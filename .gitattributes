@@ -1,0 +1,6 @@
+* text=auto eol=lf
+*.wav binary
+*.png binary
+*.mp4 binary
+*.exe binary
+*.bundle binary

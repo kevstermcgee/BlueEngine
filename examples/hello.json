@@ -1,0 +1,1 @@
+{"duration":4,"nodes":[{"id":"floor","shape":"box","pos":[0,-0.2,0],"scale":[8,0.2,8],"material":"ground"},{"id":"hello","shape":"robot","motion":{"wave":1}}],"materials":{"ground":{"color":[0.08,0.13,0.2],"metallic":0.2}}}

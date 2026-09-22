@@ -1,0 +1,15 @@
+{
+  "duration": 6,
+  "camera": {"pos": [10,7,12], "target": [0,1,0], "orbit": 8},
+  "materials": {
+    "leaves": {"color": [0.02,0.4,0.22], "roughness": 0.55},
+    "glow": {"color": [0.3,0.8,1], "emission": 4},
+    "ground": {"color": [0.05,0.1,0.15], "metallic": 0.25}
+  },
+  "nodes": [
+    {"id": "island", "shape": "cylinder", "material": "ground", "pos": [0,-0.2,0], "scale": [6,0.2,6]},
+    {"id": "forest", "shape": "tree", "material": "leaves", "repeat": {"count": 12, "ring": 4}},
+    {"id": "fireflies", "shape": "sphere", "material": "glow", "pos": [0,2,0], "scale": [0.04,0.04,0.04], "repeat": {"count": 50, "jitter": [110,40,110], "seed": 17}, "motion": {"bob": 0.2, "frequency": 0.3}},
+    {"id": "friend", "shape": "robot", "motion": {"wave": 1}}
+  ]
+}
