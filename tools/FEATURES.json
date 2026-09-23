@@ -1,15 +1,139 @@
 {
   "format": 1,
   "features": {
-    "map_geometry": {"files":["src/viewer/house.rs","src/viewer/maps.rs"],"checks":["house traversal tests","house captures","headless tests"],"note":"Rust is the default map source; editable JSON maps are explicit opt-in via --map."},
-    "map_editing": {"files":["src/viewer/authoring.rs","src/bin/be2-tools.rs","tests/authoring.rs"],"checks":["authoring integration tests","client and headless custom-map smoke"],"note":"Change both validation and tools documentation for schema changes."},
-    "props": {"files":["src/viewer/props.rs","assets/props","examples/export_props.rs"],"checks":["prop budget and collision tests","captures"],"note":"Preserve IDs; regenerate JSON exports into a new directory."},
-    "movement": {"files":["src/viewer/controller.rs","src/viewer/simulation.rs"],"checks":["controller and simulation tests","route commands","manual controls"],"note":"Keep frame-rate independence and render/headless parity."},
-    "graphics": {"files":["src/viewer/mesh.rs","src/bin/blue-engine.rs"],"checks":["captures","menu inspection","render report"],"note":"Simple matte geometry uses tag 3; do not tint it with crystal tag 2."},
-    "wrench": {"files":["src/viewer/wrench.rs","src/bin/wrench_view/mod.rs","src/bin/impact_audio/mod.rs"],"checks":["wrench tests","--studio --capture-wrench"],"note":"Sound observes confirmed impacts; keep audio out of headless."},
-    "interactions": {"files":["src/viewer/interaction.rs","src/viewer/room.rs"],"checks":["interaction tests","--studio --capture-interactions"],"note":"Keep semantic IDs stable. Map document v1 supports inspect actions only."},
-    "camera_character": {"files":["src/viewer/camera.rs","src/bin/character/mod.rs","src/bin/blue-engine.rs"],"checks":["camera tests","--studio --capture-character","Q toggle"],"note":"First and third person must share aim and authoritative position."},
-    "multiplayer": {"files":["src/viewer/simulation.rs","src/bin/be2-headless.rs","BE2_ARCHITECTURE.md"],"checks":["no-default-feature build","future two-client integration"],"note":"PulseNet integration and Prop Hunt game rules are not implemented."},
-    "offline_renderer": {"files":["src/main.rs","src/render.rs","src/output.rs","src/scene.rs","src/geometry.rs"],"checks":["CLI tests","offline export"],"note":"Read ARCHITECTURE.md and AI_REFERENCE.md before changes."}
+    "map_geometry": {
+      "files": [
+        "src/viewer/house.rs",
+        "src/viewer/maps.rs"
+      ],
+      "checks": [
+        "house traversal tests",
+        "house captures",
+        "headless tests"
+      ],
+      "note": "Rust is the default map source; editable JSON maps are explicit opt-in via --map."
+    },
+    "map_editing": {
+      "files": [
+        "src/viewer/authoring.rs",
+        "src/bin/be2-tools.rs",
+        "tests/authoring.rs"
+      ],
+      "checks": [
+        "authoring integration tests",
+        "client and headless custom-map smoke"
+      ],
+      "note": "Change both validation and tools documentation for schema changes."
+    },
+    "props": {
+      "files": [
+        "src/viewer/props.rs",
+        "assets/props",
+        "examples/export_props.rs"
+      ],
+      "checks": [
+        "prop budget and collision tests",
+        "captures"
+      ],
+      "note": "Preserve IDs; regenerate JSON exports into a new directory."
+    },
+    "movement": {
+      "files": [
+        "src/viewer/controller.rs",
+        "src/viewer/simulation.rs"
+      ],
+      "checks": [
+        "controller and simulation tests",
+        "route commands",
+        "manual controls"
+      ],
+      "note": "Keep frame-rate independence and render/headless parity."
+    },
+    "graphics": {
+      "files": [
+        "src/viewer/mesh.rs",
+        "src/bin/blue-engine.rs"
+      ],
+      "checks": [
+        "captures",
+        "menu inspection",
+        "render report"
+      ],
+      "note": "Simple matte geometry uses tag 3; do not tint it with crystal tag 2."
+    },
+    "wrench": {
+      "files": [
+        "src/viewer/wrench.rs",
+        "src/bin/wrench_view/mod.rs",
+        "src/bin/impact_audio/mod.rs"
+      ],
+      "checks": [
+        "wrench tests",
+        "--studio --capture-wrench"
+      ],
+      "note": "Sound observes confirmed impacts; keep audio out of headless."
+    },
+    "interactions": {
+      "files": [
+        "src/viewer/interaction.rs",
+        "src/viewer/room.rs"
+      ],
+      "checks": [
+        "interaction tests",
+        "--studio --capture-interactions"
+      ],
+      "note": "Keep semantic IDs stable. Map document v1 supports inspect actions only."
+    },
+    "camera_character": {
+      "files": [
+        "src/viewer/camera.rs",
+        "src/bin/character/mod.rs",
+        "src/bin/blue-engine.rs"
+      ],
+      "checks": [
+        "camera tests",
+        "--studio --capture-character",
+        "Q toggle"
+      ],
+      "note": "First and third person must share aim and authoritative position."
+    },
+    "multiplayer": {
+      "files": [
+        "src/viewer/simulation.rs",
+        "src/bin/be2-headless.rs",
+        "BE2_ARCHITECTURE.md"
+      ],
+      "checks": [
+        "no-default-feature build",
+        "future two-client integration"
+      ],
+      "note": "PulseNet integration and Prop Hunt game rules are not implemented."
+    },
+    "offline_renderer": {
+      "files": [
+        "src/main.rs",
+        "src/render.rs",
+        "src/output.rs",
+        "src/scene.rs",
+        "src/geometry.rs"
+      ],
+      "checks": [
+        "CLI tests",
+        "offline export"
+      ],
+      "note": "Read ARCHITECTURE.md and AI_REFERENCE.md before changes."
+    },
+    "landscaping": {
+      "files": [
+        "src/viewer/landscaping.rs",
+        "src/viewer/house.rs"
+      ],
+      "checks": [
+        "house traversal and hiding-spot tests",
+        "authoring export round trip",
+        "outdoor captures and menu"
+      ],
+      "note": "Reusable static broadleaf, pine, clustered shrub and flower builders. Preserve collision routes; no alpha textures or animation."
+    }
   }
 }

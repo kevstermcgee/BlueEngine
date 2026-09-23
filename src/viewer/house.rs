@@ -1,5 +1,6 @@
 //! Small, low-poly two-story house. All rooms and the garden share one world.
 use super::{
+    landscaping,
     props::{self, PropKind},
     room::{Builder, Room},
 };
@@ -101,19 +102,6 @@ fn bed(b: &mut Builder, x: f32, z: f32, id: &'static str) {
     b.obstacle(V(x, 3.85, z - 1.21), V(0.88, 0.65, 0.06));
     furniture(b, id, "Bed", V(x, 3.63, z), V(0.88, 0.43, 1.28));
 }
-// Solid foliage has a simple, predictable collision core and matte faceted leaves.
-fn bush(b: &mut Builder, p: V, wide: bool) {
-    let sx = if wide { 1.1 } else { 0.65 };
-    b.cube("soil", p + V(0., 0.06, 0.), V(sx + 0.1, 0.06, 0.65));
-    b.add(
-        Shape::Sphere,
-        "leaf",
-        p + V(0., 0.8, 0.),
-        V(sx, 0.8, 0.6),
-        V::ZERO,
-    );
-    b.obstacle(p + V(0., 0.65, 0.), V(sx * 0.78, 0.65, 0.45));
-}
 fn cabinet(b: &mut Builder, p: V, s: V) {
     solid(b, "wood", p, s);
     // Inset-looking door panels and handles give cover a recognizable purpose.
@@ -154,6 +142,7 @@ pub fn build() -> crate::Result<Room> {
         b.material(name, c, 0., 0.);
     }
     props::palette(&mut b);
+    landscaping::palette(&mut b);
     b.cube("grass", V(0., -0.075, -3.), V(9.5, 0.06, 11.5));
     solid(&mut b, "floor", V(0., -0.08, 0.), V(6., 0.08, 6.));
     // Upstairs floor leaves a continuous stairwell on the east side.
@@ -370,17 +359,19 @@ pub fn build() -> crate::Result<Room> {
         V(-4.6, 0., -10.),
     );
     for (x, z) in [(6.8, -11.5), (-7., -12.)] {
-        solid(&mut b, "wood", V(x, 1.1, z), V(0.20, 1.1, 0.20));
-        b.add(
-            Shape::Sphere,
-            "leaf",
-            V(x, 2.9, z),
-            V(1.3, 1.25, 1.3),
-            V::ZERO,
-        );
+        landscaping::broadleaf(&mut b, V(x, 0., z));
+    }
+    for (x, z) in [(7.9, -13.1), (-7.9, 6.3)] {
+        landscaping::pine(&mut b, V(x, 0., z));
+    }
+    for (i, (x, z)) in [(-1.65, 7.1), (1.65, 7.1), (-2.7, -8.7), (2.7, -8.7)]
+        .into_iter()
+        .enumerate()
+    {
+        landscaping::flower_patch(&mut b, V(x, 0., z), i);
     }
     // Planting beds flank the entrances but leave a clear centre route.
-    for (x, z, wide) in [
+    for (variant, (x, z, wide)) in [
         (-3.6, 6.95, true),
         (3.6, 6.95, true),
         (-7.05, 3.8, false),
@@ -393,8 +384,11 @@ pub fn build() -> crate::Result<Room> {
         (6.8, -8.8, true),
         (-4.4, -12.5, true),
         (3.8, -12.5, true),
-    ] {
-        bush(&mut b, V(x, 0., z), wide);
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        landscaping::shrub(&mut b, V(x, 0., z), wide, variant);
     }
     // L-shaped garden privacy screen: cover from the back door, open at both ends.
     solid(&mut b, "fence", V(4.4, 0.95, -10.4), V(1.65, 0.95, 0.07));
@@ -583,7 +577,7 @@ mod tests {
             room.entities.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(ids.len(), room.entities.len());
         assert!(ids.contains("house-apple") && ids.contains("yard-table"));
-        assert!(room.world.instances.len() < 750);
+        assert!(room.world.instances.len() < 1400);
     }
     #[test]
     fn stairs_reach_second_floor_and_return_without_jumping() {

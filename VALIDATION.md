@@ -1,3 +1,15 @@
+# Landscaping revision — 2026-09-23
+
+Replaced two pole-and-sphere trees with tapered branching broadleaf trees and irregular seven-cluster crowns. Added two layered pine trees. Rebuilt all twelve shrubs from six varied leaf clusters with small stems; preserved shrub collision cores. Added 48 cream/pink/gold flowers across bed edges and four entrance/patio planting patches. All geometry is static matte primitives, without textures, transparency, per-frame animation or new dependencies.
+
+The house circulation, upstairs access, fence containment and hiding-pocket route/occlusion tests pass. The full 82 default and 59 no-default-feature tests, formatting and both Clippy configurations pass. Authoring round-trip tests cover the new cone/cylinder/sphere/box assets. Client, headless and editor release builds are included.
+
+Inspected exterior, backyard, side-yard vegetation and actual menu captures. Whole-house render: 29,316 triangles, 36,987 shared vertices, 10 batches at 1024x697. The short capture averaged 16.940 ms/frame; it is a smoke check, not a sustained GPU benchmark or a claim to have eliminated hardware stutter. House instance budget is now 1,400 to accommodate static flower parts. Native controls, physical audio and Linux runtime were not retested for this visual-only change.
+
+The existing desktop shortcut targets the updated bin/BE2.exe. Shared landscaping builders and the feature index are documented for later maps.
+
+---
+
 # Agent authoring toolkit — 2026-09-23
 
 Added a rendering-free be2-tools executable and tools/be2.py workflow entry point. Both the graphical client and headless simulation load validated static map documents through --map. Default play still uses the procedural house; demonstration edits do not modify it. Runtime entity/name strings are owned rather than leaked static allocations.

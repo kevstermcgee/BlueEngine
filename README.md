@@ -16,6 +16,8 @@ All house geometry uses simple matte shapes. The cereal box, apple, chair and ta
 
 The cleanup pass closes the roof gables and wall gaps, completes the stair railing, and adds 12 outdoor planting beds. Cabinets, a kitchen island, bedroom divider and garden privacy screen provide more cover while preserving paths through the house.
 
+Landscaping includes branching broadleaf trees, layered pines, clustered shrubs and 48 small flowers in cream, pink and gold. Plant geometry stays static and matte, with shared builders available for future maps.
+
 Future maps are recorded in MAPS.md: school, office and convenience store. Only the house is playable in this release.
 
 ## Changes

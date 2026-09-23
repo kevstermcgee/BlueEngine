@@ -17,3 +17,5 @@ mod house;
 pub mod maps;
 
 pub mod authoring;
+
+mod landscaping;
