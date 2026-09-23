@@ -1,38 +1,19 @@
-# Validation — Vesper3D 0.1.0
+# Blue Engine 0.1 validation
 
-Verified locally on Windows x64, September 22, 2026. The initial core compiled on Rust 1.87.0; the final source, tests, checks and distributed executable were built with Rust 1.98.1 after the host toolchain changed during development. Renderer worker count: 12. FFmpeg and ffprobe were available locally.
+Verified on Windows x64, September 22, 2026.
 
-## Automated checks
+- `cargo fmt --check`: passed.
+- `cargo test --locked --offline`: 45 tests passed (31 library, 1 viewer input mapping, 13 inherited CLI integration tests).
+- `cargo clippy --all-targets --locked --offline -- -D warnings`: passed.
+- Release build with locked dependencies: passed.
+- Final executable render smoke check: three camera PNGs generated without graphics warnings. Earlier geometry-batch clipping and inverted menu issues were fixed and rechecked visually.
 
-- **35 tests passed:** 22 library tests and 13 CLI integration tests; no tests ignored. The FFmpeg-dependent tests executed on this machine.
-- `cargo clippy --all-targets --locked -- -D warnings` passed.
-- `cargo fmt --check` passed.
-- Release build passed with locked dependencies.
+Movement tests cover matched WASD/arrow mappings, simultaneous aliases without doubled speed, opposing keys, normalized diagonals, 60/144 Hz agreement, yaw-relative movement with fixed eye height, pitch clamps, invalid time steps, stopping, wall sliding, and extended simulated movement remaining inside the room. The inherited offline tests still exercise PNG output, MP4 encoding, cancellation, scene validation and output protection.
 
-Tests cover analytic intersections, transformed geometry, BVH agreement with brute force, affine inversion, parallel slab boundaries, keyframe interpolation, invalid keys, hierarchy/visibility, cycles, singular/explosive scales, frame-count rounding, strict unknown fields, deterministic RGB across thread counts, repetition and expansion limits, invalid sampling budgets, cancellation before/during rendering, temporary-file cleanup, successful atomic replacement, output races, real PNG decoding, animated-image differences, invalid CLI input, missing materials/parents, dimensions, extreme portrait contact sheets, asset traversal, OBJ index checks/negative indices/quads, missing encoders, invalid audio, and actual MP4 encoding/probing/decoding.
+The actual Windows app was opened and checked through desktop automation. Verified: the entry button, Enter to resume, W and Up moving forward, Right strafing, F3 statistics, mouse-driven view rotation, Escape pause, Quit, and automatic pause after switching to Explorer and back. Keyboard taps were verified using the displayed camera coordinates. The Windows key-state fallback was added after the automation's scan-code-free key injection did not reach the graphics library's normal input path. This is a short functional check, not an extended human play session.
 
-## Showcase verification
+The final capture run reported 0.470 seconds to prepare the scene and meshes, 50,672 triangles, 17 mesh batches, and 16.963 milliseconds per displayed frame (approximately 59 FPS, including presentation and screenshot overhead). The live window generally showed 58–61 FPS. These are measurements of this machine, not guarantees for other GPUs or resolutions. The capture viewport was constrained by the test desktop; no 4K performance claim is made.
 
-`first-light.mp4` contains 288 frames at 1280×720, 24 fps, H.264/yuv420p video and AAC audio. ffprobe reports exactly 12.000 seconds and 3,733,644 bytes. A full decode with `ffmpeg -v error -i first-light.mp4 -f null -` completed without errors. Six decoded frames were inspected visually, along with high-quality stills and the grove/materials examples.
+The library's unsafe-code prohibition is retained. Small read-only Win32 calls are confined to the executable for focus and keyboard state. The executable needs no network, FFmpeg, installation, or runtime scene files.
 
-The film was rendered with the same renderer core before the later CLI/validation/repetition additions. Its scene does not use repeats. The final executable's additional features were tested separately, and its contact sheet was inspected. Exact image bytes across compiler versions are not promised.
-
-## Measured performance
-
-Wall-clock measurements from this machine, not portable performance guarantees:
-
-| Scene / operation | Setting | Time |
-|---|---|---:|
-| First Light frame at 5s | 1280×720, standard, 12 workers | 2.28 s before background build load; 3.26 s with the film rendering concurrently |
-| First Light frame at 5s | 960×540, high | 4.81 s |
-| First Light frame at 5s | 640×360, draft | 0.20 s while film rendering |
-| Hello frame at 1s | 640×360, standard | 0.11 s while film rendering |
-| Grove frame | 640×360, standard, 113 expanded primitives | 0.14 s while film rendering |
-| Materials frame | 640×360, standard | 0.25 s while film rendering |
-| Full First Light film | 720p, standard, 288 frames | 874.59 s / 14m35s, including competing compilation and test work |
-
-Scene complexity and quality matter substantially: the showcase includes several tessellated rings, reflective surfaces and three lights. This is not a real-time engine. Draft/small previews provide a much faster authoring loop. The 64-bit Windows executable is under 1 MB; FFmpeg remains a separate installation.
-
-## Not established by these checks
-
-No soak test lasting days, fuzzing campaign, sanitizer run, hostile-media audit, real-time guarantee, cross-platform execution result, or visual match across architectures is claimed. CI definitions are supplied, but remote CI was not run for this local repository. The README and architecture document describe missing features and known limitations.
+Not established: Linux/macOS execution, long-duration soak testing, every graphics driver, physical hardware held-key feel, extreme high-DPI combinations, or dynamic lighting/physics. The live prototype deliberately has static scene geometry and no object actions. The pre-existing CI file is retained, but remote CI has not run for this local repository. Original Vesper release measurements are in VESPER_VALIDATION.md.

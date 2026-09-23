@@ -4,5 +4,6 @@ pub mod math;
 pub mod output;
 pub mod render;
 pub mod scene;
+pub mod viewer;
 
 pub type Result<T> = std::result::Result<T, Box<dyn std::error::Error + Send + Sync>>;

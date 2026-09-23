@@ -1,123 +1,56 @@
-# Vesper3D
+# Blue Engine 0.1
 
-**Describe a world. Give it motion. Render a film.**
+A native first-person room viewer in Rust, built from the Vesper3D animation engine. Explore a furnished blue-accented studio at eye level using the keyboard and mouse.
 
-A native Rust animation engine designed for AI authors. A small declarative JSON scene becomes a deterministic 3D animation and a normal H.264 MP4. No browser, Python runtime, graphics driver, Blender installation, cloud service, or generated source code is needed to render.
+## Run
 
-Vesper3D is a new, independent engine and local Git repository. It shares Flick's AI-first objectives, but uses its own 3D renderer, scene contract, and codebase.
+Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. No installation, internet connection, server, Rust toolchain, or FFmpeg is needed for the viewer. The room and shaders are compiled into the executable. Windows x64 with an OpenGL-capable graphics driver is the tested platform.
 
-## Start here
-
-The delivery includes a Windows x64 executable at `bin/vesper3d.exe`. FFmpeg with `libx264` on PATH is needed for MP4; still frames and contact sheets work without it.
-
-```powershell
-.\bin\vesper3d.exe doctor
-.\bin\vesper3d.exe validate examples\hello.json
-.\bin\vesper3d.exe frame examples\hello.json renders\hello.png --time 1 --quality high
-.\bin\vesper3d.exe render examples\hello.json renders\hello.mp4
-```
-
-For an AI, provide **[AI_REFERENCE.md](AI_REFERENCE.md)**. It is the complete compact authoring contract. The executable also prints it with `vesper3d reference`.
-
-This is a complete scene for a waving robot:
-
-```json
-{"nodes":[{"id":"friend","shape":"robot","motion":{"wave":1}}]}
-```
-
-A small scene with a reflective floor, animated sphere, and reusable material:
-
-```json
-{
-  "duration": 4,
-  "materials": {
-    "gold": {"color": [0.9, 0.5, 0.12], "metallic": 0.8, "roughness": 0.2},
-    "floor": {"color": [0.04, 0.08, 0.13], "metallic": 0.4}
-  },
-  "nodes": [
-    {"id": "floor", "shape": "box", "material": "floor", "pos": [0,-0.2,0], "scale": [12,0.2,12]},
-    {"id": "ball", "shape": "sphere", "material": "gold", "pos": [[0,[-2,1,0]],[2,[0,2,0]],[4,[2,1,0]]]}
-  ]
-}
-```
-
-## What is implemented
-
-| Area | Available now |
+| Control | Action |
 |---|---|
-| Geometry | Analytic spheres, boxes, capped cylinders and cones; smooth torus meshes; faceted crystals; OBJ polygon meshes |
-| Reusable models | Articulated robot, layered tree, rocket; named materials; parented groups |
-| Compact populations | Deterministic repeats in rows, rings, or seeded scattered volumes |
-| Animation | Vector keyframes, four easing modes, inherited transforms, visibility intervals, spin, orbit, bob, robot walking and waving |
-| Cinematography | Animated camera position/target, orbit, vertical field of view, sampled depth of field |
-| Rendering | CPU ray tracing, BVH acceleration, multithreaded rows, GGX direct-light highlights, metal response, sampled soft shadows, ambient occlusion, recursive reflections |
-| Finishing | Atmospheric fog, emissive glow, bloom, ACES-style tone mapping, sRGB output, antialiasing |
-| Deliverables | PNG stills, six-frame contact sheets, H.264 MP4, optional AAC audio |
-| Automation | JSON status/errors, CLI and Rust library, headless execution, absolute-time frames, CPU-worker limit |
-| Reliability | Strict input validation, bounded scene complexity, locked dependencies, cancellation checks, temporary outputs, success-only commits |
+| W / Up | Walk forward |
+| S / Down | Walk backward |
+| A / Left | Strafe left |
+| D / Right | Strafe right |
+| Mouse | Look in any direction |
+| Shift | Walk faster |
+| Escape / Tab | Pause or resume; release or capture the cursor |
+| Enter | Enter or resume from the menu |
+| F11 | Toggle fullscreen |
+| H | Hide or show the on-screen hints |
+| F3 | Show performance and camera coordinates |
+| Q | Quit from the pause menu |
 
-The renderer is physically inspired, with explicit artistic approximations. Ambient light and occlusion approximate indirect illumination. Reflections are sharp and attenuated by roughness; they are not stochastic rough-surface transport. Emissive objects bloom but require a separate light to illuminate nearby objects. Source radii sample a box-shaped area. This keeps output reproducible and avoids the noisy reflections of a low-sample path tracer.
+Pause to adjust mouse sensitivity, vertical field of view, invert vertical look, or reset your position. Switching to another app pauses the viewer and releases its mouse capture. Settings last for the current session. Arrow keys move relative to your view; left and right strafe, matching A and D.
 
-## Examples
+The camera stays 1.68 metres above the floor. Movement is normalized, accelerates and stops smoothly, slides along walls and furniture, and is subdivided to resist collision tunnelling. There is no forced head bob, jumping, or flying. The room is enclosed and the entrance remains closed.
 
-| File | Purpose |
-|---|---|
-| `examples/hello.json` | Tiny robot greeting; quickest starting point |
-| `examples/first-light.json` | 12-second observatory showcase: animated robot, mechanical planet, orbiting lights, camera move, original chime score |
-| `examples/materials.json` | Five primitives and material responses with an orbiting camera |
-| `examples/mesh.json` | Local OBJ import |
-| `examples/grove.json` | One declaration creates a ring of trees; another scatters glowing particles |
+## What comes from Vesper3D
 
-The included `first-light.wav` is an original synthesized chime score. No third-party media or downloaded models are used in the showcase.
+The original Rust scene graph, materials, primitive definitions, models, transform math, ray intersection code and BVH are retained. Blue Engine builds its studio with those same scene types and compiles it through `geometry::Compiled`. The crystal and little robot are the original engine's reusable models.
 
-```powershell
-.\bin\vesper3d.exe contact examples\first-light.json renders\board.png --quality draft
-.\bin\vesper3d.exe render examples\first-light.json renders\first-light.mp4 --quality standard
-.\bin\vesper3d.exe frame examples\first-light.json renders\poster.png --time 5 --quality ultra
+A new real-time layer tessellates the evaluated primitives once, bakes static lighting and contact shadows using the original BVH, and draws those meshes through a GPU backend. The camera and player update each frame. This keeps offline scene construction out of the interactive frame loop. The live viewer is intentionally a static-room prototype; it is not the offline renderer running every frame and does not claim identical shading.
+
+The original offline commands remain available in **bin/vesper3d.exe**. See VESPER_README.md and AI_REFERENCE.md for authoring and MP4 export. FFmpeg is needed only for the original video export workflow.
+
+## Future interaction
+
+`src/viewer/room.rs` separates the scene, collision bounds and semantic entities. Each entity has a stable ID, display label and bounds. `Room::focus` uses the original BVH to find the first visible surface within 4.5 metres; occluded objects do not show a label. The crosshair labels relevant display pieces as you approach.
+
+A later version can resolve the focused entity ID into an interaction component and dispatch an action. No pickup, door opening, inventory, or other action is bound in this version. Animated objects will need dynamic meshes and updated collision/focus geometry; the current lighting bake is static.
+
+## Build and checks
+
 ```
-
-## Performance and quality
-
-Use `draft` for blocking and `standard` for animation; use `high` or `ultra` for polished stills and final shots where more render time is acceptable. `--width 640` reduces resolution while preserving aspect ratio. `--threads 4` limits renderer workers; FFmpeg uses two encoding workers separately.
-
-| Preset | Camera samples/pixel | Shadow samples/light | AO samples | Reflection bounces |
-|---|---:|---:|---:|---:|
-| draft | 1 | 1 | 0 | 1 |
-| standard | 4 | 1 | 1 | 1 |
-| high | 9 | 2 | 2 | 2 |
-| ultra | 25 | 4 | 4 | 2 |
-
-This is an **offline film renderer**, not a real-time viewport. BVH traversal reduces intersection work; analytic primitives avoid unnecessary tessellation; each frame is streamed to the encoder instead of accumulating a frame directory. Pixel seeds do not depend on thread scheduling or frame order. See [VALIDATION.md](VALIDATION.md) for measured timings and tested limits.
-
-Memory scales with a single frame and scene geometry, not film duration. RGB and three floating-point image buffers use approximately 39 bytes/pixel before scene data and encoder overhead: about 36 MB at 720p and 323 MB near the maximum pixel count. Geometry is compiled once; world transforms and the BVH are rebuilt per frame. There is no GPU requirement or network access during rendering.
-
-## Build and test
-
-Rust 1.87 or newer and its native platform linker are required. Dependencies are pinned and `Cargo.lock` is committed. The first build needs the Rust package registry; subsequent cached builds can use `--offline`.
-
-```text
-cargo build --release --locked
+cargo run --release --bin blue-engine
+cargo fmt --check
 cargo test --locked
 cargo clippy --all-targets --locked -- -D warnings
-cargo fmt --check
+cargo build --release --locked
 ```
 
-Windows build output: `target/release/vesper3d.exe`. On Linux/macOS: `target/release/vesper3d`. The code uses portable Rust and process APIs; this delivery was tested on Windows. CI is included for Windows and Linux. Linux/macOS support is not claimed as locally verified.
+The default Cargo target is Blue Engine. The library remains named `vesper3d` to preserve the inherited code and tests. `cargo run --release --bin vesper3d -- doctor` runs the offline tool.
 
-## Failure handling
+For a repeatable render smoke check, run `BlueEngine.exe --capture PATH_TO_EMPTY_FOLDER`. It renders three camera views, writes PNGs and a small timing report, then exits. Existing same-named captures in that explicitly supplied folder are replaced. Measurements include presentation/vsync and are not GPU-only benchmarks.
 
-Outputs are refused if they already exist unless `--overwrite` is explicit. A render writes to a unique sibling temporary file, waits for successful encoding, and only then commits it. Without overwrite, an atomic hard-link operation also protects against a destination created during rendering. Filesystems without hard-link support report an error rather than weakening that protection. With overwrite, the temporary file is renamed into place.
-
-Ctrl+C requests cancellation at a row/frame boundary. Encoder failure, broken pipes, and ordinary cancellation remove the temporary output and preserve an existing completed video. An OS kill or power loss can leave a `.partial.*` file; it does not turn that partial file into the requested final output. Audio/mesh references are restricted to the scene directory. The engine does not evaluate scripts or invoke a shell.
-
-## Scope of version 0.1
-
-This is a working, tested engine for procedural 3D films and explainers. It is not a replacement for a mature general-purpose DCC package. There is currently no graphical editor, GPU backend, texture mapping, skeletal asset import, glTF/FBX, IK, collision simulation, fluid/cloth solver, text layout, transparency/refraction, motion blur, or full global illumination. OBJ import uses flat normals and one material per node; convex polygon faces are fan-triangulated. Robots use built-in joint animation.
-
-The small modules and documented scene contract make those extensions possible without changing the authoring workflow. See [ARCHITECTURE.md](ARCHITECTURE.md).
-
-## References
-
-Scene serialization uses [Serde JSON](https://docs.rs/serde_json/1.0.140/serde_json/); PNG export uses [png](https://docs.rs/png/0.17.16/png/); video export uses [FFmpeg rawvideo and MP4 formats](https://ffmpeg.org/ffmpeg-formats.html). The ray tracer, transforms, geometry, animation, materials, camera, and image finishing are implemented in this repository.
-
-MIT licensed. Third-party Rust packages retain their respective licenses. FFmpeg is an external dependency and is not redistributed in this package.
+See VALIDATION.md for actual checks and limitations. VESPER_VALIDATION.md records the inherited engine's earlier release. This repository preserves that engine's local Git history; no remote repository has been published.

@@ -1,0 +1,215 @@
+//! Tessellate Vesper's evaluated primitives once, baking visibility with its BVH.
+//! GPU frames reuse these meshes; no scene rebuild or ray tracing in the frame loop.
+use crate::{
+    geometry::{Instance, Primitive, World},
+    math::{Ray, V},
+};
+use macroquad::prelude::*;
+
+pub fn vec(v: V) -> Vec3 {
+    vec3(v.0, v.1, v.2)
+}
+pub fn bake(world: &World) -> Vec<Mesh> {
+    let mut meshes = vec![Mesh {
+        vertices: vec![],
+        indices: vec![],
+        texture: None,
+    }];
+    for instance in &world.instances {
+        let transform = instance.inverse.inverse();
+        let mut triangle = |positions: [V; 3], normals: [V; 3]| {
+            if meshes.last().unwrap().vertices.len() + 3 > 9000 {
+                meshes.push(Mesh {
+                    vertices: vec![],
+                    indices: vec![],
+                    texture: None,
+                });
+            }
+            let mesh = meshes.last_mut().unwrap();
+            for k in 0..3 {
+                let p = transform.point(positions[k]);
+                let n = instance.inverse.normal_from_inverse(normals[k]);
+                let c = shade(world, instance, p, n);
+                let mut vertex = Vertex::new2(vec(p), Vec2::ZERO, Color::new(c.0, c.1, c.2, 1.));
+                vertex.normal = vec4(n.0, n.1, n.2, instance.material.metallic);
+                mesh.indices.push(mesh.vertices.len() as u16);
+                mesh.vertices.push(vertex);
+            }
+        };
+        match &instance.shape {
+            Primitive::Triangle(p, n) => triangle(*p, *n),
+            Primitive::Box => {
+                for (normal, u, v) in [
+                    (V(1., 0., 0.), V(0., 0., 1.), V(0., 1., 0.)),
+                    (V(-1., 0., 0.), V(0., 0., 1.), V(0., 1., 0.)),
+                    (V(0., 1., 0.), V(1., 0., 0.), V(0., 0., 1.)),
+                    (V(0., -1., 0.), V(1., 0., 0.), V(0., 0., 1.)),
+                    (V(0., 0., 1.), V(1., 0., 0.), V(0., 1., 0.)),
+                    (V(0., 0., -1.), V(1., 0., 0.), V(0., 1., 0.)),
+                ] {
+                    let nu = (transform.vector(u).length() * 2. / 0.38)
+                        .ceil()
+                        .clamp(1., 40.) as usize;
+                    let nv = (transform.vector(v).length() * 2. / 0.38)
+                        .ceil()
+                        .clamp(1., 40.) as usize;
+                    for i in 0..nu {
+                        for j in 0..nv {
+                            let p = |a: usize, b: usize| {
+                                normal
+                                    + u * (a as f32 / nu as f32 * 2. - 1.)
+                                    + v * (b as f32 / nv as f32 * 2. - 1.)
+                            };
+                            triangle([p(i, j), p(i + 1, j), p(i + 1, j + 1)], [normal; 3]);
+                            triangle([p(i, j), p(i + 1, j + 1), p(i, j + 1)], [normal; 3]);
+                        }
+                    }
+                }
+            }
+            Primitive::Sphere => {
+                let p = |i: usize, j: usize| {
+                    let a = i as f32 / 24. * std::f32::consts::TAU;
+                    let b = j as f32 / 12. * std::f32::consts::PI;
+                    V(a.cos() * b.sin(), b.cos(), a.sin() * b.sin())
+                };
+                for i in 0..24 {
+                    for j in 0..12 {
+                        let a = [p(i, j), p(i + 1, j), p(i + 1, j + 1)];
+                        let b = [p(i, j), p(i + 1, j + 1), p(i, j + 1)];
+                        triangle(a, a);
+                        triangle(b, b);
+                    }
+                }
+            }
+            Primitive::Cylinder | Primitive::Cone => {
+                let cone = matches!(instance.shape, Primitive::Cone);
+                for i in 0..24 {
+                    let a = i as f32 / 24. * std::f32::consts::TAU;
+                    let b = (i + 1) as f32 / 24. * std::f32::consts::TAU;
+                    let bottom_a = V(a.cos(), -1., a.sin());
+                    let bottom_b = V(b.cos(), -1., b.sin());
+                    let top_a = if cone {
+                        V(0., 1., 0.)
+                    } else {
+                        V(a.cos(), 1., a.sin())
+                    };
+                    let top_b = if cone {
+                        V(0., 1., 0.)
+                    } else {
+                        V(b.cos(), 1., b.sin())
+                    };
+                    let na = V(a.cos(), if cone { 0.5 } else { 0. }, a.sin()).norm();
+                    let nb = V(b.cos(), if cone { 0.5 } else { 0. }, b.sin()).norm();
+                    triangle([bottom_a, bottom_b, top_b], [na, nb, nb]);
+                    if !cone {
+                        triangle([bottom_a, top_b, top_a], [na, nb, na]);
+                        triangle([V(0., 1., 0.), top_a, top_b], [V(0., 1., 0.); 3]);
+                    }
+                    triangle([V(0., -1., 0.), bottom_b, bottom_a], [V(0., -1., 0.); 3]);
+                }
+            }
+        }
+    }
+    meshes
+}
+
+fn shade(world: &World, instance: &Instance, p: V, n: V) -> V {
+    let mat = &instance.material;
+    if mat.emission > 0. {
+        return (mat.color * (0.75 + mat.emission * 0.25)).min(V::ONE);
+    }
+    let origin = p + n * 0.012;
+    let mut light = V(0.24, 0.27, 0.31) * (0.8 + 0.2 * n.1);
+    // Actual Vesper intersections provide static contact shadows.
+    for (pos, color, power) in [
+        (V(-4.8, 3., 1.0), V(0.72, 0.87, 1.), 18.),
+        (V(2.4, 3.25, -2.5), V(1., 0.86, 0.66), 15.),
+        (V(2.4, 3.25, 3.), V(0.82, 0.91, 1.), 10.),
+    ] {
+        let delta = pos - origin;
+        let distance = delta.length();
+        let direction = delta / distance;
+        let ndl = n.dot(direction).max(0.);
+        if ndl > 0.
+            && world
+                .hit(
+                    Ray {
+                        o: origin,
+                        d: direction,
+                    },
+                    distance - 0.025,
+                    true,
+                )
+                .is_none()
+        {
+            light = light + color * (ndl * power / (3. + distance * distance));
+        }
+    }
+    let tangent = if n.1.abs() < 0.9 {
+        n.cross(V(0., 1., 0.)).norm()
+    } else {
+        n.cross(V(1., 0., 0.)).norm()
+    };
+    let bitangent = n.cross(tangent);
+    let mut ao = 1.;
+    for d in [n, (n + tangent * 0.7).norm(), (n + bitangent * 0.7).norm()] {
+        if let Some(h) = world.hit(Ray { o: origin, d }, 0.7, false) {
+            ao -= 0.14 * (1. - h.t / 0.7);
+        }
+    }
+    let linear = mat.color * light * ao;
+    V(
+        linear.0.max(0.).powf(1. / 2.2),
+        linear.1.max(0.).powf(1. / 2.2),
+        linear.2.max(0.).powf(1. / 2.2),
+    )
+    .min(V::ONE)
+}
+
+pub fn material() -> Result<macroquad::material::Material, macroquad::Error> {
+    load_material(
+        ShaderSource::Glsl {
+            vertex: VERTEX,
+            fragment: FRAGMENT,
+        },
+        MaterialParams {
+            pipeline_params: PipelineParams {
+                depth_test: Comparison::LessOrEqual,
+                depth_write: true,
+                cull_face: miniquad::CullFace::Nothing,
+                ..Default::default()
+            },
+            uniforms: vec![UniformDesc::new("Eye", UniformType::Float3)],
+            ..Default::default()
+        },
+    )
+}
+const VERTEX: &str = r#"#version 100
+attribute vec3 position;
+attribute vec2 texcoord;
+attribute vec4 color0;
+attribute vec4 normal;
+uniform mat4 Model;
+uniform mat4 Projection;
+varying lowp vec4 vcolor;
+varying mediump vec3 vnormal;
+varying mediump vec3 vpos;
+varying lowp float metal;
+void main(){gl_Position=Projection*Model*vec4(position,1.0);vcolor=color0/255.0;vnormal=normal.xyz;vpos=position;metal=normal.w;}
+"#;
+const FRAGMENT: &str = r#"#version 100
+precision mediump float;
+varying lowp vec4 vcolor;
+varying mediump vec3 vnormal;
+varying mediump vec3 vpos;
+varying lowp float metal;
+uniform vec3 Eye;
+void main(){
+ vec3 n=normalize(vnormal);vec3 v=normalize(Eye-vpos);
+ vec3 h=normalize(normalize(vec3(-3.0,5.0,2.0)-vpos)+v);
+ float spec=pow(max(dot(n,h),0.0),48.0)*metal*0.22;
+ vec3 c=vcolor.rgb+vec3(spec);
+ float fog=1.0-exp(-length(Eye-vpos)*0.008);
+ gl_FragColor=vec4(mix(c,vec3(0.18,0.24,0.30),fog),1.0);
+}
+"#;

@@ -1,16 +1,32 @@
 [package]
-name = "vesper3d"
+name = "blue-engine"
 version = "0.1.0"
 edition = "2021"
 rust-version = "1.87"
-description = "Deterministic, AI-first 3D animation to MP4"
+description = "Native first-person room viewer built on Vesper3D"
 license = "MIT"
+default-run = "blue-engine"
+
+[lib]
+name = "vesper3d"
+
+[[bin]]
+name = "vesper3d"
+path = "src/main.rs"
+
+[[bin]]
+name = "blue-engine"
+path = "src/bin/blue-engine.rs"
 
 [dependencies]
 serde = { version = "=1.0.219", features = ["derive"] }
 serde_json = "=1.0.140"
 png = "=0.17.16"
 ctrlc = "=3.4.5"
+macroquad = { version = "=0.4.14", default-features = false }
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_UI_Input_KeyboardAndMouse"] }
 
 [profile.release]
 lto = "thin"
