@@ -15,8 +15,10 @@ WASD/arrows move; mouse looks; Shift sprints; Space jumps; Ctrl/C crouches; Q sw
 - Preserved between-frame action taps and reduced held-tool screen coverage.
 - Removed persistent branding, control panels by default, and redundant hit text.
 - Shared static vertices and reusable character/tool buffers reduce rendering work and allocations.
-- Four new props: shipping crate, steel barrel, workshop stool and toolbox, with stable IDs and collision bounds.
+- Four new props: cereal box, chair, table and apple, with stable IDs and collision bounds.
 - A true headless Cargo build with no graphics/window dependencies.
+
+The active props use plain matte colours, no layered decals, and 324 triangles total. Earlier prop assets are retained in `assets/legacy-props`.
 
 ## Reusable props
 

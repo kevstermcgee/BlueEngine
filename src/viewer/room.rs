@@ -23,7 +23,7 @@ pub struct Room {
 impl Room {
     /// GPU tags change only the selected surfaces; static geometry and shadows stay valid.
     pub fn render_tags(&self) -> Vec<(Collider, f32)> {
-        vec![
+        let mut tags = vec![
             (
                 Collider {
                     min: V(-4.85, 0.98, -2.17),
@@ -40,7 +40,14 @@ impl Room {
                     .clone(),
                 2.,
             ),
-        ]
+        ];
+        tags.extend(
+            self.entities
+                .iter()
+                .filter(|e| super::props::CATALOG.iter().any(|p| p.id == e.id))
+                .map(|e| (e.bounds.clone(), 3.)),
+        );
+        tags
     }
     pub fn focus(&self, ray: crate::math::Ray) -> Option<&Entity> {
         let hit = self.world.hit(ray, 4.5, false)?;

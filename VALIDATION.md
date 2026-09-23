@@ -1,3 +1,17 @@
+# Simple-prop revision — 2026-09-23
+
+Replaced the active crate/barrel/stool/toolbox set with a cereal box, chair, table and apple. Old JSON assets retain their IDs in assets/legacy-props. The new props have new IDs.
+
+Validation: 71 default-build tests and 48 headless tests pass; formatting and both Clippy configurations pass. Default and no-default-feature headless release builds pass. The new geometry-budget test checks all four simple meshes, matte tags and index validity. Both room entity/collision checks and standalone scene compilation pass.
+
+The active props total 324 triangles, versus 1,164 for the earlier set (72% reduction). Full room: 50,996 triangles, 37,879 shared vertices, 17 batches. Static face colours and no view-dependent highlights are used for these props. Thin decorative overlaps were removed; these were a plausible flicker source, not a confirmed diagnosis of the user's observed stutter.
+
+Rendered and visually inspected overview, cereal/apple close-up, chair close-up and the actual pause menu. No obvious surface overlap artifacts appear in these stills. Motion on the user's display has not been verified, so do not claim all gameplay stutter is resolved. No controls or movement logic changed in this revision.
+
+The rebuilt client was copied to bin/BE2.exe and its SHA256 matched the build output. The existing desktop shortcut continues to target that file. The headless binary and standalone exported prop scenes were updated as well.
+
+---
+
 # BE2 validation â€” 2026-09-23
 
 ## Passed locally on Windows x64

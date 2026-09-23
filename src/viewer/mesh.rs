@@ -24,6 +24,7 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
             .iter()
             .find(|(b, _)| b.contains(center))
             .map_or(0., |(_, tag)| *tag);
+        let simple = tag > 2.5;
         let transform = instance.inverse.inverse();
         let mut lighting_cache = std::collections::HashMap::new();
         let mut triangle = |positions: [V; 3], normals: [V; 3]| {
@@ -46,9 +47,15 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
                     n.1.to_bits(),
                     n.2.to_bits(),
                 ];
-                let c = *lighting_cache
-                    .entry(key)
-                    .or_insert_with(|| shade(world, instance, p, n));
+                let c = *lighting_cache.entry(key).or_insert_with(|| {
+                    if simple {
+                        let light = 0.55 + 0.45 * n.dot(V(-0.4, 0.8, -0.3).norm()).max(0.);
+                        let c = instance.material.color * light;
+                        V(c.0.sqrt(), c.1.sqrt(), c.2.sqrt())
+                    } else {
+                        shade(world, instance, p, n)
+                    }
+                });
                 let mut vertex = Vertex::new2(
                     vec(p),
                     vec2(tag, instance.material.roughness),
@@ -76,6 +83,7 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
                     let nv = (transform.vector(v).length() * 2. / 0.38)
                         .ceil()
                         .clamp(1., 40.) as usize;
+                    let (nu, nv) = if simple { (1, 1) } else { (nu, nv) };
                     for i in 0..nu {
                         for j in 0..nv {
                             let p = |a: usize, b: usize| {
@@ -90,13 +98,14 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
                 }
             }
             Primitive::Sphere => {
+                let (slices, rings) = if simple { (12, 6) } else { (24, 12) };
                 let p = |i: usize, j: usize| {
-                    let a = i as f32 / 24. * std::f32::consts::TAU;
-                    let b = j as f32 / 12. * std::f32::consts::PI;
+                    let a = i as f32 / slices as f32 * std::f32::consts::TAU;
+                    let b = j as f32 / rings as f32 * std::f32::consts::PI;
                     V(a.cos() * b.sin(), b.cos(), a.sin() * b.sin())
                 };
-                for i in 0..24 {
-                    for j in 0..12 {
+                for i in 0..slices {
+                    for j in 0..rings {
                         let a = [p(i, j), p(i + 1, j), p(i + 1, j + 1)];
                         let b = [p(i, j), p(i + 1, j + 1), p(i, j + 1)];
                         triangle(a, a);
@@ -271,7 +280,8 @@ void main(){
  float spec=pow(max(dot(n,h),0.0),mix(96.0,8.0,r))*(0.035+metal*0.22)*(1.0-r*0.5);
  vec3 c=vcolor.rgb+vec3(spec)+vec3(0.12,0.18,0.25)*fresnel*metal;
  if(tag>0.5 && tag<1.5 && ObjectStates.x<0.5){c=vec3(0.015,0.024,0.035)+vec3(spec*0.2);}
- if(tag>1.5 && ObjectStates.y>0.5){float shade=max(vcolor.b,0.04);c=vec3(1.0,0.60,0.12)*shade+vec3(spec);}
+ if(tag>1.5 && tag<2.5 && ObjectStates.y>0.5){float shade=max(vcolor.b,0.04);c=vec3(1.0,0.60,0.12)*shade+vec3(spec);}
+ if(tag>2.5){c=vcolor.rgb;}
  float fog=1.0-exp(-length(Eye-vpos)*0.008);
  gl_FragColor=vec4(mix(c,vec3(0.18,0.24,0.30),fog),1.0);
 }

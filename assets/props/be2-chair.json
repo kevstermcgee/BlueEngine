@@ -1,0 +1,442 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      1.4918529,
+      1.1934823,
+      1.4918529
+    ],
+    "target": [
+      0.0,
+      0.47,
+      0.0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.025,
+      0.045,
+      0.09
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.24,
+    "fog": 0.012,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "prop-blue": {
+      "color": [
+        0.04,
+        0.23,
+        0.62
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-red": {
+      "color": [
+        0.75,
+        0.025,
+        0.02
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-stem": {
+      "color": [
+        0.15,
+        0.075,
+        0.025
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-wood": {
+      "color": [
+        0.48,
+        0.27,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-yellow": {
+      "color": [
+        0.95,
+        0.62,
+        0.08
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "be2-chair-0",
+      "shape": "box",
+      "material": "prop-blue",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.44,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.26,
+        0.04,
+        0.26
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-chair-1",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        -0.21,
+        0.2,
+        -0.21
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-chair-2",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        -0.21,
+        0.2,
+        0.21
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-chair-3",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        0.21,
+        0.2,
+        -0.21
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-chair-4",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        0.21,
+        0.2,
+        0.21
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.04,
+        0.2,
+        0.04
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-chair-5",
+      "shape": "box",
+      "material": "prop-blue",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.71,
+        0.22
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.26,
+        0.23,
+        0.04
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    }
+  ],
+  "audio": null
+}

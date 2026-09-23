@@ -25,10 +25,12 @@ Wrench geometry and character buffers reuse capacity each frame. The first-perso
 
 ## Props
 
-`viewer/props.rs` contains four typed definitions, stable IDs, bounds, room placements and `scene(PropKind)`. `assets/props` contains their standalone JSON scenes. Coordinates are metres, Y-up, origin at the floor. They use existing primitive/material types, so there is no scene-schema change. Crate, barrel, stool and toolbox have conservative collision boxes and work with inspection/wrench ray hits. Disguise selection and prop possession are not implemented.
+`viewer/props.rs` contains four typed definitions, stable IDs, bounds, room placements and `scene(PropKind)`. `assets/props` contains their standalone JSON scenes. Coordinates are metres, Y-up, origin at the floor. They use existing primitive/material types, so there is no scene-schema change. Cereal box, chair, table and apple have conservative collision boxes and work with inspection/wrench ray hits. Disguise selection and prop possession are not implemented.
 
 ## PulseNet next phase
 
 The prior design uses Quinn transport, reliable control streams, input/snapshot datagrams, bounded queues, a 60 Hz authoritative simulation and 20 Hz snapshots. Its source archive was referenced in the earlier conversation but was not available in this workspace; this change does not invent or vendor a substitute.
 
 The adapter should map authenticated PlayerId to HeadlessWorld IDs, validate/decode bounded input, reject duplicate/out-of-order sequences, expire stale movement on disconnect/timeout, run `step()` only on a simulation worker, and encode player-visible snapshots within PulseNet's payload limit. Add authoritative wrench/prop/round rules before enabling public matches. Client prediction, snapshot interpolation/reconciliation and a two-client integration test follow. Keep offline play available without a connection.
+
+Simple-prop revision: tag 3 selects one quad per box face and a 12-by-6 apple sphere. Static directional face colours replace detailed shadow bakes on these props; their shader skips specular highlights. The cereal band is a solid section of the carton, not an overlaid label. New objects have new IDs; earlier JSON props remain under assets/legacy-props with their original IDs. Crystal recolouring is restricted to tag 2, so it cannot tint simple props.

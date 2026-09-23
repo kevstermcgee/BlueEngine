@@ -500,13 +500,13 @@ async fn main() {
                 &room.colliders,
             );
         } else if capture_dir.is_some() && props_capture {
-            controller.position = if frame < 24 {
-                V(2.7, 1.68, 1.4)
-            } else {
-                V(-2.8, 1.68, 3.7)
+            controller.position = match frame / 12 {
+                0 => V(2.7, 1.68, 1.4),
+                1 => V(2.32, 1.30, 2.9),
+                _ => V(1.25, 1.4, 2.3),
             };
-            controller.yaw = if frame < 24 { std::f32::consts::PI } else { 0. };
-            controller.pitch = -0.35;
+            controller.yaw = std::f32::consts::PI;
+            controller.pitch = if frame < 12 { -0.35 } else { -0.25 };
         } else if capture_dir.is_some() {
             match frame / 12 {
                 0 => {}
