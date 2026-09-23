@@ -13,6 +13,8 @@ Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. No in
 | A / Left | Strafe left |
 | D / Right | Strafe right |
 | Mouse | Look in any direction |
+| E or left-click | Use the object under the crosshair |
+| Right-click or Backspace | Dismiss the information card |
 | Hold Shift | Sprint (works with WASD and arrow keys) |
 | Space | Small jump (about 35 cm) |
 | Hold Ctrl or C | Crouch and move slowly |
@@ -35,11 +37,21 @@ A new real-time layer tessellates the evaluated primitives once, bakes static li
 
 The original offline commands remain available in **bin/vesper3d.exe**. See VESPER_README.md and AI_REFERENCE.md for authoring and MP4 export. FFmpeg is needed only for the original video export workflow.
 
-## Future interaction
+## Interactions
 
-`src/viewer/room.rs` separates the scene, collision bounds and semantic entities. Each entity has a stable ID, display label and bounds. `Room::focus` uses the original BVH to find the first visible surface within 4.5 metres; occluded objects do not show a label. The crosshair labels relevant display pieces as you approach.
+`src/viewer/room.rs` separates the scene, collision bounds and semantic entities. Each entity has a stable ID, display label and bounds. `Room::focus` uses the original BVH to find the first visible surface within 4.5 metres; occluded objects do not show a label. The crosshair shows a blue ring and a contextual E / Click prompt when an object is available.
 
-A later version can resolve the focused entity ID into an interaction component and dispatch an action. No pickup, door opening, inventory, or other action is bound in this version. Animated objects will need dynamic meshes and updated collision/focus geometry; the current lighting bake is static.
+Aim at an object within 4.5 metres and press E or left-click once:
+
+- **Desk monitor:** switch its display on or off.
+- **Crystal:** toggle between blue and amber finishes.
+- **Blue notebook:** read a short studio note.
+- **Artwork, robot, lounge, workbench and table:** inspect a short description.
+- **Entrance:** check its status; it remains closed in this room demo.
+
+The same action works with either E or left-click. Holding a button does not repeatedly activate it. Only the nearest visible surface is considered, so you cannot activate objects through walls or furniture. Information cards fade after six active seconds or can be dismissed with right-click or Backspace. Interaction prompts remain visible when H hides the general controls. Paused/menu clicks cannot trigger room actions, and resuming discards the initial click. Object states last for the current session; Reset position only resets the player.
+
+`src/viewer/interaction.rs` owns the typed actions, state and feedback independently of keyboard/mouse input. Future actions can extend this module and assign an Action to a stable entity ID. Monitor/crystal appearances update with shader uniforms without rebuilding the room. Geometry and lighting stay static. Pickups, inventory and opening doors remain future work.
 
 ## Build and checks
 
@@ -54,6 +66,8 @@ cargo build --release --locked
 The default Cargo target is Blue Engine. The library remains named `vesper3d` to preserve the inherited code and tests. `cargo run --release --bin vesper3d -- doctor` runs the offline tool.
 
 For a repeatable render smoke check, run `BlueEngine.exe --capture PATH_TO_EMPTY_FOLDER`. It renders three camera views, writes PNGs and a small timing report, then exits. Existing same-named captures in that explicitly supplied folder are replaced. Measurements include presentation/vsync and are not GPU-only benchmarks.
+
+For repeatable interaction screenshots, use `BlueEngine.exe --capture-interactions PATH_TO_EMPTY_FOLDER`. It captures the monitor on/off, crystal blue/amber, notebook inspection, and pause menu. Same-named files in the supplied directory are replaced.
 
 For repeatable jump/crouch screenshots, use `BlueEngine.exe --capture-motion PATH_TO_EMPTY_FOLDER`. This simulates a jump, a held crouch, and standing again; the report records the captured eye heights. As with the regular capture mode, same-named output files are replaced in the supplied folder.
 

@@ -2,6 +2,14 @@
 
 Verified on Windows x64, September 22, 2026.
 
+## Object interaction update
+
+58 tests pass (44 library, 1 input mapping, 13 CLI); formatting, strict Clippy and the locked release build pass. Five new interaction tests cover E/click equivalence and pause/capture guards, monitor toggling and contextual prompts, crystal state isolation (including the pedestal), out-of-range/occluded/empty targeting, inspection feedback, expiry and dismissal.
+
+The final executable's `--capture-interactions` run produced six rendered views: monitor on, monitor off, blue crystal, amber crystal, notebook information, and pause menu. The actionable prompts, feedback wrapping, visual state changes and menu were inspected. A pedestal tint discovered in the first visual pass was corrected and rechecked. The standard three-view capture also completed cleanly.
+
+The updated Windows app was opened and its pause menu checked; entering with a mouse click and pressing E without a reachable target did not trigger an object action. E/left-click action equivalence is covered by tests; the state-changing visual checks use the scripted application capture path rather than claiming a complete human playthrough of every object.
+
 ## Faster movement and sprint update
 
 Normal walking increases from 2.6 to 3.2 m/s (about 23%). Holding either Shift key now explicitly sprints at 5.6 m/s; release transitions smoothly back to walking. Crouching remains 1.3 m/s and overrides sprint. The HUD and pause menu identify Shift as Sprint.

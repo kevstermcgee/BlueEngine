@@ -1,4 +1,5 @@
 use super::controller::Collider;
+use super::interaction::Action;
 use crate::{
     geometry::{Compiled, World},
     math::V,
@@ -11,6 +12,7 @@ pub struct Entity {
     pub id: &'static str,
     pub label: &'static str,
     pub bounds: Collider,
+    pub action: Action,
 }
 pub struct Room {
     pub compiled: Compiled,
@@ -19,6 +21,27 @@ pub struct Room {
     pub entities: Vec<Entity>,
 }
 impl Room {
+    /// GPU tags change only the selected surfaces; static geometry and shadows stay valid.
+    pub fn render_tags(&self) -> Vec<(Collider, f32)> {
+        vec![
+            (
+                Collider {
+                    min: V(-4.85, 0.98, -2.17),
+                    max: V(-4.79, 1.70, -1.03),
+                },
+                1.,
+            ),
+            (
+                self.entities
+                    .iter()
+                    .find(|e| e.id == "vesper-crystal")
+                    .unwrap()
+                    .bounds
+                    .clone(),
+                2.,
+            ),
+        ]
+    }
     pub fn focus(&self, ray: crate::math::Ray) -> Option<&Entity> {
         let hit = self.world.hit(ray, 4.5, false)?;
         self.entities.iter().find(|e| e.bounds.contains(hit.p))
@@ -69,6 +92,11 @@ impl Builder {
             bounds: Collider {
                 min: p - s,
                 max: p + s,
+            },
+            action: match id {
+                "monitor" => Action::ToggleMonitor,
+                "vesper-crystal" => Action::CycleCrystal,
+                _ => Action::Inspect,
             },
         });
     }
@@ -230,6 +258,12 @@ pub fn build() -> crate::Result<Room> {
         V::ZERO,
     );
     b.entity(
+        "notebook",
+        "Studio notebook",
+        V(2.12, 0.69, 0.75),
+        V(0.33, 0.065, 0.23),
+    );
+    b.entity(
         "table",
         "Reading table",
         V(2.05, 0.5, 0.25),
@@ -246,6 +280,12 @@ pub fn build() -> crate::Result<Room> {
     b.cube("light", V(-4.805, 1.35, -1.65), V(0.006, 0.017, 0.33));
     b.cube("trim", V(-4.8, 1.02, -1.6), V(0.1, 0.18, 0.045));
     b.cube("trim", V(-4.22, 0.91, -1.6), V(0.19, 0.018, 0.43));
+    b.entity(
+        "monitor",
+        "Design terminal",
+        V(-4.84, 1.34, -1.6),
+        V(0.12, 0.42, 0.64),
+    );
     b.entity(
         "workbench",
         "Design workbench",
@@ -266,8 +306,8 @@ pub fn build() -> crate::Result<Room> {
     b.entity(
         "vesper-crystal",
         "Vesper / crystal study",
-        V(-1.65, 1.55, -2.80),
-        V(0.5, 0.8, 0.5),
+        V(-1.65, 1.70, -2.80),
+        V(0.5, 0.65, 0.5),
     );
     // Built-in display shelving and familiar Vesper robot.
     for x in [3.20, 5.5] {

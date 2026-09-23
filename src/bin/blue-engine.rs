@@ -8,6 +8,7 @@ use vesper3d::{
     math::V,
     viewer::{
         controller::{Controller, Movement},
+        interaction::{activation_requested, Interactions},
         mesh, room,
     },
 };
@@ -60,6 +61,8 @@ impl Keys {
                 (KeyCode::LeftControl, 0xA2),
                 (KeyCode::RightControl, 0xA3),
                 (KeyCode::C, 0x43),
+                (KeyCode::E, 0x45),
+                (KeyCode::Backspace, 0x08),
                 (KeyCode::Enter, 0x0D),
                 (KeyCode::Escape, 0x1B),
                 (KeyCode::Tab, 0x09),
@@ -161,6 +164,28 @@ fn menu_scale() -> f32 {
         .min((screen_width() - 24.) / 470.)
         .clamp(0.2, 1.)
 }
+fn wrapped_lines(message: &str, width: f32) -> Vec<String> {
+    let mut lines = vec![];
+    let mut line = String::new();
+    for word in message.split_whitespace() {
+        let candidate = if line.is_empty() {
+            word.into()
+        } else {
+            format!("{line} {word}")
+        };
+        let size = FONT.with(|f| measure_text(&candidate, f.borrow().as_ref(), 18, 1.).width);
+        if size > width && !line.is_empty() {
+            lines.push(line);
+            line = word.into();
+        } else {
+            line = candidate;
+        }
+    }
+    if !line.is_empty() {
+        lines.push(line);
+    }
+    lines
+}
 fn menu_mouse() -> Vec2 {
     Vec2::from(mouse_position()) / menu_scale()
 }
@@ -230,7 +255,7 @@ async fn main() {
             return;
         }
     };
-    let meshes = mesh::bake(&room.world);
+    let meshes = mesh::bake_tagged(&room.world, &room.render_tags());
     let material = match mesh::material() {
         Ok(m) => m,
         Err(e) => {
@@ -242,9 +267,12 @@ async fn main() {
     let triangles: usize = meshes.iter().map(|m| m.indices.len() / 3).sum();
     let args: Vec<String> = std::env::args().collect();
     let motion_capture = args.iter().any(|a| a == "--capture-motion");
+    let interaction_capture = args.iter().any(|a| a == "--capture-interactions");
     let capture_dir = args
         .windows(2)
-        .find(|a| a[0] == "--capture" || a[0] == "--capture-motion")
+        .find(|a| {
+            a[0] == "--capture" || a[0] == "--capture-motion" || a[0] == "--capture-interactions"
+        })
         .map(|a| std::path::PathBuf::from(&a[1]));
     if let Some(dir) = &capture_dir {
         if std::fs::create_dir_all(dir).is_err() {
@@ -253,6 +281,7 @@ async fn main() {
         }
     }
     let mut controller = Controller::default();
+    let mut interactions = Interactions::default();
     let mut keys = Keys::default();
     let subscriber = register_input_subscriber();
     let mut active = false;
@@ -326,8 +355,44 @@ async fn main() {
                 get_frame_time(),
                 &room.colliders,
             );
+            interactions.tick(get_frame_time());
+            if keys.pressed(KeyCode::Backspace) || is_mouse_button_pressed(MouseButton::Right) {
+                interactions.dismiss();
+            }
+            if activation_requested(
+                active,
+                skip_look == 0,
+                keys.pressed(KeyCode::E),
+                is_mouse_button_pressed(MouseButton::Left),
+            ) {
+                interactions.activate(&room, controller.ray());
+            }
         }
-        if capture_dir.is_some() && motion_capture {
+        if capture_dir.is_some() && interaction_capture {
+            match frame / 12 {
+                0 | 1 => {
+                    controller.position = V(-3.3, 1.34, -1.6);
+                    controller.yaw = -std::f32::consts::FRAC_PI_2;
+                    controller.pitch = 0.;
+                }
+                2 | 3 => {
+                    controller.position = V(-1.65, 1.55, 0.);
+                    controller.yaw = 0.;
+                    controller.pitch = 0.;
+                }
+                _ => {
+                    controller.position = V(2.12, 1.68, 1.6);
+                    controller.yaw = 0.;
+                    controller.pitch = -0.855;
+                }
+            }
+            if [12, 36, 48].contains(&frame) {
+                interactions.activate(&room, controller.ray());
+            }
+            if frame == 24 {
+                interactions.dismiss();
+            }
+        } else if capture_dir.is_some() && motion_capture {
             controller.update(
                 Movement {
                     jump: frame == 1,
@@ -364,6 +429,13 @@ async fn main() {
             ..Default::default()
         });
         material.set_uniform("Eye", mesh::vec(controller.position));
+        material.set_uniform(
+            "ObjectStates",
+            vec2(
+                if interactions.monitor_on { 1. } else { 0. },
+                if interactions.crystal_amber { 1. } else { 0. },
+            ),
+        );
         gl_use_material(&material);
         for m in &meshes {
             draw_mesh(m);
@@ -379,28 +451,62 @@ async fn main() {
             draw_circle(sw * 0.5, sh * 0.5, 2., Color::new(0.92, 0.96, 1., 0.85));
             draw_rectangle(
                 24.,
-                sh - 80.,
+                sh - 103.,
                 sw.min(780.) - 48.,
-                56.,
+                79.,
                 Color::new(0.025, 0.045, 0.08, 0.8),
             );
             text(
                 "WASD / Arrows   Move     Mouse   Look     Shift   Sprint",
                 38.,
-                sh - 57.,
+                sh - 80.,
                 18.,
                 INK,
             );
             text(
                 "Space   Small jump     Hold Ctrl / C   Crouch     Esc   Pause",
                 38.,
+                sh - 57.,
+                18.,
+                INK,
+            );
+            text(
+                "E / Left-click   Interact     Right-click / Backspace   Dismiss info",
+                38.,
                 sh - 34.,
                 18.,
                 INK,
             );
+        }
+        if active || capture_dir.is_some() {
+            if let Some(info) = &interactions.feedback {
+                let width = 440_f32.min(sw - 48.);
+                let x = sw - width - 24.;
+                let y = 94.;
+                let lines = wrapped_lines(info.description, width - 36.);
+                let height = 84. + lines.len() as f32 * 24.;
+                draw_rectangle(x, y, width, height, Color::new(0.025, 0.045, 0.08, 0.94));
+                draw_rectangle(x, y, 3., height, BLUE);
+                text(info.title, x + 18., y + 31., 22., INK);
+                for (i, line) in lines.iter().enumerate() {
+                    text(line, x + 18., y + 60. + i as f32 * 24., 18., INK);
+                }
+                text(
+                    "Right-click / Backspace to dismiss",
+                    x + 18.,
+                    y + height - 15.,
+                    16.,
+                    MUTED,
+                );
+            }
             if let Some(entity) = room.focus(controller.ray()) {
-                let width =
-                    FONT.with(|f| measure_text(entity.label, f.borrow().as_ref(), 20, 1.).width);
+                draw_circle_lines(sw * 0.5, sh * 0.5, 7., 1.5, BLUE);
+                let label = format!(
+                    "{}  |  E / Click: {}",
+                    entity.label,
+                    interactions.prompt(entity.action)
+                );
+                let width = FONT.with(|f| measure_text(&label, f.borrow().as_ref(), 18, 1.).width);
                 draw_rectangle(
                     sw * 0.5 - width * 0.5 - 16.,
                     sh * 0.5 + 24.,
@@ -408,16 +514,10 @@ async fn main() {
                     36.,
                     Color::new(0.025, 0.045, 0.08, 0.84),
                 );
-                text(
-                    entity.label,
-                    sw * 0.5 - width * 0.5,
-                    sh * 0.5 + 48.,
-                    20.,
-                    INK,
-                );
+                text(&label, sw * 0.5 - width * 0.5, sh * 0.5 + 48., 18., INK);
             }
         }
-        if !active && capture_dir.is_none() {
+        if !active && (capture_dir.is_none() || (interaction_capture && frame >= 60)) {
             let scale = menu_scale();
             let sw = sw / scale;
             let sh = sh / scale;
@@ -463,19 +563,21 @@ async fn main() {
                 capture(true);
                 skip_look = 3;
             }
-            text("WASD or arrow keys", left, y + 246., 21., INK);
-            text("Walk in any direction", left + 210., y + 246., 18., MUTED);
-            text("Mouse", left, y + 274., 21., INK);
-            text("Look around", left + 210., y + 274., 18., MUTED);
-            text("Space / Hold Ctrl or C", left, y + 302., 19., INK);
-            text("Small jump / Crouch", left + 210., y + 302., 18., MUTED);
-            text("Shift / Esc", left, y + 330., 21., INK);
-            text("Sprint / Pause", left + 210., y + 330., 18., MUTED);
+            text("WASD or arrow keys", left, y + 242., 21., INK);
+            text("Walk in any direction", left + 210., y + 242., 18., MUTED);
+            text("Mouse", left, y + 266., 21., INK);
+            text("Look around", left + 210., y + 266., 18., MUTED);
+            text("Space / Hold Ctrl or C", left, y + 290., 19., INK);
+            text("Small jump / Crouch", left + 210., y + 290., 18., MUTED);
+            text("Shift / Esc", left, y + 314., 21., INK);
+            text("Sprint / Pause", left + 210., y + 314., 18., MUTED);
+            text("E / Left-click", left, y + 338., 21., INK);
+            text("Use the aimed object", left + 210., y + 338., 18., MUTED);
             draw_line(
                 left,
-                y + 348.,
+                y + 354.,
                 left + width,
-                y + 348.,
+                y + 354.,
                 1.,
                 Color::new(0.16, 0.22, 0.30, 1.),
             );
@@ -588,7 +690,15 @@ async fn main() {
             if frame > 3 {
                 samples.push(get_frame_time());
             }
-            if frame == if motion_capture { 85 } else { 35 } {
+            if frame
+                == if motion_capture {
+                    85
+                } else if interaction_capture {
+                    71
+                } else {
+                    35
+                }
+            {
                 let mean = samples.iter().sum::<f32>() / samples.len() as f32;
                 let report=format!("startup_seconds={setup_seconds:.3}\ntriangles={triangles}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\n",meshes.len(),mean*1000.);
                 let _ = std::fs::write(dir.join("render-report.txt"), report);

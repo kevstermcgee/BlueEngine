@@ -10,12 +10,20 @@ pub fn vec(v: V) -> Vec3 {
     vec3(v.0, v.1, v.2)
 }
 pub fn bake(world: &World) -> Vec<Mesh> {
+    bake_tagged(world, &[])
+}
+pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -> Vec<Mesh> {
     let mut meshes = vec![Mesh {
         vertices: vec![],
         indices: vec![],
         texture: None,
     }];
     for instance in &world.instances {
+        let center = (instance.bounds.lo + instance.bounds.hi) * 0.5;
+        let tag = tags
+            .iter()
+            .find(|(b, _)| b.contains(center))
+            .map_or(0., |(_, tag)| *tag);
         let transform = instance.inverse.inverse();
         let mut triangle = |positions: [V; 3], normals: [V; 3]| {
             if meshes.last().unwrap().vertices.len() + 3 > 9000 {
@@ -30,7 +38,7 @@ pub fn bake(world: &World) -> Vec<Mesh> {
                 let p = transform.point(positions[k]);
                 let n = instance.inverse.normal_from_inverse(normals[k]);
                 let c = shade(world, instance, p, n);
-                let mut vertex = Vertex::new2(vec(p), Vec2::ZERO, Color::new(c.0, c.1, c.2, 1.));
+                let mut vertex = Vertex::new2(vec(p), vec2(tag, 0.), Color::new(c.0, c.1, c.2, 1.));
                 vertex.normal = vec4(n.0, n.1, n.2, instance.material.metallic);
                 mesh.indices.push(mesh.vertices.len() as u16);
                 mesh.vertices.push(vertex);
@@ -179,7 +187,10 @@ pub fn material() -> Result<macroquad::material::Material, macroquad::Error> {
                 cull_face: miniquad::CullFace::Nothing,
                 ..Default::default()
             },
-            uniforms: vec![UniformDesc::new("Eye", UniformType::Float3)],
+            uniforms: vec![
+                UniformDesc::new("Eye", UniformType::Float3),
+                UniformDesc::new("ObjectStates", UniformType::Float2),
+            ],
             ..Default::default()
         },
     )
@@ -195,7 +206,8 @@ varying lowp vec4 vcolor;
 varying mediump vec3 vnormal;
 varying mediump vec3 vpos;
 varying lowp float metal;
-void main(){gl_Position=Projection*Model*vec4(position,1.0);vcolor=color0/255.0;vnormal=normal.xyz;vpos=position;metal=normal.w;}
+varying lowp float tag;
+void main(){gl_Position=Projection*Model*vec4(position,1.0);vcolor=color0/255.0;vnormal=normal.xyz;vpos=position;metal=normal.w;tag=texcoord.x;}
 "#;
 const FRAGMENT: &str = r#"#version 100
 precision mediump float;
@@ -204,11 +216,15 @@ varying mediump vec3 vnormal;
 varying mediump vec3 vpos;
 varying lowp float metal;
 uniform vec3 Eye;
+uniform vec2 ObjectStates;
+varying lowp float tag;
 void main(){
  vec3 n=normalize(vnormal);vec3 v=normalize(Eye-vpos);
  vec3 h=normalize(normalize(vec3(-3.0,5.0,2.0)-vpos)+v);
  float spec=pow(max(dot(n,h),0.0),48.0)*metal*0.22;
  vec3 c=vcolor.rgb+vec3(spec);
+ if(tag>0.5 && tag<1.5 && ObjectStates.x<0.5){c=vec3(0.015,0.024,0.035)+vec3(spec*0.2);}
+ if(tag>1.5 && ObjectStates.y>0.5){float shade=max(vcolor.b,0.04);c=vec3(1.0,0.60,0.12)*shade+vec3(spec);}
  float fog=1.0-exp(-length(Eye-vpos)*0.008);
  gl_FragColor=vec4(mix(c,vec3(0.18,0.24,0.30),fog),1.0);
 }
