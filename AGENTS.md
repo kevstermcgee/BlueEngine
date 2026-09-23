@@ -2,7 +2,7 @@
 
 Read README.md and BLUE_ARCHITECTURE.md for the viewer. Read AI_REFERENCE.md for Vesper scenes and ARCHITECTURE.md before changing the inherited offline renderer.
 
-Keep the engine and authoring API native Rust. Keep player movement independent from the frame rate and from rendering. Preserve the library's unsafe-code prohibition; Windows input/focus queries belong only in the executable.
+Keep the engine and authoring API native Rust. Keep player movement independent from the frame rate and from rendering. Preserve the library's unsafe-code prohibition; Windows input/focus queries and own-window lifecycle calls belong only in the executable.
 
 Preserve completed outputs on failure. Never shell-interpolate scene values. Keep semantic entity IDs stable for future interaction components.
 

@@ -1,4 +1,5 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+mod platform_window;
 use macroquad::{
     input::utils::{register_input_subscriber, repeat_all_miniquad_input},
     prelude::*,
@@ -17,8 +18,9 @@ fn config() -> macroquad::conf::Conf {
     macroquad::conf::Conf {
         miniquad_conf: Conf {
             window_title: "Blue Engine".into(),
-            window_width: 1440,
-            window_height: 900,
+            window_width: 960,
+            window_height: 600,
+            fullscreen: false,
             high_dpi: true,
             sample_count: 4,
             window_resizable: true,
@@ -236,6 +238,9 @@ fn slider(label: &str, x: f32, y: f32, w: f32, value: &mut f32, min: f32, max: f
 
 #[macroquad::main(config)]
 async fn main() {
+    platform_window::maximize_on_launch();
+    // Process the queued maximize/resize before preparing or displaying the room.
+    next_frame().await;
     #[cfg(windows)]
     if let Some(windows) = std::env::var_os("WINDIR") {
         let path = std::path::PathBuf::from(windows).join("Fonts/segoeui.ttf");
@@ -700,7 +705,7 @@ async fn main() {
                 }
             {
                 let mean = samples.iter().sum::<f32>() / samples.len() as f32;
-                let report=format!("startup_seconds={setup_seconds:.3}\ntriangles={triangles}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\n",meshes.len(),mean*1000.);
+                let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\n",platform_window::report(),screen_width(),screen_height(),meshes.len(),mean*1000.);
                 let _ = std::fs::write(dir.join("render-report.txt"), report);
                 break;
             }

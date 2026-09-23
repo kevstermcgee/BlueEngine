@@ -2,6 +2,12 @@
 
 Verified on Windows x64, September 22, 2026.
 
+## Maximized window startup update
+
+All 58 tests, formatting, strict Clippy and the locked release build passed. The final executable's capture reported `maximized=true`, `caption=true`, and a 1024x697 client viewport on the available 1024x768 test display. A visible desktop launch was inspected: the title bar shows the Restore control and the app fills the work area with a centered menu. The desktop shortcut was updated and reread to verify WindowStyle=3 and its unchanged engine target.
+
+The app uses Windows' own maximization of its current monitor, rather than hard-coded full-screen dimensions or manual centering. Physical multi-monitor and mixed-DPI hardware configurations were not available for a separate test; no exhaustive multi-monitor test is claimed. F11 remains opt-in fullscreen. Changes apply to Windows startup; no cross-platform maximized-startup claim is made.
+
 ## Object interaction update
 
 58 tests pass (44 library, 1 input mapping, 13 CLI); formatting, strict Clippy and the locked release build pass. Five new interaction tests cover E/click equivalence and pause/capture guards, monitor toggling and contextual prompts, crystal state isolation (including the pedestal), out-of-range/occluded/empty targeting, inspection feedback, expiry and dismissal.

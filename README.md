@@ -4,7 +4,7 @@ A native first-person room viewer in Rust, built from the Vesper3D animation eng
 
 ## Run
 
-Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. No installation, internet connection, server, Rust toolchain, or FFmpeg is needed for the viewer. The room and shaders are compiled into the executable. Windows x64 with an OpenGL-capable graphics driver is the tested platform.
+Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. On Windows, every launch opens maximized within the current monitor's work area, keeping the title bar and taskbar available. The view and menu adapt to the resulting client size; F11 fullscreen remains an optional manual toggle. No installation, internet connection, server, Rust toolchain, or FFmpeg is needed for the viewer. The room and shaders are compiled into the executable. Windows x64 with an OpenGL-capable graphics driver is the tested platform.
 
 | Control | Action |
 |---|---|
