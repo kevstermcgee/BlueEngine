@@ -29,6 +29,10 @@ client = ["dep:macroquad", "dep:windows-sys"]
 name = "be2-headless"
 path = "src/bin/be2-headless.rs"
 
+[[bin]]
+name = "be2-tools"
+path = "src/bin/be2-tools.rs"
+
 [dependencies]
 serde = { version = "=1.0.219", features = ["derive"] }
 serde_json = "=1.0.140"

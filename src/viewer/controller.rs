@@ -21,7 +21,8 @@ pub struct Movement {
     pub crouch: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Collider {
     pub min: V,
     pub max: V,

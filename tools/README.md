@@ -1,0 +1,114 @@
+# BE2 agent editing toolkit
+
+Start here after AGENTS.md and BE2_ARCHITECTURE.md. This toolkit lives with the repository, uses no AI service, and works for humans, Codex or other agents. The native editor is Rust; the workflow runner uses Python 3.10+ and only its standard library. No plugin installation is needed.
+
+## First five minutes
+
+Run from the repository root:
+
+```sh
+python tools/be2.py doctor
+python tools/be2.py features
+python tools/be2.py map help
+```
+
+Read tools/FEATURES.json to locate a feature's implementation, dependencies and checks. Inspect `git status --short` before edits; preserve existing work. `doctor` reports tools without installing or changing anything. Rust 1.87+ is required, along with rustfmt and Clippy. FFmpeg is needed for the full offline test suite. Linux graphical builds require ALSA development headers (`libasound2-dev`); this revision was tested on Windows only.
+
+The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headless and tooling release outputs so packages cannot accidentally include a graphics-enabled headless executable. Missing dependencies and failed checks return nonzero; commands do not continue past failures. Check logs go in ignored `.be2-work/check-*/`.
+
+## Command inventory
+
+| Command | Purpose |
+|---|---|
+| `python tools/be2.py doctor` | Read-only local toolchain and Git report |
+| `python tools/be2.py features` | Machine-readable feature/file/check index |
+| `python tools/be2.py check` | Formatting, both test configurations, both Clippy configurations; persistent logs and JSON result |
+| `python tools/be2.py build client` | Locked release client and offline renderer |
+| `python tools/be2.py build headless` | Locked release server simulation with default features disabled |
+| `python tools/be2.py build tools` | Native editor without graphics/audio |
+| `python tools/be2.py build all` | All three isolated builds |
+| `python tools/be2.py capture NEW_DIR --map MAP.json` | Twelve house camera captures and rendered menu; checks completion |
+| `python tools/be2.py package NEW.zip` | Builds a source + binary package with SHA256 manifest and Git provenance |
+| `python tools/be2.py map ...` | Builds and invokes `be2-tools` with the arguments below |
+
+`package` includes current Git-tracked working files plus newly built binaries. Add intended new source files to Git first. It records dirty status; it does not imply tests ran or commit your edits. Run `check` before packaging. It never updates the user's desktop shortcut or installed binaries automatically.
+
+A distributed Windows copy also includes `bin/be2-tools.exe`, which needs neither Python nor Cargo. `be2-tools help` lists the native commands. Native operations return JSON reports/errors and nonzero exit codes on failure. `help` is plain text; inspect prints a full JSON document. Export commands write files.
+
+## A complete map-edit session
+
+Use a fresh directory (create `edits` first). These commands do not modify the built-in house:
+
+```sh
+python tools/be2.py map export-house edits/house.json
+python tools/be2.py map audit edits/house.json
+python tools/be2.py map floorplan edits/house.json edits/house.svg
+python tools/be2.py map apply edits/house.json tools/examples/add-garden-props.json edits/garden.json
+python tools/be2.py map diff edits/house.json edits/garden.json
+python tools/be2.py map route edits/garden.json tools/examples/upstairs.route.json
+python tools/be2.py map route edits/garden.json tools/examples/garden.route.json
+python tools/be2.py map ray edits/garden.json 0,1.68,-6.3 4.4,0.98,-11.4
+python tools/be2.py capture edits/captures --map edits/garden.json
+```
+
+Run a packaged map with `bin/BE2.exe --map edits/garden.json` or `bin/be2-headless.exe --map edits/garden.json --ticks 600`. Source runs can use `cargo run --locked --bin be2 -- --map edits/garden.json`. Without `--map`, the procedural Rust house remains the source of truth. An edited JSON file becomes active only when explicitly selected. Keep finished maps in an appropriate versioned assets/maps directory if adopting them; do not assume an export changes the default.
+
+`export-house` freezes the current procedural house, all its collision proxies and semantic entities into a versioned document. A snapshot's IDs stay stable while edited. Regenerating from changed Rust code can renumber `room-N` and `collider-N`; rebase patches against a new export deliberately. Newly added objects use your explicit IDs.
+
+## Find, add, move and remove things
+
+- `inspect MAP` dumps all visual nodes, materials, colliders and entities.
+- `near MAP X,Y,Z RADIUS` returns IDs whose bounds overlap a sphere around that point. This is a candidate selection, not proof all returned parts belong to one object.
+- `select MAP ID` selects exact IDs and their slash-prefixed children. It is useful for tool-added multi-part props, such as `garden-apple/0` and `/1`.
+- `catalog` lists reusable prop kinds and supported operations.
+- `export-scene MAP OUT` exports only the visual Vesper scene for the offline renderer. Collision/entities are intentionally absent from that format.
+- `diff BEFORE AFTER` lists added/removed/changed nodes, colliders, entities and materials by ID.
+
+Patch files are JSON arrays. Every field is explicit and unknown fields are rejected. `tools/patch.schema.json` describes their structure. Examples:
+
+```json
+[
+  {"op":"add_box","id":"cover-cabinet","label":"Cabinet","center":[2,1,-8],"half_extents":[0.6,1,0.4],"color":[0.45,0.25,0.12]},
+  {"op":"add_prop","id":"spare-chair","label":"Chair","kind":"chair","origin":[-2,0,-9]}
+]
+```
+
+`add_box` creates a matte box, matching collision proxy and inspect entity. Sizes are **half extents**, positions are metres, Y is up, RGB values are linear 0..1. `add_prop` reuses cereal, chair, table or apple geometry; origin is the bottom of the prop. Both reject occupied IDs. Use `select` to enumerate the resulting components.
+
+```json
+[
+  {"op":"translate","nodes":["cover-cabinet"],"colliders":["cover-cabinet"],"entities":["cover-cabinet"],"delta":[1,0,0]},
+  {"op":"remove","nodes":["spare-chair/0","spare-chair/1","spare-chair/2","spare-chair/3","spare-chair/4","spare-chair/5"],"colliders":["spare-chair"],"entities":["spare-chair"]}
+]
+```
+
+Use the actual lists returned by `select`; do not assume a future prop still has six nodes. For built-in geometry, visual, collision and semantic IDs are independent: use `near`, `inspect` and the floor plan to find all relevant pieces. Removing only a visual node leaves its collision proxy in place. Explicit lists permit legitimate visual-only details and multiple collision parts, so the editor does not guess ownership or silently delete nearby objects.
+
+`apply` clones the source document, applies the complete batch, validates it and compiles the resulting geometry before creating the destination. A failed operation saves nothing and leaves the source untouched. **All output paths must be new**; existing files are never overwritten. Roll back by returning to the previous document or reversing the patch; there is no hidden undo database. Empty/unknown selections are errors. Unused materials are retained to avoid accidental shared-material removal.
+
+## Validation and its limits
+
+Map schema v1 is for portable, static, matte primitive maps. It accepts unparented box/sphere/cylinder/cone nodes with fixed positive scales; no animation, repeats, imported meshes, external audio or custom monitor/crystal actions. The legacy studio stays available via `--studio` and is not exported by this schema. Runtime entity text is owned, so loading maps does not leak strings or need unsafe code.
+
+`audit` validates schema/version/IDs/transforms/bounds, compiles the map, verifies default spawn clearance, reports counts and flags exact duplicate collision boxes. Duplicate boxes are advisory (the inherited fridge has one); overlap alone does not mean an error. It cannot prove the absence of every visual gap, floating object, trapped region or gameplay imbalance.
+
+`route` uses the real controller at 60 Hz, starting at the normal spawn. A route is a JSON array of `{x,z,feet,crouch?}`. Each straight waypoint leg has a 60-second simulation budget. It is a reachability regression, **not a pathfinder**: insert waypoints around obstacles. It returns failure at the first blocked waypoint. The supplied upstairs and garden routes exercise important house circulation.
+
+`ray` tests actual render geometry between two points, not just physics proxies. It reports the first blocking surface and node ID. Use it for line of sight and cover checks. A clear ray does not imply a player can fit through a gap.
+
+`floorplan` emits a lightweight SVG showing collision slices at 0.6 m and 3.8 m. Hover boxes for IDs; entity labels identify landmarks. The current view is sized for the house plot and the two current floor heights; it is not an automatic floor-discovery system. Tall/low objects may appear only in one slice. Inspect actual captures after map changes.
+
+`capture` uses the current house camera tour. A future school/office/store will need its own capture positions in the client. Inspect PNGs and the menu; successful file generation is not visual approval. Hardware input, audio audibility and multiplayer balancing still require appropriate playtesting.
+
+## Code feature workflow
+
+For gameplay, graphics, audio, networking or new reusable prop types, use `FEATURES.json` to find the relevant source. The JSON map editor does not rewrite Rust or remove engine dependencies.
+
+1. Identify shared simulation versus optional client code before changing a feature.
+2. Make a narrow source change and preserve existing semantic IDs and feature boundaries.
+3. Run focused tests for that behavior. Run the required complete `check` suite before delivery.
+4. For visuals, capture and inspect the changed area and menu. For controls, exercise both key layouts, cursor capture and camera modes.
+5. Update this guide and the feature index when entry points or contracts change. Record tested platforms and remaining limits in VALIDATION.md.
+6. Build and package. Keep useful source, routes and patches tracked; keep scratch exports and logs out of the final asset set.
+
+To remove a feature, inspect all references with `rg`, remove its runtime path and assets intentionally, then update callers, tests, feature flags and documentation together. Never remove a dependency solely because it appears unused in one binary: the offline renderer and headless build share this crate. For PulseNet, preserve the rendering-free authoritative simulation boundary.

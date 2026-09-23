@@ -1,3 +1,17 @@
+# Agent authoring toolkit — 2026-09-23
+
+Added a rendering-free be2-tools executable and tools/be2.py workflow entry point. Both the graphical client and headless simulation load validated static map documents through --map. Default play still uses the procedural house; demonstration edits do not modify it. Runtime entity/name strings are owned rather than leaked static allocations.
+
+82 default tests and 59 no-default-feature tests pass, including five authoring integration tests covering map round-trip/build, synchronized added components, move/removal, invalid versions/fields/IDs, failure preservation, exclusive file creation, successful CLI patches, spatial selection, controller routes and custom-map headless execution. Formatting and both all-target Clippy configurations pass with warnings denied. The workflow runner's check command completed and saved individual logs plus a JSON report.
+
+Built client/offline, headless and tools releases in feature-isolated target directories. Exercised doctor, feature index, native help/catalog, export, audit, apply, diff, select, near, ray, floorplan and route commands. Exported the house, applied the sample planter/apple patch, and completed upstairs and garden controller routes. A sightline query hit the expected garden screen. Audit reports the inherited duplicate fridge collision proxy as advisory rather than silently modifying it.
+
+The edited document loaded in the headless runner for 600 ticks and the graphical client for twelve capture views. Inspected exterior, added planter/apple and actual menu. The sample edit rendered 10,092 triangles in four batches. No new graphic asset or gameplay feature was added to the default house. Capture automation completed; the generated file set and report were checked. Native input and physical audio were not retested because their handling did not change.
+
+Limits: map v1 covers static matte primitive scenes and inspect actions. Original generated component IDs are stable within a snapshot, not across regenerated exports from modified Rust. Visual/collision/entity components have explicit independent selections; ownership is not inferred. Routes are waypoint regressions, not pathfinding; the floor-plan slices and capture tour target the current house. Windows x64 is locally verified; Linux runtime is not. Packaging uses tracked working files, reports dirty status, and includes a SHA256 manifest; running it does not substitute for tests.
+
+---
+
 # House cleanup and hiding cover — 2026-09-23
 
 Fixed open roof gables, gaps above upstairs walls, incomplete doorway headers, unsupported stair posts and headboard collision coverage. The bathroom now uses recessed tub/basin shapes and a recognizable toilet; the wardrobe and new cabinets have doors/handles. The tub base and rim abut without coplanar overlap.

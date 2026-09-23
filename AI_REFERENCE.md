@@ -32,3 +32,9 @@ Other commands: frame scene.json still.png --time 2; bench scene.json --time 2; 
 Limits: scene JSON 8 MiB, 4096 nodes, 16 parent levels, 16 lights, 1024 materials, 4096 keys/track, 200000 expanded primitives, OBJ 32 MiB/100000 triangles. Even image dimensions 16..3840, up to 8294400 pixels. 1..120 fps, duration .01..3600 sec. Use draft contact sheets before expensive high-resolution renders.
 
 BE2 reusable props: viewer::props::scene(PropKind) creates a standalone scene. PropKind is CerealBox, Chair, Table or Apple. Origin is floor-level, Y-up. Standalone JSON assets are in assets/props. No changes to the version-1 scene contract.
+
+## BE2 editable maps (separate document contract)
+
+The graphical and headless BE2 runtimes accept `--map FILE`. This is a versioned map document with `schema_version: 1`, `name`, `scene`, named `colliders`, and `entities`; it is not a raw Vesper scene. `scene` uses the inherited schema but map v1 restricts it to static unparented box/sphere/cylinder/cone nodes, fixed positive transforms, inspect-only entities, no repeats, imported meshes or external audio. Colliders contain min/max vectors. Entity fields are id, label, bounds, action (`inspect`). Spawn remains the existing default controller spawn.
+
+Use `be2-tools export-house` to obtain a valid example and `apply` for checked transactions. The full workflow, commands, constraints and output preservation semantics are in tools/README.md; patch structure is in tools/patch.schema.json. `export-scene` converts only visual geometry back to a raw Vesper scene for the offline renderer. Runtime names/labels are now owned strings, so custom maps do not leak static allocations. No changes were made to the inherited scene JSON schema.

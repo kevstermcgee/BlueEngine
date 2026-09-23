@@ -8,14 +8,16 @@ use crate::{
 use std::path::Path;
 
 /// Stable IDs and bounds are the attachment points for future interaction components.
+#[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Entity {
-    pub id: &'static str,
-    pub label: &'static str,
+    pub id: String,
+    pub label: String,
     pub bounds: Collider,
     pub action: Action,
 }
 pub struct Room {
-    pub name: &'static str,
+    pub name: String,
     pub simple_geometry: bool,
     pub compiled: Compiled,
     pub world: World,
@@ -28,8 +30,8 @@ impl Room {
         if self.simple_geometry {
             return vec![(
                 Collider {
-                    min: V(-100., -10., -100.),
-                    max: V(100., 100., 100.),
+                    min: V(-10000., -10000., -10000.),
+                    max: V(10000., 10000., 10000.),
                 },
                 3.,
             )];
@@ -105,8 +107,8 @@ impl Builder {
     }
     pub(super) fn entity(&mut self, id: &'static str, label: &'static str, p: V, s: V) {
         self.entities.push(Entity {
-            id,
-            label,
+            id: id.into(),
+            label: label.into(),
             bounds: Collider {
                 min: p - s,
                 max: p + s,
@@ -406,7 +408,7 @@ pub fn build() -> crate::Result<Room> {
     let compiled = Compiled::new(b.scene, Path::new("."))?;
     let world = compiled.at(0.);
     Ok(Room {
-        name: "Studio",
+        name: "Studio".into(),
         simple_geometry: false,
         compiled,
         world,
@@ -441,7 +443,7 @@ mod tests {
     #[test]
     fn stable_entity_ids_are_unique() {
         let r = build().unwrap();
-        let ids: std::collections::HashSet<_> = r.entities.iter().map(|e| e.id).collect();
+        let ids: std::collections::HashSet<_> = r.entities.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(ids.len(), r.entities.len());
     }
 }

@@ -40,3 +40,9 @@ Simple-prop revision: tag 3 selects one quad per box face and a 12-by-6 apple sp
 MapId selects House by default for both client and HeadlessWorld, with Studio preserved for regression work. House instances use the matte low-poly tag throughout. The controller can step onto obstacles up to 22 cm while grounded if standing clearance is available; the staircase uses 10 cm risers. Automated routes cover each upstairs room and the backyard.
 
 The optional client feature includes Macroquad audio. ImpactAudio embeds the original short WAV and plays once when the wrench's confirmed hit count changes. No sound is played for a miss; playback is quiet and non-looping. Audio initialization failure leaves the client usable without sound. No audio types or dependencies enter the headless build. Linux client builds require ALSA development libraries; CI installs them.
+
+## Agent authoring boundary
+
+viewer/authoring.rs owns the strict MapDocument v1 contract, static validation, runtime construction and transactional edits. It depends only on the existing scene/simulation modules and Serde. be2-tools supplies JSON CLI inspection, diagnostics, patches and exports with exclusive output creation. Client --map and headless --map share the same loader. The ordinary built-in house remains the default. Entity IDs, labels and room names now use owned String values to support repeated map loading without leaked allocations.
+
+tools/be2.py orchestrates tools, checks, isolated release builds, bounded captures and packages through argument arrays without shell evaluation. tools/FEATURES.json and tools/README.md are the discovery entry points for agents. New gameplay subsystems remain Rust code changes; authoring patches do not rewrite code or dependencies.

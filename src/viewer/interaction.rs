@@ -2,7 +2,8 @@
 use super::room::Room;
 use crate::math::Ray;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum Action {
     ToggleMonitor,
     CycleCrystal,
@@ -11,7 +12,7 @@ pub enum Action {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Feedback {
-    pub title: &'static str,
+    pub title: String,
     pub description: &'static str,
 }
 
@@ -86,7 +87,7 @@ impl Interactions {
                     "Blue finish selected. Use again for amber."
                 }
             }
-            Action::Inspect => match entity.id {
+            Action::Inspect => match entity.id.as_str() {
                 "composition-01" => "Composition / 01. A study in blue, brass, and balance.",
                 "notebook" => "Studio notes: explore, observe, and make something new.",
                 "vesper-robot" => "Little explorer. A familiar face from the Vesper3D engine.",
@@ -98,7 +99,7 @@ impl Interactions {
             },
         };
         self.feedback = Some(Feedback {
-            title: entity.label,
+            title: entity.label.clone(),
             description,
         });
         self.remaining = 6.;

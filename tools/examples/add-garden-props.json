@@ -1,0 +1,4 @@
+[
+  {"op":"add_box","id":"garden-planter","label":"Garden planter","center":[-1.8,0.4,-11.2],"half_extents":[0.6,0.4,0.4],"color":[0.45,0.25,0.12]},
+  {"op":"add_prop","id":"garden-apple","label":"Apple","kind":"apple","origin":[-1.8,0.8,-11.2]}
+]

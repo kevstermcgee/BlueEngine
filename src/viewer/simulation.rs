@@ -60,11 +60,16 @@ pub struct HeadlessWorld {
 }
 impl HeadlessWorld {
     pub fn new() -> crate::Result<Self> {
-        Ok(Self {
-            room: super::maps::build(super::maps::MapId::House)?,
+        Ok(Self::with_room(super::maps::build(
+            super::maps::MapId::House,
+        )?))
+    }
+    pub fn with_room(room: Room) -> Self {
+        Self {
+            room,
             players: BTreeMap::new(),
             tick: 0,
-        })
+        }
     }
     pub fn join(&mut self, id: u64) -> bool {
         if self.players.len() >= 8 || self.players.contains_key(&id) {

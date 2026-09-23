@@ -72,3 +72,9 @@ See VALIDATION.md for measured results and limitations; BE2_ARCHITECTURE.md for 
 ## Next: Prop Hunt and PulseNet
 
 This release improves the engine and adds props. It does not yet implement online multiplayer, prop disguises, hunters/hiders, rounds or scoring. The next phase connects the discussed PulseNet utility to the headless world, adds authoritative game rules, and validates one server with two clients. Offline play remains available.
+
+## Agent editing toolkit
+
+Start with `python tools/be2.py doctor`, then `python tools/be2.py map help`. The repository includes a native headless map editor, JSON edit transactions, spatial queries, collision floor plans, route/sightline checks, reusable prop placement, full validation, capture automation and release packaging with hashes. Both runtimes accept `--map FILE` for edited maps; the normal desktop launch still uses the built-in house.
+
+See [tools/README.md](tools/README.md) for the complete workflow and [tools/FEATURES.json](tools/FEATURES.json) for the feature-to-source index. Distributed Windows builds include bin/be2-tools.exe for native editing without Python or a compiler.

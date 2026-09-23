@@ -443,7 +443,7 @@ pub fn build() -> crate::Result<Room> {
     let compiled = Compiled::new(b.scene, Path::new("."))?;
     let world = compiled.at(0.);
     Ok(Room {
-        name: "Suburban House",
+        name: "Suburban House".into(),
         simple_geometry: true,
         compiled,
         world,
@@ -579,7 +579,8 @@ mod tests {
             .colliders
             .iter()
             .any(|c| c.blocks(Controller::default().position)));
-        let ids: std::collections::HashSet<_> = room.entities.iter().map(|e| e.id).collect();
+        let ids: std::collections::HashSet<_> =
+            room.entities.iter().map(|e| e.id.as_str()).collect();
         assert_eq!(ids.len(), room.entities.len());
         assert!(ids.contains("house-apple") && ids.contains("yard-table"));
         assert!(room.world.instances.len() < 750);

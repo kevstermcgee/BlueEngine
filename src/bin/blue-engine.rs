@@ -269,7 +269,14 @@ async fn main() {
     } else {
         MapId::House
     };
-    let room = match maps::build(map) {
+    let map_file = args.windows(2).find(|a| a[0] == "--map").map(|a| &a[1]);
+    let room = match map_file.map_or_else(
+        || maps::build(map),
+        |p| {
+            vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(p))
+                .and_then(|d| d.build())
+        },
+    ) {
         Ok(r) => r,
         Err(e) => {
             error_screen(&format!("Could not load the room: {e}")).await;
@@ -674,7 +681,7 @@ async fn main() {
                 let height = 84. + lines.len() as f32 * 24.;
                 draw_rectangle(x, y, width, height, Color::new(0.025, 0.045, 0.08, 0.94));
                 draw_rectangle(x, y, 3., height, BLUE);
-                text(info.title, x + 18., y + 31., 22., INK);
+                text(&info.title, x + 18., y + 31., 22., INK);
                 for (i, line) in lines.iter().enumerate() {
                     text(line, x + 18., y + 60. + i as f32 * 24., 18., INK);
                 }
@@ -743,7 +750,7 @@ async fn main() {
                 37.,
                 INK,
             );
-            text(room.name, left, y + 135., 20., MUTED);
+            text(&room.name, left, y + 135., 20., MUTED);
             if button(
                 if entered {
                     "Resume exploring    /    Enter"

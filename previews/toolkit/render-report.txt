@@ -1,0 +1,11 @@
+maximized=true
+caption=true
+viewport=1024x697
+startup_seconds=0.025
+triangles=10092
+vertices=16705
+batches=4
+mean_frame_ms=16.749
+captured_eye_heights=[10.0, 1.68, 1.68, 1.68, 4.88, 2.1, 4.88, 4.88, 1.68, 1.68, 0.98, 2.1]
+wrench_hits=0
+audio_plays=0

@@ -5,6 +5,7 @@ fn main() -> vesper3d::Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
     let mut ticks = 600_u64;
     let mut realtime = false;
+    let mut map_file = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -12,9 +13,13 @@ fn main() -> vesper3d::Result<()> {
                 index += 1;
                 ticks = args.get(index).ok_or("--ticks needs a number")?.parse()?;
             }
+            "--map" => {
+                index += 1;
+                map_file = Some(args.get(index).ok_or("--map needs a file")?);
+            }
             "--realtime" => realtime = true,
             "--help" => {
-                println!("be2-headless [--ticks N] [--realtime]\nLocal two-player simulation benchmark; no network listener.");
+                println!("be2-headless [--ticks N] [--realtime] [--map FILE]\nLocal two-player simulation benchmark; no network listener.");
                 return Ok(());
             }
             other => return Err(format!("Unknown argument: {other}").into()),
@@ -24,7 +29,13 @@ fn main() -> vesper3d::Result<()> {
     if ticks == 0 || ticks > 10_000_000 {
         return Err("ticks must be 1..10000000".into());
     }
-    let mut world = HeadlessWorld::new()?;
+    let mut world = if let Some(path) = map_file {
+        HeadlessWorld::with_room(
+            vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(path))?.build()?,
+        )
+    } else {
+        HeadlessWorld::new()?
+    };
     world.join(1);
     world.join(2);
     let started = Instant::now();

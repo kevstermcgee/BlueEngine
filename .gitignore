@@ -2,3 +2,6 @@
 /renders/
 /bin/
 *.partial.*
+
+/.be2-work/
+__pycache__/

@@ -8,7 +8,7 @@ pub const SWING_TIME: f32 = 0.52;
 pub struct Impact {
     pub point: V,
     pub normal: V,
-    pub label: &'static str,
+    pub label: String,
     pub age: f32,
 }
 #[derive(Default)]
@@ -56,7 +56,7 @@ impl Wrench {
                         .entities
                         .iter()
                         .find(|e| e.bounds.contains(hit.p))
-                        .map_or("Surface", |e| e.label),
+                        .map_or_else(|| "Surface".into(), |e| e.label.clone()),
                     age: (next - CONTACT_TIME).min(0.65),
                 });
             }
