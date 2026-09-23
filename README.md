@@ -14,6 +14,8 @@ The default client and headless world now use the two-story suburban house: livi
 
 All house geometry uses simple matte shapes. The cereal box, apple, chair and table share the reusable prop definitions. A quiet, short impact sound plays when the wrench makes contact; missed swings stay silent.
 
+The cleanup pass closes the roof gables and wall gaps, completes the stair railing, and adds 12 outdoor planting beds. Cabinets, a kitchen island, bedroom divider and garden privacy screen provide more cover while preserving paths through the house.
+
 Future maps are recorded in MAPS.md: school, office and convenience store. Only the house is playable in this release.
 
 ## Changes
@@ -70,4 +72,3 @@ See VALIDATION.md for measured results and limitations; BE2_ARCHITECTURE.md for 
 ## Next: Prop Hunt and PulseNet
 
 This release improves the engine and adds props. It does not yet implement online multiplayer, prop disguises, hunters/hiders, rounds or scoring. The next phase connects the discussed PulseNet utility to the headless world, adds authoritative game rules, and validates one server with two clients. Offline play remains available.
-

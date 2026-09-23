@@ -441,7 +441,13 @@ async fn main() {
                 2 => (V(-0.9, 1.68, -1.1), -0.65, -0.20),
                 3 => (V(4.5, 1.68, 4.1), 0., 0.25),
                 4 => (V(-1.3, 4.88, 0.5), -0.60, -0.12),
-                _ => (V(5., 2.1, -12.8), -2.75, 0.04),
+                5 => (V(-1., 2.1, -13.7), 2.85, -0.05),
+                6 => (V(1.25, 4.88, -3.45), -0.20, -0.45),
+                7 => (V(1.2, 4.88, 1.05), -0.30, -0.20),
+                8 => (V(2.8, 1.68, 1.4), -2.50, -0.10),
+                9 => (V(-8.4, 1.68, 5.5), 0.10, -0.10),
+                10 => (V(4.4, 0.98, -11.4), std::f32::consts::PI, 0.0),
+                _ => (V(-1., 2.1, -13.7), 2.85, -0.05),
             };
             controller.position = eye;
             controller.yaw = yaw;
@@ -702,7 +708,7 @@ async fn main() {
             && (capture_dir.is_none()
                 || ((interaction_capture || wrench_capture) && frame >= 60)
                 || (character_capture && frame >= 96)
-                || (house_capture && frame >= 72))
+                || (house_capture && frame >= 132))
         {
             let scale = menu_scale();
             let sw = sw / scale;
@@ -892,7 +898,7 @@ async fn main() {
             }
             if frame
                 == if house_capture {
-                    83
+                    143
                 } else if character_capture {
                     107
                 } else if motion_capture {

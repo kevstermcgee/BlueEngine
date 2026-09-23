@@ -1,3 +1,17 @@
+# House cleanup and hiding cover — 2026-09-23
+
+Fixed open roof gables, gaps above upstairs walls, incomplete doorway headers, unsupported stair posts and headboard collision coverage. The bathroom now uses recessed tub/basin shapes and a recognizable toilet; the wardrobe and new cabinets have doors/handles. The tub base and rim abut without coplanar overlap.
+
+Added twelve simple faceted shrubs with planting beds, a framed L-shaped garden screen, a hall cabinet, living-room sideboard, kitchen island and bedroom divider. The main entrances, stairway and upstairs doorways remain traversable. Cover has predictable collision cores; shrub leaves are opaque static meshes, with no alpha textures or animation.
+
+77 default tests and 54 no-default-feature tests pass. Formatting and both all-target Clippy configurations pass with warnings denied. Client and headless release builds pass. New regressions check gable closure, wall tops, reachable indoor/outdoor cover pockets, a garden escape route and actual world-ray occlusion from entrances. Existing stair and every-room traversal checks pass.
+
+Expanded --capture-house to twelve views and inspected the house exterior, living room, kitchen, stairs, both bedrooms, bathroom, hall, side yard, backyard, cover viewpoint and actual menu across the revision. Final geometry: 9,924 triangles, 16,578 shared vertices, 4 batches. The short capture runs are smoke checks, not multiplayer balance tests or proof that all display stutter is resolved. Hardware-controlled play and Linux runtime were not retested.
+
+Updated client/headless binaries and previews/house-cover are included. The existing desktop shortcut targets the updated client. Future Prop Hunt disguises and multiplayer rules remain outside this map pass.
+
+---
+
 # House and wrench sound revision â€” 2026-09-23
 
 75 default tests and 52 no-default-feature tests pass. Formatting and Clippy (all targets, warnings denied) pass in both feature configurations. Client and headless release builds pass.
@@ -62,4 +76,3 @@ An initial 1024x697 capture measured original startup at 0.657 s versus BE2 at 0
 Linux compilation, actual Debian/Ubuntu VPS memory/CPU usage, GPU/driver coverage and sustained playtesting are not verified here. CI contains Linux and Windows checks but was not executed remotely.
 
 PulseNet transport integration, authentication/session lifecycle, packet sequencing, snapshots, prediction/reconciliation, server combat and interactions, player collision, disguises, prop possession, rounds and scoring are not part of this release. Props are static inspectable/hittable assets. The headless executable is a local simulation/benchmark, not an online listener.
-
