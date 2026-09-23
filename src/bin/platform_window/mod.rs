@@ -29,7 +29,7 @@ fn own_window() -> windows_sys::Win32::Foundation::HWND {
     hwnd
 }
 
-pub fn maximize_on_launch() {
+pub fn maximize() {
     #[cfg(windows)]
     {
         use windows_sys::Win32::UI::WindowsAndMessaging::*;

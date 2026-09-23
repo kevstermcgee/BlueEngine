@@ -74,6 +74,21 @@ impl Default for Controller {
     }
 }
 impl Controller {
+    /// Interpolate presentation only; current look stays immediate.
+    pub fn interpolated(&self, previous: &Self, alpha: f32) -> Self {
+        let mut pose = self.clone();
+        let alpha = alpha.clamp(0., 1.);
+        pose.position = previous.position.lerp(self.position, alpha);
+        pose.feet = previous.feet + (self.feet - previous.feet) * alpha;
+        pose.body_height = previous.body_height + (self.body_height - previous.body_height) * alpha;
+        pose
+    }
+    pub fn feet_height(&self) -> f32 {
+        self.feet
+    }
+    pub fn body_height(&self) -> f32 {
+        self.body_height
+    }
     pub fn is_grounded(&self) -> bool {
         self.grounded
     }

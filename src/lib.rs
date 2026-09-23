@@ -1,7 +1,9 @@
 #![forbid(unsafe_code)]
 pub mod geometry;
 pub mod math;
+#[cfg(feature = "offline")]
 pub mod output;
+#[cfg(feature = "offline")]
 pub mod render;
 pub mod scene;
 pub mod viewer;

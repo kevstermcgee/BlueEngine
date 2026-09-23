@@ -1,74 +1,60 @@
-# Blue Engine 0.1
+# Blue Engine 2 (BE2) — 0.2.0
 
-A native first-person room viewer in Rust, built from the Vesper3D animation engine. Explore a furnished blue-accented studio at eye level using the keyboard and mouse.
+A native Rust client and headless simulation foundation for our Prop Hunt project. Forked from the latest Blue Engine working code, preserving the wrench, Blue mechanic skin, first/third-person camera and Git history.
 
-## Run
+## Play
 
-Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. On Windows, every launch opens maximized within the current monitor's work area, keeping the title bar and taskbar available. The view and menu adapt to the resulting client size; F11 fullscreen remains an optional manual toggle. No installation, internet connection, server, Rust toolchain, or FFmpeg is needed for the viewer. The room and shaders are compiled into the executable. Windows x64 with an OpenGL-capable graphics driver is the tested platform.
+Open `bin/BE2.exe`, then click **Enter the room**. No installation or server is needed. Windows x64 is the locally tested build.
 
-| Control | Action |
-|---|---|
-| W / Up | Walk forward |
-| S / Down | Walk backward |
-| A / Left | Strafe left |
-| D / Right | Strafe right |
-| Mouse | Look in any direction |
-| E or left-click | Use the object under the crosshair |
-| Right-click or Backspace | Dismiss the information card |
-| Hold Shift | Sprint (works with WASD and arrow keys) |
-| Space | Small jump (about 35 cm) |
-| Hold Ctrl or C | Crouch and move slowly |
-| Escape / Tab | Pause or resume; release or capture the cursor |
-| Enter | Enter or resume from the menu |
-| F11 | Toggle fullscreen |
-| H | Hide or show the on-screen hints |
-| F3 | Show performance and camera coordinates |
-| Q | Quit from the pause menu |
+WASD/arrows move; mouse looks; Shift sprints; Space jumps; Ctrl/C crouches; Q switches camera; left-click swings the wrench; E interacts; Escape/Tab pauses. H enables optional help; F3 enables diagnostics. The default view retains only the crosshair and relevant action prompts. Right-click/Backspace dismisses an inspection card. F/F11 toggles fullscreen.
 
-Pause to adjust mouse sensitivity, vertical field of view, invert vertical look, or reset your position. Switching to another app pauses the viewer and releases its mouse capture. Settings last for the current session. Arrow keys move relative to your view; left and right strafe, matching A and D.
+## Changes
 
-Standing eye height is 1.68 metres. Space triggers a small 35 cm jump with gravity and a grounded landing; midair jump presses are ignored. Hold either Ctrl key or C to crouch smoothly to a 0.98 metre eye height and move at a slower 1.3 m/s. Release to stand when there is enough overhead clearance. Crouching also works in midair without moving your feet artificially. Normal walking is 3.2 m/s (up from 2.6 m/s). Hold either Shift key to sprint at 5.6 m/s, and release to return smoothly to walking. Crouching takes priority over sprinting. Movement is normalized, accelerates and stops smoothly, slides along walls and furniture, and is subdivided to resist collision tunnelling. Collision accounts for body height, ceilings, and landing on low surfaces. There is no forced head bob or flying. The room is enclosed and the entrance remains closed.
+- Softer baked shadows, roughness-aware highlights and restrained metal reflections.
+- Fixed 60 Hz movement with interpolated display poses and bounded catch-up after stalls.
+- Preserved between-frame action taps and reduced held-tool screen coverage.
+- Removed persistent branding, control panels by default, and redundant hit text.
+- Shared static vertices and reusable character/tool buffers reduce rendering work and allocations.
+- Four new props: shipping crate, steel barrel, workshop stool and toolbox, with stable IDs and collision bounds.
+- A true headless Cargo build with no graphics/window dependencies.
 
-## What comes from Vesper3D
+## Reusable props
 
-The original Rust scene graph, materials, primitive definitions, models, transform math, ray intersection code and BVH are retained. Blue Engine builds its studio with those same scene types and compiles it through `geometry::Compiled`. The crystal and little robot are the original engine's reusable models.
+The props are in the room and in `assets/props/*.json`. Reuse them through `vesper3d::viewer::props::scene(PropKind)`, or export them to a new folder:
 
-A new real-time layer tessellates the evaluated primitives once, bakes static lighting and contact shadows using the original BVH, and draws those meshes through a GPU backend. The camera and player update each frame. This keeps offline scene construction out of the interactive frame loop. The live viewer is intentionally a static-room prototype; it is not the offline renderer running every frame and does not claim identical shading.
-
-The original offline commands remain available in **bin/vesper3d.exe**. See VESPER_README.md and AI_REFERENCE.md for authoring and MP4 export. FFmpeg is needed only for the original video export workflow.
-
-## Interactions
-
-`src/viewer/room.rs` separates the scene, collision bounds and semantic entities. Each entity has a stable ID, display label and bounds. `Room::focus` uses the original BVH to find the first visible surface within 4.5 metres; occluded objects do not show a label. The crosshair shows a blue ring and a contextual E / Click prompt when an object is available.
-
-Aim at an object within 4.5 metres and press E or left-click once:
-
-- **Desk monitor:** switch its display on or off.
-- **Crystal:** toggle between blue and amber finishes.
-- **Blue notebook:** read a short studio note.
-- **Artwork, robot, lounge, workbench and table:** inspect a short description.
-- **Entrance:** check its status; it remains closed in this room demo.
-
-The same action works with either E or left-click. Holding a button does not repeatedly activate it. Only the nearest visible surface is considered, so you cannot activate objects through walls or furniture. Information cards fade after six active seconds or can be dismissed with right-click or Backspace. Interaction prompts remain visible when H hides the general controls. Paused/menu clicks cannot trigger room actions, and resuming discards the initial click. Object states last for the current session; Reset position only resets the player.
-
-`src/viewer/interaction.rs` owns the typed actions, state and feedback independently of keyboard/mouse input. Future actions can extend this module and assign an Action to a stable entity ID. Monitor/crystal appearances update with shader uniforms without rebuilding the room. Geometry and lighting stay static. Pickups, inventory and opening doors remain future work.
-
-## Build and checks
-
+```sh
+cargo run --no-default-features --example export_props -- my-props
 ```
-cargo run --release --bin blue-engine
+
+Exports refuse to replace existing files. JSON uses the inherited scene format documented in AI_REFERENCE.md. Props are static objects for now; disguises and possession belong to the upcoming Prop Hunt game layer.
+
+## Build
+
+```sh
+cargo run --release --locked --bin be2
+cargo build --release --locked --no-default-features --bin be2-headless
+cargo run --release --locked --no-default-features --bin be2-headless -- --ticks 60000
+cargo run --release --locked --no-default-features --bin be2-headless -- --ticks 600 --realtime
+```
+
+The second command is the intended build configuration on Debian/Ubuntu. Linux compilation and VPS performance have not been tested locally. CI includes Linux checks. The headless executable runs a bounded local two-player simulation; it does not open a network port.
+
+`bin/be2-headless.exe` is the Windows headless build. `bin/vesper3d.exe` retains the original offline rendering CLI. The library remains named `vesper3d` for compatibility.
+
+## Validation
+
+```sh
 cargo fmt --check
 cargo test --locked
 cargo clippy --all-targets --locked -- -D warnings
-cargo build --release --locked
+cargo test --locked --no-default-features
+cargo clippy --all-targets --locked --no-default-features -- -D warnings
 ```
 
-The default Cargo target is Blue Engine. The library remains named `vesper3d` to preserve the inherited code and tests. `cargo run --release --bin vesper3d -- doctor` runs the offline tool.
+Visual smoke modes: `BE2.exe --capture DIR`, `--capture-props DIR`, `--capture-character DIR`, `--capture-interactions DIR`, `--capture-motion DIR`, and `--capture-wrench DIR`. Use a new directory; capture filenames are replaced inside the explicitly supplied directory.
 
-For a repeatable render smoke check, run `BlueEngine.exe --capture PATH_TO_EMPTY_FOLDER`. It renders three camera views, writes PNGs and a small timing report, then exits. Existing same-named captures in that explicitly supplied folder are replaced. Measurements include presentation/vsync and are not GPU-only benchmarks.
+See VALIDATION.md for measured results and limitations; BE2_ARCHITECTURE.md for the implementation and PulseNet plan. The original prototype documentation is retained in BLUE_V1_README.md and BLUE_V1_VALIDATION.md.
 
-For repeatable interaction screenshots, use `BlueEngine.exe --capture-interactions PATH_TO_EMPTY_FOLDER`. It captures the monitor on/off, crystal blue/amber, notebook inspection, and pause menu. Same-named files in the supplied directory are replaced.
+## Next: Prop Hunt and PulseNet
 
-For repeatable jump/crouch screenshots, use `BlueEngine.exe --capture-motion PATH_TO_EMPTY_FOLDER`. This simulates a jump, a held crouch, and standing again; the report records the captured eye heights. As with the regular capture mode, same-named output files are replaced in the supplied folder.
-
-See VALIDATION.md for actual checks and limitations. VESPER_VALIDATION.md records the inherited engine's earlier release. This repository preserves that engine's local Git history; no remote repository has been published.
+This release improves the engine and adds props. It does not yet implement online multiplayer, prop disguises, hunters/hiders, rounds or scoring. The next phase connects the discussed PulseNet utility to the headless world, adds authoritative game rules, and validates one server with two clients. Offline play remains available.

@@ -47,13 +47,13 @@ impl Room {
         self.entities.iter().find(|e| e.bounds.contains(hit.p))
     }
 }
-struct Builder {
-    scene: Scene,
-    colliders: Vec<Collider>,
-    entities: Vec<Entity>,
+pub(super) struct Builder {
+    pub(super) scene: Scene,
+    pub(super) colliders: Vec<Collider>,
+    pub(super) entities: Vec<Entity>,
 }
 impl Builder {
-    fn material(&mut self, id: &str, rgb: V, metallic: f32, emission: f32) {
+    pub(super) fn material(&mut self, id: &str, rgb: V, metallic: f32, emission: f32) {
         self.scene.materials.insert(
             id.into(),
             Material {
@@ -65,7 +65,7 @@ impl Builder {
             },
         );
     }
-    fn add(&mut self, shape: Shape, mat: &str, pos: V, scale: V, rot: V) {
+    pub(super) fn add(&mut self, shape: Shape, mat: &str, pos: V, scale: V, rot: V) {
         self.scene.nodes.push(Node {
             id: format!("room-{}", self.scene.nodes.len()),
             shape,
@@ -76,16 +76,16 @@ impl Builder {
             ..Default::default()
         });
     }
-    fn cube(&mut self, mat: &str, p: V, s: V) {
+    pub(super) fn cube(&mut self, mat: &str, p: V, s: V) {
         self.add(Shape::Box, mat, p, s, V::ZERO);
     }
-    fn obstacle(&mut self, p: V, s: V) {
+    pub(super) fn obstacle(&mut self, p: V, s: V) {
         self.colliders.push(Collider {
             min: p - s,
             max: p + s,
         });
     }
-    fn entity(&mut self, id: &'static str, label: &'static str, p: V, s: V) {
+    pub(super) fn entity(&mut self, id: &'static str, label: &'static str, p: V, s: V) {
         self.entities.push(Entity {
             id,
             label,
@@ -384,6 +384,7 @@ pub fn build() -> crate::Result<Room> {
         V(-1.8, 1.2, 5.75),
         V(0.8, 1.25, 0.2),
     );
+    super::props::populate(&mut b);
     let compiled = Compiled::new(b.scene, Path::new("."))?;
     let world = compiled.at(0.);
     Ok(Room {

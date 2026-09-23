@@ -1,3 +1,4 @@
+#![cfg(feature = "offline")]
 use std::{
     fs,
     path::PathBuf,

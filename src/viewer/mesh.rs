@@ -25,6 +25,7 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
             .find(|(b, _)| b.contains(center))
             .map_or(0., |(_, tag)| *tag);
         let transform = instance.inverse.inverse();
+        let mut lighting_cache = std::collections::HashMap::new();
         let mut triangle = |positions: [V; 3], normals: [V; 3]| {
             if meshes.last().unwrap().vertices.len() + 3 > 9000 {
                 meshes.push(Mesh {
@@ -37,8 +38,22 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
             for k in 0..3 {
                 let p = transform.point(positions[k]);
                 let n = instance.inverse.normal_from_inverse(normals[k]);
-                let c = shade(world, instance, p, n);
-                let mut vertex = Vertex::new2(vec(p), vec2(tag, 0.), Color::new(c.0, c.1, c.2, 1.));
+                let key = [
+                    p.0.to_bits(),
+                    p.1.to_bits(),
+                    p.2.to_bits(),
+                    n.0.to_bits(),
+                    n.1.to_bits(),
+                    n.2.to_bits(),
+                ];
+                let c = *lighting_cache
+                    .entry(key)
+                    .or_insert_with(|| shade(world, instance, p, n));
+                let mut vertex = Vertex::new2(
+                    vec(p),
+                    vec2(tag, instance.material.roughness),
+                    Color::new(c.0, c.1, c.2, 1.),
+                );
                 vertex.normal = vec4(n.0, n.1, n.2, instance.material.metallic);
                 mesh.indices.push(mesh.vertices.len() as u16);
                 mesh.vertices.push(vertex);
@@ -118,6 +133,26 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
             }
         }
     }
+    // Exact vertex sharing preserves normals, material tags and baked illumination.
+    for mesh in &mut meshes {
+        let mut seen = std::collections::HashMap::new();
+        let mut unique: Vec<Vertex> = Vec::new();
+        for index in &mut mesh.indices {
+            let v = mesh.vertices[*index as usize];
+            let key = (
+                v.position.to_array().map(f32::to_bits),
+                v.normal.to_array().map(f32::to_bits),
+                v.uv.to_array().map(f32::to_bits),
+                v.color,
+            );
+            *index = *seen.entry(key).or_insert_with(|| {
+                let i = unique.len() as u16;
+                unique.push(v);
+                i
+            });
+        }
+        mesh.vertices = unique;
+    }
     meshes
 }
 
@@ -134,25 +169,33 @@ fn shade(world: &World, instance: &Instance, p: V, n: V) -> V {
         (V(2.4, 3.25, -2.5), V(1., 0.86, 0.66), 15.),
         (V(2.4, 3.25, 3.), V(0.82, 0.91, 1.), 10.),
     ] {
-        let delta = pos - origin;
-        let distance = delta.length();
-        let direction = delta / distance;
-        let ndl = n.dot(direction).max(0.);
-        if ndl > 0.
-            && world
-                .hit(
-                    Ray {
-                        o: origin,
-                        d: direction,
-                    },
-                    distance - 0.025,
-                    true,
-                )
-                .is_none()
-        {
-            light = light + color * (ndl * power / (3. + distance * distance));
+        for offset in [
+            V(-0.18, 0., -0.18),
+            V(0.18, 0., -0.18),
+            V(-0.18, 0., 0.18),
+            V(0.18, 0., 0.18),
+        ] {
+            let delta = pos + offset - origin;
+            let distance = delta.length();
+            let direction = delta / distance;
+            let ndl = n.dot(direction).max(0.);
+            if ndl > 0.
+                && world
+                    .hit(
+                        Ray {
+                            o: origin,
+                            d: direction,
+                        },
+                        distance - 0.025,
+                        true,
+                    )
+                    .is_none()
+            {
+                light = light + color * (ndl * power * 0.25 / (3. + distance * distance));
+            }
         }
     }
+
     let tangent = if n.1.abs() < 0.9 {
         n.cross(V(0., 1., 0.)).norm()
     } else {
@@ -207,7 +250,8 @@ varying mediump vec3 vnormal;
 varying mediump vec3 vpos;
 varying lowp float metal;
 varying lowp float tag;
-void main(){gl_Position=Projection*Model*vec4(position,1.0);vcolor=color0/255.0;vnormal=normal.xyz;vpos=position;metal=normal.w;tag=texcoord.x;}
+varying lowp float roughness;
+void main(){gl_Position=Projection*Model*vec4(position,1.0);vcolor=color0/255.0;vnormal=normal.xyz;vpos=position;metal=normal.w;tag=texcoord.x;roughness=texcoord.y;}
 "#;
 const FRAGMENT: &str = r#"#version 100
 precision mediump float;
@@ -218,11 +262,14 @@ varying lowp float metal;
 uniform vec3 Eye;
 uniform vec2 ObjectStates;
 varying lowp float tag;
+varying lowp float roughness;
 void main(){
  vec3 n=normalize(vnormal);vec3 v=normalize(Eye-vpos);
  vec3 h=normalize(normalize(vec3(-3.0,5.0,2.0)-vpos)+v);
- float spec=pow(max(dot(n,h),0.0),48.0)*metal*0.22;
- vec3 c=vcolor.rgb+vec3(spec);
+ float r=clamp(roughness,0.12,1.0);
+ float fresnel=pow(1.0-max(dot(n,v),0.0),5.0);
+ float spec=pow(max(dot(n,h),0.0),mix(96.0,8.0,r))*(0.035+metal*0.22)*(1.0-r*0.5);
+ vec3 c=vcolor.rgb+vec3(spec)+vec3(0.12,0.18,0.25)*fresnel*metal;
  if(tag>0.5 && tag<1.5 && ObjectStates.x<0.5){c=vec3(0.015,0.024,0.035)+vec3(spec*0.2);}
  if(tag>1.5 && ObjectStates.y>0.5){float shade=max(vcolor.b,0.04);c=vec3(1.0,0.60,0.12)*shade+vec3(spec);}
  float fog=1.0-exp(-length(Eye-vpos)*0.008);

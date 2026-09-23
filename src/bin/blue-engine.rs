@@ -1,5 +1,7 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+mod character;
 mod platform_window;
+mod wrench_view;
 use macroquad::{
     input::utils::{register_input_subscriber, repeat_all_miniquad_input},
     prelude::*,
@@ -8,16 +10,19 @@ use std::collections::HashSet;
 use vesper3d::{
     math::V,
     viewer::{
+        camera::Perspective,
         controller::{Controller, Movement},
         interaction::{activation_requested, Interactions},
         mesh, room,
+        simulation::PlayerStepper,
+        wrench::Wrench,
     },
 };
 
 fn config() -> macroquad::conf::Conf {
     macroquad::conf::Conf {
         miniquad_conf: Conf {
-            window_title: "Blue Engine".into(),
+            window_title: "Blue Engine 2 | BE2".into(),
             window_width: 960,
             window_height: 600,
             fullscreen: false,
@@ -68,6 +73,7 @@ impl Keys {
                 (KeyCode::Enter, 0x0D),
                 (KeyCode::Escape, 0x1B),
                 (KeyCode::Tab, 0x09),
+                (KeyCode::F, 0x46),
                 (KeyCode::F3, 0x72),
                 (KeyCode::F11, 0x7A),
                 (KeyCode::H, 0x48),
@@ -104,6 +110,7 @@ impl miniquad::EventHandler for Keys {
     fn key_down_event(&mut self, key: KeyCode, _: miniquad::KeyMods, repeat: bool) {
         if !repeat {
             self.down.insert(key);
+            self.pressed.insert(key);
         }
     }
     fn key_up_event(&mut self, key: KeyCode, _: miniquad::KeyMods) {
@@ -238,7 +245,7 @@ fn slider(label: &str, x: f32, y: f32, w: f32, value: &mut f32, min: f32, max: f
 
 #[macroquad::main(config)]
 async fn main() {
-    platform_window::maximize_on_launch();
+    platform_window::maximize();
     // Process the queued maximize/resize before preparing or displaying the room.
     next_frame().await;
     #[cfg(windows)]
@@ -249,7 +256,7 @@ async fn main() {
         }
     }
     clear_background(Color::new(0.035, 0.06, 0.10, 1.));
-    text("BLUE ENGINE", 60., 90., 42., INK);
+    text("BLUE ENGINE 2", 60., 90., 42., INK);
     text("Preparing the studio...", 60., 132., 22., MUTED);
     next_frame().await;
     let started = std::time::Instant::now();
@@ -271,12 +278,20 @@ async fn main() {
     let setup_seconds = started.elapsed().as_secs_f32();
     let triangles: usize = meshes.iter().map(|m| m.indices.len() / 3).sum();
     let args: Vec<String> = std::env::args().collect();
+    let props_capture = args.iter().any(|a| a == "--capture-props");
     let motion_capture = args.iter().any(|a| a == "--capture-motion");
+    let character_capture = args.iter().any(|a| a == "--capture-character");
+    let wrench_capture = args.iter().any(|a| a == "--capture-wrench");
     let interaction_capture = args.iter().any(|a| a == "--capture-interactions");
     let capture_dir = args
         .windows(2)
         .find(|a| {
-            a[0] == "--capture" || a[0] == "--capture-motion" || a[0] == "--capture-interactions"
+            a[0] == "--capture-props"
+                || a[0] == "--capture-character"
+                || a[0] == "--capture-wrench"
+                || a[0] == "--capture"
+                || a[0] == "--capture-motion"
+                || a[0] == "--capture-interactions"
         })
         .map(|a| std::path::PathBuf::from(&a[1]));
     if let Some(dir) = &capture_dir {
@@ -286,7 +301,16 @@ async fn main() {
         }
     }
     let mut controller = Controller::default();
+    let mut stepper = PlayerStepper::default();
     let mut interactions = Interactions::default();
+    let mut wrench = Wrench::default();
+    let mut wrench_view = wrench_view::View::new();
+    let mut character = character::Character::default();
+    let mut perspective = if args.iter().any(|a| a == "--third-person") {
+        Perspective::Third
+    } else {
+        Perspective::default()
+    };
     let mut keys = Keys::default();
     let subscriber = register_input_subscriber();
     let mut active = false;
@@ -295,25 +319,43 @@ async fn main() {
     let mut sensitivity = 50.;
     let mut fov: f32 = 65.;
     let mut invert = false;
-    let mut hud = true;
+    let mut hud = false;
     let mut debug = false;
     let mut fullscreen = false;
+    let mut maximize_pending = false;
     let mut frame = 0;
     let mut samples = Vec::new();
     let mut captured_heights = Vec::new();
     loop {
-        repeat_all_miniquad_input(&mut keys, subscriber);
+        let previous_position = controller.position;
         let focused = foreground();
         keys.poll(focused);
+        repeat_all_miniquad_input(&mut keys, subscriber);
+        if !focused {
+            keys.down.clear();
+            keys.pressed.clear();
+        }
         if active && !focused {
             active = false;
             capture(false);
             controller.stop();
+            stepper.reset(&controller);
+            wrench.cancel();
             keys.down.clear();
         }
-        if focused && keys.pressed(KeyCode::F11) {
+        // Fullscreen requests are applied by the backend between frames.
+        if maximize_pending {
+            platform_window::maximize();
+            maximize_pending = false;
+        }
+        if focused && (keys.pressed(KeyCode::F) || keys.pressed(KeyCode::F11)) {
             fullscreen = !fullscreen;
             set_fullscreen(fullscreen);
+            maximize_pending = !fullscreen;
+            skip_look = 3;
+        }
+        if focused && keys.pressed(KeyCode::Q) {
+            perspective.toggle();
             skip_look = 3;
         }
         if focused && keys.pressed(KeyCode::F3) {
@@ -327,6 +369,8 @@ async fn main() {
             entered |= active;
             capture(active);
             controller.stop();
+            stepper.reset(&controller);
+            wrench.cancel();
             keys.down.clear();
             skip_look = 3;
         }
@@ -346,7 +390,8 @@ async fn main() {
             let mut movement_keys = keys.down.clone();
             movement_keys.extend(keys.pressed.iter().copied());
             let (f, r) = axes(&movement_keys);
-            controller.update(
+            stepper.advance(
+                &mut controller,
                 Movement {
                     forward: f,
                     right: r,
@@ -361,19 +406,63 @@ async fn main() {
                 &room.colliders,
             );
             interactions.tick(get_frame_time());
+            if is_mouse_button_pressed(MouseButton::Left) {
+                wrench.start(active, skip_look == 0);
+            }
+            wrench.tick(
+                get_frame_time(),
+                &room,
+                perspective.view(&controller, &room).aim(&controller, &room),
+            );
             if keys.pressed(KeyCode::Backspace) || is_mouse_button_pressed(MouseButton::Right) {
                 interactions.dismiss();
             }
-            if activation_requested(
-                active,
-                skip_look == 0,
-                keys.pressed(KeyCode::E),
-                is_mouse_button_pressed(MouseButton::Left),
-            ) {
-                interactions.activate(&room, controller.ray());
+            if activation_requested(active, skip_look == 0, keys.pressed(KeyCode::E), false) {
+                interactions.activate(
+                    &room,
+                    perspective.view(&controller, &room).aim(&controller, &room),
+                );
             }
         }
-        if capture_dir.is_some() && interaction_capture {
+        if capture_dir.is_some() && character_capture {
+            if frame == 0 {
+                controller.position.2 = 2.7;
+                controller.yaw = 0.;
+                controller.pitch = -0.10;
+            }
+            perspective = if frame < 12 || (60..72).contains(&frame) {
+                Perspective::First
+            } else {
+                Perspective::Third
+            };
+            if frame == 24 {
+                wrench.start(true, true);
+            }
+            if frame >= 36 {
+                controller.update(
+                    Movement {
+                        crouch: frame < 48,
+                        jump: frame == 54,
+                        ..Default::default()
+                    },
+                    1. / 60.,
+                    &room.colliders,
+                );
+            }
+            wrench.tick(
+                1. / 60.,
+                &room,
+                perspective.view(&controller, &room).aim(&controller, &room),
+            );
+        } else if capture_dir.is_some() && wrench_capture {
+            controller.position = V(-3.3, 1.34, -1.6);
+            controller.yaw = -std::f32::consts::FRAC_PI_2;
+            controller.pitch = 0.;
+            if frame == 12 {
+                wrench.start(true, true);
+            }
+            wrench.tick(1. / 60., &room, controller.ray());
+        } else if capture_dir.is_some() && interaction_capture {
             match frame / 12 {
                 0 | 1 => {
                     controller.position = V(-3.3, 1.34, -1.6);
@@ -392,7 +481,10 @@ async fn main() {
                 }
             }
             if [12, 36, 48].contains(&frame) {
-                interactions.activate(&room, controller.ray());
+                interactions.activate(
+                    &room,
+                    perspective.view(&controller, &room).aim(&controller, &room),
+                );
             }
             if frame == 24 {
                 interactions.dismiss();
@@ -407,6 +499,14 @@ async fn main() {
                 1. / 60.,
                 &room.colliders,
             );
+        } else if capture_dir.is_some() && props_capture {
+            controller.position = if frame < 24 {
+                V(2.7, 1.68, 1.4)
+            } else {
+                V(-2.8, 1.68, 3.7)
+            };
+            controller.yaw = if frame < 24 { std::f32::consts::PI } else { 0. };
+            controller.pitch = -0.35;
         } else if capture_dir.is_some() {
             match frame / 12 {
                 0 => {}
@@ -423,17 +523,44 @@ async fn main() {
                 _ => {}
             }
         }
+        if active || capture_dir.is_some() {
+            let d = controller.position - previous_position;
+            let distance = (d.0 * d.0 + d.2 * d.2).sqrt();
+            character.update(
+                distance,
+                if capture_dir.is_some() {
+                    1. / 60.
+                } else {
+                    get_frame_time()
+                },
+                controller.is_grounded() && distance > 0.0001,
+            );
+        }
+        let render_controller = if active && capture_dir.is_none() {
+            stepper.pose(&controller)
+        } else {
+            controller.clone()
+        };
+        let view = perspective.view(&render_controller, &room);
+        let aim = view.aim(&controller, &room);
+        let mut camera_eye = view.eye;
+        let mut camera_target = view.target;
+        // Capture-only front portrait exposes the default skin for visual QA.
+        if character_capture && (72..96).contains(&frame) {
+            camera_eye = controller.position + V(1.4, -0.25, -2.8);
+            camera_target = controller.position + V(0., -0.55, 0.);
+        }
         clear_background(Color::new(0.12, 0.17, 0.24, 1.));
         set_camera(&Camera3D {
-            position: mesh::vec(controller.position),
-            target: mesh::vec(controller.position + controller.direction()),
+            position: mesh::vec(camera_eye),
+            target: mesh::vec(camera_target),
             up: vec3(0., 1., 0.),
             fovy: fov.to_radians(),
             z_near: 0.045,
             z_far: 60.,
             ..Default::default()
         });
-        material.set_uniform("Eye", mesh::vec(controller.position));
+        material.set_uniform("Eye", mesh::vec(camera_eye));
         material.set_uniform(
             "ObjectStates",
             vec2(
@@ -446,14 +573,32 @@ async fn main() {
             draw_mesh(m);
         }
         gl_use_default_material();
+        if view.show_body {
+            character.draw(&render_controller, &wrench, &wrench_view);
+        }
+        if let Some(hit) = &wrench.impact {
+            let p = mesh::vec(hit.point + hit.normal * 0.015);
+            for i in 0..12 {
+                let a = i as f32 * 2.399;
+                let velocity = vec3(a.cos(), (i as f32 * 1.7).sin().abs(), a.sin()) * 0.7
+                    + mesh::vec(hit.normal) * 0.8;
+                let tip = p + velocity * hit.age + vec3(0., -1.8 * hit.age * hit.age, 0.);
+                if hit.age < 0.3 {
+                    draw_line_3d(
+                        tip,
+                        tip - velocity * 0.035,
+                        Color::new(1., 0.72, 0.25, 1. - hit.age / 0.3),
+                    );
+                }
+            }
+        }
         set_default_camera();
+        if perspective == Perspective::First || !view.show_body {
+            wrench_view.draw(&wrench);
+        }
         let sw = screen_width();
         let sh = screen_height();
         if (active || capture_dir.is_some()) && hud {
-            draw_rectangle(24., 22., 218., 52., Color::new(0.025, 0.045, 0.08, 0.86));
-            draw_rectangle(38., 37., 7., 22., BLUE);
-            text("BLUE ENGINE", 57., 56., 22., INK);
-            draw_circle(sw * 0.5, sh * 0.5, 2., Color::new(0.92, 0.96, 1., 0.85));
             draw_rectangle(
                 24.,
                 sh - 103.,
@@ -476,7 +621,7 @@ async fn main() {
                 INK,
             );
             text(
-                "E / Left-click   Interact     Right-click / Backspace   Dismiss info",
+                "Left-click   Swing wrench     E   Interact     Right-click   Dismiss info",
                 38.,
                 sh - 34.,
                 18.,
@@ -484,6 +629,14 @@ async fn main() {
             );
         }
         if active || capture_dir.is_some() {
+            draw_circle(sw * 0.5, sh * 0.5, 2., Color::new(0.92, 0.96, 1., 0.85));
+            if let Some(hit) = &wrench.impact {
+                let c = Color::new(1., 0.76, 0.35, 1. - hit.age / 0.65);
+                let (cx, cy) = (sw * 0.5, sh * 0.5);
+                for (x, y) in [(-1., -1.), (1., 1.), (-1., 1.), (1., -1.)] {
+                    draw_line(cx + x * 5., cy + y * 5., cx + x * 11., cy + y * 11., 2., c);
+                }
+            }
             if let Some(info) = &interactions.feedback {
                 let width = 440_f32.min(sw - 48.);
                 let x = sw - width - 24.;
@@ -504,10 +657,10 @@ async fn main() {
                     MUTED,
                 );
             }
-            if let Some(entity) = room.focus(controller.ray()) {
+            if let Some(entity) = room.focus(aim) {
                 draw_circle_lines(sw * 0.5, sh * 0.5, 7., 1.5, BLUE);
                 let label = format!(
-                    "{}  |  E / Click: {}",
+                    "{}  |  E: {}",
                     entity.label,
                     interactions.prompt(entity.action)
                 );
@@ -522,7 +675,11 @@ async fn main() {
                 text(&label, sw * 0.5 - width * 0.5, sh * 0.5 + 48., 18., INK);
             }
         }
-        if !active && (capture_dir.is_none() || (interaction_capture && frame >= 60)) {
+        if !active
+            && (capture_dir.is_none()
+                || ((interaction_capture || wrench_capture) && frame >= 60)
+                || (character_capture && frame >= 96))
+        {
             let scale = menu_scale();
             let sw = sw / scale;
             let sh = sh / scale;
@@ -538,7 +695,13 @@ async fn main() {
             draw_rectangle(x, y, 4., 650., BLUE);
             let left = x + 32.;
             let width = panel_w - 64.;
-            text("B L U E   E N G I N E", left, y + 47., 20., BLUE);
+            text(
+                "B E 2   /   B L U E   E N G I N E  2",
+                left,
+                y + 47.,
+                20.,
+                BLUE,
+            );
             text(
                 if entered {
                     "Take your time."
@@ -550,7 +713,7 @@ async fn main() {
                 37.,
                 INK,
             );
-            text("First-person studio  /  01", left, y + 135., 20., MUTED);
+            text("Blue mechanic  /  Default skin", left, y + 135., 20., MUTED);
             if button(
                 if entered {
                     "Resume exploring    /    Enter"
@@ -565,6 +728,8 @@ async fn main() {
                 entered = true;
                 keys.down.clear();
                 controller.stop();
+                stepper.reset(&controller);
+                wrench.cancel();
                 capture(true);
                 skip_look = 3;
             }
@@ -576,8 +741,8 @@ async fn main() {
             text("Small jump / Crouch", left + 210., y + 290., 18., MUTED);
             text("Shift / Esc", left, y + 314., 21., INK);
             text("Sprint / Pause", left + 210., y + 314., 18., MUTED);
-            text("E / Left-click", left, y + 338., 21., INK);
-            text("Use the aimed object", left + 210., y + 338., 18., MUTED);
+            text("Left-click / E", left, y + 338., 21., INK);
+            text("Swing wrench / Use", left + 210., y + 338., 18., MUTED);
             draw_line(
                 left,
                 y + 354.,
@@ -623,18 +788,18 @@ async fn main() {
                 false,
             ) {
                 controller = Controller::default();
+                stepper.reset(&controller);
                 keys.down.clear();
             }
+            text("Q  First / Third person", left, y + 555., 17., INK);
             text(
-                "F11  Fullscreen     H  Hide hints     F3  Stats",
+                "F  Fullscreen / Maximized     H  Toggle hints     F3  Stats",
                 left,
                 y + 574.,
                 17.,
                 MUTED,
             );
-            if button("Quit", Rect::new(left, y + 594., 80., 34.), false)
-                || (focused && keys.pressed(KeyCode::Q))
-            {
+            if button("Quit", Rect::new(left, y + 594., 80., 34.), false) {
                 break;
             }
             text(
@@ -678,7 +843,13 @@ async fn main() {
             );
         }
         if let Some(dir) = &capture_dir {
-            let shot = if motion_capture {
+            let shot = if character_capture {
+                [10, 22, 34, 46, 58, 70, 94, 106]
+                    .iter()
+                    .position(|f| *f == frame)
+            } else if wrench_capture {
+                [10, 24, 42, 70].iter().position(|f| *f == frame)
+            } else if motion_capture {
                 [15, 50, 80].iter().position(|f| *f == frame)
             } else if frame % 12 == 10 {
                 Some(frame / 12)
@@ -696,16 +867,18 @@ async fn main() {
                 samples.push(get_frame_time());
             }
             if frame
-                == if motion_capture {
+                == if character_capture {
+                    107
+                } else if motion_capture {
                     85
-                } else if interaction_capture {
+                } else if interaction_capture || wrench_capture {
                     71
                 } else {
                     35
                 }
             {
                 let mean = samples.iter().sum::<f32>() / samples.len() as f32;
-                let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\n",platform_window::report(),screen_width(),screen_height(),meshes.len(),mean*1000.);
+                let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nvertices={}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\nwrench_hits={}\n",platform_window::report(),screen_width(),screen_height(),meshes.iter().map(|m|m.vertices.len()).sum::<usize>(),meshes.len(),mean*1000.,wrench.hits);
                 let _ = std::fs::write(dir.join("render-report.txt"), report);
                 break;
             }
@@ -730,6 +903,15 @@ async fn error_screen(message: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn complete_between_frame_tap_keeps_press_edge() {
+        use miniquad::EventHandler;
+        let mut keys = Keys::default();
+        keys.key_down_event(KeyCode::Space, miniquad::KeyMods::default(), false);
+        keys.key_up_event(KeyCode::Space, miniquad::KeyMods::default());
+        assert!(keys.pressed.contains(&KeyCode::Space));
+        assert!(!keys.down.contains(&KeyCode::Space));
+    }
     #[test]
     fn arrows_match_wasd_and_aliases_do_not_double_speed() {
         for (a, b) in [
