@@ -2,6 +2,17 @@
 
 Verified on Windows x64, September 22, 2026.
 
+## Jump and crouch update
+
+- 52 tests pass (38 library, 1 input mapping, 13 inherited CLI integration tests).
+- Formatting, strict Clippy, and the locked release build pass.
+- Seven new controller tests cover 35 cm jump height at 30/60/144 Hz, return to ground, rejection of midair jumps, ceiling collision, smooth crouch and reduced speed, blocked standing under a low overhang, landing on a low ledge and falling off it, and airborne crouch/pause preserving vertical motion.
+- The final executable's `--capture-motion` path rendered the real controller at jump, crouch and standing states. Reported eye heights: 2.0295687 m, 0.98 m and 1.68 m. Jump and crouch screenshots were inspected. Startup was 0.475 s and the short capture averaged 16.490 ms per frame on this machine.
+- Added Space, both Ctrl keys and C to the native input path; on-screen hints and the pause menu describe the controls. The actual updated app was opened successfully and its new HUD inspected. The jump/crouch visual check is scripted; it is not a claim of an extended physical-keyboard play test.
+
+The earlier release checks below remain historical evidence for the inherited controls and renderer.
+
+
 - `cargo fmt --check`: passed.
 - `cargo test --locked --offline`: 45 tests passed (31 library, 1 viewer input mapping, 13 inherited CLI integration tests).
 - `cargo clippy --all-targets --locked --offline -- -D warnings`: passed.

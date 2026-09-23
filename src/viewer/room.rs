@@ -141,6 +141,7 @@ pub fn build() -> crate::Result<Room> {
         b.cube("trim", V(-5.93, 1.95, z), V(0.10, 1.20, 0.045));
     }
     b.cube("oak", V(-5.86, 0.80, 0.), V(0.23, 0.045, 5.3));
+    b.obstacle(V(0., 3.65, 0.), V(6., 0.10, 6.));
     for x in [-6., 6.] {
         b.obstacle(V(x, 1.8, 0.), V(0.14, 1.8, 6.2));
     }

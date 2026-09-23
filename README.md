@@ -14,6 +14,8 @@ Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. No in
 | D / Right | Strafe right |
 | Mouse | Look in any direction |
 | Shift | Walk faster |
+| Space | Small jump (about 35 cm) |
+| Hold Ctrl or C | Crouch and move slowly |
 | Escape / Tab | Pause or resume; release or capture the cursor |
 | Enter | Enter or resume from the menu |
 | F11 | Toggle fullscreen |
@@ -23,7 +25,7 @@ Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. No in
 
 Pause to adjust mouse sensitivity, vertical field of view, invert vertical look, or reset your position. Switching to another app pauses the viewer and releases its mouse capture. Settings last for the current session. Arrow keys move relative to your view; left and right strafe, matching A and D.
 
-The camera stays 1.68 metres above the floor. Movement is normalized, accelerates and stops smoothly, slides along walls and furniture, and is subdivided to resist collision tunnelling. There is no forced head bob, jumping, or flying. The room is enclosed and the entrance remains closed.
+Standing eye height is 1.68 metres. Space triggers a small 35 cm jump with gravity and a grounded landing; midair jump presses are ignored. Hold either Ctrl key or C to crouch smoothly to a 0.98 metre eye height and walk at half normal speed. Release to stand when there is enough overhead clearance. Crouching also works in midair without moving your feet artificially. Movement is normalized, accelerates and stops smoothly, slides along walls and furniture, and is subdivided to resist collision tunnelling. Collision accounts for body height, ceilings, and landing on low surfaces. There is no forced head bob or flying. The room is enclosed and the entrance remains closed.
 
 ## What comes from Vesper3D
 
@@ -52,5 +54,7 @@ cargo build --release --locked
 The default Cargo target is Blue Engine. The library remains named `vesper3d` to preserve the inherited code and tests. `cargo run --release --bin vesper3d -- doctor` runs the offline tool.
 
 For a repeatable render smoke check, run `BlueEngine.exe --capture PATH_TO_EMPTY_FOLDER`. It renders three camera views, writes PNGs and a small timing report, then exits. Existing same-named captures in that explicitly supplied folder are replaced. Measurements include presentation/vsync and are not GPU-only benchmarks.
+
+For repeatable jump/crouch screenshots, use `BlueEngine.exe --capture-motion PATH_TO_EMPTY_FOLDER`. This simulates a jump, a held crouch, and standing again; the report records the captured eye heights. As with the regular capture mode, same-named output files are replaced in the supplied folder.
 
 See VALIDATION.md for actual checks and limitations. VESPER_VALIDATION.md records the inherited engine's earlier release. This repository preserves that engine's local Git history; no remote repository has been published.

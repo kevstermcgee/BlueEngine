@@ -6,7 +6,10 @@ use macroquad::{
 use std::collections::HashSet;
 use vesper3d::{
     math::V,
-    viewer::{controller::Controller, mesh, room},
+    viewer::{
+        controller::{Controller, Movement},
+        mesh, room,
+    },
 };
 
 fn config() -> macroquad::conf::Conf {
@@ -53,6 +56,10 @@ impl Keys {
                 (KeyCode::Right, 0x27),
                 (KeyCode::LeftShift, 0xA0),
                 (KeyCode::RightShift, 0xA1),
+                (KeyCode::Space, 0x20),
+                (KeyCode::LeftControl, 0xA2),
+                (KeyCode::RightControl, 0xA3),
+                (KeyCode::C, 0x43),
                 (KeyCode::Enter, 0x0D),
                 (KeyCode::Escape, 0x1B),
                 (KeyCode::Tab, 0x09),
@@ -234,9 +241,10 @@ async fn main() {
     let setup_seconds = started.elapsed().as_secs_f32();
     let triangles: usize = meshes.iter().map(|m| m.indices.len() / 3).sum();
     let args: Vec<String> = std::env::args().collect();
+    let motion_capture = args.iter().any(|a| a == "--capture-motion");
     let capture_dir = args
         .windows(2)
-        .find(|a| a[0] == "--capture")
+        .find(|a| a[0] == "--capture" || a[0] == "--capture-motion")
         .map(|a| std::path::PathBuf::from(&a[1]));
     if let Some(dir) = &capture_dir {
         if std::fs::create_dir_all(dir).is_err() {
@@ -258,6 +266,7 @@ async fn main() {
     let mut fullscreen = false;
     let mut frame = 0;
     let mut samples = Vec::new();
+    let mut captured_heights = Vec::new();
     loop {
         repeat_all_miniquad_input(&mut keys, subscriber);
         let focused = foreground();
@@ -303,15 +312,32 @@ async fn main() {
             let mut movement_keys = keys.down.clone();
             movement_keys.extend(keys.pressed.iter().copied());
             let (f, r) = axes(&movement_keys);
-            controller.step(
-                f,
-                r,
-                keys.down.contains(&KeyCode::LeftShift) || keys.down.contains(&KeyCode::RightShift),
+            controller.update(
+                Movement {
+                    forward: f,
+                    right: r,
+                    fast: keys.down.contains(&KeyCode::LeftShift)
+                        || keys.down.contains(&KeyCode::RightShift),
+                    jump: keys.pressed(KeyCode::Space),
+                    crouch: movement_keys.contains(&KeyCode::LeftControl)
+                        || movement_keys.contains(&KeyCode::RightControl)
+                        || movement_keys.contains(&KeyCode::C),
+                },
                 get_frame_time(),
                 &room.colliders,
             );
         }
-        if capture_dir.is_some() {
+        if capture_dir.is_some() && motion_capture {
+            controller.update(
+                Movement {
+                    jump: frame == 1,
+                    crouch: (25..55).contains(&frame),
+                    ..Default::default()
+                },
+                1. / 60.,
+                &room.colliders,
+            );
+        } else if capture_dir.is_some() {
             match frame / 12 {
                 0 => {}
                 1 => {
@@ -353,15 +379,22 @@ async fn main() {
             draw_circle(sw * 0.5, sh * 0.5, 2., Color::new(0.92, 0.96, 1., 0.85));
             draw_rectangle(
                 24.,
-                sh - 60.,
-                sw.min(720.) - 48.,
-                36.,
+                sh - 80.,
+                sw.min(780.) - 48.,
+                56.,
                 Color::new(0.025, 0.045, 0.08, 0.8),
             );
             text(
-                "WASD / Arrows   Move     Mouse   Look     Shift   Faster     Esc   Pause",
+                "WASD / Arrows   Move     Mouse   Look     Shift   Faster",
                 38.,
-                sh - 36.,
+                sh - 57.,
+                18.,
+                INK,
+            );
+            text(
+                "Space   Small jump     Hold Ctrl / C   Crouch     Esc   Pause",
+                38.,
+                sh - 34.,
                 18.,
                 INK,
             );
@@ -430,17 +463,19 @@ async fn main() {
                 capture(true);
                 skip_look = 3;
             }
-            text("WASD or arrow keys", left, y + 254., 21., INK);
-            text("Walk in any direction", left + 210., y + 254., 18., MUTED);
-            text("Mouse", left, y + 285., 21., INK);
-            text("Look around", left + 210., y + 285., 18., MUTED);
-            text("Shift / Esc", left, y + 316., 21., INK);
-            text("Move faster / Pause", left + 210., y + 316., 18., MUTED);
+            text("WASD or arrow keys", left, y + 246., 21., INK);
+            text("Walk in any direction", left + 210., y + 246., 18., MUTED);
+            text("Mouse", left, y + 274., 21., INK);
+            text("Look around", left + 210., y + 274., 18., MUTED);
+            text("Space / Hold Ctrl or C", left, y + 302., 19., INK);
+            text("Small jump / Crouch", left + 210., y + 302., 18., MUTED);
+            text("Shift / Esc", left, y + 330., 21., INK);
+            text("Move faster / Pause", left + 210., y + 330., 18., MUTED);
             draw_line(
                 left,
-                y + 340.,
+                y + 348.,
                 left + width,
-                y + 340.,
+                y + 348.,
                 1.,
                 Color::new(0.16, 0.22, 0.30, 1.),
             );
@@ -515,8 +550,8 @@ async fn main() {
             );
             text(
                 &format!(
-                    "x {:.2}   z {:.2}   yaw {:.2}",
-                    controller.position.0, controller.position.2, controller.yaw
+                    "x {:.2}  y {:.2}  z {:.2}",
+                    controller.position.0, controller.position.1, controller.position.2
                 ),
                 sw - 336.,
                 70.,
@@ -536,18 +571,26 @@ async fn main() {
             );
         }
         if let Some(dir) = &capture_dir {
-            if frame % 12 == 10 {
+            let shot = if motion_capture {
+                [15, 50, 80].iter().position(|f| *f == frame)
+            } else if frame % 12 == 10 {
+                Some(frame / 12)
+            } else {
+                None
+            };
+            if let Some(index) = shot {
+                captured_heights.push(controller.position.1);
                 get_screen_data().export_png(
-                    &dir.join(format!("blue-engine-{}.png", frame / 12 + 1))
+                    &dir.join(format!("blue-engine-{}.png", index + 1))
                         .to_string_lossy(),
                 );
             }
             if frame > 3 {
                 samples.push(get_frame_time());
             }
-            if frame == 35 {
+            if frame == if motion_capture { 85 } else { 35 } {
                 let mean = samples.iter().sum::<f32>() / samples.len() as f32;
-                let report=format!("startup_seconds={setup_seconds:.3}\ntriangles={triangles}\nbatches={}\nmean_frame_ms={:.3}\n",meshes.len(),mean*1000.);
+                let report=format!("startup_seconds={setup_seconds:.3}\ntriangles={triangles}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\n",meshes.len(),mean*1000.);
                 let _ = std::fs::write(dir.join("render-report.txt"), report);
                 break;
             }
