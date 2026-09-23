@@ -34,3 +34,9 @@ The prior design uses Quinn transport, reliable control streams, input/snapshot 
 The adapter should map authenticated PlayerId to HeadlessWorld IDs, validate/decode bounded input, reject duplicate/out-of-order sequences, expire stale movement on disconnect/timeout, run `step()` only on a simulation worker, and encode player-visible snapshots within PulseNet's payload limit. Add authoritative wrench/prop/round rules before enabling public matches. Client prediction, snapshot interpolation/reconciliation and a two-client integration test follow. Keep offline play available without a connection.
 
 Simple-prop revision: tag 3 selects one quad per box face and a 12-by-6 apple sphere. Static directional face colours replace detailed shadow bakes on these props; their shader skips specular highlights. The cereal band is a solid section of the carton, not an overlaid label. New objects have new IDs; earlier JSON props remain under assets/legacy-props with their original IDs. Crystal recolouring is restricted to tag 2, so it cannot tint simple props.
+
+## House and contact audio
+
+MapId selects House by default for both client and HeadlessWorld, with Studio preserved for regression work. House instances use the matte low-poly tag throughout. The controller can step onto obstacles up to 22 cm while grounded if standing clearance is available; the staircase uses 10 cm risers. Automated routes cover each upstairs room and the backyard.
+
+The optional client feature includes Macroquad audio. ImpactAudio embeds the original short WAV and plays once when the wrench's confirmed hit count changes. No sound is played for a miss; playback is quiet and non-looping. Audio initialization failure leaves the client usable without sound. No audio types or dependencies enter the headless build. Linux client builds require ALSA development libraries; CI installs them.

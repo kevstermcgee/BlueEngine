@@ -15,6 +15,8 @@ pub struct Entity {
     pub action: Action,
 }
 pub struct Room {
+    pub name: &'static str,
+    pub simple_geometry: bool,
     pub compiled: Compiled,
     pub world: World,
     pub colliders: Vec<Collider>,
@@ -23,6 +25,15 @@ pub struct Room {
 impl Room {
     /// GPU tags change only the selected surfaces; static geometry and shadows stay valid.
     pub fn render_tags(&self) -> Vec<(Collider, f32)> {
+        if self.simple_geometry {
+            return vec![(
+                Collider {
+                    min: V(-100., -10., -100.),
+                    max: V(100., 100., 100.),
+                },
+                3.,
+            )];
+        }
         let mut tags = vec![
             (
                 Collider {
@@ -395,6 +406,8 @@ pub fn build() -> crate::Result<Room> {
     let compiled = Compiled::new(b.scene, Path::new("."))?;
     let world = compiled.at(0.);
     Ok(Room {
+        name: "Studio",
+        simple_geometry: false,
         compiled,
         world,
         colliders: b.colliders,

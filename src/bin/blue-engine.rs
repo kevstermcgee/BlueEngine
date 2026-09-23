@@ -1,5 +1,6 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 mod character;
+mod impact_audio;
 mod platform_window;
 mod wrench_view;
 use macroquad::{
@@ -13,7 +14,8 @@ use vesper3d::{
         camera::Perspective,
         controller::{Controller, Movement},
         interaction::{activation_requested, Interactions},
-        mesh, room,
+        maps::{self, MapId},
+        mesh,
         simulation::PlayerStepper,
         wrench::Wrench,
     },
@@ -257,10 +259,17 @@ async fn main() {
     }
     clear_background(Color::new(0.035, 0.06, 0.10, 1.));
     text("BLUE ENGINE 2", 60., 90., 42., INK);
-    text("Preparing the studio...", 60., 132., 22., MUTED);
+    text("Preparing the map...", 60., 132., 22., MUTED);
     next_frame().await;
     let started = std::time::Instant::now();
-    let room = match room::build() {
+    let args: Vec<String> = std::env::args().collect();
+    let house_capture = args.iter().any(|a| a == "--capture-house");
+    let map = if args.iter().any(|a| a == "--studio") {
+        MapId::Studio
+    } else {
+        MapId::House
+    };
+    let room = match maps::build(map) {
         Ok(r) => r,
         Err(e) => {
             error_screen(&format!("Could not load the room: {e}")).await;
@@ -277,7 +286,6 @@ async fn main() {
     };
     let setup_seconds = started.elapsed().as_secs_f32();
     let triangles: usize = meshes.iter().map(|m| m.indices.len() / 3).sum();
-    let args: Vec<String> = std::env::args().collect();
     let props_capture = args.iter().any(|a| a == "--capture-props");
     let motion_capture = args.iter().any(|a| a == "--capture-motion");
     let character_capture = args.iter().any(|a| a == "--capture-character");
@@ -286,7 +294,8 @@ async fn main() {
     let capture_dir = args
         .windows(2)
         .find(|a| {
-            a[0] == "--capture-props"
+            a[0] == "--capture-house"
+                || a[0] == "--capture-props"
                 || a[0] == "--capture-character"
                 || a[0] == "--capture-wrench"
                 || a[0] == "--capture"
@@ -304,6 +313,7 @@ async fn main() {
     let mut stepper = PlayerStepper::default();
     let mut interactions = Interactions::default();
     let mut wrench = Wrench::default();
+    let mut impact_audio = impact_audio::ImpactAudio::new().await;
     let mut wrench_view = wrench_view::View::new();
     let mut character = character::Character::default();
     let mut perspective = if args.iter().any(|a| a == "--third-person") {
@@ -424,7 +434,19 @@ async fn main() {
                 );
             }
         }
-        if capture_dir.is_some() && character_capture {
+        if capture_dir.is_some() && house_capture {
+            let (eye, yaw, pitch) = match frame / 12 {
+                0 => (V(14., 10., 17.), -0.69, -0.29),
+                1 => (V(-0.3, 1.68, 5.0), -1.0, -0.08),
+                2 => (V(-0.9, 1.68, -1.1), -0.65, -0.20),
+                3 => (V(4.5, 1.68, 4.1), 0., 0.25),
+                4 => (V(-1.3, 4.88, 0.5), -0.60, -0.12),
+                _ => (V(5., 2.1, -12.8), -2.75, 0.04),
+            };
+            controller.position = eye;
+            controller.yaw = yaw;
+            controller.pitch = pitch;
+        } else if capture_dir.is_some() && character_capture {
             if frame == 0 {
                 controller.position.2 = 2.7;
                 controller.yaw = 0.;
@@ -523,6 +545,7 @@ async fn main() {
                 _ => {}
             }
         }
+        impact_audio.update(wrench.hits);
         if active || capture_dir.is_some() {
             let d = controller.position - previous_position;
             let distance = (d.0 * d.0 + d.2 * d.2).sqrt();
@@ -550,7 +573,7 @@ async fn main() {
             camera_eye = controller.position + V(1.4, -0.25, -2.8);
             camera_target = controller.position + V(0., -0.55, 0.);
         }
-        clear_background(Color::new(0.12, 0.17, 0.24, 1.));
+        clear_background(Color::new(0.48, 0.70, 0.86, 1.));
         set_camera(&Camera3D {
             position: mesh::vec(camera_eye),
             target: mesh::vec(camera_target),
@@ -678,7 +701,8 @@ async fn main() {
         if !active
             && (capture_dir.is_none()
                 || ((interaction_capture || wrench_capture) && frame >= 60)
-                || (character_capture && frame >= 96))
+                || (character_capture && frame >= 96)
+                || (house_capture && frame >= 72))
         {
             let scale = menu_scale();
             let sw = sw / scale;
@@ -706,19 +730,19 @@ async fn main() {
                 if entered {
                     "Take your time."
                 } else {
-                    "A room to explore."
+                    "A house to explore."
                 },
                 left,
                 y + 101.,
                 37.,
                 INK,
             );
-            text("Blue mechanic  /  Default skin", left, y + 135., 20., MUTED);
+            text(room.name, left, y + 135., 20., MUTED);
             if button(
                 if entered {
                     "Resume exploring    /    Enter"
                 } else {
-                    "Enter the room    /    Enter"
+                    "Start exploring    /    Enter"
                 },
                 Rect::new(left, y + 164., width, 52.),
                 true,
@@ -867,7 +891,9 @@ async fn main() {
                 samples.push(get_frame_time());
             }
             if frame
-                == if character_capture {
+                == if house_capture {
+                    83
+                } else if character_capture {
                     107
                 } else if motion_capture {
                     85
@@ -878,7 +904,7 @@ async fn main() {
                 }
             {
                 let mean = samples.iter().sum::<f32>() / samples.len() as f32;
-                let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nvertices={}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\nwrench_hits={}\n",platform_window::report(),screen_width(),screen_height(),meshes.iter().map(|m|m.vertices.len()).sum::<usize>(),meshes.len(),mean*1000.,wrench.hits);
+                let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nvertices={}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\nwrench_hits={}\naudio_plays={}\n",platform_window::report(),screen_width(),screen_height(),meshes.iter().map(|m|m.vertices.len()).sum::<usize>(),meshes.len(),mean*1000.,wrench.hits,impact_audio.plays);
                 let _ = std::fs::write(dir.join("render-report.txt"), report);
                 break;
             }

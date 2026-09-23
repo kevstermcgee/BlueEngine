@@ -12,3 +12,6 @@ pub mod camera;
 pub mod simulation;
 
 pub mod props;
+
+mod house;
+pub mod maps;

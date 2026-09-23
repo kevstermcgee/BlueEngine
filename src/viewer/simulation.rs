@@ -1,7 +1,7 @@
 //! Rendering-free simulation shared by the client and future PulseNet adapter.
 use super::{
     controller::{Collider, Controller, Movement},
-    room::{self, Room},
+    room::Room,
 };
 use std::collections::BTreeMap;
 
@@ -61,7 +61,7 @@ pub struct HeadlessWorld {
 impl HeadlessWorld {
     pub fn new() -> crate::Result<Self> {
         Ok(Self {
-            room: room::build()?,
+            room: super::maps::build(super::maps::MapId::House)?,
             players: BTreeMap::new(),
             tick: 0,
         })

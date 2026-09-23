@@ -1,0 +1,10 @@
+window_state=unavailable
+viewport=960x600
+startup_seconds=0.004
+triangles=6276
+vertices=11787
+batches=3
+mean_frame_ms=17.363
+captured_eye_heights=[10.0, 1.68, 1.68, 1.68, 4.88, 2.1, 2.1]
+wrench_hits=0
+audio_plays=0

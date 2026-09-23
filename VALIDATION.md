@@ -1,4 +1,20 @@
-# Simple-prop revision — 2026-09-23
+# House and wrench sound revision â€” 2026-09-23
+
+75 default tests and 52 no-default-feature tests pass. Formatting and Clippy (all targets, warnings denied) pass in both feature configurations. Client and headless release builds pass.
+
+New traversal tests verify walking up and down the stairs without jumping, entry into every upstairs room, the back doorway and fence containment. Spawn clearance, entity ID uniqueness and a geometry instance budget are checked. Collision step-up is limited to 22 cm and requires ground contact and headroom.
+
+Seven release captures were inspected: exterior, living room, kitchen, stairs, bedroom, backyard and menu. House scene: 6,276 triangles, 11,787 vertices, 3 batches. A short 960x600 capture averaged 17.363 ms per frame; this is a smoke run, not a sustained performance benchmark or verification of the user's display stutter.
+
+The scripted studio wrench capture reported one confirmed hit and one audio playback call. The generated PCM asset and hit-only trigger were checked; speaker audibility on the user's hardware was not verified. Headless dependency inspection confirms Serde/JSON only, with no audio or graphics dependencies.
+
+House headless smoke: two players, 60,000 ticks in 327.844 ms on this Windows host. This is not a VPS capacity estimate. Linux runtime and hardware keyboard/mouse traversal were not retested for this revision.
+
+Updated bin/BE2.exe is the target of the existing desktop shortcut. Selected house captures are in previews/house. Only the house is implemented from the four-map roadmap; multiplayer and Prop Hunt rules remain future work.
+
+---
+
+# Simple-prop revision ï¿½ 2026-09-23
 
 Replaced the active crate/barrel/stool/toolbox set with a cereal box, chair, table and apple. Old JSON assets retain their IDs in assets/legacy-props. The new props have new IDs.
 
@@ -46,3 +62,4 @@ An initial 1024x697 capture measured original startup at 0.657 s versus BE2 at 0
 Linux compilation, actual Debian/Ubuntu VPS memory/CPU usage, GPU/driver coverage and sustained playtesting are not verified here. CI contains Linux and Windows checks but was not executed remotely.
 
 PulseNet transport integration, authentication/session lifecycle, packet sequencing, snapshots, prediction/reconciliation, server combat and interactions, player collision, disguises, prop possession, rounds and scoring are not part of this release. Props are static inspectable/hittable assets. The headless executable is a local simulation/benchmark, not an online listener.
+

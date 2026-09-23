@@ -138,6 +138,38 @@ impl Controller {
             colliders,
         );
     }
+    // Grounded step-up for stairs, with a full standing/crouched headroom check.
+    fn move_horizontal(&mut self, target: V, colliders: &[Collider]) -> bool {
+        let blocked = colliders
+            .iter()
+            .any(|c| c.overlaps_body(target, self.feet, self.body_height));
+        if !blocked {
+            self.position = target;
+            return true;
+        }
+        if !self.grounded {
+            return false;
+        }
+        let mut top = self.feet;
+        for c in colliders
+            .iter()
+            .filter(|c| c.overlaps_body(target, self.feet, self.body_height))
+        {
+            if c.max.1 - self.feet > 0.221 {
+                return false;
+            }
+            top = top.max(c.max.1);
+        }
+        if colliders
+            .iter()
+            .any(|c| c.overlaps_body(target, top, self.body_height))
+        {
+            return false;
+        }
+        self.feet = top;
+        self.position = V(target.0, top + self.body_height - HEAD_MARGIN, target.2);
+        true
+    }
     pub fn update(&mut self, input: Movement, dt: f32, colliders: &[Collider]) {
         let Movement {
             forward,
@@ -190,21 +222,11 @@ impl Controller {
             self.velocity = self.velocity.lerp(desired, 1. - (-18. * h).exp());
             let d = self.velocity * h;
             let px = self.position + V(d.0, 0., 0.);
-            if !colliders
-                .iter()
-                .any(|c| c.overlaps_body(px, self.feet, self.body_height))
-            {
-                self.position = px;
-            } else {
+            if !self.move_horizontal(px, colliders) {
                 self.velocity.0 = 0.;
             }
             let pz = self.position + V(0., 0., d.2);
-            if !colliders
-                .iter()
-                .any(|c| c.overlaps_body(pz, self.feet, self.body_height))
-            {
-                self.position = pz;
-            } else {
+            if !self.move_horizontal(pz, colliders) {
                 self.velocity.2 = 0.;
             }
             // Swept vertical movement catches ceilings and landings even on long frames.

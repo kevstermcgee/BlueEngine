@@ -40,7 +40,7 @@ pub const CATALOG: [PropDefinition; 4] = [
         half_extents: V(0.10, 0.12, 0.10),
     },
 ];
-fn palette(b: &mut Builder) {
+pub(super) fn palette(b: &mut Builder) {
     for (id, color) in [
         ("prop-yellow", V(0.95, 0.62, 0.08)),
         ("prop-blue", V(0.04, 0.23, 0.62)),
@@ -79,6 +79,23 @@ pub(super) fn populate(b: &mut Builder) {
     ]) {
         spawn(b, def, origin);
     }
+}
+/// Reuse geometry under a map-specific instance ID.
+pub(super) fn place(
+    b: &mut Builder,
+    kind: PropKind,
+    id: &'static str,
+    label: &'static str,
+    origin: V,
+) {
+    let source = CATALOG.iter().find(|p| p.kind == kind).unwrap();
+    let def = PropDefinition {
+        id,
+        label,
+        kind,
+        half_extents: source.half_extents,
+    };
+    spawn(b, &def, origin);
 }
 fn spawn(b: &mut Builder, def: &PropDefinition, origin: V) {
     let center = origin + V(0., def.half_extents.1, 0.);

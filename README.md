@@ -4,9 +4,17 @@ A native Rust client and headless simulation foundation for our Prop Hunt projec
 
 ## Play
 
-Open `bin/BE2.exe`, then click **Enter the room**. No installation or server is needed. Windows x64 is the locally tested build.
+Open `bin/BE2.exe`, then click **Start exploring**. No installation or server is needed. Windows x64 is the locally tested build.
 
 WASD/arrows move; mouse looks; Shift sprints; Space jumps; Ctrl/C crouches; Q switches camera; left-click swings the wrench; E interacts; Escape/Tab pauses. H enables optional help; F3 enables diagnostics. The default view retains only the crosshair and relevant action prompts. Right-click/Backspace dismisses an inspection card. F/F11 toggles fullscreen.
+
+## House map
+
+The default client and headless world now use the two-story suburban house: living room, kitchen/dining area, two bedrooms, bathroom, walkable stairs, and a fenced backyard with patio furniture. The existing desktop shortcut launches this updated map. Walk up the stairs normally; jumping is not required.
+
+All house geometry uses simple matte shapes. The cereal box, apple, chair and table share the reusable prop definitions. A quiet, short impact sound plays when the wrench makes contact; missed swings stay silent.
+
+Future maps are recorded in MAPS.md: school, office and convenience store. Only the house is playable in this release.
 
 ## Changes
 
@@ -22,7 +30,7 @@ The active props use plain matte colours, no layered decals, and 324 triangles t
 
 ## Reusable props
 
-The props are in the room and in `assets/props/*.json`. Reuse them through `vesper3d::viewer::props::scene(PropKind)`, or export them to a new folder:
+The props are in the house and in `assets/props/*.json`. Reuse them through `vesper3d::viewer::props::scene(PropKind)`, or export them to a new folder:
 
 ```sh
 cargo run --no-default-features --example export_props -- my-props
@@ -53,6 +61,8 @@ cargo test --locked --no-default-features
 cargo clippy --all-targets --locked --no-default-features -- -D warnings
 ```
 
+House screenshots: `BE2.exe --capture-house DIR`. The original studio remains available with `--studio`; include that flag for the legacy scripted captures below.
+
 Visual smoke modes: `BE2.exe --capture DIR`, `--capture-props DIR`, `--capture-character DIR`, `--capture-interactions DIR`, `--capture-motion DIR`, and `--capture-wrench DIR`. Use a new directory; capture filenames are replaced inside the explicitly supplied directory.
 
 See VALIDATION.md for measured results and limitations; BE2_ARCHITECTURE.md for the implementation and PulseNet plan. The original prototype documentation is retained in BLUE_V1_README.md and BLUE_V1_VALIDATION.md.
@@ -60,3 +70,4 @@ See VALIDATION.md for measured results and limitations; BE2_ARCHITECTURE.md for 
 ## Next: Prop Hunt and PulseNet
 
 This release improves the engine and adds props. It does not yet implement online multiplayer, prop disguises, hunters/hiders, rounds or scoring. The next phase connects the discussed PulseNet utility to the headless world, adds authoritative game rules, and validates one server with two clients. Offline play remains available.
+
