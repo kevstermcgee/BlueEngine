@@ -316,7 +316,7 @@ async fn main() {
                 Movement {
                     forward: f,
                     right: r,
-                    fast: keys.down.contains(&KeyCode::LeftShift)
+                    sprint: keys.down.contains(&KeyCode::LeftShift)
                         || keys.down.contains(&KeyCode::RightShift),
                     jump: keys.pressed(KeyCode::Space),
                     crouch: movement_keys.contains(&KeyCode::LeftControl)
@@ -385,7 +385,7 @@ async fn main() {
                 Color::new(0.025, 0.045, 0.08, 0.8),
             );
             text(
-                "WASD / Arrows   Move     Mouse   Look     Shift   Faster",
+                "WASD / Arrows   Move     Mouse   Look     Shift   Sprint",
                 38.,
                 sh - 57.,
                 18.,
@@ -470,7 +470,7 @@ async fn main() {
             text("Space / Hold Ctrl or C", left, y + 302., 19., INK);
             text("Small jump / Crouch", left + 210., y + 302., 18., MUTED);
             text("Shift / Esc", left, y + 330., 21., INK);
-            text("Move faster / Pause", left + 210., y + 330., 18., MUTED);
+            text("Sprint / Pause", left + 210., y + 330., 18., MUTED);
             draw_line(
                 left,
                 y + 348.,

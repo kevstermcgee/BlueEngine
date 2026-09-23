@@ -5,6 +5,9 @@ pub const RADIUS: f32 = 0.23;
 pub const STANDING_HEIGHT: f32 = 1.80;
 pub const CROUCH_HEIGHT: f32 = 1.10;
 pub const JUMP_HEIGHT: f32 = 0.35;
+pub const WALK_SPEED: f32 = 3.2;
+pub const SPRINT_SPEED: f32 = 5.6;
+pub const CROUCH_SPEED: f32 = 1.3;
 const GRAVITY: f32 = 12.;
 const HEAD_MARGIN: f32 = STANDING_HEIGHT - EYE_HEIGHT;
 
@@ -12,7 +15,7 @@ const HEAD_MARGIN: f32 = STANDING_HEIGHT - EYE_HEIGHT;
 pub struct Movement {
     pub forward: f32,
     pub right: f32,
-    pub fast: bool,
+    pub sprint: bool,
     /// A press edge, not a held key. An airborne press is ignored.
     pub jump: bool,
     pub crouch: bool,
@@ -101,12 +104,19 @@ impl Controller {
         self.pitch =
             (self.pitch - dy * sensitivity * if invert { -1. } else { 1. }).clamp(-1.50, 1.50);
     }
-    pub fn step(&mut self, forward: f32, right: f32, fast: bool, dt: f32, colliders: &[Collider]) {
+    pub fn step(
+        &mut self,
+        forward: f32,
+        right: f32,
+        sprint: bool,
+        dt: f32,
+        colliders: &[Collider],
+    ) {
         self.update(
             Movement {
                 forward,
                 right,
-                fast,
+                sprint,
                 ..Default::default()
             },
             dt,
@@ -117,7 +127,7 @@ impl Controller {
         let Movement {
             forward,
             right,
-            fast,
+            sprint,
             jump,
             crouch,
         } = input;
@@ -156,11 +166,11 @@ impl Controller {
             self.body_height = next_height;
             let desired = direction
                 * if crouch || self.is_crouched() {
-                    1.3
-                } else if fast {
-                    4.2
+                    CROUCH_SPEED
+                } else if sprint {
+                    SPRINT_SPEED
                 } else {
-                    2.6
+                    WALK_SPEED
                 };
             self.velocity = self.velocity.lerp(desired, 1. - (-18. * h).exp());
             let d = self.velocity * h;
@@ -218,6 +228,61 @@ impl Controller {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn sprint_is_normalized_and_returns_smoothly_to_walking() {
+        for hz in [30, 60, 144] {
+            let mut c = Controller::default();
+            for _ in 0..hz {
+                c.update(
+                    Movement {
+                        forward: 1.,
+                        right: 1.,
+                        sprint: true,
+                        ..Default::default()
+                    },
+                    1. / hz as f32,
+                    &[],
+                );
+            }
+            assert!((c.velocity.length() - SPRINT_SPEED).abs() < 0.001);
+            c.update(
+                Movement {
+                    forward: 1.,
+                    right: 1.,
+                    ..Default::default()
+                },
+                1. / hz as f32,
+                &[],
+            );
+            assert!(c.velocity.length() > WALK_SPEED && c.velocity.length() < SPRINT_SPEED);
+            for _ in 0..hz {
+                c.update(
+                    Movement {
+                        forward: 1.,
+                        right: 1.,
+                        ..Default::default()
+                    },
+                    1. / hz as f32,
+                    &[],
+                );
+            }
+            assert!((c.velocity.length() - WALK_SPEED).abs() < 0.001);
+            for _ in 0..hz {
+                c.update(
+                    Movement {
+                        forward: 1.,
+                        right: 1.,
+                        sprint: true,
+                        crouch: true,
+                        ..Default::default()
+                    },
+                    1. / hz as f32,
+                    &[],
+                );
+            }
+            assert!((c.velocity.length() - CROUCH_SPEED).abs() < 0.001);
+        }
+    }
     #[test]
     fn small_jump_lands_and_is_frame_rate_independent() {
         for hz in [30, 60, 144] {
@@ -304,7 +369,7 @@ mod tests {
                 Movement {
                     forward: 1.,
                     crouch: true,
-                    fast: true,
+                    sprint: true,
                     ..Default::default()
                 },
                 1. / 60.,

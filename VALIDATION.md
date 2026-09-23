@@ -2,6 +2,12 @@
 
 Verified on Windows x64, September 22, 2026.
 
+## Faster movement and sprint update
+
+Normal walking increases from 2.6 to 3.2 m/s (about 23%). Holding either Shift key now explicitly sprints at 5.6 m/s; release transitions smoothly back to walking. Crouching remains 1.3 m/s and overrides sprint. The HUD and pause menu identify Shift as Sprint.
+
+53 tests pass (39 library, 1 input mapping, 13 CLI). The new sprint test checks diagonal normalization, steady sprint speed, smooth release to walking, and crouch priority at 30, 60 and 144 Hz. Existing wall collision and long-frame tests run at the new sprint speed. Formatting, strict Clippy, and the locked release build passed. A fresh executable capture completed without graphics warnings.
+
 ## Jump and crouch update
 
 - 52 tests pass (38 library, 1 input mapping, 13 inherited CLI integration tests).

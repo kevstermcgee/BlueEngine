@@ -13,7 +13,7 @@ Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. No in
 | A / Left | Strafe left |
 | D / Right | Strafe right |
 | Mouse | Look in any direction |
-| Shift | Walk faster |
+| Hold Shift | Sprint (works with WASD and arrow keys) |
 | Space | Small jump (about 35 cm) |
 | Hold Ctrl or C | Crouch and move slowly |
 | Escape / Tab | Pause or resume; release or capture the cursor |
@@ -25,7 +25,7 @@ Open **bin/BlueEngine.exe**, then click **Enter the room** or press Enter. No in
 
 Pause to adjust mouse sensitivity, vertical field of view, invert vertical look, or reset your position. Switching to another app pauses the viewer and releases its mouse capture. Settings last for the current session. Arrow keys move relative to your view; left and right strafe, matching A and D.
 
-Standing eye height is 1.68 metres. Space triggers a small 35 cm jump with gravity and a grounded landing; midair jump presses are ignored. Hold either Ctrl key or C to crouch smoothly to a 0.98 metre eye height and walk at half normal speed. Release to stand when there is enough overhead clearance. Crouching also works in midair without moving your feet artificially. Movement is normalized, accelerates and stops smoothly, slides along walls and furniture, and is subdivided to resist collision tunnelling. Collision accounts for body height, ceilings, and landing on low surfaces. There is no forced head bob or flying. The room is enclosed and the entrance remains closed.
+Standing eye height is 1.68 metres. Space triggers a small 35 cm jump with gravity and a grounded landing; midair jump presses are ignored. Hold either Ctrl key or C to crouch smoothly to a 0.98 metre eye height and move at a slower 1.3 m/s. Release to stand when there is enough overhead clearance. Crouching also works in midair without moving your feet artificially. Normal walking is 3.2 m/s (up from 2.6 m/s). Hold either Shift key to sprint at 5.6 m/s, and release to return smoothly to walking. Crouching takes priority over sprinting. Movement is normalized, accelerates and stops smoothly, slides along walls and furniture, and is subdivided to resist collision tunnelling. Collision accounts for body height, ceilings, and landing on low surfaces. There is no forced head bob or flying. The room is enclosed and the entrance remains closed.
 
 ## What comes from Vesper3D
 
