@@ -90,7 +90,7 @@ Use the actual lists returned by `select`; do not assume a future prop still has
 
 Map schema v1 is for portable, static, matte primitive maps. It accepts unparented box/sphere/cylinder/cone nodes with fixed positive scales; no animation, repeats, imported meshes, external audio or custom monitor/crystal actions. The legacy studio stays available via `--studio` and is not exported by this schema. Runtime entity text is owned, so loading maps does not leak strings or need unsafe code.
 
-`audit` validates schema/version/IDs/transforms/bounds, compiles the map, verifies default spawn clearance, reports counts and flags exact duplicate collision boxes. Duplicate boxes are advisory (the inherited fridge has one); overlap alone does not mean an error. It cannot prove the absence of every visual gap, floating object, trapped region or gameplay imbalance.
+`audit` validates schema/version/IDs/transforms/bounds, compiles the map, verifies default spawn clearance, reports counts and flags exact duplicate collision boxes. Duplicate boxes are advisory; overlap alone does not mean an error. It cannot prove the absence of every visual gap, floating object, trapped region or gameplay imbalance.
 
 `route` uses the real controller at 60 Hz, starting at the normal spawn. A route is a JSON array of `{x,z,feet,crouch?}`. Each straight waypoint leg has a 60-second simulation budget. It is a reachability regression, **not a pathfinder**: insert waypoints around obstacles. It returns failure at the first blocked waypoint. The supplied upstairs and garden routes exercise important house circulation.
 

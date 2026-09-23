@@ -1,4 +1,14 @@
-# Landscaping revision — 2026-09-23
+# Interior placement revision ï¿½ 2026-09-23
+
+Rearranged the living room around a sofa facing a TV mounted on the solid partition, with a low coffee table and wall-adjacent console. Moved the fridge into the counter run, faced its doors into the kitchen, and removed its duplicate collider. Dining chairs now face the table from opposite sides. Moved the master bed headboard to the rear wall, placed the wardrobe beside it on a solid wall section, and added a bedside cabinet. The smaller bedroom uses a narrower single bed with a usable side aisle. Removed the detached hall cupboard, misplaced kitchen island, floating sideboard and unnecessary bedroom divider.
+
+Preserved semantic IDs for moved furniture and updated visual, collision and entity bounds together. Indoor cover now uses a tested crouched pocket behind the sofa; outdoor cover is unchanged. Expanded route checks verify access beside the small bed and in front of the wardrobe, plus a new living-room/kitchen working-aisle route. Existing stair, doorway, backyard and cover-occlusion checks pass.
+
+83 default tests and 60 no-default-feature tests pass, as do formatting and both Clippy configurations. One earlier run encountered a Windows access-denied error in the unchanged offline-output replacement test; the full suite passed on retry. Client, headless and authoring release builds are updated. Inspected kitchen, both bedrooms, living-room views and the actual menu. Hardware input, physical audio and Linux runtime were not retested; input handling and audio were unchanged. The desktop shortcut continues to target bin/BE2.exe.
+
+---
+
+# Landscaping revision ï¿½ 2026-09-23
 
 Replaced two pole-and-sphere trees with tapered branching broadleaf trees and irregular seven-cluster crowns. Added two layered pine trees. Rebuilt all twelve shrubs from six varied leaf clusters with small stems; preserved shrub collision cores. Added 48 cream/pink/gold flowers across bed edges and four entrance/patio planting patches. All geometry is static matte primitives, without textures, transparency, per-frame animation or new dependencies.
 
@@ -10,7 +20,7 @@ The existing desktop shortcut targets the updated bin/BE2.exe. Shared landscapin
 
 ---
 
-# Agent authoring toolkit — 2026-09-23
+# Agent authoring toolkit ï¿½ 2026-09-23
 
 Added a rendering-free be2-tools executable and tools/be2.py workflow entry point. Both the graphical client and headless simulation load validated static map documents through --map. Default play still uses the procedural house; demonstration edits do not modify it. Runtime entity/name strings are owned rather than leaked static allocations.
 
@@ -24,7 +34,7 @@ Limits: map v1 covers static matte primitive scenes and inspect actions. Origina
 
 ---
 
-# House cleanup and hiding cover — 2026-09-23
+# House cleanup and hiding cover ï¿½ 2026-09-23
 
 Fixed open roof gables, gaps above upstairs walls, incomplete doorway headers, unsupported stair posts and headboard collision coverage. The bathroom now uses recessed tub/basin shapes and a recognizable toilet; the wardrobe and new cabinets have doors/handles. The tub base and rim abut without coplanar overlap.
 
@@ -102,3 +112,4 @@ An initial 1024x697 capture measured original startup at 0.657 s versus BE2 at 0
 Linux compilation, actual Debian/Ubuntu VPS memory/CPU usage, GPU/driver coverage and sustained playtesting are not verified here. CI contains Linux and Windows checks but was not executed remotely.
 
 PulseNet transport integration, authentication/session lifecycle, packet sequencing, snapshots, prediction/reconciliation, server combat and interactions, player collision, disguises, prop possession, rounds and scoring are not part of this release. Props are static inspectable/hittable assets. The headless executable is a local simulation/benchmark, not an online listener.
+

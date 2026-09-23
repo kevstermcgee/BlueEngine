@@ -93,14 +93,27 @@ fn facade(b: &mut Builder, along_x: bool, fixed: f32, base: f32, door: bool) {
         size((6. - cursor) * 0.5, 1.6),
     );
 }
-fn bed(b: &mut Builder, x: f32, z: f32, id: &'static str) {
-    b.cube("wood", V(x, 3.4, z), V(0.85, 0.20, 1.15));
-    b.cube("white", V(x, 3.68, z), V(0.83, 0.08, 1.13));
-    b.cube("blue", V(x, 3.79, z + 0.3), V(0.83, 0.03, 0.80));
-    b.cube("white", V(x, 3.80, z - 0.8), V(0.60, 0.04, 0.25));
-    b.cube("wood", V(x, 3.85, z - 1.21), V(0.88, 0.65, 0.06));
-    b.obstacle(V(x, 3.85, z - 1.21), V(0.88, 0.65, 0.06));
-    furniture(b, id, "Bed", V(x, 3.63, z), V(0.88, 0.43, 1.28));
+fn bed(b: &mut Builder, x: f32, z: f32, width: f32, id: &'static str) {
+    b.cube("wood", V(x, 3.4, z), V(width, 0.20, 1.15));
+    b.cube("white", V(x, 3.68, z), V(width - 0.02, 0.08, 1.13));
+    b.cube("blue", V(x, 3.79, z + 0.3), V(width - 0.02, 0.03, 0.80));
+    b.cube("white", V(x, 3.80, z - 0.8), V(width * 0.70, 0.04, 0.25));
+    b.cube("wood", V(x, 3.85, z - 1.21), V(width + 0.03, 0.65, 0.06));
+    b.obstacle(V(x, 3.85, z - 1.21), V(width + 0.03, 0.65, 0.06));
+    furniture(b, id, "Bed", V(x, 3.63, z), V(width + 0.03, 0.43, 1.28));
+}
+fn dining_chair(b: &mut Builder, id: &'static str, p: V, reverse: bool) {
+    let first = b.scene.nodes.len();
+    props::place(b, PropKind::Chair, id, "Dining chair", p);
+    if reverse {
+        // A half-turn preserves this chair's axis-aligned collision bounds.
+        for n in &mut b.scene.nodes[first..] {
+            if let crate::scene::Track::Fixed(v) = n.pos {
+                n.pos = crate::scene::Track::Fixed(V(2. * p.0 - v.0, v.1, 2. * p.2 - v.2));
+                n.rot = crate::scene::Track::Fixed(V(0., 180., 0.));
+            }
+        }
+    }
 }
 fn cabinet(b: &mut Builder, p: V, s: V) {
     solid(b, "wood", p, s);
@@ -229,39 +242,61 @@ pub fn build() -> crate::Result<Room> {
         solid(&mut b, "wall", V(2., 5.975, z), V(0.08, 0.425, half));
     }
     solid(&mut b, "wall", V(0.75, 4.8, -2.), V(1.25, 1.6, 0.08));
-    // Living room furnishings; shapes intentionally simple.
-    b.cube("blue", V(-4.7, 0.5, 3.2), V(0.7, 0.25, 1.5));
-    b.cube("blue", V(-5.3, 0.90, 3.2), V(0.10, 0.55, 1.5));
-    for z in [1.7, 4.7] {
-        b.cube("blue", V(-4.7, 0.70, z), V(0.7, 0.45, 0.10));
+    // Living room: sofa against the front wall, facing the TV on the solid partition.
+    b.cube("blue", V(-3.8, 0.5, 4.65), V(1.5, 0.25, 0.7));
+    for x in [-5.0, -2.6] {
+        for z in [4.2, 5.1] {
+            b.cube("wood", V(x, 0.125, z), V(0.06, 0.125, 0.06));
+        }
+    }
+    b.cube("blue", V(-3.8, 0.90, 5.25), V(1.5, 0.55, 0.10));
+    for x in [-5.3, -2.3] {
+        b.cube("blue", V(x, 0.70, 4.65), V(0.10, 0.45, 0.7));
     }
     furniture(
         &mut b,
         "house-sofa",
         "Sofa",
-        V(-4.7, 0.65, 3.2),
-        V(0.75, 0.65, 1.6),
+        V(-3.8, 0.65, 4.65),
+        V(1.6, 0.65, 0.75),
     );
-    solid(&mut b, "wood", V(-1.45, 0.35, 3.2), V(0.35, 0.35, 1.));
-    solid(&mut b, "dark", V(-1.45, 1.2, 3.2), V(0.08, 0.5, 0.8));
+    cabinet(&mut b, V(-4.9, 0.32, 0.46), V(0.85, 0.32, 0.3));
+    solid(&mut b, "dark", V(-4.9, 1.35, 0.15), V(0.80, 0.48, 0.07));
     b.entity(
         "house-tv",
         "Television",
-        V(-1.45, 1.2, 3.2),
-        V(0.08, 0.5, 0.8),
+        V(-4.9, 1.35, 0.15),
+        V(0.80, 0.48, 0.07),
+    );
+    // Low coffee table, with walking space around the seating group.
+    b.cube("wood", V(-3.8, 0.46, 2.8), V(0.75, 0.04, 0.42));
+    for x in [-4.4, -3.2] {
+        for z in [2.5, 3.1] {
+            b.cube("wood", V(x, 0.21, z), V(0.045, 0.21, 0.045));
+        }
+    }
+    furniture(
+        &mut b,
+        "house-coffee-table",
+        "Coffee table",
+        V(-3.8, 0.25, 2.8),
+        V(0.75, 0.25, 0.42),
     );
     // Kitchen counters, refrigerator, sink and hob.
     solid(&mut b, "white", V(-5.3, 0.46, -3.9), V(0.55, 0.46, 1.65));
     b.cube("stone", V(-5.3, 0.96, -3.9), V(0.57, 0.04, 1.67));
     b.cube("dark", V(-5.3, 1.008, -3.1), V(0.4, 0.008, 0.4));
-    solid(&mut b, "white", V(-3.9, 1., -5.35), V(0.5, 1., 0.5));
-    b.cube("dark", V(-3.38, 1.15, -5.1), V(0.02, 0.20, 0.025));
+    // Refrigerator joins the west-wall appliance run; door and handle face the room.
+    b.cube("white", V(-5.3, 1., -1.5), V(0.55, 1., 0.55));
+    b.cube("dark", V(-4.742, 1.43, -1.5), V(0.008, 0.012, 0.52));
+    b.cube("dark", V(-4.72, 0.95, -1.12), V(0.025, 0.20, 0.025));
+    b.cube("dark", V(-4.72, 1.67, -1.12), V(0.025, 0.10, 0.025));
     furniture(
         &mut b,
         "house-fridge",
         "Refrigerator",
-        V(-3.9, 1., -5.35),
-        V(0.5, 1., 0.5),
+        V(-5.3, 1., -1.5),
+        V(0.55, 1., 0.55),
     );
     props::place(
         &mut b,
@@ -284,31 +319,14 @@ pub fn build() -> crate::Result<Room> {
         "Dining table",
         V(-2.2, 0., -3.4),
     );
-    for (id, x, z) in [
-        ("house-chair-1", -3.35, -3.4),
-        ("house-chair-2", -1.05, -3.4),
-    ] {
-        props::place(&mut b, PropKind::Chair, id, "Dining chair", V(x, 0., z));
-    }
-    bed(&mut b, -3.8, -3.3, "house-bed-1");
-    bed(&mut b, 0.7, -0.65, "house-bed-2");
-    cabinet(&mut b, V(-4.5, 4.3, 0.55), V(0.8, 1.1, 0.4));
-    // Furniture creates small pockets off the main circulation routes.
-    cabinet(&mut b, V(1.75, 1.0, 2.8), V(0.65, 1.0, 0.4));
-    cabinet(&mut b, V(-3.0, 0.68, 1.0), V(0.8, 0.68, 0.3));
-    cabinet(&mut b, V(1.8, 0.55, -3.8), V(0.75, 0.55, 0.8));
-    b.cube("stone", V(1.8, 1.13, -3.8), V(0.79, 0.03, 0.84));
-    // Framed room divider with two open ends and visible supporting feet.
-    solid(&mut b, "floor", V(-3.2, 4.15, -0.9), V(0.65, 0.95, 0.045));
-    for x in [-3.85, -3.2, -2.55] {
-        b.cube("wood", V(x, 4.15, -0.9), V(0.035, 0.95, 0.065));
-    }
-    for y in [3.24, 5.06] {
-        b.cube("wood", V(-3.2, y, -0.9), V(0.68, 0.04, 0.065));
-    }
-    for x in [-3.72, -2.68] {
-        solid(&mut b, "wood", V(x, 3.25, -0.9), V(0.07, 0.05, 0.23));
-    }
+    dining_chair(&mut b, "house-chair-1", V(-2.2, 0., -2.5), false);
+    dining_chair(&mut b, "house-chair-2", V(-2.2, 0., -4.3), true);
+    // Bedrooms: headboards touch the rear walls; storage faces accessible floor space.
+    bed(&mut b, -3.6, -4.60, 0.85, "house-bed-1");
+    bed(&mut b, 0.20, -0.65, 0.55, "house-bed-2");
+    cabinet(&mut b, V(-1.4, 4.3, -5.4), V(0.6, 1.1, 0.45));
+    cabinet(&mut b, V(-4.95, 3.55, -4.85), V(0.30, 0.35, 0.30));
+    // Removed the free-standing room divider, hall cupboard and misplaced island.
     // Bathroom: recessed tub, basin and recognizable toilet, not plain blocks.
     solid(&mut b, "tile", V(0.7, 3.215, -4.0), V(1.1, 0.015, 1.9));
     b.obstacle(V(0.3, 3.5, -5.1), V(0.5, 0.3, 0.65));
@@ -482,25 +500,45 @@ mod tests {
             (2.8, -4.),
             (2.8, 1.05),
             (1.0, 1.05),
+            (1.4, -0.65),
+            (1.4, 1.05),
             (2.8, 1.05),
             (2.8, 3.),
             (-1.6, 3.),
             (-1.6, 1.),
             (-2.7, 0.),
+            (-1.4, -4.5),
         ] {
             walk_to(&mut p, &room, x, z);
         }
         assert!((p.feet_height() - 3.2).abs() < 0.01);
     }
     #[test]
+    fn kitchen_working_aisle_and_living_room_are_accessible() {
+        let room = build().unwrap();
+        let mut p = Controller::default();
+        for (x, z) in [
+            (-1.5, 3.6),
+            (-1.5, 1.3),
+            (-4.9, 1.3),
+            (-2.85, 1.3),
+            (-2.85, -1.2),
+            (-4.15, -1.5),
+            (-4.15, -4.4),
+        ] {
+            walk_to(&mut p, &room, x, z);
+        }
+        assert!(p.feet_height().abs() < 0.01);
+    }
+    #[test]
     fn cover_pockets_are_reachable_and_block_entrance_sightlines() {
         let room = build().unwrap();
         let mut p = Controller::default();
-        for (x, z) in [(3., 4.3), (3., 2.), (2.7, 2.)] {
+        for (x, z) in [(-1.5, 4.6), (-1.5, 5.65), (-3.8, 5.65)] {
             walk_to(&mut p, &room, x, z);
         }
         let cases = [
-            (V(0., 1.68, 4.6), V(2.7, 1.1, 2.)),
+            (V(-3.8, 1.68, 2.), V(-3.8, 0.98, 5.65)),
             (V(0., 1.68, -6.3), V(4.4, 0.98, -11.4)),
         ];
         for (eye, hide) in cases {

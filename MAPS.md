@@ -11,4 +11,4 @@
 
 The house is an exploration map foundation. Prop possession, rounds, scoring and online matches remain future game-layer work.
 
-House cover: shrub beds around all sides, an L-shaped backyard privacy screen, a hall cabinet, living-room sideboard, kitchen island and bedroom divider. Main routes stay open. Reachability and entrance sightlines are regression-tested; gameplay balance still needs player testing.
+House cover: shrub beds around all sides, an L-shaped backyard privacy screen, a living-room sofa pocket and wall-aligned bedroom furniture. Main routes stay open. Reachability and entrance sightlines are regression-tested; gameplay balance still needs player testing.

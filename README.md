@@ -14,7 +14,7 @@ The default client and headless world now use the two-story suburban house: livi
 
 All house geometry uses simple matte shapes. The cereal box, apple, chair and table share the reusable prop definitions. A quiet, short impact sound plays when the wrench makes contact; missed swings stay silent.
 
-The cleanup pass closes the roof gables and wall gaps, completes the stair railing, and adds 12 outdoor planting beds. Cabinets, a kitchen island, bedroom divider and garden privacy screen provide more cover while preserving paths through the house.
+The cleanup pass closes the roof gables and wall gaps, completes the stair railing, and adds 12 outdoor planting beds. The garden privacy screen and a pocket behind the living-room sofa provide cover while keeping main routes open. Furniture follows room layouts: a sofa facing the wall-mounted TV, fridge beside the counters, inward-facing dining chairs, and beds/storage against walls.
 
 Landscaping includes branching broadleaf trees, layered pines, clustered shrubs and 48 small flowers in cream, pink and gold. Plant geometry stays static and matte, with shared builders available for future maps.
 
