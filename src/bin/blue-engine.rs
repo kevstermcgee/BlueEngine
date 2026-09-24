@@ -421,9 +421,12 @@ async fn main() {
     let mut prediction_buffer = PredictionBuffer::new(128);
     let mut remote_interpolators: HashMap<u64, InterpolationBuffer<PlayerNetState>> =
         HashMap::new();
-    let mut remote_prop_interpolators: HashMap<String, InterpolationBuffer<vesper3d::viewer::net::PropNetState>> =
-        HashMap::new();
+    let mut remote_prop_interpolators: HashMap<
+        String,
+        InterpolationBuffer<vesper3d::viewer::net::PropNetState>,
+    > = HashMap::new();
     let mut client_baseline_snapshot: Option<vesper3d::viewer::net::WorldSnapshot> = None;
+    let mut client_acked_server_tick = 0u64;
     let mut remote_controllers: HashMap<u64, Controller> = HashMap::new();
     let mut remote_characters: HashMap<u64, character::Character> = HashMap::new();
     let mut client_tick = 0u64;
@@ -469,13 +472,24 @@ async fn main() {
                         }
                         Packet::Snapshot(snap) => {
                             client_baseline_snapshot = Some(snap.clone());
+                            client_acked_server_tick = snap.tick;
                             incoming_snap = Some(snap);
                         }
                         Packet::Delta(delta) => {
                             if let Some(ref base) = client_baseline_snapshot {
-                                let reconstructed = delta.apply_to(base);
-                                client_baseline_snapshot = Some(reconstructed.clone());
-                                incoming_snap = Some(reconstructed);
+                                if delta.base_tick == base.tick {
+                                    let reconstructed = delta.apply_to(base);
+                                    client_baseline_snapshot = Some(reconstructed.clone());
+                                    client_acked_server_tick = reconstructed.tick;
+                                    incoming_snap = Some(reconstructed);
+                                } else {
+                                    // Delta base mismatch due to packet loss or reordering: request keyframe recovery
+                                    let _ = transport
+                                        .send_packet(&Packet::RequestKeyframe, server_addr);
+                                }
+                            } else {
+                                let _ =
+                                    transport.send_packet(&Packet::RequestKeyframe, server_addr);
                             }
                         }
                         Packet::Pong { send_time_ms, .. } => {
@@ -497,9 +511,22 @@ async fn main() {
                                     0.05,
                                 );
                             }
+
+                            // Reconcile authoritative prop ownership with local prop physics
+                            for prop in &snap.props {
+                                if let Some(prop_idx) =
+                                    prop_physics.props.iter().position(|p| p.id == prop.id)
+                                {
+                                    if prop.held_by == Some(my_id) {
+                                        prop_physics.set_held_for_player(my_id, prop_idx);
+                                    } else if prop_physics.held_for_player(my_id) == Some(prop_idx)
+                                    {
+                                        prop_physics.drop_for_player(my_id);
+                                    }
+                                }
+                            }
                         }
-                        let active_ids: HashSet<u64> =
-                            snap.players.iter().map(|p| p.id).collect();
+                        let active_ids: HashSet<u64> = snap.players.iter().map(|p| p.id).collect();
                         remote_controllers.retain(|id, _| active_ids.contains(id));
                         remote_interpolators.retain(|id, _| active_ids.contains(id));
                         remote_characters.retain(|id, _| active_ids.contains(id));
@@ -541,8 +568,9 @@ async fn main() {
             let mut props_updated = false;
             for (prop_id, interp) in &remote_prop_interpolators {
                 if let Some(state) = interp.interpolate_at(render_tick) {
-                    let locally_held = prop_physics.held().is_some_and(|h| h.id == *prop_id);
-                    if !locally_held {
+                    let is_held_by_me =
+                        net_player_id.is_some_and(|my_id| state.held_by == Some(my_id));
+                    if !is_held_by_me {
                         prop_physics.set_prop_transform_and_vel(
                             prop_id,
                             state.position,
@@ -653,6 +681,7 @@ async fn main() {
                     fire_pistol: is_mouse_button_pressed(MouseButton::Left)
                         && loadout.selected == Weapon::Pistol,
                     interact: keys.pressed(KeyCode::E),
+                    ack_server_tick: client_acked_server_tick,
                 };
                 let _ = transport.send_packet(&Packet::Input(input_frame.clone()), server_addr);
                 prediction_buffer.push(input_frame, controller.clone());
@@ -682,13 +711,25 @@ async fn main() {
                     );
                 }
             }
-            if keys.pressed(KeyCode::E) && skip_look == 0 {
-                let ray = perspective.view(&controller, &room).aim(&controller, &room);
-                if prop_physics.toggle(&room, ray) {
-                    wrench.cancel();
+            if net_transport.is_none() {
+                if keys.pressed(KeyCode::E) && skip_look == 0 {
+                    let ray = perspective.view(&controller, &room).aim(&controller, &room);
+                    if prop_physics.toggle(&room, ray) {
+                        wrench.cancel();
+                    }
+                }
+                prop_physics.advance(get_frame_time(), &controller, &mut room);
+            } else if let Some(my_id) = net_player_id {
+                if prop_physics.held_for_player(my_id).is_some() {
+                    let mut players = HashMap::new();
+                    players.insert(my_id, &controller);
+                    prop_physics.step_simulation_with_players(
+                        get_frame_time(),
+                        &players,
+                        &mut room,
+                    );
                 }
             }
-            prop_physics.advance(get_frame_time(), &controller, &mut room);
             wrench.tick(
                 get_frame_time(),
                 &room,

@@ -28,10 +28,12 @@ pub struct ClientSession {
     pub last_seen: Instant,
     pub last_client_tick: u64,
     pub last_input_tick: u64,
+    pub last_acked_tick: u64,
     pub pistol_cooldown: f32,
     pub wrench_cooldown: f32,
-    pub baseline_snapshot: Option<crate::viewer::net::WorldSnapshot>,
+    pub snapshot_history: std::collections::VecDeque<crate::viewer::net::WorldSnapshot>,
     pub snapshots_since_keyframe: u32,
+    pub keyframe_requested: bool,
 }
 
 /// Authoritative dedicated server running HeadlessWorld over UDP.
@@ -127,10 +129,12 @@ impl DedicatedServer {
                 last_seen: now,
                 last_client_tick: 0,
                 last_input_tick: self.world.tick,
+                last_acked_tick: 0,
                 pistol_cooldown: 0.0,
                 wrench_cooldown: 0.0,
-                baseline_snapshot: None,
+                snapshot_history: std::collections::VecDeque::with_capacity(64),
                 snapshots_since_keyframe: 0,
+                keyframe_requested: false,
             },
         );
 
@@ -168,6 +172,9 @@ impl DedicatedServer {
                             session.last_seen = Instant::now();
                             session.last_client_tick = frame.client_tick;
                             session.last_input_tick = self.world.tick;
+                            if frame.ack_server_tick > session.last_acked_tick {
+                                session.last_acked_tick = frame.ack_server_tick;
+                            }
 
                             if frame.fire_pistol && session.pistol_cooldown <= 0.0 {
                                 session.pistol_cooldown = crate::viewer::weapons::SHOT_INTERVAL;
@@ -199,6 +206,13 @@ impl DedicatedServer {
                         }
                         if should_fire_wrench {
                             self.world.fire_wrench(player_id);
+                        }
+                    }
+                }
+                Packet::RequestKeyframe => {
+                    if let Some(&player_id) = self.clients.get(&src) {
+                        if let Some(session) = self.sessions.get_mut(&player_id) {
+                            session.keyframe_requested = true;
                         }
                     }
                 }
@@ -241,35 +255,48 @@ impl DedicatedServer {
             self.world.leave(id);
             self.sessions.remove(&id);
             self.clients.remove(&addr);
-            self.recent_disconnects
-                .insert(id, (addr, Instant::now()));
+            self.recent_disconnects.insert(id, (addr, Instant::now()));
             println!("[Server] Client #{id} timed out (disconnected)");
             ids.push(id);
         }
         ids
     }
 
-    /// Broadcast spatially filtered snapshots to each connected client with per-client delta tracking.
+    /// Broadcast spatially filtered snapshots to each connected client with per-client acknowledged delta tracking.
     pub fn broadcast_snapshots(&mut self) {
         for (&id, session) in &mut self.sessions {
             let snap = self.world.snapshot_for_player(id, session.last_client_tick);
-            let send_keyframe = session.baseline_snapshot.is_none()
+            let acked_base = if session.last_acked_tick > 0 {
+                session
+                    .snapshot_history
+                    .iter()
+                    .find(|s| s.tick == session.last_acked_tick)
+            } else {
+                None
+            };
+
+            let send_keyframe = session.keyframe_requested
+                || acked_base.is_none()
                 || session.snapshots_since_keyframe >= KEYFRAME_INTERVAL;
 
             if send_keyframe {
                 let _ = self
                     .transport
                     .send_packet(&Packet::Snapshot(snap.clone()), session.addr);
-                session.baseline_snapshot = Some(snap);
                 session.snapshots_since_keyframe = 0;
+                session.keyframe_requested = false;
             } else {
-                let base = session.baseline_snapshot.as_ref().unwrap();
+                let base = acked_base.unwrap();
                 let delta = snap.compute_delta(base);
                 let _ = self
                     .transport
                     .send_packet(&Packet::Delta(delta), session.addr);
-                session.baseline_snapshot = Some(snap);
                 session.snapshots_since_keyframe += 1;
+            }
+
+            session.snapshot_history.push_back(snap);
+            if session.snapshot_history.len() > 60 {
+                session.snapshot_history.pop_front();
             }
         }
     }
@@ -278,12 +305,10 @@ impl DedicatedServer {
     pub fn step(&mut self) {
         // Cooldown ticks and stale input neutralization
         for (&id, session) in &mut self.sessions {
-            session.pistol_cooldown = (session.pistol_cooldown
-                - crate::viewer::simulation::TICK_SECONDS)
-                .max(0.0);
-            session.wrench_cooldown = (session.wrench_cooldown
-                - crate::viewer::simulation::TICK_SECONDS)
-                .max(0.0);
+            session.pistol_cooldown =
+                (session.pistol_cooldown - crate::viewer::simulation::TICK_SECONDS).max(0.0);
+            session.wrench_cooldown =
+                (session.wrench_cooldown - crate::viewer::simulation::TICK_SECONDS).max(0.0);
             if self.world.tick.saturating_sub(session.last_input_tick) > STALE_INPUT_WINDOW_TICKS {
                 self.world.neutralize_input(id);
             }

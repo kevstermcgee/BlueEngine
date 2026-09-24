@@ -364,6 +364,27 @@ impl PropPhysics {
         }
     }
 
+    /// Authoritatively synchronize a held prop for a player (used by network client reconciliation).
+    pub fn set_held_for_player(&mut self, player_id: u64, prop_idx: usize) {
+        if prop_idx >= self.props.len() {
+            return;
+        }
+        if self.held_by_player.get(&player_id) == Some(&prop_idx) {
+            return;
+        }
+        if self.held_by_player.contains_key(&player_id) {
+            self.drop_for_player(player_id);
+        }
+        if let Some(other) = self.player_by_held.remove(&prop_idx) {
+            self.held_by_player.remove(&other);
+        }
+        self.held_by_player.insert(player_id, prop_idx);
+        self.player_by_held.insert(prop_idx, player_id);
+        let b = &mut self.bodies[self.props[prop_idx].handle];
+        b.set_gravity_scale(0., true);
+        b.wake_up(true);
+    }
+
     /// Pause clears only accumulated time; held objects and poses stay frozen.
     pub fn pause(&mut self) {
         self.debt = 0.;
@@ -399,8 +420,9 @@ impl PropPhysics {
             for (&player_id, &i) in &self.held_by_player {
                 if let Some(player) = players.get(&player_id) {
                     let prop = &self.props[i];
-                    let target =
-                        player.position + player.direction() * (0.65 + prop.radius) + V(0., 0.08, 0.);
+                    let target = player.position
+                        + player.direction() * (0.65 + prop.radius)
+                        + V(0., 0.08, 0.);
                     let b = &mut self.bodies[prop.handle];
                     let delta = vector(target) - b.translation();
                     if delta.norm() > 4. {

@@ -146,6 +146,7 @@ See tools/README.md."#
                     fire_wrench: false,
                     fire_pistol: false,
                     interact: false,
+                    ack_server_tick: 0,
                 };
                 controller.update(
                     input.movement,

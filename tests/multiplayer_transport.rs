@@ -39,16 +39,24 @@ impl SimulatedClient {
 
 struct TestClientReceiver {
     pub baseline: Option<vesper3d::viewer::net::WorldSnapshot>,
+    pub history: std::collections::VecDeque<vesper3d::viewer::net::WorldSnapshot>,
     pub deltas_received: usize,
+    pub deltas_applied: usize,
+    pub deltas_rejected: usize,
     pub snapshots_received: usize,
+    pub keyframe_needed: bool,
 }
 
 impl TestClientReceiver {
     fn new() -> Self {
         Self {
             baseline: None,
+            history: std::collections::VecDeque::with_capacity(32),
             deltas_received: 0,
+            deltas_applied: 0,
+            deltas_rejected: 0,
             snapshots_received: 0,
+            keyframe_needed: false,
         }
     }
 
@@ -57,20 +65,48 @@ impl TestClientReceiver {
             Packet::Snapshot(snap) => {
                 self.snapshots_received += 1;
                 self.baseline = Some(snap.clone());
+                self.history.push_back(snap.clone());
+                if self.history.len() > 32 {
+                    self.history.pop_front();
+                }
+                self.keyframe_needed = false;
                 Some(snap)
             }
             Packet::Delta(delta) => {
                 self.deltas_received += 1;
-                if let Some(ref base) = self.baseline {
-                    let snap = delta.apply_to(base);
+                let base = self
+                    .history
+                    .iter()
+                    .find(|s| s.tick == delta.base_tick)
+                    .cloned()
+                    .or_else(|| {
+                        self.baseline
+                            .as_ref()
+                            .filter(|b| b.tick == delta.base_tick)
+                            .cloned()
+                    });
+
+                if let Some(base) = base {
+                    let snap = delta.apply_to(&base);
                     self.baseline = Some(snap.clone());
+                    self.history.push_back(snap.clone());
+                    if self.history.len() > 32 {
+                        self.history.pop_front();
+                    }
+                    self.deltas_applied += 1;
                     Some(snap)
                 } else {
+                    self.deltas_rejected += 1;
+                    self.keyframe_needed = true;
                     None
                 }
             }
             _ => None,
         }
+    }
+
+    fn latest_acked_tick(&self) -> u64 {
+        self.baseline.as_ref().map(|b| b.tick).unwrap_or(0)
     }
 }
 
@@ -103,6 +139,7 @@ fn one_server_two_clients_end_to_end_in_test_lab() {
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: 0,
         };
         client1
             .controller
@@ -124,6 +161,7 @@ fn one_server_two_clients_end_to_end_in_test_lab() {
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: 0,
         };
         client2
             .controller
@@ -405,6 +443,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: 0,
         };
         client1
             .controller
@@ -428,6 +467,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: 0,
         };
         client2
             .controller
@@ -628,6 +668,11 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
 
     // 5. Active movement and mutual smooth observation for 30 ticks
     for tick in 1..=30 {
+        if c1_rx.keyframe_needed {
+            client1_net
+                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .unwrap();
+        }
         // Client 1 inputs (moving forward)
         let inp1 = InputFrame {
             client_tick: tick,
@@ -640,6 +685,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: c1_rx.latest_acked_tick(),
         };
         c1_controller.update(inp1.movement, TICK_SECONDS, &server.world.room.colliders);
         c1_pred.push(inp1.clone(), c1_controller.clone());
@@ -647,6 +693,11 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             .send_packet(&Packet::Input(inp1), server_addr)
             .unwrap();
 
+        if c2_rx.keyframe_needed {
+            client2_net
+                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .unwrap();
+        }
         // Client 2 inputs (strafing right)
         let inp2 = InputFrame {
             client_tick: tick,
@@ -659,6 +710,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: c2_rx.latest_acked_tick(),
         };
         c2_controller.update(inp2.movement, TICK_SECONDS, &server.world.room.colliders);
         c2_pred.push(inp2.clone(), c2_controller.clone());
@@ -728,8 +780,14 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
     }
 
     // Verify deltas were actually received by clients
-    assert!(c1_rx.deltas_received > 0, "Client 1 received real delta packets");
-    assert!(c2_rx.deltas_received > 0, "Client 2 received real delta packets");
+    assert!(
+        c1_rx.deltas_received > 0,
+        "Client 1 received real delta packets"
+    );
+    assert!(
+        c2_rx.deltas_received > 0,
+        "Client 2 received real delta packets"
+    );
 
     // Both clients observed each other moving via interpolation
     let c1_sees_c2 = c1_remote_interp.interpolate_state_at(25.0);
@@ -758,7 +816,31 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         .apply_prop_impulse(0, vesper3d::math::V(2.0, 6.0, 1.0));
 
     // Simulate 30 ticks of real Rapier physics trajectory and replication
-    for _tick in 31..=60 {
+    for tick in 31..=60 {
+        let inp1 = InputFrame {
+            client_tick: tick,
+            movement: Movement::default(),
+            yaw: 0.0,
+            pitch: 0.0,
+            fire_wrench: false,
+            fire_pistol: false,
+            interact: false,
+            ack_server_tick: c1_rx.latest_acked_tick(),
+        };
+        let _ = client1_net.send_packet(&Packet::Input(inp1), server_addr);
+
+        let inp2 = InputFrame {
+            client_tick: tick,
+            movement: Movement::default(),
+            yaw: 0.0,
+            pitch: 0.0,
+            fire_wrench: false,
+            fire_pistol: false,
+            interact: false,
+            ack_server_tick: c2_rx.latest_acked_tick(),
+        };
+        let _ = client2_net.send_packet(&Packet::Input(inp2), server_addr);
+
         server.poll_network().unwrap();
         server.step();
 
@@ -984,6 +1066,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: 0,
         };
         client1
             .send_packet(&Packet::Input(inp1), server_addr)
@@ -1000,6 +1083,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: 0,
         };
         client2
             .send_packet(&Packet::Input(inp2), server_addr)
@@ -1182,6 +1266,7 @@ fn test_input_sequencing_and_stale_input_neutralization() {
         fire_wrench: false,
         fire_pistol: false,
         interact: false,
+        ack_server_tick: 0,
     };
     client
         .send_packet(&Packet::Input(inp10), server_addr)
@@ -1201,6 +1286,7 @@ fn test_input_sequencing_and_stale_input_neutralization() {
         fire_wrench: false,
         fire_pistol: false,
         interact: false,
+        ack_server_tick: 0,
     };
     client
         .send_packet(&Packet::Input(inp_dup), server_addr)
@@ -1222,6 +1308,7 @@ fn test_input_sequencing_and_stale_input_neutralization() {
         fire_wrench: false,
         fire_pistol: false,
         interact: false,
+        ack_server_tick: 0,
     };
     client
         .send_packet(&Packet::Input(inp_old), server_addr)
@@ -1296,9 +1383,16 @@ fn test_multiplayer_prop_contention_and_ownership() {
     assert!(!phys.props.is_empty(), "Props available");
 
     // Position player 1 right in front of prop 0, aiming directly at it
-    let p0_pos = server.world.prop_physics.as_ref().unwrap().prop_position(0).unwrap();
+    let p0_pos = server
+        .world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_position(0)
+        .unwrap();
     let eye1 = server.world.player(1).unwrap().position.1;
-    server.world.player_mut(1).unwrap().position = vesper3d::math::V(p0_pos.0, eye1, p0_pos.2 + 0.8);
+    server.world.player_mut(1).unwrap().position =
+        vesper3d::math::V(p0_pos.0, eye1, p0_pos.2 + 0.8);
     let delta1 = p0_pos - server.world.player(1).unwrap().position;
     let pitch1 = (delta1.1 / delta1.length()).asin();
     let yaw1 = delta1.0.atan2(-delta1.2);
@@ -1314,11 +1408,19 @@ fn test_multiplayer_prop_contention_and_ownership() {
         fire_wrench: false,
         fire_pistol: false,
         interact: true,
+        ack_server_tick: 0,
     };
-    client1.send_packet(&Packet::Input(inp1), server_addr).unwrap();
+    client1
+        .send_packet(&Packet::Input(inp1), server_addr)
+        .unwrap();
     server.poll_network().unwrap();
 
-    let p1_held = server.world.prop_physics.as_ref().unwrap().held_for_player(1);
+    let p1_held = server
+        .world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .held_for_player(1);
     assert_eq!(p1_held, Some(0), "Player 1 picked up prop 0");
     assert_eq!(
         server.world.prop_physics.as_ref().unwrap().holder_of(0),
@@ -1328,7 +1430,8 @@ fn test_multiplayer_prop_contention_and_ownership() {
 
     // Position player 2 at the same prop and attempt to interact
     let eye2 = server.world.player(2).unwrap().position.1;
-    server.world.player_mut(2).unwrap().position = vesper3d::math::V(p0_pos.0 + 0.2, eye2, p0_pos.2 + 0.8);
+    server.world.player_mut(2).unwrap().position =
+        vesper3d::math::V(p0_pos.0 + 0.2, eye2, p0_pos.2 + 0.8);
     let delta2 = p0_pos - server.world.player(2).unwrap().position;
     let pitch2 = (delta2.1 / delta2.length()).asin();
     let yaw2 = delta2.0.atan2(-delta2.2);
@@ -1343,13 +1446,21 @@ fn test_multiplayer_prop_contention_and_ownership() {
         fire_wrench: false,
         fire_pistol: false,
         interact: true,
+        ack_server_tick: 0,
     };
-    client2.send_packet(&Packet::Input(inp2), server_addr).unwrap();
+    client2
+        .send_packet(&Packet::Input(inp2), server_addr)
+        .unwrap();
     server.poll_network().unwrap();
 
     // Contention resolution: Player 2 cannot steal prop 0 while Player 1 holds it
     assert_eq!(
-        server.world.prop_physics.as_ref().unwrap().held_for_player(2),
+        server
+            .world
+            .prop_physics
+            .as_ref()
+            .unwrap()
+            .held_for_player(2),
         None,
         "Player 2 interaction rejected by contention resolution"
     );
@@ -1396,9 +1507,16 @@ fn test_authoritative_combat_hitscan_and_impulse() {
     server.poll_network().unwrap();
 
     // Position player directly facing prop 0 within reach
-    let p0_pos = server.world.prop_physics.as_ref().unwrap().prop_position(0).unwrap();
+    let p0_pos = server
+        .world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_position(0)
+        .unwrap();
     let eye1 = server.world.player(1).unwrap().position.1;
-    server.world.player_mut(1).unwrap().position = vesper3d::math::V(p0_pos.0, eye1, p0_pos.2 + 0.8);
+    server.world.player_mut(1).unwrap().position =
+        vesper3d::math::V(p0_pos.0, eye1, p0_pos.2 + 0.8);
     let delta = p0_pos - server.world.player(1).unwrap().position;
     let pitch = (delta.1 / delta.length()).asin();
     let yaw = delta.0.atan2(-delta.2);
@@ -1423,8 +1541,11 @@ fn test_authoritative_combat_hitscan_and_impulse() {
         fire_wrench: false,
         fire_pistol: true,
         interact: false,
+        ack_server_tick: 0,
     };
-    client.send_packet(&Packet::Input(inp_pistol), server_addr).unwrap();
+    client
+        .send_packet(&Packet::Input(inp_pistol), server_addr)
+        .unwrap();
     server.poll_network().unwrap();
 
     let post_shot_speed = server
@@ -1467,7 +1588,12 @@ fn test_prop_state_interpolation_and_quantized_checksum() {
     let prop1 = PropNetState {
         id: "apple_1".into(),
         position: V(1.0, 1.0, 0.0),
-        rotation: [0.0, 0.7071068, 0.0, 0.7071068],
+        rotation: [
+            0.0,
+            std::f32::consts::FRAC_1_SQRT_2,
+            0.0,
+            std::f32::consts::FRAC_1_SQRT_2,
+        ],
         linear_velocity: V(1.0, 0.0, 0.0),
         angular_velocity: V(0.0, 2.0, 0.0),
         sleeping: false,
@@ -1502,5 +1628,301 @@ fn test_prop_state_interpolation_and_quantized_checksum() {
         world1.checksum(),
         world2.checksum(),
         "Quantized checksum diverges when a prop moves"
+    );
+}
+
+#[test]
+fn test_weapon_occlusion_and_wall_blocking() {
+    use vesper3d::math::V;
+    use vesper3d::viewer::simulation::HeadlessWorld;
+
+    let mut world = HeadlessWorld::new().unwrap();
+    // Position Player 1 in Main Arena behind East wall (wall is at X = 8.1, Z = -4.5)
+    world.join_at(1, V(5.0, 1.0, -4.5));
+
+    let phys = world.prop_physics.as_ref().unwrap();
+    let prop_idx = 0;
+    let prop_pos = phys.prop_position(prop_idx).unwrap();
+
+    // Aim from player 1 at prop_pos through the solid East wall
+    let p1 = world.player_mut(1).unwrap();
+    let delta = prop_pos - p1.position;
+    let pitch = (delta.1 / delta.length()).asin();
+    let yaw = delta.0.atan2(-delta.2);
+    p1.yaw = yaw;
+    p1.pitch = pitch;
+
+    let initial_speed = world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_linear_velocity(prop_idx)
+        .unwrap()
+        .length();
+
+    // Player 1 fires pistol: ray must hit the occluding wall before reaching the prop
+    let hit_point = world.fire_pistol(1);
+    assert!(hit_point.is_some(), "Pistol hit the occluding wall");
+
+    // Dynamic prop behind the wall must NOT have received any impulse
+    let speed_after_wall_shot = world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_linear_velocity(prop_idx)
+        .unwrap()
+        .length();
+    assert_eq!(
+        speed_after_wall_shot, initial_speed,
+        "Prop behind wall did not receive impulse (occluded by wall)"
+    );
+
+    // Now move player 1 in direct line of sight of the prop (no wall between)
+    let eye1 = world.player(1).unwrap().position.1;
+    world.player_mut(1).unwrap().position = V(prop_pos.0 - 1.5, eye1, prop_pos.2);
+    let delta_direct = prop_pos - world.player(1).unwrap().position;
+    let pitch_direct = (delta_direct.1 / delta_direct.length()).asin();
+    let yaw_direct = delta_direct.0.atan2(-delta_direct.2);
+    world.player_mut(1).unwrap().yaw = yaw_direct;
+    world.player_mut(1).unwrap().pitch = pitch_direct;
+
+    // Fire pistol with clear line of sight
+    let hit_direct = world.fire_pistol(1);
+    assert!(hit_direct.is_some(), "Direct line of sight hit");
+
+    let speed_after_direct_shot = world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_linear_velocity(prop_idx)
+        .unwrap()
+        .length();
+    assert!(
+        speed_after_direct_shot > initial_speed + 0.1,
+        "Prop with clear line of sight received physical impulse"
+    );
+}
+
+#[test]
+fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
+    use std::collections::VecDeque;
+    use vesper3d::viewer::{
+        controller::Movement,
+        net::{InputFrame, Packet, UdpTransport, PROTOCOL_VERSION},
+        server::DedicatedServer,
+    };
+
+    let mut server = DedicatedServer::bind("127.0.0.1:0").expect("Server bind");
+    let server_addr = server.local_addr;
+
+    let mut client1 = UdpTransport::bind("127.0.0.1:0").expect("Client 1");
+    let mut client2 = UdpTransport::bind("127.0.0.1:0").expect("Client 2");
+
+    client1
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    client2
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+
+    let mut c1_rx = TestClientReceiver::new();
+    let mut c2_rx = TestClientReceiver::new();
+
+    let mut c1_inbound_queue: VecDeque<(u64, Packet)> = VecDeque::new();
+    let mut c2_inbound_queue: VecDeque<(u64, Packet)> = VecDeque::new();
+
+    let latency_ticks = 5u64; // ~80 ms at 60 Hz
+    let mut dropped_packets = 0usize;
+    let mut reordered_packets = 0usize;
+
+    // Run for 120 ticks (~2 seconds of simulation)
+    for tick in 1..=120 {
+        let inp1 = InputFrame {
+            client_tick: tick,
+            movement: Movement {
+                forward: if tick % 20 < 10 { 1.0 } else { -1.0 },
+                ..Default::default()
+            },
+            yaw: 0.0,
+            pitch: 0.0,
+            fire_wrench: false,
+            fire_pistol: false,
+            interact: tick == 15 || tick == 45,
+            ack_server_tick: c1_rx.latest_acked_tick(),
+        };
+        client1
+            .send_packet(&Packet::Input(inp1), server_addr)
+            .unwrap();
+
+        let inp2 = InputFrame {
+            client_tick: tick,
+            movement: Movement {
+                right: if tick % 20 < 10 { 1.0 } else { -1.0 },
+                ..Default::default()
+            },
+            yaw: 0.0,
+            pitch: 0.0,
+            fire_wrench: false,
+            fire_pistol: false,
+            interact: false,
+            ack_server_tick: c2_rx.latest_acked_tick(),
+        };
+        client2
+            .send_packet(&Packet::Input(inp2), server_addr)
+            .unwrap();
+
+        server.poll_network().unwrap();
+        server.step();
+
+        // Collect packets emitted by server to client sockets
+        while let Ok(Some((pkt, _))) = client1.recv_packet() {
+            // Simulate 10% packet loss: drop every 10th packet
+            if (tick + c1_inbound_queue.len() as u64).is_multiple_of(10) {
+                dropped_packets += 1;
+                continue;
+            }
+            // Simulate jitter (delay +/- 2 ticks)
+            let jitter = if tick % 3 == 0 { 2 } else { 0 };
+            if jitter > 0 {
+                reordered_packets += 1;
+            }
+            c1_inbound_queue.push_back((tick + latency_ticks + jitter, pkt));
+        }
+
+        while let Ok(Some((pkt, _))) = client2.recv_packet() {
+            if (tick + c2_inbound_queue.len() as u64).is_multiple_of(10) {
+                dropped_packets += 1;
+                continue;
+            }
+            let jitter = if tick % 4 == 0 { 2 } else { 0 };
+            if jitter > 0 {
+                reordered_packets += 1;
+            }
+            c2_inbound_queue.push_back((tick + latency_ticks + jitter, pkt));
+        }
+
+        // Deliver ready packets to Client 1
+        let mut i = 0;
+        while i < c1_inbound_queue.len() {
+            if c1_inbound_queue[i].0 <= tick {
+                let (_, pkt) = c1_inbound_queue.remove(i).unwrap();
+                c1_rx.receive(pkt);
+            } else {
+                i += 1;
+            }
+        }
+        if c1_rx.keyframe_needed {
+            client1
+                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .unwrap();
+        }
+
+        // Deliver ready packets to Client 2
+        let mut j = 0;
+        while j < c2_inbound_queue.len() {
+            if c2_inbound_queue[j].0 <= tick {
+                let (_, pkt) = c2_inbound_queue.remove(j).unwrap();
+                c2_rx.receive(pkt);
+            } else {
+                j += 1;
+            }
+        }
+        if c2_rx.keyframe_needed {
+            client2
+                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .unwrap();
+        }
+    }
+
+    // Deliver remaining packets and allow clean recovery for 25 ticks
+    for tick in 121..=145 {
+        let inp1 = InputFrame {
+            client_tick: tick,
+            movement: Movement::default(),
+            yaw: 0.0,
+            pitch: 0.0,
+            fire_wrench: false,
+            fire_pistol: false,
+            interact: false,
+            ack_server_tick: c1_rx.latest_acked_tick(),
+        };
+        client1
+            .send_packet(&Packet::Input(inp1), server_addr)
+            .unwrap();
+
+        let inp2 = InputFrame {
+            client_tick: tick,
+            movement: Movement::default(),
+            yaw: 0.0,
+            pitch: 0.0,
+            fire_wrench: false,
+            fire_pistol: false,
+            interact: false,
+            ack_server_tick: c2_rx.latest_acked_tick(),
+        };
+        client2
+            .send_packet(&Packet::Input(inp2), server_addr)
+            .unwrap();
+
+        server.poll_network().unwrap();
+        server.step();
+
+        while let Ok(Some((pkt, _))) = client1.recv_packet() {
+            c1_rx.receive(pkt);
+        }
+        while let Ok(Some((pkt, _))) = client2.recv_packet() {
+            c2_rx.receive(pkt);
+        }
+    }
+
+    assert!(
+        dropped_packets > 0,
+        "Packet loss was actually simulated (dropped: {dropped_packets})"
+    );
+    assert!(
+        reordered_packets > 0,
+        "Packet jitter/reordering was actually simulated (jittered: {reordered_packets})"
+    );
+    assert!(
+        c1_rx.deltas_applied > 0,
+        "Client 1 successfully applied valid deltas (applied: {})",
+        c1_rx.deltas_applied
+    );
+    assert!(
+        c2_rx.deltas_applied > 0,
+        "Client 2 successfully applied valid deltas (applied: {})",
+        c2_rx.deltas_applied
+    );
+    assert!(
+        c1_rx.baseline.is_some(),
+        "Client 1 has valid recovered baseline snapshot"
+    );
+    assert!(
+        c2_rx.baseline.is_some(),
+        "Client 2 has valid recovered baseline snapshot"
+    );
+
+    let final_c1_tick = c1_rx.baseline.as_ref().unwrap().tick;
+    let final_c2_tick = c2_rx.baseline.as_ref().unwrap().tick;
+    assert!(
+        final_c1_tick >= 120,
+        "Client 1 settled at recent tick: {final_c1_tick}"
+    );
+    assert!(
+        final_c2_tick >= 120,
+        "Client 2 settled at recent tick: {final_c2_tick}"
     );
 }

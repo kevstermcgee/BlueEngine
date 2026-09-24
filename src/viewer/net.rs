@@ -183,7 +183,7 @@ impl DeltaSnapshot {
 }
 
 /// Client input sent to the authoritative server each tick.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct InputFrame {
     pub client_tick: u64,
     pub movement: Movement,
@@ -192,6 +192,8 @@ pub struct InputFrame {
     pub fire_wrench: bool,
     pub fire_pistol: bool,
     pub interact: bool,
+    #[serde(default)]
+    pub ack_server_tick: u64,
 }
 
 /// Network packets exchanged between client and dedicated server.
@@ -209,6 +211,7 @@ pub enum Packet {
     Input(InputFrame),
     Snapshot(WorldSnapshot),
     Delta(DeltaSnapshot),
+    RequestKeyframe,
     Ping {
         seq: u32,
         send_time_ms: u64,
@@ -663,6 +666,7 @@ mod tests {
                 fire_wrench: false,
                 fire_pistol: false,
                 interact: false,
+                ack_server_tick: 0,
             };
             controller.update(
                 input.movement,

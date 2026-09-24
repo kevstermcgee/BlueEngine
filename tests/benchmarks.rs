@@ -72,6 +72,7 @@ fn benchmark_prediction_and_reconciliation_throughput() {
             fire_wrench: false,
             fire_pistol: false,
             interact: false,
+            ack_server_tick: 0,
         };
         controller.update(input.movement, TICK_SECONDS, &colliders);
         pred.push(input, controller.clone());

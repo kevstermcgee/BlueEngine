@@ -149,7 +149,7 @@ impl HeadlessWorld {
         }
     }
     /// Authoritatively fire a pistol shot for a player.
-    /// Checks raycast against dynamic props and room geometry. If a prop is hit, applies impulse.
+    /// Resolves closest hit among static room geometry and dynamic props to prevent firing through walls.
     pub fn fire_pistol(&mut self, id: u64) -> Option<crate::math::V> {
         let player = self.players.get(&id)?;
         let ray = player.controller.ray();
@@ -157,57 +157,49 @@ impl HeadlessWorld {
             return None;
         }
 
-        let mut closest_dist = crate::viewer::weapons::PISTOL_RANGE;
+        let max_range = crate::viewer::weapons::PISTOL_RANGE;
+        let static_hit = self.room.world.hit(ray, max_range, false);
+        let max_prop_dist = static_hit.as_ref().map(|h| h.t).unwrap_or(max_range);
+
         let mut hit_prop = None;
-
         if let Some(ref mut physics) = self.prop_physics {
-            if let Some((i, d)) = physics.hit_prop(ray, closest_dist) {
-                closest_dist = d;
-                hit_prop = Some(i);
+            if let Some((i, d)) = physics.hit_prop(ray, max_prop_dist) {
+                hit_prop = Some((i, d));
             }
-            if let Some(i) = hit_prop {
+            if let Some((i, d)) = hit_prop {
                 physics.apply_impulse(i, ray.d.norm() * 6.0);
+                return Some(ray.o + ray.d.norm() * d);
             }
         }
 
-        if let Some(hit) = self.room.hit(ray, closest_dist) {
-            Some(hit.p)
-        } else if hit_prop.is_some() {
-            Some(ray.o + ray.d.norm() * closest_dist)
-        } else {
-            None
-        }
+        static_hit.map(|h| h.p)
     }
+
     /// Authoritatively swing a wrench for a player.
-    /// Checks reach against dynamic props and room geometry. If a prop is hit, applies heavy impulse or knocks it loose.
+    /// Resolves closest hit among static room geometry and dynamic props within reach.
     pub fn fire_wrench(&mut self, id: u64) -> Option<crate::math::V> {
         let player = self.players.get(&id)?;
         let ray = player.controller.ray();
         let reach = crate::viewer::wrench::REACH;
 
-        let mut closest_dist = reach;
-        let mut hit_prop = None;
+        let static_hit = self.room.world.hit(ray, reach, false);
+        let max_prop_dist = static_hit.as_ref().map(|h| h.t).unwrap_or(reach);
 
+        let mut hit_prop = None;
         if let Some(ref mut physics) = self.prop_physics {
-            if let Some((i, d)) = physics.hit_prop(ray, closest_dist) {
-                closest_dist = d;
-                hit_prop = Some(i);
+            if let Some((i, d)) = physics.hit_prop(ray, max_prop_dist) {
+                hit_prop = Some((i, d));
             }
-            if let Some(i) = hit_prop {
+            if let Some((i, d)) = hit_prop {
                 if let Some(holder) = physics.holder_of(i) {
                     physics.drop_for_player(holder);
                 }
                 physics.apply_impulse(i, ray.d.norm() * 12.0);
+                return Some(ray.o + ray.d.norm() * d);
             }
         }
 
-        if let Some(hit) = self.room.hit(ray, closest_dist) {
-            Some(hit.p)
-        } else if hit_prop.is_some() {
-            Some(ray.o + ray.d.norm() * closest_dist)
-        } else {
-            None
-        }
+        static_hit.map(|h| h.p)
     }
     /// Borrow current authoritative controller state, or return `None` for an unknown ID.
     pub fn player(&self, id: u64) -> Option<&Controller> {
@@ -398,20 +390,29 @@ impl HeadlessWorld {
             .iter()
             .filter(|o| o.state.requires_rigid_body() || o.state.requires_networking())
             .map(|o| {
-                let idx = self.prop_physics.as_ref().and_then(|phys| {
-                    phys.props.iter().position(|p| p.id == o.id)
-                });
-                let (rot, linvel, angvel, sleeping, held_by) = if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
-                    (
-                        phys.prop_rotation(i).unwrap_or([0., 0., 0., 1.]),
-                        phys.prop_linear_velocity(i).unwrap_or(crate::math::V::ZERO),
-                        phys.prop_angular_velocity(i).unwrap_or(crate::math::V::ZERO),
-                        phys.is_prop_sleeping(i),
-                        phys.holder_of(i),
-                    )
-                } else {
-                    ([0., 0., 0., 1.], crate::math::V::ZERO, crate::math::V::ZERO, true, None)
-                };
+                let idx = self
+                    .prop_physics
+                    .as_ref()
+                    .and_then(|phys| phys.props.iter().position(|p| p.id == o.id));
+                let (rot, linvel, angvel, sleeping, held_by) =
+                    if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
+                        (
+                            phys.prop_rotation(i).unwrap_or([0., 0., 0., 1.]),
+                            phys.prop_linear_velocity(i).unwrap_or(crate::math::V::ZERO),
+                            phys.prop_angular_velocity(i)
+                                .unwrap_or(crate::math::V::ZERO),
+                            phys.is_prop_sleeping(i),
+                            phys.holder_of(i),
+                        )
+                    } else {
+                        (
+                            [0., 0., 0., 1.],
+                            crate::math::V::ZERO,
+                            crate::math::V::ZERO,
+                            true,
+                            None,
+                        )
+                    };
 
                 super::net::PropNetState {
                     id: o.id.clone(),
@@ -476,20 +477,29 @@ impl HeadlessWorld {
             .filter(|o| o.state.requires_rigid_body() || o.state.requires_networking())
             .filter(|o| is_relevant(o.position))
             .map(|o| {
-                let idx = self.prop_physics.as_ref().and_then(|phys| {
-                    phys.props.iter().position(|p| p.id == o.id)
-                });
-                let (rot, linvel, angvel, sleeping, held_by) = if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
-                    (
-                        phys.prop_rotation(i).unwrap_or([0., 0., 0., 1.]),
-                        phys.prop_linear_velocity(i).unwrap_or(crate::math::V::ZERO),
-                        phys.prop_angular_velocity(i).unwrap_or(crate::math::V::ZERO),
-                        phys.is_prop_sleeping(i),
-                        phys.holder_of(i),
-                    )
-                } else {
-                    ([0., 0., 0., 1.], crate::math::V::ZERO, crate::math::V::ZERO, true, None)
-                };
+                let idx = self
+                    .prop_physics
+                    .as_ref()
+                    .and_then(|phys| phys.props.iter().position(|p| p.id == o.id));
+                let (rot, linvel, angvel, sleeping, held_by) =
+                    if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
+                        (
+                            phys.prop_rotation(i).unwrap_or([0., 0., 0., 1.]),
+                            phys.prop_linear_velocity(i).unwrap_or(crate::math::V::ZERO),
+                            phys.prop_angular_velocity(i)
+                                .unwrap_or(crate::math::V::ZERO),
+                            phys.is_prop_sleeping(i),
+                            phys.holder_of(i),
+                        )
+                    } else {
+                        (
+                            [0., 0., 0., 1.],
+                            crate::math::V::ZERO,
+                            crate::math::V::ZERO,
+                            true,
+                            None,
+                        )
+                    };
 
                 super::net::PropNetState {
                     id: o.id.clone(),
