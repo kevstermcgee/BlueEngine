@@ -22,3 +22,8 @@ mod landscaping;
 
 pub mod prop_physics;
 pub mod weapons;
+
+pub mod lifecycle;
+pub mod metrics;
+pub mod net;
+pub mod spatial;

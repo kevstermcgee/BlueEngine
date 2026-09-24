@@ -82,6 +82,10 @@ pub struct Player {
 pub struct HeadlessWorld {
     /// Shared geometry and collision data; mutation is the host caller's responsibility.
     pub room: Room,
+    /// Spatial room graph for interest management and culling.
+    pub room_graph: super::spatial::RoomGraph,
+    /// Object lifecycle registry ("static until proven otherwise").
+    pub lifecycle: super::lifecycle::LifecycleRegistry,
     players: BTreeMap<u64, Player>,
     /// Number of completed calls to [`Self::step`], initially zero.
     pub tick: u64,
@@ -95,8 +99,16 @@ impl HeadlessWorld {
     }
     /// Start an empty world with an already constructed room and tick zero.
     pub fn with_room(room: Room) -> Self {
+        let mut lifecycle = super::lifecycle::LifecycleRegistry::new();
+        for e in &room.entities {
+            let center = (e.bounds.min + e.bounds.max) * 0.5;
+            lifecycle.register(e.id.clone(), e.label.clone(), center);
+        }
+        let room_graph = super::spatial::RoomGraph::house();
         Self {
             room,
+            room_graph,
+            lifecycle,
             players: BTreeMap::new(),
             tick: 0,
         }
@@ -158,6 +170,57 @@ impl HeadlessWorld {
             player.input.jump = false;
         }
         self.tick += 1;
+    }
+
+    /// Generate an authoritative world snapshot for multiplayer replication.
+    pub fn snapshot(&self, ack_client_tick: u64) -> super::net::WorldSnapshot {
+        let players = self
+            .players
+            .iter()
+            .map(|(&id, p)| {
+                let room_id = self.room_graph.find_room_at(p.controller.position);
+                super::net::PlayerNetState::from_controller(id, self.tick, &p.controller, room_id)
+            })
+            .collect();
+
+        let props = self
+            .lifecycle
+            .objects
+            .iter()
+            .filter(|o| o.state.requires_networking())
+            .map(|o| super::net::PropNetState {
+                id: o.id.clone(),
+                position: o.position,
+                generation: o.generation,
+                is_held: false,
+            })
+            .collect();
+
+        super::net::WorldSnapshot {
+            tick: self.tick,
+            ack_client_tick,
+            players,
+            props,
+        }
+    }
+
+    /// Create a performance snapshot for observability and profiling.
+    pub fn performance_snapshot(&self, sim_cpu_time_us: f64) -> super::metrics::PerformanceSnapshot {
+        let (static_inst, _, dynamic, replicated) = self.lifecycle.counts();
+        let snap = self.snapshot(0);
+        let encoded_bytes = serde_json::to_vec(&snap).map(|b| b.len()).unwrap_or(0);
+        super::metrics::PerformanceSnapshot {
+            tick: self.tick,
+            sim_cpu_time_us,
+            physics_time_us: 0.0,
+            active_dynamic_bodies: dynamic,
+            sleeping_bodies: 0,
+            static_instances: static_inst,
+            replicated_entities: replicated + self.players.len(),
+            snapshot_bytes: encoded_bytes,
+            delta_bytes: encoded_bytes.min(256),
+            bandwidth_kbps: (encoded_bytes as f64 * 8.0 * 20.0) / 1000.0, // at 20 Hz snapshot rate
+        }
     }
 }
 

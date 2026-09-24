@@ -7,6 +7,9 @@ use vesper3d::{
     viewer::{
         authoring::{write_new, Edit, MapDocument},
         controller::{Controller, Movement},
+        metrics::PerformanceBudget,
+        net::{InputFrame, NetworkSimulator, PredictionBuffer},
+        simulation::HeadlessWorld,
     },
     Result,
 };
@@ -44,7 +47,7 @@ fn run() -> Result<()> {
     };
     let command = a.first().map(String::as_str).unwrap_or("help");
     let arity = match command {
-        "help" | "catalog" => 1,
+        "help" | "catalog" | "inspect-performance" | "validate-budget" | "net-test" | "bench" => 1,
         "export-house" => 2,
         "inspect" | "audit" => 2,
         "export-scene" | "floorplan" | "diff" | "route" | "select" => 3,
@@ -56,10 +59,14 @@ fn run() -> Result<()> {
     }
     match command {
         "help" => println!(
-            r#"BE2 native authoring toolkit
+            r#"BE2 native authoring and engine toolkit
 export-house OUT.json
 inspect MAP.json
 audit MAP.json
+inspect-performance
+validate-budget
+net-test
+bench
 apply MAP.json PATCH.json OUT.json
 diff BEFORE.json AFTER.json
 export-scene MAP.json OUT.json
@@ -73,6 +80,143 @@ All output files must be new.
 apply validates the entire transaction before writing.
 See tools/README.md."#
         ),
+        "inspect-performance" => {
+            let mut world = HeadlessWorld::new()?;
+            world.join(1);
+            world.join(2);
+            let started = std::time::Instant::now();
+            for _ in 0..60 {
+                world.step();
+            }
+            let elapsed_us = started.elapsed().as_secs_f64() * 1_000_000. / 60.;
+            let perf = world.performance_snapshot(elapsed_us);
+            let report = json!({
+                "ok": true,
+                "snapshot": perf,
+                "explanation": perf.explain(),
+            });
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        "validate-budget" => {
+            let mut world = HeadlessWorld::new()?;
+            world.join(1);
+            world.join(2);
+            let started = std::time::Instant::now();
+            for _ in 0..60 {
+                world.step();
+            }
+            let elapsed_us = started.elapsed().as_secs_f64() * 1_000_000. / 60.;
+            let perf = world.performance_snapshot(elapsed_us);
+            let budget = PerformanceBudget::default();
+            let validation = budget.validate(&perf);
+            let report = json!({
+                "ok": true,
+                "passed": validation.passed,
+                "violations": validation.violations,
+                "metrics": perf,
+            });
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        "net-test" => {
+            let mut world = HeadlessWorld::new()?;
+            world.join(1);
+            let mut sim = NetworkSimulator::new(50, 0.05); // 50ms latency, 5% packet loss
+            let mut pred = PredictionBuffer::new(64);
+            let mut controller = Controller::default();
+            let mut dropped_packets = 0;
+            let mut reconciled_corrections = 0;
+
+            for tick in 1..=120 {
+                let input = InputFrame {
+                    client_tick: tick,
+                    movement: Movement { forward: 1.0, ..Default::default() },
+                    yaw: 0.0,
+                    pitch: 0.0,
+                    fire_wrench: false,
+                    fire_pistol: false,
+                    interact: false,
+                };
+                controller.update(input.movement, vesper3d::viewer::simulation::TICK_SECONDS, &world.room.colliders);
+                pred.push(input, controller.clone());
+
+                if sim.should_drop() {
+                    dropped_packets += 1;
+                } else {
+                    world.input(1, Movement { forward: 1.0, ..Default::default() }, 0.0, 0.0);
+                    world.step();
+                    if tick % 3 == 0 {
+                        let snap = world.snapshot(tick);
+                        if let Some(p) = snap.players.iter().find(|p| p.id == 1) {
+                            if pred.reconcile(tick, p, &mut controller, &world.room.colliders, 0.02) {
+                                reconciled_corrections += 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            let report = json!({
+                "ok": true,
+                "simulated_ticks": 120,
+                "simulated_latency_ms": sim.latency_ms,
+                "simulated_packet_loss_rate": sim.packet_loss_rate,
+                "dropped_packets": dropped_packets,
+                "reconciled_corrections": reconciled_corrections,
+                "final_position": [controller.position.0, controller.position.1, controller.position.2],
+            });
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        "bench" => {
+            let mut world = HeadlessWorld::new()?;
+            world.join(1);
+            world.join(2);
+
+            // 1. Simulation step benchmark (1000 ticks)
+            let t0 = std::time::Instant::now();
+            for _ in 0..1000 {
+                world.step();
+            }
+            let sim_step_us = t0.elapsed().as_secs_f64() * 1_000_000. / 1000.;
+
+            // 2. Snapshot computation benchmark (1000 iterations)
+            let t0 = std::time::Instant::now();
+            for _ in 0..1000 {
+                let _ = world.snapshot(world.tick);
+            }
+            let snapshot_us = t0.elapsed().as_secs_f64() * 1_000_000. / 1000.;
+
+            // 3. Delta snapshot computation benchmark (1000 iterations)
+            let snap1 = world.snapshot(100);
+            let mut snap2 = snap1.clone();
+            snap2.tick = 101;
+            if let Some(p) = snap2.players.get_mut(0) {
+                p.position.0 += 0.1;
+            }
+            let t0 = std::time::Instant::now();
+            for _ in 0..1000 {
+                let _ = snap2.compute_delta(&snap1);
+            }
+            let delta_us = t0.elapsed().as_secs_f64() * 1_000_000. / 1000.;
+
+            // 4. Room graph spatial lookup benchmark (10,000 queries)
+            let t0 = std::time::Instant::now();
+            for i in 0..10000 {
+                let p = V((i as f32 % 10.0) - 5.0, 1.0, (i as f32 % 10.0) - 5.0);
+                let _ = world.room_graph.find_room_at(p);
+            }
+            let room_lookup_ns = t0.elapsed().as_secs_f64() * 1_000_000_000. / 10000.;
+
+            let results = json!({
+                "ok": true,
+                "benchmarks": {
+                    "sim_step_mean_us": sim_step_us,
+                    "snapshot_creation_mean_us": snapshot_us,
+                    "delta_compression_mean_us": delta_us,
+                    "room_graph_lookup_mean_ns": room_lookup_ns,
+                }
+            });
+            println!("{}", serde_json::to_string_pretty(&results)?);
+        }
         "catalog" => println!(
             "{}",
             json!({

@@ -42,7 +42,8 @@ impl CharacterKind {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Movement {
     pub forward: f32,
     pub right: f32,
@@ -144,6 +145,14 @@ impl Controller {
     }
     pub fn is_crouched(&self) -> bool {
         self.body_height < self.kind.standing_height() - 0.01
+    }
+    pub fn vertical_velocity(&self) -> f32 {
+        self.vertical_velocity
+    }
+    pub fn set_physics_state(&mut self, pos: V, vert_vel: f32, grounded: bool) {
+        self.position = pos;
+        self.vertical_velocity = vert_vel;
+        self.grounded = grounded;
     }
     pub fn direction(&self) -> V {
         V(
