@@ -30,6 +30,8 @@ pub struct PlayerNetState {
     pub vertical_vel: f32,
     pub grounded: bool,
     pub crouched: bool,
+    #[serde(default)]
+    pub character_kind: crate::viewer::controller::CharacterKind,
     pub room_id: Option<RoomId>,
 }
 
@@ -44,6 +46,7 @@ impl PlayerNetState {
             vertical_vel: c.vertical_velocity(),
             grounded: c.is_grounded(),
             crouched: c.is_crouched(),
+            character_kind: c.character_kind(),
             room_id,
         }
     }
@@ -204,6 +207,9 @@ pub enum Packet {
         seq: u32,
         send_time_ms: u64,
     },
+    Disconnect {
+        player_id: u64,
+    },
 }
 
 impl Packet {
@@ -355,6 +361,44 @@ impl InterpolationBuffer<PlayerNetState> {
             Some(self.snapshots[0].1.position)
         } else {
             Some(self.snapshots.back().unwrap().1.position)
+        }
+    }
+
+    /// Interpolate full remote player state (position, yaw, pitch) at fractional render tick.
+    pub fn interpolate_state_at(&self, render_tick: f32) -> Option<PlayerNetState> {
+        if self.snapshots.is_empty() {
+            return None;
+        }
+        if self.snapshots.len() == 1 {
+            return Some(self.snapshots[0].1.clone());
+        }
+
+        for i in 0..self.snapshots.len() - 1 {
+            let (t0, s0) = &self.snapshots[i];
+            let (t1, s1) = &self.snapshots[i + 1];
+            let t0_f = *t0 as f32;
+            let t1_f = *t1 as f32;
+            if render_tick >= t0_f && render_tick <= t1_f {
+                let alpha = if (t1_f - t0_f).abs() > 1e-4 {
+                    ((render_tick - t0_f) / (t1_f - t0_f)).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let pos = s0.position.lerp(s1.position, alpha);
+                let yaw = s0.yaw + (s1.yaw - s0.yaw) * alpha;
+                let pitch = s0.pitch + (s1.pitch - s0.pitch) * alpha;
+                let mut state = s1.clone();
+                state.position = pos;
+                state.yaw = yaw;
+                state.pitch = pitch;
+                return Some(state);
+            }
+        }
+
+        if render_tick < self.snapshots[0].0 as f32 {
+            Some(self.snapshots[0].1.clone())
+        } else {
+            Some(self.snapshots.back().unwrap().1.clone())
         }
     }
 }
@@ -511,6 +555,7 @@ mod tests {
                 vertical_vel: 0.0,
                 grounded: true,
                 crouched: false,
+                character_kind: Default::default(),
                 room_id: Some(RoomId(1)),
             }],
             props: vec![],

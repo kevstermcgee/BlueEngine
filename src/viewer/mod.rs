@@ -27,4 +27,5 @@ pub mod weapons;
 pub mod lifecycle;
 pub mod metrics;
 pub mod net;
+pub mod server;
 pub mod spatial;

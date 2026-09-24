@@ -9,7 +9,8 @@ use macroquad::{
     input::utils::{register_input_subscriber, repeat_all_miniquad_input},
     prelude::*,
 };
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::net::SocketAddr;
 use vesper3d::{
     math::V,
     viewer::{
@@ -17,8 +18,14 @@ use vesper3d::{
         controller::{Controller, Movement},
         maps::{self, MapId},
         mesh,
+        net::{
+            InputFrame, InterpolationBuffer, Packet, PlayerNetState, PredictionBuffer,
+            UdpTransport, PROTOCOL_VERSION,
+        },
         prop_physics::PropPhysics,
+        server::DedicatedServer,
         simulation::PlayerStepper,
+        test_lab::{SPAWN_PLAYER_1, SPAWN_PLAYER_2},
         weapons::{Loadout, Weapon},
         wrench::Wrench,
     },
@@ -345,7 +352,177 @@ async fn main() {
     let mut frame = 0;
     let mut samples = Vec::new();
     let mut captured_heights = Vec::new();
+
+    let host_mode = args
+        .windows(2)
+        .find(|a| a[0] == "--server")
+        .map(|a| a[1].clone())
+        .or_else(|| {
+            if args.iter().any(|a| a == "--server") {
+                Some("127.0.0.1:4000".to_string())
+            } else {
+                None
+            }
+        });
+
+    if let Some(ref s_addr) = host_mode {
+        let s_addr_clone = s_addr.clone();
+        std::thread::spawn(move || {
+            if let Ok(mut server) = DedicatedServer::bind(&s_addr_clone) {
+                let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+                let _ = server.run_realtime(stop, None);
+            }
+        });
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    let connect_addr_str = args
+        .windows(2)
+        .find(|a| a[0] == "--connect")
+        .map(|a| a[1].clone())
+        .or(host_mode);
+
+    let (mut net_transport, net_server_dest) = if let Some(ref addr_str) = connect_addr_str {
+        let parsed = addr_str.parse::<SocketAddr>().or_else(|_| {
+            use std::net::ToSocketAddrs;
+            addr_str
+                .to_socket_addrs()
+                .ok()
+                .and_then(|mut it| it.next())
+                .ok_or_else(|| "Failed to resolve address".to_string())
+        });
+        match parsed {
+            Ok(dest) => match UdpTransport::bind("0.0.0.0:0") {
+                Ok(transport) => {
+                    let _ = transport.send_packet(
+                        &Packet::Hello {
+                            protocol_version: PROTOCOL_VERSION,
+                            player_id: 0,
+                        },
+                        dest,
+                    );
+                    (Some(transport), Some(dest))
+                }
+                Err(e) => {
+                    eprintln!("Failed to bind local UDP socket: {e}");
+                    (None, None)
+                }
+            },
+            Err(e) => {
+                eprintln!("Invalid server address '{addr_str}': {e}");
+                (None, None)
+            }
+        }
+    } else {
+        (None, None)
+    };
+
+    let mut net_player_id: Option<u64> = None;
+    let mut prediction_buffer = PredictionBuffer::new(128);
+    let mut remote_interpolators: HashMap<u64, InterpolationBuffer<PlayerNetState>> =
+        HashMap::new();
+    let mut remote_controllers: HashMap<u64, Controller> = HashMap::new();
+    let mut remote_characters: HashMap<u64, character::Character> = HashMap::new();
+    let mut client_tick = 0u64;
+    let mut last_server_tick = 0u64;
+    let mut last_hello_sent = std::time::Instant::now();
+    let mut current_ping_ms = 0u64;
+
     loop {
+        if let (Some(ref mut transport), Some(server_addr)) = (&mut net_transport, net_server_dest)
+        {
+            if net_player_id.is_none()
+                && last_hello_sent.elapsed() > std::time::Duration::from_millis(500)
+            {
+                let _ = transport.send_packet(
+                    &Packet::Hello {
+                        protocol_version: PROTOCOL_VERSION,
+                        player_id: 0,
+                    },
+                    server_addr,
+                );
+                last_hello_sent = std::time::Instant::now();
+            }
+
+            while let Ok(Some((packet, src))) = transport.recv_packet() {
+                if src == server_addr {
+                    match packet {
+                        Packet::Welcome {
+                            player_id,
+                            server_tick,
+                            ..
+                        } => {
+                            net_player_id = Some(player_id);
+                            last_server_tick = server_tick;
+                            let spawn = match player_id {
+                                1 => SPAWN_PLAYER_1,
+                                2 => SPAWN_PLAYER_2,
+                                n => V((n as f32 - 1.0) * 1.5, 1.68, 6.0),
+                            };
+                            controller.position = spawn;
+                            character_chosen = true;
+                            active = true;
+                        }
+                        Packet::Snapshot(snap) => {
+                            last_server_tick = snap.tick;
+                            if let Some(my_id) = net_player_id {
+                                if let Some(my_server) = snap.players.iter().find(|p| p.id == my_id)
+                                {
+                                    prediction_buffer.reconcile(
+                                        snap.ack_client_tick,
+                                        my_server,
+                                        &mut controller,
+                                        &room.colliders,
+                                        0.05,
+                                    );
+                                }
+                            }
+                            let active_ids: HashSet<u64> =
+                                snap.players.iter().map(|p| p.id).collect();
+                            remote_controllers.retain(|id, _| active_ids.contains(id));
+                            remote_interpolators.retain(|id, _| active_ids.contains(id));
+                            remote_characters.retain(|id, _| active_ids.contains(id));
+
+                            for p in &snap.players {
+                                if Some(p.id) != net_player_id {
+                                    remote_interpolators
+                                        .entry(p.id)
+                                        .or_insert_with(|| InterpolationBuffer::new(32))
+                                        .push(snap.tick, p.clone());
+                                }
+                            }
+
+                            for prop in &snap.props {
+                                prop_physics.set_prop_position(&prop.id, prop.position);
+                            }
+                            if !snap.props.is_empty() {
+                                prop_physics.sync(&mut room);
+                            }
+                        }
+                        Packet::Pong { send_time_ms, .. } => {
+                            let now_ms = (get_time() * 1000.0) as u64;
+                            current_ping_ms = now_ms.saturating_sub(send_time_ms);
+                        }
+                        _ => {}
+                    }
+                }
+            }
+
+            let render_tick = (last_server_tick as f32) - 2.0;
+            for (&pid, interp) in &remote_interpolators {
+                if let Some(state) = interp.interpolate_state_at(render_tick) {
+                    let remote_c = remote_controllers.entry(pid).or_insert_with(|| {
+                        let mut c = Controller::for_character(state.character_kind);
+                        c.position = state.position;
+                        c
+                    });
+                    remote_c.position = state.position;
+                    remote_c.yaw = state.yaw;
+                    remote_c.pitch = state.pitch;
+                }
+            }
+        }
+
         let previous_position = controller.position;
         let focused = foreground();
         keys.poll(focused);
@@ -414,21 +591,35 @@ async fn main() {
             let mut movement_keys = keys.down.clone();
             movement_keys.extend(keys.pressed.iter().copied());
             let (f, r) = axes(&movement_keys);
-            stepper.advance(
-                &mut controller,
-                Movement {
-                    forward: f,
-                    right: r,
-                    sprint: keys.down.contains(&KeyCode::LeftShift)
-                        || keys.down.contains(&KeyCode::RightShift),
-                    jump: keys.pressed(KeyCode::Space),
-                    crouch: movement_keys.contains(&KeyCode::LeftControl)
-                        || movement_keys.contains(&KeyCode::RightControl)
-                        || movement_keys.contains(&KeyCode::C),
-                },
-                get_frame_time(),
-                &room.colliders,
-            );
+            let movement = Movement {
+                forward: f,
+                right: r,
+                sprint: keys.down.contains(&KeyCode::LeftShift)
+                    || keys.down.contains(&KeyCode::RightShift),
+                jump: keys.pressed(KeyCode::Space),
+                crouch: movement_keys.contains(&KeyCode::LeftControl)
+                    || movement_keys.contains(&KeyCode::RightControl)
+                    || movement_keys.contains(&KeyCode::C),
+            };
+            stepper.advance(&mut controller, movement, get_frame_time(), &room.colliders);
+            if let (Some(ref transport), Some(server_addr), Some(_)) =
+                (&net_transport, net_server_dest, net_player_id)
+            {
+                client_tick += 1;
+                let input_frame = InputFrame {
+                    client_tick,
+                    movement,
+                    yaw: controller.yaw,
+                    pitch: controller.pitch,
+                    fire_wrench: is_mouse_button_pressed(MouseButton::Left)
+                        && loadout.selected == Weapon::Wrench,
+                    fire_pistol: is_mouse_button_pressed(MouseButton::Left)
+                        && loadout.selected == Weapon::Pistol,
+                    interact: keys.pressed(KeyCode::E),
+                };
+                let _ = transport.send_packet(&Packet::Input(input_frame.clone()), server_addr);
+                prediction_buffer.push(input_frame, controller.clone());
+            }
             loadout.pistol.tick(get_frame_time());
             if loadout.scroll(
                 mouse_wheel().1,
@@ -690,6 +881,10 @@ async fn main() {
                 prop_physics.held().is_some(),
             );
         }
+        for (&pid, remote_c) in &mut remote_controllers {
+            let remote_char = remote_characters.entry(pid).or_default();
+            remote_char.draw(remote_c, &wrench, &wrench_view, false);
+        }
         if let Some(hit) = if loadout.selected == Weapon::Pistol {
             &loadout.pistol.impact
         } else {
@@ -795,6 +990,22 @@ async fn main() {
                 sh - 22.,
                 18.,
                 MUTED,
+            );
+        }
+        if let Some(pid) = net_player_id {
+            let net_info = format!(
+                "MULTIPLAYER | Player #{} | Server Tick {} | Remote Players: {} | Ping: {}ms",
+                pid,
+                last_server_tick,
+                remote_controllers.len(),
+                current_ping_ms
+            );
+            text(
+                &net_info,
+                28.,
+                sh - 46.,
+                18.,
+                Color::new(0.35, 0.95, 0.55, 0.95),
             );
         }
         if active || capture_dir.is_some() {
@@ -1151,6 +1362,11 @@ async fn main() {
         }
         frame += 1;
         next_frame().await;
+    }
+    if let (Some(ref transport), Some(server_addr), Some(pid)) =
+        (&net_transport, net_server_dest, net_player_id)
+    {
+        let _ = transport.send_packet(&Packet::Disconnect { player_id: pid }, server_addr);
     }
     capture(false);
 }

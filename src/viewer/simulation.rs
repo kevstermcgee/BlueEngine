@@ -157,6 +157,12 @@ impl HeadlessWorld {
         }
         true
     }
+    /// Apply an external linear impulse to an authoritative prop body by index.
+    pub fn apply_prop_impulse(&mut self, i: usize, impulse: crate::math::V) {
+        if let Some(ref mut physics) = self.prop_physics {
+            physics.apply_impulse(i, impulse);
+        }
+    }
     /// Accept movement intent without accepting a client position.
     /// Return false without mutation for unknown IDs or nonfinite axes/look angles.
     /// Clamp axes to [-1, 1], wrap yaw to [0, TAU), clamp pitch to [-1.5, 1.5].

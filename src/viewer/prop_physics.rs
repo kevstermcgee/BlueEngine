@@ -412,7 +412,31 @@ impl PropPhysics {
             .and_then(|p| self.bodies.get(p.handle).map(|b| value(b.linvel())))
     }
 
-    fn sync(&mut self, room: &mut Room) {
+    /// Apply an external linear impulse to a prop body by index.
+    pub fn apply_impulse(&mut self, i: usize, impulse: V) {
+        if let Some(p) = self.props.get(i) {
+            if let Some(b) = self.bodies.get_mut(p.handle) {
+                b.apply_impulse(vector(impulse), true);
+                b.wake_up(true);
+            }
+        }
+    }
+
+    /// Set a prop's translation directly by semantic ID (e.g. from network replication).
+    pub fn set_prop_position(&mut self, id: &str, pos: V) -> bool {
+        if let Some(p) = self.props.iter_mut().find(|p| p.id == id) {
+            if let Some(body) = self.bodies.get_mut(p.handle) {
+                let mut iso = *body.position();
+                iso.translation.vector = vector(pos);
+                body.set_position(iso, true);
+                p.transform = matrix(&iso);
+                return true;
+            }
+        }
+        false
+    }
+
+    pub fn sync(&mut self, room: &mut Room) {
         let any_active = self
             .props
             .iter()

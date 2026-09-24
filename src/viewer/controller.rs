@@ -12,7 +12,7 @@ const GRAVITY: f32 = 12.;
 const HEAD_MARGIN: f32 = STANDING_HEIGHT - EYE_HEIGHT;
 
 /// Playable body profile shared by rendering and fixed-step movement.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum CharacterKind {
     #[default]
     Scientist,
