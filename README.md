@@ -1,12 +1,12 @@
 # Blue Engine 2 (BE2) — 0.2.0
 
-A native Rust client and headless simulation foundation for our Prop Hunt project. Forked from the latest Blue Engine working code, preserving the wrench, Blue mechanic skin, first/third-person camera and Git history.
+A native Rust client and headless simulation foundation for our Prop Hunt project. Forked from the latest Blue Engine working code, with a Scientist seeker, Feta lab rat, wrench, first/third-person camera and Git history.
 
 ## Play
 
-Open `bin/BE2.exe`, then click **Start exploring**. No installation or server is needed. Windows x64 is the locally tested build.
+Open `bin/BE2.exe`, then choose **Feta / Lab rat** or **The Scientist / Seeker**. No installation or server is needed. Windows x64 is the locally tested build.
 
-WASD/arrows move; mouse looks; Shift sprints; Space jumps; Ctrl/C crouches; Q switches camera; left-click swings the wrench; E interacts; Escape/Tab pauses. H enables optional help; F3 enables diagnostics. The default view retains only the crosshair and relevant action prompts. Right-click/Backspace dismisses an inspection card. F/F11 toggles fullscreen.
+WASD/arrows move; mouse looks; Shift sprints; Space jumps; Ctrl/C crouches; Q switches camera; left-click swings the wrench; Escape/Tab pauses. H enables optional help; F3 enables diagnostics. The default view shows the crosshair, wrench hit feedback and a contextual E pickup/drop hint. The seeker has no object inspection menu. E picks up or drops a nearby loose prop for either character. Right-click and R remain available for future disguise controls. F/F11 toggles fullscreen.
 
 ## House map
 
@@ -18,7 +18,7 @@ The cleanup pass closes the roof gables and wall gaps, completes the stair raili
 
 Landscaping includes branching broadleaf trees, layered pines, clustered shrubs and 48 small flowers in cream, pink and gold. Plant geometry stays static and matte, with shared builders available for future maps.
 
-Future maps are recorded in MAPS.md: school, office and convenience store. Only the house is playable in this release.
+Four furnished maps are playable through the named desktop shortcuts or `--map assets/maps/starters/NAME.json`: house, school-wing, office and convenience-store. Each has been expanded to roughly double its previous floor/yard area, with 269 additional loose physics props in total. See assets/maps/starters/README.md for the additions and validation. A bare executable launch retains the original procedural house.
 
 ## Changes
 
@@ -30,7 +30,7 @@ Future maps are recorded in MAPS.md: school, office and convenience store. Only 
 - Four new props: cereal box, chair, table and apple, with stable IDs and collision bounds.
 - A true headless Cargo build with no graphics/window dependencies.
 
-The active props use plain matte colours, no layered decals, and 324 triangles total. Earlier prop assets are retained in `assets/legacy-props`.
+The active props use plain matte colours and bounded low-poly meshes. Five design accessories add framed sunset and botanical prints, a terracotta oval sculpture, leafy ceramic vase and catchall bowl. Examples are placed in the living room, kitchen and bedroom. Earlier prop assets are retained in `assets/legacy-props`.
 
 ## Reusable props
 
@@ -40,7 +40,7 @@ The props are in the house and in `assets/props/*.json`. Reuse them through `ves
 cargo run --no-default-features --example export_props -- my-props
 ```
 
-Exports refuse to replace existing files. JSON uses the inherited scene format documented in AI_REFERENCE.md. Props are static objects for now; disguises and possession belong to the upcoming Prop Hunt game layer.
+Exports refuse to replace existing files. JSON uses the inherited scene format documented in AI_REFERENCE.md. Loose catalog props now have runtime rigid-body physics; disguises and possession belong to the upcoming Prop Hunt game layer.
 
 ## Build
 
@@ -73,10 +73,24 @@ See VALIDATION.md for measured results and limitations; BE2_ARCHITECTURE.md for 
 
 ## Next: Prop Hunt and PulseNet
 
-This release improves the engine and adds props. It does not yet implement online multiplayer, prop disguises, hunters/hiders, rounds or scoring. The next phase connects the discussed PulseNet utility to the headless world, adds authoritative game rules, and validates one server with two clients. Offline play remains available.
+This release improves the engine and adds props. It does not yet implement online multiplayer, prop disguises, competitive hunter/hider rules, rounds or scoring. The next phase connects the discussed PulseNet utility to the headless world, adds authoritative game rules, and validates one server with two clients. Offline play remains available.
 
 ## Agent editing toolkit
 
 Start with `python tools/be2.py doctor`, then `python tools/be2.py map help`. The repository includes a native headless map editor, JSON edit transactions, spatial queries, collision floor plans, route/sightline checks, reusable prop placement, full validation, capture automation and release packaging with hashes. Both runtimes accept `--map FILE` for edited maps; the normal desktop launch still uses the built-in house.
 
 See [tools/README.md](tools/README.md) for the complete workflow and [tools/FEATURES.json](tools/FEATURES.json) for the feature-to-source index. Distributed Windows builds include bin/be2-tools.exe for native editing without Python or a compiler.
+
+## Playable characters
+
+Every interactive map launch asks you to choose Feta or The Scientist. Feta is a white rat with red eyes, pink ears/paws, whiskers and an animated tail. His body is 0.30 m high with a 0.16 m collision radius and 0.22 m eye height. Normal movement is 5.6 m/s, matching the Scientist sprint; Shift does not boost it further. Crouching lowers his body to 0.20 m and speed to 2.8 m/s. He starts in third person; Q switches perspectives. He has no wrench. The 1.80 m Scientist wears a white lab coat and eyeglasses and retains normal movement and wrench controls. Reset position preserves your character.
+
+Visual QA: `--studio --capture-character DIR --feta` renders Feta; omit `--feta` for the Scientist. Character selection is local; prop replication and multiplayer role rules remain future work.
+
+## Picking up and dropping props
+
+Aim at a loose prop within 2 metres and press **E** to carry it; press **E** again to drop it. Both Feta and The Scientist use the same controls. A contextual label identifies the target or carried item. The Scientist puts the wrench away while carrying. Dropped props fall, rotate, bounce slightly, settle with friction and can knock other loose props over. Objects stay solid while carried and can be blocked by walls. Escape freezes physics; Reset position releases the carried object first.
+
+This applies to freestanding catalog props in the built-in and shipped JSON maps, including boxes, fruit, chairs, small tables, vases and tabletop decorations. Wall art, built-in furnishings and architecture remain fixed. Custom geometry using unrelated materials remains static. Changes to object positions last for the current session; relaunch restores the map. This does not add breakage, inventory, throwing controls or multiplayer ownership.
+
+Physics visual smoke: `BE2.exe --studio --capture-physics NEW_DIR` (add `--feta` for the rat). The report records final prop positions alongside the rendered sequence.

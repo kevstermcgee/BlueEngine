@@ -1,0 +1,608 @@
+[
+  {
+    "id": "student-desk",
+    "label": "Student desk",
+    "scene": "student-desk.json",
+    "half_extents": [
+      0.58,
+      0.39,
+      0.37
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP student-desk OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "backpack",
+    "label": "School backpack",
+    "scene": "backpack.json",
+    "half_extents": [
+      0.18,
+      0.22,
+      0.13
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP backpack OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "locker",
+    "label": "Student locker",
+    "scene": "locker.json",
+    "half_extents": [
+      0.25,
+      1,
+      0.295
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP locker OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "file-cabinet",
+    "label": "Filing cabinet",
+    "scene": "file-cabinet.json",
+    "half_extents": [
+      0.32,
+      0.68,
+      0.38
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP file-cabinet OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "waste-bin",
+    "label": "Waste bin",
+    "scene": "waste-bin.json",
+    "half_extents": [
+      0.18,
+      0.25,
+      0.18
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP waste-bin OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "computer",
+    "label": "Desktop computer and keyboard",
+    "scene": "computer.json",
+    "half_extents": [
+      0.34,
+      0.28,
+      0.28
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP computer OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "papers",
+    "label": "Paperwork and pen",
+    "scene": "papers.json",
+    "half_extents": [
+      0.15,
+      0.013,
+      0.12
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP papers OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "mug",
+    "label": "Coffee mug",
+    "scene": "mug.json",
+    "half_extents": [
+      0.096,
+      0.09,
+      0.075
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP mug OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "printer",
+    "label": "Office printer",
+    "scene": "printer.json",
+    "half_extents": [
+      0.31,
+      0.2,
+      0.39
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP printer OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "coffee-machine",
+    "label": "Coffee machine",
+    "scene": "coffee-machine.json",
+    "half_extents": [
+      0.18,
+      0.31,
+      0.18
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP coffee-machine OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "microwave",
+    "label": "Microwave",
+    "scene": "microwave.json",
+    "half_extents": [
+      0.32,
+      0.18,
+      0.245
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP microwave OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "register",
+    "label": "Checkout register",
+    "scene": "register.json",
+    "half_extents": [
+      0.28,
+      0.3,
+      0.24
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP register OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "bottle",
+    "label": "Drink bottle",
+    "scene": "bottle.json",
+    "half_extents": [
+      0.055,
+      0.18,
+      0.055
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP bottle OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "snack-bag",
+    "label": "Snack packet",
+    "scene": "snack-bag.json",
+    "half_extents": [
+      0.075,
+      0.13,
+      0.041
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP snack-bag OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "carton",
+    "label": "Stock carton",
+    "scene": "carton.json",
+    "half_extents": [
+      0.3,
+      0.242,
+      0.256
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP carton OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "lunch-tray",
+    "label": "Lunch tray",
+    "scene": "lunch-tray.json",
+    "half_extents": [
+      0.24,
+      0.035,
+      0.16
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP lunch-tray OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "wall-window",
+    "label": "Opaque daylight window panel",
+    "scene": "wall-window.json",
+    "half_extents": [
+      0.94,
+      0.65,
+      0.18
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP wall-window OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "bench",
+    "label": "Bench",
+    "scene": "bench.json",
+    "half_extents": [
+      1,
+      0.24,
+      0.25
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP bench OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "bookcase",
+    "label": "Bookshelf",
+    "scene": "bookcase.json",
+    "half_extents": [
+      0.55,
+      0.8,
+      0.2
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP bookcase OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "soap-dispenser",
+    "label": "Soap dispenser",
+    "scene": "soap-dispenser.json",
+    "half_extents": [
+      0.08,
+      0.143,
+      0.055
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP soap-dispenser OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "math-board",
+    "label": "Blackboard - Math",
+    "scene": "math-board.json",
+    "half_extents": [
+      1.75,
+      0.68,
+      0.21
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP math-board OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "reading-board",
+    "label": "Blackboard - Reading",
+    "scene": "reading-board.json",
+    "half_extents": [
+      1.75,
+      0.68,
+      0.21
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP reading-board OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "closed-double-door",
+    "label": "Closed exterior double doors",
+    "scene": "closed-double-door.json",
+    "half_extents": [
+      1.5,
+      1.35,
+      0.14
+    ],
+    "origin": "bottom center",
+    "placement": "python tools/place_interior.py MAP closed-double-door OUTPUT --id ID --at X,Y,Z --yaw 0|90|180|270"
+  },
+  {
+    "id": "wall-clock",
+    "label": "Wall clock",
+    "scene": "wall-clock.json",
+    "half_extents": [
+      0.25,
+      0.26,
+      0.055
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "plain-basket",
+    "label": "Plain storage basket",
+    "scene": "plain-basket.json",
+    "half_extents": [
+      0.3,
+      0.19,
+      0.23
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "retail-shelf",
+    "label": "Simple freestanding shop shelf",
+    "scene": "retail-shelf.json",
+    "half_extents": [
+      0.5,
+      0.85,
+      1.33
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "sofa-two-seat",
+    "label": "Two seat sofa",
+    "scene": "sofa-two-seat.json",
+    "half_extents": [
+      0.9,
+      0.46,
+      0.4
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "pencil-cup",
+    "label": "Pencil cup",
+    "scene": "pencil-cup.json",
+    "half_extents": [
+      0.06,
+      0.14,
+      0.06
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "trophy",
+    "label": "School trophy",
+    "scene": "trophy.json",
+    "half_extents": [
+      0.15,
+      0.28,
+      0.1
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "water-dispenser",
+    "label": "Water dispenser",
+    "scene": "water-dispenser.json",
+    "half_extents": [
+      0.2,
+      0.67,
+      0.25
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "toilet-fixture",
+    "label": "Toilet",
+    "scene": "toilet-fixture.json",
+    "half_extents": [
+      0.3,
+      0.5,
+      0.46
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "sink-vanity",
+    "label": "Sink vanity",
+    "scene": "sink-vanity.json",
+    "half_extents": [
+      0.57,
+      0.61,
+      0.38
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "toilet-roll",
+    "label": "Toilet roll holder",
+    "scene": "toilet-roll.json",
+    "half_extents": [
+      0.13,
+      0.15,
+      0.15
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "orange",
+    "label": "Orange",
+    "scene": "orange.json",
+    "half_extents": [
+      0.085,
+      0.085,
+      0.085
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "pear",
+    "label": "Green pear",
+    "scene": "pear.json",
+    "half_extents": [
+      0.075,
+      0.12,
+      0.075
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "carrot",
+    "label": "Carrot",
+    "scene": "carrot.json",
+    "half_extents": [
+      0.04,
+      0.16,
+      0.04
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "bread-loaf",
+    "label": "Bread loaf",
+    "scene": "bread-loaf.json",
+    "half_extents": [
+      0.17,
+      0.095,
+      0.065
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "produce-stand",
+    "label": "Divided produce display",
+    "scene": "produce-stand.json",
+    "half_extents": [
+      0.75,
+      0.46,
+      0.54
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "small-cubby",
+    "label": "Open cubby unit",
+    "scene": "small-cubby.json",
+    "half_extents": [
+      0.75,
+      0.65,
+      0.2
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "cubby-bin",
+    "label": "Small cubby bin",
+    "scene": "cubby-bin.json",
+    "half_extents": [
+      0.2,
+      0.14,
+      0.15
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "floor-lamp-drum",
+    "label": "Floor lamp - linen drum",
+    "scene": "floor-lamp-drum.json",
+    "half_extents": [
+      0.285,
+      0.875,
+      0.285
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "floor-lamp-reading",
+    "label": "Floor lamp - reading",
+    "scene": "floor-lamp-reading.json",
+    "half_extents": [
+      0.33,
+      0.78,
+      0.2
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "table-lamp-ceramic",
+    "label": "Table lamp - ceramic",
+    "scene": "table-lamp-ceramic.json",
+    "half_extents": [
+      0.17,
+      0.265,
+      0.17
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "painting-coast",
+    "label": "Framed coastal landscape",
+    "scene": "painting-coast.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "painting-sunset",
+    "label": "Framed sunset landscape",
+    "scene": "painting-sunset.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "painting-geometric",
+    "label": "Framed geometric study",
+    "scene": "painting-geometric.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "painting-botanical",
+    "label": "Framed leaf study",
+    "scene": "painting-botanical.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "school-solar-print",
+    "label": "Framed solar system print",
+    "scene": "school-solar-print.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "school-shape-print",
+    "label": "Framed shapes print",
+    "scene": "school-shape-print.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "market-citrus-print",
+    "label": "Framed citrus poster",
+    "scene": "market-citrus-print.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "market-coffee-print",
+    "label": "Framed coffee poster",
+    "scene": "market-coffee-print.json",
+    "half_extents": [
+      0.56,
+      0.46,
+      0.044
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "shopping-basket",
+    "label": "Shopping basket with carry handles",
+    "scene": "shopping-basket.json",
+    "half_extents": [
+      0.3,
+      0.244,
+      0.21
+    ],
+    "origin": "bottom center"
+  },
+  {
+    "id": "shopping-basket-stack",
+    "label": "Nested shopping basket stack",
+    "scene": "shopping-basket-stack.json",
+    "half_extents": [
+      0.3,
+      0.329,
+      0.21
+    ],
+    "origin": "bottom center"
+  }
+]

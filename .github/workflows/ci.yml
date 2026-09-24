@@ -25,3 +25,6 @@ jobs:
       - run: cargo test --locked --no-default-features
       - run: cargo clippy --all-targets --locked --no-default-features -- -D warnings
       - run: cargo build --release --locked --no-default-features --bin be2-headless
+
+      - run: cargo rustdoc --locked --lib -- -D warnings
+      - run: cargo rustdoc --locked --lib --no-default-features -- -D warnings

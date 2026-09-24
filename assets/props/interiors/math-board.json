@@ -1,0 +1,6611 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      7.0,
+      4.8999999999999995,
+      7.0
+    ],
+    "target": [
+      0,
+      0.68,
+      0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.025,
+      0.045,
+      0.09
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.24,
+    "fog": 0,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "life-wood": {
+      "color": [
+        0.43,
+        0.25,
+        0.12
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-oak": {
+      "color": [
+        0.64,
+        0.43,
+        0.22
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-white": {
+      "color": [
+        0.87,
+        0.87,
+        0.8
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-paper": {
+      "color": [
+        0.94,
+        0.91,
+        0.79
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-ink": {
+      "color": [
+        0.045,
+        0.065,
+        0.08
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-blue": {
+      "color": [
+        0.075,
+        0.26,
+        0.44
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-sage": {
+      "color": [
+        0.25,
+        0.42,
+        0.35
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-clay": {
+      "color": [
+        0.65,
+        0.24,
+        0.12
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-yellow": {
+      "color": [
+        0.92,
+        0.63,
+        0.14
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-red": {
+      "color": [
+        0.6,
+        0.08,
+        0.09
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-metal": {
+      "color": [
+        0.32,
+        0.37,
+        0.39
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-chalk": {
+      "color": [
+        0.83,
+        0.88,
+        0.77
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-green": {
+      "color": [
+        0.055,
+        0.19,
+        0.12
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-glass": {
+      "color": [
+        0.36,
+        0.62,
+        0.69
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-cork": {
+      "color": [
+        0.55,
+        0.37,
+        0.19
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-tile": {
+      "color": [
+        0.58,
+        0.65,
+        0.62
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "math-board/0",
+      "shape": "box",
+      "material": "life-wood",
+      "parent": null,
+      "pos": [
+        0,
+        0.68,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.75,
+        0.68,
+        0.045
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/1",
+      "shape": "box",
+      "material": "life-green",
+      "parent": null,
+      "pos": [
+        0,
+        0.68,
+        0.05
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.68,
+        0.61,
+        0.008
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/2",
+      "shape": "box",
+      "material": "life-metal",
+      "parent": null,
+      "pos": [
+        0,
+        0.04,
+        0.1
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1.7,
+        0.025,
+        0.1
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/3",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        1.12,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/4",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        1.12,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/5",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.3335000000000001,
+        1.0870000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.03036,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/6",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2345000000000002,
+        1.0870000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.03036,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/7",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/8",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.284,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/9",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/10",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        1.0210000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/11",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.284,
+        1.0210000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/12",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        1.0210000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/13",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        0.9880000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/14",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        0.9880000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/15",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        0.9550000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/16",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        0.9550000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/17",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        0.9220000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/18",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        0.9220000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/19",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.086,
+        1.12,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.045540000000000004,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/20",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.1520000000000001,
+        1.0870000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/21",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.02,
+        1.0870000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/22",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.1520000000000001,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/23",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.02,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/24",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.086,
+        1.0210000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/25",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.1520000000000001,
+        0.9880000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/26",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.02,
+        0.9880000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/27",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.1520000000000001,
+        0.9550000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/28",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.02,
+        0.9550000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/29",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.1520000000000001,
+        0.9220000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/30",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.02,
+        0.9220000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/31",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        1.12,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/32",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        1.0870000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/33",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/34",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        1.0210000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/35",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.9880000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/36",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.9550000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/37",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.9220000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/38",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.756,
+        1.12,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/39",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6240000000000001,
+        1.12,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/40",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.756,
+        1.0870000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/41",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6240000000000001,
+        1.0870000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/42",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.756,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/43",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6240000000000001,
+        1.054,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/44",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6900000000000001,
+        1.0210000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/45",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.756,
+        0.9880000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/46",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6240000000000001,
+        0.9880000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/47",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.756,
+        0.9550000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/48",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6240000000000001,
+        0.9550000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/49",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.756,
+        0.9220000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/50",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6240000000000001,
+        0.9220000000000002,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/51",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.284,
+        0.8,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.045540000000000004,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/52",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        0.767,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/53",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        0.767,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/54",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.218,
+        0.734,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/55",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2510000000000001,
+        0.7010000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/56",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.284,
+        0.668,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/57",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.3170000000000002,
+        0.635,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/58",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.284,
+        0.6020000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/59",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.767,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/60",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.734,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/61",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.7010000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/62",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.668,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/63",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.635,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/64",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.5085000000000001,
+        0.8,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.06072,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/65",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.42600000000000005,
+        0.767,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/66",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.42600000000000005,
+        0.734,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/67",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.492,
+        0.7010000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.045540000000000004,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/68",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.42600000000000005,
+        0.668,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/69",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.42600000000000005,
+        0.635,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/70",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.5085000000000001,
+        0.6020000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.06072,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/71",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.09600000000000009,
+        0.734,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/72",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.09600000000000009,
+        0.668,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/73",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.30000000000000004,
+        0.8,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/74",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.23399999999999999,
+        0.767,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/75",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.23399999999999999,
+        0.734,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/76",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.2835000000000001,
+        0.7010000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.06072,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/77",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.3660000000000001,
+        0.668,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/78",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.3660000000000001,
+        0.635,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/79",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.2835000000000001,
+        0.6020000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.06072,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/80",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2510000000000001,
+        0.4800000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/81",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2675,
+        0.44700000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.03036,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/82",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.3170000000000002,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/83",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2510000000000001,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/84",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.35,
+        0.3810000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/85",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2510000000000001,
+        0.3810000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/86",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.284,
+        0.3480000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/87",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2510000000000001,
+        0.31500000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/88",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -1.2510000000000001,
+        0.2820000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/89",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.44700000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/90",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/91",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.3810000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/92",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.3480000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/93",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.8880000000000001,
+        0.31500000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/94",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.4590000000000001,
+        0.4800000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/95",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.47550000000000003,
+        0.44700000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.03036,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/96",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.525,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/97",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.4590000000000001,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/98",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.558,
+        0.3810000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/99",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.4590000000000001,
+        0.3810000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/100",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.492,
+        0.3480000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/101",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.4590000000000001,
+        0.31500000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/102",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.4590000000000001,
+        0.2820000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/103",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.09600000000000009,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/104",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.09600000000000009,
+        0.3480000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.07590000000000001,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/105",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.30000000000000004,
+        0.4800000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.045540000000000004,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/106",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.23399999999999999,
+        0.44700000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/107",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.3660000000000001,
+        0.44700000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/108",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.23399999999999999,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/109",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.3660000000000001,
+        0.4140000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/110",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.30000000000000004,
+        0.3810000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.045540000000000004,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/111",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.23399999999999999,
+        0.3480000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/112",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.3660000000000001,
+        0.3480000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/113",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.23399999999999999,
+        0.31500000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/114",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.3660000000000001,
+        0.31500000000000006,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.01518,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/115",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        0.30000000000000004,
+        0.2820000000000001,
+        0.061
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.045540000000000004,
+        0.014190000000000001,
+        0.002
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/116",
+      "shape": "box",
+      "material": "life-chalk",
+      "parent": null,
+      "pos": [
+        -0.6,
+        0.07,
+        0.13
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.12,
+        0.018,
+        0.03
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "math-board/117",
+      "shape": "box",
+      "material": "life-wood",
+      "parent": null,
+      "pos": [
+        0.75,
+        0.08,
+        0.12
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.09,
+        0.03,
+        0.045
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    }
+  ],
+  "audio": null
+}

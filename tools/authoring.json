@@ -1,0 +1,519 @@
+{
+  "version": 1,
+  "contract": {
+    "scope": "Static map authoring using the packaged native engine; no engine source access required.",
+    "units": "metres; Y up; linear RGB 0..1; box sizes are half extents; prop origins are at the bottom",
+    "map_schema_version": 1,
+    "map_document": "schema_version, name, scene, colliders, entities; use new to obtain a native-valid house template",
+    "validation_authority": "Native audit/apply. Discovery metadata is curated, not complete Rust type reflection.",
+    "output_policy": "New output paths only; native apply validates the entire batch before saving.",
+    "activation": "Launch bin/BE2.exe --map MAP.json or bin/be2-headless.exe --map MAP.json --ticks 600. Exporting does not change the default map.",
+    "supported": [
+      "static unparented box/sphere/cylinder/cone geometry",
+      "colliders",
+      "inspect entities",
+      "native prop placement",
+      "transactional translate/remove patches"
+    ],
+    "unsupported": [
+      "new gameplay rules",
+      "Prop Hunt rounds/disguises",
+      "network transport",
+      "custom scripts",
+      "animated maps",
+      "imported meshes in maps",
+      "custom spawn in map v1",
+      "rotating/scaling prefab instances"
+    ],
+    "context_policy": "Use describe, query, schema, assets, recipes, select, near and verify. Do not read src/ for content authoring. Unsupported behavior requires a separate engine change."
+  },
+  "commands": {
+    "describe": "Live native capabilities, units, limits, version and provenance",
+    "query TEXT --limit N": "Bounded local search of assets, recipes and capability topics (default 5, maximum 20)",
+    "schema patch": "Strict machine-readable patch schema",
+    "assets": "Available stable asset IDs and native kinds",
+    "recipes": "Known reusable patches, dependencies and verification guidance",
+    "new OUT.json": "Export the native house as a new editable map",
+    "add MAP TEMPLATE OUT --id ID --at X,Y,Z": "Instantiate an asset or recipe with namespaced IDs using a native transaction",
+    "map OP ...": "audit, diff, select, near, ray, route, floorplan, export-scene or apply",
+    "verify MAP NEW_DIR [--route ROUTE] [--capture] [--baseline REPORT]": "Persistent audit/route results and optional house camera captures with exact baseline comparison"
+  },
+  "assets": [
+    {
+      "id": "chair_wooden_1",
+      "label": "Wooden chair",
+      "native_kind": "chair",
+      "tags": [
+        "seat",
+        "furniture",
+        "wood"
+      ],
+      "scene": "assets/props/be2-chair.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom"
+    },
+    {
+      "id": "table_wooden_1",
+      "label": "Wooden table",
+      "native_kind": "table",
+      "tags": [
+        "furniture",
+        "dining",
+        "wood"
+      ],
+      "scene": "assets/props/be2-table.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom"
+    },
+    {
+      "id": "apple_red",
+      "label": "Red apple",
+      "native_kind": "apple",
+      "tags": [
+        "fruit",
+        "food",
+        "kitchen"
+      ],
+      "scene": "assets/props/be2-apple.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom"
+    },
+    {
+      "id": "cereal_box_1",
+      "label": "Cereal box",
+      "native_kind": "cereal",
+      "tags": [
+        "food",
+        "kitchen",
+        "carton"
+      ],
+      "scene": "assets/props/be2-cereal-box.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom"
+    },
+    {
+      "id": "framed_art_1",
+      "label": "Framed sunset print",
+      "native_kind": "framed-art",
+      "tags": [
+        "decor",
+        "accessory",
+        "framed-art"
+      ],
+      "scene": "assets/props/be2-framed-art.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom; art faces +Z"
+    },
+    {
+      "id": "framed_botanical_1",
+      "label": "Framed botanical print",
+      "native_kind": "framed-botanical",
+      "tags": [
+        "decor",
+        "accessory",
+        "framed-botanical"
+      ],
+      "scene": "assets/props/be2-framed-botanical.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom; art faces +Z"
+    },
+    {
+      "id": "sculpture_1",
+      "label": "Abstract terracotta sculpture",
+      "native_kind": "sculpture",
+      "tags": [
+        "decor",
+        "accessory",
+        "sculpture"
+      ],
+      "scene": "assets/props/be2-sculpture.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom; art faces +Z"
+    },
+    {
+      "id": "vase_plant_1",
+      "label": "Leafy ceramic vase",
+      "native_kind": "vase-plant",
+      "tags": [
+        "decor",
+        "accessory",
+        "vase-plant"
+      ],
+      "scene": "assets/props/be2-vase-plant.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom; art faces +Z"
+    },
+    {
+      "id": "bowl_1",
+      "label": "Ceramic catchall bowl",
+      "native_kind": "bowl",
+      "tags": [
+        "decor",
+        "accessory",
+        "bowl"
+      ],
+      "scene": "assets/props/be2-bowl.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom; art faces +Z"
+    },
+    {
+      "id": "table_lamp_1",
+      "label": "Table lamp",
+      "native_kind": "table-lamp",
+      "tags": [
+        "decor",
+        "accessory",
+        "lighting",
+        "desk"
+      ],
+      "scene": "assets/props/be2-table-lamp.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.46,
+        0.7,
+        0.46
+      ]
+    },
+    {
+      "id": "book_stack_1",
+      "label": "Stacked books",
+      "native_kind": "book-stack",
+      "tags": [
+        "decor",
+        "accessory",
+        "books",
+        "shelf"
+      ],
+      "scene": "assets/props/be2-book-stack.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.5,
+        0.21,
+        0.36
+      ]
+    },
+    {
+      "id": "candle_trio_1",
+      "label": "Candle trio on tray",
+      "native_kind": "candle-trio",
+      "tags": [
+        "decor",
+        "accessory",
+        "candles",
+        "table"
+      ],
+      "scene": "assets/props/be2-candle-trio.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.5,
+        0.36,
+        0.36
+      ]
+    },
+    {
+      "id": "potted_cactus_1",
+      "label": "Potted cactus",
+      "native_kind": "potted-cactus",
+      "tags": [
+        "decor",
+        "accessory",
+        "plant",
+        "succulent"
+      ],
+      "scene": "assets/props/be2-potted-cactus.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.46,
+        0.8,
+        0.36
+      ]
+    },
+    {
+      "id": "flower_vase_1",
+      "label": "Daisy vase",
+      "native_kind": "flower-vase",
+      "tags": [
+        "decor",
+        "accessory",
+        "flowers",
+        "plant"
+      ],
+      "scene": "assets/props/be2-flower-vase.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.6,
+        0.8,
+        0.5
+      ]
+    },
+    {
+      "id": "tall_vase_1",
+      "label": "Tall ceramic vase",
+      "native_kind": "tall-vase",
+      "tags": [
+        "decor",
+        "accessory",
+        "ceramic",
+        "vase"
+      ],
+      "scene": "assets/props/be2-tall-vase.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.4,
+        0.68,
+        0.4
+      ]
+    },
+    {
+      "id": "mantel_clock_1",
+      "label": "Mantel clock",
+      "native_kind": "mantel-clock",
+      "tags": [
+        "decor",
+        "accessory",
+        "clock",
+        "shelf"
+      ],
+      "scene": "assets/props/be2-mantel-clock.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.58,
+        0.44,
+        0.24
+      ]
+    },
+    {
+      "id": "woven_basket_1",
+      "label": "Woven-style basket",
+      "native_kind": "woven-basket",
+      "tags": [
+        "decor",
+        "accessory",
+        "basket",
+        "storage"
+      ],
+      "scene": "assets/props/be2-woven-basket.json",
+      "collision": "native conservative bounds",
+      "origin": "bottom center; clock faces +Z",
+      "dimensions_m": [
+        0.6,
+        0.38,
+        0.46
+      ]
+    }
+  ],
+  "recipes": [
+    {
+      "id": "dining_pair",
+      "description": "Table with two chairs. Translation only; chair orientations follow the native asset.",
+      "dependencies": [
+        "table_wooden_1",
+        "chair_wooden_1"
+      ],
+      "verify": "audit; select INSTANCE; inspect captures and routes near placement",
+      "patch": [
+        {
+          "op": "add_prop",
+          "id": "table",
+          "label": "Dining table",
+          "kind": "table",
+          "origin": [
+            0,
+            0,
+            0
+          ]
+        },
+        {
+          "op": "add_prop",
+          "id": "chair-left",
+          "label": "Dining chair",
+          "kind": "chair",
+          "origin": [
+            -1.1,
+            0,
+            0
+          ]
+        },
+        {
+          "op": "add_prop",
+          "id": "chair-right",
+          "label": "Dining chair",
+          "kind": "chair",
+          "origin": [
+            1.1,
+            0,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "garden_planter",
+      "description": "Low solid planter with an apple on top; explicit collision and inspect entities.",
+      "dependencies": [
+        "apple_red",
+        "add_box"
+      ],
+      "verify": "audit; route tools/examples/garden.route.json when placed in the house garden; inspect captures",
+      "patch": [
+        {
+          "op": "add_box",
+          "id": "base",
+          "label": "Garden planter",
+          "center": [
+            0,
+            0.4,
+            0
+          ],
+          "half_extents": [
+            0.6,
+            0.4,
+            0.4
+          ],
+          "color": [
+            0.45,
+            0.25,
+            0.12
+          ]
+        },
+        {
+          "op": "add_prop",
+          "id": "apple",
+          "label": "Apple",
+          "kind": "apple",
+          "origin": [
+            0,
+            0.8,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cover_block",
+      "description": "Solid waist-high cover with matching collision and inspect entity.",
+      "dependencies": [
+        "add_box"
+      ],
+      "verify": "audit; ray for line of sight; route around the cover; inspect capture",
+      "patch": [
+        {
+          "op": "add_box",
+          "id": "body",
+          "label": "Cover block",
+          "center": [
+            0,
+            0.5,
+            0
+          ],
+          "half_extents": [
+            0.6,
+            0.5,
+            0.4
+          ],
+          "color": [
+            0.28,
+            0.32,
+            0.36
+          ]
+        }
+      ]
+    }
+  ],
+  "topics": [
+    {
+      "id": "movement",
+      "summary": "Shared native 60 Hz controller. Validate stairs, doors and garden reachability with routes. Routes are straight waypoint legs, not pathfinding.",
+      "tools": [
+        "map route",
+        "verify --route"
+      ],
+      "dependencies": [
+        "colliders",
+        "spawn clearance"
+      ],
+      "examples": [
+        "tools/examples/upstairs.route.json",
+        "tools/examples/garden.route.json"
+      ]
+    },
+    {
+      "id": "ownership",
+      "summary": "Use select with an instance ID to retrieve slash-prefixed visual, collision and entity components. Translate/remove all relevant component IDs together. Built-in house components do not necessarily share IDs.",
+      "tools": [
+        "map select",
+        "map near",
+        "map apply",
+        "map diff"
+      ],
+      "dependencies": [
+        "stable IDs",
+        "patch schema"
+      ]
+    },
+    {
+      "id": "visual_regression",
+      "summary": "Twelve house cameras include the menu. Captures require a graphical desktop. Hash comparison flags changes for review; it does not assess aesthetics. Camera tour is house-specific.",
+      "tools": [
+        "verify --capture",
+        "verify --capture --baseline"
+      ],
+      "dependencies": [
+        "packaged client",
+        "graphical desktop"
+      ]
+    },
+    {
+      "id": "map_contract",
+      "summary": "Use the native house export as the canonical map example. Static primitives, fixed positive transforms, inspect-only actions. Strict native validation is the authority.",
+      "tools": [
+        "new",
+        "schema patch",
+        "map audit"
+      ],
+      "dependencies": [
+        "schema_version 1",
+        "packaged be2-tools"
+      ]
+    },
+    {
+      "id": "multiplayer",
+      "summary": "Headless simulation exists. Network transport, authoritative Prop Hunt rules and disguise selection are not implemented; content tools cannot add them.",
+      "tools": [],
+      "dependencies": [
+        "engine development required"
+      ]
+    },
+    {
+      "id": "asset_catalogue",
+      "summary": "Seventeen reusable native props including art, plants, ceramics, lighting, books, candles, a clock and basket. Use assets for IDs and dimensions. Lamps and candles are static, unlit decor; clock hands are fixed.",
+      "tools": [
+        "assets",
+        "add",
+        "query"
+      ],
+      "dependencies": [
+        "native catalog"
+      ]
+    },
+    {
+      "id": "interior_prefabs",
+      "summary": "23 additional static interior templates: desks, lockers, backpack, computer, paperwork, mugs, cabinets, appliances, stock, written blackboards and closed doors. Separate from native add_prop kinds. Discover with python tools/place_interior.py --list.",
+      "tools": [
+        "tools/place_interior.py --list",
+        "tools/place_interior.py MAP ASSET OUTPUT --id ID --at X,Y,Z --yaw 90"
+      ],
+      "dependencies": [
+        "assets/props/interiors/catalog.json",
+        "packaged native audit"
+      ]
+    }
+  ]
+}

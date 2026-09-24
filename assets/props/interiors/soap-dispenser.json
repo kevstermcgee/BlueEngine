@@ -1,0 +1,401 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      0.572,
+      0.4003999999999999,
+      0.572
+    ],
+    "target": [
+      0,
+      0.143,
+      0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.025,
+      0.045,
+      0.09
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.24,
+    "fog": 0,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "life-wood": {
+      "color": [
+        0.43,
+        0.25,
+        0.12
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-oak": {
+      "color": [
+        0.64,
+        0.43,
+        0.22
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-white": {
+      "color": [
+        0.87,
+        0.87,
+        0.8
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-paper": {
+      "color": [
+        0.94,
+        0.91,
+        0.79
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-ink": {
+      "color": [
+        0.045,
+        0.065,
+        0.08
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-blue": {
+      "color": [
+        0.075,
+        0.26,
+        0.44
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-sage": {
+      "color": [
+        0.25,
+        0.42,
+        0.35
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-clay": {
+      "color": [
+        0.65,
+        0.24,
+        0.12
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-yellow": {
+      "color": [
+        0.92,
+        0.63,
+        0.14
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-red": {
+      "color": [
+        0.6,
+        0.08,
+        0.09
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-metal": {
+      "color": [
+        0.32,
+        0.37,
+        0.39
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-chalk": {
+      "color": [
+        0.83,
+        0.88,
+        0.77
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-green": {
+      "color": [
+        0.055,
+        0.19,
+        0.12
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-glass": {
+      "color": [
+        0.36,
+        0.62,
+        0.69
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-cork": {
+      "color": [
+        0.55,
+        0.37,
+        0.19
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    },
+    "life-tile": {
+      "color": [
+        0.58,
+        0.65,
+        0.62
+      ],
+      "roughness": 1,
+      "metallic": 0,
+      "emission": 0,
+      "checker": null
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "soap-dispenser/0",
+      "shape": "box",
+      "material": "life-white",
+      "parent": null,
+      "pos": [
+        0,
+        0.11,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.11,
+        0.055
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "soap-dispenser/1",
+      "shape": "box",
+      "material": "life-metal",
+      "parent": null,
+      "pos": [
+        0,
+        0.25,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.022,
+        0.025,
+        0.02
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "soap-dispenser/2",
+      "shape": "box",
+      "material": "life-metal",
+      "parent": null,
+      "pos": [
+        0.025,
+        0.277,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.048,
+        0.008,
+        0.02
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    }
+  ],
+  "audio": null
+}

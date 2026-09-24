@@ -1,0 +1,616 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      1.7057348,
+      1.3645879,
+      1.7057348
+    ],
+    "target": [
+      0.0,
+      0.4,
+      0.0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.025,
+      0.045,
+      0.09
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.24,
+    "fog": 0.012,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "decor-clay": {
+      "color": [
+        0.68,
+        0.24,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-cream": {
+      "color": [
+        0.88,
+        0.81,
+        0.66
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-gold": {
+      "color": [
+        0.95,
+        0.57,
+        0.15
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-ink": {
+      "color": [
+        0.045,
+        0.065,
+        0.07
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-leaf": {
+      "color": [
+        0.075,
+        0.24,
+        0.13
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-sage": {
+      "color": [
+        0.27,
+        0.43,
+        0.29
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-blue": {
+      "color": [
+        0.04,
+        0.23,
+        0.62
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-red": {
+      "color": [
+        0.75,
+        0.025,
+        0.02
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-stem": {
+      "color": [
+        0.15,
+        0.075,
+        0.025
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-wood": {
+      "color": [
+        0.48,
+        0.27,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-yellow": {
+      "color": [
+        0.95,
+        0.62,
+        0.08
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "be2-framed-art-0",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.4,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.515,
+        0.365,
+        0.015
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-framed-art-1",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        -0.5325,
+        0.4,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.0175,
+        0.4,
+        0.055
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-framed-art-2",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        0.5325,
+        0.4,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.0175,
+        0.4,
+        0.055
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-framed-art-3",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.0175,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.515,
+        0.0175,
+        0.055
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-framed-art-4",
+      "shape": "box",
+      "material": "prop-wood",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.7825,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.515,
+        0.0175,
+        0.055
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-framed-art-5",
+      "shape": "sphere",
+      "material": "decor-gold",
+      "parent": null,
+      "pos": [
+        0.18,
+        0.53,
+        0.023
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.12,
+        0.12,
+        0.005
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-framed-art-6",
+      "shape": "box",
+      "material": "decor-sage",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.2,
+        0.024
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.43,
+        0.085,
+        0.006
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-framed-art-7",
+      "shape": "sphere",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.12,
+        0.29,
+        0.035
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.28,
+        0.115,
+        0.005
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    }
+  ],
+  "audio": null
+}

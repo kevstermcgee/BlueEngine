@@ -282,6 +282,47 @@ pub fn build() -> crate::Result<Room> {
         V(-3.8, 0.25, 2.8),
         V(0.75, 0.25, 0.42),
     );
+    // Accessories sit on existing surfaces or flush against solid interior walls.
+    for (kind, id, label, p) in [
+        (
+            PropKind::FramedArt,
+            "house-sunset",
+            "Framed sunset print",
+            V(-4.9, 2.0, 0.16),
+        ),
+        (
+            PropKind::FramedBotanical,
+            "house-botanical",
+            "Framed botanical print",
+            V(-5.3, 4.65, -5.82),
+        ),
+        (
+            PropKind::Sculpture,
+            "house-sculpture",
+            "Terracotta sculpture",
+            V(-4.15, 0.50, 2.8),
+        ),
+        (
+            PropKind::Bowl,
+            "house-bowl",
+            "Ceramic catchall bowl",
+            V(-3.65, 0.50, 2.8),
+        ),
+        (
+            PropKind::VasePlant,
+            "house-vase",
+            "Leafy ceramic vase",
+            V(-2.25, 0.8, -3.45),
+        ),
+        (
+            PropKind::VasePlant,
+            "bedroom-vase",
+            "Bedside greenery",
+            V(-4.95, 3.9, -4.85),
+        ),
+    ] {
+        props::place(&mut b, kind, id, label, p);
+    }
     // Kitchen counters, refrigerator, sink and hob.
     solid(&mut b, "white", V(-5.3, 0.46, -3.9), V(0.55, 0.46, 1.65));
     b.cube("stone", V(-5.3, 0.96, -3.9), V(0.57, 0.04, 1.67));
@@ -459,9 +500,11 @@ pub fn build() -> crate::Result<Room> {
         simple_geometry: true,
         compiled,
         world,
+        dynamic_world: crate::geometry::World::new(vec![]),
         colliders: b.colliders,
         entities: b.entities,
-    })
+    }
+    .with_furniture_colliders())
 }
 
 #[cfg(test)]

@@ -1,0 +1,213 @@
+{
+  "office": {
+    "apply": {
+      "ok": true,
+      "operations": 64,
+      "output": "C:\\Users\\TheNa\\Documents\\Codex\\2026-09-23\\le\\outputs\\be2\\.be2-work\\starter-maps\\revision-3\\office.json"
+    },
+    "routes": [
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.000961954821832478,
+            1.6799999475479126,
+            4.963620185852051
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.000961954821832478,
+            1.6799999475479126,
+            4.963620185852051
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.0001992184843402356,
+            1.6799999475479126,
+            4.950857639312744
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.0001992184843402356,
+            1.6799999475479126,
+            4.950857639312744
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      }
+    ],
+    "audit": {
+      "colliders": 64,
+      "duplicate_collision_boxes": [],
+      "entities": 64,
+      "instances": 228,
+      "name": "Office Starter",
+      "nodes": 228,
+      "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+      "ok": true,
+      "spawn_clear": true
+    },
+    "sha256": "cfdec7301b001e1d2813fd01072ed686e839830704a8fe96af268c3fe2794833",
+    "headless_smoke": {
+      "ticks": 600,
+      "players": 2,
+      "passed": true
+    },
+    "visual_review": "Native client interior and offline roof-omitted cutaway inspected. House camera tour is not full custom-map coverage."
+  },
+  "convenience-store": {
+    "apply": {
+      "ok": true,
+      "operations": 99,
+      "output": "C:\\Users\\TheNa\\Documents\\Codex\\2026-09-23\\le\\outputs\\be2\\.be2-work\\starter-maps\\revision-3\\convenience-store.json"
+    },
+    "routes": [
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            5.799922943115234,
+            1.6799999475479126,
+            1.971342921257019
+          ],
+          "ok": true,
+          "waypoints": 11
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -3.400512456893921,
+            1.6799999475479126,
+            1.9259978532791138
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      }
+    ],
+    "audit": {
+      "colliders": 99,
+      "duplicate_collision_boxes": [],
+      "entities": 99,
+      "instances": 274,
+      "name": "Convenience Store Starter",
+      "nodes": 274,
+      "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+      "ok": true,
+      "spawn_clear": true
+    },
+    "sha256": "56e2759d5cbaeb7df4ab6323e96ec73bd5be1beed00be637cc9d95712c7d60a4",
+    "headless_smoke": {
+      "ticks": 600,
+      "players": 2,
+      "passed": true
+    },
+    "visual_review": "Native client interior and offline roof-omitted cutaway inspected. House camera tour is not full custom-map coverage."
+  },
+  "school-wing": {
+    "apply": {
+      "ok": true,
+      "operations": 63,
+      "output": "C:\\Users\\TheNa\\Documents\\Codex\\2026-09-23\\le\\outputs\\be2\\.be2-work\\starter-maps\\revision-3\\school-wing.json"
+    },
+    "routes": [
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.000961954821832478,
+            1.6799999475479126,
+            4.963620185852051
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.000961954821832478,
+            1.6799999475479126,
+            4.963620185852051
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.0001992184843402356,
+            1.6799999475479126,
+            4.950857639312744
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.0001992184843402356,
+            1.6799999475479126,
+            4.950857639312744
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      }
+    ],
+    "audit": {
+      "colliders": 63,
+      "duplicate_collision_boxes": [],
+      "entities": 63,
+      "instances": 253,
+      "name": "School Wing Starter",
+      "nodes": 253,
+      "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+      "ok": true,
+      "spawn_clear": true
+    },
+    "sha256": "6547660268ae677db2b6a60e1ddeb496ed43a7058c3065b7ccaafc6a6b84fa71",
+    "headless_smoke": {
+      "ticks": 600,
+      "players": 2,
+      "passed": true
+    },
+    "visual_review": "Native client interior and offline roof-omitted cutaway inspected. House camera tour is not full custom-map coverage."
+  }
+}

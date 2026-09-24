@@ -149,9 +149,11 @@ impl MapDocument {
             simple_geometry: true,
             compiled,
             world,
+            dynamic_world: crate::geometry::World::new(vec![]),
             colliders: self.colliders.values().cloned().collect(),
             entities: self.entities.clone(),
-        })
+        }
+        .with_furniture_colliders())
     }
     pub fn apply(&self, operations: &[Edit]) -> Result<Self> {
         let mut next = self.clone();
@@ -218,10 +220,27 @@ impl MapDocument {
                 self.free_id(id)?;
                 let k = match kind.as_str() {
                     "apple" => PropKind::Apple,
+                    "table-lamp" => PropKind::TableLamp,
+                    "book-stack" => PropKind::BookStack,
+                    "candle-trio" => PropKind::CandleTrio,
+                    "potted-cactus" => PropKind::PottedCactus,
+                    "flower-vase" => PropKind::FlowerVase,
+                    "tall-vase" => PropKind::TallVase,
+                    "mantel-clock" => PropKind::MantelClock,
+                    "woven-basket" => PropKind::WovenBasket,
+
+                    "framed-art" => PropKind::FramedArt,
+                    "framed-botanical" => PropKind::FramedBotanical,
+                    "sculpture" => PropKind::Sculpture,
+                    "vase-plant" => PropKind::VasePlant,
+                    "bowl" => PropKind::Bowl,
+
                     "cereal" => PropKind::CerealBox,
                     "chair" => PropKind::Chair,
                     "table" => PropKind::Table,
-                    _ => return Err("Prop kind must be apple, cereal, chair or table".into()),
+                    _ => {
+                        return Err("Unknown prop kind; use catalog to list supported kinds".into())
+                    }
                 };
                 let scene = props::scene(k);
                 for (key, value) in scene.materials {

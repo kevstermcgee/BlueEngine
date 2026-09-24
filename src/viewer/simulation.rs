@@ -1,13 +1,33 @@
 //! Rendering-free simulation shared by the client and future PulseNet adapter.
+//!
+//! Callers schedule ticks; this module does not authenticate players or expire inputs.
+//! Held movement persists until replaced or the player leaves. A future transport
+//! adapter must handle disconnects, stale input and packet ordering separately.
+//!
+//! ```
+//! use vesper3d::viewer::{controller::Movement, simulation::HeadlessWorld};
+//! let mut world = HeadlessWorld::new()?;
+//! assert!(world.join(42));
+//! assert!(world.input(42, Movement { right: 1.0, ..Default::default() }, 0.0, 0.0));
+//! world.step();
+//! assert_eq!(world.tick, 1);
+//! assert!(world.player(42).is_some());
+//! world.leave(42);
+//! assert!(world.player(42).is_none());
+//! # Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+//! ```
 use super::{
     controller::{Collider, Controller, Movement},
     room::Room,
 };
 use std::collections::BTreeMap;
 
+/// Duration in seconds of one shared simulation tick (60 Hz).
 pub const TICK_SECONDS: f32 = 1. / 60.;
 const MAX_STEPS: usize = 8;
 
+/// Client frame accumulator with at most eight catch-up ticks per advance.
+/// Call [`Self::reset`] before using a newly positioned controller.
 #[derive(Default)]
 pub struct PlayerStepper {
     remainder: f64,
@@ -15,11 +35,14 @@ pub struct PlayerStepper {
     jump: bool,
 }
 impl PlayerStepper {
+    /// Discard accumulated time and pending jump; synchronize the previous pose.
     pub fn reset(&mut self, current: &Controller) {
         self.remainder = 0.;
         self.previous = current.clone();
         self.jump = false;
     }
+    /// Advance fixed ticks and return their count. Nonpositive/nonfinite time is ignored.
+    /// Retain a jump edge until a tick consumes it; discard stall time beyond eight ticks.
     pub fn advance(
         &mut self,
         current: &mut Controller,
@@ -43,27 +66,34 @@ impl PlayerStepper {
         }
         steps
     }
+    /// Interpolate position/stance for display while keeping current look angles.
     pub fn pose(&self, current: &Controller) -> Controller {
         current.interpolated(&self.previous, (self.remainder * 60.) as f32)
     }
 }
 
+/// Stored controller and private pending intent for one match-local player.
 pub struct Player {
+    /// Simulation state; world callers inspect it through [`HeadlessWorld::player`].
     pub controller: Controller,
     input: Movement,
 }
 /// Match-local world, bounded to eight players. No socket, renderer or window.
 pub struct HeadlessWorld {
+    /// Shared geometry and collision data; mutation is the host caller's responsibility.
     pub room: Room,
     players: BTreeMap<u64, Player>,
+    /// Number of completed calls to [`Self::step`], initially zero.
     pub tick: u64,
 }
 impl HeadlessWorld {
+    /// Build the default House. Returns an error if map construction fails.
     pub fn new() -> crate::Result<Self> {
         Ok(Self::with_room(super::maps::build(
             super::maps::MapId::House,
         )?))
     }
+    /// Start an empty world with an already constructed room and tick zero.
     pub fn with_room(room: Room) -> Self {
         Self {
             room,
@@ -71,6 +101,8 @@ impl HeadlessWorld {
             tick: 0,
         }
     }
+    /// Join at the shared default spawn; reject duplicate IDs or a full eight-player world.
+    /// Players do not collide with each other. IDs are supplied by the caller.
     pub fn join(&mut self, id: u64) -> bool {
         if self.players.len() >= 8 || self.players.contains_key(&id) {
             return false;
@@ -84,13 +116,19 @@ impl HeadlessWorld {
         );
         true
     }
+    /// Remove state and pending input. Unknown IDs are harmless.
     pub fn leave(&mut self, id: u64) {
         self.players.remove(&id);
     }
+    /// Borrow current authoritative controller state, or return `None` for an unknown ID.
     pub fn player(&self, id: u64) -> Option<&Controller> {
         self.players.get(&id).map(|p| &p.controller)
     }
-    /// Only bounded movement intent is accepted; clients cannot assign positions.
+    /// Accept movement intent without accepting a client position.
+    /// Return false without mutation for unknown IDs or nonfinite axes/look angles.
+    /// Clamp axes to [-1, 1], wrap yaw to [0, TAU), clamp pitch to [-1.5, 1.5].
+    /// Jump edges accumulate until the next tick; all other input replaces prior intent.
+    /// Held input persists across ticks; there is no timeout in this API.
     pub fn input(&mut self, id: u64, mut input: Movement, yaw: f32, pitch: f32) -> bool {
         if !input.forward.is_finite()
             || !input.right.is_finite()
@@ -110,6 +148,8 @@ impl HeadlessWorld {
         player.controller.pitch = pitch.clamp(-1.5, 1.5);
         true
     }
+    /// Advance every player one tick and increment the world tick, even when empty.
+    /// Consume pending jump edges once; retain all other movement intent.
     pub fn step(&mut self) {
         for player in self.players.values_mut() {
             player

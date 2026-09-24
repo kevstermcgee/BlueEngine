@@ -1,5 +1,7 @@
 # BE2 agent editing toolkit
 
+For source-free content authoring, start with `python tools/author.py describe` and [AUTHORING.md](AUTHORING.md). This compact JSON interface uses packaged binaries and adds bounded discovery, asset IDs, parameterized recipes and persistent regression reports without Cargo or engine source reads. The development runner below remains available for engine maintenance/builds.
+
 Start here after AGENTS.md and BE2_ARCHITECTURE.md. This toolkit lives with the repository, uses no AI service, and works for humans, Codex or other agents. The native editor is Rust; the workflow runner uses Python 3.10+ and only its standard library. No plugin installation is needed.
 
 ## First five minutes
@@ -73,7 +75,7 @@ Patch files are JSON arrays. Every field is explicit and unknown fields are reje
 ]
 ```
 
-`add_box` creates a matte box, matching collision proxy and inspect entity. Sizes are **half extents**, positions are metres, Y is up, RGB values are linear 0..1. `add_prop` reuses cereal, chair, table or apple geometry; origin is the bottom of the prop. Both reject occupied IDs. Use `select` to enumerate the resulting components.
+`add_box` creates a matte box, matching collision proxy and inspect entity. Sizes are **half extents**, positions are metres, Y is up, RGB values are linear 0..1. `add_prop` reuses cereal, chair, table, apple, framed-art, framed-botanical, sculpture, vase-plant or bowl geometry; origin is the bottom of the prop. Both reject occupied IDs. Use `select` to enumerate the resulting components.
 
 ```json
 [
@@ -112,3 +114,32 @@ For gameplay, graphics, audio, networking or new reusable prop types, use `FEATU
 6. Build and package. Keep useful source, routes and patches tracked; keep scratch exports and logs out of the final asset set.
 
 To remove a feature, inspect all references with `rg`, remove its runtime path and assets intentionally, then update callers, tests, feature flags and documentation together. Never remove a dependency solely because it appears unused in one binary: the offline renderer and headless build share this crate. For PulseNet, preserve the rendering-free authoritative simulation boundary.
+
+Accessory origins are at their bottom center. Framed prints are 1.10 m wide by 0.80 m tall and face +Z; place the back against a wall facing that direction. All accessory kinds create inspection entities and conservative collision bounds. Place tabletop pieces on an existing surface. Catalogue aliases: framed_art_1, framed_botanical_1, sculpture_1, vase_plant_1, bowl_1.
+
+The catalogue also supports table-lamp, book-stack, candle-trio, potted-cactus, flower-vase, tall-vase, mantel-clock and woven-basket. See assets/props/DECOR_LIBRARY.md for dimensions and catalogue IDs. Lamps/candles are unlit static props and clock hands are fixed.
+
+## Interior furnishing prefabs
+
+Use `python tools/place_interior.py --list` for 23 additional data-only templates (furniture, clutter, written boards and closed doors). Place with `python tools/place_interior.py MAP ASSET OUTPUT --id ID --at=X,Y,Z --yaw 90`. The native audit validates the result before a new file is created. This separate helper supports quarter turns and conservative inspection/collision bounds; these are not extra native add_prop kinds. See assets/props/interiors/README.md.
+
+## Engine API reference
+
+Use the existing FEATURES.json index before opening source. Generate browsable
+library contracts with `cargo doc --locked --no-deps --lib --open` (add
+`--no-default-features` for the headless surface). `check` also builds library
+rustdoc with warnings denied in both feature configurations; cargo test runs its
+examples. This does not enforce documentation on every public item.
+
+Read [the decision index](../docs/adr/README.md) for boundary tradeoffs and
+[the glossary](../docs/GLOSSARY.md) for domain terms. The public simulation lifecycle
+is exercised by tests/simulation_flow.rs. It is local simulation, not a network handshake.
+
+Character engine edits: `CharacterKind` / `Controller::for_character` in controller.rs own body profiles. Capture both skins with `--studio --capture-character NEW_DIR` and a separate run adding `--feta`. Interactive launches always ask for a character; capture-only flags bypass selection for deterministic QA.
+
+## Runtime loose props
+
+`prop_physics.rs` is the engine entry point for E pickup/drop and rigid bodies. Existing native catalog placement remains the authoring path. The client recognizes freestanding semantic groups with `prop-`/`decor-` materials; custom geometry and wall art stay fixed. Data-only authoring does not tune masses or author scripts. Validate new catalog geometry with headless physics tests plus `--studio --capture-physics DIR` and a second capture with `--feta`. Runtime positions are not saved into the static source map.
+
+
+Furniture clearance: runtime room loading replaces matching table/desk/chair/bench/workbench semantic envelopes with contained visible-part collision bounds. Use a furniture noun as the final label word (e.g. Student desk or Dining table). Keep the full entity envelope for selection/ownership. Solid pedestals remain solid. Existing shipped maps need no data rewrite. Tests: tests/furniture_clearance.rs; moved furniture ghost-proxy regression in prop_physics.rs.

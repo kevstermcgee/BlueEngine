@@ -1,0 +1,1102 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      0.8717798,
+      0.6974239,
+      0.8717798
+    ],
+    "target": [
+      0.0,
+      0.08,
+      0.0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.025,
+      0.045,
+      0.09
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.24,
+    "fog": 0.012,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "decor-clay": {
+      "color": [
+        0.68,
+        0.24,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-cream": {
+      "color": [
+        0.88,
+        0.81,
+        0.66
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-gold": {
+      "color": [
+        0.95,
+        0.57,
+        0.15
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-ink": {
+      "color": [
+        0.045,
+        0.065,
+        0.07
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-leaf": {
+      "color": [
+        0.075,
+        0.24,
+        0.13
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-sage": {
+      "color": [
+        0.27,
+        0.43,
+        0.29
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-blue": {
+      "color": [
+        0.04,
+        0.23,
+        0.62
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-red": {
+      "color": [
+        0.75,
+        0.025,
+        0.02
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-stem": {
+      "color": [
+        0.15,
+        0.075,
+        0.025
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-wood": {
+      "color": [
+        0.48,
+        0.27,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-yellow": {
+      "color": [
+        0.95,
+        0.62,
+        0.08
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "be2-bowl-0",
+      "shape": "cylinder",
+      "material": "decor-sage",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.018,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.2,
+        0.018,
+        0.2
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-1",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.205,
+        0.08,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        -90.0,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-2",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.1893953,
+        0.08,
+        0.078450106
+      ],
+      "rot": [
+        0.0,
+        -112.5,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-3",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.14495689,
+        0.08,
+        0.14495689
+      ],
+      "rot": [
+        0.0,
+        -135.0,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-4",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.0784501,
+        0.08,
+        0.1893953
+      ],
+      "rot": [
+        0.0,
+        -157.5,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-5",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -8.960835e-9,
+        0.08,
+        0.205
+      ],
+      "rot": [
+        0.0,
+        -180.0,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-6",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -0.07845012,
+        0.08,
+        0.1893953
+      ],
+      "rot": [
+        0.0,
+        -202.5,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-7",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -0.14495689,
+        0.08,
+        0.14495689
+      ],
+      "rot": [
+        0.0,
+        -225.0,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-8",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -0.18939532,
+        0.08,
+        0.07845007
+      ],
+      "rot": [
+        0.0,
+        -247.50002,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-9",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -0.205,
+        0.08,
+        -1.792167e-8
+      ],
+      "rot": [
+        0.0,
+        -270.0,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-10",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -0.1893953,
+        0.08,
+        -0.0784501
+      ],
+      "rot": [
+        0.0,
+        -292.5,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-11",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -0.14495686,
+        0.08,
+        -0.14495692
+      ],
+      "rot": [
+        0.0,
+        -315.0,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-12",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        -0.07845004,
+        0.08,
+        -0.18939534
+      ],
+      "rot": [
+        0.0,
+        -337.5,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-13",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        2.4446005e-9,
+        0.08,
+        -0.205
+      ],
+      "rot": [
+        0.0,
+        -360.0,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-14",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.078450136,
+        0.08,
+        -0.18939528
+      ],
+      "rot": [
+        0.0,
+        -382.5,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-15",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.14495693,
+        0.08,
+        -0.14495684
+      ],
+      "rot": [
+        0.0,
+        -405.00003,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-bowl-16",
+      "shape": "box",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.18939531,
+        0.08,
+        -0.0784501
+      ],
+      "rot": [
+        0.0,
+        -427.5,
+        0.0
+      ],
+      "scale": [
+        0.043,
+        0.08,
+        0.022
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    }
+  ],
+  "audio": null
+}

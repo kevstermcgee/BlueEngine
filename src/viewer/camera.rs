@@ -27,7 +27,10 @@ impl Perspective {
         }
         let anchor = player.position;
         let right = V(player.yaw.cos(), 0., player.yaw.sin());
-        let desired = anchor - player.direction() * 2.7 + right * 0.65 + V(0., 0.28, 0.);
+        let small = player.character_kind() == super::controller::CharacterKind::Feta;
+        let desired = anchor - player.direction() * if small { 1.25 } else { 2.7 }
+            + right * if small { 0.28 } else { 0.65 }
+            + V(0., if small { 0.35 } else { 0.28 }, 0.);
         let delta = desired - anchor;
         let distance = delta.length();
         let ray = Ray {
@@ -42,7 +45,7 @@ impl Perspective {
             }
         }
         // Decorative scene geometry can also obstruct the camera boom.
-        if let Some(hit) = room.world.hit(ray, distance, false) {
+        if let Some(hit) = room.hit(ray, distance) {
             limit = limit.min((hit.t - 0.20).max(0.));
         }
         View {
@@ -64,7 +67,7 @@ impl View {
             o: self.eye,
             d: (self.target - self.eye).norm(),
         };
-        let point = room.world.hit(ray, 40., false).map_or(self.target, |h| h.p);
+        let point = room.hit(ray, 40.).map_or(self.target, |h| h.p);
         Ray {
             o: player.position,
             d: (point - player.position).norm(),

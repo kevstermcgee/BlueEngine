@@ -1,0 +1,303 @@
+{
+  "school-wing": {
+    "audit": {
+      "exit_code": 0,
+      "result": {
+        "colliders": 132,
+        "duplicate_collision_boxes": [],
+        "entities": 177,
+        "instances": 1828,
+        "name": "School Wing",
+        "nodes": 1828,
+        "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+        "ok": true,
+        "spawn_clear": true
+      }
+    },
+    "routes": [
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.06930163502693176,
+            1.6799999475479126,
+            2.9992358684539795
+          ],
+          "ok": true,
+          "waypoints": 6
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.06931008398532867,
+            1.6799999475479126,
+            -7.500769138336182
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.05256730318069458,
+            1.6799999475479126,
+            3.0
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.06929551064968109,
+            1.6799999475479126,
+            -8.000761032104492
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      }
+    ],
+    "exit": {
+      "exit_code": 1,
+      "result": {
+        "error": "Route blocked at waypoint 0: eye V(-4.5312746e-8, 1.68, 7.5987988), feet 0",
+        "ok": false
+      }
+    }
+  },
+  "office": {
+    "audit": {
+      "exit_code": 0,
+      "result": {
+        "colliders": 121,
+        "duplicate_collision_boxes": [],
+        "entities": 132,
+        "instances": 1251,
+        "name": "Office - Open Studio",
+        "nodes": 1251,
+        "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+        "ok": true,
+        "spawn_clear": true
+      }
+    },
+    "routes": [
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.056860409677028656,
+            1.6799999475479126,
+            -4.797388553619385
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.04962000250816345,
+            1.6799999475479126,
+            -4.80056095123291
+          ],
+          "ok": true,
+          "waypoints": 8
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.05270284786820412,
+            1.6799999475479126,
+            -5.0
+          ],
+          "ok": true,
+          "waypoints": 5
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.031703926622867584,
+            1.6799999475479126,
+            -10.500009536743164
+          ],
+          "ok": true,
+          "waypoints": 10
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.07078132033348083,
+            1.6799999475479126,
+            2.0000317096710205
+          ],
+          "ok": true,
+          "waypoints": 6
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.014000000432133675,
+          "final_eye": [
+            -0.02972821146249771,
+            1.694000005722046,
+            6.89999532699585
+          ],
+          "ok": true,
+          "waypoints": 6
+        }
+      }
+    ],
+    "exit": {
+      "exit_code": 1,
+      "result": {
+        "error": "Route blocked at waypoint 0: eye V(-4.5312746e-8, 1.68, 7.5987988), feet 0",
+        "ok": false
+      }
+    }
+  },
+  "convenience-store": {
+    "audit": {
+      "exit_code": 0,
+      "result": {
+        "colliders": 56,
+        "duplicate_collision_boxes": [],
+        "entities": 259,
+        "instances": 1848,
+        "name": "Corner Market",
+        "nodes": 1848,
+        "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+        "ok": true,
+        "spawn_clear": true
+      }
+    },
+    "routes": [
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            5.799922466278076,
+            1.6799999475479126,
+            1.9713438749313354
+          ],
+          "ok": true,
+          "waypoints": 10
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -3.400516986846924,
+            1.6799999475479126,
+            1.9250136613845825
+          ],
+          "ok": true,
+          "waypoints": 7
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            -0.07669854164123535,
+            1.6799999475479126,
+            2.000030517578125
+          ],
+          "ok": true,
+          "waypoints": 7
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            0.0733765959739685,
+            1.6799999475479126,
+            5.0018086433410645
+          ],
+          "ok": true,
+          "waypoints": 7
+        }
+      }
+    ],
+    "exit": {
+      "exit_code": 1,
+      "result": {
+        "error": "Route blocked at waypoint 0: eye V(-4.5312746e-8, 1.68, 7.5987988), feet 0",
+        "ok": false
+      }
+    }
+  },
+  "house": {
+    "audit": {
+      "exit_code": 0,
+      "result": {
+        "colliders": 199,
+        "duplicate_collision_boxes": [],
+        "entities": 33,
+        "instances": 1379,
+        "name": "Suburban House",
+        "nodes": 1379,
+        "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+        "ok": true,
+        "spawn_clear": true
+      }
+    },
+    "routes": [
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 3.1999998092651367,
+          "final_eye": [
+            -2.680349826812744,
+            4.880000114440918,
+            0.018490787595510483
+          ],
+          "ok": true,
+          "waypoints": 13
+        }
+      },
+      {
+        "exit_code": 0,
+        "result": {
+          "feet": 0.0,
+          "final_eye": [
+            1.8385224342346191,
+            1.6799999475479126,
+            -13.499682426452637
+          ],
+          "ok": true,
+          "waypoints": 7
+        }
+      }
+    ]
+  }
+}

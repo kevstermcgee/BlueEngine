@@ -19,3 +19,6 @@ pub mod maps;
 pub mod authoring;
 
 mod landscaping;
+
+pub mod prop_physics;
+pub mod weapons;

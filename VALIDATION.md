@@ -113,3 +113,89 @@ Linux compilation, actual Debian/Ubuntu VPS memory/CPU usage, GPU/driver coverag
 
 PulseNet transport integration, authentication/session lifecycle, packet sequencing, snapshots, prediction/reconciliation, server combat and interactions, player collision, disguises, prop possession, rounds and scoring are not part of this release. Props are static inspectable/hittable assets. The headless executable is a local simulation/benchmark, not an online listener.
 
+# Source-free authoring toolkit validation (2026-09-23)
+
+Added tools/author.py, tools/authoring.json and tools/AUTHORING.md. No engine Rust files were read or changed for this addition. Tested against the existing Windows packaged binaries. `python -m unittest discover -s tools -p test_author.py -v` passed all four tests: discovery/JSON errors, every asset and recipe through native compilation, failed-transaction preservation, and routes/persistent failure reports. The seven asset/recipe fixtures all compiled and audited successfully.
+
+A garden_planter instance passed the thirteen-waypoint upstairs route and seven-waypoint garden route. The custom map loaded in the packaged headless runtime for sixty ticks. Two graphical verification runs each produced all twelve captures and a render report. Eleven hashes matched between runs; blue-engine-12.png (menu) differed and was correctly marked review_required. Inspected garden and menu images; the existing blue-engine-11.png camera faces the fence and does not provide useful general scene coverage. The inherited camera tour is not a complete visual-quality oracle. No input behavior or engine visuals changed; the Rust engine suite was not rerun for this Python/data/docs-only addition. Linux and macOS were not tested.
+# Forged wrench visual revision (2026-09-23)
+
+Replaced the rectangular three-block head with an angled open-end profile, parallel gripping faces, curved shoulders and beveled edges. The handle is tapered forged steel. First- and third-person views share the mesh. Enabled an actual depth attachment on the first-person render target (including after resizing); the previous default target had none, allowing rear surfaces to paint over front surfaces. Swing timing and hit logic were not changed.
+
+Validated the final release build with all five required checks: fmt, default tests/Clippy and no-default-feature tests/Clippy. Persistent successful report: `.be2-work/check-20260923T161817724162Z/report.json`. Generated 12 house captures, 4 wrench captures and 8 character captures; inspected the held wrench, impact pose, third-person portrait and actual menu. Wrench capture recorded one hit and one audio-play event; audio audibility was not manually retested. Updated `bin/BE2.exe` to the verified release binary, preserving the preceding binary at `.be2-work/BE2-before-wrench.exe`. Windows tested only; hardware input unchanged and not retested.
+
+## Design accessories — 2026-09-23
+
+Added five reusable native props: framed sunset and botanical prints, terracotta oval sculpture, leafy ceramic vase, and ceramic catchall bowl. Six instances decorate the default house. Standalone scenes are in assets/props; catalogue discovery, patch schema and native placement support all nine prop kinds.
+
+Windows validation: cargo fmt --check, cargo test --locked, cargo clippy --all-targets --locked -- -D warnings, plus test and Clippy with --no-default-features passed. Persistent report: .be2-work/check-20260923T163512286192Z/report.json. Accessory geometry is tested against its collision/inspection bounds. Existing house traversal tests passed. All four Python authoring integration tests passed, including instantiation/audit of every asset and recipe and upstairs/garden routes.
+
+Inspected final living room, kitchen, bedroom and pause menu captures. Corrected initial art placement in a doorway and over a window. Final house capture: 35,100 triangles, 41,904 vertices, 12 batches at 1024x697; this is a capture smoke check, not a performance benchmark. Updated bin/BE2.exe, bin/be2-tools.exe and bin/be2-headless.exe; previous binaries retained in .be2-work/before-accessory-binaries. Existing unrelated working-tree edits preserved. No multiplayer or cross-platform validation claimed.
+
+## Decor library expansion — 2026-09-23
+
+Added eight library-only assets: table lamp, stacked books, candle trio, potted cactus, daisy vase, tall vase, mantel clock and woven-style basket. Default house placements are unchanged. Seventeen total catalogue entries are available through the native CLI and author.py. Standalone scenes and dimensions are documented in assets/props/DECOR_LIBRARY.md. Props remain static; lights/candles are unlit and clock hands do not animate.
+
+All five required Rust checks passed (.be2-work/check-20260923T163924186995Z/report.json), including conservative bounds and matte mesh budget tests. An initial unrelated output replacement test returned Windows Access Denied; a complete rerun passed. All four packaged authoring tests passed, including placement/audit of all seventeen assets and routes. Inspected rendered previews of all eight additions and the actual pause-menu capture. Updated client, tools and headless binaries; backups are in .be2-work/before-library-binaries. Windows only; existing working-tree edits retained.
+
+
+## Lived-in map revision
+
+School, office and market furnishing upgraded without Rust changes. Three native audits passed with zero duplicate collision boxes; eleven routes passed. Three negative exit routes were blocked as intended and native rays hit closed-door geometry. All 23 interior prefab bounds and rotated native placements passed, with occupied-ID and overwrite failure preservation checks. Inspected client frames, pause menu and detail renders; 600-tick headless smokes passed. Reports: assets/maps/starters/lived-in-validation.json. Previous map files preserved in .be2-work/lived-in/before-publish.
+
+House shortcut snapshot: nine added household props; native audit, upstairs/garden routes, 600-tick headless smoke and inspected living/kitchen captures passed. All four authoring integration tests also passed. Desktop links verified for House, School Wing, Office and Convenience Store.
+
+## Distinct furnished maps, September 23
+
+four clean native audits, sixteen successful controller routes, three deliberately blocked exterior routes; 41 successful rotated template placement audits; all 18 new template bounds checked; shelf/basket panels checked for non-overlapping volumes. All four maps passed 600-tick headless smoke checks. Targeted interior renders reviewed, plus native market client captures. The native basket now uses five abutting panels with a regression test; full tools/be2.py check and build all passed. Still images and geometry checks do not establish every possible live-camera view or exhaustive traversal.
+
+Previous maps/library/binaries: .be2-work/distinct-maps/before-publish. Reports, captures and scratch outputs: .be2-work/distinct-maps/revision-4. Map audits/routes: redesign-validation.json.
+
+## Context and simulation contract documentation � 2026-09-23
+
+Expanded AGENTS.md and added its CLAUDE.md import, two retrospective ADRs,
+a glossary and an eight-option context review. Documented the public simulation
+API and added two lifecycle integration tests plus one runnable rustdoc example.
+Library rustdoc with warnings denied now runs in both configurations in the
+local check runner and CI. No runtime behavior or packaged binaries changed.
+
+Windows: all seven tools/be2.py check steps passed, including both test and Clippy
+configurations and both rustdoc builds. Report:
+.be2-work/check-20260923T184546111275Z/report.json. Both new tests and the doctest
+passed in both feature configurations. Documentation links, feature-index paths,
+Python runner syntax and git diff whitespace checks passed. Existing uncommitted
+work was preserved. CI configuration was updated but remote CI was not run.
+
+
+Bedroom decor update: the large bedroom now has a reading loveseat, low table with books/mug, rug, floor lamp and dresser with a cactus/keepsake bowl. The smaller bedroom has a bedside cabinet/lamp, coastal print, rug and laundry basket. All original components preserved. Native audit (no duplicate boxes), four routes including new house.route-4.json, collision-overlap check and 600-tick headless smoke passed. Reviewed both bedroom renders and native client bedroom/menu captures. Updated the house JSON used by the map shortcut; procedural default and binaries unchanged. Backup/review: .be2-work/bedroom-decor; persistent report: assets/maps/starters/bedroom-validation.json.
+
+
+## Seeker object controls (2026-09-23)
+
+Removed the client E activation, object cards, focus/action prompts, right-click dismissal and obsolete help/menu labels. Left-click wrench timing, contact feedback and impact audio are preserved. E/right-click selection and R replication remain future hider work. Legacy semantic actions remain library/map metadata; the client does not dispatch them.
+
+`python tools/be2.py check` passed all seven checks (format, library rustdoc in both configurations, tests and strict all-target Clippy in both configurations); report: `.be2-work/check-20260923T193007098764Z/report.json`. The default suite passed 88 tests including rustdoc. Final release build, formatting and diff checks passed after correcting the pause-menu label. Inspected final live house menu and studio wrench captures; scripted contact reported one hit and one audio playback with no card. Live W and Up movement, Enter start and E/no UI were checked. No multiplayer/hider behavior is implemented or claimed. Updated bin/BE2.exe and bin/BE2-decor.exe, preserving map arguments; desktop host verification confirms all four BE2 map shortcuts resolve to BE2-decor.exe.
+
+
+## Feta and Scientist (2026-09-23)
+
+Added profile-aware body/eye height, cylinder radius, stance and speed; Feta uses human sprint speed for normal movement. Regression tests verify equal travel distance and low-obstacle traversal versus human collision. Full seven-stage `python tools/be2.py check` passed after final code changes: `.be2-work/check-20260923T201405611178Z/report.json`. Release client build and git diff whitespace check passed. Existing unrelated working-tree changes remain intact.
+
+Inspected both procedural character portraits and final Feta menu (`.be2-work/feta-final`); Scientist portrait is in `.be2-work/scientist-qa`. Live Windows checks exercised Feta launch selection, W and Up movement, Escape pause and Enter resume. Installed BE2-decor launcher displayed selection and Scientist choice entered first-person play with the white sleeve. Both bin/BE2.exe and bin/BE2-decor.exe were replaced by the final release binary. No multiplayer, disguise behavior or other-platform validation is claimed.
+
+
+## E pickup/drop and loose-prop physics (2026-09-23)
+
+Added Rapier 0.26.1 compound rigid bodies and reusable dynamic mesh transforms. Six physics regressions cover falling/settling and absent static ghosts, momentum transfer/toppling, pickup/carry/drop for both characters, occluded selection, carrying against a thin wall, frame-rate equivalence/pause, and built-in/all four shipped-map extraction. Final full seven-stage checks passed: `.be2-work/check-20260923T203812286997Z/report.json`. Metadata confirms no dependency declares an MSRV above Rust 1.87 after locking ordered-float 5.0.0; the compiler used locally was the installed toolchain, not a separate Rust 1.87 test.
+
+Rendered Scientist and Feta physics sequences in `.be2-work/physics-scientist` and `.be2-work/physics-feta`; inspected held and settled frames. Feta's occluded cereal ray correctly selected the table instead, lifting it and displacing its contents. Final installed release smoke is `.be2-work/physics-final`. Both launch binaries match SHA256 5858D03672F8C29387FEE147793C1B61583ACB2EB78FAE567A2322DA440D0851.
+
+Used a local two-level test fixture for live Windows controls: Scientist E pickup hides the wrench, E drop restores it; Feta third-person E pickup and drop both work. Exercised S and Down carrying movement, Escape pause and Enter resume, and inspected each pause menu. Closed a duplicate hidden test process after it interfered with Windows key polling; the single visible instance then passed. Existing unrelated working changes are preserved. Physics positions are session-local, custom non-catalog geometry stays fixed, and no network ownership or other-platform execution is claimed.
+
+## Four-map expansion (2026-09-23)
+
+All four launcher JSON maps expanded to approximately 2x gross floor/yard area. Added 269 runtime-recognized loose physics props. Four native audits, 46 controller routes (18 retained, 25 extension, three reopened entrances), and 1,200-tick headless loads per map passed. The rendering-independent validation example passed settling plus pickup/drop as both characters on all maps. Full seven-stage tools/be2.py check passed; log .be2-work/check-20260923T205924113475Z/report.json. Targeted offline renders and native menu captures reviewed. No gameplay engine or shipped binary changes in this pass. Map hashes and results: assets/maps/starters/expansion-validation.json. Original maps and detailed captures/logs retained under .be2-work/map-expansion.
+
+## Feta furniture clearance (2026-09-23)
+
+Procedural and JSON room loading now refines table/desk/chair/bench collision envelopes into visible-part bounds. Tests cover Feta standing passage, Scientist exclusion, quarter-turn furniture, fixed/dynamic cases, solid legs and undersides, all four shipped map desks, and moved furniture without ghost proxies. Full seven-stage check passed: .be2-work/check-20260923T211414339288Z/report.json. Client/tools/headless release builds installed in bin, including BE2.exe and BE2-decor.exe; hashes/backups: .be2-work/feta-clearance. Four audits and all 46 shipped routes passed with packaged tools. School/Feta client capture and menu reviewed. Movement mappings and character dimensions are unchanged; no manual keyboard-input retest in this collision-only pass.

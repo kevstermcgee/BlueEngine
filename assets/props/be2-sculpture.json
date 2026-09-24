@@ -1,0 +1,1156 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      1.2713182,
+      1.0170546,
+      1.2713182
+    ],
+    "target": [
+      0.0,
+      0.4,
+      0.0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.025,
+      0.045,
+      0.09
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.24,
+    "fog": 0.012,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "decor-clay": {
+      "color": [
+        0.68,
+        0.24,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-cream": {
+      "color": [
+        0.88,
+        0.81,
+        0.66
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-gold": {
+      "color": [
+        0.95,
+        0.57,
+        0.15
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-ink": {
+      "color": [
+        0.045,
+        0.065,
+        0.07
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-leaf": {
+      "color": [
+        0.075,
+        0.24,
+        0.13
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-sage": {
+      "color": [
+        0.27,
+        0.43,
+        0.29
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-blue": {
+      "color": [
+        0.04,
+        0.23,
+        0.62
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-red": {
+      "color": [
+        0.75,
+        0.025,
+        0.02
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-stem": {
+      "color": [
+        0.15,
+        0.075,
+        0.025
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-wood": {
+      "color": [
+        0.48,
+        0.27,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-yellow": {
+      "color": [
+        0.95,
+        0.62,
+        0.08
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "be2-sculpture-0",
+      "shape": "box",
+      "material": "decor-ink",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.035,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.25,
+        0.035,
+        0.19
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-1",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.10543009,
+        0.48953238,
+        -0.10543009
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        6.174272
+      ],
+      "scale": [
+        0.052,
+        0.061432626,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-2",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.08937931,
+        0.5902951,
+        -0.08937931
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        19.970915
+      ],
+      "scale": [
+        0.052,
+        0.05509078,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-3",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.05972135,
+        0.6674155,
+        -0.05972135
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        39.143642
+      ],
+      "scale": [
+        0.052,
+        0.04460863,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-4",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.020971347,
+        0.7091528,
+        -0.020971347
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        69.9104
+      ],
+      "scale": [
+        0.052,
+        0.03536889,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-5",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.020971354,
+        0.7091528,
+        0.020971354
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        110.0896
+      ],
+      "scale": [
+        0.052,
+        0.035368893,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-6",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.059721358,
+        0.6674155,
+        0.059721358
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        140.85637
+      ],
+      "scale": [
+        0.052,
+        0.044608627,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-7",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.089379326,
+        0.5902951,
+        0.089379326
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        160.0291
+      ],
+      "scale": [
+        0.052,
+        0.055090815,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-8",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.1054301,
+        0.48953235,
+        0.1054301
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        173.82573
+      ],
+      "scale": [
+        0.052,
+        0.06143261,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-9",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.10543009,
+        0.3804676,
+        0.10543009
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -173.82573
+      ],
+      "scale": [
+        0.052,
+        0.06143261,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-10",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.08937931,
+        0.27970487,
+        0.08937931
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -160.02908
+      ],
+      "scale": [
+        0.052,
+        0.055090807,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-11",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.059721325,
+        0.20258442,
+        0.059721325
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -140.85635
+      ],
+      "scale": [
+        0.052,
+        0.04460865,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-12",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        -0.020971332,
+        0.16084716,
+        0.020971332
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -110.08957
+      ],
+      "scale": [
+        0.052,
+        0.03536885,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-13",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.020971358,
+        0.16084719,
+        -0.020971358
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -69.91039
+      ],
+      "scale": [
+        0.052,
+        0.035368904,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-14",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.059721366,
+        0.2025845,
+        -0.059721366
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -39.143623
+      ],
+      "scale": [
+        0.052,
+        0.044608656,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-15",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.089379326,
+        0.27970493,
+        -0.089379326
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -19.97091
+      ],
+      "scale": [
+        0.052,
+        0.055090744,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-16",
+      "shape": "cylinder",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.1054301,
+        0.38046765,
+        -0.1054301
+      ],
+      "rot": [
+        0.0,
+        45.0,
+        -6.174265
+      ],
+      "scale": [
+        0.052,
+        0.06143265,
+        0.052
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-sculpture-17",
+      "shape": "box",
+      "material": "decor-clay",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.11,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.065,
+        0.04,
+        0.065
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    }
+  ],
+  "audio": null
+}

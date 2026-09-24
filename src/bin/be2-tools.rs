@@ -76,7 +76,7 @@ See tools/README.md."#
         "catalog" => println!(
             "{}",
             json!({
-            "props":["cereal","chair","table","apple"],"maps":["house"],"schema_version":1,"operations":["add_box","add_prop","translate","remove"]
+            "props":["cereal","chair","table","apple","framed-art","framed-botanical","sculpture","vase-plant","bowl","table-lamp","book-stack","candle-trio","potted-cactus","flower-vase","tall-vase","mantel-clock","woven-basket"],"maps":["house"],"schema_version":1,"operations":["add_box","add_prop","translate","remove"]
             }
             )
         ),

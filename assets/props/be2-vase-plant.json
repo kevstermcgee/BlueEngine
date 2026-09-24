@@ -1,0 +1,832 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      1.704406,
+      1.3635248,
+      1.704406
+    ],
+    "target": [
+      0.0,
+      0.48,
+      0.0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.025,
+      0.045,
+      0.09
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.24,
+    "fog": 0.012,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "decor-clay": {
+      "color": [
+        0.68,
+        0.24,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-cream": {
+      "color": [
+        0.88,
+        0.81,
+        0.66
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-gold": {
+      "color": [
+        0.95,
+        0.57,
+        0.15
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-ink": {
+      "color": [
+        0.045,
+        0.065,
+        0.07
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-leaf": {
+      "color": [
+        0.075,
+        0.24,
+        0.13
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "decor-sage": {
+      "color": [
+        0.27,
+        0.43,
+        0.29
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-blue": {
+      "color": [
+        0.04,
+        0.23,
+        0.62
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-red": {
+      "color": [
+        0.75,
+        0.025,
+        0.02
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-stem": {
+      "color": [
+        0.15,
+        0.075,
+        0.025
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-wood": {
+      "color": [
+        0.48,
+        0.27,
+        0.12
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    },
+    "prop-yellow": {
+      "color": [
+        0.95,
+        0.62,
+        0.08
+      ],
+      "roughness": 1.0,
+      "metallic": 0.0,
+      "emission": 0.0,
+      "checker": null
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "be2-vase-plant-0",
+      "shape": "sphere",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.16,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15,
+        0.16,
+        0.15
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-1",
+      "shape": "cylinder",
+      "material": "decor-cream",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.3,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.075,
+        0.07,
+        0.075
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-2",
+      "shape": "cylinder",
+      "material": "decor-ink",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.372,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.055,
+        0.003,
+        0.055
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-3",
+      "shape": "cylinder",
+      "material": "decor-leaf",
+      "parent": null,
+      "pos": [
+        -0.075,
+        0.515,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        0.0,
+        15.000001
+      ],
+      "scale": [
+        0.009,
+        0.18549998,
+        0.009
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-4",
+      "shape": "sphere",
+      "material": "decor-leaf",
+      "parent": null,
+      "pos": [
+        -0.22500001,
+        0.53999996,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        -25.0,
+        -28.0
+      ],
+      "scale": [
+        0.125,
+        0.037,
+        0.065
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-5",
+      "shape": "sphere",
+      "material": "decor-sage",
+      "parent": null,
+      "pos": [
+        -0.075,
+        0.66,
+        0.0
+      ],
+      "rot": [
+        0.0,
+        25.0,
+        28.0
+      ],
+      "scale": [
+        0.125,
+        0.037,
+        0.065
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-6",
+      "shape": "cylinder",
+      "material": "decor-leaf",
+      "parent": null,
+      "pos": [
+        0.065,
+        0.555,
+        0.04
+      ],
+      "rot": [
+        8.0,
+        0.0,
+        -13.0
+      ],
+      "scale": [
+        0.009,
+        0.22789997,
+        0.009
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-7",
+      "shape": "sphere",
+      "material": "decor-leaf",
+      "parent": null,
+      "pos": [
+        0.054999992,
+        0.62,
+        0.08
+      ],
+      "rot": [
+        0.0,
+        -25.0,
+        -28.0
+      ],
+      "scale": [
+        0.125,
+        0.037,
+        0.065
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-8",
+      "shape": "sphere",
+      "material": "decor-sage",
+      "parent": null,
+      "pos": [
+        0.205,
+        0.74,
+        0.08
+      ],
+      "rot": [
+        0.0,
+        25.0,
+        28.0
+      ],
+      "scale": [
+        0.125,
+        0.037,
+        0.065
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-9",
+      "shape": "cylinder",
+      "material": "decor-leaf",
+      "parent": null,
+      "pos": [
+        0.0,
+        0.59,
+        -0.06
+      ],
+      "rot": [
+        -12.0,
+        0.0,
+        -0.0
+      ],
+      "scale": [
+        0.009,
+        0.26499996,
+        0.009
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-10",
+      "shape": "sphere",
+      "material": "decor-leaf",
+      "parent": null,
+      "pos": [
+        -0.075,
+        0.68999994,
+        -0.12
+      ],
+      "rot": [
+        0.0,
+        -25.0,
+        -28.0
+      ],
+      "scale": [
+        0.125,
+        0.037,
+        0.065
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    },
+    {
+      "id": "be2-vase-plant-11",
+      "shape": "sphere",
+      "material": "decor-sage",
+      "parent": null,
+      "pos": [
+        0.075,
+        0.81,
+        -0.12
+      ],
+      "rot": [
+        0.0,
+        25.0,
+        28.0
+      ],
+      "scale": [
+        0.125,
+        0.037,
+        0.065
+      ],
+      "ease": "smooth",
+      "motion": {
+        "bob": 0.0,
+        "frequency": 1.0,
+        "phase": 0.0,
+        "spin": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "orbit": 0.0,
+        "orbit_speed": 30.0,
+        "walk": 0.0,
+        "wave": 0.0
+      },
+      "visible": null,
+      "mesh": null,
+      "tube": 0.22,
+      "repeat": {
+        "count": 1,
+        "step": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "ring": 0.0,
+        "jitter": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "seed": 1
+      }
+    }
+  ],
+  "audio": null
+}

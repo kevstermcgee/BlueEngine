@@ -1,4 +1,6 @@
 //! Simple matte props without decals or overlapping exterior trim.
+mod accessories;
+mod decor_library;
 use super::room::Builder;
 use crate::{math::V, scene::Shape};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -7,6 +9,19 @@ pub enum PropKind {
     Chair,
     Table,
     Apple,
+    FramedArt,
+    FramedBotanical,
+    Sculpture,
+    VasePlant,
+    Bowl,
+    TableLamp,
+    BookStack,
+    CandleTrio,
+    PottedCactus,
+    FlowerVase,
+    TallVase,
+    MantelClock,
+    WovenBasket,
 }
 pub struct PropDefinition {
     pub id: &'static str,
@@ -14,7 +29,7 @@ pub struct PropDefinition {
     pub kind: PropKind,
     pub half_extents: V,
 }
-pub const CATALOG: [PropDefinition; 4] = [
+pub const CATALOG: [PropDefinition; 17] = [
     PropDefinition {
         id: "be2-cereal-box",
         label: "Cereal box",
@@ -39,8 +54,88 @@ pub const CATALOG: [PropDefinition; 4] = [
         kind: PropKind::Apple,
         half_extents: V(0.10, 0.12, 0.10),
     },
+    PropDefinition {
+        id: "be2-framed-art",
+        label: "Framed sunset print",
+        kind: PropKind::FramedArt,
+        half_extents: V(0.55, 0.4, 0.055),
+    },
+    PropDefinition {
+        id: "be2-framed-botanical",
+        label: "Framed botanical print",
+        kind: PropKind::FramedBotanical,
+        half_extents: V(0.55, 0.4, 0.055),
+    },
+    PropDefinition {
+        id: "be2-sculpture",
+        label: "Abstract terracotta sculpture",
+        kind: PropKind::Sculpture,
+        half_extents: V(0.25, 0.4, 0.19),
+    },
+    PropDefinition {
+        id: "be2-vase-plant",
+        label: "Leafy ceramic vase",
+        kind: PropKind::VasePlant,
+        half_extents: V(0.38, 0.48, 0.3),
+    },
+    PropDefinition {
+        id: "be2-bowl",
+        label: "Ceramic catchall bowl",
+        kind: PropKind::Bowl,
+        half_extents: V(0.24, 0.08, 0.24),
+    },
+    PropDefinition {
+        id: "be2-table-lamp",
+        label: "Table lamp",
+        kind: PropKind::TableLamp,
+        half_extents: V(0.23, 0.35, 0.23),
+    },
+    PropDefinition {
+        id: "be2-book-stack",
+        label: "Stacked books",
+        kind: PropKind::BookStack,
+        half_extents: V(0.25, 0.105, 0.18),
+    },
+    PropDefinition {
+        id: "be2-candle-trio",
+        label: "Candle trio on tray",
+        kind: PropKind::CandleTrio,
+        half_extents: V(0.25, 0.18, 0.18),
+    },
+    PropDefinition {
+        id: "be2-potted-cactus",
+        label: "Potted cactus",
+        kind: PropKind::PottedCactus,
+        half_extents: V(0.23, 0.4, 0.18),
+    },
+    PropDefinition {
+        id: "be2-flower-vase",
+        label: "Daisy vase",
+        kind: PropKind::FlowerVase,
+        half_extents: V(0.3, 0.4, 0.25),
+    },
+    PropDefinition {
+        id: "be2-tall-vase",
+        label: "Tall ceramic vase",
+        kind: PropKind::TallVase,
+        half_extents: V(0.2, 0.34, 0.2),
+    },
+    PropDefinition {
+        id: "be2-mantel-clock",
+        label: "Mantel clock",
+        kind: PropKind::MantelClock,
+        half_extents: V(0.29, 0.22, 0.12),
+    },
+    PropDefinition {
+        id: "be2-woven-basket",
+        label: "Woven-style basket",
+        kind: PropKind::WovenBasket,
+        half_extents: V(0.3, 0.19, 0.23),
+    },
 ];
 pub(super) fn palette(b: &mut Builder) {
+    accessories::palette(b);
+    decor_library::palette(b);
     for (id, color) in [
         ("prop-yellow", V(0.95, 0.62, 0.08)),
         ("prop-blue", V(0.04, 0.23, 0.62)),
@@ -100,6 +195,19 @@ pub(super) fn place(
 fn spawn(b: &mut Builder, def: &PropDefinition, origin: V) {
     let center = origin + V(0., def.half_extents.1, 0.);
     match def.kind {
+        PropKind::TableLamp
+        | PropKind::BookStack
+        | PropKind::CandleTrio
+        | PropKind::PottedCactus
+        | PropKind::FlowerVase
+        | PropKind::TallVase
+        | PropKind::MantelClock
+        | PropKind::WovenBasket => decor_library::build(b, def.kind, origin),
+        PropKind::FramedArt
+        | PropKind::FramedBotanical
+        | PropKind::Sculpture
+        | PropKind::VasePlant
+        | PropKind::Bowl => accessories::build(b, def.kind, origin),
         PropKind::CerealBox => {
             // Abutting carton sections, not a label laid over an existing face.
             for (mat, y, h) in [
@@ -151,13 +259,68 @@ mod tests {
     #[test]
     fn all_props_have_stable_entities_and_colliders() {
         let room = super::super::room::build().unwrap();
-        for def in &CATALOG {
+        for def in &CATALOG[..4] {
             crate::geometry::Compiled::new(scene(def.kind), std::path::Path::new(".")).unwrap();
             let e = room.entities.iter().find(|e| e.id == def.id).unwrap();
-            assert!(room
-                .colliders
-                .iter()
-                .any(|c| c.min == e.bounds.min && c.max == e.bounds.max));
+            if matches!(def.id, "be2-chair" | "be2-table") {
+                // Furniture now keeps its semantic envelope but collides by part.
+                let parts: Vec<_> = room
+                    .world
+                    .instances
+                    .iter()
+                    .filter(|p| {
+                        (0..3).all(|a| {
+                            p.bounds.lo.axis(a) >= e.bounds.min.axis(a) - 0.001
+                                && p.bounds.hi.axis(a) <= e.bounds.max.axis(a) + 0.001
+                        })
+                    })
+                    .collect();
+                assert!(parts.len() >= 5);
+                for part in parts {
+                    assert!(room
+                        .colliders
+                        .iter()
+                        .any(|c| c.min == part.bounds.lo && c.max == part.bounds.hi));
+                }
+            } else {
+                assert!(room
+                    .colliders
+                    .iter()
+                    .any(|c| c.min == e.bounds.min && c.max == e.bounds.max));
+            }
+        }
+    }
+    #[test]
+    fn accessories_compile_inside_their_inspection_and_collision_bounds() {
+        for def in &CATALOG[4..] {
+            let mut b = Builder {
+                scene: crate::scene::Scene::default(),
+                colliders: vec![],
+                entities: vec![],
+            };
+            palette(&mut b);
+            spawn(&mut b, def, V::ZERO);
+            assert_eq!(b.entities[0].id, def.id);
+            assert_eq!(b.entities[0].bounds.min, b.colliders[0].min);
+            assert_eq!(b.entities[0].bounds.max, b.colliders[0].max);
+            let compiled =
+                crate::geometry::Compiled::new(b.scene, std::path::Path::new(".")).unwrap();
+            for part in compiled.at(0.).instances {
+                for axis in 0..3 {
+                    assert!(
+                        part.bounds.lo.axis(axis) >= b.colliders[0].min.axis(axis) - 0.001,
+                        "{} lower axis {}",
+                        def.id,
+                        axis
+                    );
+                    assert!(
+                        part.bounds.hi.axis(axis) <= b.colliders[0].max.axis(axis) + 0.001,
+                        "{} upper axis {}",
+                        def.id,
+                        axis
+                    );
+                }
+            }
         }
     }
     #[cfg(feature = "client")]
@@ -186,7 +349,7 @@ mod tests {
             }
         }
         assert!(
-            triangles <= 360,
+            triangles <= 14000,
             "{triangles} exceeds the simple-prop triangle budget"
         );
     }

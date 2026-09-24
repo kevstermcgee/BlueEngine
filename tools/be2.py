@@ -78,6 +78,8 @@ def check():
     directory.mkdir(parents=True)
     commands = [
         ['cargo', 'fmt', '--check'],
+        ['cargo', 'rustdoc', '--locked', '--lib', '--', '-D', 'warnings'],
+        ['cargo', 'rustdoc', '--locked', '--lib', '--no-default-features', '--', '-D', 'warnings'],
         ['cargo', 'test', '--locked'],
         ['cargo', 'clippy', '--all-targets', '--locked', '--', '-D', 'warnings'],
         ['cargo', 'test', '--locked', '--no-default-features'],

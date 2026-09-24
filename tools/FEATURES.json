@@ -29,7 +29,9 @@
       "files": [
         "src/viewer/props.rs",
         "assets/props",
-        "examples/export_props.rs"
+        "examples/export_props.rs",
+        "src/viewer/props/accessories.rs",
+        "src/viewer/props/decor_library.rs"
       ],
       "checks": [
         "prop budget and collision tests",
@@ -40,12 +42,14 @@
     "movement": {
       "files": [
         "src/viewer/controller.rs",
-        "src/viewer/simulation.rs"
+        "src/viewer/simulation.rs",
+        "tests/furniture_clearance.rs"
       ],
       "checks": [
         "controller and simulation tests",
         "route commands",
-        "manual controls"
+        "manual controls",
+        "Feta furniture passages, solid legs/undersides, Scientist exclusion, four-map desks"
       ],
       "note": "Keep frame-rate independence and render/headless parity."
     },
@@ -88,14 +92,16 @@
       "files": [
         "src/viewer/camera.rs",
         "src/bin/character/mod.rs",
-        "src/bin/blue-engine.rs"
+        "src/bin/blue-engine.rs",
+        "src/viewer/controller.rs"
       ],
       "checks": [
         "camera tests",
         "--studio --capture-character",
-        "Q toggle"
+        "Q toggle",
+        "--studio --capture-character DIR --feta"
       ],
-      "note": "First and third person must share aim and authoritative position."
+      "note": "Scientist and Feta procedural skins; CharacterKind controls body/collision/speed. Launch selection gates gameplay. Q toggles perspective; reset preserves profile."
     },
     "multiplayer": {
       "files": [
@@ -134,6 +140,61 @@
         "outdoor captures and menu"
       ],
       "note": "Reusable static broadleaf, pine, clustered shrub and flower builders. Preserve collision routes; no alpha textures or animation."
+    },
+    "source_free_authoring": {
+      "files": [
+        "tools/author.py",
+        "tools/authoring.json",
+        "tools/AUTHORING.md",
+        "tools/test_author.py"
+      ],
+      "checks": [
+        "python -m unittest discover -s tools -p test_author.py -v",
+        "verify with routes and captures",
+        "explicit baseline comparison"
+      ],
+      "note": "Packaged-native static map authoring; curated metadata and local bounded token search; no engine source reads, embeddings or arbitrary gameplay scripting."
+    },
+    "interior_prefabs": {
+      "files": [
+        "assets/props/interiors",
+        "tools/place_interior.py",
+        "assets/maps/starters"
+      ],
+      "checks": [
+        "native map audits and routes",
+        "23-template bounds and rotated placement checks",
+        "client captures"
+      ],
+      "note": "Data-only prefab scenes and quarter-turn placement; preserves source and validates with packaged native audit."
+    },
+    "simulation_contract": {
+      "files": [
+        "src/viewer/simulation.rs",
+        "tests/simulation_flow.rs",
+        "docs/adr/0001-shared-simulation.md",
+        "docs/GLOSSARY.md"
+      ],
+      "checks": [
+        "simulation_flow integration tests in both feature configurations",
+        "library rustdoc with warnings denied in both feature configurations"
+      ],
+      "note": "Concrete local simulation API; held input persists, jump is consumed once, transport is future work."
+    },
+    "prop_physics": {
+      "files": [
+        "src/viewer/prop_physics.rs",
+        "src/bin/prop_view/mod.rs",
+        "src/viewer/room.rs",
+        "src/bin/blue-engine.rs"
+      ],
+      "checks": [
+        "prop_physics tests in both feature configurations",
+        "--studio --capture-physics DIR",
+        "--studio --capture-physics DIR --feta",
+        "live E pickup/drop, pause/resume and both movement key layouts"
+      ],
+      "note": "Runtime catalog-prop extraction; fixed-step Rapier compound rigid bodies. No v1 map schema change or multiplayer ownership."
     }
   }
 }

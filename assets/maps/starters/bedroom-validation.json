@@ -1,0 +1,102 @@
+{
+  "protocol_version": 1,
+  "ok": true,
+  "checks": [
+    {
+      "name": "audit",
+      "result": {
+        "colliders": 217,
+        "duplicate_collision_boxes": [],
+        "entities": 62,
+        "instances": 1568,
+        "name": "Suburban House",
+        "nodes": 1568,
+        "note": "Duplicate boxes are advisory; visual inspection and route tests are still required.",
+        "ok": true,
+        "spawn_clear": true
+      }
+    },
+    {
+      "name": "route",
+      "input": "C:\\Users\\TheNa\\Documents\\Codex\\2026-09-23\\le\\outputs\\be2\\assets\\maps\\starters\\house.route-1.json",
+      "sha256": "db508fffd7e483d389dc82f2d588bc80e58f9111d065cdbe578387d299b65681",
+      "result": {
+        "feet": 3.1999998092651367,
+        "final_eye": [
+          -2.680349826812744,
+          4.880000114440918,
+          0.018490787595510483
+        ],
+        "ok": true,
+        "waypoints": 13
+      }
+    },
+    {
+      "name": "route",
+      "input": "C:\\Users\\TheNa\\Documents\\Codex\\2026-09-23\\le\\outputs\\be2\\assets\\maps\\starters\\house.route-2.json",
+      "sha256": "9524bb21b6d3a5b9c20ec7d4ce127ae5df8ef3a25d9f6d4300cb2218e670e298",
+      "result": {
+        "feet": 0.0,
+        "final_eye": [
+          1.8385224342346191,
+          1.6799999475479126,
+          -13.499682426452637
+        ],
+        "ok": true,
+        "waypoints": 7
+      }
+    },
+    {
+      "name": "route",
+      "input": "C:\\Users\\TheNa\\Documents\\Codex\\2026-09-23\\le\\outputs\\be2\\assets\\maps\\starters\\house.route-3.json",
+      "sha256": "c8c2277982b19db72034d12f0660a57d04b40c7ad1e9a933ade1e00ac9f11bd9",
+      "result": {
+        "feet": 3.1999998092651367,
+        "final_eye": [
+          -1.6005375385284424,
+          4.880000114440918,
+          1.0364607572555542
+        ],
+        "ok": true,
+        "waypoints": 20
+      }
+    },
+    {
+      "name": "route",
+      "input": "C:\\Users\\TheNa\\Documents\\Codex\\2026-09-23\\le\\outputs\\be2\\.be2-work\\bedroom-decor\\bedrooms.route.json",
+      "sha256": "cc0424e905fab1086295e4e7103f174926f9de376f8fd94f7a9cc347732c5ee8",
+      "result": {
+        "feet": 3.1999998092651367,
+        "final_eye": [
+          -2.1005191802978516,
+          4.880000114440918,
+          -3.9698164463043213
+        ],
+        "ok": true,
+        "waypoints": 18
+      }
+    }
+  ],
+  "visual_status": "not_requested",
+  "limitations": [
+    "Routes are reachability checks, not pathfinding.",
+    "Image hashes detect any pixel/file change; they do not judge appearance."
+  ],
+  "map_sha256": "60804e363b84695d7555098e70a3c935a61aafe9d113366f0109e4aa210c098a",
+  "native_sha256": "d4375fa506b67e5eb7aa488317481d005188fdbcbe1033a3b49d0c30fbd3f5a0",
+  "visual_review": {
+    "reviewed": [
+      "large-after.png",
+      "nook-after.png",
+      "small-after.png",
+      "review/captures/blue-engine-5.png",
+      "review/captures/blue-engine-8.png",
+      "review/captures/blue-engine-12.png"
+    ],
+    "runtime_equivalent_to_reviewed_candidate": true,
+    "new_furniture_collider_overlaps": 0,
+    "original_components_preserved": true
+  },
+  "backup": ".be2-work/bedroom-decor/before.json",
+  "headless_smoke": "BE2 headless: players=2 ticks=600 elapsed_ms=5.322 mean_tick_us=8.870 realtime=false\n"
+}

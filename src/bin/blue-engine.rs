@@ -1,7 +1,9 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+use vesper3d::viewer::controller::CharacterKind;
 mod character;
 mod impact_audio;
 mod platform_window;
+mod prop_view;
 mod wrench_view;
 use macroquad::{
     input::utils::{register_input_subscriber, repeat_all_miniquad_input},
@@ -13,10 +15,11 @@ use vesper3d::{
     viewer::{
         camera::Perspective,
         controller::{Controller, Movement},
-        interaction::{activation_requested, Interactions},
         maps::{self, MapId},
         mesh,
+        prop_physics::PropPhysics,
         simulation::PlayerStepper,
+        weapons::{Loadout, Weapon},
         wrench::Wrench,
     },
 };
@@ -70,8 +73,6 @@ impl Keys {
                 (KeyCode::LeftControl, 0xA2),
                 (KeyCode::RightControl, 0xA3),
                 (KeyCode::C, 0x43),
-                (KeyCode::E, 0x45),
-                (KeyCode::Backspace, 0x08),
                 (KeyCode::Enter, 0x0D),
                 (KeyCode::Escape, 0x1B),
                 (KeyCode::Tab, 0x09),
@@ -80,6 +81,7 @@ impl Keys {
                 (KeyCode::F11, 0x7A),
                 (KeyCode::H, 0x48),
                 (KeyCode::Q, 0x51),
+                (KeyCode::E, 0x45),
             ] {
                 // GetAsyncKeyState takes a virtual key integer and no pointers.
                 let state = unsafe {
@@ -175,28 +177,6 @@ fn menu_scale() -> f32 {
         .min((screen_width() - 24.) / 470.)
         .clamp(0.2, 1.)
 }
-fn wrapped_lines(message: &str, width: f32) -> Vec<String> {
-    let mut lines = vec![];
-    let mut line = String::new();
-    for word in message.split_whitespace() {
-        let candidate = if line.is_empty() {
-            word.into()
-        } else {
-            format!("{line} {word}")
-        };
-        let size = FONT.with(|f| measure_text(&candidate, f.borrow().as_ref(), 18, 1.).width);
-        if size > width && !line.is_empty() {
-            lines.push(line);
-            line = word.into();
-        } else {
-            line = candidate;
-        }
-    }
-    if !line.is_empty() {
-        lines.push(line);
-    }
-    lines
-}
 fn menu_mouse() -> Vec2 {
     Vec2::from(mouse_position()) / menu_scale()
 }
@@ -263,6 +243,7 @@ async fn main() {
     next_frame().await;
     let started = std::time::Instant::now();
     let args: Vec<String> = std::env::args().collect();
+    let physics_capture = args.iter().any(|a| a == "--capture-physics");
     let house_capture = args.iter().any(|a| a == "--capture-house");
     let map = if args.iter().any(|a| a == "--studio") {
         MapId::Studio
@@ -270,7 +251,7 @@ async fn main() {
         MapId::House
     };
     let map_file = args.windows(2).find(|a| a[0] == "--map").map(|a| &a[1]);
-    let room = match map_file.map_or_else(
+    let mut room = match map_file.map_or_else(
         || maps::build(map),
         |p| {
             vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(p))
@@ -283,6 +264,14 @@ async fn main() {
             return;
         }
     };
+    let mut prop_physics = match PropPhysics::new(&mut room) {
+        Ok(p) => p,
+        Err(e) => {
+            error_screen(&format!("Could not prepare prop physics: {e}")).await;
+            return;
+        }
+    };
+    let mut prop_view = prop_view::Props::new(&prop_physics);
     let meshes = mesh::bake_tagged(&room.world, &room.render_tags());
     let material = match mesh::material() {
         Ok(m) => m,
@@ -296,12 +285,15 @@ async fn main() {
     let props_capture = args.iter().any(|a| a == "--capture-props");
     let motion_capture = args.iter().any(|a| a == "--capture-motion");
     let character_capture = args.iter().any(|a| a == "--capture-character");
+    let pistol_capture = args.iter().any(|a| a == "--capture-pistol");
     let wrench_capture = args.iter().any(|a| a == "--capture-wrench");
     let interaction_capture = args.iter().any(|a| a == "--capture-interactions");
     let capture_dir = args
         .windows(2)
         .find(|a| {
-            a[0] == "--capture-house"
+            a[0] == "--capture-pistol"
+                || a[0] == "--capture-physics"
+                || a[0] == "--capture-house"
                 || a[0] == "--capture-props"
                 || a[0] == "--capture-character"
                 || a[0] == "--capture-wrench"
@@ -316,10 +308,18 @@ async fn main() {
             return;
         }
     }
-    let mut controller = Controller::default();
+    let capture_kind = if args.iter().any(|a| a == "--feta") {
+        CharacterKind::Feta
+    } else {
+        CharacterKind::Scientist
+    };
+    let mut controller = Controller::for_character(capture_kind);
+    let mut character_chosen = capture_dir.is_some();
     let mut stepper = PlayerStepper::default();
-    let mut interactions = Interactions::default();
     let mut wrench = Wrench::default();
+    let mut loadout = Loadout::default();
+    let mut pistol_audio = impact_audio::ImpactAudio::pistol().await;
+    let mut pistol_view = wrench_view::View::pistol();
     let mut impact_audio = impact_audio::ImpactAudio::new().await;
     let mut wrench_view = wrench_view::View::new();
     let mut character = character::Character::default();
@@ -334,7 +334,7 @@ async fn main() {
     let mut entered = false;
     let mut skip_look = 0;
     let mut sensitivity = 50.;
-    let mut fov: f32 = 65.;
+    let mut fov: f32 = 90.;
     let mut invert = false;
     let mut hud = false;
     let mut debug = false;
@@ -358,6 +358,7 @@ async fn main() {
             controller.stop();
             stepper.reset(&controller);
             wrench.cancel();
+            prop_physics.pause();
             keys.down.clear();
         }
         // Fullscreen requests are applied by the backend between frames.
@@ -381,13 +382,17 @@ async fn main() {
         if focused && keys.pressed(KeyCode::H) && active {
             hud = !hud;
         }
-        if focused && (keys.pressed(KeyCode::Escape) || keys.pressed(KeyCode::Tab)) {
+        if character_chosen
+            && focused
+            && (keys.pressed(KeyCode::Escape) || keys.pressed(KeyCode::Tab))
+        {
             active = !active;
             entered |= active;
             capture(active);
             controller.stop();
             stepper.reset(&controller);
             wrench.cancel();
+            prop_physics.pause();
             keys.down.clear();
             skip_look = 3;
         }
@@ -422,26 +427,87 @@ async fn main() {
                 get_frame_time(),
                 &room.colliders,
             );
-            interactions.tick(get_frame_time());
-            if is_mouse_button_pressed(MouseButton::Left) {
-                wrench.start(active, skip_look == 0);
+            loadout.pistol.tick(get_frame_time());
+            if loadout.scroll(
+                mouse_wheel().1,
+                controller.character_kind(),
+                skip_look == 0 && active,
+                prop_physics.held().is_some(),
+            ) {
+                wrench.cancel();
             }
+            if Loadout::can_use(
+                controller.character_kind(),
+                active,
+                prop_physics.held().is_some(),
+            ) && is_mouse_button_pressed(MouseButton::Left)
+            {
+                if loadout.selected == Weapon::Wrench {
+                    wrench.start(active, skip_look == 0);
+                } else {
+                    loadout.pistol.fire(
+                        skip_look == 0,
+                        &room,
+                        perspective.view(&controller, &room).aim(&controller, &room),
+                    );
+                }
+            }
+            if keys.pressed(KeyCode::E) && skip_look == 0 {
+                let ray = perspective.view(&controller, &room).aim(&controller, &room);
+                if prop_physics.toggle(&room, ray) {
+                    wrench.cancel();
+                }
+            }
+            prop_physics.advance(get_frame_time(), &controller, &mut room);
             wrench.tick(
                 get_frame_time(),
                 &room,
                 perspective.view(&controller, &room).aim(&controller, &room),
             );
-            if keys.pressed(KeyCode::Backspace) || is_mouse_button_pressed(MouseButton::Right) {
-                interactions.dismiss();
-            }
-            if activation_requested(active, skip_look == 0, keys.pressed(KeyCode::E), false) {
-                interactions.activate(
-                    &room,
-                    perspective.view(&controller, &room).aim(&controller, &room),
-                );
-            }
         }
-        if capture_dir.is_some() && house_capture {
+        if capture_dir.is_some() && pistol_capture {
+            controller.position = V(0., 1.68, 2.5);
+            controller.yaw = 0.;
+            controller.pitch = -0.04;
+            loadout.pistol.tick(1. / 60.);
+            if (frame == 1 || frame == 84 || frame == 96)
+                && loadout.scroll(1., controller.character_kind(), true, false)
+            {
+                wrench.cancel();
+            }
+            if [20, 40, 64].contains(&frame)
+                && controller.character_kind() == CharacterKind::Scientist
+            {
+                loadout
+                    .pistol
+                    .fire(loadout.selected == Weapon::Pistol, &room, controller.ray());
+            }
+            perspective = if (55..84).contains(&frame) {
+                Perspective::Third
+            } else {
+                Perspective::First
+            };
+        } else if capture_dir.is_some() && physics_capture {
+            if frame == 0 {
+                controller.position.0 = 2.32;
+                controller.position.2 = 2.7;
+                controller.yaw = std::f32::consts::PI;
+                let target = V(2.32, 1.02, 3.8) - controller.position;
+                controller.pitch = (target.1 / target.length()).asin();
+                perspective = Perspective::Third;
+            }
+            if frame == 2 {
+                prop_physics.toggle(&room, controller.ray());
+            }
+            if (30..90).contains(&frame) {
+                controller.position.0 += 0.015;
+                controller.pitch = 0.2;
+            }
+            if frame == 95 {
+                prop_physics.drop_held();
+            }
+            prop_physics.advance(1. / 60., &controller, &mut room);
+        } else if capture_dir.is_some() && house_capture {
             let (eye, yaw, pitch) = match frame / 12 {
                 0 => (V(14., 10., 17.), -0.69, -0.29),
                 1 => (V(-1.35, 1.68, 3.65), -0.85, -0.12),
@@ -470,7 +536,7 @@ async fn main() {
             } else {
                 Perspective::Third
             };
-            if frame == 24 {
+            if frame == 24 && controller.character_kind() == CharacterKind::Scientist {
                 wrench.start(true, true);
             }
             if frame >= 36 {
@@ -515,15 +581,10 @@ async fn main() {
                     controller.pitch = -0.855;
                 }
             }
-            if [12, 36, 48].contains(&frame) {
-                interactions.activate(
-                    &room,
-                    perspective.view(&controller, &room).aim(&controller, &room),
-                );
+            if [12, 48].contains(&frame) {
+                wrench.start(true, true);
             }
-            if frame == 24 {
-                interactions.dismiss();
-            }
+            wrench.tick(1. / 60., &room, controller.ray());
         } else if capture_dir.is_some() && motion_capture {
             controller.update(
                 Movement {
@@ -559,6 +620,7 @@ async fn main() {
             }
         }
         impact_audio.update(wrench.hits);
+        pistol_audio.update(loadout.pistol.shots);
         if active || capture_dir.is_some() {
             let d = controller.position - previous_position;
             let distance = (d.0 * d.0 + d.2 * d.2).sqrt();
@@ -578,13 +640,22 @@ async fn main() {
             controller.clone()
         };
         let view = perspective.view(&render_controller, &room);
-        let aim = view.aim(&controller, &room);
         let mut camera_eye = view.eye;
         let mut camera_target = view.target;
         // Capture-only front portrait exposes the default skin for visual QA.
         if character_capture && (72..96).contains(&frame) {
-            camera_eye = controller.position + V(1.4, -0.25, -2.8);
-            camera_target = controller.position + V(0., -0.55, 0.);
+            camera_eye = controller.position
+                + if controller.character_kind() == CharacterKind::Feta {
+                    V(0.65, 0.28, -1.1)
+                } else {
+                    V(1.4, -0.25, -2.8)
+                };
+            camera_target = controller.position
+                + if controller.character_kind() == CharacterKind::Feta {
+                    V(0., -0.02, 0.)
+                } else {
+                    V(0., -0.55, 0.)
+                };
         }
         clear_background(Color::new(0.48, 0.70, 0.86, 1.));
         set_camera(&Camera3D {
@@ -597,22 +668,31 @@ async fn main() {
             ..Default::default()
         });
         material.set_uniform("Eye", mesh::vec(camera_eye));
-        material.set_uniform(
-            "ObjectStates",
-            vec2(
-                if interactions.monitor_on { 1. } else { 0. },
-                if interactions.crystal_amber { 1. } else { 0. },
-            ),
-        );
+        // Legacy studio surfaces keep their default appearance; seeker input is melee only.
+        material.set_uniform("ObjectStates", vec2(1., 0.));
         gl_use_material(&material);
         for m in &meshes {
             draw_mesh(m);
         }
+        prop_view.draw(&prop_physics);
         gl_use_default_material();
         if view.show_body {
-            character.draw(&render_controller, &wrench, &wrench_view);
+            character.draw(
+                &render_controller,
+                &wrench,
+                if loadout.selected == Weapon::Pistol {
+                    &pistol_view
+                } else {
+                    &wrench_view
+                },
+                prop_physics.held().is_some(),
+            );
         }
-        if let Some(hit) = &wrench.impact {
+        if let Some(hit) = if loadout.selected == Weapon::Pistol {
+            &loadout.pistol.impact
+        } else {
+            &wrench.impact
+        } {
             let p = mesh::vec(hit.point + hit.normal * 0.015);
             for i in 0..12 {
                 let a = i as f32 * 2.399;
@@ -629,8 +709,15 @@ async fn main() {
             }
         }
         set_default_camera();
-        if perspective == Perspective::First || !view.show_body {
-            wrench_view.draw(&wrench);
+        if controller.character_kind() == CharacterKind::Scientist
+            && prop_physics.held().is_none()
+            && (perspective == Perspective::First || !view.show_body)
+        {
+            if loadout.selected == Weapon::Pistol {
+                pistol_view.draw_pistol(&loadout.pistol);
+            } else {
+                wrench_view.draw(&wrench);
+            }
         }
         let sw = screen_width();
         let sh = screen_height();
@@ -643,7 +730,11 @@ async fn main() {
                 Color::new(0.025, 0.045, 0.08, 0.8),
             );
             text(
-                "WASD / Arrows   Move     Mouse   Look     Shift   Sprint",
+                if controller.character_kind() == CharacterKind::Feta {
+                    "WASD / Arrows   Scurry     Mouse   Look"
+                } else {
+                    "WASD / Arrows   Move     Mouse   Look     Shift   Sprint"
+                },
                 38.,
                 sh - 80.,
                 18.,
@@ -657,62 +748,125 @@ async fn main() {
                 INK,
             );
             text(
-                "Left-click   Swing wrench     E   Interact     Right-click   Dismiss info",
+                if controller.character_kind() == CharacterKind::Feta {
+                    "E   Pick up / Drop     Q   Switch camera"
+                } else {
+                    "E Pick up/drop   Click Attack   Scroll Weapon   Q Camera"
+                },
                 38.,
                 sh - 34.,
                 18.,
                 INK,
             );
         }
+        if active || physics_capture {
+            let prompt = if let Some(p) = prop_physics.held() {
+                Some(format!("E  Drop {}", p.label))
+            } else {
+                prop_physics
+                    .target(&room, view.aim(&controller, &room))
+                    .map(|i| format!("E  Pick up {}", prop_physics.props[i].label))
+            };
+            if let Some(prompt) = prompt {
+                let width = prompt.len() as f32 * 10. + 28.;
+                draw_rectangle(
+                    (sw - width) * 0.5,
+                    sh * 0.5 + 28.,
+                    width,
+                    32.,
+                    Color::new(0.02, 0.035, 0.055, 0.8),
+                );
+                text(&prompt, (sw - width) * 0.5 + 14., sh * 0.5 + 50., 18., INK);
+            }
+        }
+        if (active || capture_dir.is_some())
+            && controller.character_kind() == CharacterKind::Scientist
+            && prop_physics.held().is_none()
+        {
+            text(
+                if loadout.selected == Weapon::Pistol {
+                    "Pistol  /  Unlimited ammo"
+                } else {
+                    "Wrench"
+                },
+                28.,
+                sh - 22.,
+                18.,
+                MUTED,
+            );
+        }
         if active || capture_dir.is_some() {
             draw_circle(sw * 0.5, sh * 0.5, 2., Color::new(0.92, 0.96, 1., 0.85));
-            if let Some(hit) = &wrench.impact {
+            if let Some(hit) = if loadout.selected == Weapon::Pistol {
+                &loadout.pistol.impact
+            } else {
+                &wrench.impact
+            } {
                 let c = Color::new(1., 0.76, 0.35, 1. - hit.age / 0.65);
                 let (cx, cy) = (sw * 0.5, sh * 0.5);
                 for (x, y) in [(-1., -1.), (1., 1.), (-1., 1.), (1., -1.)] {
                     draw_line(cx + x * 5., cy + y * 5., cx + x * 11., cy + y * 11., 2., c);
                 }
             }
-            if let Some(info) = &interactions.feedback {
-                let width = 440_f32.min(sw - 48.);
-                let x = sw - width - 24.;
-                let y = 94.;
-                let lines = wrapped_lines(info.description, width - 36.);
-                let height = 84. + lines.len() as f32 * 24.;
-                draw_rectangle(x, y, width, height, Color::new(0.025, 0.045, 0.08, 0.94));
-                draw_rectangle(x, y, 3., height, BLUE);
-                text(&info.title, x + 18., y + 31., 22., INK);
-                for (i, line) in lines.iter().enumerate() {
-                    text(line, x + 18., y + 60. + i as f32 * 24., 18., INK);
-                }
-                text(
-                    "Right-click / Backspace to dismiss",
-                    x + 18.,
-                    y + height - 15.,
-                    16.,
-                    MUTED,
-                );
-            }
-            if let Some(entity) = room.focus(aim) {
-                draw_circle_lines(sw * 0.5, sh * 0.5, 7., 1.5, BLUE);
-                let label = format!(
-                    "{}  |  E: {}",
-                    entity.label,
-                    interactions.prompt(entity.action)
-                );
-                let width = FONT.with(|f| measure_text(&label, f.borrow().as_ref(), 18, 1.).width);
-                draw_rectangle(
-                    sw * 0.5 - width * 0.5 - 16.,
-                    sh * 0.5 + 24.,
-                    width + 32.,
-                    36.,
-                    Color::new(0.025, 0.045, 0.08, 0.84),
-                );
-                text(&label, sw * 0.5 - width * 0.5, sh * 0.5 + 48., 18., INK);
+        }
+
+        if !character_chosen {
+            let scale = menu_scale();
+            let (w, h) = (sw / scale, sh / scale);
+            let mut camera = Camera2D::from_display_rect(Rect::new(0., 0., w, h));
+            camera.zoom.y = -camera.zoom.y;
+            set_camera(&camera);
+            draw_rectangle(0., 0., w, h, Color::new(0.01, 0.025, 0.055, 0.8));
+            let x = (w - 460.) * 0.5;
+            let y = (h - 330.) * 0.5;
+            text("Choose your character", x, y + 36., 36., INK);
+            text(&room.name, x, y + 72., 20., MUTED);
+            let feta = button("Feta  /  Lab rat", Rect::new(x, y + 102., 460., 56.), true);
+            text(
+                "Small, white, red-eyed. Fast on all four paws.",
+                x,
+                y + 184.,
+                19.,
+                INK,
+            );
+            let scientist = button(
+                "The Scientist  /  Seeker",
+                Rect::new(x, y + 214., 460., 56.),
+                false,
+            );
+            text(
+                "Lab coat, eyeglasses, wrench and pistol.",
+                x,
+                y + 296.,
+                19.,
+                INK,
+            );
+            if feta || scientist {
+                controller = Controller::for_character(if feta {
+                    CharacterKind::Feta
+                } else {
+                    CharacterKind::Scientist
+                });
+                perspective = if feta {
+                    Perspective::Third
+                } else {
+                    Perspective::First
+                };
+                character_chosen = true;
+                active = true;
+                entered = true;
+                stepper.reset(&controller);
+                keys.down.clear();
+                wrench.cancel();
+                prop_physics.pause();
+                capture(true);
+                skip_look = 3;
             }
         }
-        if !active
+        if character_chosen
+            && !active
             && (capture_dir.is_none()
+                || (pistol_capture && frame >= 108)
                 || ((interaction_capture || wrench_capture) && frame >= 60)
                 || (character_capture && frame >= 96)
                 || (house_capture && frame >= 132))
@@ -743,7 +897,7 @@ async fn main() {
                 if entered {
                     "Take your time."
                 } else {
-                    "A house to explore."
+                    "Ready to explore."
                 },
                 left,
                 y + 101.,
@@ -767,6 +921,7 @@ async fn main() {
                 controller.stop();
                 stepper.reset(&controller);
                 wrench.cancel();
+                prop_physics.pause();
                 capture(true);
                 skip_look = 3;
             }
@@ -776,10 +931,50 @@ async fn main() {
             text("Look around", left + 210., y + 266., 18., MUTED);
             text("Space / Hold Ctrl or C", left, y + 290., 19., INK);
             text("Small jump / Crouch", left + 210., y + 290., 18., MUTED);
-            text("Shift / Esc", left, y + 314., 21., INK);
-            text("Sprint / Pause", left + 210., y + 314., 18., MUTED);
-            text("Left-click / E", left, y + 338., 21., INK);
-            text("Swing wrench / Use", left + 210., y + 338., 18., MUTED);
+            text(
+                if controller.character_kind() == CharacterKind::Feta {
+                    "Esc"
+                } else {
+                    "Shift / Esc"
+                },
+                left,
+                y + 314.,
+                21.,
+                INK,
+            );
+            text(
+                if controller.character_kind() == CharacterKind::Feta {
+                    "Pause"
+                } else {
+                    "Sprint / Pause"
+                },
+                left + 210.,
+                y + 314.,
+                18.,
+                MUTED,
+            );
+            text(
+                if controller.character_kind() == CharacterKind::Feta {
+                    "Character"
+                } else {
+                    "Left-click"
+                },
+                left,
+                y + 338.,
+                21.,
+                INK,
+            );
+            text(
+                if controller.character_kind() == CharacterKind::Feta {
+                    "Feta / Lab rat"
+                } else {
+                    "Attack / Fire"
+                },
+                left + 210.,
+                y + 338.,
+                18.,
+                MUTED,
+            );
             draw_line(
                 left,
                 y + 354.,
@@ -824,11 +1019,22 @@ async fn main() {
                 Rect::new(left + width * 0.5 + 6., y + 493., width * 0.5 - 6., 42.),
                 false,
             ) {
-                controller = Controller::default();
+                prop_physics.drop_held();
+                controller = Controller::for_character(controller.character_kind());
                 stepper.reset(&controller);
                 keys.down.clear();
             }
-            text("Q  First / Third person", left, y + 555., 17., INK);
+            text(
+                if controller.character_kind() == CharacterKind::Feta {
+                    "E Pick up/drop   Q Camera"
+                } else {
+                    "E Pick/drop   Q Camera   Scroll Weapon"
+                },
+                left,
+                y + 555.,
+                17.,
+                INK,
+            );
             text(
                 "F  Fullscreen / Maximized     H  Toggle hints     F3  Stats",
                 left,
@@ -880,7 +1086,13 @@ async fn main() {
             );
         }
         if let Some(dir) = &capture_dir {
-            let shot = if character_capture {
+            let shot = if pistol_capture {
+                [10, 20, 24, 56, 64, 88, 100, 110]
+                    .iter()
+                    .position(|f| *f == frame)
+            } else if physics_capture {
+                [1, 28, 90, 110, 170, 350].iter().position(|f| *f == frame)
+            } else if character_capture {
                 [10, 22, 34, 46, 58, 70, 94, 106]
                     .iter()
                     .position(|f| *f == frame)
@@ -904,7 +1116,11 @@ async fn main() {
                 samples.push(get_frame_time());
             }
             if frame
-                == if house_capture {
+                == if pistol_capture {
+                    111
+                } else if physics_capture {
+                    351
+                } else if house_capture {
                     143
                 } else if character_capture {
                     107
@@ -918,6 +1134,15 @@ async fn main() {
             {
                 let mean = samples.iter().sum::<f32>() / samples.len() as f32;
                 let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nvertices={}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\nwrench_hits={}\naudio_plays={}\n",platform_window::report(),screen_width(),screen_height(),meshes.iter().map(|m|m.vertices.len()).sum::<usize>(),meshes.len(),mean*1000.,wrench.hits,impact_audio.plays);
+                let props_report:Vec<_> = prop_physics.props.iter().map(|p| serde_json::json!({"id":p.id,"position":[p.transform.p.0,p.transform.p.1,p.transform.p.2]})).collect();
+                let _ = std::fs::write(
+                    dir.join("physics-report.json"),
+                    serde_json::to_string_pretty(&props_report).unwrap(),
+                );
+                let report = format!(
+                    "{report}pistol_shots={}\npistol_audio_plays={}\nselected_weapon={:?}\n",
+                    loadout.pistol.shots, pistol_audio.plays, loadout.selected
+                );
                 let _ = std::fs::write(dir.join("render-report.txt"), report);
                 break;
             }

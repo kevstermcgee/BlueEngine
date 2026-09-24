@@ -47,7 +47,7 @@ impl Wrench {
         let next = old + dt;
         // Crossing the contact instant also works when a frame spans the whole swing.
         if old < CONTACT_TIME && next >= CONTACT_TIME {
-            if let Some(hit) = room.world.hit(ray, REACH, false) {
+            if let Some(hit) = room.hit(ray, REACH) {
                 self.hits += 1;
                 self.impact = Some(Impact {
                     point: hit.p,

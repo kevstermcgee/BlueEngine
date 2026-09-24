@@ -21,10 +21,63 @@ pub struct Room {
     pub simple_geometry: bool,
     pub compiled: Compiled,
     pub world: World,
+    /// Moving geometry, rebuilt independently of the static map BVH.
+    pub dynamic_world: World,
     pub colliders: Vec<Collider>,
     pub entities: Vec<Entity>,
 }
 impl Room {
+    /// Replace legacy furniture envelopes with their visible component bounds.
+    /// Semantic bounds remain intact for inspection and rigid-body ownership.
+    pub(crate) fn with_furniture_colliders(mut self) -> Self {
+        for entity in &self.entities {
+            let label = entity.label.to_ascii_lowercase();
+            let furniture = label.split([' ', '-']).next_back().is_some_and(|word| {
+                matches!(word, "table" | "desk" | "chair" | "bench" | "workbench")
+            });
+            if !furniture {
+                continue;
+            }
+            let envelope = &entity.bounds;
+            let matches = |c: &Collider| {
+                (c.min - envelope.min).length() < 0.005 && (c.max - envelope.max).length() < 0.005
+            };
+            if !self.colliders.iter().any(matches) {
+                continue;
+            }
+            let parts: Vec<_> = self
+                .world
+                .instances
+                .iter()
+                .filter(|part| {
+                    (0..3).all(|axis| {
+                        part.bounds.lo.axis(axis) >= envelope.min.axis(axis) - 0.003
+                            && part.bounds.hi.axis(axis) <= envelope.max.axis(axis) + 0.003
+                    })
+                })
+                .map(|part| Collider {
+                    min: part.bounds.lo,
+                    max: part.bounds.hi,
+                })
+                .collect();
+            // A single solid plinth is not a passage; unmatched/incomplete data
+            // keeps the authored proxy. Never infer a hole by lowering its top.
+            if parts.len() > 1 {
+                self.colliders.retain(|c| !matches(c));
+                self.colliders.extend(parts);
+            }
+        }
+        self
+    }
+
+    /// Closest static or moving surface; used by aim, tools and camera occlusion.
+    pub fn hit(&self, ray: crate::math::Ray, distance: f32) -> Option<crate::geometry::Hit> {
+        let fixed = self.world.hit(ray, distance, false);
+        self.dynamic_world
+            .hit(ray, fixed.map_or(distance, |h| h.t), false)
+            .or(fixed)
+    }
+
     /// GPU tags change only the selected surfaces; static geometry and shadows stay valid.
     pub fn render_tags(&self) -> Vec<(Collider, f32)> {
         if self.simple_geometry {
@@ -63,7 +116,7 @@ impl Room {
         tags
     }
     pub fn focus(&self, ray: crate::math::Ray) -> Option<&Entity> {
-        let hit = self.world.hit(ray, 4.5, false)?;
+        let hit = self.hit(ray, 4.5)?;
         self.entities.iter().find(|e| e.bounds.contains(hit.p))
     }
 }
@@ -412,9 +465,11 @@ pub fn build() -> crate::Result<Room> {
         simple_geometry: false,
         compiled,
         world,
+        dynamic_world: World::new(vec![]),
         colliders: b.colliders,
         entities: b.entities,
-    })
+    }
+    .with_furniture_colliders())
 }
 
 #[cfg(test)]
