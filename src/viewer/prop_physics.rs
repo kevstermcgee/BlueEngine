@@ -11,7 +11,10 @@ use crate::{
     scene::Track,
 };
 use rapier3d::prelude::*;
-use std::{collections::HashSet, path::Path};
+use std::{
+    collections::{HashMap, HashSet},
+    path::Path,
+};
 
 const STEP: f32 = 1. / 120.;
 pub const PICKUP_REACH: f32 = 2.;
@@ -41,7 +44,8 @@ pub struct PropPhysics {
     multi: MultibodyJointSet,
     ccd: CCDSolver,
     static_colliders: Vec<PlayerCollider>,
-    held: Option<usize>,
+    held_by_player: HashMap<u64, usize>,
+    player_by_held: HashMap<usize, u64>,
     debt: f32,
 }
 fn vector(v: V) -> Vector<Real> {
@@ -134,7 +138,8 @@ impl PropPhysics {
             multi: MultibodyJointSet::new(),
             ccd: CCDSolver::new(),
             static_colliders: vec![],
-            held: None,
+            held_by_player: HashMap::new(),
+            player_by_held: HashMap::new(),
             debt: 0.,
         };
         let source = &room.compiled.scene;
@@ -254,8 +259,25 @@ impl PropPhysics {
         Ok(this)
     }
     pub fn held(&self) -> Option<&PropBody> {
-        self.held.map(|i| &self.props[i])
+        self.held_for_player(0).map(|i| &self.props[i])
     }
+
+    pub fn held_for_player(&self, player_id: u64) -> Option<usize> {
+        self.held_by_player.get(&player_id).copied()
+    }
+
+    pub fn holder_of(&self, prop_idx: usize) -> Option<u64> {
+        self.player_by_held.get(&prop_idx).copied()
+    }
+
+    pub fn is_prop_held(&self, prop_idx: usize) -> bool {
+        self.player_by_held.contains_key(&prop_idx)
+    }
+
+    pub fn held_index(&self) -> Option<usize> {
+        self.held_for_player(0)
+    }
+
     /// Aim at the nearest visible prop. Fixed surfaces and other props occlude pickup.
     pub fn target(&self, room: &Room, ray: ViewRay) -> Option<usize> {
         if !ray.o.finite() || !ray.d.finite() {
@@ -278,56 +300,122 @@ impl PropPhysics {
         }
         result
     }
-    /// One E press picks up the aimed prop, or drops the current one. No repeat timer.
+
+    /// Raycast against all dynamic props within max_distance, returning closest hit prop index and distance.
+    pub fn hit_prop(&self, ray: ViewRay, max_distance: f32) -> Option<(usize, f32)> {
+        if !ray.o.finite() || !ray.d.finite() {
+            return None;
+        }
+        let mut distance = max_distance;
+        let mut result = None;
+        for (i, p) in self.props.iter().enumerate() {
+            for part in &p.local_world.instances {
+                if let Some((t, _)) = moved(part, p.transform, p.origin).intersect(ray, distance) {
+                    if t < distance {
+                        distance = t;
+                        result = Some((i, t));
+                    }
+                }
+            }
+        }
+        result
+    }
+
+    /// One E press picks up the aimed prop, or drops the current one (for player 0).
     pub fn toggle(&mut self, room: &Room, ray: ViewRay) -> bool {
-        if self.held.is_some() {
-            self.drop_held();
+        self.toggle_for_player(0, room, ray)
+    }
+
+    /// Multi-player interaction: pick up aimed prop or drop held prop for a specific player ID.
+    /// Contention resolution: returns false if the target prop is already held by another player.
+    pub fn toggle_for_player(&mut self, player_id: u64, room: &Room, ray: ViewRay) -> bool {
+        if self.held_by_player.contains_key(&player_id) {
+            self.drop_for_player(player_id);
             return true;
         }
         let Some(i) = self.target(room, ray) else {
             return false;
         };
-        self.held = Some(i);
+        // Contention resolution: Cannot take a prop already held by another player
+        if self.player_by_held.contains_key(&i) {
+            return false;
+        }
+        self.held_by_player.insert(player_id, i);
+        self.player_by_held.insert(i, player_id);
         let b = &mut self.bodies[self.props[i].handle];
         b.set_gravity_scale(0., true);
         b.wake_up(true);
         true
     }
-    /// Release in place, retaining bounded carry momentum and restoring gravity.
+
+    /// Release in place for player 0, retaining bounded carry momentum and restoring gravity.
     pub fn drop_held(&mut self) {
-        if let Some(i) = self.held.take() {
+        self.drop_for_player(0);
+    }
+
+    /// Release in place for a specific player ID.
+    pub fn drop_for_player(&mut self, player_id: u64) {
+        if let Some(i) = self.held_by_player.remove(&player_id) {
+            self.player_by_held.remove(&i);
             let b = &mut self.bodies[self.props[i].handle];
             b.set_gravity_scale(1., true);
             let v = *b.linvel();
             b.set_linvel(v.cap_magnitude(4.), true);
         }
     }
+
     /// Pause clears only accumulated time; held objects and poses stay frozen.
     pub fn pause(&mut self) {
         self.debt = 0.;
     }
-    /// Fixed 120 Hz rigid-body steps, capped to 16 ticks after a stall.
+
+    /// Fixed 120 Hz rigid-body steps, capped to 16 ticks after a stall (single-player convenience).
     pub fn advance(&mut self, dt: f32, player: &Controller, room: &mut Room) {
+        let mut map = HashMap::new();
+        map.insert(0, player);
+        self.step_simulation_with_players(dt, &map, room);
+    }
+
+    /// Step the simulation without requiring players (for empty server or static ticks).
+    pub fn step_simulation(&mut self, dt: f32, room: &mut Room) {
+        let empty = HashMap::new();
+        self.step_simulation_with_players(dt, &empty, room);
+    }
+
+    /// Step simulation with multiple authoritative player poses for velocity servos and contention.
+    pub fn step_simulation_with_players(
+        &mut self,
+        dt: f32,
+        players: &HashMap<u64, &Controller>,
+        room: &mut Room,
+    ) {
         if !dt.is_finite() || dt <= 0. {
             return;
         }
         self.debt = (self.debt + dt).min(STEP * 16.);
         while self.debt + 1e-6 >= STEP {
             self.debt = (self.debt - STEP).max(0.);
-            if let Some(i) = self.held {
-                let prop = &self.props[i];
-                let target =
-                    player.position + player.direction() * (0.65 + prop.radius) + V(0., 0.08, 0.);
-                let b = &mut self.bodies[prop.handle];
-                let delta = vector(target) - b.translation();
-                if delta.norm() > 4. {
-                    self.drop_held();
+            let mut to_drop = Vec::new();
+            for (&player_id, &i) in &self.held_by_player {
+                if let Some(player) = players.get(&player_id) {
+                    let prop = &self.props[i];
+                    let target =
+                        player.position + player.direction() * (0.65 + prop.radius) + V(0., 0.08, 0.);
+                    let b = &mut self.bodies[prop.handle];
+                    let delta = vector(target) - b.translation();
+                    if delta.norm() > 4. {
+                        to_drop.push(player_id);
+                    } else {
+                        // Velocity servo keeps the object physical while carrying
+                        b.set_linvel((delta * 12.).cap_magnitude(8.), true);
+                        b.set_angvel(*b.angvel() * 0.85, true);
+                    }
                 } else {
-                    // A velocity servo keeps the object physical while carrying: contacts
-                    // resist the hand instead of teleporting it through walls or furniture.
-                    b.set_linvel((delta * 12.).cap_magnitude(8.), true);
-                    b.set_angvel(*b.angvel() * 0.85, true);
+                    to_drop.push(player_id);
                 }
+            }
+            for pid in to_drop {
+                self.drop_for_player(pid);
             }
             self.pipeline.step(
                 &Vector::new(0., -9.81, 0.),
@@ -349,40 +437,6 @@ impl PropPhysics {
             );
         }
         self.sync(room);
-    }
-
-    /// Step the simulation without requiring a client player (for authoritative headless servers).
-    pub fn step_simulation(&mut self, dt: f32, room: &mut Room) {
-        if !dt.is_finite() || dt <= 0. {
-            return;
-        }
-        self.debt = (self.debt + dt).min(STEP * 16.);
-        while self.debt + 1e-6 >= STEP {
-            self.debt = (self.debt - STEP).max(0.);
-            self.pipeline.step(
-                &Vector::new(0., -9.81, 0.),
-                &IntegrationParameters {
-                    dt: STEP,
-                    ..Default::default()
-                },
-                &mut self.islands,
-                &mut self.broad,
-                &mut self.narrow,
-                &mut self.bodies,
-                &mut self.colliders,
-                &mut self.joints,
-                &mut self.multi,
-                &mut self.ccd,
-                None,
-                &(),
-                &(),
-            );
-        }
-        self.sync(room);
-    }
-
-    pub fn held_index(&self) -> Option<usize> {
-        self.held
     }
 
     pub fn active_and_sleeping_counts(&self) -> (usize, usize) {
@@ -412,6 +466,13 @@ impl PropPhysics {
             .and_then(|p| self.bodies.get(p.handle).map(|b| value(b.linvel())))
     }
 
+    pub fn is_prop_sleeping(&self, i: usize) -> bool {
+        self.props
+            .get(i)
+            .and_then(|p| self.bodies.get(p.handle).map(|b| b.is_sleeping()))
+            .unwrap_or(true)
+    }
+
     /// Apply an external linear impulse to a prop body by index.
     pub fn apply_impulse(&mut self, i: usize, impulse: V) {
         if let Some(p) = self.props.get(i) {
@@ -436,6 +497,53 @@ impl PropPhysics {
         false
     }
 
+    pub fn prop_rotation(&self, i: usize) -> Option<[f32; 4]> {
+        self.props.get(i).and_then(|p| {
+            self.bodies.get(p.handle).map(|b| {
+                let q = b.position().rotation;
+                [q.i, q.j, q.k, q.w]
+            })
+        })
+    }
+
+    pub fn prop_angular_velocity(&self, i: usize) -> Option<V> {
+        self.props
+            .get(i)
+            .and_then(|p| self.bodies.get(p.handle).map(|b| value(b.angvel())))
+    }
+
+    pub fn set_prop_transform_and_vel(
+        &mut self,
+        id: &str,
+        pos: V,
+        rot: [f32; 4],
+        linvel: V,
+        angvel: V,
+        sleeping: bool,
+    ) -> bool {
+        if let Some(p) = self.props.iter_mut().find(|p| p.id == id) {
+            if let Some(body) = self.bodies.get_mut(p.handle) {
+                let q = rapier3d::na::UnitQuaternion::new_normalize(rapier3d::na::Quaternion::new(
+                    rot[3], rot[0], rot[1], rot[2],
+                ));
+                let mut iso = *body.position();
+                iso.translation.vector = vector(pos);
+                iso.rotation = q;
+                body.set_position(iso, true);
+                body.set_linvel(vector(linvel), true);
+                body.set_angvel(vector(angvel), true);
+                if sleeping {
+                    body.sleep();
+                } else {
+                    body.wake_up(true);
+                }
+                p.transform = matrix(&iso);
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn sync(&mut self, room: &mut Room) {
         let any_active = self
             .props
@@ -445,6 +553,7 @@ impl PropPhysics {
             return;
         }
         room.colliders.clone_from(&self.static_colliders);
+        let held_indices: HashSet<usize> = self.player_by_held.keys().copied().collect();
         let mut instances = vec![];
         for (i, p) in self.props.iter_mut().enumerate() {
             p.transform = matrix(self.bodies[p.handle].position());
@@ -461,7 +570,7 @@ impl PropPhysics {
                 hi = hi.max(part.bounds.hi);
             }
             room.entities[p.entity].bounds = PlayerCollider { min: lo, max: hi };
-            if self.held != Some(i) {
+            if !held_indices.contains(&i) {
                 for handle in self.bodies[p.handle].colliders() {
                     let a = self.colliders[*handle].compute_aabb();
                     room.colliders.push(PlayerCollider {

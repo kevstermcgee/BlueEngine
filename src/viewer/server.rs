@@ -16,6 +16,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+pub const STALE_INPUT_WINDOW_TICKS: u64 = 6; // 100 ms at 60 Hz
+pub const KEYFRAME_INTERVAL: u32 = 20; // Full snapshot every 20 snapshots (~1s at 20 Hz)
+
 /// Session tracking state for one connected client.
 #[derive(Clone, Debug)]
 pub struct ClientSession {
@@ -24,6 +27,11 @@ pub struct ClientSession {
     pub connected_at: Instant,
     pub last_seen: Instant,
     pub last_client_tick: u64,
+    pub last_input_tick: u64,
+    pub pistol_cooldown: f32,
+    pub wrench_cooldown: f32,
+    pub baseline_snapshot: Option<crate::viewer::net::WorldSnapshot>,
+    pub snapshots_since_keyframe: u32,
 }
 
 /// Authoritative dedicated server running HeadlessWorld over UDP.
@@ -32,6 +40,7 @@ pub struct DedicatedServer {
     pub world: HeadlessWorld,
     pub sessions: HashMap<u64, ClientSession>,
     pub clients: HashMap<SocketAddr, u64>,
+    pub recent_disconnects: HashMap<u64, (SocketAddr, Instant)>,
     pub next_player_id: u64,
     pub client_timeout: Duration,
     pub local_addr: SocketAddr,
@@ -53,6 +62,7 @@ impl DedicatedServer {
             world,
             sessions: HashMap::new(),
             clients: HashMap::new(),
+            recent_disconnects: HashMap::new(),
             next_player_id: 1,
             client_timeout: Duration::from_secs(5),
             local_addr,
@@ -77,13 +87,24 @@ impl DedicatedServer {
             return;
         }
 
-        // Determine player ID: if requested ID is already owned by this socket, or available, reuse it
-        let player_id = if req_id > 0
-            && (!self.sessions.contains_key(&req_id) || self.clients.get(&src) == Some(&req_id))
-        {
-            req_id
-        } else if let Some(&existing_id) = self.clients.get(&src) {
+        // Expire disconnect reservations older than 60s
+        let now = Instant::now();
+        self.recent_disconnects
+            .retain(|_, (_, time)| now.duration_since(*time) < Duration::from_secs(60));
+
+        // Session security: Server assigns authoritative IDs.
+        // Reconnecting clients from the same socket address or with valid unexpired reservation retain their ID.
+        // Arbitrary requested IDs from untrusted sockets are rejected and assigned fresh sequential IDs.
+        let player_id = if let Some(&existing_id) = self.clients.get(&src) {
             existing_id
+        } else if req_id > 0
+            && self
+                .recent_disconnects
+                .get(&req_id)
+                .is_some_and(|(addr, _)| *addr == src)
+        {
+            self.recent_disconnects.remove(&req_id);
+            req_id
         } else {
             let id = self.next_player_id;
             self.next_player_id += 1;
@@ -96,7 +117,6 @@ impl DedicatedServer {
         let spawn = self.spawn_point_for(player_id);
         self.world.join_at(player_id, spawn);
 
-        let now = Instant::now();
         self.clients.insert(src, player_id);
         self.sessions.insert(
             player_id,
@@ -106,6 +126,11 @@ impl DedicatedServer {
                 connected_at: now,
                 last_seen: now,
                 last_client_tick: 0,
+                last_input_tick: self.world.tick,
+                pistol_cooldown: 0.0,
+                wrench_cooldown: 0.0,
+                baseline_snapshot: None,
+                snapshots_since_keyframe: 0,
             },
         );
 
@@ -132,27 +157,65 @@ impl DedicatedServer {
                 }
                 Packet::Input(frame) => {
                     if let Some(&player_id) = self.clients.get(&src) {
+                        let mut should_fire_pistol = false;
+                        let mut should_fire_wrench = false;
+
                         if let Some(session) = self.sessions.get_mut(&player_id) {
+                            // Input sequencing enforcement: reject duplicate or out-of-order input frames
+                            if frame.client_tick <= session.last_client_tick {
+                                continue;
+                            }
                             session.last_seen = Instant::now();
                             session.last_client_tick = frame.client_tick;
+                            session.last_input_tick = self.world.tick;
+
+                            if frame.fire_pistol && session.pistol_cooldown <= 0.0 {
+                                session.pistol_cooldown = crate::viewer::weapons::SHOT_INTERVAL;
+                                should_fire_pistol = true;
+                            }
+                            if frame.fire_wrench && session.wrench_cooldown <= 0.0 {
+                                session.wrench_cooldown = crate::viewer::wrench::SWING_TIME;
+                                should_fire_wrench = true;
+                            }
                         }
+
+                        // Authoritative movement
                         self.world
                             .input(player_id, frame.movement, frame.yaw, frame.pitch);
+
+                        // Multiplayer prop interaction with contention resolution
                         if frame.interact {
                             if let Some(p) = self.world.player(player_id) {
                                 let ray = p.ray();
                                 if let Some(ref mut physics) = self.world.prop_physics {
-                                    physics.toggle(&self.world.room, ray);
+                                    physics.toggle_for_player(player_id, &self.world.room, ray);
                                 }
                             }
+                        }
+
+                        // Authoritative weapon hitscan and impulse application
+                        if should_fire_pistol {
+                            self.world.fire_pistol(player_id);
+                        }
+                        if should_fire_wrench {
+                            self.world.fire_wrench(player_id);
                         }
                     }
                 }
                 Packet::Disconnect { player_id } => {
-                    self.world.leave(player_id);
-                    self.sessions.remove(&player_id);
-                    self.clients.remove(&src);
-                    println!("[Server] Client #{player_id} disconnected gracefully");
+                    // Session security: Verify that sender actually owns this player ID
+                    if self.clients.get(&src) == Some(&player_id) {
+                        self.world.leave(player_id);
+                        self.sessions.remove(&player_id);
+                        self.clients.remove(&src);
+                        self.recent_disconnects
+                            .insert(player_id, (src, Instant::now()));
+                        println!("[Server] Client #{player_id} disconnected gracefully");
+                    } else {
+                        eprintln!(
+                            "[Server] Rejected unauthorized disconnect attempt for #{player_id} from {src}"
+                        );
+                    }
                 }
                 Packet::Ping { seq, send_time_ms } => {
                     let pong = Packet::Pong { seq, send_time_ms };
@@ -178,24 +241,54 @@ impl DedicatedServer {
             self.world.leave(id);
             self.sessions.remove(&id);
             self.clients.remove(&addr);
+            self.recent_disconnects
+                .insert(id, (addr, Instant::now()));
             println!("[Server] Client #{id} timed out (disconnected)");
             ids.push(id);
         }
         ids
     }
 
-    /// Broadcast spatially filtered snapshots to each connected client.
+    /// Broadcast spatially filtered snapshots to each connected client with per-client delta tracking.
     pub fn broadcast_snapshots(&mut self) {
-        for (&id, session) in &self.sessions {
+        for (&id, session) in &mut self.sessions {
             let snap = self.world.snapshot_for_player(id, session.last_client_tick);
-            let _ = self
-                .transport
-                .send_packet(&Packet::Snapshot(snap), session.addr);
+            let send_keyframe = session.baseline_snapshot.is_none()
+                || session.snapshots_since_keyframe >= KEYFRAME_INTERVAL;
+
+            if send_keyframe {
+                let _ = self
+                    .transport
+                    .send_packet(&Packet::Snapshot(snap.clone()), session.addr);
+                session.baseline_snapshot = Some(snap);
+                session.snapshots_since_keyframe = 0;
+            } else {
+                let base = session.baseline_snapshot.as_ref().unwrap();
+                let delta = snap.compute_delta(base);
+                let _ = self
+                    .transport
+                    .send_packet(&Packet::Delta(delta), session.addr);
+                session.baseline_snapshot = Some(snap);
+                session.snapshots_since_keyframe += 1;
+            }
         }
     }
 
-    /// Step authoritative simulation one tick and broadcast snapshots every 3 ticks (20 Hz).
+    /// Step authoritative simulation one tick, neutralize stale inputs, and broadcast snapshots every 3 ticks (20 Hz).
     pub fn step(&mut self) {
+        // Cooldown ticks and stale input neutralization
+        for (&id, session) in &mut self.sessions {
+            session.pistol_cooldown = (session.pistol_cooldown
+                - crate::viewer::simulation::TICK_SECONDS)
+                .max(0.0);
+            session.wrench_cooldown = (session.wrench_cooldown
+                - crate::viewer::simulation::TICK_SECONDS)
+                .max(0.0);
+            if self.world.tick.saturating_sub(session.last_input_tick) > STALE_INPUT_WINDOW_TICKS {
+                self.world.neutralize_input(id);
+            }
+        }
+
         self.world.step();
         if self.world.tick.is_multiple_of(3) {
             self.broadcast_snapshots();

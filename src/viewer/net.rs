@@ -63,8 +63,18 @@ impl PlayerNetState {
 pub struct PropNetState {
     pub id: String,
     pub position: V,
+    pub rotation: [f32; 4],
+    pub linear_velocity: V,
+    pub angular_velocity: V,
+    pub sleeping: bool,
+    pub held_by: Option<u64>,
     pub generation: Generation,
-    pub is_held: bool,
+}
+
+impl PropNetState {
+    pub fn is_held(&self) -> bool {
+        self.held_by.is_some()
+    }
 }
 
 /// Complete authoritative state snapshot for a simulation tick.
@@ -391,6 +401,67 @@ impl InterpolationBuffer<PlayerNetState> {
                 state.position = pos;
                 state.yaw = yaw;
                 state.pitch = pitch;
+                return Some(state);
+            }
+        }
+
+        if render_tick < self.snapshots[0].0 as f32 {
+            Some(self.snapshots[0].1.clone())
+        } else {
+            Some(self.snapshots.back().unwrap().1.clone())
+        }
+    }
+}
+
+/// Normalized linear quaternion interpolation between two unit quaternions [x, y, z, w].
+pub fn nlerp_quat(q0: [f32; 4], mut q1: [f32; 4], t: f32) -> [f32; 4] {
+    let dot = q0[0] * q1[0] + q0[1] * q1[1] + q0[2] * q1[2] + q0[3] * q1[3];
+    if dot < 0.0 {
+        q1 = [-q1[0], -q1[1], -q1[2], -q1[3]];
+    }
+    let inv_t = 1.0 - t;
+    let x = inv_t * q0[0] + t * q1[0];
+    let y = inv_t * q0[1] + t * q1[1];
+    let z = inv_t * q0[2] + t * q1[2];
+    let w = inv_t * q0[3] + t * q1[3];
+    let len = (x * x + y * y + z * z + w * w).sqrt();
+    if len > 1e-6 {
+        [x / len, y / len, z / len, w / len]
+    } else {
+        q0
+    }
+}
+
+impl InterpolationBuffer<PropNetState> {
+    /// Smoothly interpolate prop state (position, rotation, linear & angular velocity) at fractional render tick.
+    pub fn interpolate_at(&self, render_tick: f32) -> Option<PropNetState> {
+        if self.snapshots.is_empty() {
+            return None;
+        }
+        if self.snapshots.len() == 1 {
+            return Some(self.snapshots[0].1.clone());
+        }
+
+        for i in 0..self.snapshots.len() - 1 {
+            let (t0, s0) = &self.snapshots[i];
+            let (t1, s1) = &self.snapshots[i + 1];
+            let t0_f = *t0 as f32;
+            let t1_f = *t1 as f32;
+            if render_tick >= t0_f && render_tick <= t1_f {
+                let alpha = if (t1_f - t0_f).abs() > 1e-4 {
+                    ((render_tick - t0_f) / (t1_f - t0_f)).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                let pos = s0.position.lerp(s1.position, alpha);
+                let rot = nlerp_quat(s0.rotation, s1.rotation, alpha);
+                let linvel = s0.linear_velocity.lerp(s1.linear_velocity, alpha);
+                let angvel = s0.angular_velocity.lerp(s1.angular_velocity, alpha);
+                let mut state = s1.clone();
+                state.position = pos;
+                state.rotation = rot;
+                state.linear_velocity = linvel;
+                state.angular_velocity = angvel;
                 return Some(state);
             }
         }

@@ -63,7 +63,7 @@ The shared client starts with a 90-degree world field of view for all maps and b
 
 Gravity, contacts, angular motion, friction, modest restitution, sleeping and CCD run at 120 Hz, capped at 16 ticks per frame. Each primitive contributes a convex collision proxy; sphere/cylinder/cone proxies are sampled convex hulls, and boxes retain their oriented shape. Static visible geometry supplies collision surfaces; the movement world ground at y=0 is retained. `Room::hit` chooses the closest static/dynamic geometry for focus, camera and wrench hits. Dynamic BVHs and semantic/player-collision bounds track poses, eliminating old-position ghost hits. Held props are excluded from player/camera queries but remain rigid bodies against scenery and other props.
 
-E uses the closest visible surface within 2 m. Carrying drives a capped velocity servo toward a point in front of the player; it does not teleport the object. Releasing restores gravity and bounded carry velocity. Pause stops time, reset drops first, and wrench input/rendering is suppressed while carrying. Physics state is session-local. The standalone `HeadlessWorld` movement benchmark is unchanged; the reusable `PropPhysics` module is tested without graphics, but there is no authoritative multi-player ownership protocol.
+E uses the closest visible surface within 2 m. Carrying drives a capped velocity servo toward a point in front of the player; it does not teleport the object. Releasing restores gravity and bounded carry velocity. Pause stops time, reset drops first, and wrench input/rendering is suppressed while carrying. Multi-player ownership is tracked via bidirectional player-to-prop tables (`held_by_player` / `player_by_held`), rejecting concurrent pickup contention and automatically releasing held objects on player disconnect.
 
 
 ## Furniture clearance
@@ -71,3 +71,31 @@ E uses the closest visible surface within 2 m. Carrying drives a capped velocity
 Room construction refines legacy table/desk/chair/bench/workbench collision envelopes into contained visible component AABBs. Furniture is identified by the final word of its semantic label (space or hyphen separated); unrelated architecture and single solid plinths retain their authored proxies. Entity bounds and IDs are unchanged. This applies to procedural and JSON rooms and both character profiles; Feta retains his normal size and movement speed. Real legs, stretchers, seats and tops remain solid, including ceilings for jumping.
 
 PropPhysics removes both whole-object and component proxies when extracting movable furniture, then supplies its transformed compound-part bounds each step. Moving or dropping a table therefore does not leave fixed invisible legs behind. Quarter-turn furniture, fixed desks, native chairs/tables, Scientist exclusion, solid legs/undersides and desk passages in all four shipped maps are covered by tests/furniture_clearance.rs and the physics regression suite. Arbitrary-angle component AABBs remain conservative.
+
+
+## Network architecture and hardening pass
+
+The dedicated server (`viewer/server.rs`) and client network stack (`viewer/net.rs`, `bin/blue-engine.rs`) provide authoritative multiplayer simulation, state synchronization, and resilience against untrusted input:
+
+- **Session Security & Disconnect Verification**: `Packet::Disconnect { player_id }` validates socket address ownership against registered sessions before disconnecting. Reconnecting clients requesting arbitrary IDs are assigned next sequential IDs unless verified against valid recent disconnect records, preventing session hijacking.
+- **Input Sequencing & Stale-Input Neutralization**: Clients send sequential `client_tick` values in `InputFrame`. The server strictly enforces `client_tick > session.last_client_tick`, discarding duplicate, replayed, or out-of-order packets. If a client stalls or drops packets exceeding `STALE_INPUT_WINDOW_TICKS` (6 ticks / 100 ms), the server neutralizes movement intent to default/zero via `world.neutralize_input(id)`, letting natural kinematic ground friction bring the character to a stop rather than perpetuating runaway motion until socket timeout.
+- **Server-Authoritative Dynamic Props**: `PropNetState` replicates full 3D transform and dynamic state: position, orientation quaternion (`[x, y, z, w]`), linear velocity, angular velocity, sleeping state, and holder ID (`Option<PlayerId>`). Clients maintain an `InterpolationBuffer<PropNetState>` with spherical unit quaternion interpolation (`nlerp_quat`) to smoothly step remote visual props and synchronise with Rapier rigid bodies without visual snapping.
+- **Authoritative Combat & Physics Impulses**: Weapon firing (`fire_pistol` and `fire_wrench`) is evaluated exclusively by the server. The server tracks cooldowns (`PISTOL_COOLDOWN_TICKS = 15`, `WRENCH_COOLDOWN_TICKS = 30`), performs raycasts against dynamic Rapier bodies via `hit_prop()`, and imparts physical impulse vectors (35.0 N·s for pistol, 60.0 N·s for wrench) into hit props.
+- **Delta Snapshots & Keyframe Intervals**: `DedicatedServer::broadcast_snapshots()` maintains per-client baseline snapshots. On `KEYFRAME_INTERVAL` (20 ticks / 1 s), the server transmits a full `Packet::Snapshot`; intermediate ticks transmit bandwidth-efficient `Packet::Delta` packets containing changed player and prop states. Clients reconstruct full snapshots against their baseline.
+- **Complete Quantized Checksums**: `HeadlessWorld::checksum()` hashes quantized player states alongside full dynamic prop states: prop ID, position (1 mm), orientation quaternion (1e-4), linear velocity (1 mm/s), angular velocity (1 mrad/s), sleep flag, and holder ID. This guarantees deterministic desync detection across simulation ticks.
+
+
+## Transport evaluation and roadmap (JSON-UDP vs. QUIC)
+
+The current network implementation transmits serialized JSON over UDP datagrams (`UdpTransport`).
+
+### Architectural Trade-off
+1. **JSON over UDP (Current Prototyping Baseline)**:
+   - *Strengths*: Completely transparent, human-readable wire format, trivially inspectable in packet captures and logs. Zero cryptographic handshake or certificate overhead, enabling deterministic, high-speed end-to-end integration tests on `127.0.0.1`.
+   - *Limitations*: Plaintext transmission vulnerable to interception or spoofing without network-layer security. Verbose payload overhead risks exceeding IPv4 path MTU (typically 1200–1400 bytes) as prop and player counts scale, leading to UDP fragmentation or packet drops.
+
+2. **Quinn / QUIC & Bitpacked UDP (Production Roadmap)**:
+   - *Transport Layer*: Migration to Quinn (Rust QUIC implementation) or a dual-channel UDP transport with DTLS.
+   - *Multiplexing*: QUIC provides native stream multiplexing alongside unreliable datagrams: reliable ordered streams for initial handshake, asset verification, map negotiation, and chat; unreliable datagrams for 60 Hz input frames and 20 Hz delta snapshots.
+   - *Security*: Integrated TLS 1.3 encryption, automatic connection migration across NAT/IP changes via connection IDs, and built-in congestion control.
+   - *Serialization*: Bincode, Postcard, or Bitcode packed binary encoding to compress `InputFrame`, `PropNetState`, and `SnapshotDelta` down to tens of bytes per tick, guaranteeing payloads remain comfortably beneath standard MTU.

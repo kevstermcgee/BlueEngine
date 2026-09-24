@@ -421,6 +421,9 @@ async fn main() {
     let mut prediction_buffer = PredictionBuffer::new(128);
     let mut remote_interpolators: HashMap<u64, InterpolationBuffer<PlayerNetState>> =
         HashMap::new();
+    let mut remote_prop_interpolators: HashMap<String, InterpolationBuffer<vesper3d::viewer::net::PropNetState>> =
+        HashMap::new();
+    let mut client_baseline_snapshot: Option<vesper3d::viewer::net::WorldSnapshot> = None;
     let mut remote_controllers: HashMap<u64, Controller> = HashMap::new();
     let mut remote_characters: HashMap<u64, character::Character> = HashMap::new();
     let mut client_tick = 0u64;
@@ -446,6 +449,7 @@ async fn main() {
 
             while let Ok(Some((packet, src))) = transport.recv_packet() {
                 if src == server_addr {
+                    let mut incoming_snap = None;
                     match packet {
                         Packet::Welcome {
                             player_id,
@@ -464,39 +468,14 @@ async fn main() {
                             active = true;
                         }
                         Packet::Snapshot(snap) => {
-                            last_server_tick = snap.tick;
-                            if let Some(my_id) = net_player_id {
-                                if let Some(my_server) = snap.players.iter().find(|p| p.id == my_id)
-                                {
-                                    prediction_buffer.reconcile(
-                                        snap.ack_client_tick,
-                                        my_server,
-                                        &mut controller,
-                                        &room.colliders,
-                                        0.05,
-                                    );
-                                }
-                            }
-                            let active_ids: HashSet<u64> =
-                                snap.players.iter().map(|p| p.id).collect();
-                            remote_controllers.retain(|id, _| active_ids.contains(id));
-                            remote_interpolators.retain(|id, _| active_ids.contains(id));
-                            remote_characters.retain(|id, _| active_ids.contains(id));
-
-                            for p in &snap.players {
-                                if Some(p.id) != net_player_id {
-                                    remote_interpolators
-                                        .entry(p.id)
-                                        .or_insert_with(|| InterpolationBuffer::new(32))
-                                        .push(snap.tick, p.clone());
-                                }
-                            }
-
-                            for prop in &snap.props {
-                                prop_physics.set_prop_position(&prop.id, prop.position);
-                            }
-                            if !snap.props.is_empty() {
-                                prop_physics.sync(&mut room);
+                            client_baseline_snapshot = Some(snap.clone());
+                            incoming_snap = Some(snap);
+                        }
+                        Packet::Delta(delta) => {
+                            if let Some(ref base) = client_baseline_snapshot {
+                                let reconstructed = delta.apply_to(base);
+                                client_baseline_snapshot = Some(reconstructed.clone());
+                                incoming_snap = Some(reconstructed);
                             }
                         }
                         Packet::Pong { send_time_ms, .. } => {
@@ -504,6 +483,42 @@ async fn main() {
                             current_ping_ms = now_ms.saturating_sub(send_time_ms);
                         }
                         _ => {}
+                    }
+
+                    if let Some(snap) = incoming_snap {
+                        last_server_tick = snap.tick;
+                        if let Some(my_id) = net_player_id {
+                            if let Some(my_server) = snap.players.iter().find(|p| p.id == my_id) {
+                                prediction_buffer.reconcile(
+                                    snap.ack_client_tick,
+                                    my_server,
+                                    &mut controller,
+                                    &room.colliders,
+                                    0.05,
+                                );
+                            }
+                        }
+                        let active_ids: HashSet<u64> =
+                            snap.players.iter().map(|p| p.id).collect();
+                        remote_controllers.retain(|id, _| active_ids.contains(id));
+                        remote_interpolators.retain(|id, _| active_ids.contains(id));
+                        remote_characters.retain(|id, _| active_ids.contains(id));
+
+                        for p in &snap.players {
+                            if Some(p.id) != net_player_id {
+                                remote_interpolators
+                                    .entry(p.id)
+                                    .or_insert_with(|| InterpolationBuffer::new(32))
+                                    .push(snap.tick, p.clone());
+                            }
+                        }
+
+                        for prop in &snap.props {
+                            remote_prop_interpolators
+                                .entry(prop.id.clone())
+                                .or_insert_with(|| InterpolationBuffer::new(32))
+                                .push(snap.tick, prop.clone());
+                        }
                     }
                 }
             }
@@ -520,6 +535,28 @@ async fn main() {
                     remote_c.yaw = state.yaw;
                     remote_c.pitch = state.pitch;
                 }
+            }
+
+            // Interpolate remote props authoritatively
+            let mut props_updated = false;
+            for (prop_id, interp) in &remote_prop_interpolators {
+                if let Some(state) = interp.interpolate_at(render_tick) {
+                    let locally_held = prop_physics.held().is_some_and(|h| h.id == *prop_id);
+                    if !locally_held {
+                        prop_physics.set_prop_transform_and_vel(
+                            prop_id,
+                            state.position,
+                            state.rotation,
+                            state.linear_velocity,
+                            state.angular_velocity,
+                            state.sleeping,
+                        );
+                        props_updated = true;
+                    }
+                }
+            }
+            if props_updated {
+                prop_physics.sync(&mut room);
             }
         }
 

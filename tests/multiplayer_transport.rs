@@ -37,6 +37,43 @@ impl SimulatedClient {
     }
 }
 
+struct TestClientReceiver {
+    pub baseline: Option<vesper3d::viewer::net::WorldSnapshot>,
+    pub deltas_received: usize,
+    pub snapshots_received: usize,
+}
+
+impl TestClientReceiver {
+    fn new() -> Self {
+        Self {
+            baseline: None,
+            deltas_received: 0,
+            snapshots_received: 0,
+        }
+    }
+
+    fn receive(&mut self, pkt: Packet) -> Option<vesper3d::viewer::net::WorldSnapshot> {
+        match pkt {
+            Packet::Snapshot(snap) => {
+                self.snapshots_received += 1;
+                self.baseline = Some(snap.clone());
+                Some(snap)
+            }
+            Packet::Delta(delta) => {
+                self.deltas_received += 1;
+                if let Some(ref base) = self.baseline {
+                    let snap = delta.apply_to(base);
+                    self.baseline = Some(snap.clone());
+                    Some(snap)
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }
+    }
+}
+
 #[test]
 fn one_server_two_clients_end_to_end_in_test_lab() {
     let mut server = HeadlessWorld::new().expect("Build Blue Test Lab");
@@ -586,6 +623,9 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
     let mut c2_room = vesper3d::viewer::test_lab::build().expect("Build Lab 2");
     let mut c2_prop_phys = PropPhysics::new(&mut c2_room).expect("PropPhys 2");
 
+    let mut c1_rx = TestClientReceiver::new();
+    let mut c2_rx = TestClientReceiver::new();
+
     // 5. Active movement and mutual smooth observation for 30 ticks
     for tick in 1..=30 {
         // Client 1 inputs (moving forward)
@@ -632,7 +672,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
 
         // Drain client 1 packets
         while let Ok(Some((pkt, _))) = client1_net.recv_packet() {
-            if let Packet::Snapshot(snap) = pkt {
+            if let Some(snap) = c1_rx.receive(pkt) {
                 if let Some(my_state) = snap.players.iter().find(|p| p.id == 1) {
                     c1_pred.reconcile(
                         snap.ack_client_tick,
@@ -646,14 +686,21 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
                     c1_remote_interp.push(snap.tick, p2_state.clone());
                 }
                 for prop in &snap.props {
-                    c1_prop_phys.set_prop_position(&prop.id, prop.position);
+                    c1_prop_phys.set_prop_transform_and_vel(
+                        &prop.id,
+                        prop.position,
+                        prop.rotation,
+                        prop.linear_velocity,
+                        prop.angular_velocity,
+                        prop.sleeping,
+                    );
                 }
             }
         }
 
         // Drain client 2 packets
         while let Ok(Some((pkt, _))) = client2_net.recv_packet() {
-            if let Packet::Snapshot(snap) = pkt {
+            if let Some(snap) = c2_rx.receive(pkt) {
                 if let Some(my_state) = snap.players.iter().find(|p| p.id == 2) {
                     c2_pred.reconcile(
                         snap.ack_client_tick,
@@ -667,11 +714,22 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
                     c2_remote_interp.push(snap.tick, p1_state.clone());
                 }
                 for prop in &snap.props {
-                    c2_prop_phys.set_prop_position(&prop.id, prop.position);
+                    c2_prop_phys.set_prop_transform_and_vel(
+                        &prop.id,
+                        prop.position,
+                        prop.rotation,
+                        prop.linear_velocity,
+                        prop.angular_velocity,
+                        prop.sleeping,
+                    );
                 }
             }
         }
     }
+
+    // Verify deltas were actually received by clients
+    assert!(c1_rx.deltas_received > 0, "Client 1 received real delta packets");
+    assert!(c2_rx.deltas_received > 0, "Client 2 received real delta packets");
 
     // Both clients observed each other moving via interpolation
     let c1_sees_c2 = c1_remote_interp.interpolate_state_at(25.0);
@@ -705,17 +763,31 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         server.step();
 
         while let Ok(Some((pkt, _))) = client1_net.recv_packet() {
-            if let Packet::Snapshot(snap) = pkt {
+            if let Some(snap) = c1_rx.receive(pkt) {
                 for prop in &snap.props {
-                    c1_prop_phys.set_prop_position(&prop.id, prop.position);
+                    c1_prop_phys.set_prop_transform_and_vel(
+                        &prop.id,
+                        prop.position,
+                        prop.rotation,
+                        prop.linear_velocity,
+                        prop.angular_velocity,
+                        prop.sleeping,
+                    );
                 }
             }
         }
 
         while let Ok(Some((pkt, _))) = client2_net.recv_packet() {
-            if let Packet::Snapshot(snap) = pkt {
+            if let Some(snap) = c2_rx.receive(pkt) {
                 for prop in &snap.props {
-                    c2_prop_phys.set_prop_position(&prop.id, prop.position);
+                    c2_prop_phys.set_prop_transform_and_vel(
+                        &prop.id,
+                        prop.position,
+                        prop.rotation,
+                        prop.linear_velocity,
+                        prop.angular_velocity,
+                        prop.sleeping,
+                    );
                 }
             }
         }
@@ -767,7 +839,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
     server.broadcast_snapshots();
     let mut c1_saw_c2_leave = false;
     while let Ok(Some((pkt, _))) = client1_net.recv_packet() {
-        if let Packet::Snapshot(snap) = pkt {
+        if let Some(snap) = c1_rx.receive(pkt) {
             if !snap.players.iter().any(|p| p.id == 2) {
                 c1_saw_c2_leave = true;
             }
@@ -813,7 +885,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
     server.broadcast_snapshots();
     let mut c1_saw_c2_return = false;
     while let Ok(Some((pkt, _))) = client1_net.recv_packet() {
-        if let Packet::Snapshot(snap) = pkt {
+        if let Some(snap) = c1_rx.receive(pkt) {
             if snap.players.iter().any(|p| p.id == 2) {
                 c1_saw_c2_return = true;
             }
@@ -937,10 +1009,11 @@ fn process_dedicated_server_two_clients_end_to_end() {
     }
 
     // Client 1 receives server snapshots showing Client 2 moving
+    let mut c1_rx = TestClientReceiver::new();
     let mut c1_saw_c2 = false;
     for _ in 0..30 {
         while let Ok(Some((pkt, _))) = client1.recv_packet() {
-            if let Packet::Snapshot(snap) = pkt {
+            if let Some(snap) = c1_rx.receive(pkt) {
                 if snap.players.iter().any(|p| p.id == 2) {
                     c1_saw_c2 = true;
                 }
@@ -965,7 +1038,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
     let mut c1_saw_disconnect = false;
     for _ in 0..30 {
         while let Ok(Some((pkt, _))) = client1.recv_packet() {
-            if let Packet::Snapshot(snap) = pkt {
+            if let Some(snap) = c1_rx.receive(pkt) {
                 if !snap.players.iter().any(|p| p.id == 2) {
                     c1_saw_disconnect = true;
                 }
@@ -1006,5 +1079,428 @@ fn process_dedicated_server_two_clients_end_to_end() {
     assert!(
         status.success(),
         "Server process completed successfully with exit code 0"
+    );
+}
+
+#[test]
+fn test_session_security_and_disconnect_verification() {
+    use vesper3d::viewer::{
+        net::{Packet, UdpTransport, PROTOCOL_VERSION},
+        server::DedicatedServer,
+    };
+
+    let mut server = DedicatedServer::bind("127.0.0.1:0").expect("Server bind");
+    let server_addr = server.local_addr;
+
+    let client1 = UdpTransport::bind("127.0.0.1:0").expect("Client 1 bind");
+    let client2 = UdpTransport::bind("127.0.0.1:0").expect("Client 2 bind");
+
+    // Client 1 connects
+    client1
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions.len(), 1);
+    assert!(server.sessions.contains_key(&1));
+
+    // Client 2 connects but attempts to maliciously request player_id 999
+    client2
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 999,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions.len(), 2);
+    // Server must reject arbitrary requested ID and allocate sequential ID 2
+    assert!(!server.sessions.contains_key(&999));
+    assert!(server.sessions.contains_key(&2));
+
+    // Attacker Client 2 attempts to send a spoofed Disconnect packet for Client 1 (player_id: 1)
+    client2
+        .send_packet(&Packet::Disconnect { player_id: 1 }, server_addr)
+        .unwrap();
+    server.poll_network().unwrap();
+
+    // Verify Player 1 was NOT disconnected by Client 2's spoofed packet
+    assert_eq!(server.sessions.len(), 2);
+    assert!(server.sessions.contains_key(&1));
+    assert!(server.world.player(1).is_some());
+
+    // Legitimate owner Client 1 disconnects
+    client1
+        .send_packet(&Packet::Disconnect { player_id: 1 }, server_addr)
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions.len(), 1);
+    assert!(!server.sessions.contains_key(&1));
+    assert!(server.world.player(1).is_none());
+}
+
+#[test]
+fn test_input_sequencing_and_stale_input_neutralization() {
+    use vesper3d::viewer::{
+        controller::Movement,
+        net::{InputFrame, Packet, UdpTransport, PROTOCOL_VERSION},
+        server::{DedicatedServer, STALE_INPUT_WINDOW_TICKS},
+    };
+
+    let mut server = DedicatedServer::bind("127.0.0.1:0").expect("Server bind");
+    let server_addr = server.local_addr;
+
+    let client = UdpTransport::bind("127.0.0.1:0").expect("Client bind");
+    client
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    assert!(server.sessions.contains_key(&1));
+
+    // Send input tick 10
+    let inp10 = InputFrame {
+        client_tick: 10,
+        movement: Movement {
+            forward: 1.0,
+            ..Default::default()
+        },
+        yaw: 0.0,
+        pitch: 0.0,
+        fire_wrench: false,
+        fire_pistol: false,
+        interact: false,
+    };
+    client
+        .send_packet(&Packet::Input(inp10), server_addr)
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions[&1].last_client_tick, 10);
+
+    // Send duplicate input tick 10 (must be rejected)
+    let inp_dup = InputFrame {
+        client_tick: 10,
+        movement: Movement {
+            right: 1.0,
+            ..Default::default()
+        },
+        yaw: 1.0,
+        pitch: 0.0,
+        fire_wrench: false,
+        fire_pistol: false,
+        interact: false,
+    };
+    client
+        .send_packet(&Packet::Input(inp_dup), server_addr)
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions[&1].last_client_tick, 10);
+    // Yaw was NOT overwritten by duplicate tick
+    assert_eq!(server.world.player(1).unwrap().yaw, 0.0);
+
+    // Send out-of-order input tick 5 (must be rejected)
+    let inp_old = InputFrame {
+        client_tick: 5,
+        movement: Movement {
+            right: 1.0,
+            ..Default::default()
+        },
+        yaw: 2.0,
+        pitch: 0.0,
+        fire_wrench: false,
+        fire_pistol: false,
+        interact: false,
+    };
+    client
+        .send_packet(&Packet::Input(inp_old), server_addr)
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions[&1].last_client_tick, 10);
+    assert_eq!(server.world.player(1).unwrap().yaw, 0.0);
+
+    // Test stale-input neutralization window:
+    // Client sent forward movement at tick 10, then went silent.
+    // Run server steps past the neutralization window (STALE_INPUT_WINDOW_TICKS = 6).
+    let initial_pos = server.world.player(1).unwrap().position;
+    for _ in 0..STALE_INPUT_WINDOW_TICKS {
+        server.step();
+    }
+    let moved_pos = server.world.player(1).unwrap().position;
+    assert!((moved_pos - initial_pos).length() > 0.01);
+
+    // Advance 30 more ticks with no packets from client: input is neutralized, velocity decays to 0
+    for _ in 0..30 {
+        server.step();
+    }
+    let neutral_pos = server.world.player(1).unwrap().position;
+
+    // Advance 20 further ticks: since input was neutralized and velocity is 0, position does NOT keep moving!
+    for _ in 0..20 {
+        server.step();
+    }
+    let stopped_pos = server.world.player(1).unwrap().position;
+    assert!(
+        (stopped_pos - neutral_pos).length() < 0.001,
+        "Player stopped moving after stale input neutralization window"
+    );
+}
+
+#[test]
+fn test_multiplayer_prop_contention_and_ownership() {
+    use vesper3d::viewer::{
+        controller::Movement,
+        net::{InputFrame, Packet, UdpTransport, PROTOCOL_VERSION},
+        server::DedicatedServer,
+    };
+
+    let mut server = DedicatedServer::bind("127.0.0.1:0").expect("Server bind");
+    let server_addr = server.local_addr;
+
+    let client1 = UdpTransport::bind("127.0.0.1:0").expect("Client 1");
+    let client2 = UdpTransport::bind("127.0.0.1:0").expect("Client 2");
+
+    client1
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    client2
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions.len(), 2);
+
+    let phys = server.world.prop_physics.as_ref().unwrap();
+    assert!(!phys.props.is_empty(), "Props available");
+
+    // Position player 1 right in front of prop 0, aiming directly at it
+    let p0_pos = server.world.prop_physics.as_ref().unwrap().prop_position(0).unwrap();
+    let eye1 = server.world.player(1).unwrap().position.1;
+    server.world.player_mut(1).unwrap().position = vesper3d::math::V(p0_pos.0, eye1, p0_pos.2 + 0.8);
+    let delta1 = p0_pos - server.world.player(1).unwrap().position;
+    let pitch1 = (delta1.1 / delta1.length()).asin();
+    let yaw1 = delta1.0.atan2(-delta1.2);
+    server.world.player_mut(1).unwrap().yaw = yaw1;
+    server.world.player_mut(1).unwrap().pitch = pitch1;
+
+    // Client 1 sends interact press
+    let inp1 = InputFrame {
+        client_tick: 1,
+        movement: Movement::default(),
+        yaw: yaw1,
+        pitch: pitch1,
+        fire_wrench: false,
+        fire_pistol: false,
+        interact: true,
+    };
+    client1.send_packet(&Packet::Input(inp1), server_addr).unwrap();
+    server.poll_network().unwrap();
+
+    let p1_held = server.world.prop_physics.as_ref().unwrap().held_for_player(1);
+    assert_eq!(p1_held, Some(0), "Player 1 picked up prop 0");
+    assert_eq!(
+        server.world.prop_physics.as_ref().unwrap().holder_of(0),
+        Some(1),
+        "Prop 0 held by Player 1"
+    );
+
+    // Position player 2 at the same prop and attempt to interact
+    let eye2 = server.world.player(2).unwrap().position.1;
+    server.world.player_mut(2).unwrap().position = vesper3d::math::V(p0_pos.0 + 0.2, eye2, p0_pos.2 + 0.8);
+    let delta2 = p0_pos - server.world.player(2).unwrap().position;
+    let pitch2 = (delta2.1 / delta2.length()).asin();
+    let yaw2 = delta2.0.atan2(-delta2.2);
+    server.world.player_mut(2).unwrap().yaw = yaw2;
+    server.world.player_mut(2).unwrap().pitch = pitch2;
+
+    let inp2 = InputFrame {
+        client_tick: 1,
+        movement: Movement::default(),
+        yaw: yaw2,
+        pitch: pitch2,
+        fire_wrench: false,
+        fire_pistol: false,
+        interact: true,
+    };
+    client2.send_packet(&Packet::Input(inp2), server_addr).unwrap();
+    server.poll_network().unwrap();
+
+    // Contention resolution: Player 2 cannot steal prop 0 while Player 1 holds it
+    assert_eq!(
+        server.world.prop_physics.as_ref().unwrap().held_for_player(2),
+        None,
+        "Player 2 interaction rejected by contention resolution"
+    );
+    assert_eq!(
+        server.world.prop_physics.as_ref().unwrap().holder_of(0),
+        Some(1),
+        "Prop 0 remains held by Player 1"
+    );
+
+    // When Player 1 disconnects, their held prop is released automatically
+    client1
+        .send_packet(&Packet::Disconnect { player_id: 1 }, server_addr)
+        .unwrap();
+    server.poll_network().unwrap();
+
+    assert_eq!(
+        server.world.prop_physics.as_ref().unwrap().holder_of(0),
+        None,
+        "Prop 0 freed after Player 1 leaves"
+    );
+}
+
+#[test]
+fn test_authoritative_combat_hitscan_and_impulse() {
+    use vesper3d::viewer::{
+        controller::Movement,
+        net::{InputFrame, Packet, UdpTransport, PROTOCOL_VERSION},
+        server::DedicatedServer,
+    };
+
+    let mut server = DedicatedServer::bind("127.0.0.1:0").expect("Server bind");
+    let server_addr = server.local_addr;
+
+    let client = UdpTransport::bind("127.0.0.1:0").expect("Client");
+    client
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+
+    // Position player directly facing prop 0 within reach
+    let p0_pos = server.world.prop_physics.as_ref().unwrap().prop_position(0).unwrap();
+    let eye1 = server.world.player(1).unwrap().position.1;
+    server.world.player_mut(1).unwrap().position = vesper3d::math::V(p0_pos.0, eye1, p0_pos.2 + 0.8);
+    let delta = p0_pos - server.world.player(1).unwrap().position;
+    let pitch = (delta.1 / delta.length()).asin();
+    let yaw = delta.0.atan2(-delta.2);
+    server.world.player_mut(1).unwrap().yaw = yaw;
+    server.world.player_mut(1).unwrap().pitch = pitch;
+
+    let initial_speed = server
+        .world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_linear_velocity(0)
+        .unwrap()
+        .length();
+
+    // Client fires pistol authoritatively
+    let inp_pistol = InputFrame {
+        client_tick: 1,
+        movement: Movement::default(),
+        yaw,
+        pitch,
+        fire_wrench: false,
+        fire_pistol: true,
+        interact: false,
+    };
+    client.send_packet(&Packet::Input(inp_pistol), server_addr).unwrap();
+    server.poll_network().unwrap();
+
+    let post_shot_speed = server
+        .world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_linear_velocity(0)
+        .unwrap()
+        .length();
+
+    // Authoritative pistol shot applied physical impulse to the targeted prop!
+    assert!(
+        post_shot_speed > initial_speed + 0.1,
+        "Authoritative shot applied physical impulse to prop (speed: {post_shot_speed})"
+    );
+}
+
+#[test]
+fn test_prop_state_interpolation_and_quantized_checksum() {
+    use vesper3d::math::V;
+    use vesper3d::viewer::{
+        lifecycle::Generation,
+        net::{InterpolationBuffer, PropNetState},
+        simulation::HeadlessWorld,
+    };
+
+    // 1. Verify PropNetState interpolation with position, rotation, linear & angular velocity
+    let mut buffer = InterpolationBuffer::<PropNetState>::new(16);
+    let prop0 = PropNetState {
+        id: "apple_1".into(),
+        position: V(0.0, 1.0, 0.0),
+        rotation: [0.0, 0.0, 0.0, 1.0],
+        linear_velocity: V(1.0, 0.0, 0.0),
+        angular_velocity: V(0.0, 2.0, 0.0),
+        sleeping: false,
+        held_by: None,
+        generation: Generation(1),
+    };
+    let prop1 = PropNetState {
+        id: "apple_1".into(),
+        position: V(1.0, 1.0, 0.0),
+        rotation: [0.0, 0.7071068, 0.0, 0.7071068],
+        linear_velocity: V(1.0, 0.0, 0.0),
+        angular_velocity: V(0.0, 2.0, 0.0),
+        sleeping: false,
+        held_by: Some(1),
+        generation: Generation(1),
+    };
+
+    buffer.push(10, prop0);
+    buffer.push(20, prop1);
+
+    let interp = buffer.interpolate_at(15.0).expect("Interpolated state");
+    assert!((interp.position.0 - 0.5).abs() < 1e-4);
+    assert_eq!(interp.held_by, Some(1));
+    assert!(interp.rotation[1] > 0.3 && interp.rotation[1] < 0.6);
+
+    // 2. Verify deterministic quantized checksum catches prop movements
+    let mut world1 = HeadlessWorld::new().unwrap();
+    let mut world2 = HeadlessWorld::new().unwrap();
+    world1.join(1);
+    world2.join(1);
+
+    // At identical state, checksums are identical
+    assert_eq!(world1.checksum(), world2.checksum());
+
+    // Nudge a dynamic prop in world1
+    world1.apply_prop_impulse(0, V(0.5, 1.0, 0.0));
+    world1.step();
+    world2.step();
+
+    // Checksum must diverge immediately because prop transform and velocity are quantized and hashed!
+    assert_ne!(
+        world1.checksum(),
+        world2.checksum(),
+        "Quantized checksum diverges when a prop moves"
     );
 }

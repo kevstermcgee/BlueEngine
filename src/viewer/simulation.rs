@@ -135,9 +135,79 @@ impl HeadlessWorld {
         );
         true
     }
-    /// Remove state and pending input. Unknown IDs are harmless.
+    /// Remove state and pending input. Release any held prop owned by this player.
     pub fn leave(&mut self, id: u64) {
+        if let Some(ref mut physics) = self.prop_physics {
+            physics.drop_for_player(id);
+        }
         self.players.remove(&id);
+    }
+    /// Neutralize active movement intent for a player (used on input sequence timeout/stale frames).
+    pub fn neutralize_input(&mut self, id: u64) {
+        if let Some(player) = self.players.get_mut(&id) {
+            player.input = Movement::default();
+        }
+    }
+    /// Authoritatively fire a pistol shot for a player.
+    /// Checks raycast against dynamic props and room geometry. If a prop is hit, applies impulse.
+    pub fn fire_pistol(&mut self, id: u64) -> Option<crate::math::V> {
+        let player = self.players.get(&id)?;
+        let ray = player.controller.ray();
+        if !ray.o.finite() || !ray.d.finite() {
+            return None;
+        }
+
+        let mut closest_dist = crate::viewer::weapons::PISTOL_RANGE;
+        let mut hit_prop = None;
+
+        if let Some(ref mut physics) = self.prop_physics {
+            if let Some((i, d)) = physics.hit_prop(ray, closest_dist) {
+                closest_dist = d;
+                hit_prop = Some(i);
+            }
+            if let Some(i) = hit_prop {
+                physics.apply_impulse(i, ray.d.norm() * 6.0);
+            }
+        }
+
+        if let Some(hit) = self.room.hit(ray, closest_dist) {
+            Some(hit.p)
+        } else if hit_prop.is_some() {
+            Some(ray.o + ray.d.norm() * closest_dist)
+        } else {
+            None
+        }
+    }
+    /// Authoritatively swing a wrench for a player.
+    /// Checks reach against dynamic props and room geometry. If a prop is hit, applies heavy impulse or knocks it loose.
+    pub fn fire_wrench(&mut self, id: u64) -> Option<crate::math::V> {
+        let player = self.players.get(&id)?;
+        let ray = player.controller.ray();
+        let reach = crate::viewer::wrench::REACH;
+
+        let mut closest_dist = reach;
+        let mut hit_prop = None;
+
+        if let Some(ref mut physics) = self.prop_physics {
+            if let Some((i, d)) = physics.hit_prop(ray, closest_dist) {
+                closest_dist = d;
+                hit_prop = Some(i);
+            }
+            if let Some(i) = hit_prop {
+                if let Some(holder) = physics.holder_of(i) {
+                    physics.drop_for_player(holder);
+                }
+                physics.apply_impulse(i, ray.d.norm() * 12.0);
+            }
+        }
+
+        if let Some(hit) = self.room.hit(ray, closest_dist) {
+            Some(hit.p)
+        } else if hit_prop.is_some() {
+            Some(ray.o + ray.d.norm() * closest_dist)
+        } else {
+            None
+        }
     }
     /// Borrow current authoritative controller state, or return `None` for an unknown ID.
     pub fn player(&self, id: u64) -> Option<&Controller> {
@@ -199,13 +269,17 @@ impl HeadlessWorld {
 
         let t_phys = std::time::Instant::now();
         if let Some(ref mut physics) = self.prop_physics {
-            physics.step_simulation(TICK_SECONDS, &mut self.room);
+            let mut player_controllers = std::collections::HashMap::new();
+            for (&id, p) in &self.players {
+                player_controllers.insert(id, &p.controller);
+            }
+            physics.step_simulation_with_players(TICK_SECONDS, &player_controllers, &mut self.room);
 
             // Synchronize prop positions & velocities into lifecycle registry
             for (i, p) in physics.props.iter().enumerate() {
                 if let Some(pos) = physics.prop_position(i) {
                     self.lifecycle.update_position(&p.id, pos);
-                    let is_held = physics.held_index() == Some(i);
+                    let is_held = physics.is_prop_held(i);
                     let speed = physics
                         .prop_linear_velocity(i)
                         .map(|v| v.length())
@@ -225,7 +299,8 @@ impl HeadlessWorld {
     }
 
     /// Calculate a deterministic 64-bit checksum of the world state at the current tick.
-    /// Uses quantized coordinates (to millimeter precision) to ensure cross-platform reproducibility.
+    /// Uses quantized coordinates (to millimeter precision) and quantized prop transforms and
+    /// velocities to ensure cross-platform reproducibility and catch desyncs instantly.
     pub fn checksum(&self) -> u64 {
         const FNV_OFFSET: u64 = 0xcbf29ce484222325;
         const FNV_PRIME: u64 = 0x100000001b3;
@@ -267,10 +342,40 @@ impl HeadlessWorld {
         mix_u64(dynamic as u64);
         mix_u64(replicated as u64);
 
+        // Full prop state: quantized position, rotation quaternion, linear & angular velocity, sleeping, holder
         if let Some(ref physics) = self.prop_physics {
             let (active, sleeping) = physics.active_and_sleeping_counts();
             mix_u64(active as u64);
             mix_u64(sleeping as u64);
+
+            for (i, p) in physics.props.iter().enumerate() {
+                for b in p.id.as_bytes() {
+                    mix_u64(*b as u64);
+                }
+                if let Some(pos) = physics.prop_position(i) {
+                    mix_u64((pos.0 * 1000.0).round() as i64 as u64);
+                    mix_u64((pos.1 * 1000.0).round() as i64 as u64);
+                    mix_u64((pos.2 * 1000.0).round() as i64 as u64);
+                }
+                if let Some(rot) = physics.prop_rotation(i) {
+                    mix_u64((rot[0] * 10000.0).round() as i64 as u64);
+                    mix_u64((rot[1] * 10000.0).round() as i64 as u64);
+                    mix_u64((rot[2] * 10000.0).round() as i64 as u64);
+                    mix_u64((rot[3] * 10000.0).round() as i64 as u64);
+                }
+                if let Some(lv) = physics.prop_linear_velocity(i) {
+                    mix_u64((lv.0 * 1000.0).round() as i64 as u64);
+                    mix_u64((lv.1 * 1000.0).round() as i64 as u64);
+                    mix_u64((lv.2 * 1000.0).round() as i64 as u64);
+                }
+                if let Some(av) = physics.prop_angular_velocity(i) {
+                    mix_u64((av.0 * 1000.0).round() as i64 as u64);
+                    mix_u64((av.1 * 1000.0).round() as i64 as u64);
+                    mix_u64((av.2 * 1000.0).round() as i64 as u64);
+                }
+                mix_u64(if physics.is_prop_sleeping(i) { 1 } else { 0 });
+                mix_u64(physics.holder_of(i).unwrap_or(0));
+            }
         }
 
         hash
@@ -293,18 +398,30 @@ impl HeadlessWorld {
             .iter()
             .filter(|o| o.state.requires_rigid_body() || o.state.requires_networking())
             .map(|o| {
-                let is_held = self
-                    .prop_physics
-                    .as_ref()
-                    .and_then(|phys| phys.held_index())
-                    .and_then(|idx| self.prop_physics.as_ref().unwrap().props.get(idx))
-                    .is_some_and(|p| p.id == o.id);
+                let idx = self.prop_physics.as_ref().and_then(|phys| {
+                    phys.props.iter().position(|p| p.id == o.id)
+                });
+                let (rot, linvel, angvel, sleeping, held_by) = if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
+                    (
+                        phys.prop_rotation(i).unwrap_or([0., 0., 0., 1.]),
+                        phys.prop_linear_velocity(i).unwrap_or(crate::math::V::ZERO),
+                        phys.prop_angular_velocity(i).unwrap_or(crate::math::V::ZERO),
+                        phys.is_prop_sleeping(i),
+                        phys.holder_of(i),
+                    )
+                } else {
+                    ([0., 0., 0., 1.], crate::math::V::ZERO, crate::math::V::ZERO, true, None)
+                };
 
                 super::net::PropNetState {
                     id: o.id.clone(),
                     position: o.position,
+                    rotation: rot,
+                    linear_velocity: linvel,
+                    angular_velocity: angvel,
+                    sleeping,
+                    held_by,
                     generation: o.generation,
-                    is_held,
                 }
             })
             .collect();
@@ -359,18 +476,30 @@ impl HeadlessWorld {
             .filter(|o| o.state.requires_rigid_body() || o.state.requires_networking())
             .filter(|o| is_relevant(o.position))
             .map(|o| {
-                let is_held = self
-                    .prop_physics
-                    .as_ref()
-                    .and_then(|phys| phys.held_index())
-                    .and_then(|idx| self.prop_physics.as_ref().unwrap().props.get(idx))
-                    .is_some_and(|p| p.id == o.id);
+                let idx = self.prop_physics.as_ref().and_then(|phys| {
+                    phys.props.iter().position(|p| p.id == o.id)
+                });
+                let (rot, linvel, angvel, sleeping, held_by) = if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
+                    (
+                        phys.prop_rotation(i).unwrap_or([0., 0., 0., 1.]),
+                        phys.prop_linear_velocity(i).unwrap_or(crate::math::V::ZERO),
+                        phys.prop_angular_velocity(i).unwrap_or(crate::math::V::ZERO),
+                        phys.is_prop_sleeping(i),
+                        phys.holder_of(i),
+                    )
+                } else {
+                    ([0., 0., 0., 1.], crate::math::V::ZERO, crate::math::V::ZERO, true, None)
+                };
 
                 super::net::PropNetState {
                     id: o.id.clone(),
                     position: o.position,
+                    rotation: rot,
+                    linear_velocity: linvel,
+                    angular_velocity: angvel,
+                    sleeping,
+                    held_by,
                     generation: o.generation,
-                    is_held,
                 }
             })
             .collect();
