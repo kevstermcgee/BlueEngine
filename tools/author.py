@@ -24,8 +24,12 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
+def native_binary():
+    return Path(os.environ.get('BE2_TOOLS', ROOT / 'bin' / ('be2-tools.exe' if os.name == 'nt' else 'be2-tools')))
+
+
 def native(args, timeout=60):
-    binary = ROOT / 'bin' / ('be2-tools.exe' if os.name == 'nt' else 'be2-tools')
+    binary = native_binary()
     if not binary.is_file():
         raise ValueError('Packaged native tool missing. Use python tools/be2.py build tools and copy its binary to bin/.')
     run = subprocess.run([str(binary), *map(str, args)], capture_output=True,
@@ -61,13 +65,14 @@ def save_new(path, data):
 
 def describe(data):
     catalog = native(['catalog'])
+    engine = native(['describe'])
     expected = {asset['native_kind'] for asset in data['assets']}
     if not expected.issubset(set(catalog['props'])):
         raise ValueError('Authoring metadata does not match this native binary')
-    return {'protocol_version': VERSION, 'native': catalog, 'contract': data['contract'],
+    return {'protocol_version': VERSION, 'native': catalog, 'engine': engine, 'contract': data['contract'],
             'commands': data['commands'], 'asset_count': len(data['assets']),
             'recipes': [item['id'] for item in data['recipes']],
-            'native_sha256': digest(ROOT / 'bin' / ('be2-tools.exe' if os.name == 'nt' else 'be2-tools')),
+            'native_sha256': digest(native_binary()),
             'metadata_sha256': digest(DATA)}
 
 
@@ -114,7 +119,7 @@ def verify(args):
     try:
         map_file = Path(args.map).resolve()
         report['map_sha256'] = digest(map_file)
-        report['native_sha256'] = digest(ROOT / 'bin' / ('be2-tools.exe' if os.name == 'nt' else 'be2-tools'))
+        report['native_sha256'] = digest(native_binary())
         report['checks'].append({'name': 'audit', 'result': native(['audit', map_file])})
         for route in args.route:
             path = Path(route).resolve()

@@ -3,6 +3,7 @@ pub mod geometry;
 pub mod math;
 #[cfg(feature = "offline")]
 pub mod output;
+pub mod prelude;
 #[cfg(feature = "offline")]
 pub mod render;
 pub mod scene;

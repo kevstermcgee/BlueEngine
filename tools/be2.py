@@ -84,6 +84,8 @@ def check():
         ['cargo', 'clippy', '--all-targets', '--locked', '--', '-D', 'warnings'],
         ['cargo', 'test', '--locked', '--no-default-features'],
         ['cargo', 'clippy', '--all-targets', '--locked', '--no-default-features', '--', '-D', 'warnings'],
+        [sys.executable, 'tools/check_headless.py'],
+        [sys.executable, 'tools/check_authoring.py'],
     ]
     report = {'ok': False, 'checks': []}
     try:

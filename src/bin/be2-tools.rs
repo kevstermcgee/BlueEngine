@@ -46,47 +46,30 @@ fn run() -> Result<()> {
             .ok_or_else(|| "Missing argument; run be2-tools help".into())
     };
     let command = a.first().map(String::as_str).unwrap_or("help");
-    let arity = match command {
-        "help"
-        | "catalog"
-        | "inspect-performance"
-        | "validate-budget"
-        | "net-test"
-        | "bench"
-        | "replay-test" => 1,
-        "export-house" => 2,
-        "inspect" | "audit" => 2,
-        "export-scene" | "floorplan" | "diff" | "route" | "select" => 3,
-        "apply" | "ray" | "near" => 4,
-        _ => return Err("Unknown command; run be2-tools help".into()),
-    };
+    let signature = vesper3d::viewer::capabilities::COMMANDS
+        .iter()
+        .find(|(name, _)| *name == command)
+        .ok_or("Unknown command; run be2-tools help")?
+        .1;
+    let arity = 1 + signature.split_whitespace().count();
     if !a.is_empty() && a.len() != arity {
         return Err(format!("{command} expects {} arguments", arity - 1).into());
     }
     match command {
-        "help" => println!(
-            r#"BE2 native authoring and engine toolkit
-export-house OUT.json
-inspect MAP.json
-audit MAP.json
-inspect-performance
-validate-budget
-net-test
-bench
-replay-test
-apply MAP.json PATCH.json OUT.json
-diff BEFORE.json AFTER.json
-export-scene MAP.json OUT.json
-floorplan MAP.json OUT.svg
-ray MAP.json ORIGIN_X,Y,Z TARGET_X,Y,Z
-route MAP.json ROUTE.json
-select MAP.json OBJECT_ID
-near MAP.json X,Y,Z RADIUS
-catalog
-All output files must be new.
-apply validates the entire transaction before writing.
-See tools/README.md."#
-        ),
+        "help" => {
+            println!("BlueEngine native toolkit (new output paths only)");
+            for (name, signature) in vesper3d::viewer::capabilities::COMMANDS {
+                println!("{name} {signature}");
+            }
+        }
+        "describe" => println!("{}", vesper3d::viewer::capabilities::describe()?),
+        "search" => println!("{}", vesper3d::viewer::capabilities::search(arg(1)?)?),
+        "export-lab" => {
+            let doc = MapDocument::from_map(vesper3d::viewer::maps::MapId::TestLab)?;
+            doc.build()?;
+            save(arg(1)?, &doc)?;
+            println!("{}", json!({"ok":true,"output":arg(1)?}));
+        }
         "inspect-performance" => {
             let mut world = HeadlessWorld::new()?;
             world.join(1);
@@ -319,7 +302,7 @@ See tools/README.md."#
         "catalog" => println!(
             "{}",
             json!({
-            "props":["cereal","chair","table","apple","framed-art","framed-botanical","sculpture","vase-plant","bowl","table-lamp","book-stack","candle-trio","potted-cactus","flower-vase","tall-vase","mantel-clock","woven-basket"],"maps":["house"],"schema_version":1,"operations":["add_box","add_prop","translate","remove"]
+            "props":["cereal","chair","table","apple","framed-art","framed-botanical","sculpture","vase-plant","bowl","table-lamp","book-stack","candle-trio","potted-cactus","flower-vase","tall-vase","mantel-clock","woven-basket"],"maps":["test-lab","house"],"schema_version":1,"operations":["add_box","add_prop","translate","remove"]
             }
             )
         ),

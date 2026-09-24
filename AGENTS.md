@@ -24,7 +24,9 @@ The toolkit is project-local; do not install plugins or add external services me
 
 BE2 is one Rust package with the compatibility library name `vesper3d`. The
 `be2` client and `be2-headless` runner share concrete movement/simulation types;
-there is no orchestrator, online match server or shared-trait transport yet.
+DedicatedServer provides authoritative UDP matches, prediction, acknowledged
+deltas and per-player prop ownership. PulseNet/QUIC and authenticated sessions
+remain planned. Protocol 2 checks map content before creating a session.
 `client` gates graphics/audio; `offline` gates the inherited output renderer.
 
 - Feature-to-file/check lookup: tools/FEATURES.json (maintain this existing map).
@@ -33,7 +35,9 @@ there is no orchestrator, online match server or shared-trait transport yet.
 - Client wiring/UI: src/bin/blue-engine.rs; headless driver: src/bin/be2-headless.rs.
 - Current architecture: BE2_ARCHITECTURE.md; decisions: docs/adr/README.md;
   vocabulary: docs/GLOSSARY.md; context review: docs/CONTEXT_REVIEW.md.
-- Behavior examples: tests/simulation_flow.rs and tests/authoring.rs.
+- Prototype API: docs/AI_QUICKSTART.md, src/prelude.rs, examples/prototype.rs.
+- Native discovery: be2-tools describe; be2-tools search TEXT.
+- Behavior evidence: tests/simulation_flow.rs, tests/authoring.rs, tests/multiplayer_transport.rs.
 
 Build: `cargo build --locked` or
 `cargo build --locked --no-default-features --bin be2-headless`.

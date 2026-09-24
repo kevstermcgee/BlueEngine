@@ -18,6 +18,9 @@ pub mod maps;
 pub mod test_lab;
 
 pub mod authoring;
+pub mod builder;
+pub mod capabilities;
+pub mod content;
 
 mod landscaping;
 

@@ -31,7 +31,7 @@ pub struct PropBody {
     radius: f32,
 }
 /// A local physics scene. The owner must call `advance` only while gameplay is active.
-/// One held body is supported; multiplayer ownership is deliberately not implied.
+/// One body per player can be held; bidirectional ownership rejects contention.
 pub struct PropPhysics {
     pub props: Vec<PropBody>,
     bodies: RigidBodySet,

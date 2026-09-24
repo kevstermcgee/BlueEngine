@@ -273,6 +273,7 @@ async fn main() {
             return;
         }
     };
+    let content_hash = vesper3d::viewer::content::fingerprint(&room);
     let mut prop_physics = match PropPhysics::new(&mut room) {
         Ok(p) => p,
         Err(e) => {
@@ -397,6 +398,7 @@ async fn main() {
                     let _ = transport.send_packet(
                         &Packet::Hello {
                             protocol_version: PROTOCOL_VERSION,
+                            content_hash,
                             player_id: 0,
                         },
                         dest,
@@ -443,6 +445,7 @@ async fn main() {
                 let _ = transport.send_packet(
                     &Packet::Hello {
                         protocol_version: PROTOCOL_VERSION,
+                        content_hash,
                         player_id: 0,
                     },
                     server_addr,
@@ -454,6 +457,10 @@ async fn main() {
                 if src == server_addr {
                     let mut incoming_snap = None;
                     match packet {
+                        Packet::Rejected { reason } => {
+                            error_screen(&reason).await;
+                            return;
+                        }
                         Packet::Welcome {
                             player_id,
                             server_tick,

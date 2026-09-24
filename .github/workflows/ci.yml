@@ -28,3 +28,5 @@ jobs:
 
       - run: cargo rustdoc --locked --lib -- -D warnings
       - run: cargo rustdoc --locked --lib --no-default-features -- -D warnings
+      - run: python tools/check_headless.py
+      - run: python tools/check_authoring.py

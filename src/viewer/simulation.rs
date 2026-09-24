@@ -1,8 +1,8 @@
-//! Rendering-free simulation shared by the client and future PulseNet adapter.
+//! Rendering-free simulation shared by the client and dedicated UDP server.
 //!
 //! Callers schedule ticks; this module does not authenticate players or expire inputs.
-//! Held movement persists until replaced or the player leaves. A future transport
-//! adapter must handle disconnects, stale input and packet ordering separately.
+//! Held movement persists until replaced or the player leaves. The dedicated server
+//! handles disconnects, stale input and packet ordering separately.
 //!
 //! ```
 //! use vesper3d::viewer::{controller::Movement, simulation::HeadlessWorld};
@@ -80,6 +80,8 @@ pub struct Player {
 }
 /// Match-local world, bounded to eight players. No socket, renderer or window.
 pub struct HeadlessWorld {
+    /// Initial content fingerprint, captured before physics extracts/moves geometry.
+    pub content_hash: u64,
     /// Shared geometry and collision data; mutation is the host caller's responsibility.
     pub room: Room,
     /// Spatial room graph for interest management and culling.
@@ -97,20 +99,37 @@ pub struct HeadlessWorld {
 impl HeadlessWorld {
     /// Build the default Blue Test Lab. Returns an error if map construction fails.
     pub fn new() -> crate::Result<Self> {
-        Ok(Self::with_room(super::maps::build(
-            super::maps::MapId::TestLab,
-        )?))
+        Self::try_with_room(super::maps::build(super::maps::MapId::TestLab)?)
     }
     /// Start an empty world with an already constructed room and tick zero.
     pub fn with_room(mut room: Room) -> Self {
+        let content_hash = super::content::fingerprint(&room);
+        let prop_physics = super::prop_physics::PropPhysics::new(&mut room).ok();
+        Self::from_initialized_room(room, prop_physics, content_hash)
+    }
+    /// Fallible initialization for new callers: never silently discard physics errors.
+    pub fn try_with_room(mut room: Room) -> crate::Result<Self> {
+        let content_hash = super::content::fingerprint(&room);
+        let physics = super::prop_physics::PropPhysics::new(&mut room)?;
+        Ok(Self::from_initialized_room(
+            room,
+            Some(physics),
+            content_hash,
+        ))
+    }
+    fn from_initialized_room(
+        room: Room,
+        prop_physics: Option<super::prop_physics::PropPhysics>,
+        content_hash: u64,
+    ) -> Self {
         let mut lifecycle = super::lifecycle::LifecycleRegistry::new();
         for e in &room.entities {
             let center = (e.bounds.min + e.bounds.max) * 0.5;
             lifecycle.register(e.id.clone(), e.label.clone(), center);
         }
         let room_graph = super::spatial::RoomGraph::for_room(&room);
-        let prop_physics = super::prop_physics::PropPhysics::new(&mut room).ok();
         Self {
+            content_hash,
             room,
             room_graph,
             lifecycle,
@@ -225,6 +244,27 @@ impl HeadlessWorld {
             physics.apply_impulse(i, impulse);
         }
     }
+    /// Apply an impulse by stable semantic ID; false for static/unknown IDs or nonfinite input.
+    /// Resolves the index internally so callers need no long-lived room/physics borrow.
+    pub fn impulse(&mut self, id: &str, impulse: crate::math::V) -> bool {
+        if !impulse.finite() {
+            return false;
+        }
+        let Some(physics) = self.prop_physics.as_mut() else {
+            return false;
+        };
+        let Some(index) = physics.props.iter().position(|p| p.id == id) else {
+            return false;
+        };
+        physics.apply_impulse(index, impulse);
+        true
+    }
+    /// Copy a dynamic prop's current center by semantic ID; static/unknown IDs return None.
+    pub fn prop_position(&self, id: &str) -> Option<crate::math::V> {
+        let physics = self.prop_physics.as_ref()?;
+        let index = physics.props.iter().position(|p| p.id == id)?;
+        physics.prop_position(index)
+    }
     /// Accept movement intent without accepting a client position.
     /// Return false without mutation for unknown IDs or nonfinite axes/look angles.
     /// Clamp axes to [-1, 1], wrap yaw to [0, TAU), clamp pitch to [-1.5, 1.5].
@@ -292,7 +332,8 @@ impl HeadlessWorld {
 
     /// Calculate a deterministic 64-bit checksum of the world state at the current tick.
     /// Uses quantized coordinates (to millimeter precision) and quantized prop transforms and
-    /// velocities to ensure cross-platform reproducibility and catch desyncs instantly.
+    /// velocities for repeat-run comparison and desync diagnostics. Cross-platform
+    /// bitwise equivalence is not guaranteed by quantization alone.
     pub fn checksum(&self) -> u64 {
         const FNV_OFFSET: u64 = 0xcbf29ce484222325;
         const FNV_PRIME: u64 = 0x100000001b3;

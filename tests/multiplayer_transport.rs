@@ -357,6 +357,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 1,
             },
             server_addr,
@@ -366,6 +367,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 2,
             },
             server_addr,
@@ -378,6 +380,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
             if let Packet::Hello {
                 protocol_version,
                 player_id,
+                ..
             } = pkt
             {
                 assert_eq!(protocol_version, PROTOCOL_VERSION);
@@ -595,6 +598,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -626,6 +630,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -937,6 +942,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 2,
             },
             server_addr,
@@ -1017,6 +1023,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1029,6 +1036,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1140,6 +1148,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 2,
             },
             server_addr,
@@ -1184,6 +1193,7 @@ fn test_session_security_and_disconnect_verification() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1198,6 +1208,7 @@ fn test_session_security_and_disconnect_verification() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 999,
             },
             server_addr,
@@ -1246,6 +1257,7 @@ fn test_input_sequencing_and_stale_input_neutralization() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1362,6 +1374,7 @@ fn test_multiplayer_prop_contention_and_ownership() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1371,6 +1384,7 @@ fn test_multiplayer_prop_contention_and_ownership() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1499,6 +1513,7 @@ fn test_authoritative_combat_hitscan_and_impulse() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1722,6 +1737,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1731,6 +1747,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
         .send_packet(
             &Packet::Hello {
                 protocol_version: PROTOCOL_VERSION,
+                content_hash: test_lab_hash(),
                 player_id: 0,
             },
             server_addr,
@@ -1925,4 +1942,13 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
         final_c2_tick >= 120,
         "Client 2 settled at recent tick: {final_c2_tick}"
     );
+}
+
+fn test_lab_hash() -> u64 {
+    static HASH: std::sync::OnceLock<u64> = std::sync::OnceLock::new();
+    *HASH.get_or_init(|| {
+        vesper3d::viewer::content::fingerprint(
+            &vesper3d::viewer::maps::build(vesper3d::viewer::maps::MapId::TestLab).unwrap(),
+        )
+    })
 }

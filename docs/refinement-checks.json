@@ -1,0 +1,100 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "command": [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--lib",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--lib",
+        "--no-default-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--locked",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--no-default-features"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--locked",
+        "--no-default-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "python",
+        "tools/check_headless.py"
+      ],
+      "ok": true
+    },
+    {
+      "command": [
+        "python",
+        "tools/check_authoring.py"
+      ],
+      "ok": true
+    }
+  ],
+  "platform": "Windows",
+  "default_tests_passed": 143,
+  "headless_tests_passed": 120,
+  "python_workflow_tests_passed": 4,
+  "quickstart_o200k_tokens": 408,
+  "prototype_lines": 30
+}

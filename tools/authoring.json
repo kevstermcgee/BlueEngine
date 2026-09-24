@@ -5,7 +5,7 @@
     "units": "metres; Y up; linear RGB 0..1; box sizes are half extents; prop origins are at the bottom",
     "map_schema_version": 1,
     "map_document": "schema_version, name, scene, colliders, entities; use new to obtain a native-valid house template",
-    "validation_authority": "Native audit/apply. Discovery metadata is curated, not complete Rust type reflection.",
+    "validation_authority": "Native audit/apply and describe. Capability metadata is curated and checked in CI; not complete Rust reflection.",
     "output_policy": "New output paths only; native apply validates the entire batch before saving.",
     "activation": "Launch bin/BE2.exe --map MAP.json or bin/be2-headless.exe --map MAP.json --ticks 600. Exporting does not change the default map.",
     "supported": [
@@ -18,12 +18,12 @@
     "unsupported": [
       "new gameplay rules",
       "Prop Hunt rounds/disguises",
-      "network transport",
       "custom scripts",
       "animated maps",
       "imported meshes in maps",
       "custom spawn in map v1",
-      "rotating/scaling prefab instances"
+      "rotating/scaling prefab instances",
+      "authoring network transport configuration through map v1"
     ],
     "context_policy": "Use describe, query, schema, assets, recipes, select, near and verify. Do not read src/ for content authoring. Unsupported behavior requires a separate engine change."
   },
@@ -514,6 +514,18 @@
         "assets/props/interiors/catalog.json",
         "packaged native audit"
       ]
+    },
+    {
+      "id": "native-engine-discovery",
+      "tags": [
+        "multiplayer",
+        "physics",
+        "builder",
+        "prelude",
+        "Test Lab",
+        "engine"
+      ],
+      "summary": "Native be2-tools describe lists commands and limits; search TEXT returns feature files/checks. export-lab OUT.json starts in Blue Test Lab. docs/AI_QUICKSTART.md is the compact Rust prototype API. Multiplayer exists, but map v1 does not define game rules or spawn profiles."
     }
   ]
 }

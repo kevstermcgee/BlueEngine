@@ -81,10 +81,34 @@ impl DedicatedServer {
     }
 
     /// Handle client connection handshake (`Packet::Hello`).
-    pub fn handle_hello(&mut self, src: SocketAddr, protocol_version: u32, req_id: u64) {
+    pub fn handle_hello(
+        &mut self,
+        src: SocketAddr,
+        protocol_version: u32,
+        req_id: u64,
+        content_hash: u64,
+    ) {
         if protocol_version != PROTOCOL_VERSION {
             eprintln!(
                 "[Server] Rejected client from {src}: protocol mismatch {protocol_version} != {PROTOCOL_VERSION}"
+            );
+            return;
+        }
+        if content_hash != self.world.content_hash {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "Map content mismatch; load the same map as the server".into(),
+                },
+                src,
+            );
+            return;
+        }
+        if !self.clients.contains_key(&src) && self.sessions.len() >= 8 {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "Server is full (8 players)".into(),
+                },
+                src,
             );
             return;
         }
@@ -117,7 +141,15 @@ impl DedicatedServer {
         self.world.leave(player_id);
 
         let spawn = self.spawn_point_for(player_id);
-        self.world.join_at(player_id, spawn);
+        if !self.world.join_at(player_id, spawn) {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "World is full (8 players)".into(),
+                },
+                src,
+            );
+            return;
+        }
 
         self.clients.insert(src, player_id);
         self.sessions.insert(
@@ -150,14 +182,18 @@ impl DedicatedServer {
     /// Poll and process all pending incoming network packets non-blockingly.
     pub fn poll_network(&mut self) -> crate::Result<usize> {
         let mut count = 0;
-        while let Some((packet, src)) = self.transport.recv_packet()? {
+        while count < 256 {
+            let Some((packet, src)) = self.transport.recv_packet()? else {
+                break;
+            };
             count += 1;
             match packet {
                 Packet::Hello {
                     protocol_version,
                     player_id,
+                    content_hash,
                 } => {
-                    self.handle_hello(src, protocol_version, player_id);
+                    self.handle_hello(src, protocol_version, player_id, content_hash);
                 }
                 Packet::Input(frame) => {
                     if let Some(&player_id) = self.clients.get(&src) {

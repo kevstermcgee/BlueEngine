@@ -16,7 +16,7 @@ use crate::math::V;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
 pub const MAX_PACKET_BYTES: usize = 1400; // Safe MTU size
 
 /// Replicated network state for one player.
@@ -202,6 +202,10 @@ pub enum Packet {
     Hello {
         protocol_version: u32,
         player_id: u64,
+        content_hash: u64,
+    },
+    Rejected {
+        reason: String,
     },
     Welcome {
         player_id: u64,
@@ -552,7 +556,8 @@ use std::net::{SocketAddr, UdpSocket};
 /// Non-blocking UDP transport layer for authoritative server and clients.
 pub struct UdpTransport {
     pub socket: UdpSocket,
-    recv_buf: [u8; MAX_PACKET_BYTES],
+    // Receive whole UDP datagrams; never accept a valid-looking truncated prefix.
+    recv_buf: [u8; 65_536],
 }
 
 impl UdpTransport {
@@ -562,7 +567,7 @@ impl UdpTransport {
         socket.set_nonblocking(true)?;
         Ok(Self {
             socket,
-            recv_buf: [0u8; MAX_PACKET_BYTES],
+            recv_buf: [0u8; 65_536],
         })
     }
 
@@ -578,16 +583,21 @@ impl UdpTransport {
         Ok(sent)
     }
 
-    /// Receive a packet from socket if available (non-blocking).
+    /// Receive a valid packet, dropping at most 32 malformed datagrams per call.
+    /// Invalid remote data never terminates the host. Actual socket errors propagate.
     pub fn recv_packet(&mut self) -> crate::Result<Option<(Packet, SocketAddr)>> {
-        match self.socket.recv_from(&mut self.recv_buf) {
-            Ok((len, src)) => {
-                let packet = Packet::decode(&self.recv_buf[..len])?;
-                Ok(Some((packet, src)))
+        for _ in 0..32 {
+            match self.socket.recv_from(&mut self.recv_buf) {
+                Ok((len, src)) => {
+                    if let Ok(packet) = Packet::decode(&self.recv_buf[..len]) {
+                        return Ok(Some((packet, src)));
+                    }
+                }
+                Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => return Ok(None),
+                Err(e) => return Err(e.into()),
             }
-            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok(None),
-            Err(e) => Err(e.into()),
         }
+        Ok(None)
     }
 }
 
@@ -599,6 +609,7 @@ mod tests {
     fn packet_encode_decode_roundtrip() {
         let pkt = Packet::Hello {
             protocol_version: PROTOCOL_VERSION,
+            content_hash: 123,
             player_id: 42,
         };
         let bytes = pkt.encode().unwrap();
@@ -607,7 +618,9 @@ mod tests {
             Packet::Hello {
                 protocol_version,
                 player_id,
+                content_hash,
             } => {
+                assert_eq!(content_hash, 123);
                 assert_eq!(protocol_version, PROTOCOL_VERSION);
                 assert_eq!(player_id, 42);
             }

@@ -74,12 +74,12 @@ impl RoomGraph {
 
     /// Locate which room/zone contains a 3D point (e.g. player position).
     pub fn find_room_at(&self, p: V) -> Option<RoomId> {
-        for (id, node) in &self.rooms {
-            if node.bounds.contains(p) {
-                return Some(*id);
-            }
-        }
-        None
+        // Shared boundaries must not depend on randomized HashMap iteration.
+        self.rooms
+            .iter()
+            .filter(|(_, node)| node.bounds.contains(p))
+            .map(|(id, _)| *id)
+            .min()
     }
 
     /// Get all directly connected / adjacent rooms.

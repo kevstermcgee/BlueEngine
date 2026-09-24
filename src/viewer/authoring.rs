@@ -45,7 +45,11 @@ fn identifier(s: &str) -> bool {
 }
 impl MapDocument {
     pub fn house() -> Result<Self> {
-        let r = super::maps::build(super::maps::MapId::House)?;
+        Self::from_map(super::maps::MapId::House)
+    }
+    /// Export a built-in map, preserving geometry, colliders, semantic IDs and spatial graph.
+    pub fn from_map(map: super::maps::MapId) -> Result<Self> {
+        let r = super::maps::build(map)?;
         Ok(Self {
             schema_version: 1,
             name: r.name,

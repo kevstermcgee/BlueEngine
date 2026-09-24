@@ -47,3 +47,5 @@ Office, convenience store and school wing JSON maps are available in assets/maps
 ## Interior furnishing prefabs
 
 Use `python tools/place_interior.py --list` for 53 additional data-only templates (furniture, clutter, written boards and closed doors). Place with `python tools/place_interior.py MAP ASSET OUTPUT --id ID --at=X,Y,Z --yaw 90`. The native audit validates the result before a new file is created. This separate helper supports quarter turns and conservative inspection/collision bounds; these are not extra native add_prop kinds. See assets/props/interiors/README.md.
+
+Engine discovery: native `be2-tools describe` reports compiled command signatures and limits; `be2-tools search TEXT` locates feature files/checks in at most ten results. `export-lab NEW.json` exports the default Test Lab. Python describe includes that native discovery response. For development/CI, set `BE2_TOOLS` to an absolute freshly built native executable; packaged users continue using bin/.

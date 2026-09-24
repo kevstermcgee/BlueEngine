@@ -11,7 +11,7 @@
         "house captures",
         "headless tests"
       ],
-      "note": "Rust is the default map source; editable JSON maps are explicit opt-in via --map."
+      "note": "Blue Test Lab is the default. Procedural maps can be exported; editable JSON maps load via --map."
     },
     "map_editing": {
       "files": [
@@ -105,15 +105,32 @@
     },
     "multiplayer": {
       "files": [
+        "src/viewer/net.rs",
+        "src/viewer/server.rs",
+        "src/viewer/content.rs",
         "src/viewer/simulation.rs",
         "src/bin/be2-headless.rs",
-        "BE2_ARCHITECTURE.md"
+        "tests/multiplayer_transport.rs",
+        "tests/content_handshake.rs"
       ],
       "checks": [
-        "no-default-feature build",
-        "future two-client integration"
+        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake"
       ],
-      "note": "PulseNet integration and Prop Hunt game rules are not implemented."
+      "note": "Dedicated UDP server, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership and combat; protocol 2 rejects mismatched map fingerprints. Development sessions, no encryption or cryptographic authentication. JSON packets bounded to 1400 bytes.",
+      "evidence": [
+        {
+          "suite": "multiplayer_transport",
+          "test": "process_dedicated_server_two_clients_end_to_end"
+        },
+        {
+          "suite": "multiplayer_transport",
+          "test": "test_delta_recovery_under_packet_loss_reordering_and_jitter"
+        },
+        {
+          "suite": "content_handshake",
+          "test": "mismatch_and_capacity_rejections_do_not_create_sessions"
+        }
+      ]
     },
     "offline_renderer": {
       "files": [
@@ -179,7 +196,7 @@
         "simulation_flow integration tests in both feature configurations",
         "library rustdoc with warnings denied in both feature configurations"
       ],
-      "note": "Concrete local simulation API; held input persists, jump is consumed once, transport is future work."
+      "note": "Concrete rendering-free simulation; held input persists and jump is consumed once. DedicatedServer enforces input ordering and stale-input expiry."
     },
     "prop_physics": {
       "files": [
@@ -194,7 +211,7 @@
         "--studio --capture-physics DIR --feta",
         "live E pickup/drop, pause/resume and both movement key layouts"
       ],
-      "note": "Runtime catalog-prop extraction; fixed-step Rapier compound rigid bodies. No v1 map schema change or multiplayer ownership."
+      "note": "Runtime catalog-prop extraction; 120 Hz Rapier compound bodies with per-player authoritative ownership. Large furniture/wall art remain fixed. All eligible bodies are allocated up front; lifecycle sleeping is not lazy allocation."
     },
     "weapons": {
       "files": [
@@ -210,6 +227,52 @@
         "--studio --capture-pistol"
       ],
       "note": "Scientist primary wrench and scroll-selected black pistol with infinite ammo prototype, hitscan raycasts, recoil, muzzle flash, third-person aiming and audio."
+    },
+    "prototype_api": {
+      "files": [
+        "src/prelude.rs",
+        "src/viewer/builder.rs",
+        "examples/prototype.rs",
+        "docs/AI_QUICKSTART.md",
+        "tests/prototype.rs"
+      ],
+      "checks": [
+        "cargo test --locked --no-default-features --test prototype",
+        "cargo run --locked --no-default-features --example prototype"
+      ],
+      "note": "SceneBuilder batches ordinary map edits; static boxes plus catalog props include collision and semantic IDs. World impulse/prop_position use IDs, not borrowed body indices. No generic scripting or arbitrary dynamic mesh builder.",
+      "evidence": [
+        {
+          "suite": "prototype",
+          "test": "builder_roundtrip_runs_physics_and_movement"
+        },
+        {
+          "suite": "prototype",
+          "test": "quickstart_is_the_compiled_thirty_line_example"
+        }
+      ]
+    },
+    "native_discovery": {
+      "files": [
+        "src/viewer/capabilities.rs",
+        "src/bin/be2-tools.rs",
+        "tools/FEATURES.json",
+        "tests/capabilities.rs"
+      ],
+      "checks": [
+        "cargo test --locked --no-default-features --test capabilities"
+      ],
+      "note": "describe and bounded search use the CLI command registry and embedded feature index. export-lab creates a validated authoring starter. Evidence names and files must resolve; their tests run in the ordinary CI suite.",
+      "evidence": [
+        {
+          "suite": "capabilities",
+          "test": "discovery_and_parser_share_command_signatures"
+        },
+        {
+          "suite": "capabilities",
+          "test": "feature_paths_and_evidence_resolve_to_suite_tests"
+        }
+      ]
     }
   }
 }

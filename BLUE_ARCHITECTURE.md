@@ -1,3 +1,5 @@
+> Historical viewer implementation notes. Current engine contracts and limits are in BE2_ARCHITECTURE.md and `be2-tools describe`; original future-tense statements below describe earlier revisions.
+
 # Blue Engine: real-time extension
 
 See README.md for controls and ARCHITECTURE.md for the inherited offline pipeline.

@@ -2,7 +2,7 @@
 
 For source-free content authoring, start with `python tools/author.py describe` and [AUTHORING.md](AUTHORING.md). This compact JSON interface uses packaged binaries and adds bounded discovery, asset IDs, parameterized recipes and persistent regression reports without Cargo or engine source reads. The development runner below remains available for engine maintenance/builds.
 
-Start here after AGENTS.md and BE2_ARCHITECTURE.md. This toolkit lives with the repository, uses no AI service, and works for humans, Codex or other agents. The native editor is Rust; the workflow runner uses Python 3.10+ and only its standard library. No plugin installation is needed.
+Start with native `be2-tools describe` and `be2-tools search TEXT`; `export-lab NEW.json` exports the default Test Lab. Engine maintainers also read AGENTS.md and BE2_ARCHITECTURE.md. This toolkit lives with the repository, uses no AI service, and works for humans, Codex or other agents. The native editor is Rust; the workflow runner uses Python 3.10+ and only its standard library. No plugin installation is needed.
 
 ## First five minutes
 
@@ -53,7 +53,7 @@ python tools/be2.py map ray edits/garden.json 0,1.68,-6.3 4.4,0.98,-11.4
 python tools/be2.py capture edits/captures --map edits/garden.json
 ```
 
-Run a packaged map with `bin/BE2.exe --map edits/garden.json` or `bin/be2-headless.exe --map edits/garden.json --ticks 600`. Source runs can use `cargo run --locked --bin be2 -- --map edits/garden.json`. Without `--map`, the procedural Rust house remains the source of truth. An edited JSON file becomes active only when explicitly selected. Keep finished maps in an appropriate versioned assets/maps directory if adopting them; do not assume an export changes the default.
+Run a packaged map with `bin/BE2.exe --map edits/garden.json` or `bin/be2-headless.exe --map edits/garden.json --ticks 600`. Source runs can use `cargo run --locked --bin be2 -- --map edits/garden.json`. Without `--map`, the Blue Test Lab is the default. An edited JSON file becomes active only when explicitly selected. Keep finished maps in an appropriate versioned assets/maps directory if adopting them; do not assume an export changes the default.
 
 `export-house` freezes the current procedural house, all its collision proxies and semantic entities into a versioned document. A snapshot's IDs stay stable while edited. Regenerating from changed Rust code can renumber `room-N` and `collider-N`; rebase patches against a new export deliberately. Newly added objects use your explicit IDs.
 
