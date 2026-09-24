@@ -56,6 +56,34 @@ fn run() -> Result<()> {
         return Err(format!("{command} expects {} arguments", arity - 1).into());
     }
     match command {
+        "game-describe" => println!(
+            "{}",
+            json!({
+                "ok":true,"schema_version":1,"schema_command":"game-schema", "example":"game-example NEW_DIRECTORY",
+                "event":"authoritative nearest-visible interaction within 2.5 metres (E intent)",
+                "actions":["increment","set_counter","set_enabled","complete"],
+                "conditions":"counter equals integer; null means unconditional",
+                "limits":{"game_bytes":64000,"spawns":8,"counters":8,"interactables":16,"rules":16,"actions_per_rule":4,"counter_magnitude":1000000},
+                "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match",
+                "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds",
+                "set_enabled":"interaction eligibility only; never changes visibility or collision",
+                "profiles":"one shared validated movement profile; spawns use feet coordinates and round-robin server IDs",
+                "map":"relative child file inside game directory; loaded content participates in fingerprint",
+                "unsupported":["timers","recursive events","doors/geometry mutation","custom weapon actions","per-player inventory"]
+            })
+        ),
+        "game-schema" => println!("{}", include_str!("../../tools/game.schema.json")),
+        "game-example" => {
+            vesper3d::viewer::game_example::write(Path::new(arg(1)?))?;
+            println!("{}", json!({"ok":true,"directory":arg(1)?}));
+        }
+        "game-validate" => {
+            let world = vesper3d::viewer::game::GameDocument::load(Path::new(arg(1)?))?.world()?;
+            println!(
+                "{}",
+                json!({"ok":true,"content_hash":format!("{:016x}",world.content_hash),"state":world.game.as_ref().unwrap().state()})
+            );
+        }
         "help" => {
             println!("BlueEngine native toolkit (new output paths only)");
             for (name, signature) in vesper3d::viewer::capabilities::COMMANDS {

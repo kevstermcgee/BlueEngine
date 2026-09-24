@@ -7,6 +7,10 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("help", ""),
     ("describe", ""),
     ("search", "TEXT"),
+    ("game-describe", ""),
+    ("game-schema", ""),
+    ("game-validate", "GAME.json"),
+    ("game-example", "NEW_DIRECTORY"),
     ("export-house", "OUT.json"),
     ("export-lab", "OUT.json"),
     ("inspect", "MAP.json"),
@@ -44,14 +48,14 @@ pub fn describe() -> Result<Value> {
         .collect();
     Ok(json!({
         "ok": true, "engine": "BlueEngine", "version": env!("CARGO_PKG_VERSION"),
-        "protocol_version": super::net::PROTOCOL_VERSION, "map_schema_version": 1,
+        "protocol_version": super::net::PROTOCOL_VERSION, "map_schema_version": 1, "game_schema_version": 1,
         "units": "metres; +Y up; yaw/pitch radians; yaw 0 faces -Z; boxes use half extents; prop origins are bottoms",
         "default_map": "Blue Test Lab",
         "commands": COMMANDS.iter().map(|(name, args)| json!({"name":name,"arguments":args})).collect::<Vec<_>>(),
         "features": names,
         "limits": {"packet_bytes": super::net::MAX_PACKET_BYTES, "players": 8, "map_bytes": 8_000_000, "patch_operations": 1000, "search_results": 10},
         "start": ["be2-tools export-lab NEW.json", "be2-tools catalog", "be2-tools search multiplayer", "docs/AI_QUICKSTART.md"],
-        "unsupported": ["arbitrary gameplay scripts", "game/behavior documents", "authenticated Internet sessions", "runtime mesh import"],
+        "unsupported": ["arbitrary gameplay scripts", "authenticated Internet sessions", "runtime mesh import"],
         "metadata": "Curated feature index; executable commands/arities come from the native CLI registry."
     }))
 }

@@ -1,8 +1,11 @@
 //! Real-time adapter. The original scene, geometry and offline renderer remain shared.
 pub mod controller;
+pub mod game;
+pub mod game_example;
 pub mod interaction;
 #[cfg(feature = "client")]
 pub mod mesh;
+pub mod profile;
 pub mod room;
 
 pub mod wrench;

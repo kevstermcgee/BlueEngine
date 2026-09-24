@@ -16,7 +16,7 @@ use crate::math::V;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
-pub const PROTOCOL_VERSION: u32 = 2;
+pub const PROTOCOL_VERSION: u32 = 3;
 pub const MAX_PACKET_BYTES: usize = 1400; // Safe MTU size
 
 /// Replicated network state for one player.
@@ -213,6 +213,11 @@ pub enum Packet {
         map_name: String,
     },
     Input(InputFrame),
+    /// Small full state, repeated at snapshot rate for independent loss recovery.
+    GameState {
+        tick: u64,
+        state: super::game::GameState,
+    },
     Snapshot(WorldSnapshot),
     Delta(DeltaSnapshot),
     RequestKeyframe,
@@ -557,7 +562,7 @@ use std::net::{SocketAddr, UdpSocket};
 pub struct UdpTransport {
     pub socket: UdpSocket,
     // Receive whole UDP datagrams; never accept a valid-looking truncated prefix.
-    recv_buf: [u8; 65_536],
+    recv_buf: Box<[u8]>,
 }
 
 impl UdpTransport {
@@ -567,7 +572,7 @@ impl UdpTransport {
         socket.set_nonblocking(true)?;
         Ok(Self {
             socket,
-            recv_buf: [0u8; 65_536],
+            recv_buf: vec![0u8; 65_536].into_boxed_slice(),
         })
     }
 

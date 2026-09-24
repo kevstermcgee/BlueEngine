@@ -12,3 +12,5 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0004: One authoring contract and compatibility names](0004-authoring-and-compatibility.md)
 - [0005: Native discovery and evidence](0005-native-discovery.md)
 - [0006: Content compatibility handshake](0006-content-handshake.md)
+
+- [0007: Bounded GameDocument v1](0007-game-documents.md)

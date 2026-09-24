@@ -1,3 +1,4 @@
+use super::profile::ControllerProfile;
 use crate::math::{Ray, V};
 
 pub const EYE_HEIGHT: f32 = 1.68;
@@ -9,7 +10,6 @@ pub const WALK_SPEED: f32 = 3.2;
 pub const SPRINT_SPEED: f32 = 5.6;
 pub const CROUCH_SPEED: f32 = 1.3;
 const GRAVITY: f32 = 12.;
-const HEAD_MARGIN: f32 = STANDING_HEIGHT - EYE_HEIGHT;
 
 /// Playable body profile shared by rendering and fixed-step movement.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -31,13 +31,6 @@ impl CharacterKind {
             0.16
         } else {
             RADIUS
-        }
-    }
-    fn head_margin(self) -> f32 {
-        if self == Self::Feta {
-            0.08
-        } else {
-            HEAD_MARGIN
         }
     }
 }
@@ -63,7 +56,7 @@ impl Collider {
     pub fn blocks(&self, p: V) -> bool {
         self.overlaps_body(p, 0., STANDING_HEIGHT, RADIUS)
     }
-    fn overlaps_body(&self, p: V, feet: f32, height: f32, radius: f32) -> bool {
+    pub(crate) fn overlaps_body(&self, p: V, feet: f32, height: f32, radius: f32) -> bool {
         self.max.1 > feet + 0.0001
             && self.min.1 < feet + height - 0.0001
             && self.overlaps_xz(p, radius)
@@ -89,6 +82,7 @@ pub struct Controller {
     pub yaw: f32,
     pub pitch: f32,
     kind: CharacterKind,
+    profile: ControllerProfile,
     velocity: V,
     feet: f32,
     body_height: f32,
@@ -102,6 +96,7 @@ impl Default for Controller {
             yaw: -0.10,
             pitch: -0.035,
             kind: CharacterKind::Scientist,
+            profile: ControllerProfile::default(),
             velocity: V::ZERO,
             feet: 0.,
             body_height: STANDING_HEIGHT,
@@ -113,13 +108,43 @@ impl Default for Controller {
 impl Controller {
     /// Spawn a character at the normal map entrance, with matching eye/body height.
     pub fn for_character(kind: CharacterKind) -> Self {
-        let mut player = Self {
-            kind,
-            body_height: kind.standing_height(),
-            ..Self::default()
+        let profile = if kind == CharacterKind::Feta {
+            ControllerProfile {
+                height: 0.30,
+                crouched_height: 0.20,
+                radius: 0.16,
+                eye_height: 0.22,
+                walk_speed: 5.6,
+                sprint_speed: 5.6,
+                crouch_speed: 2.8,
+                ..ControllerProfile::default()
+            }
+        } else {
+            ControllerProfile::default()
         };
-        player.position.1 = player.body_height - kind.head_margin();
-        player
+        Self {
+            kind,
+            profile,
+            body_height: profile.height,
+            position: V(0., profile.eye_height, 4.6),
+            ..Self::default()
+        }
+    }
+    /// Create a generic controller at a feet position, with no rendering metadata.
+    pub fn for_profile(profile: ControllerProfile, feet: V, yaw: f32) -> crate::Result<Self> {
+        profile.validate()?;
+        if !feet.finite() || !yaw.is_finite() {
+            return Err("Nonfinite spawn".into());
+        }
+        Ok(Self {
+            profile,
+            body_height: profile.height,
+            position: profile.eye_at(feet),
+            feet: feet.1,
+            yaw,
+            pitch: 0.,
+            ..Self::default()
+        })
     }
     pub fn character_kind(&self) -> CharacterKind {
         self.kind
@@ -148,13 +173,14 @@ impl Controller {
         self.grounded
     }
     pub fn is_crouched(&self) -> bool {
-        self.body_height < self.kind.standing_height() - 0.01
+        self.body_height < self.profile.height - 0.01
     }
     pub fn vertical_velocity(&self) -> f32 {
         self.vertical_velocity
     }
     pub fn set_physics_state(&mut self, pos: V, vert_vel: f32, grounded: bool) {
         self.position = pos;
+        self.feet = pos.1 - (self.body_height - self.profile.head_margin());
         self.vertical_velocity = vert_vel;
         self.grounded = grounded;
     }
@@ -205,7 +231,7 @@ impl Controller {
     fn move_horizontal(&mut self, target: V, colliders: &[Collider]) -> bool {
         let blocked = colliders
             .iter()
-            .any(|c| c.overlaps_body(target, self.feet, self.body_height, self.kind.radius()));
+            .any(|c| c.overlaps_body(target, self.feet, self.body_height, self.profile.radius));
         if !blocked {
             self.position = target;
             return true;
@@ -216,7 +242,7 @@ impl Controller {
         let mut top = self.feet;
         for c in colliders
             .iter()
-            .filter(|c| c.overlaps_body(target, self.feet, self.body_height, self.kind.radius()))
+            .filter(|c| c.overlaps_body(target, self.feet, self.body_height, self.profile.radius))
         {
             if c.max.1 - self.feet > 0.221 {
                 return false;
@@ -225,14 +251,14 @@ impl Controller {
         }
         if colliders
             .iter()
-            .any(|c| c.overlaps_body(target, top, self.body_height, self.kind.radius()))
+            .any(|c| c.overlaps_body(target, top, self.body_height, self.profile.radius))
         {
             return false;
         }
         self.feet = top;
         self.position = V(
             target.0,
-            top + self.body_height - self.kind.head_margin(),
+            top + self.body_height - self.profile.head_margin(),
             target.2,
         );
         true
@@ -256,20 +282,16 @@ impl Controller {
             -self.yaw.cos() * forward + self.yaw.sin() * right,
         ) / length;
         if jump && self.grounded {
-            self.vertical_velocity = (2. * GRAVITY * JUMP_HEIGHT).sqrt();
+            self.vertical_velocity = (2. * GRAVITY * self.profile.jump_height).sqrt();
             self.grounded = false;
         }
         let steps = (dt / 0.008).ceil() as usize;
         let h = dt / steps as f32;
         for _ in 0..steps {
             let target_height = if crouch {
-                if self.kind == CharacterKind::Feta {
-                    0.20
-                } else {
-                    CROUCH_HEIGHT
-                }
+                self.profile.crouched_height
             } else {
-                self.kind.standing_height()
+                self.profile.height
             };
             let mut next_height =
                 self.body_height + (target_height - self.body_height).clamp(-4. * h, 4. * h);
@@ -277,7 +299,7 @@ impl Controller {
             if next_height > self.body_height {
                 for c in colliders
                     .iter()
-                    .filter(|c| c.overlaps_xz(self.position, self.kind.radius()))
+                    .filter(|c| c.overlaps_xz(self.position, self.profile.radius))
                 {
                     if c.min.1 >= self.feet + self.body_height - 0.0001 {
                         next_height = next_height.min((c.min.1 - self.feet).max(self.body_height));
@@ -287,15 +309,11 @@ impl Controller {
             self.body_height = next_height;
             let desired = direction
                 * if crouch || self.is_crouched() {
-                    if self.kind == CharacterKind::Feta {
-                        2.8
-                    } else {
-                        CROUCH_SPEED
-                    }
-                } else if sprint || self.kind == CharacterKind::Feta {
-                    SPRINT_SPEED
+                    self.profile.crouch_speed
+                } else if sprint {
+                    self.profile.sprint_speed
                 } else {
-                    WALK_SPEED
+                    self.profile.walk_speed
                 };
             self.velocity = self.velocity.lerp(desired, 1. - (-18. * h).exp());
             let d = self.velocity * h;
@@ -315,7 +333,7 @@ impl Controller {
             if dy > 0. {
                 for c in colliders
                     .iter()
-                    .filter(|c| c.overlaps_xz(self.position, self.kind.radius()))
+                    .filter(|c| c.overlaps_xz(self.position, self.profile.radius))
                 {
                     if self.feet + self.body_height <= c.min.1 + 0.0001
                         && next_feet + self.body_height >= c.min.1
@@ -328,7 +346,7 @@ impl Controller {
                 let mut support = 0_f32;
                 for c in colliders
                     .iter()
-                    .filter(|c| c.overlaps_xz(self.position, self.kind.radius()))
+                    .filter(|c| c.overlaps_xz(self.position, self.profile.radius))
                 {
                     if self.feet >= c.max.1 - 0.0001 && next_feet <= c.max.1 {
                         support = support.max(c.max.1);
@@ -341,7 +359,7 @@ impl Controller {
                 }
             }
             self.feet = next_feet;
-            self.position.1 = self.feet + self.body_height - self.kind.head_margin();
+            self.position.1 = self.feet + self.body_height - self.profile.head_margin();
         }
     }
 }
@@ -497,7 +515,10 @@ mod tests {
                 &[],
             );
         }
-        assert!((c.position.1 - (CROUCH_HEIGHT - HEAD_MARGIN)).abs() < 0.001);
+        assert!(
+            (c.position.1 - (CROUCH_HEIGHT - ControllerProfile::default().head_margin())).abs()
+                < 0.001
+        );
         assert!(4.6 - c.position.2 < 1.4);
         assert_eq!(c.feet, 0.);
         for _ in 0..60 {

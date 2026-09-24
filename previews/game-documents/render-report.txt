@@ -1,0 +1,14 @@
+maximized=true
+caption=true
+viewport=1024x697
+startup_seconds=0.016
+triangles=456
+vertices=894
+batches=1
+mean_frame_ms=16.045
+captured_eye_heights=[1.68, 1.68, 1.68, 1.68, 1.68, 1.68]
+wrench_hits=0
+audio_plays=0
+pistol_shots=0
+pistol_audio_plays=0
+selected_weapon=Wrench

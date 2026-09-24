@@ -260,20 +260,56 @@ async fn main() {
         MapId::TestLab
     };
     let map_file = args.windows(2).find(|a| a[0] == "--map").map(|a| &a[1]);
-    let mut room = match map_file.map_or_else(
-        || maps::build(map),
-        |p| {
-            vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(p))
-                .and_then(|d| d.build())
-        },
-    ) {
-        Ok(r) => r,
+    let game_file = args.windows(2).find(|a| a[0] == "--game").map(|a| &a[1]);
+    if game_file.is_some() && map_file.is_some() {
+        error_screen("Choose --game or --map, not both").await;
+        return;
+    }
+    let loaded_game = if let Some(path) = game_file {
+        match vesper3d::viewer::game::GameDocument::load(std::path::Path::new(path)) {
+            Ok(game) => Some(game),
+            Err(e) => {
+                error_screen(&format!("Could not load game: {e}")).await;
+                return;
+            }
+        }
+    } else {
+        None
+    };
+    let room_result = if let Some(loaded) = &loaded_game {
+        loaded.map.build()
+    } else {
+        map_file.map_or_else(
+            || maps::build(map),
+            |p| {
+                vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(p))
+                    .and_then(|d| d.build())
+            },
+        )
+    };
+    let mut room = match room_result {
+        Ok(room) => room,
         Err(e) => {
-            error_screen(&format!("Could not load the room: {e}")).await;
+            error_screen(&format!("Could not load room: {e}")).await;
             return;
         }
     };
-    let content_hash = vesper3d::viewer::content::fingerprint(&room);
+    let mut game = if let Some(loaded) = loaded_game {
+        match vesper3d::viewer::game::GameRuntime::compile(loaded.document, &loaded.map) {
+            Ok(game) => Some(game),
+            Err(e) => {
+                error_screen(&format!("Could not compile game: {e}")).await;
+                return;
+            }
+        }
+    } else {
+        None
+    };
+    let content_hash = game.as_ref().map_or_else(
+        || vesper3d::viewer::content::fingerprint(&room),
+        |game| game.content_hash(&room),
+    );
+    let mut pending_game_interaction = false;
     let mut prop_physics = match PropPhysics::new(&mut room) {
         Ok(p) => p,
         Err(e) => {
@@ -297,6 +333,7 @@ async fn main() {
     let character_capture = args.iter().any(|a| a == "--capture-character");
     let pistol_capture = args.iter().any(|a| a == "--capture-pistol");
     let wrench_capture = args.iter().any(|a| a == "--capture-wrench");
+    let game_capture = args.iter().any(|a| a == "--capture-game");
     let interaction_capture = args.iter().any(|a| a == "--capture-interactions");
     let capture_dir = args
         .windows(2)
@@ -309,6 +346,7 @@ async fn main() {
                 || a[0] == "--capture-wrench"
                 || a[0] == "--capture"
                 || a[0] == "--capture-motion"
+                || a[0] == "--capture-game"
                 || a[0] == "--capture-interactions"
         })
         .map(|a| std::path::PathBuf::from(&a[1]));
@@ -323,8 +361,11 @@ async fn main() {
     } else {
         CharacterKind::Scientist
     };
-    let mut controller = Controller::for_character(capture_kind);
-    let mut character_chosen = capture_dir.is_some();
+    let mut controller = game.as_ref().map_or_else(
+        || Controller::for_character(capture_kind),
+        |g| g.controller(1),
+    );
+    let mut character_chosen = capture_dir.is_some() || game.is_some();
     let mut stepper = PlayerStepper::default();
     let mut wrench = Wrench::default();
     let mut loadout = Loadout::default();
@@ -357,6 +398,7 @@ async fn main() {
     let host_mode = args
         .windows(2)
         .find(|a| a[0] == "--server")
+        .filter(|a| !a[1].starts_with("--"))
         .map(|a| a[1].clone())
         .or_else(|| {
             if args.iter().any(|a| a == "--server") {
@@ -368,10 +410,30 @@ async fn main() {
 
     if let Some(ref s_addr) = host_mode {
         let s_addr_clone = s_addr.clone();
+        let host_game = game_file.cloned();
+        let host_map = map_file.cloned();
         std::thread::spawn(move || {
-            if let Ok(mut server) = DedicatedServer::bind(&s_addr_clone) {
-                let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-                let _ = server.run_realtime(stop, None);
+            let world = if let Some(path) = host_game {
+                vesper3d::viewer::game::GameDocument::load(std::path::Path::new(&path))
+                    .and_then(|loaded| loaded.world())
+            } else {
+                let room = host_map.map_or_else(
+                    || maps::build(map),
+                    |path| {
+                        vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(&path))
+                            .and_then(|document| document.build())
+                    },
+                );
+                room.and_then(vesper3d::viewer::simulation::HeadlessWorld::try_with_room)
+            };
+            match world.and_then(|world| DedicatedServer::with_world(&s_addr_clone, world)) {
+                Ok(mut server) => {
+                    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+                    if let Err(error) = server.run_realtime(stop, None) {
+                        eprintln!("Host stopped: {error}");
+                    }
+                }
+                Err(error) => eprintln!("Could not start host: {error}"),
             }
         });
         std::thread::sleep(std::time::Duration::from_millis(100));
@@ -473,9 +535,19 @@ async fn main() {
                                 2 => SPAWN_PLAYER_2,
                                 n => V((n as f32 - 1.0) * 1.5, 1.68, 6.0),
                             };
-                            controller.position = spawn;
+                            if let Some(game) = &game {
+                                controller = game.controller(player_id);
+                            } else {
+                                controller.position = spawn;
+                            }
+                            stepper.reset(&controller);
                             character_chosen = true;
                             active = true;
+                        }
+                        Packet::GameState { tick, state } => {
+                            if let Some(game) = &mut game {
+                                game.accept_snapshot(tick, state);
+                            }
                         }
                         Packet::Snapshot(snap) => {
                             client_baseline_snapshot = Some(snap.clone());
@@ -561,7 +633,10 @@ async fn main() {
             for (&pid, interp) in &remote_interpolators {
                 if let Some(state) = interp.interpolate_state_at(render_tick) {
                     let remote_c = remote_controllers.entry(pid).or_insert_with(|| {
-                        let mut c = Controller::for_character(state.character_kind);
+                        let mut c = game.as_ref().map_or_else(
+                            || Controller::for_character(state.character_kind),
+                            |g| g.controller(pid),
+                        );
                         c.position = state.position;
                         c
                     });
@@ -673,7 +748,8 @@ async fn main() {
                     || movement_keys.contains(&KeyCode::RightControl)
                     || movement_keys.contains(&KeyCode::C),
             };
-            stepper.advance(&mut controller, movement, get_frame_time(), &room.colliders);
+            let simulation_steps =
+                stepper.advance(&mut controller, movement, get_frame_time(), &room.colliders);
             if let (Some(ref transport), Some(server_addr), Some(_)) =
                 (&net_transport, net_server_dest, net_player_id)
             {
@@ -683,9 +759,11 @@ async fn main() {
                     movement,
                     yaw: controller.yaw,
                     pitch: controller.pitch,
-                    fire_wrench: is_mouse_button_pressed(MouseButton::Left)
+                    fire_wrench: game.is_none()
+                        && is_mouse_button_pressed(MouseButton::Left)
                         && loadout.selected == Weapon::Wrench,
-                    fire_pistol: is_mouse_button_pressed(MouseButton::Left)
+                    fire_pistol: game.is_none()
+                        && is_mouse_button_pressed(MouseButton::Left)
                         && loadout.selected == Weapon::Pistol,
                     interact: keys.pressed(KeyCode::E),
                     ack_server_tick: client_acked_server_tick,
@@ -702,11 +780,13 @@ async fn main() {
             ) {
                 wrench.cancel();
             }
-            if Loadout::can_use(
-                controller.character_kind(),
-                active,
-                prop_physics.held().is_some(),
-            ) && is_mouse_button_pressed(MouseButton::Left)
+            if game.is_none()
+                && Loadout::can_use(
+                    controller.character_kind(),
+                    active,
+                    prop_physics.held().is_some(),
+                )
+                && is_mouse_button_pressed(MouseButton::Left)
             {
                 if loadout.selected == Weapon::Wrench {
                     wrench.start(active, skip_look == 0);
@@ -719,7 +799,12 @@ async fn main() {
                 }
             }
             if net_transport.is_none() {
-                if keys.pressed(KeyCode::E) && skip_look == 0 {
+                if let Some(game) = &mut game {
+                    pending_game_interaction |= keys.pressed(KeyCode::E) && skip_look == 0;
+                    if simulation_steps > 0 && std::mem::take(&mut pending_game_interaction) {
+                        game.interact(&room, &controller, 1);
+                    }
+                } else if keys.pressed(KeyCode::E) && skip_look == 0 {
                     let ray = perspective.view(&controller, &room).aim(&controller, &room);
                     if prop_physics.toggle(&room, ray) {
                         wrench.cancel();
@@ -743,7 +828,27 @@ async fn main() {
                 perspective.view(&controller, &room).aim(&controller, &room),
             );
         }
-        if capture_dir.is_some() && pistol_capture {
+        if capture_dir.is_some() && game_capture {
+            entered = true;
+            if let Some(game) = &mut game {
+                let index = (frame / 8).min(game.document().interactables.len() - 1);
+                let id = &game.document().interactables[index].entity;
+                if let Some(entity) = room.entities.iter().find(|e| &e.id == id) {
+                    let center = (entity.bounds.min + entity.bounds.max) * 0.5;
+                    controller = Controller::for_profile(
+                        game.document().player_profile,
+                        V(center.0, 0., center.2 + 2.),
+                        0.,
+                    )
+                    .unwrap();
+                    let aim = center - controller.position;
+                    controller.pitch = (aim.1 / aim.length()).asin();
+                    if frame % 8 == 4 {
+                        game.interact(&room, &controller, 1);
+                    }
+                }
+            }
+        } else if capture_dir.is_some() && pistol_capture {
             controller.position = V(0., 1.68, 2.5);
             controller.yaw = 0.;
             controller.pitch = -0.04;
@@ -991,7 +1096,8 @@ async fn main() {
             }
         }
         set_default_camera();
-        if controller.character_kind() == CharacterKind::Scientist
+        if game.is_none()
+            && controller.character_kind() == CharacterKind::Scientist
             && prop_physics.held().is_none()
             && (perspective == Perspective::First || !view.show_body)
         {
@@ -1003,6 +1109,36 @@ async fn main() {
         }
         let sw = screen_width();
         let sh = screen_height();
+        if let Some(game) = &game {
+            if active || capture_dir.is_some() {
+                draw_rectangle(18., 16., 440., 82., Color::new(0.02, 0.04, 0.08, 0.85));
+                text(&game.document().name, 30., 42., 22., INK);
+                let status = if game.state().completed {
+                    "Objective complete!".to_string()
+                } else {
+                    game.document()
+                        .counters
+                        .keys()
+                        .zip(&game.state().counters)
+                        .map(|(id, value)| format!("{id}: {value}"))
+                        .collect::<Vec<_>>()
+                        .join("   ")
+                };
+                text(&status, 30., 70., 20., INK);
+                if let Some(index) = game
+                    .target(&room, &controller)
+                    .filter(|_| !game.state().completed)
+                {
+                    let target = &game.document().interactables[index].entity;
+                    let status = if game.enabled(index) {
+                        "E  Interact"
+                    } else {
+                        "Inactive / locked"
+                    };
+                    text(&format!("{target}   {status}"), 30., 94., 18., INK);
+                }
+            }
+        }
         if (active || capture_dir.is_some()) && hud {
             draw_rectangle(
                 24.,
@@ -1030,7 +1166,9 @@ async fn main() {
                 INK,
             );
             text(
-                if controller.character_kind() == CharacterKind::Feta {
+                if game.is_some() {
+                    "E  Interact with switches / exit"
+                } else if controller.character_kind() == CharacterKind::Feta {
                     "E   Pick up / Drop     Q   Switch camera"
                 } else {
                     "E Pick up/drop   Click Attack   Scroll Weapon   Q Camera"
@@ -1041,7 +1179,7 @@ async fn main() {
                 INK,
             );
         }
-        if active || physics_capture {
+        if game.is_none() && (active || physics_capture) {
             let prompt = if let Some(p) = prop_physics.held() {
                 Some(format!("E  Drop {}", p.label))
             } else {
@@ -1062,6 +1200,7 @@ async fn main() {
             }
         }
         if (active || capture_dir.is_some())
+            && game.is_none()
             && controller.character_kind() == CharacterKind::Scientist
             && prop_physics.held().is_none()
         {
@@ -1164,6 +1303,7 @@ async fn main() {
         if character_chosen
             && !active
             && (capture_dir.is_none()
+                || (game_capture && frame >= 30)
                 || (pistol_capture && frame >= 108)
                 || ((interaction_capture || wrench_capture) && frame >= 60)
                 || (character_capture && frame >= 96)
@@ -1252,7 +1392,9 @@ async fn main() {
                 MUTED,
             );
             text(
-                if controller.character_kind() == CharacterKind::Feta {
+                if game.is_some() {
+                    "E"
+                } else if controller.character_kind() == CharacterKind::Feta {
                     "Character"
                 } else {
                     "Left-click"
@@ -1263,7 +1405,9 @@ async fn main() {
                 INK,
             );
             text(
-                if controller.character_kind() == CharacterKind::Feta {
+                if game.is_some() {
+                    "Interact"
+                } else if controller.character_kind() == CharacterKind::Feta {
                     "Feta / Lab rat"
                 } else {
                     "Attack / Fire"
@@ -1318,12 +1462,17 @@ async fn main() {
                 false,
             ) {
                 prop_physics.drop_held();
-                controller = Controller::for_character(controller.character_kind());
+                controller = game.as_ref().map_or_else(
+                    || Controller::for_character(controller.character_kind()),
+                    |g| g.controller(net_player_id.unwrap_or(1)),
+                );
                 stepper.reset(&controller);
                 keys.down.clear();
             }
             text(
-                if controller.character_kind() == CharacterKind::Feta {
+                if game.is_some() {
+                    "E Interact   Q Camera"
+                } else if controller.character_kind() == CharacterKind::Feta {
                     "E Pick up/drop   Q Camera"
                 } else {
                     "E Pick/drop   Q Camera   Scroll Weapon"
@@ -1384,7 +1533,9 @@ async fn main() {
             );
         }
         if let Some(dir) = &capture_dir {
-            let shot = if pistol_capture {
+            let shot = if game_capture {
+                [1, 6, 14, 22, 29, 35].iter().position(|f| *f == frame)
+            } else if pistol_capture {
                 [10, 20, 24, 56, 64, 88, 100, 110]
                     .iter()
                     .position(|f| *f == frame)
@@ -1442,6 +1593,12 @@ async fn main() {
                     loadout.pistol.shots, pistol_audio.plays, loadout.selected
                 );
                 let _ = std::fs::write(dir.join("render-report.txt"), report);
+                if let Some(game) = &game {
+                    let _ = std::fs::write(
+                        dir.join("game-state.json"),
+                        serde_json::to_vec_pretty(game.state()).unwrap(),
+                    );
+                }
                 break;
             }
         }

@@ -1,0 +1,3042 @@
+{
+  "schema_version": 1,
+  "name": "Blue Test Lab",
+  "scene": {
+    "version": 1,
+    "size": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "duration": 6.0,
+    "camera": {
+      "pos": [
+        7.0,
+        4.5,
+        9.0
+      ],
+      "target": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "fov": 42.0,
+      "orbit": 0.0,
+      "aperture": 0.0,
+      "focus": 10.0,
+      "ease": "smooth"
+    },
+    "world": {
+      "sky": [
+        0.025,
+        0.045,
+        0.09
+      ],
+      "horizon": [
+        0.16,
+        0.22,
+        0.28
+      ],
+      "ambient": 0.24,
+      "fog": 0.012,
+      "exposure": 1.15,
+      "bloom": 0.22
+    },
+    "materials": {
+      "edit-button-a": {
+        "color": [
+          0.2,
+          0.5,
+          0.95
+        ],
+        "roughness": 1.0,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "edit-button-b": {
+        "color": [
+          0.2,
+          0.5,
+          0.95
+        ],
+        "roughness": 1.0,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "edit-button-c": {
+        "color": [
+          0.2,
+          0.5,
+          0.95
+        ],
+        "roughness": 1.0,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "edit-exit": {
+        "color": [
+          0.2,
+          0.85,
+          0.4
+        ],
+        "roughness": 1.0,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "lab-feature": {
+        "color": [
+          0.85,
+          0.55,
+          0.15
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "lab-floor": {
+        "color": [
+          0.22,
+          0.24,
+          0.26
+        ],
+        "roughness": 0.4,
+        "metallic": 0.1,
+        "emission": 0.0,
+        "checker": null
+      },
+      "lab-target": {
+        "color": [
+          0.9,
+          0.15,
+          0.15
+        ],
+        "roughness": 0.4,
+        "metallic": 0.1,
+        "emission": 0.0,
+        "checker": null
+      },
+      "lab-trim": {
+        "color": [
+          0.12,
+          0.45,
+          0.85
+        ],
+        "roughness": 0.4,
+        "metallic": 0.2,
+        "emission": 0.0,
+        "checker": null
+      },
+      "lab-wall": {
+        "color": [
+          0.75,
+          0.76,
+          0.78
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "prop-cereal": {
+        "color": [
+          0.92,
+          0.58,
+          0.15
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "prop-crate": {
+        "color": [
+          0.55,
+          0.38,
+          0.22
+        ],
+        "roughness": 0.4,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      }
+    },
+    "lights": [
+      {
+        "pos": [
+          -4.0,
+          8.0,
+          5.0
+        ],
+        "color": [
+          1.0,
+          0.88,
+          0.72
+        ],
+        "power": 90.0,
+        "radius": 1.2
+      }
+    ],
+    "nodes": [
+      {
+        "id": "room-0",
+        "shape": "box",
+        "material": "lab-floor",
+        "parent": null,
+        "pos": [
+          0.0,
+          -0.1,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          8.0,
+          0.1,
+          8.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-1",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          0.0,
+          4.1,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          8.0,
+          0.1,
+          8.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-2",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          0.0,
+          2.0,
+          -8.1
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          8.0,
+          2.0,
+          0.1
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-3",
+        "shape": "box",
+        "material": "lab-target",
+        "parent": null,
+        "pos": [
+          0.0,
+          1.8,
+          -7.95
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          1.0,
+          0.05
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-4",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          0.0,
+          2.0,
+          8.1
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          8.0,
+          2.0,
+          0.1
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-5",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          8.1,
+          2.0,
+          -4.5
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          2.0,
+          3.5
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-6",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          8.1,
+          2.0,
+          4.5
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          2.0,
+          3.5
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-7",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          8.1,
+          3.2,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          0.8,
+          1.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-8",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          -8.1,
+          2.0,
+          -4.5
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          2.0,
+          3.5
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-9",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          -8.1,
+          2.0,
+          4.5
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          2.0,
+          3.5
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-10",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -8.1,
+          3.2,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          0.8,
+          1.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-11",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          3.0,
+          0.6,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.4,
+          0.6,
+          0.4
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-12",
+        "shape": "box",
+        "material": "lab-floor",
+        "parent": null,
+        "pos": [
+          14.0,
+          -0.1,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          0.1,
+          6.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-13",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          14.0,
+          4.1,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          0.1,
+          6.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-14",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          20.1,
+          2.0,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          2.0,
+          6.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-15",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          14.0,
+          2.0,
+          -6.1
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          2.0,
+          0.1
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-16",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          14.0,
+          2.0,
+          6.1
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          2.0,
+          0.1
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-17",
+        "shape": "box",
+        "material": "lab-feature",
+        "parent": null,
+        "pos": [
+          14.0,
+          0.4,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.5,
+          0.4,
+          1.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-18",
+        "shape": "box",
+        "material": "prop-crate",
+        "parent": null,
+        "pos": [
+          14.0,
+          0.95,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.2,
+          0.15,
+          0.2
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-19",
+        "shape": "box",
+        "material": "prop-cereal",
+        "parent": null,
+        "pos": [
+          14.0,
+          1.3,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.15,
+          0.2,
+          0.1
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-20",
+        "shape": "box",
+        "material": "lab-floor",
+        "parent": null,
+        "pos": [
+          -14.0,
+          -0.1,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          0.1,
+          6.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-21",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          -14.0,
+          5.1,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          0.1,
+          6.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-22",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          -20.1,
+          2.5,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.1,
+          2.5,
+          6.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-23",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          -14.0,
+          2.5,
+          -6.1
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          2.5,
+          0.1
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-24",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          -14.0,
+          2.5,
+          6.1
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          6.0,
+          2.5,
+          0.1
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-25",
+        "shape": "box",
+        "material": "lab-feature",
+        "parent": null,
+        "pos": [
+          -17.0,
+          0.6,
+          -3.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          2.5,
+          0.6,
+          2.5
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-26",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.075,
+          -0.5
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.075,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-27",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.15,
+          -0.8
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.15,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-28",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.22500001,
+          -1.1
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.22500001,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-29",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.3,
+          -1.4000001
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.3,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-30",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.375,
+          -1.7
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.375,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-31",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.45000002,
+          -2.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.45000002,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-32",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.52500004,
+          -2.3000002
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.52500004,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-33",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -13.0,
+          0.6,
+          -2.6000001
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.6,
+          0.15
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-34",
+        "shape": "box",
+        "material": "lab-trim",
+        "parent": null,
+        "pos": [
+          -12.0,
+          0.175,
+          3.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.0,
+          0.175,
+          1.0
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "room-35",
+        "shape": "box",
+        "material": "lab-wall",
+        "parent": null,
+        "pos": [
+          -16.0,
+          1.6,
+          3.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          1.5,
+          0.9,
+          1.5
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "button-a",
+        "shape": "box",
+        "material": "edit-button-a",
+        "parent": null,
+        "pos": [
+          -3.0,
+          1.5,
+          1.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.3,
+          0.3,
+          0.3
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "button-b",
+        "shape": "box",
+        "material": "edit-button-b",
+        "parent": null,
+        "pos": [
+          -1.0,
+          1.5,
+          1.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.3,
+          0.3,
+          0.3
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "button-c",
+        "shape": "box",
+        "material": "edit-button-c",
+        "parent": null,
+        "pos": [
+          1.0,
+          1.5,
+          1.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.3,
+          0.3,
+          0.3
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "exit",
+        "shape": "box",
+        "material": "edit-exit",
+        "parent": null,
+        "pos": [
+          3.0,
+          1.5,
+          1.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.3,
+          0.3,
+          0.3
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      }
+    ],
+    "audio": null
+  },
+  "colliders": {
+    "button-a": {
+      "min": [
+        -3.3,
+        1.2,
+        0.7
+      ],
+      "max": [
+        -2.7,
+        1.8,
+        1.3
+      ]
+    },
+    "button-b": {
+      "min": [
+        -1.3,
+        1.2,
+        0.7
+      ],
+      "max": [
+        -0.7,
+        1.8,
+        1.3
+      ]
+    },
+    "button-c": {
+      "min": [
+        0.7,
+        1.2,
+        0.7
+      ],
+      "max": [
+        1.3,
+        1.8,
+        1.3
+      ]
+    },
+    "collider-0": {
+      "min": [
+        -8.0,
+        -0.2,
+        -8.0
+      ],
+      "max": [
+        8.0,
+        0.0,
+        8.0
+      ]
+    },
+    "collider-1": {
+      "min": [
+        -8.0,
+        4.0,
+        -8.0
+      ],
+      "max": [
+        8.0,
+        4.2,
+        8.0
+      ]
+    },
+    "collider-10": {
+      "min": [
+        2.6,
+        0.0,
+        -0.4
+      ],
+      "max": [
+        3.4,
+        1.2,
+        0.4
+      ]
+    },
+    "collider-11": {
+      "min": [
+        8.0,
+        -0.2,
+        -6.0
+      ],
+      "max": [
+        20.0,
+        0.0,
+        6.0
+      ]
+    },
+    "collider-12": {
+      "min": [
+        8.0,
+        4.0,
+        -6.0
+      ],
+      "max": [
+        20.0,
+        4.2,
+        6.0
+      ]
+    },
+    "collider-13": {
+      "min": [
+        20.0,
+        0.0,
+        -6.0
+      ],
+      "max": [
+        20.2,
+        4.0,
+        6.0
+      ]
+    },
+    "collider-14": {
+      "min": [
+        8.0,
+        0.0,
+        -6.2
+      ],
+      "max": [
+        20.0,
+        4.0,
+        -6.0
+      ]
+    },
+    "collider-15": {
+      "min": [
+        8.0,
+        0.0,
+        6.0
+      ],
+      "max": [
+        20.0,
+        4.0,
+        6.2
+      ]
+    },
+    "collider-16": {
+      "min": [
+        12.5,
+        0.0,
+        -1.0
+      ],
+      "max": [
+        15.5,
+        0.8,
+        1.0
+      ]
+    },
+    "collider-17": {
+      "min": [
+        13.8,
+        0.8,
+        -0.2
+      ],
+      "max": [
+        14.2,
+        1.1,
+        0.2
+      ]
+    },
+    "collider-18": {
+      "min": [
+        13.85,
+        1.1,
+        -0.1
+      ],
+      "max": [
+        14.15,
+        1.5,
+        0.1
+      ]
+    },
+    "collider-19": {
+      "min": [
+        -20.0,
+        -0.2,
+        -6.0
+      ],
+      "max": [
+        -8.0,
+        0.0,
+        6.0
+      ]
+    },
+    "collider-2": {
+      "min": [
+        -8.0,
+        0.0,
+        -8.200001
+      ],
+      "max": [
+        8.0,
+        4.0,
+        -8.0
+      ]
+    },
+    "collider-20": {
+      "min": [
+        -20.0,
+        5.0,
+        -6.0
+      ],
+      "max": [
+        -8.0,
+        5.2,
+        6.0
+      ]
+    },
+    "collider-21": {
+      "min": [
+        -20.2,
+        0.0,
+        -6.0
+      ],
+      "max": [
+        -20.0,
+        5.0,
+        6.0
+      ]
+    },
+    "collider-22": {
+      "min": [
+        -20.0,
+        0.0,
+        -6.2
+      ],
+      "max": [
+        -8.0,
+        5.0,
+        -6.0
+      ]
+    },
+    "collider-23": {
+      "min": [
+        -20.0,
+        0.0,
+        6.0
+      ],
+      "max": [
+        -8.0,
+        5.0,
+        6.2
+      ]
+    },
+    "collider-24": {
+      "min": [
+        -19.5,
+        0.0,
+        -5.5
+      ],
+      "max": [
+        -14.5,
+        1.2,
+        -0.5
+      ]
+    },
+    "collider-25": {
+      "min": [
+        -14.0,
+        0.0,
+        -0.65
+      ],
+      "max": [
+        -12.0,
+        0.15,
+        -0.35
+      ]
+    },
+    "collider-26": {
+      "min": [
+        -14.0,
+        0.0,
+        -0.95000005
+      ],
+      "max": [
+        -12.0,
+        0.3,
+        -0.65
+      ]
+    },
+    "collider-27": {
+      "min": [
+        -14.0,
+        0.0,
+        -1.25
+      ],
+      "max": [
+        -12.0,
+        0.45000002,
+        -0.95000005
+      ]
+    },
+    "collider-28": {
+      "min": [
+        -14.0,
+        0.0,
+        -1.5500001
+      ],
+      "max": [
+        -12.0,
+        0.6,
+        -1.2500001
+      ]
+    },
+    "collider-29": {
+      "min": [
+        -14.0,
+        0.0,
+        -1.85
+      ],
+      "max": [
+        -12.0,
+        0.75,
+        -1.5500001
+      ]
+    },
+    "collider-3": {
+      "min": [
+        -8.0,
+        0.0,
+        8.0
+      ],
+      "max": [
+        8.0,
+        4.0,
+        8.200001
+      ]
+    },
+    "collider-30": {
+      "min": [
+        -14.0,
+        0.0,
+        -2.15
+      ],
+      "max": [
+        -12.0,
+        0.90000004,
+        -1.85
+      ]
+    },
+    "collider-31": {
+      "min": [
+        -14.0,
+        0.0,
+        -2.4500003
+      ],
+      "max": [
+        -12.0,
+        1.0500001,
+        -2.15
+      ]
+    },
+    "collider-32": {
+      "min": [
+        -14.0,
+        0.0,
+        -2.7500002
+      ],
+      "max": [
+        -12.0,
+        1.2,
+        -2.45
+      ]
+    },
+    "collider-33": {
+      "min": [
+        -13.0,
+        0.0,
+        2.0
+      ],
+      "max": [
+        -11.0,
+        0.35,
+        4.0
+      ]
+    },
+    "collider-34": {
+      "min": [
+        -17.5,
+        0.70000005,
+        1.5
+      ],
+      "max": [
+        -14.5,
+        2.5,
+        4.5
+      ]
+    },
+    "collider-4": {
+      "min": [
+        8.0,
+        0.0,
+        -8.0
+      ],
+      "max": [
+        8.200001,
+        4.0,
+        -1.0
+      ]
+    },
+    "collider-5": {
+      "min": [
+        8.0,
+        0.0,
+        1.0
+      ],
+      "max": [
+        8.200001,
+        4.0,
+        8.0
+      ]
+    },
+    "collider-6": {
+      "min": [
+        8.0,
+        2.4,
+        -1.0
+      ],
+      "max": [
+        8.200001,
+        4.0,
+        1.0
+      ]
+    },
+    "collider-7": {
+      "min": [
+        -8.200001,
+        0.0,
+        -8.0
+      ],
+      "max": [
+        -8.0,
+        4.0,
+        -1.0
+      ]
+    },
+    "collider-8": {
+      "min": [
+        -8.200001,
+        0.0,
+        1.0
+      ],
+      "max": [
+        -8.0,
+        4.0,
+        8.0
+      ]
+    },
+    "collider-9": {
+      "min": [
+        -8.200001,
+        2.4,
+        -1.0
+      ],
+      "max": [
+        -8.0,
+        4.0,
+        1.0
+      ]
+    },
+    "exit": {
+      "min": [
+        2.7,
+        1.2,
+        0.7
+      ],
+      "max": [
+        3.3,
+        1.8,
+        1.3
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "lab-terminal",
+      "label": "Main Diagnostics Terminal",
+      "bounds": {
+        "min": [
+          2.5,
+          -0.099999964,
+          -0.5
+        ],
+        "max": [
+          3.5,
+          1.3,
+          0.5
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "lab-crate-base",
+      "label": "Wooden Crate (Base)",
+      "bounds": {
+        "min": [
+          13.8,
+          0.8,
+          -0.2
+        ],
+        "max": [
+          14.2,
+          1.1,
+          0.2
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "lab-cereal-mid",
+      "label": "Cereal Box (Mid)",
+      "bounds": {
+        "min": [
+          13.85,
+          1.1,
+          -0.1
+        ],
+        "max": [
+          14.15,
+          1.5,
+          0.1
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "button-a",
+      "label": "Switch 1",
+      "bounds": {
+        "min": [
+          -3.3,
+          1.2,
+          0.7
+        ],
+        "max": [
+          -2.7,
+          1.8,
+          1.3
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "button-b",
+      "label": "Switch 2",
+      "bounds": {
+        "min": [
+          -1.3,
+          1.2,
+          0.7
+        ],
+        "max": [
+          -0.7,
+          1.8,
+          1.3
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "button-c",
+      "label": "Switch 3",
+      "bounds": {
+        "min": [
+          0.7,
+          1.2,
+          0.7
+        ],
+        "max": [
+          1.3,
+          1.8,
+          1.3
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "exit",
+      "label": "Exit terminal",
+      "bounds": {
+        "min": [
+          2.7,
+          1.2,
+          0.7
+        ],
+        "max": [
+          3.3,
+          1.8,
+          1.3
+        ]
+      },
+      "action": "inspect"
+    }
+  ],
+  "spatial": {
+    "rooms": {
+      "2": {
+        "id": 2,
+        "name": "Physics Lab",
+        "bounds": {
+          "min": [
+            8.0,
+            0.0,
+            -6.0
+          ],
+          "max": [
+            20.0,
+            4.0,
+            6.0
+          ]
+        },
+        "floor_level": 1
+      },
+      "3": {
+        "id": 3,
+        "name": "Locomotion Lab",
+        "bounds": {
+          "min": [
+            -20.0,
+            0.0,
+            -6.0
+          ],
+          "max": [
+            -8.0,
+            5.0,
+            6.0
+          ]
+        },
+        "floor_level": 1
+      },
+      "1": {
+        "id": 1,
+        "name": "Main Arena",
+        "bounds": {
+          "min": [
+            -8.0,
+            0.0,
+            -8.0
+          ],
+          "max": [
+            8.0,
+            4.0,
+            8.0
+          ]
+        },
+        "floor_level": 1
+      }
+    },
+    "portals": [
+      {
+        "from": 1,
+        "to": 2,
+        "bounds": {
+          "min": [
+            7.8,
+            0.0,
+            -1.0
+          ],
+          "max": [
+            8.2,
+            2.4,
+            1.0
+          ]
+        },
+        "is_open": true
+      },
+      {
+        "from": 1,
+        "to": 3,
+        "bounds": {
+          "min": [
+            -8.2,
+            0.0,
+            -1.0
+          ],
+          "max": [
+            -7.8,
+            2.4,
+            1.0
+          ]
+        },
+        "is_open": true
+      }
+    ],
+    "adjacency": {
+      "1": [
+        3,
+        2
+      ],
+      "2": [
+        1
+      ],
+      "3": [
+        1
+      ]
+    }
+  }
+}

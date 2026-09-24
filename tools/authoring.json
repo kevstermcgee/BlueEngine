@@ -1,7 +1,7 @@
 {
   "version": 1,
   "contract": {
-    "scope": "Static map authoring using the packaged native engine; no engine source access required.",
+    "scope": "Static maps plus bounded GameDocument v1 prototypes using native tools; no source access required.",
     "units": "metres; Y up; linear RGB 0..1; box sizes are half extents; prop origins are at the bottom",
     "map_schema_version": 1,
     "map_document": "schema_version, name, scene, colliders, entities; use new to obtain a native-valid house template",
@@ -13,10 +13,10 @@
       "colliders",
       "inspect entities",
       "native prop placement",
-      "transactional translate/remove patches"
+      "transactional translate/remove patches",
+      "GameDocument v1 profiles, spawns, interaction counters and completion; see native game-describe"
     ],
     "unsupported": [
-      "new gameplay rules",
       "Prop Hunt rounds/disguises",
       "custom scripts",
       "animated maps",
@@ -36,7 +36,11 @@
     "new OUT.json": "Export the native house as a new editable map",
     "add MAP TEMPLATE OUT --id ID --at X,Y,Z": "Instantiate an asset or recipe with namespaced IDs using a native transaction",
     "map OP ...": "audit, diff, select, near, ray, route, floorplan, export-scene or apply",
-    "verify MAP NEW_DIR [--route ROUTE] [--capture] [--baseline REPORT]": "Persistent audit/route results and optional house camera captures with exact baseline comparison"
+    "verify MAP NEW_DIR [--route ROUTE] [--capture] [--baseline REPORT]": "Persistent audit/route results and optional house camera captures with exact baseline comparison",
+    "game-describe (native be2-tools)": "GameDocument v1 contract and limits",
+    "game-schema (native be2-tools)": "Machine-readable GameDocument schema",
+    "game-example NEW_DIRECTORY (native be2-tools)": "Write a playable three-switches example",
+    "game-validate GAME.json (native be2-tools)": "Validate game/map, compile physics and fingerprint"
   },
   "assets": [
     {

@@ -9,6 +9,7 @@ fn main() -> vesper3d::Result<()> {
     let mut ticks = None;
     let mut realtime = false;
     let mut map_file = None;
+    let mut game_file = None;
     let mut server_addr = None;
     let mut index = 0;
     while index < args.len() {
@@ -39,10 +40,14 @@ fn main() -> vesper3d::Result<()> {
                 index += 1;
                 map_file = Some(args.get(index).ok_or("--map needs a file")?.clone());
             }
+            "--game" => {
+                index += 1;
+                game_file = Some(args.get(index).ok_or("--game needs a file")?.clone());
+            }
             "--realtime" => realtime = true,
             "--help" => {
                 println!(
-                    "be2-headless [--server [ADDR]] [--listen ADDR] [--ticks N] [--realtime] [--map FILE]\n\
+                    "be2-headless [--server [ADDR]] [--listen ADDR] [--ticks N] [--realtime] [--map FILE | --game FILE]\n\
                      Modes:\n\
                        --server [ADDR]   Run authoritative dedicated multiplayer server (default 0.0.0.0:4000)\n\
                        (no --server)     Run local benchmark simulation"
@@ -54,10 +59,15 @@ fn main() -> vesper3d::Result<()> {
         index += 1;
     }
 
-    let world = if let Some(ref path) = map_file {
-        HeadlessWorld::with_room(
+    if map_file.is_some() && game_file.is_some() {
+        return Err("Use --map or --game, not both".into());
+    }
+    let world = if let Some(ref path) = game_file {
+        vesper3d::viewer::game::GameDocument::load(std::path::Path::new(path))?.world()?
+    } else if let Some(ref path) = map_file {
+        HeadlessWorld::try_with_room(
             vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(path))?.build()?,
-        )
+        )?
     } else {
         HeadlessWorld::new()?
     };
@@ -105,5 +115,11 @@ fn main() -> vesper3d::Result<()> {
         started.elapsed().as_secs_f64() * 1_000_000. / ticks as f64,
         realtime
     );
+    if let Some(game) = &world.game {
+        println!(
+            "{}",
+            serde_json::json!({"game_state":game.state(), "checksum": world.checksum()})
+        );
+    }
     Ok(())
 }

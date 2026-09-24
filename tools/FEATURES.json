@@ -273,6 +273,21 @@
           "test": "feature_paths_and_evidence_resolve_to_suite_tests"
         }
       ]
+    },
+    "game_documents": {
+      "files": [
+        "src/viewer/game.rs",
+        "src/viewer/profile.rs",
+        "src/viewer/game_example.rs",
+        "tests/game_documents.rs",
+        "tools/game.schema.json",
+        "docs/GAME_QUICKSTART.md"
+      ],
+      "checks": [
+        "game_documents integration tests",
+        "graphical --capture-game smoke"
+      ],
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors."
     }
   }
 }

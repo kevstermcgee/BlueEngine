@@ -1,0 +1,321 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "name",
+    "map",
+    "player_profile",
+    "spawn_points",
+    "counters",
+    "interactables",
+    "rules"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "map": {
+      "type": "string",
+      "minLength": 1
+    },
+    "player_profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "height",
+        "crouched_height",
+        "radius",
+        "eye_height",
+        "walk_speed",
+        "sprint_speed",
+        "crouch_speed",
+        "jump_height"
+      ],
+      "properties": {
+        "height": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 3
+        },
+        "crouched_height": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 3
+        },
+        "radius": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 1
+        },
+        "eye_height": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 3
+        },
+        "walk_speed": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 20
+        },
+        "sprint_speed": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 20
+        },
+        "crouch_speed": {
+          "type": "number",
+          "minimum": 0.1,
+          "maximum": 20
+        },
+        "jump_height": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 3
+        }
+      }
+    },
+    "spawn_points": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "feet",
+          "yaw"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_/-]+$"
+          },
+          "feet": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": -1000,
+              "maximum": 1000
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "yaw": {
+            "type": "number"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 8
+    },
+    "counters": {
+      "type": "object",
+      "maxProperties": 8,
+      "propertyNames": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 64,
+        "pattern": "^[A-Za-z0-9_/-]+$"
+      },
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": -1000000,
+        "maximum": 1000000
+      }
+    },
+    "interactables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "entity",
+          "enabled"
+        ],
+        "properties": {
+          "entity": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_/-]+$"
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 16
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "once",
+          "actions"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_/-]+$"
+          },
+          "on_interact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_/-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "counter",
+                  "equals"
+                ],
+                "properties": {
+                  "counter": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64,
+                    "pattern": "^[A-Za-z0-9_/-]+$"
+                  },
+                  "equals": {
+                    "type": "integer",
+                    "minimum": -1000000,
+                    "maximum": 1000000
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "once": {
+            "type": "boolean"
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "counter",
+                    "amount"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "increment"
+                    },
+                    "counter": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_/-]+$"
+                    },
+                    "amount": {
+                      "type": "integer",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "counter",
+                    "value"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "set_counter"
+                    },
+                    "counter": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_/-]+$"
+                    },
+                    "value": {
+                      "type": "integer",
+                      "minimum": -1000000,
+                      "maximum": 1000000
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "entity",
+                    "enabled"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "set_enabled"
+                    },
+                    "entity": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_/-]+$"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "complete"
+                    }
+                  }
+                }
+              ]
+            },
+            "minItems": 1,
+            "maxItems": 4
+          }
+        }
+      },
+      "minItems": 1,
+      "maxItems": 16
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "BlueEngine GameDocument v1",
+  "$comment": "Native game-validate also checks references, UTF-8 byte limits, profile relationships, spawn clearance, static box bounds and confined map paths."
+}

@@ -77,9 +77,12 @@ pub struct Player {
     /// Simulation state; world callers inspect it through [`HeadlessWorld::player`].
     pub controller: Controller,
     input: Movement,
+    interact: bool,
 }
 /// Match-local world, bounded to eight players. No socket, renderer or window.
 pub struct HeadlessWorld {
+    /// Optional authoritative declarative game rules/state.
+    pub game: Option<super::game::GameRuntime>,
     /// Initial content fingerprint, captured before physics extracts/moves geometry.
     pub content_hash: u64,
     /// Shared geometry and collision data; mutation is the host caller's responsibility.
@@ -129,6 +132,7 @@ impl HeadlessWorld {
         }
         let room_graph = super::spatial::RoomGraph::for_room(&room);
         Self {
+            game: None,
             content_hash,
             room,
             room_graph,
@@ -148,8 +152,12 @@ impl HeadlessWorld {
         self.players.insert(
             id,
             Player {
-                controller: Controller::default(),
+                controller: self
+                    .game
+                    .as_ref()
+                    .map_or_else(Controller::default, |g| g.controller(id)),
                 input: Movement::default(),
+                interact: false,
             },
         );
         true
@@ -165,6 +173,7 @@ impl HeadlessWorld {
     pub fn neutralize_input(&mut self, id: u64) {
         if let Some(player) = self.players.get_mut(&id) {
             player.input = Movement::default();
+            player.interact = false;
         }
     }
     /// Authoritatively fire a pistol shot for a player.
@@ -265,6 +274,14 @@ impl HeadlessWorld {
         let index = physics.props.iter().position(|p| p.id == id)?;
         physics.prop_position(index)
     }
+    /// Queue one interaction edge for the next fixed tick; repeated intents coalesce.
+    pub fn request_interaction(&mut self, id: u64) -> bool {
+        let Some(player) = self.players.get_mut(&id) else {
+            return false;
+        };
+        player.interact = true;
+        true
+    }
     /// Accept movement intent without accepting a client position.
     /// Return false without mutation for unknown IDs or nonfinite axes/look angles.
     /// Clamp axes to [-1, 1], wrap yaw to [0, TAU), clamp pitch to [-1.5, 1.5].
@@ -292,11 +309,16 @@ impl HeadlessWorld {
     /// Advance every player one tick and increment the world tick, even when empty.
     /// Consume pending jump edges once; retain all other movement intent.
     pub fn step(&mut self) {
-        for player in self.players.values_mut() {
+        for (&id, player) in &mut self.players {
             player
                 .controller
                 .update(player.input, TICK_SECONDS, &self.room.colliders);
             player.input.jump = false;
+            if std::mem::take(&mut player.interact) {
+                if let Some(game) = &mut self.game {
+                    game.interact(&self.room, &player.controller, id);
+                }
+            }
         }
 
         let t_phys = std::time::Instant::now();
@@ -411,6 +433,14 @@ impl HeadlessWorld {
             }
         }
 
+        if let Some(game) = &self.game {
+            for value in &game.state().counters {
+                mix_u64(*value as u64);
+            }
+            mix_u64(u64::from(game.state().enabled));
+            mix_u64(u64::from(game.state().fired));
+            mix_u64(u64::from(game.state().completed));
+        }
         hash
     }
 

@@ -141,7 +141,12 @@ impl DedicatedServer {
         self.world.leave(player_id);
 
         let spawn = self.spawn_point_for(player_id);
-        if !self.world.join_at(player_id, spawn) {
+        let joined = if self.world.game.is_some() {
+            self.world.join(player_id)
+        } else {
+            self.world.join_at(player_id, spawn)
+        };
+        if !joined {
             let _ = self.transport.send_packet(
                 &Packet::Rejected {
                     reason: "World is full (8 players)".into(),
@@ -223,12 +228,18 @@ impl DedicatedServer {
                         }
 
                         // Authoritative movement
-                        self.world
-                            .input(player_id, frame.movement, frame.yaw, frame.pitch);
+                        if !self
+                            .world
+                            .input(player_id, frame.movement, frame.yaw, frame.pitch)
+                        {
+                            continue;
+                        }
 
                         // Multiplayer prop interaction with contention resolution
                         if frame.interact {
-                            if let Some(p) = self.world.player(player_id) {
+                            if self.world.game.is_some() {
+                                self.world.request_interaction(player_id);
+                            } else if let Some(p) = self.world.player(player_id) {
                                 let ray = p.ray();
                                 if let Some(ref mut physics) = self.world.prop_physics {
                                     physics.toggle_for_player(player_id, &self.world.room, ray);
@@ -237,10 +248,10 @@ impl DedicatedServer {
                         }
 
                         // Authoritative weapon hitscan and impulse application
-                        if should_fire_pistol {
+                        if should_fire_pistol && self.world.game.is_none() {
                             self.world.fire_pistol(player_id);
                         }
-                        if should_fire_wrench {
+                        if should_fire_wrench && self.world.game.is_none() {
                             self.world.fire_wrench(player_id);
                         }
                     }
@@ -301,6 +312,15 @@ impl DedicatedServer {
     /// Broadcast spatially filtered snapshots to each connected client with per-client acknowledged delta tracking.
     pub fn broadcast_snapshots(&mut self) {
         for (&id, session) in &mut self.sessions {
+            if let Some(game) = &self.world.game {
+                let _ = self.transport.send_packet(
+                    &Packet::GameState {
+                        tick: self.world.tick,
+                        state: game.state().clone(),
+                    },
+                    session.addr,
+                );
+            }
             let snap = self.world.snapshot_for_player(id, session.last_client_tick);
             let acked_base = if session.last_acked_tick > 0 {
                 session

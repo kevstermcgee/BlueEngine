@@ -1,6 +1,6 @@
 # Working on Blue Engine
 
-For **content authoring**, start with `python tools/author.py describe` and tools/AUTHORING.md. Use query/assets/recipes/schema and native map tools; do not load engine source into context. The supported workflow is static maps and inspectable props. Report unsupported gameplay requirements as engine work rather than inventing APIs. The architecture-reading and Rust-check requirements below apply to **engine maintenance**, not data-only authoring.
+For **content authoring**, start with `python tools/author.py describe` and tools/AUTHORING.md. Use query/assets/recipes/schema and native map tools; do not load engine source into context. The supported workflow includes static maps, inspectable props and bounded GameDocument v1 prototypes (docs/GAME_QUICKSTART.md). Report unsupported gameplay requirements as engine work rather than inventing APIs. The architecture-reading and Rust-check requirements below apply to **engine maintenance**, not data-only authoring.
 
 For engine maintenance, read README.md and BLUE_ARCHITECTURE.md for the viewer. Read AI_REFERENCE.md for Vesper scenes and ARCHITECTURE.md before changing the inherited offline renderer.
 
@@ -26,7 +26,7 @@ BE2 is one Rust package with the compatibility library name `vesper3d`. The
 `be2` client and `be2-headless` runner share concrete movement/simulation types;
 DedicatedServer provides authoritative UDP matches, prediction, acknowledged
 deltas and per-player prop ownership. PulseNet/QUIC and authenticated sessions
-remain planned. Protocol 2 checks map content before creating a session.
+remain planned. Protocol 3 checks map content before creating a session.
 `client` gates graphics/audio; `offline` gates the inherited output renderer.
 
 - Feature-to-file/check lookup: tools/FEATURES.json (maintain this existing map).

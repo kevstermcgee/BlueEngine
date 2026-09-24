@@ -66,7 +66,7 @@ keyframes provide another recovery path. Replication includes prop orientation,
 velocities, sleeping state and holder. Combat resolves nearer static geometry before
 applying prop impulses. Constants in weapons.rs/wrench.rs define ranges/cooldowns.
 
-Protocol 2 requires the initial content fingerprint, captured before physics
+Protocol 3 requires the initial content fingerprint, captured before physics
 extraction from scene, collision, semantic data and the spatial graph. HashMap/HashSet
 contents are canonicalized. Mismatched content and full servers are rejected before
 session allocation. The client displays the rejection. Old clients must rebuild.
@@ -87,5 +87,13 @@ versioned trace format. Quantized checksums help diagnose divergence but do not 
 cross-platform bitwise determinism. There is no calibrated benchmark baseline or
 allocation regression guard yet. See [refinement report](docs/REFINEMENT.md).
 
-No generic gameplay scripting/document runtime, account service or required MCP
+No arbitrary gameplay scripting, account service or required MCP
 adapter is implemented. [ADRs](docs/adr/README.md) record settled boundaries.
+
+## Data-driven prototypes
+
+GameDocument v1 (`viewer/game.rs`) compiles validated rules to indices, separate from
+MapDocument geometry. `viewer/profile.rs` supplies movement dimensions and speeds.
+Local play and HeadlessWorld share ordered interaction transitions. Protocol 3 adds
+game semantics to the content fingerprint and repeats bounded full GameState snapshots
+independently of movement deltas. See docs/GAME_QUICKSTART.md and ADR 0007.

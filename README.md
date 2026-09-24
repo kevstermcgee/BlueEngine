@@ -26,11 +26,11 @@ cargo run --locked --no-default-features --bin be2-tools -- export-lab lab.json
 cargo run --locked --bin be2 -- --map lab.json
 ```
 
-Use the same map on both peers. Protocol 2 rejects different initial content.
+Use the same map on both peers. Protocol 3 rejects different initial content.
 Output files must be new. `export-house` and assets/maps/starters retain reference maps.
 WASD/arrows move, mouse looks, Space jumps, Ctrl/C crouches, E carries/drops,
 left click uses the demo tool, scroll selects tools, Q changes perspective, Esc pauses.
-Scientist/Feta are current demo profiles, not a generic gameplay document system.
+Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement and simple interaction objectives; see [game quickstart](docs/GAME_QUICKSTART.md).
 
 ## Current capabilities and limits
 
@@ -62,3 +62,5 @@ Google DeepMind Antigravity contributed the earlier fork, integrations and weapo
 Original authorship, Git history and MIT license are preserved. BlueEngine continues
 that work with OpenAI Codex. Historical Vesper/Blue v1 documentation remains for
 asset/offline-renderer compatibility; current runtime guidance is linked above.
+
+Try the data-driven objective demo with `Launch Three Switches.cmd` (after a release build), or `be2 --game assets/games/three-switches/game.json`. See [game quickstart](docs/GAME_QUICKSTART.md) and [implementation evidence and limits](docs/GAME_REFINEMENT.md).
