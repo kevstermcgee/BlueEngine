@@ -24,17 +24,21 @@ Launch via `launch_bea.bat`, `BEA.bat`, or run `bin/BEA.exe` (or `bin/BE2.exe`),
 - **Esc / Tab**: Pause menu / controls
 - **F / F11**: Toggle fullscreen
 
-## House map
+## Blue Test Lab (Default Development Map)
 
-The default client and headless world now use the two-story suburban house: living room, kitchen/dining area, two bedrooms, bathroom, walkable stairs, and a fenced backyard with patio furniture. The existing desktop shortcut launches this updated map. Walk up the stairs normally; jumping is not required.
+Bare launches (`cargo run --bin be2` or `bin/BEA.exe`) open the **Blue Test Lab** (`MapId::TestLab`), the primary test bed for engine architecture and validation:
 
-All house geometry uses simple matte shapes. The cereal box, apple, chair and table share the reusable prop definitions. A quiet, short impact sound plays when the wrench makes contact; missed swings stay silent.
+- **Main Arena**: High ceiling, dual multiplayer spawn pads (`SPAWN_PLAYER_1`, `SPAWN_PLAYER_2`), weapon target practice wall, and interactive terminal.
+- **Physics Lab (East Wing)**: Rapier dynamic rigid-body test stacks (crates and cereal boxes) for verifying momentum transfer, impulse response, and sleep/wake cycles.
+- **Locomotion Lab (West Wing)**: Walkable staircases (standard 0.15 m risers), 15° and 30° ramps, elevated observation ledges, and low-clearance crawlspace (0.70 m ceiling) accessible to Feta / Lab Rat.
+- **Room / Portal Graph**: Three connected zones with doorway portals validating spatial culling and network interest management.
 
-The cleanup pass closes the roof gables and wall gaps, completes the stair railing, and adds 12 outdoor planting beds. The garden privacy screen and a pocket behind the living-room sofa provide cover while keeping main routes open. Furniture follows room layouts: a sofa facing the wall-mounted TV, fridge beside the counters, inward-facing dining chairs, and beds/storage against walls.
+## Reference / Legacy Content
 
-Landscaping includes branching broadleaf trees, layered pines, clustered shrubs and 48 small flowers in cream, pink and gold. Plant geometry stays static and matte, with shared builders available for future maps.
-
-Four furnished maps are playable through the named desktop shortcuts or `--map assets/maps/starters/NAME.json`: house, school-wing, office and convenience-store. Each has been expanded to roughly double its previous floor/yard area, with 269 additional loose physics props in total. See assets/maps/starters/README.md for the additions and validation. A bare executable launch retains the original procedural house.
+The earlier procedural and furnished maps are preserved as reference content and asset catalogs:
+- **Suburban House**: Two-story house with backyard (`--house` or `--map assets/maps/starters/house.json`).
+- **School Wing, Corporate Office, Convenience Store**: Available via `--map assets/maps/starters/<name>.json`.
+- **Studio Sandbox**: Minimal lighting and prop stage (`--studio`).
 
 ## Changes
 
@@ -87,9 +91,16 @@ Visual smoke modes: `BE2.exe --capture DIR`, `--capture-props DIR`, `--capture-c
 
 See VALIDATION.md for measured results and limitations; BE2_ARCHITECTURE.md for the implementation and PulseNet plan. The original prototype documentation is retained in BLUE_V1_README.md and BLUE_V1_VALIDATION.md.
 
-## Next: Prop Hunt and PulseNet
+## Multiplayer Networking Architecture
 
-This release improves the engine and adds props. It does not yet implement online multiplayer, prop disguises, competitive hunter/hider rules, rounds or scoring. The next phase connects the discussed PulseNet utility to the headless world, adds authoritative game rules, and validates one server with two clients. Offline play remains available.
+Blue Engine V2 provides a modular, server-authoritative multiplayer pipeline:
+- **UDP Transport (`UdpTransport`)**: Non-blocking UDP socket wrapper for low-latency datagram communication.
+- **Server-Authoritative Simulation (`HeadlessWorld`)**: Continuous 60 Hz fixed-timestep physics and player simulation with 64-bit deterministic state checksums.
+- **Client Prediction & Reconciliation (`PredictionBuffer`)**: Zero-latency local movement with authoritative server rewind and replay upon drift.
+- **Snapshot Interpolation (`InterpolationBuffer`)**: Smooth remote entity rendering with configurable jitter buffer delay.
+- **Spatial Interest Management (`snapshot_for_player`)**: Room/portal graph based relevance filtering so clients only receive deltas for entities in their own or adjacent rooms.
+- **Delta Snapshots (`DeltaSnapshot`)**: Transmits only state changes and removals between simulation ticks.
+- **Validated 1-Server + 2-Clients Tests**: End-to-end integration verified both in simulated network environments and over real loopback UDP sockets (`tests/multiplayer_transport.rs`).
 
 ## Agent editing toolkit
 

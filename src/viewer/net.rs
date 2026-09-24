@@ -65,7 +65,7 @@ pub struct PropNetState {
 }
 
 /// Complete authoritative state snapshot for a simulation tick.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct WorldSnapshot {
     pub tick: u64,
     pub ack_client_tick: u64,
@@ -429,6 +429,50 @@ impl<T> NetworkSimulator<T> {
     }
 }
 
+use std::net::{SocketAddr, UdpSocket};
+
+/// Non-blocking UDP transport layer for authoritative server and clients.
+pub struct UdpTransport {
+    pub socket: UdpSocket,
+    recv_buf: [u8; MAX_PACKET_BYTES],
+}
+
+impl UdpTransport {
+    /// Bind to a local address (e.g. `"127.0.0.1:0"`) and set non-blocking mode.
+    pub fn bind(addr: &str) -> crate::Result<Self> {
+        let socket = UdpSocket::bind(addr)?;
+        socket.set_nonblocking(true)?;
+        Ok(Self {
+            socket,
+            recv_buf: [0u8; MAX_PACKET_BYTES],
+        })
+    }
+
+    /// Local socket address.
+    pub fn local_addr(&self) -> crate::Result<SocketAddr> {
+        Ok(self.socket.local_addr()?)
+    }
+
+    /// Send a packet to destination address.
+    pub fn send_packet(&self, packet: &Packet, dest: SocketAddr) -> crate::Result<usize> {
+        let bytes = packet.encode()?;
+        let sent = self.socket.send_to(&bytes, dest)?;
+        Ok(sent)
+    }
+
+    /// Receive a packet from socket if available (non-blocking).
+    pub fn recv_packet(&mut self) -> crate::Result<Option<(Packet, SocketAddr)>> {
+        match self.socket.recv_from(&mut self.recv_buf) {
+            Ok((len, src)) => {
+                let packet = Packet::decode(&self.recv_buf[..len])?;
+                Ok(Some((packet, src)))
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::WouldBlock => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -521,5 +565,41 @@ mod tests {
         assert!(pred.last_correction_error > 0.01);
         // Only ticks 2 and 3 remain in history after tick 1 was acked
         assert_eq!(pred.history.len(), 2);
+    }
+
+    #[test]
+    fn udp_transport_localhost_roundtrip() {
+        let mut server = UdpTransport::bind("127.0.0.1:0").unwrap();
+        let server_addr = server.local_addr().unwrap();
+
+        let client = UdpTransport::bind("127.0.0.1:0").unwrap();
+        let client_addr = client.local_addr().unwrap();
+
+        let ping = Packet::Ping {
+            seq: 1,
+            send_time_ms: 1234,
+        };
+        client.send_packet(&ping, server_addr).unwrap();
+
+        // Non-blocking loop waiting for packet arrival
+        let mut received = None;
+        for _ in 0..100 {
+            if let Ok(Some((pkt, src))) = server.recv_packet() {
+                received = Some((pkt, src));
+                break;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+
+        assert!(received.is_some());
+        let (pkt, src) = received.unwrap();
+        assert_eq!(src, client_addr);
+        match pkt {
+            Packet::Ping { seq, send_time_ms } => {
+                assert_eq!(seq, 1);
+                assert_eq!(send_time_ms, 1234);
+            }
+            _ => panic!("Expected Ping packet"),
+        }
     }
 }

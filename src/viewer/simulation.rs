@@ -143,6 +143,20 @@ impl HeadlessWorld {
     pub fn player(&self, id: u64) -> Option<&Controller> {
         self.players.get(&id).map(|p| &p.controller)
     }
+    /// Borrow current authoritative controller state mutably, or return `None` for an unknown ID.
+    pub fn player_mut(&mut self, id: u64) -> Option<&mut Controller> {
+        self.players.get_mut(&id).map(|p| &mut p.controller)
+    }
+    /// Join at a specific initial spawn position.
+    pub fn join_at(&mut self, id: u64, position: crate::math::V) -> bool {
+        if !self.join(id) {
+            return false;
+        }
+        if let Some(player) = self.players.get_mut(&id) {
+            player.controller.position = position;
+        }
+        true
+    }
     /// Accept movement intent without accepting a client position.
     /// Return false without mutation for unknown IDs or nonfinite axes/look angles.
     /// Clamp axes to [-1, 1], wrap yaw to [0, TAU), clamp pitch to [-1.5, 1.5].
@@ -297,6 +311,72 @@ impl HeadlessWorld {
         }
     }
 
+    /// Generate an authoritative world snapshot filtered by spatial interest for a specific observer player.
+    /// The observer always receives their own authoritative state (for client-side prediction reconciliation).
+    /// Remote entities (players and props) are included only if they are spatially relevant (in the same room,
+    /// an adjacent room via open portals, or global/outdoor).
+    pub fn snapshot_for_player(
+        &self,
+        observer_id: u64,
+        ack_client_tick: u64,
+    ) -> super::net::WorldSnapshot {
+        let obs_pos = self
+            .players
+            .get(&observer_id)
+            .map(|p| p.controller.position);
+        let obs_room = obs_pos.and_then(|p| self.room_graph.find_room_at(p));
+
+        let is_relevant = |pos: crate::math::V| -> bool {
+            match obs_room {
+                None => true, // Observer outside/global: full visibility
+                Some(r_obs) => match self.room_graph.find_room_at(pos) {
+                    None => true, // Target is outdoor/global
+                    Some(r_tgt) => self.room_graph.is_relevant_for_interest(r_obs, r_tgt),
+                },
+            }
+        };
+
+        let players = self
+            .players
+            .iter()
+            .filter(|(&id, p)| id == observer_id || is_relevant(p.controller.position))
+            .map(|(&id, p)| {
+                let room_id = self.room_graph.find_room_at(p.controller.position);
+                super::net::PlayerNetState::from_controller(id, self.tick, &p.controller, room_id)
+            })
+            .collect();
+
+        let props = self
+            .lifecycle
+            .objects
+            .iter()
+            .filter(|o| o.state.requires_rigid_body() || o.state.requires_networking())
+            .filter(|o| is_relevant(o.position))
+            .map(|o| {
+                let is_held = self
+                    .prop_physics
+                    .as_ref()
+                    .and_then(|phys| phys.held_index())
+                    .and_then(|idx| self.prop_physics.as_ref().unwrap().props.get(idx))
+                    .is_some_and(|p| p.id == o.id);
+
+                super::net::PropNetState {
+                    id: o.id.clone(),
+                    position: o.position,
+                    generation: o.generation,
+                    is_held,
+                }
+            })
+            .collect();
+
+        super::net::WorldSnapshot {
+            tick: self.tick,
+            ack_client_tick,
+            players,
+            props,
+        }
+    }
+
     /// Create a performance snapshot for observability and profiling.
     pub fn performance_snapshot(
         &self,
@@ -311,11 +391,8 @@ impl HeadlessWorld {
 
         let snap = self.snapshot(0);
         let encoded_bytes = serde_json::to_vec(&snap).map(|b| b.len()).unwrap_or(0);
-        let delta_bytes = if encoded_bytes > 0 {
-            encoded_bytes.min(256)
-        } else {
-            0
-        };
+        let delta = snap.compute_delta(&super::net::WorldSnapshot::default());
+        let delta_bytes = serde_json::to_vec(&delta).map(|b| b.len()).unwrap_or(0);
 
         super::metrics::PerformanceSnapshot {
             tick: self.tick,

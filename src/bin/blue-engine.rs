@@ -247,8 +247,10 @@ async fn main() {
     let house_capture = args.iter().any(|a| a == "--capture-house");
     let map = if args.iter().any(|a| a == "--studio") {
         MapId::Studio
-    } else {
+    } else if args.iter().any(|a| a == "--house") || house_capture {
         MapId::House
+    } else {
+        MapId::TestLab
     };
     let map_file = args.windows(2).find(|a| a[0] == "--map").map(|a| &a[1]);
     let mut room = match map_file.map_or_else(
