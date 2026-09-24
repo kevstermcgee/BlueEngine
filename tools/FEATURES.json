@@ -49,7 +49,8 @@
         "controller and simulation tests",
         "route commands",
         "manual controls",
-        "Feta furniture passages, solid legs/undersides, Scientist exclusion, four-map desks"
+        "Feta furniture passages, solid legs/undersides, Scientist exclusion, four-map desks",
+        "dropped-prop overlap recovery for both characters; wall exclusion and stable feet"
       ],
       "note": "Keep frame-rate independence and render/headless parity."
     },
@@ -63,7 +64,7 @@
         "menu inspection",
         "render report"
       ],
-      "note": "Simple matte geometry uses tag 3; do not tint it with crystal tag 2."
+      "note": "Simple matte geometry uses tag 3; do not tint it with crystal tag 2. Pause shows Resume/Settings/Quit; controls and options are in Settings."
     },
     "wrench": {
       "files": [

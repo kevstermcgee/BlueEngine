@@ -97,3 +97,9 @@ MapDocument geometry. `viewer/profile.rs` supplies movement dimensions and speed
 Local play and HeadlessWorld share ordered interaction transitions. Protocol 3 adds
 game semantics to the content fingerprint and repeats bounded full GameState snapshots
 independently of movement deltas. See docs/GAME_QUICKSTART.md and ADR 0007.
+
+Player overlap recovery handles props dropped/moved into a character before movement.
+It chooses the nearest clear horizontal candidate within four metres, preserves feet
+height, and rejects paths crossing previously non-overlapping colliders. If no safe
+candidate exists, it keeps the current pose rather than crossing a wall. This runs in
+the shared Controller for local play, client prediction and server simulation.

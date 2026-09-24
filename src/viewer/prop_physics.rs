@@ -658,6 +658,52 @@ mod tests {
         }
     }
     #[test]
+    fn dropping_a_prop_inside_either_character_recovers_and_allows_walking() {
+        for kind in [CharacterKind::Scientist, CharacterKind::Feta] {
+            let mut player = Controller::for_character(kind);
+            let mut room = fixture(&[player.position + V(0., 0., -1.)]);
+            let mut physics = PropPhysics::new(&mut room).unwrap();
+            physics.set_held_for_player(0, 0);
+            let body = &mut physics.bodies[physics.props[0].handle];
+            body.set_translation(
+                vector(V(
+                    player.position.0,
+                    player.feet_height() + 0.22,
+                    player.position.2,
+                )),
+                true,
+            );
+            physics.drop_held();
+            physics.advance(STEP, &player, &mut room);
+            let before = player.position;
+            assert!(room.colliders.iter().any(|c| c.contains(V(
+                before.0,
+                player.feet_height() + 0.1,
+                before.2
+            ))));
+            player.update(Default::default(), 1. / 60., &room.colliders);
+            assert!(
+                (player.position - before).length() > 0.1,
+                "did not escape dropped prop"
+            );
+            let recovered = player.position;
+            for _ in 0..60 {
+                player.update(
+                    crate::viewer::controller::Movement {
+                        forward: 1.,
+                        ..Default::default()
+                    },
+                    1. / 60.,
+                    &room.colliders,
+                );
+            }
+            assert!(
+                (player.position - recovered).length() > 1.,
+                "player remained trapped"
+            );
+        }
+    }
+    #[test]
     fn falling_prop_lands_and_sleeps_without_static_ghost() {
         let mut room = fixture(&[V(0., 2., 0.)]);
         let mut p = PropPhysics::new(&mut room).unwrap();

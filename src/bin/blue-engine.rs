@@ -382,6 +382,7 @@ async fn main() {
     let mut keys = Keys::default();
     let subscriber = register_input_subscriber();
     let mut active = false;
+    let mut settings_open = false;
     let mut entered = false;
     let mut skip_look = 0;
     let mut sensitivity = 50.;
@@ -712,7 +713,11 @@ async fn main() {
             && focused
             && (keys.pressed(KeyCode::Escape) || keys.pressed(KeyCode::Tab))
         {
-            active = !active;
+            if settings_open {
+                settings_open = false;
+            } else {
+                active = !active;
+            }
             entered |= active;
             capture(active);
             controller.stop();
@@ -1316,189 +1321,156 @@ async fn main() {
             ui_camera.zoom.y = -ui_camera.zoom.y;
             set_camera(&ui_camera);
             draw_rectangle(0., 0., sw, sh, Color::new(0.01, 0.025, 0.055, 0.53));
-            // Scale the panel on small windows without letting controls leave the viewport.
-            let panel_w = 470_f32.min(sw - 32.);
+            if capture_dir.is_some() && args.iter().any(|a| a == "--capture-settings") {
+                settings_open = true;
+            }
+            let panel_w = if settings_open { 460_f32 } else { 320_f32 }.min(sw - 32.);
+            let panel_h = if settings_open { 600. } else { 280. };
             let x = (sw - panel_w) * 0.5;
-            let y = ((sh - 660.) * 0.5).max(12.);
-            draw_rectangle(x, y, panel_w, 650., Color::new(0.025, 0.046, 0.077, 0.97));
-            draw_rectangle(x, y, 4., 650., BLUE);
-            let left = x + 32.;
-            let width = panel_w - 64.;
-            text(
-                "B E 2   /   B L U E   E N G I N E  2",
-                left,
-                y + 47.,
-                20.,
-                BLUE,
+            let y = (sh - panel_h) * 0.5;
+            draw_rectangle(
+                x,
+                y,
+                panel_w,
+                panel_h,
+                Color::new(0.025, 0.046, 0.077, 0.97),
             );
+            let left = x + 28.;
+            let width = panel_w - 56.;
             text(
-                if entered {
-                    "Take your time."
+                if settings_open {
+                    "Settings"
+                } else if entered {
+                    "Paused"
                 } else {
-                    "Ready to explore."
+                    "Play"
                 },
                 left,
-                y + 101.,
-                37.,
+                y + 48.,
+                28.,
                 INK,
             );
-            text(&room.name, left, y + 135., 20., MUTED);
-            if button(
-                if entered {
-                    "Resume exploring    /    Enter"
-                } else {
-                    "Start exploring    /    Enter"
-                },
-                Rect::new(left, y + 164., width, 52.),
-                true,
-            ) || (focused && keys.pressed(KeyCode::Enter))
-            {
-                active = true;
-                entered = true;
-                keys.down.clear();
-                controller.stop();
-                stepper.reset(&controller);
-                wrench.cancel();
-                prop_physics.pause();
-                capture(true);
-                skip_look = 3;
-            }
-            text("WASD or arrow keys", left, y + 242., 21., INK);
-            text("Walk in any direction", left + 210., y + 242., 18., MUTED);
-            text("Mouse", left, y + 266., 21., INK);
-            text("Look around", left + 210., y + 266., 18., MUTED);
-            text("Space / Hold Ctrl or C", left, y + 290., 19., INK);
-            text("Small jump / Crouch", left + 210., y + 290., 18., MUTED);
-            text(
-                if controller.character_kind() == CharacterKind::Feta {
-                    "Esc"
-                } else {
-                    "Shift / Esc"
-                },
-                left,
-                y + 314.,
-                21.,
-                INK,
-            );
-            text(
-                if controller.character_kind() == CharacterKind::Feta {
-                    "Pause"
-                } else {
-                    "Sprint / Pause"
-                },
-                left + 210.,
-                y + 314.,
-                18.,
-                MUTED,
-            );
-            text(
-                if game.is_some() {
-                    "E"
-                } else if controller.character_kind() == CharacterKind::Feta {
-                    "Character"
-                } else {
-                    "Left-click"
-                },
-                left,
-                y + 338.,
-                21.,
-                INK,
-            );
-            text(
-                if game.is_some() {
-                    "Interact"
-                } else if controller.character_kind() == CharacterKind::Feta {
-                    "Feta / Lab rat"
-                } else {
-                    "Attack / Fire"
-                },
-                left + 210.,
-                y + 338.,
-                18.,
-                MUTED,
-            );
-            draw_line(
-                left,
-                y + 354.,
-                left + width,
-                y + 354.,
-                1.,
-                Color::new(0.16, 0.22, 0.30, 1.),
-            );
-            slider(
-                "Mouse sensitivity",
-                left,
-                y + 375.,
-                width,
-                &mut sensitivity,
-                1.,
-                100.,
-                "%",
-            );
-            slider(
-                "Field of view",
-                left,
-                y + 441.,
-                width,
-                &mut fov,
-                50.,
-                90.,
-                " deg",
-            );
-            if button(
-                if invert {
-                    "Invert look: On"
-                } else {
-                    "Invert look: Off"
-                },
-                Rect::new(left, y + 493., width * 0.5 - 6., 42.),
-                false,
-            ) {
-                invert = !invert;
-            }
-            if button(
-                "Reset position",
-                Rect::new(left + width * 0.5 + 6., y + 493., width * 0.5 - 6., 42.),
-                false,
-            ) {
-                prop_physics.drop_held();
-                controller = game.as_ref().map_or_else(
-                    || Controller::for_character(controller.character_kind()),
-                    |g| g.controller(net_player_id.unwrap_or(1)),
+            if !settings_open {
+                if button(
+                    if entered { "Resume" } else { "Start" },
+                    Rect::new(left, y + 78., width, 48.),
+                    true,
+                ) || (focused && keys.pressed(KeyCode::Enter))
+                {
+                    active = true;
+                    entered = true;
+                    keys.down.clear();
+                    controller.stop();
+                    stepper.reset(&controller);
+                    wrench.cancel();
+                    prop_physics.pause();
+                    capture(true);
+                    skip_look = 3;
+                }
+                if button("Settings", Rect::new(left, y + 140., width, 48.), false) {
+                    settings_open = true;
+                }
+                if button("Quit", Rect::new(left, y + 202., width, 48.), false) {
+                    break;
+                }
+            } else {
+                slider(
+                    "Mouse sensitivity",
+                    left,
+                    y + 86.,
+                    width,
+                    &mut sensitivity,
+                    1.,
+                    100.,
+                    "%",
                 );
-                stepper.reset(&controller);
-                keys.down.clear();
+                slider(
+                    "Field of view",
+                    left,
+                    y + 153.,
+                    width,
+                    &mut fov,
+                    50.,
+                    90.,
+                    " deg",
+                );
+                if button(
+                    if invert {
+                        "Invert look: On"
+                    } else {
+                        "Invert look: Off"
+                    },
+                    Rect::new(left, y + 204., width, 38.),
+                    false,
+                ) {
+                    invert = !invert;
+                }
+                if button(
+                    if hud { "Hints: On" } else { "Hints: Off" },
+                    Rect::new(left, y + 252., width, 38.),
+                    false,
+                ) {
+                    hud = !hud;
+                }
+                if button(
+                    "Reset position",
+                    Rect::new(left, y + 300., width, 38.),
+                    false,
+                ) {
+                    prop_physics.drop_held();
+                    controller = game.as_ref().map_or_else(
+                        || Controller::for_character(controller.character_kind()),
+                        |g| g.controller(net_player_id.unwrap_or(1)),
+                    );
+                    stepper.reset(&controller);
+                    keys.down.clear();
+                }
+                text("Controls", left, y + 373., 20., INK);
+                text(
+                    "WASD / arrows   Move     Mouse   Look",
+                    left,
+                    y + 402.,
+                    17.,
+                    MUTED,
+                );
+                text(
+                    "Space   Jump     Ctrl / C   Crouch",
+                    left,
+                    y + 426.,
+                    17.,
+                    MUTED,
+                );
+                text(
+                    if game.is_some() {
+                        "E   Interact     Q   Camera"
+                    } else {
+                        "E   Pick up / drop     Q   Camera"
+                    },
+                    left,
+                    y + 450.,
+                    17.,
+                    MUTED,
+                );
+                text(
+                    "Shift   Sprint     F   Fullscreen     Esc   Back",
+                    left,
+                    y + 474.,
+                    17.,
+                    MUTED,
+                );
+                if game.is_none() && controller.character_kind() == CharacterKind::Scientist {
+                    text(
+                        "Left click   Attack     Scroll   Weapon",
+                        left,
+                        y + 498.,
+                        17.,
+                        MUTED,
+                    );
+                }
+                if button("Back", Rect::new(left, y + 531., width, 42.), false) {
+                    settings_open = false;
+                }
             }
-            text(
-                if game.is_some() {
-                    "E Interact   Q Camera"
-                } else if controller.character_kind() == CharacterKind::Feta {
-                    "E Pick up/drop   Q Camera"
-                } else {
-                    "E Pick/drop   Q Camera   Scroll Weapon"
-                },
-                left,
-                y + 555.,
-                17.,
-                INK,
-            );
-            text(
-                "F  Fullscreen / Maximized     H  Toggle hints     F3  Stats",
-                left,
-                y + 574.,
-                17.,
-                MUTED,
-            );
-            if button("Quit", Rect::new(left, y + 594., 80., 34.), false) {
-                break;
-            }
-            text(
-                "Built on Vesper3D",
-                left + width - 151.,
-                y + 617.,
-                17.,
-                MUTED,
-            );
         }
         set_default_camera();
         if debug {

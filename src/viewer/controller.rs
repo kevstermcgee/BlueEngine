@@ -198,7 +198,7 @@ impl Controller {
         }
     }
     pub fn stop(&mut self) {
-        self.velocity = V::ZERO;
+        self.velocity = V(0., 0., 0.);
     }
     pub fn look(&mut self, dx: f32, dy: f32, sensitivity: f32, invert: bool) {
         if !dx.is_finite() || !dy.is_finite() {
@@ -263,6 +263,44 @@ impl Controller {
         );
         true
     }
+    // A dropped/moving prop can introduce overlap without player movement. Recover
+    // horizontally before the normal sweep; never teleport through another collider.
+    fn recover_overlap(&mut self, colliders: &[Collider]) {
+        let overlaps =
+            |c: &Collider, p| c.overlaps_body(p, self.feet, self.body_height, self.profile.radius);
+        let mut best = None;
+        let mut distance = f32::INFINITY;
+        for c in colliders.iter().filter(|c| overlaps(c, self.position)) {
+            let margin = self.profile.radius + 0.001;
+            let xs = [self.position.0, c.min.0 - margin, c.max.0 + margin];
+            let zs = [self.position.2, c.min.2 - margin, c.max.2 + margin];
+            for x in xs {
+                for z in zs {
+                    let candidate = V(x, self.position.1, z);
+                    let d = (candidate - self.position).length();
+                    if d <= 4. && d < distance && !colliders.iter().any(|c| overlaps(c, candidate))
+                    {
+                        // The recovery segment must not cross an unrelated wall.
+                        let steps = (d / (self.profile.radius * 0.5)).ceil() as usize;
+                        if (1..=steps).any(|i| {
+                            let p = self.position.lerp(candidate, i as f32 / steps as f32);
+                            colliders
+                                .iter()
+                                .any(|c| !overlaps(c, self.position) && overlaps(c, p))
+                        }) {
+                            continue;
+                        }
+                        distance = d;
+                        best = Some(candidate);
+                    }
+                }
+            }
+        }
+        if let Some(position) = best {
+            self.position = position;
+            self.velocity = V(0., 0., 0.);
+        }
+    }
     pub fn update(&mut self, input: Movement, dt: f32, colliders: &[Collider]) {
         let Movement {
             forward,
@@ -274,6 +312,7 @@ impl Controller {
         if !dt.is_finite() || dt <= 0. || !forward.is_finite() || !right.is_finite() {
             return;
         }
+        self.recover_overlap(colliders);
         let dt = dt.min(0.1);
         let length = (forward * forward + right * right).sqrt().max(1.);
         let direction = V(
@@ -367,6 +406,61 @@ impl Controller {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn overlap_recovery_preserves_feet_and_avoids_adjacent_wall() {
+        let prop = Collider {
+            min: V(-0.3, 0.05, -0.3),
+            max: V(0.3, 0.5, 0.3),
+        };
+        let wall = Collider {
+            min: V(-0.6, 0., -3.),
+            max: V(-0.4, 3., 3.),
+        };
+        let colliders = [prop, wall];
+        let mut player = Controller::for_profile(Default::default(), V(0., 0., 0.), 0.).unwrap();
+        player.update(Default::default(), 1. / 60., &colliders);
+        assert_eq!(player.feet_height(), 0.);
+        assert!(player.position.0 >= 0., "crossed adjacent wall");
+        assert!(!colliders.iter().any(|c| c.overlaps_body(
+            player.position,
+            player.feet,
+            player.body_height,
+            player.profile.radius
+        )));
+        let recovered = player.position;
+        player.update(Default::default(), 1. / 60., &colliders);
+        assert_eq!(player.position, recovered, "recovery jittered");
+    }
+
+    #[test]
+    fn fully_enclosed_overlap_does_not_teleport_through_walls() {
+        let colliders = [
+            Collider {
+                min: V(-0.3, 0., -0.3),
+                max: V(0.3, 1., 0.3),
+            },
+            Collider {
+                min: V(-1., 0., -1.),
+                max: V(-0.4, 3., 1.),
+            },
+            Collider {
+                min: V(0.4, 0., -1.),
+                max: V(1., 3., 1.),
+            },
+            Collider {
+                min: V(-1., 0., -1.),
+                max: V(1., 3., -0.4),
+            },
+            Collider {
+                min: V(-1., 0., 0.4),
+                max: V(1., 3., 1.),
+            },
+        ];
+        let mut player = Controller::for_profile(Default::default(), V(0., 0., 0.), 0.).unwrap();
+        let before = player.position;
+        player.update(Default::default(), 1. / 60., &colliders);
+        assert_eq!(player.position, before);
+    }
     #[test]
     fn sprint_is_normalized_and_returns_smoothly_to_walking() {
         for hz in [30, 60, 144] {
