@@ -195,6 +195,21 @@
         "live E pickup/drop, pause/resume and both movement key layouts"
       ],
       "note": "Runtime catalog-prop extraction; fixed-step Rapier compound rigid bodies. No v1 map schema change or multiplayer ownership."
+    },
+    "weapons": {
+      "files": [
+        "src/viewer/weapons.rs",
+        "src/bin/wrench_view/mod.rs",
+        "src/bin/character/mod.rs",
+        "src/bin/impact_audio/mod.rs",
+        "assets/audio/pistol-shot.wav",
+        "src/bin/blue-engine.rs"
+      ],
+      "checks": [
+        "weapons tests",
+        "--studio --capture-pistol"
+      ],
+      "note": "Scientist primary wrench and scroll-selected black pistol with infinite ammo prototype, hitscan raycasts, recoil, muzzle flash, third-person aiming and audio."
     }
   }
 }
