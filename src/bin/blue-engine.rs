@@ -14,7 +14,7 @@ use std::net::SocketAddr;
 use vesper3d::{
     math::V,
     viewer::{
-        camera::Perspective,
+        camera::{CameraRig, Perspective},
         controller::{Controller, Movement},
         maps::{self, MapId},
         mesh,
@@ -334,6 +334,7 @@ async fn main() {
     let pistol_capture = args.iter().any(|a| a == "--capture-pistol");
     let wrench_capture = args.iter().any(|a| a == "--capture-wrench");
     let game_capture = args.iter().any(|a| a == "--capture-game");
+    let camera_capture = args.iter().any(|a| a == "--capture-camera");
     let interaction_capture = args.iter().any(|a| a == "--capture-interactions");
     let capture_dir = args
         .windows(2)
@@ -347,6 +348,7 @@ async fn main() {
                 || a[0] == "--capture"
                 || a[0] == "--capture-motion"
                 || a[0] == "--capture-game"
+                || a[0] == "--capture-camera"
                 || a[0] == "--capture-interactions"
         })
         .map(|a| std::path::PathBuf::from(&a[1]));
@@ -383,6 +385,7 @@ async fn main() {
     let subscriber = register_input_subscriber();
     let mut active = false;
     let mut settings_open = false;
+    let mut camera_rig = CameraRig::default();
     let mut entered = false;
     let mut skip_look = 0;
     let mut sensitivity = 50.;
@@ -727,6 +730,18 @@ async fn main() {
             keys.down.clear();
             skip_look = 3;
         }
+        camera_rig.advance(
+            perspective,
+            &controller,
+            &room,
+            if capture_dir.is_some() {
+                1. / 60.
+            } else if active {
+                get_frame_time()
+            } else {
+                0.
+            },
+        );
         if active && capture_dir.is_none() {
             if skip_look > 0 {
                 skip_look -= 1;
@@ -799,7 +814,9 @@ async fn main() {
                     loadout.pistol.fire(
                         skip_look == 0,
                         &room,
-                        perspective.view(&controller, &room).aim(&controller, &room),
+                        camera_rig
+                            .view(perspective, &controller, &room)
+                            .aim(&controller, &room),
                     );
                 }
             }
@@ -810,7 +827,9 @@ async fn main() {
                         game.interact(&room, &controller, 1);
                     }
                 } else if keys.pressed(KeyCode::E) && skip_look == 0 {
-                    let ray = perspective.view(&controller, &room).aim(&controller, &room);
+                    let ray = camera_rig
+                        .view(perspective, &controller, &room)
+                        .aim(&controller, &room);
                     if prop_physics.toggle(&room, ray) {
                         wrench.cancel();
                     }
@@ -830,10 +849,31 @@ async fn main() {
             wrench.tick(
                 get_frame_time(),
                 &room,
-                perspective.view(&controller, &room).aim(&controller, &room),
+                camera_rig
+                    .view(perspective, &controller, &room)
+                    .aim(&controller, &room),
             );
         }
-        if capture_dir.is_some() && game_capture {
+        if capture_dir.is_some() && camera_capture {
+            if frame == 0 {
+                controller = Controller::for_character(CharacterKind::Feta);
+                controller.position = V(0., 0.22, 2.3);
+                controller.yaw = 0.;
+                controller.pitch = -0.08;
+            }
+            perspective = Perspective::Third;
+            entered = true;
+            if frame < 64 {
+                controller.update(
+                    Movement {
+                        forward: 1.,
+                        ..Default::default()
+                    },
+                    1. / 60.,
+                    &room.colliders,
+                );
+            }
+        } else if capture_dir.is_some() && game_capture {
             entered = true;
             if let Some(game) = &mut game {
                 let index = (frame / 8).min(game.document().interactables.len() - 1);
@@ -941,7 +981,9 @@ async fn main() {
             wrench.tick(
                 1. / 60.,
                 &room,
-                perspective.view(&controller, &room).aim(&controller, &room),
+                camera_rig
+                    .view(perspective, &controller, &room)
+                    .aim(&controller, &room),
             );
         } else if capture_dir.is_some() && wrench_capture {
             controller.position = V(-3.3, 1.34, -1.6);
@@ -1027,7 +1069,7 @@ async fn main() {
         } else {
             controller.clone()
         };
-        let view = perspective.view(&render_controller, &room);
+        let view = camera_rig.view(perspective, &render_controller, &room);
         let mut camera_eye = view.eye;
         let mut camera_target = view.target;
         // Capture-only front portrait exposes the default skin for visual QA.
@@ -1309,6 +1351,7 @@ async fn main() {
             && !active
             && (capture_dir.is_none()
                 || (game_capture && frame >= 30)
+                || (camera_capture && frame >= 64)
                 || (pistol_capture && frame >= 108)
                 || ((interaction_capture || wrench_capture) && frame >= 60)
                 || (character_capture && frame >= 96)
@@ -1505,7 +1548,9 @@ async fn main() {
             );
         }
         if let Some(dir) = &capture_dir {
-            let shot = if game_capture {
+            let shot = if camera_capture {
+                [1, 20, 30, 40, 60, 70].iter().position(|f| *f == frame)
+            } else if game_capture {
                 [1, 6, 14, 22, 29, 35].iter().position(|f| *f == frame)
             } else if pistol_capture {
                 [10, 20, 24, 56, 64, 88, 100, 110]
@@ -1547,7 +1592,7 @@ async fn main() {
                     107
                 } else if motion_capture {
                     85
-                } else if interaction_capture || wrench_capture {
+                } else if interaction_capture || wrench_capture || camera_capture {
                     71
                 } else {
                     35

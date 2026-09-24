@@ -103,3 +103,9 @@ It chooses the nearest clear horizontal candidate within four metres, preserves 
 height, and rejects paths crossing previously non-overlapping colliders. If no safe
 candidate exists, it keeps the current pose rather than crossing a wall. This runs in
 the shared Controller for local play, client prediction and server simulation.
+
+Third-person CameraRig is presentation-only. Feta uses a low centered boom and 7 cm
+clearance; look pitch changes view direction without swinging the boom into furniture.
+Obstructions retract immediately, and release uses exponential distance smoothing
+without delaying player-follow or look. Render and local aim use the same rig policy.
+Collision is rechecked for the interpolated pose; first-person remains unchanged.

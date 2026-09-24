@@ -100,9 +100,10 @@
         "camera tests",
         "--studio --capture-character",
         "Q toggle",
-        "--studio --capture-character DIR --feta"
+        "--studio --capture-character DIR --feta",
+        "furniture camera clearance and 30/60/144 Hz obstruction-release tests"
       ],
-      "note": "Scientist and Feta procedural skins; CharacterKind controls body/collision/speed. Launch selection gates gameplay. Q toggles perspective; reset preserves profile."
+      "note": "Scientist and Feta procedural skins; CharacterKind controls body/collision/speed. Launch selection gates gameplay. Q toggles perspective; reset preserves profile. Feta uses a low centered pitch-independent boom; CameraRig smooths obstruction release and rechecks current-pose collisions."
     },
     "multiplayer": {
       "files": [

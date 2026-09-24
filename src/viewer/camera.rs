@@ -28,9 +28,14 @@ impl Perspective {
         let anchor = player.position;
         let right = V(player.yaw.cos(), 0., player.yaw.sin());
         let small = player.character_kind() == super::controller::CharacterKind::Feta;
-        let desired = anchor - player.direction() * if small { 1.25 } else { 2.7 }
-            + right * if small { 0.28 } else { 0.65 }
-            + V(0., if small { 0.35 } else { 0.28 }, 0.);
+        // Rat-sized passages need a low, centered boom. Pitch changes the view,
+        // not the boom height, so looking around cannot swing it into a tabletop.
+        let desired = if small {
+            anchor - V(player.yaw.sin(), 0., -player.yaw.cos()) * 1.05 + V(0., 0.06, 0.)
+        } else {
+            anchor - player.direction() * 2.7 + right * 0.65 + V(0., 0.28, 0.)
+        };
+        let radius = if small { 0.07 } else { 0.18 };
         let delta = desired - anchor;
         let distance = delta.length();
         let ray = Ray {
@@ -40,21 +45,75 @@ impl Perspective {
         // Expanded boxes sweep a small sphere; this protects the near plane at corners.
         let mut limit = distance;
         for c in &room.colliders {
-            if let Some(t) = entry(ray, c, 0.18) {
+            if let Some(t) = entry(ray, c, radius) {
                 limit = limit.min((t - 0.025).max(0.));
             }
         }
         // Decorative scene geometry can also obstruct the camera boom.
         if let Some(hit) = room.hit(ray, distance) {
-            limit = limit.min((hit.t - 0.20).max(0.));
+            limit = limit.min((hit.t - radius - 0.02).max(0.));
         }
+        let eye = anchor + ray.d * limit;
         View {
-            eye: anchor + ray.d * limit,
-            target: anchor + player.direction() * 4.,
-            show_body: limit > 0.55,
+            eye,
+            target: if small {
+                eye + player.direction() * 4.
+            } else {
+                anchor + player.direction() * 4.
+            },
+            show_body: limit > if small { 0.16 } else { 0.55 },
         }
     }
 }
+/// Presentation-only boom distance: immediate collision protection, gradual release.
+/// Follows the player directly; smoothing never adds movement or look latency.
+#[derive(Default)]
+pub struct CameraRig {
+    distance: Option<f32>,
+    mode: Option<(Perspective, bool)>,
+}
+impl CameraRig {
+    pub fn advance(&mut self, mode: Perspective, player: &Controller, room: &Room, dt: f32) {
+        let small = player.character_kind() == super::controller::CharacterKind::Feta;
+        let wanted = (mode.view(player, room).eye - player.position).length();
+        let next = match self.distance {
+            Some(previous) if self.mode == Some((mode, small)) => {
+                let dt = if dt.is_finite() {
+                    dt.clamp(0., 0.1)
+                } else {
+                    0.
+                };
+                if wanted < previous {
+                    wanted
+                } else {
+                    previous + (wanted - previous) * (1. - (-6. * dt).exp())
+                }
+            }
+            _ => wanted,
+        };
+        self.distance = Some(next);
+        self.mode = Some((mode, small));
+    }
+    /// Recheck collision for the current/interpolated pose even between updates.
+    pub fn view(&self, mode: Perspective, player: &Controller, room: &Room) -> View {
+        let mut view = mode.view(player, room);
+        let small = player.character_kind() == super::controller::CharacterKind::Feta;
+        if mode == Perspective::Third && self.mode == Some((mode, small)) {
+            let delta = view.eye - player.position;
+            let length = delta.length();
+            let distance = self.distance.unwrap_or(length).min(length);
+            if length > 0.0001 {
+                view.eye = player.position + delta * (distance / length);
+            }
+            if small {
+                view.target = view.eye + player.direction() * 4.;
+            }
+            view.show_body = distance > if small { 0.16 } else { 0.55 };
+        }
+        view
+    }
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct View {
     pub eye: V,
