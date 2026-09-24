@@ -93,9 +93,9 @@ impl View {
         self.draw_pose(
             Quat::from_rotation_x(pistol.recoil() * 0.22),
             vec3(
-                0.28,
-                -0.24 + pistol.recoil() * 0.025,
-                -0.65 + pistol.recoil() * 0.065,
+                0.38,
+                -0.33 + pistol.recoil() * 0.035,
+                -0.90 + pistol.recoil() * 0.09,
             ),
             pistol.flash > 0.,
         );
@@ -122,10 +122,10 @@ impl View {
         draw_mesh(&self.posed);
         if flash {
             let muzzle = rotation * vec3(0., 0.07, -0.34) * 0.82 + shift;
-            draw_sphere(muzzle, 0.025, None, Color::new(1., 0.78, 0.27, 1.));
+            draw_sphere(muzzle, 0.032, None, Color::new(1., 0.78, 0.27, 1.));
             draw_line_3d(
                 muzzle,
-                muzzle + rotation * vec3(0., 0., -0.10),
+                muzzle + rotation * vec3(0., 0., -0.13),
                 Color::new(1., 0.92, 0.65, 1.),
             );
         }

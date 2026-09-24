@@ -1060,7 +1060,7 @@ async fn main() {
                 } else {
                     CharacterKind::Scientist
                 });
-                perspective = if feta {
+                perspective = if args.iter().any(|a| a == "--third-person") {
                     Perspective::Third
                 } else {
                     Perspective::First
