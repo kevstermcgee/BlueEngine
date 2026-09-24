@@ -1,12 +1,28 @@
-# Blue Engine 2 (BE2) — 0.2.0
+# Blue Engine Antigravity (BEA) / Blue Engine 2 (BE2) — 0.2.0
 
-A native Rust client and headless simulation foundation for our Prop Hunt project. Forked from the latest Blue Engine working code, with a Scientist seeker, Feta lab rat, wrench, first/third-person camera and Git history.
+A native Rust client and headless simulation engine foundation. Forked from Blue Engine 2 with playable environments (Suburban House, School Wing, Corporate Office, Convenience Store, Studio Sandbox), full prop physics, and completed Scientist weapon loadout (Wrench & Black Pistol).
+
+## Credits & Attribution
+
+- **Project Lead & Architecture Direction**: Kevin Ward ([@kevstermcgee](https://github.com/kevstermcgee))
+- **Engine Development, Map Authoring & Simulation Systems**: OpenAI Codex
+- **Weapon System, Antigravity Fork, Integration & Launchers**: Google DeepMind Antigravity
 
 ## Play
 
-Open `bin/BE2.exe`, then choose **Feta / Lab rat** or **The Scientist / Seeker**. No installation or server is needed. Windows x64 is the locally tested build.
+Launch via `launch_bea.bat`, `BEA.bat`, or run `bin/BEA.exe` (or `bin/BE2.exe`), then choose **The Scientist** or **Feta / Lab rat**. No installation or server is needed.
 
-WASD/arrows move; mouse looks; Shift sprints; Space jumps; Ctrl/C crouches; Q switches camera; left-click swings the wrench; Escape/Tab pauses. H enables optional help; F3 enables diagnostics. The default view shows the crosshair, wrench hit feedback and a contextual E pickup/drop hint. The seeker has no object inspection menu. E picks up or drops a nearby loose prop for either character. Right-click and R remain available for future disguise controls. F/F11 toggles fullscreen.
+- **WASD / Arrows**: Move
+- **Mouse**: Look around
+- **Shift**: Sprint (Scientist)
+- **Space**: Jump
+- **Ctrl / C**: Crouch
+- **Mouse Scroll**: Switch weapon (Scientist: Wrench <-> Black Pistol)
+- **Left-Click**: Attack / Fire equipped weapon
+- **E**: Pick up / drop nearby loose props
+- **Q**: Switch between first-person and third-person camera
+- **Esc / Tab**: Pause menu / controls
+- **F / F11**: Toggle fullscreen
 
 ## House map
 
