@@ -350,7 +350,76 @@ impl PropPhysics {
         }
         self.sync(room);
     }
+
+    /// Step the simulation without requiring a client player (for authoritative headless servers).
+    pub fn step_simulation(&mut self, dt: f32, room: &mut Room) {
+        if !dt.is_finite() || dt <= 0. {
+            return;
+        }
+        self.debt = (self.debt + dt).min(STEP * 16.);
+        while self.debt + 1e-6 >= STEP {
+            self.debt = (self.debt - STEP).max(0.);
+            self.pipeline.step(
+                &Vector::new(0., -9.81, 0.),
+                &IntegrationParameters {
+                    dt: STEP,
+                    ..Default::default()
+                },
+                &mut self.islands,
+                &mut self.broad,
+                &mut self.narrow,
+                &mut self.bodies,
+                &mut self.colliders,
+                &mut self.joints,
+                &mut self.multi,
+                &mut self.ccd,
+                None,
+                &(),
+                &(),
+            );
+        }
+        self.sync(room);
+    }
+
+    pub fn held_index(&self) -> Option<usize> {
+        self.held
+    }
+
+    pub fn active_and_sleeping_counts(&self) -> (usize, usize) {
+        let mut active = 0;
+        let mut sleeping = 0;
+        for p in &self.props {
+            if let Some(b) = self.bodies.get(p.handle) {
+                if b.is_sleeping() {
+                    sleeping += 1;
+                } else {
+                    active += 1;
+                }
+            }
+        }
+        (active, sleeping)
+    }
+
+    pub fn prop_position(&self, i: usize) -> Option<V> {
+        self.props
+            .get(i)
+            .and_then(|p| self.bodies.get(p.handle).map(|b| value(b.translation())))
+    }
+
+    pub fn prop_linear_velocity(&self, i: usize) -> Option<V> {
+        self.props
+            .get(i)
+            .and_then(|p| self.bodies.get(p.handle).map(|b| value(b.linvel())))
+    }
+
     fn sync(&mut self, room: &mut Room) {
+        let any_active = self
+            .props
+            .iter()
+            .any(|p| self.bodies.get(p.handle).is_some_and(|b| !b.is_sleeping()));
+        if !any_active && !room.dynamic_world.instances.is_empty() {
+            return;
+        }
         room.colliders.clone_from(&self.static_colliders);
         let mut instances = vec![];
         for (i, p) in self.props.iter_mut().enumerate() {
@@ -425,6 +494,7 @@ mod tests {
             compiled,
             colliders,
             entities,
+            spatial: None,
         }
     }
     fn run(p: &mut PropPhysics, r: &mut Room, seconds: f32) {

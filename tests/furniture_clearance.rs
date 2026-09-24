@@ -46,6 +46,7 @@ fn fixture(kind: &str, rotated: bool) -> Room {
             bounds,
             action: Action::Inspect,
         }],
+        spatial: None,
     }
     .build()
     .unwrap()

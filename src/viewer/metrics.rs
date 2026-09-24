@@ -129,10 +129,12 @@ mod tests {
     #[test]
     fn budget_validation_detects_violations() {
         let budget = PerformanceBudget::default();
-        let mut snap = PerformanceSnapshot::default();
-        snap.sim_cpu_time_us = 1000.0;
-        snap.active_dynamic_bodies = 10;
-        snap.snapshot_bytes = 300;
+        let mut snap = PerformanceSnapshot {
+            sim_cpu_time_us: 1000.0,
+            active_dynamic_bodies: 10,
+            snapshot_bytes: 300,
+            ..Default::default()
+        };
 
         let report = budget.validate(&snap);
         assert!(report.passed);

@@ -503,6 +503,7 @@ pub fn build() -> crate::Result<Room> {
         dynamic_world: crate::geometry::World::new(vec![]),
         colliders: b.colliders,
         entities: b.entities,
+        spatial: Some(super::spatial::RoomGraph::house()),
     }
     .with_furniture_colliders())
 }

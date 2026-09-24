@@ -9,20 +9,24 @@ use serde::{Deserialize, Serialize};
 /// Monotonically increasing generation number for change tracking.
 /// Systems store the last generation they processed to avoid re-evaluating
 /// unchanged objects.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub struct Generation(pub u64);
 
 impl Generation {
     pub const ZERO: Self = Self(0);
 
-    pub fn next(&mut self) -> Self {
+    pub fn advance(&mut self) -> Self {
         self.0 += 1;
         *self
     }
 }
 
 /// The four-tier lifecycle for objects in Blue Engine V2.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub enum LifecycleState {
     /// Render instance + static collision. No ECS entity, no dynamic physics, no replication.
     #[default]
@@ -83,7 +87,7 @@ impl LifecycleObject {
     pub fn promote(&mut self, target: LifecycleState, gen: &mut Generation) -> bool {
         if target > self.state {
             self.state = target;
-            self.generation = gen.next();
+            self.generation = gen.advance();
             self.rest_duration = 0.0;
             true
         } else {
@@ -103,7 +107,7 @@ impl LifecycleObject {
             // After resting stationary for 3.0 seconds, demote from dynamic back to interactive
             if self.rest_duration >= 3.0 {
                 self.state = LifecycleState::InteractiveStatic;
-                self.generation = gen.next();
+                self.generation = gen.advance();
                 self.rest_duration = 0.0;
                 return true;
             }
@@ -146,6 +150,38 @@ impl LifecycleRegistry {
     pub fn promote_by_id(&mut self, id: &str, target: LifecycleState) -> bool {
         if let Some(obj) = self.objects.iter_mut().find(|o| o.id == id) {
             obj.promote(target, &mut self.current_generation)
+        } else {
+            false
+        }
+    }
+
+    /// Borrow an object by ID.
+    pub fn get(&self, id: &str) -> Option<&LifecycleObject> {
+        self.objects.iter().find(|o| o.id == id)
+    }
+
+    /// Mutably borrow an object by ID.
+    pub fn get_mut(&mut self, id: &str) -> Option<&mut LifecycleObject> {
+        self.objects.iter_mut().find(|o| o.id == id)
+    }
+
+    /// Update position and advance generation if changed.
+    pub fn update_position(&mut self, id: &str, position: V) {
+        if let Some(idx) = self.objects.iter().position(|o| o.id == id) {
+            if (self.objects[idx].position - position).length() > 0.001 {
+                self.objects[idx].position = position;
+                self.objects[idx].generation = self.current_generation.advance();
+            }
+        }
+    }
+
+    /// Advance rest settling for an object; demotes back toward static/interactive if settled.
+    pub fn update_prop_rest(&mut self, id: &str, dt: f32, speed: f32) -> bool {
+        if let Some(idx) = self.objects.iter().position(|o| o.id == id) {
+            let mut gen = self.current_generation;
+            let demoted = self.objects[idx].update_rest(dt, speed, &mut gen);
+            self.current_generation = gen;
+            demoted
         } else {
             false
         }

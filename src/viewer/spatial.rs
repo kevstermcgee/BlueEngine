@@ -193,6 +193,46 @@ impl RoomGraph {
 
         g
     }
+
+    /// Construct a room graph suitable for any room.
+    ///
+    /// Specializes to [`Self::house()`] when running the default suburban house map,
+    /// or computes an appropriate bounding zone graph for other maps.
+    pub fn for_room(room: &super::room::Room) -> Self {
+        if let Some(ref spatial) = room.spatial {
+            return spatial.clone();
+        }
+        if room.name.to_lowercase().contains("house") {
+            return Self::house();
+        }
+
+        let mut g = Self::new();
+        let mut min_bound = V(f32::INFINITY, f32::INFINITY, f32::INFINITY);
+        let mut max_bound = V(f32::NEG_INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY);
+        for c in &room.colliders {
+            min_bound = min_bound.min(c.min);
+            max_bound = max_bound.max(c.max);
+        }
+        for e in &room.entities {
+            min_bound = min_bound.min(e.bounds.min);
+            max_bound = max_bound.max(e.bounds.max);
+        }
+        if !min_bound.0.is_finite() {
+            min_bound = V(-50.0, -10.0, -50.0);
+            max_bound = V(50.0, 50.0, 50.0);
+        }
+
+        g.add_room(
+            RoomId(1),
+            &room.name,
+            Collider {
+                min: min_bound,
+                max: max_bound,
+            },
+            1,
+        );
+        g
+    }
 }
 
 #[cfg(test)]
@@ -213,5 +253,46 @@ mod tests {
         assert!(g.is_relevant_for_interest(RoomId(2), RoomId(4)));
         // But not directly to upstairs Bathroom (7)
         assert!(!g.is_relevant_for_interest(RoomId(2), RoomId(7)));
+    }
+
+    #[test]
+    fn for_room_supports_house_and_custom_rooms() {
+        let house_room = crate::viewer::room::Room {
+            name: "House (suburban)".into(),
+            simple_geometry: true,
+            world: crate::geometry::World::new(vec![]),
+            dynamic_world: crate::geometry::World::new(vec![]),
+            compiled: crate::geometry::Compiled::new(
+                crate::scene::Scene::default(),
+                std::path::Path::new("."),
+            )
+            .unwrap(),
+            colliders: vec![],
+            entities: vec![],
+            spatial: None,
+        };
+        let g_house = RoomGraph::for_room(&house_room);
+        assert!(g_house.rooms.len() >= 7);
+
+        let custom_room = crate::viewer::room::Room {
+            name: "Store fixture".into(),
+            simple_geometry: true,
+            world: crate::geometry::World::new(vec![]),
+            dynamic_world: crate::geometry::World::new(vec![]),
+            compiled: crate::geometry::Compiled::new(
+                crate::scene::Scene::default(),
+                std::path::Path::new("."),
+            )
+            .unwrap(),
+            colliders: vec![Collider {
+                min: V(-10.0, 0.0, -10.0),
+                max: V(10.0, 4.0, 10.0),
+            }],
+            entities: vec![],
+            spatial: None,
+        };
+        let g_custom = RoomGraph::for_room(&custom_room);
+        assert_eq!(g_custom.rooms.len(), 1);
+        assert!(g_custom.find_room_at(V(0.0, 1.0, 0.0)).is_some());
     }
 }

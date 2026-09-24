@@ -47,7 +47,13 @@ fn run() -> Result<()> {
     };
     let command = a.first().map(String::as_str).unwrap_or("help");
     let arity = match command {
-        "help" | "catalog" | "inspect-performance" | "validate-budget" | "net-test" | "bench" => 1,
+        "help"
+        | "catalog"
+        | "inspect-performance"
+        | "validate-budget"
+        | "net-test"
+        | "bench"
+        | "replay-test" => 1,
         "export-house" => 2,
         "inspect" | "audit" => 2,
         "export-scene" | "floorplan" | "diff" | "route" | "select" => 3,
@@ -67,6 +73,7 @@ inspect-performance
 validate-budget
 net-test
 bench
+replay-test
 apply MAP.json PATCH.json OUT.json
 diff BEFORE.json AFTER.json
 export-scene MAP.json OUT.json
@@ -120,36 +127,58 @@ See tools/README.md."#
         "net-test" => {
             let mut world = HeadlessWorld::new()?;
             world.join(1);
-            let mut sim = NetworkSimulator::new(50, 0.05); // 50ms latency, 5% packet loss
+            let mut sim = NetworkSimulator::<InputFrame>::new(50, 0.05); // 50ms latency, 5% packet loss
             let mut pred = PredictionBuffer::new(64);
             let mut controller = Controller::default();
             let mut dropped_packets = 0;
             let mut reconciled_corrections = 0;
+            let mut last_ack_tick = 0;
 
             for tick in 1..=120 {
                 let input = InputFrame {
                     client_tick: tick,
-                    movement: Movement { forward: 1.0, ..Default::default() },
+                    movement: Movement {
+                        forward: 1.0,
+                        ..Default::default()
+                    },
                     yaw: 0.0,
                     pitch: 0.0,
                     fire_wrench: false,
                     fire_pistol: false,
                     interact: false,
                 };
-                controller.update(input.movement, vesper3d::viewer::simulation::TICK_SECONDS, &world.room.colliders);
-                pred.push(input, controller.clone());
+                controller.update(
+                    input.movement,
+                    vesper3d::viewer::simulation::TICK_SECONDS,
+                    &world.room.colliders,
+                );
+                pred.push(input.clone(), controller.clone());
 
-                if sim.should_drop() {
+                if !sim.send(tick, input) {
                     dropped_packets += 1;
-                } else {
-                    world.input(1, Movement { forward: 1.0, ..Default::default() }, 0.0, 0.0);
-                    world.step();
-                    if tick % 3 == 0 {
-                        let snap = world.snapshot(tick);
-                        if let Some(p) = snap.players.iter().find(|p| p.id == 1) {
-                            if pred.reconcile(tick, p, &mut controller, &world.room.colliders, 0.02) {
-                                reconciled_corrections += 1;
-                            }
+                }
+
+                // Server receives scheduled packets for this tick
+                let delivered = sim.receive(tick);
+                for pkt in delivered {
+                    last_ack_tick = pkt.client_tick;
+                    world.input(1, pkt.movement, pkt.yaw, pkt.pitch);
+                }
+
+                // Continuous server simulation tick (60 Hz server ticking)
+                world.step();
+
+                if tick % 3 == 0 && last_ack_tick > 0 {
+                    let snap = world.snapshot(last_ack_tick);
+                    if let Some(p) = snap.players.iter().find(|p| p.id == 1) {
+                        if pred.reconcile(
+                            snap.ack_client_tick,
+                            p,
+                            &mut controller,
+                            &world.room.colliders,
+                            0.02,
+                        ) {
+                            reconciled_corrections += 1;
                         }
                     }
                 }
@@ -163,6 +192,75 @@ See tools/README.md."#
                 "dropped_packets": dropped_packets,
                 "reconciled_corrections": reconciled_corrections,
                 "final_position": [controller.position.0, controller.position.1, controller.position.2],
+            });
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
+        "replay-test" => {
+            // Run a match recording inputs and checkpoints, then verify identical replay reproduction
+            let mut world = HeadlessWorld::new()?;
+            world.join(1);
+            world.join(2);
+
+            let mut recorded_inputs: Vec<(u64, u64, Movement, f32, f32)> = Vec::new();
+            let mut checkpoints: Vec<(u64, u64)> = Vec::new();
+
+            for tick in 1..=120 {
+                let inp1 = Movement {
+                    forward: if tick % 20 < 10 { 1.0 } else { 0.0 },
+                    ..Default::default()
+                };
+                let inp2 = Movement {
+                    right: if tick % 15 < 8 { 1.0 } else { -1.0 },
+                    ..Default::default()
+                };
+                world.input(1, inp1, 0.0, 0.0);
+                world.input(2, inp2, 0.5, 0.0);
+
+                recorded_inputs.push((tick, 1, inp1, 0.0, 0.0));
+                recorded_inputs.push((tick, 2, inp2, 0.5, 0.0));
+
+                world.step();
+
+                if tick % 30 == 0 {
+                    checkpoints.push((tick, world.checksum()));
+                }
+            }
+
+            // Replay from identical start
+            let mut replay_world = HeadlessWorld::new()?;
+            replay_world.join(1);
+            replay_world.join(2);
+
+            let mut input_idx = 0;
+            let mut verified_checkpoints = 0;
+
+            for tick in 1..=120 {
+                while input_idx < recorded_inputs.len() && recorded_inputs[input_idx].0 == tick {
+                    let (_, pid, mv, yaw, pitch) = recorded_inputs[input_idx];
+                    replay_world.input(pid, mv, yaw, pitch);
+                    input_idx += 1;
+                }
+
+                replay_world.step();
+
+                if let Some(&(_, expected_checksum)) = checkpoints.iter().find(|(t, _)| *t == tick)
+                {
+                    let replayed_checksum = replay_world.checksum();
+                    if replayed_checksum != expected_checksum {
+                        return Err(format!(
+                            "Replay checksum mismatch at tick {tick}: expected {expected_checksum:016x}, got {replayed_checksum:016x}"
+                        ).into());
+                    }
+                    verified_checkpoints += 1;
+                }
+            }
+
+            let report = json!({
+                "ok": true,
+                "ticks": 120,
+                "checkpoints_verified": verified_checkpoints,
+                "deterministic": true,
+                "final_checksum": format!("0x{:016x}", replay_world.checksum()),
             });
             println!("{}", serde_json::to_string_pretty(&report)?);
         }

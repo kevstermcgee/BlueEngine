@@ -125,6 +125,10 @@ impl Controller {
         self.kind
     }
 
+    pub fn velocity(&self) -> V {
+        self.velocity
+    }
+
     /// Interpolate presentation only; current look stays immediate.
     pub fn interpolated(&self, previous: &Self, alpha: f32) -> Self {
         let mut pose = self.clone();

@@ -99,17 +99,33 @@ impl WorldSnapshot {
             }
         }
 
+        let mut removed_players = Vec::new();
+        for old in &base.players {
+            if !self.players.iter().any(|p| p.id == old.id) {
+                removed_players.push(old.id);
+            }
+        }
+
+        let mut removed_props = Vec::new();
+        for old in &base.props {
+            if !self.props.iter().any(|pr| pr.id == old.id) {
+                removed_props.push(old.id.clone());
+            }
+        }
+
         DeltaSnapshot {
             base_tick: base.tick,
             target_tick: self.tick,
             ack_client_tick: self.ack_client_tick,
             changed_players,
             changed_props,
+            removed_players,
+            removed_props,
         }
     }
 }
 
-/// Compact delta snapshot transmitting only changes between two ticks.
+/// Compact delta snapshot transmitting only changes and removals between two ticks.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DeltaSnapshot {
     pub base_tick: u64,
@@ -117,12 +133,15 @@ pub struct DeltaSnapshot {
     pub ack_client_tick: u64,
     pub changed_players: Vec<PlayerNetState>,
     pub changed_props: Vec<PropNetState>,
+    pub removed_players: Vec<u64>,
+    pub removed_props: Vec<String>,
 }
 
 impl DeltaSnapshot {
     /// Apply delta changes onto an existing base snapshot to reconstruct the full state.
     pub fn apply_to(&self, base: &WorldSnapshot) -> WorldSnapshot {
         let mut players = base.players.clone();
+        players.retain(|p| !self.removed_players.contains(&p.id));
         for changed in &self.changed_players {
             if let Some(existing) = players.iter_mut().find(|p| p.id == changed.id) {
                 *existing = changed.clone();
@@ -132,6 +151,7 @@ impl DeltaSnapshot {
         }
 
         let mut props = base.props.clone();
+        props.retain(|pr| !self.removed_props.contains(&pr.id));
         for changed in &self.changed_props {
             if let Some(existing) = props.iter_mut().find(|pr| pr.id == changed.id) {
                 *existing = changed.clone();
@@ -306,21 +326,96 @@ impl<T: Clone> InterpolationBuffer<T> {
     }
 }
 
+impl InterpolationBuffer<PlayerNetState> {
+    /// Linearly interpolate remote player position at fractional render tick.
+    pub fn interpolate_at(&self, render_tick: f32) -> Option<V> {
+        if self.snapshots.is_empty() {
+            return None;
+        }
+        if self.snapshots.len() == 1 {
+            return Some(self.snapshots[0].1.position);
+        }
+
+        for i in 0..self.snapshots.len() - 1 {
+            let (t0, s0) = &self.snapshots[i];
+            let (t1, s1) = &self.snapshots[i + 1];
+            let t0_f = *t0 as f32;
+            let t1_f = *t1 as f32;
+            if render_tick >= t0_f && render_tick <= t1_f {
+                let alpha = if (t1_f - t0_f).abs() > 1e-4 {
+                    (render_tick - t0_f) / (t1_f - t0_f)
+                } else {
+                    0.0
+                };
+                return Some(s0.position.lerp(s1.position, alpha.clamp(0.0, 1.0)));
+            }
+        }
+
+        if render_tick < self.snapshots[0].0 as f32 {
+            Some(self.snapshots[0].1.position)
+        } else {
+            Some(self.snapshots.back().unwrap().1.position)
+        }
+    }
+}
+
+/// Simulated network packet with delivery schedule.
+#[derive(Clone, Debug)]
+pub struct DelayedPacket<T> {
+    pub delivery_tick: u64,
+    pub packet: T,
+}
+
 /// Network condition simulator for test harnesses (latency, loss, jitter).
 #[derive(Clone, Debug, Default)]
-pub struct NetworkSimulator {
+pub struct NetworkSimulator<T = Packet> {
     pub latency_ms: u64,
     pub packet_loss_rate: f32, // 0.0 to 1.0
     packet_counter: u64,
+    pub queue: VecDeque<DelayedPacket<T>>,
 }
 
-impl NetworkSimulator {
+impl<T> NetworkSimulator<T> {
     pub fn new(latency_ms: u64, packet_loss_rate: f32) -> Self {
         Self {
             latency_ms,
             packet_loss_rate,
             packet_counter: 0,
+            queue: VecDeque::new(),
         }
+    }
+
+    /// Enqueue a packet for simulated delivery. Returns false if dropped by packet loss.
+    pub fn send(&mut self, current_tick: u64, packet: T) -> bool {
+        if self.packet_loss_rate > 0.0 {
+            self.packet_counter += 1;
+            let modulus = (1.0 / self.packet_loss_rate).round() as u64;
+            if modulus > 0 && self.packet_counter.is_multiple_of(modulus) {
+                return false; // Dropped!
+            }
+        }
+        let delay_ticks = ((self.latency_ms as f64 / 1000.0)
+            / crate::viewer::simulation::TICK_SECONDS as f64)
+            .round() as u64;
+        self.queue.push_back(DelayedPacket {
+            delivery_tick: current_tick + delay_ticks,
+            packet,
+        });
+        true
+    }
+
+    /// Deliver all packets whose delivery schedule has elapsed by current_tick.
+    pub fn receive(&mut self, current_tick: u64) -> Vec<T> {
+        let mut ready = Vec::new();
+        let mut i = 0;
+        while i < self.queue.len() {
+            if self.queue[i].delivery_tick <= current_tick {
+                ready.push(self.queue.remove(i).unwrap().packet);
+            } else {
+                i += 1;
+            }
+        }
+        ready
     }
 
     /// Returns true if packet should be dropped to simulate packet loss.
@@ -330,11 +425,7 @@ impl NetworkSimulator {
         }
         self.packet_counter += 1;
         let modulus = (1.0 / self.packet_loss_rate).round() as u64;
-        if modulus > 0 && self.packet_counter % modulus == 0 {
-            true
-        } else {
-            false
-        }
+        modulus > 0 && self.packet_counter.is_multiple_of(modulus)
     }
 }
 
@@ -413,13 +504,16 @@ mod tests {
                 fire_pistol: false,
                 interact: false,
             };
-            controller.update(input.movement, crate::viewer::simulation::TICK_SECONDS, &colliders);
+            controller.update(
+                input.movement,
+                crate::viewer::simulation::TICK_SECONDS,
+                &colliders,
+            );
             pred.push(input, controller.clone());
         }
 
         // Server sends correction for tick 1 with slightly different position
-        let mut server_state =
-            PlayerNetState::from_controller(1, 1, &Controller::default(), None);
+        let mut server_state = PlayerNetState::from_controller(1, 1, &Controller::default(), None);
         server_state.position = V(0.0, 0.0, 0.05); // shifted by 0.05m
 
         let reconciled = pred.reconcile(1, &server_state, &mut controller, &colliders, 0.01);

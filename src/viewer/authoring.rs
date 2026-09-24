@@ -26,6 +26,8 @@ pub struct MapDocument {
     pub scene: Scene,
     pub colliders: BTreeMap<String, Collider>,
     pub entities: Vec<Entity>,
+    #[serde(default)]
+    pub spatial: Option<super::spatial::RoomGraph>,
 }
 fn finite(v: V) -> bool {
     [v.0, v.1, v.2]
@@ -55,6 +57,7 @@ impl MapDocument {
                 .map(|(i, c)| (format!("collider-{i}"), c))
                 .collect(),
             entities: r.entities,
+            spatial: r.spatial,
         })
     }
     pub fn load(path: &Path) -> Result<Self> {
@@ -152,6 +155,7 @@ impl MapDocument {
             dynamic_world: crate::geometry::World::new(vec![]),
             colliders: self.colliders.values().cloned().collect(),
             entities: self.entities.clone(),
+            spatial: self.spatial.clone(),
         }
         .with_furniture_colliders())
     }

@@ -86,31 +86,38 @@ pub struct HeadlessWorld {
     pub room_graph: super::spatial::RoomGraph,
     /// Object lifecycle registry ("static until proven otherwise").
     pub lifecycle: super::lifecycle::LifecycleRegistry,
+    /// Authoritative prop physics simulation.
+    pub prop_physics: Option<super::prop_physics::PropPhysics>,
     players: BTreeMap<u64, Player>,
     /// Number of completed calls to [`Self::step`], initially zero.
     pub tick: u64,
+    /// Execution time in microseconds spent in physics on the last tick.
+    pub last_physics_time_us: f64,
 }
 impl HeadlessWorld {
-    /// Build the default House. Returns an error if map construction fails.
+    /// Build the default Blue Test Lab. Returns an error if map construction fails.
     pub fn new() -> crate::Result<Self> {
         Ok(Self::with_room(super::maps::build(
-            super::maps::MapId::House,
+            super::maps::MapId::TestLab,
         )?))
     }
     /// Start an empty world with an already constructed room and tick zero.
-    pub fn with_room(room: Room) -> Self {
+    pub fn with_room(mut room: Room) -> Self {
         let mut lifecycle = super::lifecycle::LifecycleRegistry::new();
         for e in &room.entities {
             let center = (e.bounds.min + e.bounds.max) * 0.5;
             lifecycle.register(e.id.clone(), e.label.clone(), center);
         }
-        let room_graph = super::spatial::RoomGraph::house();
+        let room_graph = super::spatial::RoomGraph::for_room(&room);
+        let prop_physics = super::prop_physics::PropPhysics::new(&mut room).ok();
         Self {
             room,
             room_graph,
             lifecycle,
+            prop_physics,
             players: BTreeMap::new(),
             tick: 0,
+            last_physics_time_us: 0.0,
         }
     }
     /// Join at the shared default spawn; reject duplicate IDs or a full eight-player world.
@@ -169,7 +176,84 @@ impl HeadlessWorld {
                 .update(player.input, TICK_SECONDS, &self.room.colliders);
             player.input.jump = false;
         }
+
+        let t_phys = std::time::Instant::now();
+        if let Some(ref mut physics) = self.prop_physics {
+            physics.step_simulation(TICK_SECONDS, &mut self.room);
+
+            // Synchronize prop positions & velocities into lifecycle registry
+            for (i, p) in physics.props.iter().enumerate() {
+                if let Some(pos) = physics.prop_position(i) {
+                    self.lifecycle.update_position(&p.id, pos);
+                    let is_held = physics.held_index() == Some(i);
+                    let speed = physics
+                        .prop_linear_velocity(i)
+                        .map(|v| v.length())
+                        .unwrap_or(0.0);
+
+                    if is_held || speed > 0.05 {
+                        self.lifecycle
+                            .promote_by_id(&p.id, super::lifecycle::LifecycleState::DynamicEntity);
+                    } else {
+                        self.lifecycle.update_prop_rest(&p.id, TICK_SECONDS, speed);
+                    }
+                }
+            }
+        }
+        self.last_physics_time_us = t_phys.elapsed().as_secs_f64() * 1_000_000.0;
         self.tick += 1;
+    }
+
+    /// Calculate a deterministic 64-bit checksum of the world state at the current tick.
+    /// Uses quantized coordinates (to millimeter precision) to ensure cross-platform reproducibility.
+    pub fn checksum(&self) -> u64 {
+        const FNV_OFFSET: u64 = 0xcbf29ce484222325;
+        const FNV_PRIME: u64 = 0x100000001b3;
+
+        let mut hash = FNV_OFFSET;
+        let mut mix_u64 = |mut val: u64| {
+            for _ in 0..8 {
+                let byte = (val & 0xff) as u8;
+                hash ^= byte as u64;
+                hash = hash.wrapping_mul(FNV_PRIME);
+                val >>= 8;
+            }
+        };
+
+        mix_u64(self.tick);
+
+        // Players sorted by ID
+        for (&id, player) in &self.players {
+            mix_u64(id);
+            let px = (player.controller.position.0 * 1000.0).round() as i64 as u64;
+            let py = (player.controller.position.1 * 1000.0).round() as i64 as u64;
+            let pz = (player.controller.position.2 * 1000.0).round() as i64 as u64;
+            let vel = player.controller.velocity();
+            let vx = (vel.0 * 1000.0).round() as i64 as u64;
+            let vy = (vel.1 * 1000.0).round() as i64 as u64;
+            let vz = (vel.2 * 1000.0).round() as i64 as u64;
+            mix_u64(px);
+            mix_u64(py);
+            mix_u64(pz);
+            mix_u64(vx);
+            mix_u64(vy);
+            mix_u64(vz);
+        }
+
+        // Lifecycle tier distribution
+        let (static_inst, interactive, dynamic, replicated) = self.lifecycle.counts();
+        mix_u64(static_inst as u64);
+        mix_u64(interactive as u64);
+        mix_u64(dynamic as u64);
+        mix_u64(replicated as u64);
+
+        if let Some(ref physics) = self.prop_physics {
+            let (active, sleeping) = physics.active_and_sleeping_counts();
+            mix_u64(active as u64);
+            mix_u64(sleeping as u64);
+        }
+
+        hash
     }
 
     /// Generate an authoritative world snapshot for multiplayer replication.
@@ -187,12 +271,21 @@ impl HeadlessWorld {
             .lifecycle
             .objects
             .iter()
-            .filter(|o| o.state.requires_networking())
-            .map(|o| super::net::PropNetState {
-                id: o.id.clone(),
-                position: o.position,
-                generation: o.generation,
-                is_held: false,
+            .filter(|o| o.state.requires_rigid_body() || o.state.requires_networking())
+            .map(|o| {
+                let is_held = self
+                    .prop_physics
+                    .as_ref()
+                    .and_then(|phys| phys.held_index())
+                    .and_then(|idx| self.prop_physics.as_ref().unwrap().props.get(idx))
+                    .is_some_and(|p| p.id == o.id);
+
+                super::net::PropNetState {
+                    id: o.id.clone(),
+                    position: o.position,
+                    generation: o.generation,
+                    is_held,
+                }
             })
             .collect();
 
@@ -205,20 +298,35 @@ impl HeadlessWorld {
     }
 
     /// Create a performance snapshot for observability and profiling.
-    pub fn performance_snapshot(&self, sim_cpu_time_us: f64) -> super::metrics::PerformanceSnapshot {
+    pub fn performance_snapshot(
+        &self,
+        sim_cpu_time_us: f64,
+    ) -> super::metrics::PerformanceSnapshot {
         let (static_inst, _, dynamic, replicated) = self.lifecycle.counts();
+        let (active_dyn, sleeping) = if let Some(ref phys) = self.prop_physics {
+            phys.active_and_sleeping_counts()
+        } else {
+            (dynamic, 0)
+        };
+
         let snap = self.snapshot(0);
         let encoded_bytes = serde_json::to_vec(&snap).map(|b| b.len()).unwrap_or(0);
+        let delta_bytes = if encoded_bytes > 0 {
+            encoded_bytes.min(256)
+        } else {
+            0
+        };
+
         super::metrics::PerformanceSnapshot {
             tick: self.tick,
             sim_cpu_time_us,
-            physics_time_us: 0.0,
-            active_dynamic_bodies: dynamic,
-            sleeping_bodies: 0,
+            physics_time_us: self.last_physics_time_us,
+            active_dynamic_bodies: active_dyn,
+            sleeping_bodies: sleeping,
             static_instances: static_inst,
             replicated_entities: replicated + self.players.len(),
             snapshot_bytes: encoded_bytes,
-            delta_bytes: encoded_bytes.min(256),
+            delta_bytes,
             bandwidth_kbps: (encoded_bytes as f64 * 8.0 * 20.0) / 1000.0, // at 20 Hz snapshot rate
         }
     }
@@ -297,5 +405,46 @@ mod tests {
         assert!((world.player(0).unwrap().position - client.position).length() < 0.00001);
         world.leave(0);
         assert!(world.join(8));
+    }
+
+    #[test]
+    fn headless_deterministic_checksum_and_prop_physics() {
+        let mut world1 = HeadlessWorld::new().unwrap();
+        let mut world2 = HeadlessWorld::new().unwrap();
+        assert!(world1.join(1));
+        assert!(world2.join(1));
+
+        assert!(world1.prop_physics.is_some());
+        assert!(world2.prop_physics.is_some());
+
+        // Identical input across 60 steps must produce identical state and checksum
+        let input = Movement {
+            forward: 1.0,
+            ..Default::default()
+        };
+        world1.input(1, input, 0.0, 0.0);
+        world2.input(1, input, 0.0, 0.0);
+
+        for _ in 0..60 {
+            world1.step();
+            world2.step();
+        }
+
+        assert_eq!(world1.tick, 60);
+        assert_eq!(world2.tick, 60);
+        assert_eq!(
+            world1.player(1).unwrap().position,
+            world2.player(1).unwrap().position
+        );
+        assert_eq!(
+            world1.player(1).unwrap().velocity(),
+            world2.player(1).unwrap().velocity()
+        );
+        assert_eq!(world1.lifecycle.counts(), world2.lifecycle.counts());
+        assert_eq!(world1.checksum(), world2.checksum());
+
+        let perf = world1.performance_snapshot(500.0);
+        assert_eq!(perf.tick, 60);
+        assert!(perf.snapshot_bytes > 0);
     }
 }

@@ -25,6 +25,8 @@ pub struct Room {
     pub dynamic_world: World,
     pub colliders: Vec<Collider>,
     pub entities: Vec<Entity>,
+    /// Optional embedded spatial room graph for portals and interest management.
+    pub spatial: Option<super::spatial::RoomGraph>,
 }
 impl Room {
     /// Replace legacy furniture envelopes with their visible component bounds.
@@ -468,6 +470,7 @@ pub fn build() -> crate::Result<Room> {
         dynamic_world: World::new(vec![]),
         colliders: b.colliders,
         entities: b.entities,
+        spatial: None,
     }
     .with_furniture_colliders())
 }
