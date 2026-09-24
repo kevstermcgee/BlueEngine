@@ -1,5 +1,7 @@
 # BlueEngine
 
+<img src="assets/branding/blueengine.png" alt="BlueEngine official logo" width="128" height="128">
+
 An AI-first Rust 3D engine foundation for building small, testable prototypes.
 Continues the complete BlueEngineAntigravity history. The primary development
 fixture is **Blue Test Lab**; furnished legacy maps remain reusable reference assets.

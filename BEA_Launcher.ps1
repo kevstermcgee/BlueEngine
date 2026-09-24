@@ -8,10 +8,11 @@
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 
-$BEA_DIR = "C:\Users\TheNa\.gemini\antigravity\scratch\BlueEngineAntigravity"
+$BEA_DIR = $PSScriptRoot
 
 $form = New-Object System.Windows.Forms.Form
-$form.Text = "BEA - Blue Engine Map Launcher"
+$form.Text = "BlueEngine - Map Launcher"
+$form.Icon = [System.Drawing.Icon]::new((Join-Path $BEA_DIR "assets\branding\blueengine.ico"))
 $form.Size = New-Object System.Drawing.Size(860, 620)
 $form.StartPosition = "CenterScreen"
 $form.FormBorderStyle = "FixedDialog"
@@ -30,7 +31,7 @@ $fontDesc   = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.Font
 
 # Header Title
 $lblTitle = New-Object System.Windows.Forms.Label
-$lblTitle.Text = "BLUE ENGINE ANTIGRAVITY (BEA)"
+$lblTitle.Text = "BLUEENGINE"
 $lblTitle.Font = $fontHeader
 $lblTitle.ForeColor = [System.Drawing.Color]::FromArgb(88, 166, 255)
 $lblTitle.Location = New-Object System.Drawing.Point(24, 16)

@@ -47,3 +47,11 @@ Read API docs with `cargo doc --locked --no-deps --lib --open`; add
 changes and failure/edge semantics alongside code. Add ADRs for meaningful design
 decisions; do not add traits or duplicate generated indexes solely for navigation.
 CLAUDE.md imports this file; keep shared guidance here.
+
+## Official branding
+
+Use `assets/branding/blueengine.ico` as the official BlueEngine icon and
+`assets/branding/blueengine.png` as the default project logo unless the user
+explicitly specifies otherwise. This is the user-approved white rat on a blue tile,
+originally `scripts/test_lab.ico`. Preserve the artwork; do not regenerate, replace
+or redesign it as part of routine engine/game work. See assets/branding/README.md.
