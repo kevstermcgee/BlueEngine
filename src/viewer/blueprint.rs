@@ -133,7 +133,7 @@ pub fn compile_blueprint(spec: &BlueprintSpec) -> Result<MapDocument> {
     // 1. Process rooms: generate floors and register bounds
     let mut room_rects: HashMap<String, [f32; 4]> = HashMap::new();
 
-    for (_r_idx, room) in spec.rooms.iter().enumerate() {
+    for room in &spec.rooms {
         let [min_x, min_z, max_x, max_z] = room.rect;
         if min_x >= max_x || min_z >= max_z {
             return Err(format!("Invalid rect for room '{}'", room.id).into());

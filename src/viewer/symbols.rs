@@ -285,8 +285,7 @@ fn parse_symbols(rel: &str, lines: &[String], symbols: &mut Vec<Symbol>) {
                     } else {
                         let mut brace_depth = 0;
                         let mut started = false;
-                        for scan_i in idx..lines.len().min(idx + 100) {
-                            let s = &lines[scan_i];
+                        for (scan_i, s) in lines.iter().enumerate().take(idx + 100).skip(idx) {
                             for ch in s.chars() {
                                 if ch == '{' {
                                     brace_depth += 1;

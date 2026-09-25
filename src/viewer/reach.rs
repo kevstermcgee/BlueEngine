@@ -200,15 +200,15 @@ pub fn analyze_reach(doc: &MapDocument, start_pos: Option<V>) -> ReachReport {
                     });
                 }
 
-                if n_feet - cy <= STEP_HEIGHT {
-                    if !is_blocked(nx, n_feet, nz, radius, height, &colliders) {
-                        let gx = (nx / CELL_SIZE).round() as i32;
-                        let gz = (nz / CELL_SIZE).round() as i32;
-                        let gy = (n_feet * 10.0).round() as i32;
+                if n_feet - cy <= STEP_HEIGHT
+                    && !is_blocked(nx, n_feet, nz, radius, height, &colliders)
+                {
+                    let gx = (nx / CELL_SIZE).round() as i32;
+                    let gz = (nz / CELL_SIZE).round() as i32;
+                    let gy = (n_feet * 10.0).round() as i32;
 
-                        if visited.insert((gx, gy, gz)) {
-                            queue.push_back((nx, n_feet, nz));
-                        }
+                    if visited.insert((gx, gy, gz)) {
+                        queue.push_back((nx, n_feet, nz));
                     }
                 }
             }

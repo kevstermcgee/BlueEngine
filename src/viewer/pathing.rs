@@ -14,6 +14,9 @@ use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap, HashSet};
 
+type GridKey = (i32, i32, i32);
+type CameFromEntry = (i32, i32, i32, f32);
+
 #[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct Waypoint {
     pub x: f32,
@@ -92,8 +95,8 @@ pub fn plan_route(doc: &MapDocument, from: V, to: V) -> Result<Vec<Waypoint>, St
     let target_gz = (to.2 / CELL_SIZE).round() as i32;
 
     let mut open = BinaryHeap::new();
-    let mut g_score: HashMap<(i32, i32, i32), f32> = HashMap::new();
-    let mut came_from: HashMap<(i32, i32, i32), (i32, i32, i32, f32)> = HashMap::new(); // key -> (prev, feet)
+    let mut g_score: HashMap<GridKey, f32> = HashMap::new();
+    let mut came_from: HashMap<GridKey, CameFromEntry> = HashMap::new(); // key -> (prev, feet)
 
     let h_start = ((from.0 - to.0).powi(2) + (from.2 - to.2).powi(2)).sqrt();
     g_score.insert((start_gx, start_gy, start_gz), 0.0);
@@ -144,27 +147,27 @@ pub fn plan_route(doc: &MapDocument, from: V, to: V) -> Result<Vec<Waypoint>, St
             let nz = ngz as f32 * CELL_SIZE;
 
             if let Some(n_feet) = ground_support_at(nx, nz, curr_feet, radius, &colliders) {
-                if n_feet - curr_feet <= STEP_HEIGHT {
-                    if !is_blocked(nx, n_feet, nz, radius, height, &colliders) {
-                        let n_gy = (n_feet * 10.0).round() as i32;
-                        let tentative_g =
-                            curr_g + dist_weight * CELL_SIZE + (n_feet - curr_feet).abs() * 0.5;
-                        let neighbor_key = (ngx, n_gy, ngz);
+                if n_feet - curr_feet <= STEP_HEIGHT
+                    && !is_blocked(nx, n_feet, nz, radius, height, &colliders)
+                {
+                    let n_gy = (n_feet * 10.0).round() as i32;
+                    let tentative_g =
+                        curr_g + dist_weight * CELL_SIZE + (n_feet - curr_feet).abs() * 0.5;
+                    let neighbor_key = (ngx, n_gy, ngz);
 
-                        if tentative_g < *g_score.get(&neighbor_key).unwrap_or(&f32::INFINITY) {
-                            g_score.insert(neighbor_key, tentative_g);
-                            came_from.insert(
-                                neighbor_key,
-                                (current.gx, current.feet_bucket, current.gz, curr_feet),
-                            );
-                            let h = ((nx - to.0).powi(2) + (nz - to.2).powi(2)).sqrt();
-                            open.push(AStarNode {
-                                cost: tentative_g + h,
-                                gx: ngx,
-                                gz: ngz,
-                                feet_bucket: n_gy,
-                            });
-                        }
+                    if tentative_g < *g_score.get(&neighbor_key).unwrap_or(&f32::INFINITY) {
+                        g_score.insert(neighbor_key, tentative_g);
+                        came_from.insert(
+                            neighbor_key,
+                            (current.gx, current.feet_bucket, current.gz, curr_feet),
+                        );
+                        let h = ((nx - to.0).powi(2) + (nz - to.2).powi(2)).sqrt();
+                        open.push(AStarNode {
+                            cost: tentative_g + h,
+                            gx: ngx,
+                            gz: ngz,
+                            feet_bucket: n_gy,
+                        });
                     }
                 }
             }

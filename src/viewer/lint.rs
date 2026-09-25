@@ -133,10 +133,9 @@ pub fn lint_map(doc: &MapDocument, strict: bool, ignore_codes: &[String]) -> Lin
                 && c.max.0 >= center_x
                 && c.min.2 <= center_z
                 && c.max.2 >= center_z
+                && c.max.1 <= bottom + 0.10
             {
-                if c.max.1 <= bottom + 0.10 {
-                    max_support = max_support.max(c.max.1);
-                }
+                max_support = max_support.max(c.max.1);
             }
         }
 

@@ -170,12 +170,14 @@ fn test_deterministic_simulation_and_replay_verification() {
 #[test]
 fn test_verification_framework() {
     let lab = MapDocument::from_map(MapId::TestLab).expect("TestLab must load");
-    let mut checks = ChecksBlock::default();
-    checks.lint = Some(LintCheck {
-        max_errors: 0,
-        max_warnings: 10,
-        forbid: vec!["overlap_critical".into()],
-    });
+    let checks = ChecksBlock {
+        lint: Some(LintCheck {
+            max_errors: 0,
+            max_warnings: 10,
+            forbid: vec!["overlap_critical".into()],
+        }),
+        ..Default::default()
+    };
 
     let report = verify_map(&lab, &checks, "TestLab");
     assert!(report.ok, "Verification of TestLab should pass");
