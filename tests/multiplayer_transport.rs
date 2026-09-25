@@ -140,6 +140,7 @@ fn one_server_two_clients_end_to_end_in_test_lab() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: 0,
+            session_token: None,
         };
         client1
             .controller
@@ -162,6 +163,7 @@ fn one_server_two_clients_end_to_end_in_test_lab() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: 0,
+            session_token: None,
         };
         client2
             .controller
@@ -399,6 +401,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
                     player_id,
                     server_tick: server.tick,
                     map_name: server.room.name.clone(),
+                    session_token: None,
                 };
                 server_net.send_packet(&welcome, src).expect("Send Welcome");
             }
@@ -447,6 +450,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: 0,
+            session_token: None,
         };
         client1
             .controller
@@ -471,6 +475,7 @@ fn localhost_udp_one_server_two_clients_end_to_end() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: 0,
+            session_token: None,
         };
         client2
             .controller
@@ -691,6 +696,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c1_rx.latest_acked_tick(),
+            session_token: None,
         };
         c1_controller.update(inp1.movement, TICK_SECONDS, &server.world.room.colliders);
         c1_pred.push(inp1.clone(), c1_controller.clone());
@@ -716,6 +722,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
+            session_token: None,
         };
         c2_controller.update(inp2.movement, TICK_SECONDS, &server.world.room.colliders);
         c2_pred.push(inp2.clone(), c2_controller.clone());
@@ -831,6 +838,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c1_rx.latest_acked_tick(),
+            session_token: None,
         };
         let _ = client1_net.send_packet(&Packet::Input(inp1), server_addr);
 
@@ -843,6 +851,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
+            session_token: None,
         };
         let _ = client2_net.send_packet(&Packet::Input(inp2), server_addr);
 
@@ -908,7 +917,13 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
 
     // 7. Graceful Disconnect: Client 2 leaves
     client2_net
-        .send_packet(&Packet::Disconnect { player_id: 2 }, server_addr)
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: 2,
+                session_token: None,
+            },
+            server_addr,
+        )
         .expect("Send Disconnect");
 
     server.poll_network().unwrap();
@@ -1075,6 +1090,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: 0,
+            session_token: None,
         };
         client1
             .send_packet(&Packet::Input(inp1), server_addr)
@@ -1092,6 +1108,7 @@ fn process_dedicated_server_two_clients_end_to_end() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: 0,
+            session_token: None,
         };
         client2
             .send_packet(&Packet::Input(inp2), server_addr)
@@ -1123,7 +1140,13 @@ fn process_dedicated_server_two_clients_end_to_end() {
 
     // Graceful disconnect of Client 2
     client2
-        .send_packet(&Packet::Disconnect { player_id: 2 }, server_addr)
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: 2,
+                session_token: None,
+            },
+            server_addr,
+        )
         .unwrap();
 
     // Client 1 receives snapshot showing Client 2 has disconnected
@@ -1222,7 +1245,13 @@ fn test_session_security_and_disconnect_verification() {
 
     // Attacker Client 2 attempts to send a spoofed Disconnect packet for Client 1 (player_id: 1)
     client2
-        .send_packet(&Packet::Disconnect { player_id: 1 }, server_addr)
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: 1,
+                session_token: None,
+            },
+            server_addr,
+        )
         .unwrap();
     server.poll_network().unwrap();
 
@@ -1233,7 +1262,13 @@ fn test_session_security_and_disconnect_verification() {
 
     // Legitimate owner Client 1 disconnects
     client1
-        .send_packet(&Packet::Disconnect { player_id: 1 }, server_addr)
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: 1,
+                session_token: None,
+            },
+            server_addr,
+        )
         .unwrap();
     server.poll_network().unwrap();
     assert_eq!(server.sessions.len(), 1);
@@ -1279,6 +1314,7 @@ fn test_input_sequencing_and_stale_input_neutralization() {
         fire_pistol: false,
         interact: false,
         ack_server_tick: 0,
+        session_token: None,
     };
     client
         .send_packet(&Packet::Input(inp10), server_addr)
@@ -1299,6 +1335,7 @@ fn test_input_sequencing_and_stale_input_neutralization() {
         fire_pistol: false,
         interact: false,
         ack_server_tick: 0,
+        session_token: None,
     };
     client
         .send_packet(&Packet::Input(inp_dup), server_addr)
@@ -1321,6 +1358,7 @@ fn test_input_sequencing_and_stale_input_neutralization() {
         fire_pistol: false,
         interact: false,
         ack_server_tick: 0,
+        session_token: None,
     };
     client
         .send_packet(&Packet::Input(inp_old), server_addr)
@@ -1423,6 +1461,7 @@ fn test_multiplayer_prop_contention_and_ownership() {
         fire_pistol: false,
         interact: true,
         ack_server_tick: 0,
+        session_token: None,
     };
     client1
         .send_packet(&Packet::Input(inp1), server_addr)
@@ -1461,6 +1500,7 @@ fn test_multiplayer_prop_contention_and_ownership() {
         fire_pistol: false,
         interact: true,
         ack_server_tick: 0,
+        session_token: None,
     };
     client2
         .send_packet(&Packet::Input(inp2), server_addr)
@@ -1486,7 +1526,13 @@ fn test_multiplayer_prop_contention_and_ownership() {
 
     // When Player 1 disconnects, their held prop is released automatically
     client1
-        .send_packet(&Packet::Disconnect { player_id: 1 }, server_addr)
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: 1,
+                session_token: None,
+            },
+            server_addr,
+        )
         .unwrap();
     server.poll_network().unwrap();
 
@@ -1557,6 +1603,7 @@ fn test_authoritative_combat_hitscan_and_impulse() {
         fire_pistol: true,
         interact: false,
         ack_server_tick: 0,
+        session_token: None,
     };
     client
         .send_packet(&Packet::Input(inp_pistol), server_addr)
@@ -1779,6 +1826,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: tick == 15 || tick == 45,
             ack_server_tick: c1_rx.latest_acked_tick(),
+            session_token: None,
         };
         client1
             .send_packet(&Packet::Input(inp1), server_addr)
@@ -1796,6 +1844,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
+            session_token: None,
         };
         client2
             .send_packet(&Packet::Input(inp2), server_addr)
@@ -1875,6 +1924,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: c1_rx.latest_acked_tick(),
+            session_token: None,
         };
         client1
             .send_packet(&Packet::Input(inp1), server_addr)
@@ -1889,6 +1939,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
+            session_token: None,
         };
         client2
             .send_packet(&Packet::Input(inp2), server_addr)

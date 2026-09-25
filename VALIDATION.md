@@ -1,4 +1,12 @@
-# Interior placement revision � 2026-09-23
+# Authenticated multiplayer, network proxy & doc drift protection — 2026-09-25
+
+Added cryptographic authentication handshake (HMAC-SHA256 challenge-response, 128-bit random nonces and salts, constant-time verification, session token issuance and validation), live network impairment proxy (UdpProxyServer, Gilbert-Elliott 2-state Markov burst loss, Gaussian latency/jitter with Box-Muller transform, packet duplication, presets for bad-wifi, mobile-3g, satellite, and congested-bursty), and strong automated documentation drift protection (e2-tools doc-check, udit_documentation).
+
+155 tests pass (93 unit tests, 12 multiplayer transport tests, 5 authoring tests, 5 content handshake tests, 5 benchmark tests, 4 capability discovery tests, 5 furniture clearance tests, 11 game document tests, 3 prototype tests, 2 secure networking & proxy tests, 2 simulation flow tests, 8 toolchain tests, and 1 doc test). cargo fmt --check, cargo clippy --all-targets --locked -- -D warnings, and cargo clippy --all-targets --locked --no-default-features -- -D warnings pass with zero warnings.
+
+---
+
+# Interior placement revision — 2026-09-23
 
 Rearranged the living room around a sofa facing a TV mounted on the solid partition, with a low coffee table and wall-adjacent console. Moved the fridge into the counter run, faced its doors into the kitchen, and removed its duplicate collider. Dining chairs now face the table from opposite sides. Moved the master bed headboard to the rear wall, placed the wardrobe beside it on a solid wall section, and added a bedside cabinet. The smaller bedroom uses a narrower single bed with a usable side aisle. Removed the detached hall cupboard, misplaced kitchen island, floating sideboard and unnecessary bedroom divider.
 
@@ -8,7 +16,7 @@ Preserved semantic IDs for moved furniture and updated visual, collision and ent
 
 ---
 
-# Landscaping revision � 2026-09-23
+# Landscaping revision — 2026-09-23
 
 Replaced two pole-and-sphere trees with tapered branching broadleaf trees and irregular seven-cluster crowns. Added two layered pine trees. Rebuilt all twelve shrubs from six varied leaf clusters with small stems; preserved shrub collision cores. Added 48 cream/pink/gold flowers across bed edges and four entrance/patio planting patches. All geometry is static matte primitives, without textures, transparency, per-frame animation or new dependencies.
 
@@ -20,7 +28,7 @@ The existing desktop shortcut targets the updated bin/BE2.exe. Shared landscapin
 
 ---
 
-# Agent authoring toolkit � 2026-09-23
+# Agent authoring toolkit — 2026-09-23
 
 Added a rendering-free be2-tools executable and tools/be2.py workflow entry point. Both the graphical client and headless simulation load validated static map documents through --map. Default play still uses the procedural house; demonstration edits do not modify it. Runtime entity/name strings are owned rather than leaked static allocations.
 
@@ -34,7 +42,7 @@ Limits: map v1 covers static matte primitive scenes and inspect actions. Origina
 
 ---
 
-# House cleanup and hiding cover � 2026-09-23
+# House cleanup and hiding cover — 2026-09-23
 
 Fixed open roof gables, gaps above upstairs walls, incomplete doorway headers, unsupported stair posts and headboard collision coverage. The bathroom now uses recessed tub/basin shapes and a recognizable toilet; the wardrobe and new cabinets have doors/handles. The tub base and rim abut without coplanar overlap.
 
@@ -64,7 +72,7 @@ Updated bin/BE2.exe is the target of the existing desktop shortcut. Selected hou
 
 ---
 
-# Simple-prop revision � 2026-09-23
+# Simple-prop revision — 2026-09-23
 
 Replaced the active crate/barrel/stool/toolbox set with a cereal box, chair, table and apple. Old JSON assets retain their IDs in assets/legacy-props. The new props have new IDs.
 
@@ -151,7 +159,7 @@ four clean native audits, sixteen successful controller routes, three deliberate
 
 Previous maps/library/binaries: .be2-work/distinct-maps/before-publish. Reports, captures and scratch outputs: .be2-work/distinct-maps/revision-4. Map audits/routes: redesign-validation.json.
 
-## Context and simulation contract documentation � 2026-09-23
+## Context and simulation contract documentation — 2026-09-23
 
 Expanded AGENTS.md and added its CLAUDE.md import, two retrospective ADRs,
 a glossary and an eight-option context review. Documented the public simulation

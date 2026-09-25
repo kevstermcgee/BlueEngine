@@ -189,6 +189,7 @@ fn run() -> Result<()> {
                     fire_pistol: false,
                     interact: false,
                     ack_server_tick: 0,
+                    session_token: None,
                 };
                 controller.update(
                     input.movement,
@@ -367,6 +368,47 @@ fn run() -> Result<()> {
         ),
         "mcp" => {
             vesper3d::viewer::mcp::run_mcp_server()?;
+        }
+        "doc-check" => {
+            let root = a.get(1).map(Path::new).unwrap_or_else(|| Path::new("."));
+            let report = vesper3d::viewer::doc_drift::audit_documentation(root)?;
+            println!("{}", serde_json::to_string_pretty(&report)?);
+            if !report.ok {
+                std::process::exit(1);
+            }
+        }
+        "net-proxy" => {
+            let listen = arg(1)?;
+            let upstream_str = arg(2)?;
+            let upstream: std::net::SocketAddr = upstream_str
+                .parse()
+                .map_err(|e| format!("Invalid upstream address '{upstream_str}': {e}"))?;
+            let preset_name = a.get(3).map(String::as_str).unwrap_or("bad-wifi");
+            let config = vesper3d::viewer::net::NetworkProxyConfig::from_preset(preset_name)
+                .ok_or_else(|| format!("Unknown proxy preset '{preset_name}'. Available: bad-wifi, mobile-3g, satellite, congested-bursty"))?;
+
+            let mut proxy = vesper3d::viewer::net::UdpProxyServer::bind(listen, upstream, config)?;
+            let local_addr = proxy.local_addr()?;
+            println!(
+                "{}",
+                json!({
+                    "ok": true,
+                    "proxy_listening": local_addr.to_string(),
+                    "upstream": upstream.to_string(),
+                    "preset": preset_name,
+                    "status": "running"
+                })
+            );
+
+            let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            #[cfg(feature = "offline")]
+            {
+                let s_clone = stop.clone();
+                let _ = ctrlc::set_handler(move || {
+                    s_clone.store(true, std::sync::atomic::Ordering::Relaxed);
+                });
+            }
+            proxy.run(stop)?;
         }
         "ui-check" => {
             let rep = vesper3d::viewer::ui_check::audit_all_screens();

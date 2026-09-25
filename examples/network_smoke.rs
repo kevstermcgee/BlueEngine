@@ -122,11 +122,7 @@ impl Scenario {
                         continue;
                     }
                     match packet {
-                        Packet::Welcome {
-                            player_id,
-                            server_tick: _,
-                            map_name: _,
-                        } => {
+                        Packet::Welcome { player_id, .. } => {
                             welcomed[i] = true;
                             assigned_ids[i] = player_id;
                         }
@@ -159,6 +155,7 @@ impl Scenario {
                         fire_pistol: false,
                         interact: false,
                         ack_server_tick: client_tick.saturating_sub(2),
+                        session_token: None,
                     };
                     let _ = c.send_packet(&Packet::Input(input), server_addr);
                 }
@@ -176,6 +173,7 @@ impl Scenario {
                 let _ = c.send_packet(
                     &Packet::Disconnect {
                         player_id: assigned_ids[i],
+                        session_token: None,
                     },
                     server_addr,
                 );

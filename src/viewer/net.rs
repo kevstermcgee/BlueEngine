@@ -18,6 +18,7 @@ use std::collections::VecDeque;
 
 pub mod action_counters;
 pub mod lag_compensation;
+pub mod proxy;
 pub mod quic;
 pub mod reliable_command;
 pub mod session;
@@ -25,6 +26,7 @@ pub mod transport;
 
 pub use action_counters::*;
 pub use lag_compensation::*;
+pub use proxy::*;
 pub use quic::*;
 pub use reliable_command::*;
 pub use session::*;
@@ -208,6 +210,8 @@ pub struct InputFrame {
     pub interact: bool,
     #[serde(default)]
     pub ack_server_tick: u64,
+    #[serde(default)]
+    pub session_token: Option<SessionToken>,
 }
 
 /// Advanced client input with reliable action counters and lag-compensated aim tick.
@@ -222,6 +226,8 @@ pub struct SequencedInputFrame {
     pub counters: ActionCounters,
     #[serde(default)]
     pub ack_server_tick: u64,
+    #[serde(default)]
+    pub session_token: Option<SessionToken>,
 }
 
 impl InputFrame {
@@ -241,6 +247,7 @@ impl InputFrame {
             aim_tick,
             counters,
             ack_server_tick: self.ack_server_tick,
+            session_token: self.session_token,
         }
     }
 }
@@ -253,6 +260,16 @@ pub enum Packet {
         player_id: u64,
         content_hash: u64,
     },
+    AuthChallenge {
+        nonce: ConnectionNonce,
+        salt: [u8; 16],
+    },
+    AuthResponse {
+        player_id: u64,
+        nonce: ConnectionNonce,
+        proof: [u8; 32],
+        content_hash: u64,
+    },
     Rejected {
         reason: String,
     },
@@ -260,6 +277,8 @@ pub enum Packet {
         player_id: u64,
         server_tick: u64,
         map_name: String,
+        #[serde(default)]
+        session_token: Option<SessionToken>,
     },
     Input(InputFrame),
     SequencedInput(SequencedInputFrame),
@@ -281,6 +300,8 @@ pub enum Packet {
     },
     Disconnect {
         player_id: u64,
+        #[serde(default)]
+        session_token: Option<SessionToken>,
     },
 }
 
@@ -762,6 +783,7 @@ mod tests {
                 fire_pistol: false,
                 interact: false,
                 ack_server_tick: 0,
+                session_token: None,
             };
             controller.update(
                 input.movement,

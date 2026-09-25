@@ -44,6 +44,8 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("new-game", "NAME DIRECTORY"),
     ("ui-check", ""),
     ("mcp", ""),
+    ("net-proxy", "LISTEN UPSTREAM [PRESET]"),
+    ("doc-check", "[ROOT]"),
 ];
 
 /// Feature-to-source/check metadata embedded at compile time; no source reads at runtime.
@@ -70,7 +72,7 @@ pub fn describe() -> Result<Value> {
         "features": names,
         "limits": {"packet_bytes": super::net::MAX_PACKET_BYTES, "players": 8, "map_bytes": 8_000_000, "patch_operations": 1000, "search_results": 10},
         "start": ["be2-tools export-lab NEW.json", "be2-tools catalog", "be2-tools search multiplayer", "docs/AI_QUICKSTART.md"],
-        "unsupported": ["arbitrary gameplay scripts", "authenticated Internet sessions", "runtime mesh import"],
+        "unsupported": ["arbitrary gameplay scripts", "runtime mesh import"],
         "metadata": "Curated feature index; executable commands/arities come from the native CLI registry."
     }))
 }

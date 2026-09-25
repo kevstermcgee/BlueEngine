@@ -39,6 +39,7 @@ pub mod server;
 pub mod spatial;
 
 pub mod blueprint;
+pub mod doc_drift;
 pub mod gen;
 pub mod lint;
 pub mod mcp;

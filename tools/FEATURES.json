@@ -108,17 +108,22 @@
     "multiplayer": {
       "files": [
         "src/viewer/net.rs",
+        "src/viewer/net/session.rs",
+        "src/viewer/net/proxy.rs",
+        "src/viewer/doc_drift.rs",
         "src/viewer/server.rs",
         "src/viewer/content.rs",
         "src/viewer/simulation.rs",
         "src/bin/be2-headless.rs",
         "tests/multiplayer_transport.rs",
-        "tests/content_handshake.rs"
+        "tests/content_handshake.rs",
+        "tests/secure_net.rs",
+        "tests/doc_drift.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake"
+        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test doc_drift"
       ],
-      "note": "Dedicated UDP server, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership and combat; protocol 2 rejects mismatched map fingerprints. Development sessions, no encryption or cryptographic authentication. JSON packets bounded to 1400 bytes.",
+      "note": "Dedicated UDP server, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat; protocol 3 rejects mismatched map fingerprints. Authenticated live multiplayer with HMAC-SHA256 challenge-response, session tokens, replay protection, and high-fidelity network impairment proxy with Gilbert-Elliott burst loss.",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -131,6 +136,18 @@
         {
           "suite": "content_handshake",
           "test": "mismatch_and_capacity_rejections_do_not_create_sessions"
+        },
+        {
+          "suite": "secure_net",
+          "test": "test_authenticated_handshake_and_session_token_enforcement"
+        },
+        {
+          "suite": "secure_net",
+          "test": "test_live_udp_proxy_forwarding"
+        },
+        {
+          "suite": "doc_drift",
+          "test": "test_documentation_drift_protection"
         }
       ]
     },

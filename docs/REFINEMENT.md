@@ -1,4 +1,4 @@
-# BlueEngine refinement — 2026-09-24
+# BlueEngine refinement â€” 2026-09-24
 
 ## Goal and scope
 

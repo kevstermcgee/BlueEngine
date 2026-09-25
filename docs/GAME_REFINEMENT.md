@@ -1,4 +1,4 @@
-# GameDocument refinement — 2026-09-24
+# GameDocument refinement â€” 2026-09-24
 
 The feedback correctly identified the next missing layer: map authoring alone cannot
 produce a playable objective. This pass implements a deliberately bounded version

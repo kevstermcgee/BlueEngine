@@ -485,7 +485,13 @@ async fn main() {
         (None, None)
     };
 
+    let client_auth_key = args
+        .windows(2)
+        .find(|a| a[0] == "--auth-key" || a[0] == "--auth")
+        .map(|a| a[1].clone());
+
     let mut net_player_id: Option<u64> = None;
+    let mut net_session_token: Option<vesper3d::viewer::net::SessionToken> = None;
     let mut prediction_buffer = PredictionBuffer::new(128);
     let mut remote_interpolators: HashMap<u64, InterpolationBuffer<PlayerNetState>> =
         HashMap::new();
@@ -527,12 +533,34 @@ async fn main() {
                             error_screen(&reason).await;
                             return;
                         }
+                        Packet::AuthChallenge { nonce, salt } => {
+                            if let Some(ref key) = client_auth_key {
+                                let proof = vesper3d::viewer::net::session::compute_auth_proof(
+                                    key, nonce, 0, &salt,
+                                );
+                                let _ = transport.send_packet(
+                                    &Packet::AuthResponse {
+                                        player_id: 0,
+                                        nonce,
+                                        proof,
+                                        content_hash,
+                                    },
+                                    server_addr,
+                                );
+                            } else {
+                                error_screen("Server requires authentication (--auth-key <KEY>)")
+                                    .await;
+                                return;
+                            }
+                        }
                         Packet::Welcome {
                             player_id,
                             server_tick,
+                            session_token,
                             ..
                         } => {
                             net_player_id = Some(player_id);
+                            net_session_token = session_token;
                             last_server_tick = server_tick;
                             let spawn = match player_id {
                                 1 => SPAWN_PLAYER_1,
@@ -788,6 +816,7 @@ async fn main() {
                         && loadout.selected == Weapon::Pistol,
                     interact: keys.pressed(KeyCode::E),
                     ack_server_tick: client_acked_server_tick,
+                    session_token: net_session_token,
                 };
                 let _ = transport.send_packet(&Packet::Input(input_frame.clone()), server_addr);
                 prediction_buffer.push(input_frame, controller.clone());
@@ -1695,7 +1724,13 @@ async fn main() {
     if let (Some(ref transport), Some(server_addr), Some(pid)) =
         (&net_transport, net_server_dest, net_player_id)
     {
-        let _ = transport.send_packet(&Packet::Disconnect { player_id: pid }, server_addr);
+        let _ = transport.send_packet(
+            &Packet::Disconnect {
+                player_id: pid,
+                session_token: net_session_token,
+            },
+            server_addr,
+        );
     }
     capture(false);
 }

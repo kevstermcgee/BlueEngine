@@ -11,6 +11,7 @@ fn main() -> vesper3d::Result<()> {
     let mut map_file = None;
     let mut game_file = None;
     let mut server_addr = None;
+    let mut auth_key = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -31,6 +32,14 @@ fn main() -> vesper3d::Result<()> {
                 index += 1;
                 server_addr = Some(args.get(index).ok_or("--listen needs an address")?.clone());
             }
+            "--auth-key" | "--auth" => {
+                index += 1;
+                auth_key = Some(
+                    args.get(index)
+                        .ok_or("--auth-key needs a secret key")?
+                        .clone(),
+                );
+            }
             "--ticks" => {
                 index += 1;
                 let t: u64 = args.get(index).ok_or("--ticks needs a number")?.parse()?;
@@ -47,9 +56,10 @@ fn main() -> vesper3d::Result<()> {
             "--realtime" => realtime = true,
             "--help" => {
                 println!(
-                    "be2-headless [--server [ADDR]] [--listen ADDR] [--ticks N] [--realtime] [--map FILE | --game FILE]\n\
+                    "be2-headless [--server [ADDR]] [--listen ADDR] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE]\n\
                      Modes:\n\
                        --server [ADDR]   Run authoritative dedicated multiplayer server (default 0.0.0.0:4000)\n\
+                       --auth-key KEY    Require cryptographic challenge-response authentication\n\
                        (no --server)     Run local benchmark simulation"
                 );
                 return Ok(());
@@ -75,6 +85,9 @@ fn main() -> vesper3d::Result<()> {
     if let Some(addr) = server_addr {
         let stop_signal = Arc::new(AtomicBool::new(false));
         let mut server = DedicatedServer::with_world(&addr, world)?;
+        if let Some(key) = auth_key {
+            server = server.with_auth(&key);
+        }
         server.run_realtime(stop_signal, ticks)?;
         return Ok(());
     }

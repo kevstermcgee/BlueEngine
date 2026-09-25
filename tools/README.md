@@ -102,6 +102,32 @@ Map schema v1 is for portable, static, matte primitive maps. It accepts unparent
 
 `capture` uses the current house camera tour. A future school/office/store will need its own capture positions in the client. Inspect PNGs and the menu; successful file generation is not visual approval. Hardware input, audio audibility and multiplayer balancing still require appropriate playtesting.
 
+## Procedural generation and spatial analysis
+
+- `lint MAP.json` audits spatial connectivity, identifying floating props, stairs to nowhere, unreachable rooms, and perimeter leaks.
+- `reach MAP.json` evaluates topological reachability between all declared rooms and spawns.
+- `walk-auto MAP.json FROM_X,Z TO_X,Z` plans an A* route between coordinates and verifies it with real physics simulation.
+- `walk-explain MAP.json FROM_X,Z TO_X,Z OUT.svg` executes an auto-planned walk test and exports an SVG diagram of the route and any blocking obstacles.
+- `blueprint-example OUT.json` writes a starter JSON blueprint specification for procedural map compilation.
+- `build SPEC.json OUT.json` compiles a blueprint specification of rooms, corridors, and doorways into a full, lint-clean map.
+- `scatter MAP.json KIND COUNT X1,Z1,X2,Z2 SEED OUT.json` procedurally places props within a 2D bounding rectangle with collision clearance.
+- `line MAP.json KIND COUNT X1,Z1,X2,Z2 OUT.json` places props spaced evenly along a line segment.
+
+## Simulation, tracing, and multiplayer verification
+
+- `sim SCENARIO.json [TRACE.json]` runs an authoritative headless simulation scenario and writes an execution trace.
+- `replay-trace TRACE.json` replays a simulation trace tick-by-tick and verifies deterministic state checksums.
+- `replay-test` runs an automated 120-tick determinism and state checkpoint verification test.
+- `net-test` runs deterministic multiplayer client-side prediction and server reconciliation under artificial network latency and packet loss.
+- `net-proxy LISTEN UPSTREAM [PRESET]` runs a live UDP network impairment proxy with Gilbert-Elliott burst loss, Gaussian latency/jitter (Box-Muller), packet duplication, and standard bad network presets (`bad-wifi`, `mobile-3g`, `satellite`, `congested-bursty`).
+- `bench` benchmarks simulation steps, snapshot creation, delta compression, and room graph lookups.
+- `inspect-performance` measures memory, allocation, and tick budgets.
+- `validate-budget` validates engine performance budgets and reports any violations.
+- `new-game NAME DIRECTORY` scaffolds a complete game project with starter map and rule definitions.
+- `ui-check` audits UI layout geometry and text fit across aspect ratios.
+- `mcp` runs the Model Context Protocol (MCP) JSON-RPC stdio server exposing engine tools directly to AI agents.
+- `doc-check [ROOT]` runs automated documentation drift protection, validating that all CLI commands, signatures, links, embedded JSON blocks, and feature files remain synchronized.
+
 ## Code feature workflow
 
 For gameplay, graphics, audio, networking or new reusable prop types, use `FEATURES.json` to find the relevant source. The JSON map editor does not rewrite Rust or remove engine dependencies.

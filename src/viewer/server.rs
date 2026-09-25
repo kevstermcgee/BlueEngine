@@ -6,7 +6,10 @@
 
 use crate::math::V;
 use crate::viewer::{
-    net::{Packet, UdpTransport, PROTOCOL_VERSION},
+    net::{
+        random_nonce, random_salt, random_token, verify_auth_proof, ConnectionNonce,
+        HandshakeLimiter, Packet, SessionRegistry, SessionToken, UdpTransport, PROTOCOL_VERSION,
+    },
     simulation::HeadlessWorld,
     test_lab::{SPAWN_PLAYER_1, SPAWN_PLAYER_2},
 };
@@ -34,6 +37,9 @@ pub struct ClientSession {
     pub snapshot_history: std::collections::VecDeque<crate::viewer::net::WorldSnapshot>,
     pub snapshots_since_keyframe: u32,
     pub keyframe_requested: bool,
+    pub session_token: SessionToken,
+    pub authenticated: bool,
+    pub action_tracker: crate::viewer::net::action_counters::ActionCountersTracker,
 }
 
 /// Authoritative dedicated server running HeadlessWorld over UDP.
@@ -46,6 +52,10 @@ pub struct DedicatedServer {
     pub next_player_id: u64,
     pub client_timeout: Duration,
     pub local_addr: SocketAddr,
+    pub auth_key: Option<String>,
+    pub pending_challenges: HashMap<SocketAddr, (ConnectionNonce, [u8; 16], Instant)>,
+    pub handshake_limiter: HandshakeLimiter,
+    pub session_registry: SessionRegistry<u64>,
 }
 
 impl DedicatedServer {
@@ -68,7 +78,17 @@ impl DedicatedServer {
             next_player_id: 1,
             client_timeout: Duration::from_secs(5),
             local_addr,
+            auth_key: None,
+            pending_challenges: HashMap::new(),
+            handshake_limiter: HandshakeLimiter::new(64),
+            session_registry: SessionRegistry::new(16, Duration::from_secs(5)),
         })
+    }
+
+    /// Configure a shared secret key for mandatory client authentication.
+    pub fn with_auth(mut self, auth_key: &str) -> Self {
+        self.auth_key = Some(auth_key.to_string());
+        self
     }
 
     /// Calculate the default spawn location for a given player ID.
@@ -88,6 +108,11 @@ impl DedicatedServer {
         req_id: u64,
         content_hash: u64,
     ) {
+        let now = Instant::now();
+        if !self.handshake_limiter.allow(now) {
+            eprintln!("[Server] Handshake rate limit exceeded for {src}");
+            return;
+        }
         if protocol_version != PROTOCOL_VERSION {
             eprintln!(
                 "[Server] Rejected client from {src}: protocol mismatch {protocol_version} != {PROTOCOL_VERSION}"
@@ -113,14 +138,20 @@ impl DedicatedServer {
             return;
         }
 
+        // If authentication key is required, send cryptographic AuthChallenge
+        if self.auth_key.is_some() {
+            let nonce = random_nonce().unwrap_or([req_id, now.elapsed().as_nanos() as u64]);
+            let salt = random_salt().unwrap_or([0u8; 16]);
+            self.pending_challenges.insert(src, (nonce, salt, now));
+            let challenge = Packet::AuthChallenge { nonce, salt };
+            let _ = self.transport.send_packet(&challenge, src);
+            return;
+        }
+
         // Expire disconnect reservations older than 60s
-        let now = Instant::now();
         self.recent_disconnects
             .retain(|_, (_, time)| now.duration_since(*time) < Duration::from_secs(60));
 
-        // Session security: Server assigns authoritative IDs.
-        // Reconnecting clients from the same socket address or with valid unexpired reservation retain their ID.
-        // Arbitrary requested IDs from untrusted sockets are rejected and assigned fresh sequential IDs.
         let player_id = if let Some(&existing_id) = self.clients.get(&src) {
             existing_id
         } else if req_id > 0
@@ -156,6 +187,11 @@ impl DedicatedServer {
             return;
         }
 
+        let token = random_token().unwrap_or([player_id, 0xcafe]);
+        let _ = self
+            .session_registry
+            .register(src, [player_id, 0], now, player_id);
+
         self.clients.insert(src, player_id);
         self.sessions.insert(
             player_id,
@@ -172,6 +208,9 @@ impl DedicatedServer {
                 snapshot_history: std::collections::VecDeque::with_capacity(64),
                 snapshots_since_keyframe: 0,
                 keyframe_requested: false,
+                session_token: token,
+                authenticated: true,
+                action_tracker: Default::default(),
             },
         );
 
@@ -179,9 +218,145 @@ impl DedicatedServer {
             player_id,
             server_tick: self.world.tick,
             map_name: self.world.room.name.clone(),
+            session_token: Some(token),
         };
         let _ = self.transport.send_packet(&welcome, src);
         println!("[Server] Client #{player_id} connected from {src} (spawn {spawn:?})");
+    }
+
+    /// Handle client authentication response (`Packet::AuthResponse`).
+    pub fn handle_auth_response(
+        &mut self,
+        src: SocketAddr,
+        player_id: u64,
+        nonce: ConnectionNonce,
+        proof: [u8; 32],
+        content_hash: u64,
+    ) {
+        let now = Instant::now();
+        let Some((expected_nonce, salt, challenge_time)) = self.pending_challenges.remove(&src)
+        else {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "No pending authentication challenge".into(),
+                },
+                src,
+            );
+            return;
+        };
+
+        if now.duration_since(challenge_time) > Duration::from_secs(10) {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "Authentication challenge expired".into(),
+                },
+                src,
+            );
+            return;
+        }
+
+        if nonce != expected_nonce {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "Authentication nonce mismatch".into(),
+                },
+                src,
+            );
+            return;
+        }
+
+        if content_hash != self.world.content_hash {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "Map content mismatch; load the same map as the server".into(),
+                },
+                src,
+            );
+            return;
+        }
+
+        if let Some(ref key) = self.auth_key {
+            if !verify_auth_proof(key, nonce, player_id, &salt, &proof) {
+                eprintln!("[Server] Client from {src} failed HMAC authentication proof");
+                let _ = self.transport.send_packet(
+                    &Packet::Rejected {
+                        reason: "Invalid authentication credentials or proof".into(),
+                    },
+                    src,
+                );
+                return;
+            }
+        }
+
+        let assigned_id = if let Some(&existing_id) = self.clients.get(&src) {
+            existing_id
+        } else if player_id > 0
+            && self
+                .recent_disconnects
+                .get(&player_id)
+                .is_some_and(|(addr, _)| *addr == src)
+        {
+            self.recent_disconnects.remove(&player_id);
+            player_id
+        } else {
+            let id = self.next_player_id;
+            self.next_player_id += 1;
+            id
+        };
+
+        self.world.leave(assigned_id);
+
+        let spawn = self.spawn_point_for(assigned_id);
+        let joined = if self.world.game.is_some() {
+            self.world.join(assigned_id)
+        } else {
+            self.world.join_at(assigned_id, spawn)
+        };
+        if !joined {
+            let _ = self.transport.send_packet(
+                &Packet::Rejected {
+                    reason: "World is full (8 players)".into(),
+                },
+                src,
+            );
+            return;
+        }
+
+        let token = random_token().unwrap_or([assigned_id, 0xcafe]);
+        let _ = self.session_registry.register(src, nonce, now, assigned_id);
+
+        self.clients.insert(src, assigned_id);
+        self.sessions.insert(
+            assigned_id,
+            ClientSession {
+                player_id: assigned_id,
+                addr: src,
+                connected_at: now,
+                last_seen: now,
+                last_client_tick: 0,
+                last_input_tick: self.world.tick,
+                last_acked_tick: 0,
+                pistol_cooldown: 0.0,
+                wrench_cooldown: 0.0,
+                snapshot_history: std::collections::VecDeque::with_capacity(64),
+                snapshots_since_keyframe: 0,
+                keyframe_requested: false,
+                session_token: token,
+                authenticated: true,
+                action_tracker: Default::default(),
+            },
+        );
+
+        let welcome = Packet::Welcome {
+            player_id: assigned_id,
+            server_tick: self.world.tick,
+            map_name: self.world.room.name.clone(),
+            session_token: Some(token),
+        };
+        let _ = self.transport.send_packet(&welcome, src);
+        println!(
+            "[Server] Authenticated client #{assigned_id} connected from {src} (spawn {spawn:?})"
+        );
     }
 
     /// Poll and process all pending incoming network packets non-blockingly.
@@ -200,12 +375,26 @@ impl DedicatedServer {
                 } => {
                     self.handle_hello(src, protocol_version, player_id, content_hash);
                 }
+                Packet::AuthResponse {
+                    player_id,
+                    nonce,
+                    proof,
+                    content_hash,
+                } => {
+                    self.handle_auth_response(src, player_id, nonce, proof, content_hash);
+                }
                 Packet::Input(frame) => {
                     if let Some(&player_id) = self.clients.get(&src) {
                         let mut should_fire_pistol = false;
                         let mut should_fire_wrench = false;
 
                         if let Some(session) = self.sessions.get_mut(&player_id) {
+                            if self.auth_key.is_some()
+                                && frame.session_token != Some(session.session_token)
+                            {
+                                eprintln!("[Server] Dropping unauthorized input frame from {src}");
+                                continue;
+                            }
                             // Input sequencing enforcement: reject duplicate or out-of-order input frames
                             if frame.client_tick <= session.last_client_tick {
                                 continue;
@@ -256,6 +445,69 @@ impl DedicatedServer {
                         }
                     }
                 }
+                Packet::SequencedInput(frame) => {
+                    if let Some(&player_id) = self.clients.get(&src) {
+                        let mut should_fire_pistol = false;
+                        let mut should_fire_wrench = false;
+                        let mut should_interact = false;
+
+                        if let Some(session) = self.sessions.get_mut(&player_id) {
+                            if self.auth_key.is_some()
+                                && frame.session_token != Some(session.session_token)
+                            {
+                                eprintln!("[Server] Dropping unauthorized sequenced input frame from {src}");
+                                continue;
+                            }
+                            if frame.client_tick <= session.last_client_tick {
+                                continue;
+                            }
+                            session.last_seen = Instant::now();
+                            session.last_client_tick = frame.client_tick;
+                            session.last_input_tick = self.world.tick;
+                            if frame.ack_server_tick > session.last_acked_tick {
+                                session.last_acked_tick = frame.ack_server_tick;
+                            }
+
+                            let edges = session.action_tracker.update(&frame.counters);
+                            if edges.secondary && session.wrench_cooldown <= 0.0 {
+                                session.wrench_cooldown = crate::viewer::wrench::SWING_TIME;
+                                should_fire_wrench = true;
+                            }
+                            if edges.primary && session.pistol_cooldown <= 0.0 {
+                                session.pistol_cooldown = crate::viewer::weapons::SHOT_INTERVAL;
+                                should_fire_pistol = true;
+                            }
+                            if edges.interact {
+                                should_interact = true;
+                            }
+                        }
+
+                        if !self
+                            .world
+                            .input(player_id, frame.movement, frame.yaw, frame.pitch)
+                        {
+                            continue;
+                        }
+
+                        if should_interact {
+                            if self.world.game.is_some() {
+                                self.world.request_interaction(player_id);
+                            } else if let Some(p) = self.world.player(player_id) {
+                                let ray = p.ray();
+                                if let Some(ref mut physics) = self.world.prop_physics {
+                                    physics.toggle_for_player(player_id, &self.world.room, ray);
+                                }
+                            }
+                        }
+
+                        if should_fire_pistol && self.world.game.is_none() {
+                            self.world.fire_pistol(player_id);
+                        }
+                        if should_fire_wrench && self.world.game.is_none() {
+                            self.world.fire_wrench(player_id);
+                        }
+                    }
+                }
                 Packet::RequestKeyframe => {
                     if let Some(&player_id) = self.clients.get(&src) {
                         if let Some(session) = self.sessions.get_mut(&player_id) {
@@ -263,11 +515,27 @@ impl DedicatedServer {
                         }
                     }
                 }
-                Packet::Disconnect { player_id } => {
+                Packet::Disconnect {
+                    player_id,
+                    session_token,
+                } => {
                     // Session security: Verify that sender actually owns this player ID
                     if self.clients.get(&src) == Some(&player_id) {
+                        if let Some(session) = self.sessions.get(&player_id) {
+                            if self.auth_key.is_some()
+                                && session_token.is_some()
+                                && session_token != Some(session.session_token)
+                            {
+                                eprintln!(
+                                    "[Server] Rejected disconnect with mismatched session token for #{player_id}"
+                                );
+                                continue;
+                            }
+                        }
                         self.world.leave(player_id);
-                        self.sessions.remove(&player_id);
+                        if let Some(session) = self.sessions.remove(&player_id) {
+                            self.session_registry.remove(&session.session_token);
+                        }
                         self.clients.remove(&src);
                         self.recent_disconnects
                             .insert(player_id, (src, Instant::now()));

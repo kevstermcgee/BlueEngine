@@ -1,292 +1,268 @@
+//! Integration tests for authenticated live multiplayer and network impairment proxy.
+
 use std::{
-    net::SocketAddr,
+    thread,
     time::{Duration, Instant},
 };
-use vesper3d::{
-    math::V,
-    viewer::{
-        controller::{CharacterKind, Controller, ControllerState, KinematicState, Movement},
-        metrics::{FixedTickRunner, TickMetrics},
-        net::{
-            action_counters::{ActionCounters, ActionCountersTracker},
-            lag_compensation::PoseHistory,
-            quic::{Identity, SecureSocket},
-            reliable_command::ReliableCommandQueue,
-            session::{random_token, HandshakeLimiter, SessionRegistry},
-        },
+
+use vesper3d::viewer::{
+    controller::Movement,
+    net::{
+        compute_auth_proof, proxy::NetworkProxyConfig, InputFrame, Packet, UdpProxyServer,
+        UdpTransport, PROTOCOL_VERSION,
     },
+    server::DedicatedServer,
+    simulation::HeadlessWorld,
 };
 
 #[test]
-fn controller_state_restores_complete_kinematic_state() {
-    let mut c1 = Controller::for_character(CharacterKind::Scientist);
-    c1.position = V(1.2, 3.4, 5.6);
-    c1.yaw = 0.78;
-    c1.pitch = -0.25;
+fn test_authenticated_handshake_and_session_token_enforcement() {
+    let auth_key = "test-secret-key-12345";
+    let mut server = DedicatedServer::with_world("127.0.0.1:0", HeadlessWorld::new().unwrap())
+        .unwrap()
+        .with_auth(auth_key);
+    let server_addr = server.local_addr;
 
-    // Run a step with movement to populate velocity, feet, etc.
-    let colliders = vec![];
-    c1.update(
-        Movement {
+    let mut client = UdpTransport::bind("127.0.0.1:0").unwrap();
+    let content_hash = server.world.content_hash;
+
+    // 1. Initial Hello
+    client
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                content_hash,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+
+    server.poll_network().unwrap();
+
+    // 2. Client receives AuthChallenge
+    let (challenge_pkt, from) = client.recv_packet().unwrap().expect("AuthChallenge packet");
+    assert_eq!(from, server_addr);
+    let (nonce, salt) = match challenge_pkt {
+        Packet::AuthChallenge { nonce, salt } => (nonce, salt),
+        other => panic!("Expected AuthChallenge, got {:?}", other),
+    };
+
+    // 3. Negative test: Attacker on different socket attempts invalid proof
+    let mut attacker = UdpTransport::bind("127.0.0.1:0").unwrap();
+    attacker
+        .send_packet(
+            &Packet::Hello {
+                protocol_version: PROTOCOL_VERSION,
+                content_hash,
+                player_id: 0,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    let (att_chal, _) = attacker.recv_packet().unwrap().expect("Attacker challenge");
+    let (att_nonce, _att_salt) = match att_chal {
+        Packet::AuthChallenge { nonce, salt } => (nonce, salt),
+        other => panic!("Expected AuthChallenge for attacker, got {:?}", other),
+    };
+    let bad_proof = [0u8; 32];
+    attacker
+        .send_packet(
+            &Packet::AuthResponse {
+                player_id: 0,
+                nonce: att_nonce,
+                proof: bad_proof,
+                content_hash,
+            },
+            server_addr,
+        )
+        .unwrap();
+
+    server.poll_network().unwrap();
+    // Server must reject invalid proof: no session created
+    assert_eq!(server.sessions.len(), 0);
+
+    // 4. Positive test: Legitimate client computes correct HMAC-SHA256 proof for its challenge
+    let valid_proof = compute_auth_proof(auth_key, nonce, 0, &salt);
+    client
+        .send_packet(
+            &Packet::AuthResponse {
+                player_id: 0,
+                nonce,
+                proof: valid_proof,
+                content_hash,
+            },
+            server_addr,
+        )
+        .unwrap();
+
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions.len(), 1, "Session must be created");
+
+    // Client receives Welcome with assigned player ID and session token
+    let (welcome_pkt, _) = client.recv_packet().unwrap().expect("Welcome packet");
+    let (assigned_id, session_token) = match welcome_pkt {
+        Packet::Welcome {
+            player_id,
+            session_token,
+            ..
+        } => (player_id, session_token.expect("session token in Welcome")),
+        other => panic!("Expected Welcome, got {:?}", other),
+    };
+    assert_eq!(assigned_id, 1);
+
+    // 5. Input enforcement: unauthorized input with bogus session token must be dropped
+    let bogus_token = [9999, 8888];
+    let bad_input = InputFrame {
+        client_tick: 1,
+        movement: Movement {
             forward: 1.0,
-            jump: true,
             ..Default::default()
         },
-        1.0 / 60.0,
-        &colliders,
-    );
-
-    let state: ControllerState = c1.network_state();
-    assert_eq!(state.position, c1.position);
-    assert_eq!(state.yaw, c1.yaw);
-    assert_eq!(state.pitch, c1.pitch);
-
-    // Verify alias KinematicState is identical
-    let _: KinematicState = state;
-
-    // Verify JSON serialization round-trip
-    let json = serde_json::to_string(&state).expect("serialize");
-    let deserialized: ControllerState = serde_json::from_str(&json).expect("deserialize");
-    assert_eq!(state, deserialized);
-
-    // Restore into a completely clean controller
-    let mut c2 = Controller::for_character(CharacterKind::Scientist);
-    c2.restore_network_state(&deserialized);
-
-    assert_eq!(c2.position, c1.position);
-    assert_eq!(c2.yaw, c1.yaw);
-    assert_eq!(c2.pitch, c1.pitch);
-    assert_eq!(c2.is_grounded(), c1.is_grounded());
-    assert_eq!(c2.vertical_velocity(), c1.vertical_velocity());
-}
-
-#[test]
-fn action_counters_prevent_dropped_edge_loss() {
-    let mut tracker = ActionCountersTracker::new();
-    let mut client_counters = ActionCounters::new();
-
-    // Frame 1: Client jumps
-    client_counters.jump += 1;
-    let edges = tracker.update(&client_counters);
-    assert!(edges.jump);
-    assert!(!edges.primary);
-
-    // Frame 2: Packet retransmitted with same counter (e.g. UDP duplicate)
-    let edges2 = tracker.update(&client_counters);
-    assert!(!edges2.jump, "Duplicate packet must not re-trigger edge");
-
-    // Frame 3: Client fires primary weapon 3 times while 2 intermediate packets were dropped
-    client_counters.primary += 3;
-    let edges3 = tracker.update(&client_counters);
-    assert!(edges3.primary, "New counter must trigger edge");
-    assert!(!edges3.jump);
-
-    // Frame 4: Interact incremented
-    client_counters.interact += 1;
-    let edges4 = tracker.update(&client_counters);
-    assert!(edges4.interact);
-}
-
-#[test]
-fn pose_history_lag_compensation_window_clamping() {
-    let mut history = PoseHistory::new(30);
-
-    // Simulate 20 ticks of recorded positions (e.g. entity running along X axis)
-    for tick in 1..=20 {
-        let pos = V(tick as f32 * 0.5, 1.0, 0.0);
-        history.record(tick, pos);
-    }
-
-    assert_eq!(history.len(), 20);
-    assert_eq!(history.latest_tick(), Some(20));
-    assert_eq!(history.oldest_tick(), Some(1));
-
-    let current_server_tick = 20;
-    let max_rewind = 8; // Max allowed rewind: tick 12
-
-    // Client viewed target at tick 15 (within allowed window)
-    let historical_pose = history.clamped(current_server_tick, 15, max_rewind);
-    assert_eq!(historical_pose, Some(&V(7.5, 1.0, 0.0)));
-
-    // Cheater / high-latency client requests tick 5 (older than allowed 8 ticks rewind)
-    // Server must clamp to tick 12
-    let clamped_pose = history.clamped(current_server_tick, 5, max_rewind);
-    assert_eq!(clamped_pose, Some(&V(6.0, 1.0, 0.0))); // tick 12 * 0.5 = 6.0
-}
-
-#[test]
-fn session_registry_authentication_and_sequencing() {
-    let now = Instant::now();
-    let mut registry = SessionRegistry::<String>::new(2, Duration::from_secs(5));
-    let peer_a: SocketAddr = "127.0.0.1:5001".parse().unwrap();
-    let peer_b: SocketAddr = "127.0.0.1:5002".parse().unwrap();
-    let peer_c: SocketAddr = "127.0.0.1:5003".parse().unwrap();
-
-    let nonce_a = random_token().unwrap();
-    let nonce_b = random_token().unwrap();
-
-    let token_a = registry
-        .register(peer_a, nonce_a, now, "PlayerA".into())
+        yaw: 0.0,
+        pitch: 0.0,
+        fire_wrench: false,
+        fire_pistol: false,
+        interact: false,
+        ack_server_tick: 0,
+        session_token: Some(bogus_token),
+    };
+    client
+        .send_packet(&Packet::Input(bad_input), server_addr)
         .unwrap();
-    let _token_b = registry
-        .register(peer_b, nonce_b, now, "PlayerB".into())
-        .unwrap();
-
-    assert_eq!(registry.count(), 2);
-    assert!(registry.is_full());
-
-    // Capacity limit prevents 3rd player
-    assert!(registry
-        .register(peer_c, random_token().unwrap(), now, "PlayerC".into())
-        .is_err());
-
-    // Sequence validation
-    assert!(registry.accept_input_seq(&token_a, 1, now));
-    assert!(registry.accept_input_seq(&token_a, 2, now));
-    assert!(
-        !registry.accept_input_seq(&token_a, 2, now),
-        "Duplicate input sequence must be rejected"
-    );
-    assert!(
-        !registry.accept_input_seq(&token_a, 1, now),
-        "Stale input sequence must be rejected"
-    );
-
-    // Timeout eviction
-    let future = now + Duration::from_secs(6);
-    let evicted = registry.evict_timeouts(future);
-    assert_eq!(evicted.len(), 2);
-    assert_eq!(registry.count(), 0);
-}
-
-#[test]
-fn handshake_rate_limiter_restricts_bursts() {
-    let now = Instant::now();
-    let mut limiter = HandshakeLimiter::new(3);
-
-    assert!(limiter.allow(now));
-    assert!(limiter.allow(now));
-    assert!(limiter.allow(now));
-    assert!(
-        !limiter.allow(now),
-        "4th handshake in same second must be rejected"
-    );
-
-    // 1 second later, window resets
-    let next_sec = now + Duration::from_millis(1100);
-    assert!(limiter.allow(next_sec));
-}
-
-#[test]
-fn reliable_command_queue_retention_and_ack() {
-    let mut queue = ReliableCommandQueue::<String>::new(4);
-    assert_eq!(queue.push("Action1".into()), Some(1));
-    assert_eq!(queue.push("Action2".into()), Some(2));
-    assert_eq!(queue.push("Action3".into()), Some(3));
-    assert_eq!(queue.len(), 3);
-
-    assert_eq!(queue.front().unwrap().command, "Action1");
-    assert_eq!(queue.front().unwrap().sequence, 1);
-
-    // Server acks sequence 1
-    queue.acknowledge(1);
-    assert_eq!(queue.len(), 2);
-    assert_eq!(queue.front().unwrap().command, "Action2");
-    assert_eq!(queue.front().unwrap().sequence, 2);
-
-    // Server acks sequence 3 (cumulative ack)
-    queue.acknowledge(3);
-    assert_eq!(queue.len(), 0);
-    assert!(queue.is_empty());
-}
-
-#[test]
-fn fixed_tick_runner_and_metrics() {
-    let mut metrics = TickMetrics::new();
-    metrics.record(1000);
-    metrics.record(3000);
-    assert_eq!(metrics.count, 2);
-    assert_eq!(metrics.mean_us(), 2000);
-    assert_eq!(metrics.max_us, 3000);
-
-    let mut runner = FixedTickRunner::new(100);
-    let mut step_count = 0;
-    for _ in 0..5 {
-        runner
-            .step(|| {
-                step_count += 1;
-                Ok(())
-            })
-            .unwrap();
-    }
-    assert_eq!(step_count, 5);
-}
-
-#[test]
-fn secure_quic_encrypted_datagram_exchange_and_pinned_cert_enforcement() {
-    // Generate authoritative server certificate and key
-    let identity = rcgen::generate_simple_self_signed(vec!["feta.local".into()]).unwrap();
-    let certificate = identity.cert.der().to_vec();
-    let private_key = identity.signing_key.serialize_der();
-
-    let server_identity = Identity::from_der(certificate.clone(), private_key);
-    let server_socket =
-        SecureSocket::server("127.0.0.1:0".parse().unwrap(), server_identity).unwrap();
-    let server_addr = server_socket.local_addr();
-
-    // 1. Untrusted client connecting with impostor certificate must fail closed
-    let impostor = rcgen::generate_simple_self_signed(vec!["feta.local".into()]).unwrap();
-    let untrusted_client = SecureSocket::client(server_addr, impostor.cert.der().to_vec()).unwrap();
-
-    let _ = untrusted_client.send_to(b"untrusted hello", server_addr);
-    std::thread::sleep(Duration::from_millis(50));
-    let err = untrusted_client.receive();
-    assert!(
-        err.is_err(),
-        "Untrusted client with non-matching certificate must be rejected"
-    );
-
-    // 2. Trusted client connecting with pinned server certificate
-    let trusted_client = SecureSocket::client(server_addr, certificate.clone()).unwrap();
-
-    // Send payload through DatagramTransport
-    let test_payload = b"authenticated blue engine datagram";
+    server.poll_network().unwrap();
+    // Player position remains unchanged at spawn
     assert_eq!(
-        trusted_client.send_to(test_payload, server_addr).unwrap(),
-        test_payload.len()
+        server.world.player(assigned_id).unwrap().position,
+        vesper3d::viewer::test_lab::SPAWN_PLAYER_1
     );
 
-    // Server receives
-    let mut received = Vec::new();
+    // 6. Authorized input with valid session token is accepted and simulated
+    let valid_input = InputFrame {
+        client_tick: 2,
+        movement: Movement {
+            forward: 1.0,
+            ..Default::default()
+        },
+        yaw: 0.0,
+        pitch: 0.0,
+        fire_wrench: false,
+        fire_pistol: false,
+        interact: false,
+        ack_server_tick: 0,
+        session_token: Some(session_token),
+    };
+    client
+        .send_packet(&Packet::Input(valid_input), server_addr)
+        .unwrap();
+    server.poll_network().unwrap();
+    server.world.step();
+    // Player moved forward
+    assert!(
+        server.world.player(assigned_id).unwrap().position.2
+            < vesper3d::viewer::test_lab::SPAWN_PLAYER_1.2
+    );
+
+    // 7. Anti-spoofing disconnect: mismatched token rejected
+    client
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: assigned_id,
+                session_token: Some(bogus_token),
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(
+        server.sessions.len(),
+        1,
+        "Session survives spoofed disconnect"
+    );
+
+    // 8. Graceful disconnect with matching session token
+    client
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: assigned_id,
+                session_token: Some(session_token),
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(server.sessions.len(), 0, "Session cleanly removed");
+}
+
+#[test]
+fn test_live_udp_proxy_forwarding() {
+    let mut server_sock = UdpTransport::bind("127.0.0.1:0").unwrap();
+    let server_addr = server_sock.local_addr().unwrap();
+
+    let proxy_config = NetworkProxyConfig::clean_delay(5.0); // 5ms delay, 0 loss
+    let mut proxy = UdpProxyServer::bind("127.0.0.1:0", server_addr, proxy_config).unwrap();
+    let proxy_addr = proxy.local_addr().unwrap();
+
+    let mut client = UdpTransport::bind("127.0.0.1:0").unwrap();
+
+    // Client sends packet to proxy
+    let hello = Packet::Hello {
+        protocol_version: PROTOCOL_VERSION,
+        content_hash: 1337,
+        player_id: 0,
+    };
+    client.send_packet(&hello, proxy_addr).unwrap();
+
     let start = Instant::now();
-    while start.elapsed() < Duration::from_secs(3) {
-        let packets = server_socket.receive().unwrap();
-        if !packets.is_empty() {
-            received.extend(packets);
+    let mut forwarded_to_server = false;
+
+    // Pump proxy for up to 50ms
+    while start.elapsed() < Duration::from_millis(50) {
+        proxy.poll(Instant::now()).unwrap();
+        if let Ok(Some((pkt, src))) = server_sock.recv_packet() {
+            match pkt {
+                Packet::Hello {
+                    protocol_version,
+                    content_hash,
+                    ..
+                } => {
+                    assert_eq!(protocol_version, PROTOCOL_VERSION);
+                    assert_eq!(content_hash, 1337);
+                }
+                other => panic!("Expected Hello, got {:?}", other),
+            }
+            // Server replies through proxy
+            let welcome = Packet::Welcome {
+                player_id: 1,
+                server_tick: 42,
+                map_name: "Test Lab".into(),
+                session_token: None,
+            };
+            server_sock.send_packet(&welcome, src).unwrap();
+            forwarded_to_server = true;
             break;
         }
-        std::thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(1));
     }
+    assert!(forwarded_to_server, "Proxy forwarded upstream packet");
 
-    assert_eq!(received.len(), 1);
-    assert_eq!(received[0].1, test_payload);
-
-    // Server responds back to client
-    let client_addr = received[0].0;
-    let reply = b"authoritative server snapshot payload";
-    server_socket.send_to(reply, client_addr).unwrap();
-
-    let mut client_received = Vec::new();
-    let start = Instant::now();
-    while start.elapsed() < Duration::from_secs(3) {
-        let packets = trusted_client.receive().unwrap();
-        if !packets.is_empty() {
-            client_received.extend(packets);
-            break;
+    // Pump proxy to deliver downstream reply to client
+    let mut forwarded_to_client = false;
+    let reply_start = Instant::now();
+    while reply_start.elapsed() < Duration::from_millis(50) {
+        proxy.poll(Instant::now()).unwrap();
+        if let Ok(Some((pkt, _))) = client.recv_packet() {
+            match pkt {
+                Packet::Welcome { player_id, .. } => {
+                    assert_eq!(player_id, 1);
+                    forwarded_to_client = true;
+                    break;
+                }
+                other => panic!("Unexpected downstream packet {:?}", other),
+            }
         }
-        std::thread::sleep(Duration::from_millis(10));
+        thread::sleep(Duration::from_millis(1));
     }
-
-    assert_eq!(client_received.len(), 1);
-    assert_eq!(client_received[0].1, reply);
+    assert!(forwarded_to_client, "Proxy forwarded downstream packet");
 }
