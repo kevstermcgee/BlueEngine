@@ -167,7 +167,10 @@ fn handshake_rate_limiter_restricts_bursts() {
     assert!(limiter.allow(now));
     assert!(limiter.allow(now));
     assert!(limiter.allow(now));
-    assert!(!limiter.allow(now), "4th handshake in same second must be rejected");
+    assert!(
+        !limiter.allow(now),
+        "4th handshake in same second must be rejected"
+    );
 
     // 1 second later, window resets
     let next_sec = now + Duration::from_millis(1100);
@@ -233,8 +236,7 @@ fn secure_quic_encrypted_datagram_exchange_and_pinned_cert_enforcement() {
 
     // 1. Untrusted client connecting with impostor certificate must fail closed
     let impostor = rcgen::generate_simple_self_signed(vec!["feta.local".into()]).unwrap();
-    let untrusted_client =
-        SecureSocket::client(server_addr, impostor.cert.der().to_vec()).unwrap();
+    let untrusted_client = SecureSocket::client(server_addr, impostor.cert.der().to_vec()).unwrap();
 
     let _ = untrusted_client.send_to(b"untrusted hello", server_addr);
     std::thread::sleep(Duration::from_millis(50));

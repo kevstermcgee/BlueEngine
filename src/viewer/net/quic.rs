@@ -45,7 +45,9 @@ impl Identity {
                 std::env::var_os("USERPROFILE")
                     .map(|h| std::path::PathBuf::from(h).join(".config/blueengine/server-key.der"))
             })
-            .ok_or("Set BLUE_TLS_KEY_FILE (or FETA_TLS_KEY_FILE) to the private PKCS#8 DER server key")?;
+            .ok_or(
+                "Set BLUE_TLS_KEY_FILE (or FETA_TLS_KEY_FILE) to the private PKCS#8 DER server key",
+            )?;
 
         Ok(Self {
             certificate: DEFAULT_CERTIFICATE.to_vec(),

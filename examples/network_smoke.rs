@@ -32,6 +32,12 @@ pub struct Scenario {
     duration_ticks: u64,
 }
 
+impl Default for Scenario {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Scenario {
     pub fn new() -> Self {
         Self {
@@ -73,7 +79,10 @@ impl Scenario {
             (local_addr, Some(stop), Some(handle))
         };
 
-        println!("[Smoke] Running smoke scenario against server {}", server_addr);
+        println!(
+            "[Smoke] Running smoke scenario against server {}",
+            server_addr
+        );
 
         let temp_world = vesper3d::viewer::simulation::HeadlessWorld::new()?;
         let content_hash = temp_world.content_hash;
@@ -188,7 +197,10 @@ impl Scenario {
             }
             let total_packets = snapshots_received[i] + deltas_received[i];
             if total_packets == 0 {
-                return Err(format!("Smoke test failed: Client {i} never received WorldSnapshots or Deltas").into());
+                return Err(format!(
+                    "Smoke test failed: Client {i} never received WorldSnapshots or Deltas"
+                )
+                .into());
             }
             println!(
                 "[Smoke] Client {} (ID: {}) -> OK (Snapshots: {}, Deltas: {})",

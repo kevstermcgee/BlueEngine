@@ -1,7 +1,8 @@
 """Fail if graphics/window/audio packages enter the rendering-free dependency graph."""
 import subprocess
 
-FORBIDDEN = {'macroquad', 'miniquad', 'quad-snd', 'alsa-sys', 'windows-sys', 'png', 'ctrlc'}
+# windows-sys may supply OS networking through Tokio; it is not itself a renderer.
+FORBIDDEN = {'macroquad', 'miniquad', 'quad-snd', 'alsa-sys', 'png', 'ctrlc'}
 
 if __name__ == '__main__':
     result = subprocess.run(

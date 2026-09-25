@@ -265,7 +265,7 @@ mod tests {
         assert!(swing.start());
         assert!(!swing.is_idle());
         assert!(!swing.tick()); // tick 1: windup
-        assert!(swing.tick());  // tick 2: strike lands!
+        assert!(swing.tick()); // tick 2: strike lands!
         assert!(!swing.tick()); // tick 3: recover
         assert!(!swing.tick()); // tick 4: recover
         assert!(!swing.tick()); // tick 5: end of swing

@@ -226,7 +226,12 @@ pub struct SequencedInputFrame {
 
 impl InputFrame {
     /// Upgrade to a SequencedInputFrame with monotonic counters.
-    pub fn to_sequenced(&self, round: u64, counters: ActionCounters, aim_tick: u64) -> SequencedInputFrame {
+    pub fn to_sequenced(
+        &self,
+        round: u64,
+        counters: ActionCounters,
+        aim_tick: u64,
+    ) -> SequencedInputFrame {
         SequencedInputFrame {
             client_tick: self.client_tick,
             round,

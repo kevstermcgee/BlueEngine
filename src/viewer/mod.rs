@@ -2,11 +2,11 @@
 pub mod controller;
 pub mod game;
 pub mod game_example;
+#[cfg(feature = "client")]
+pub mod input;
 pub mod interaction;
 #[cfg(feature = "client")]
 pub mod mesh;
-#[cfg(feature = "client")]
-pub mod input;
 pub mod profile;
 pub mod room;
 

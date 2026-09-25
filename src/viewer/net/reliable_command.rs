@@ -34,7 +34,8 @@ impl<T: Clone> ReliableCommandQueue<T> {
         }
         let sequence = self.next_sequence;
         self.next_sequence += 1;
-        self.pending.push_back(SequencedCommand { sequence, command });
+        self.pending
+            .push_back(SequencedCommand { sequence, command });
         Some(sequence)
     }
 
