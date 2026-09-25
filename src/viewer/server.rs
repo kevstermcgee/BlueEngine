@@ -392,7 +392,7 @@ impl DedicatedServer {
         stop_signal: Arc<AtomicBool>,
         max_ticks: Option<u64>,
     ) -> crate::Result<()> {
-        let tick_duration = Duration::from_secs_f64(1.0 / 60.0);
+        let mut runner = crate::viewer::metrics::FixedTickRunner::new(60);
         let started = Instant::now();
         let mut last_status = Instant::now();
 
@@ -419,19 +419,20 @@ impl DedicatedServer {
                     .world
                     .performance_snapshot(tick_start.elapsed().as_secs_f64() * 1_000_000.0);
                 println!(
-                    "[Server] Tick {} | Clients: {} | Active Props: {} | Checksum: {:016x}",
+                    "[Server] Tick {} | Clients: {} | Active Props: {} | Checksum: {:016x} | mean_us={} max_us={}",
                     self.world.tick,
                     self.sessions.len(),
                     perf.active_dynamic_bodies,
-                    self.world.checksum()
+                    self.world.checksum(),
+                    runner.metrics.mean_us(),
+                    runner.metrics.max_us
                 );
+                runner.metrics.reset();
                 last_status = Instant::now();
             }
 
-            let elapsed = tick_start.elapsed();
-            if elapsed < tick_duration {
-                std::thread::sleep(tick_duration - elapsed);
-            }
+            let elapsed = tick_start.elapsed().as_micros();
+            runner.sleep_until_next_tick(elapsed);
         }
 
         println!(

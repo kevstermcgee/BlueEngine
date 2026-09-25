@@ -1,0 +1,20 @@
+[package]
+name = "blue-multiplayer-template"
+version = "0.1.0"
+edition = "2021"
+description = "Ready-to-fork multiplayer game template built on BlueEngine"
+license = "MIT"
+
+[dependencies]
+vesper3d = { path = "../..", package = "be2", default-features = true }
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = "=1.0.140"
+macroquad = { version = "=0.4.14", default-features = false, features = ["audio"] }
+getrandom = "0.3.4"
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "net", "macros"] }
+quinn = { version = "0.11.9", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
+
+[features]
+default = ["client"]
+client = ["vesper3d/client"]

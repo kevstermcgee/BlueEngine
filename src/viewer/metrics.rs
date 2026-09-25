@@ -122,6 +122,102 @@ impl PerformanceBudget {
     }
 }
 
+use std::time::{Duration, Instant};
+
+/// Aggregates simulation tick durations and computes running mean/max statistics.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TickMetrics {
+    pub count: u64,
+    pub total_us: u128,
+    pub max_us: u128,
+}
+
+impl TickMetrics {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Record a completed tick execution time in microseconds.
+    pub fn record(&mut self, elapsed_us: u128) {
+        self.count += 1;
+        self.total_us += elapsed_us;
+        self.max_us = self.max_us.max(elapsed_us);
+    }
+
+    /// Mean execution time per tick in microseconds.
+    pub fn mean_us(&self) -> u128 {
+        if self.count == 0 {
+            0
+        } else {
+            self.total_us / self.count as u128
+        }
+    }
+
+    /// Reset counters for the next statistical sampling interval.
+    pub fn reset(&mut self) {
+        self.count = 0;
+        self.total_us = 0;
+        self.max_us = 0;
+    }
+}
+
+/// Accurate fixed-tick execution scheduler preventing clock drift and unbounded catchup bursts.
+pub struct FixedTickRunner {
+    tick_duration: Duration,
+    max_catchup_burst: Duration,
+    next_deadline: Instant,
+    pub metrics: TickMetrics,
+}
+
+impl FixedTickRunner {
+    /// Create a runner for a target tick rate (e.g. 60 Hz).
+    pub fn new(hz: u64) -> Self {
+        let tick_duration = Duration::from_secs_f64(1.0 / hz.max(1) as f64);
+        Self {
+            tick_duration,
+            max_catchup_burst: Duration::from_millis(133), // max ~8 frames burst
+            next_deadline: Instant::now(),
+            metrics: TickMetrics::new(),
+        }
+    }
+
+    /// Create a runner with an explicit tick duration.
+    pub fn with_duration(tick_duration: Duration) -> Self {
+        Self {
+            tick_duration,
+            max_catchup_burst: Duration::from_millis(133),
+            next_deadline: Instant::now(),
+            metrics: TickMetrics::new(),
+        }
+    }
+
+    /// Advance deadline and sleep until the scheduled time.
+    ///
+    /// Maintains running deadline (`next += tick_duration; sleep(next - now)`) to eliminate
+    /// cumulative clock drift, while clamping if the machine was suspended or heavily stalled.
+    pub fn sleep_until_next_tick(&mut self, elapsed_us: u128) {
+        self.metrics.record(elapsed_us);
+        self.next_deadline += self.tick_duration;
+        let now = Instant::now();
+        if self.next_deadline + self.max_catchup_burst < now {
+            self.next_deadline = now;
+        }
+        let sleep_duration = self.next_deadline.saturating_duration_since(now);
+        if !sleep_duration.is_zero() {
+            std::thread::sleep(sleep_duration);
+        }
+    }
+
+    /// Convenience wrapper: executes `step_fn`, records timing, and sleeps until next tick.
+    pub fn step<F: FnOnce() -> crate::Result<()>>(&mut self, step_fn: F) -> crate::Result<()> {
+        let started = Instant::now();
+        step_fn()?;
+        let elapsed = started.elapsed().as_micros();
+        self.sleep_until_next_tick(elapsed);
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

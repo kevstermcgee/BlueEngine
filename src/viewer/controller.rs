@@ -89,6 +89,64 @@ pub struct Controller {
     vertical_velocity: f32,
     grounded: bool,
 }
+
+/// Complete movement state for authoritative reconciliation and network serialization.
+#[derive(Clone, Copy, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ControllerState {
+    #[serde(rename = "p")]
+    pub position: V,
+    #[serde(rename = "y")]
+    pub yaw: f32,
+    #[serde(rename = "t")]
+    pub pitch: f32,
+    #[serde(rename = "v")]
+    pub velocity: V,
+    #[serde(rename = "f")]
+    pub feet: f32,
+    #[serde(rename = "h")]
+    pub body_height: f32,
+    #[serde(rename = "j")]
+    pub vertical_velocity: f32,
+    #[serde(rename = "g")]
+    pub grounded: bool,
+}
+
+/// Alias for game compatibility with Feta code.
+pub type KinematicState = ControllerState;
+
+impl Controller {
+    pub fn network_state(&self) -> ControllerState {
+        ControllerState {
+            position: self.position,
+            yaw: self.yaw,
+            pitch: self.pitch,
+            velocity: self.velocity,
+            feet: self.feet,
+            body_height: self.body_height,
+            vertical_velocity: self.vertical_velocity,
+            grounded: self.grounded,
+        }
+    }
+
+    pub fn kinematic_state(&self) -> ControllerState {
+        self.network_state()
+    }
+
+    pub fn restore_network_state(&mut self, state: &ControllerState) {
+        self.position = state.position;
+        self.yaw = state.yaw;
+        self.pitch = state.pitch;
+        self.velocity = state.velocity;
+        self.feet = state.feet;
+        self.body_height = state.body_height;
+        self.vertical_velocity = state.vertical_velocity;
+        self.grounded = state.grounded;
+    }
+
+    pub fn restore_kinematic_state(&mut self, state: &ControllerState) {
+        self.restore_network_state(state);
+    }
+}
 impl Default for Controller {
     fn default() -> Self {
         Self {

@@ -1,7 +1,7 @@
 //! Headless simulation and authoritative dedicated server for Blue Engine V2.
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
+use std::time::Instant;
 use vesper3d::viewer::{controller::Movement, server::DedicatedServer, simulation::HeadlessWorld};
 
 fn main() -> vesper3d::Result<()> {
@@ -88,7 +88,9 @@ fn main() -> vesper3d::Result<()> {
     world.join(1);
     world.join(2);
     let started = Instant::now();
+    let mut runner = vesper3d::viewer::metrics::FixedTickRunner::new(60);
     for i in 0..ticks {
+        let tick_start = Instant::now();
         for id in [1, 2] {
             world.input(
                 id,
@@ -104,8 +106,8 @@ fn main() -> vesper3d::Result<()> {
         }
         world.step();
         if realtime {
-            let deadline = started + Duration::from_secs_f64((i + 1) as f64 / 60.);
-            std::thread::sleep(deadline.saturating_duration_since(Instant::now()));
+            let elapsed = tick_start.elapsed().as_micros();
+            runner.sleep_until_next_tick(elapsed);
         }
     }
     println!(

@@ -16,6 +16,20 @@ use crate::math::V;
 use serde::{Deserialize, Serialize};
 use std::collections::VecDeque;
 
+pub mod action_counters;
+pub mod lag_compensation;
+pub mod quic;
+pub mod reliable_command;
+pub mod session;
+pub mod transport;
+
+pub use action_counters::*;
+pub use lag_compensation::*;
+pub use quic::*;
+pub use reliable_command::*;
+pub use session::*;
+pub use transport::*;
+
 pub const PROTOCOL_VERSION: u32 = 3;
 pub const MAX_PACKET_BYTES: usize = 1400; // Safe MTU size
 
@@ -196,6 +210,36 @@ pub struct InputFrame {
     pub ack_server_tick: u64,
 }
 
+/// Advanced client input with reliable action counters and lag-compensated aim tick.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+pub struct SequencedInputFrame {
+    pub client_tick: u64,
+    pub round: u64,
+    pub movement: Movement,
+    pub yaw: f32,
+    pub pitch: f32,
+    pub aim_tick: u64,
+    pub counters: ActionCounters,
+    #[serde(default)]
+    pub ack_server_tick: u64,
+}
+
+impl InputFrame {
+    /// Upgrade to a SequencedInputFrame with monotonic counters.
+    pub fn to_sequenced(&self, round: u64, counters: ActionCounters, aim_tick: u64) -> SequencedInputFrame {
+        SequencedInputFrame {
+            client_tick: self.client_tick,
+            round,
+            movement: self.movement,
+            yaw: self.yaw,
+            pitch: self.pitch,
+            aim_tick,
+            counters,
+            ack_server_tick: self.ack_server_tick,
+        }
+    }
+}
+
 /// Network packets exchanged between client and dedicated server.
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Packet {
@@ -213,6 +257,7 @@ pub enum Packet {
         map_name: String,
     },
     Input(InputFrame),
+    SequencedInput(SequencedInputFrame),
     /// Small full state, repeated at snapshot rate for independent loss recovery.
     GameState {
         tick: u64,
@@ -603,6 +648,33 @@ impl UdpTransport {
             }
         }
         Ok(None)
+    }
+}
+
+impl DatagramTransport for UdpTransport {
+    fn send(&self, peer: PeerId, data: &[u8]) -> crate::Result<usize> {
+        Ok(self.socket.send_to(data, peer)?)
+    }
+
+    fn receive(&mut self) -> crate::Result<Vec<Datagram>> {
+        let mut dgrams = Vec::new();
+        for _ in 0..128 {
+            match self.socket.recv_from(&mut self.recv_buf) {
+                Ok((len, src)) => {
+                    dgrams.push(Datagram {
+                        peer: src,
+                        data: self.recv_buf[..len].to_vec(),
+                    });
+                }
+                Err(ref e) if e.kind() == std::io::ErrorKind::WouldBlock => break,
+                Err(e) => return Err(e.into()),
+            }
+        }
+        Ok(dgrams)
+    }
+
+    fn local_addr(&self) -> crate::Result<SocketAddr> {
+        self.local_addr()
     }
 }
 

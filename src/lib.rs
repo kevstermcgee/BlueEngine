@@ -1,4 +1,4 @@
-#![forbid(unsafe_code)]
+#![deny(unsafe_code)]
 pub mod geometry;
 pub mod math;
 #[cfg(feature = "offline")]

@@ -1,0 +1,20 @@
+[Unit]
+Description=BlueEngine Dedicated Game Server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/BlueEngine
+ExecStart=%h/.local/bin/be2-headless --server 0.0.0.0:4000
+EnvironmentFile=%h/.config/blueengine/server.env
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
+MemoryMax=512M
+TasksMax=32
+
+[Install]
+WantedBy=default.target
