@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  blueengine-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: blueengine-server
+    restart: unless-stopped
+    ports:
+      - "7777:7777/udp"
+    environment:
+      - RUST_BACKTRACE=1
+      - BLUE_ENGINE_MAP=house
+    volumes:
+      - ./target:/app/data:ro
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    command: ["0.0.0.0:7777"]

@@ -29,6 +29,21 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("select", "MAP.json OBJECT_ID"),
     ("near", "MAP.json X,Y,Z RADIUS"),
     ("catalog", ""),
+    ("lint", "MAP.json"),
+    ("reach", "MAP.json"),
+    ("walk-auto", "MAP.json FROM_X,Z TO_X,Z"),
+    ("walk-explain", "MAP.json FROM_X,Z TO_X,Z OUT.svg"),
+    ("build", "SPEC.json OUT.json"),
+    ("blueprint-example", "OUT.json"),
+    ("scatter", "MAP.json KIND COUNT X1,Z1,X2,Z2 SEED OUT.json"),
+    ("line", "MAP.json KIND COUNT X1,Z1,X2,Z2 OUT.json"),
+    ("verify", "MAP.json [CHECKS.json]"),
+    ("sim", "SCENARIO.json [TRACE.json]"),
+    ("replay-trace", "TRACE.json"),
+    ("src", "ACTION [QUERY]"),
+    ("new-game", "NAME DIRECTORY"),
+    ("ui-check", ""),
+    ("mcp", ""),
 ];
 
 /// Feature-to-source/check metadata embedded at compile time; no source reads at runtime.

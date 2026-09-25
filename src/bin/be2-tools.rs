@@ -26,6 +26,26 @@ fn vector(text: &str) -> Result<V> {
     }
     Ok(V(parts[0], parts[1], parts[2]))
 }
+fn vector2(text: &str) -> Result<(f32, f32)> {
+    let parts: Vec<f32> = text
+        .split(',')
+        .map(str::parse)
+        .collect::<std::result::Result<_, _>>()?;
+    if parts.len() != 2 || parts.iter().any(|v| !v.is_finite() || v.abs() > 1000.) {
+        return Err("Expected finite x,z within +/-1000".into());
+    }
+    Ok((parts[0], parts[1]))
+}
+fn rect4(text: &str) -> Result<[f32; 4]> {
+    let parts: Vec<f32> = text
+        .split(',')
+        .map(str::parse)
+        .collect::<std::result::Result<_, _>>()?;
+    if parts.len() != 4 || parts.iter().any(|v| !v.is_finite() || v.abs() > 1000.) {
+        return Err("Expected finite x1,z1,x2,z2 within +/-1000".into());
+    }
+    Ok([parts[0], parts[1], parts[2], parts[3]])
+}
 fn main() {
     if let Err(e) = run() {
         eprintln!(
@@ -51,25 +71,36 @@ fn run() -> Result<()> {
         .find(|(name, _)| *name == command)
         .ok_or("Unknown command; run be2-tools help")?
         .1;
-    let arity = 1 + signature.split_whitespace().count();
-    if !a.is_empty() && a.len() != arity {
-        return Err(format!("{command} expects {} arguments", arity - 1).into());
+    let words: Vec<&str> = signature.split_whitespace().collect();
+    let min_args = words.iter().filter(|w| !w.starts_with('[')).count();
+    let max_args = words.len();
+    let provided_args = if a.is_empty() { 0 } else { a.len() - 1 };
+    if !a.is_empty() && (provided_args < min_args || provided_args > max_args) {
+        if min_args == max_args {
+            return Err(format!("{command} expects {} arguments", min_args).into());
+        } else {
+            return Err(format!(
+                "{command} expects between {} and {} arguments",
+                min_args, max_args
+            )
+            .into());
+        }
     }
     match command {
         "game-describe" => println!(
             "{}",
             json!({
                 "ok":true,"schema_version":1,"schema_command":"game-schema", "example":"game-example NEW_DIRECTORY",
-                "event":"authoritative nearest-visible interaction within 2.5 metres (E intent)",
-                "actions":["increment","set_counter","set_enabled","complete"],
+                "event":"authoritative nearest-visible interaction within 2.5 metres (E intent), spatial trigger zones (on_enter/on_exit), or timers (on_timer)",
+                "actions":["increment","set_counter","set_enabled","set_mover","start_timer","stop_timer","complete"],
                 "conditions":"counter equals integer; null means unconditional",
-                "limits":{"game_bytes":64000,"spawns":8,"counters":8,"interactables":16,"rules":16,"actions_per_rule":4,"counter_magnitude":1000000},
+                "limits":{"game_bytes":64000,"spawns":8,"counters":8,"interactables":16,"trigger_zones":16,"movers":16,"timers":16,"rules":16,"actions_per_rule":4,"counter_magnitude":1000000},
                 "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match",
-                "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds",
-                "set_enabled":"interaction eligibility only; never changes visibility or collision",
+                "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds; trigger zones declare spatial AABB bounds; movers translate colliders smoothly",
+                "set_enabled":"interaction and trigger zone eligibility only; never changes visibility or collision",
                 "profiles":"one shared validated movement profile; spawns use feet coordinates and round-robin server IDs",
                 "map":"relative child file inside game directory; loaded content participates in fingerprint",
-                "unsupported":["timers","recursive events","doors/geometry mutation","custom weapon actions","per-player inventory"]
+                "unsupported":["recursive events","custom weapon actions","per-player inventory"]
             })
         ),
         "game-schema" => println!("{}", include_str!("../../tools/game.schema.json")),
@@ -334,6 +365,210 @@ fn run() -> Result<()> {
             }
             )
         ),
+        "mcp" => {
+            vesper3d::viewer::mcp::run_mcp_server()?;
+        }
+        "ui-check" => {
+            let rep = vesper3d::viewer::ui_check::audit_all_screens();
+            println!("{}", serde_json::to_string_pretty(&rep)?);
+            if !rep.ok {
+                std::process::exit(1);
+            }
+        }
+        "new-game" => {
+            let name = arg(1)?;
+            let dir = arg(2)?;
+            vesper3d::viewer::newgame::scaffold_new_game(name, Path::new(dir), None)?;
+            println!("{}", json!({"ok": true, "name": name, "directory": dir}));
+        }
+        "blueprint-example" => {
+            let example = vesper3d::viewer::blueprint::BlueprintSpec {
+                name: "Example Map".into(),
+                height: 3.2,
+                wall_thickness: 0.20,
+                rooms: vec![vesper3d::viewer::blueprint::RoomSpec {
+                    id: "hall".into(),
+                    rect: [-4.0, -4.0, 4.0, 4.0],
+                    floor_color: Some([0.4, 0.45, 0.5]),
+                    wall_color: None,
+                    lamp: true,
+                }],
+                doors: vec![],
+                spawns: vec![vesper3d::viewer::blueprint::SpawnSpec {
+                    id: "p1".into(),
+                    room: "hall".into(),
+                    offset: Some([0.0, 0.0]),
+                }],
+                fill: vec![vesper3d::viewer::blueprint::FillSpec {
+                    room: "hall".into(),
+                    kind: "chair".into(),
+                    count: 2,
+                    seed: 12345,
+                }],
+            };
+            save(arg(1)?, &example)?;
+            println!("{}", json!({"ok": true, "output": arg(1)?}));
+        }
+        "build" => {
+            let spec_bytes = std::fs::read(arg(1)?)?;
+            let spec: vesper3d::viewer::blueprint::BlueprintSpec =
+                serde_json::from_slice(&spec_bytes)?;
+            let doc = vesper3d::viewer::blueprint::compile_blueprint(&spec)?;
+            save(arg(2)?, &doc)?;
+            println!(
+                "{}",
+                json!({"ok": true, "output": arg(2)?, "rooms": spec.rooms.len()})
+            );
+        }
+        "scatter" => {
+            let d = MapDocument::load(Path::new(arg(1)?))?;
+            let kind = arg(2)?;
+            let count: usize = arg(3)?.parse()?;
+            let rect = rect4(arg(4)?)?;
+            let seed: u64 = arg(5)?.parse()?;
+            let out_path = arg(6)?;
+            let (updated, placed) =
+                vesper3d::viewer::gen::scatter(d, kind, count, rect, seed, None)?;
+            save(out_path, &updated)?;
+            println!(
+                "{}",
+                json!({"ok": true, "placed": placed, "output": out_path})
+            );
+        }
+        "line" => {
+            let d = MapDocument::load(Path::new(arg(1)?))?;
+            let kind = arg(2)?;
+            let count: usize = arg(3)?.parse()?;
+            let rect = rect4(arg(4)?)?;
+            let out_path = arg(5)?;
+            let updated = vesper3d::viewer::gen::line(
+                d,
+                kind,
+                count,
+                [rect[0], rect[1]],
+                [rect[2], rect[3]],
+                None,
+            )?;
+            save(out_path, &updated)?;
+            println!(
+                "{}",
+                json!({"ok": true, "count": count, "output": out_path})
+            );
+        }
+        "lint" => {
+            let d = MapDocument::load(Path::new(arg(1)?))?;
+            let rep = vesper3d::viewer::lint::lint_map(&d, false, &[]);
+            println!("{}", serde_json::to_string_pretty(&rep)?);
+            if !rep.ok {
+                std::process::exit(1);
+            }
+        }
+        "reach" => {
+            let d = MapDocument::load(Path::new(arg(1)?))?;
+            let rep = vesper3d::viewer::reach::analyze_reach(&d, None);
+            println!("{}", serde_json::to_string_pretty(&rep)?);
+            if !rep.ok {
+                std::process::exit(1);
+            }
+        }
+        "walk-auto" => {
+            let d = MapDocument::load(Path::new(arg(1)?))?;
+            let from = vector2(arg(2)?)?;
+            let to = vector2(arg(3)?)?;
+            let res = vesper3d::viewer::pathing::execute_walk(
+                &d,
+                V(from.0, 0.0, from.1),
+                V(to.0, 0.0, to.1),
+                None,
+            );
+            println!("{}", serde_json::to_string_pretty(&res)?);
+            if !res.ok {
+                std::process::exit(1);
+            }
+        }
+        "walk-explain" => {
+            let d = MapDocument::load(Path::new(arg(1)?))?;
+            let from = vector2(arg(2)?)?;
+            let to = vector2(arg(3)?)?;
+            let out_svg = arg(4)?;
+            let res = vesper3d::viewer::pathing::execute_walk(
+                &d,
+                V(from.0, 0.0, from.1),
+                V(to.0, 0.0, to.1),
+                None,
+            );
+            if let Some(blockers) = &res.blockers {
+                let svg = vesper3d::viewer::pathing::generate_blocker_svg(
+                    &d,
+                    res.final_position,
+                    [to.0, 0.0, to.1],
+                    blockers,
+                );
+                write_new(Path::new(out_svg), svg.as_bytes())?;
+            }
+            println!("{}", serde_json::to_string_pretty(&res)?);
+            if !res.ok {
+                std::process::exit(1);
+            }
+        }
+        "verify" => {
+            let path = arg(1)?;
+            let d = MapDocument::load(Path::new(path))?;
+            let checks = if let Ok(checks_path) = arg(2) {
+                let bytes = std::fs::read(checks_path)?;
+                serde_json::from_slice(&bytes)?
+            } else {
+                d.checks.clone().unwrap_or_default()
+            };
+            let rep = vesper3d::viewer::verify::verify_map(&d, &checks, path);
+            println!("{}", serde_json::to_string_pretty(&rep)?);
+            if !rep.ok {
+                std::process::exit(1);
+            }
+        }
+        "sim" => {
+            let scen_bytes = std::fs::read(arg(1)?)?;
+            let scen: vesper3d::viewer::scenario::Scenario = serde_json::from_slice(&scen_bytes)?;
+            let (trace, _) = vesper3d::viewer::scenario::run_scenario(&scen)?;
+            let last_chk = trace.checkpoints.last().map(|c| c.checksum).unwrap_or(0);
+            if let Ok(trace_out) = arg(2) {
+                save(trace_out, &trace)?;
+            }
+            println!(
+                "{}",
+                json!({
+                    "ok": true,
+                    "scenario": scen.name,
+                    "ticks": trace.total_ticks,
+                    "final_checksum": format!("0x{:016x}", last_chk)
+                })
+            );
+        }
+        "replay-trace" => {
+            let trace_bytes = std::fs::read(arg(1)?)?;
+            let trace: vesper3d::viewer::scenario::SimulationTrace =
+                serde_json::from_slice(&trace_bytes)?;
+            let rep = vesper3d::viewer::scenario::verify_replay_trace(&trace, None)?;
+            println!("{}", serde_json::to_string_pretty(&rep)?);
+            if !rep.deterministic {
+                std::process::exit(1);
+            }
+        }
+        "src" => {
+            let action = arg(1)?;
+            let query = a.get(2).map(String::as_str).unwrap_or("");
+            let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+            let idx = vesper3d::viewer::symbols::SourceIndex::scan(root)?;
+            match action {
+                "map" => println!("{}", serde_json::to_string_pretty(&idx.map())?),
+                "find" => println!("{}", serde_json::to_string_pretty(&idx.find(query))?),
+                "outline" => println!("{}", serde_json::to_string_pretty(&idx.outline(query))?),
+                "show" => println!("{}", idx.show(query)?),
+                "refs" => println!("{}", serde_json::to_string_pretty(&idx.refs(query))?),
+                "coverage" => println!("{}", serde_json::to_string_pretty(&idx.coverage())?),
+                _ => return Err(format!("Unknown src action: {action}").into()),
+            }
+        }
         "export-house" => {
             let d = MapDocument::house()?;
             d.validate()?;

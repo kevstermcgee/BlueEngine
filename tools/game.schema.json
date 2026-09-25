@@ -151,7 +151,140 @@
           }
         }
       },
-      "minItems": 1,
+      "minItems": 0,
+      "maxItems": 16
+    },
+    "trigger_zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "bounds",
+          "enabled"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_/-]+$"
+          },
+          "bounds": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "min",
+              "max"
+            ],
+            "properties": {
+              "min": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000,
+                  "maximum": 1000
+                },
+                "minItems": 3,
+                "maxItems": 3
+              },
+              "max": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": -1000,
+                  "maximum": 1000
+                },
+                "minItems": 3,
+                "maxItems": 3
+              }
+            }
+          },
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 16
+    },
+    "movers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "entity",
+          "translation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_/-]+$"
+          },
+          "entity": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_/-]+$"
+          },
+          "translation": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "minimum": -1000,
+              "maximum": 1000
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "duration_ticks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3600
+          },
+          "initial_open": {
+            "type": "boolean"
+          }
+        }
+      },
+      "minItems": 0,
+      "maxItems": 16
+    },
+    "timers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "duration_ticks"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Za-z0-9_/-]+$"
+          },
+          "duration_ticks": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 36000
+          },
+          "auto_start": {
+            "type": "boolean"
+          },
+          "repeats": {
+            "type": "boolean"
+          }
+        }
+      },
+      "minItems": 0,
       "maxItems": 16
     },
     "rules": {
@@ -172,6 +305,45 @@
             "pattern": "^[A-Za-z0-9_/-]+$"
           },
           "on_interact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_/-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "on_enter": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_/-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "on_exit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64,
+                "pattern": "^[A-Za-z0-9_/-]+$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "on_timer": {
             "anyOf": [
               {
                 "type": "string",
@@ -289,6 +461,67 @@
                     },
                     "enabled": {
                       "type": "boolean"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "mover",
+                    "open"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "set_mover"
+                    },
+                    "mover": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_/-]+$"
+                    },
+                    "open": {
+                      "type": "boolean"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "timer"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "start_timer"
+                    },
+                    "timer": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_/-]+$"
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "timer"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "stop_timer"
+                    },
+                    "timer": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_/-]+$"
                     }
                   }
                 },

@@ -102,6 +102,97 @@ fn validation_rejects_unknown_fields_references_duplicates_and_bad_spawns() {
     let mut d = valid.clone();
     d.rules[0].actions = vec![];
     check(&d);
+    let mut d = valid.clone();
+    d.trigger_zones.push(vesper3d::viewer::game::TriggerZone {
+        id: "duplicate".into(),
+        bounds: vesper3d::viewer::controller::Collider {
+            min: V::ZERO,
+            max: V::ONE,
+        },
+        enabled: true,
+    });
+    d.trigger_zones.push(d.trigger_zones[0].clone());
+    check(&d);
+    let mut d = valid.clone();
+    d.rules[0].on_enter = Some("missing-zone".into());
+    check(&d);
+    let mut d = valid.clone();
+    d.rules[0].on_enter = Some("zone-a".into());
+    d.rules[0].on_interact = Some(d.interactables[0].entity.clone());
+    check(&d);
+    let mut d = valid.clone();
+    d.movers.push(vesper3d::viewer::game::Mover {
+        id: "duplicate-mover".into(),
+        entity: "exit".into(),
+        translation: V(0., 3., 0.),
+        duration_ticks: 60,
+        initial_open: false,
+    });
+    d.movers.push(d.movers[0].clone());
+    check(&d);
+    let mut d = valid.clone();
+    d.movers.push(vesper3d::viewer::game::Mover {
+        id: "bad-mover".into(),
+        entity: "nonexistent".into(),
+        translation: V(0., 3., 0.),
+        duration_ticks: 60,
+        initial_open: false,
+    });
+    check(&d);
+    let mut d = valid.clone();
+    d.movers.push(vesper3d::viewer::game::Mover {
+        id: "bad-ticks".into(),
+        entity: "exit".into(),
+        translation: V(0., 3., 0.),
+        duration_ticks: 0,
+        initial_open: false,
+    });
+    check(&d);
+    let mut d = valid.clone();
+    d.rules[0].actions = vec![vesper3d::viewer::game::GameAction::SetMover {
+        mover: "missing-mover".into(),
+        open: true,
+    }];
+    check(&d);
+    let mut d = valid.clone();
+    d.timers.push(vesper3d::viewer::game::TimerDefinition {
+        id: "timer-a".into(),
+        duration_ticks: 60,
+        repeats: false,
+        auto_start: false,
+    });
+    d.timers.push(d.timers[0].clone());
+    check(&d);
+    let mut d = valid.clone();
+    d.timers.push(vesper3d::viewer::game::TimerDefinition {
+        id: "zero-timer".into(),
+        duration_ticks: 0,
+        repeats: false,
+        auto_start: false,
+    });
+    check(&d);
+    let mut d = valid.clone();
+    d.rules.push(vesper3d::viewer::game::Rule {
+        id: "bad-timer-rule".into(),
+        on_interact: None,
+        on_enter: None,
+        on_exit: None,
+        on_timer: Some("missing-timer".into()),
+        condition: None,
+        once: false,
+        actions: vec![vesper3d::viewer::game::GameAction::Complete],
+    });
+    check(&d);
+    let mut d = valid.clone();
+    d.rules[0].actions = vec![vesper3d::viewer::game::GameAction::StartTimer {
+        timer: "missing-timer".into(),
+    }];
+    check(&d);
+    let mut d = valid.clone();
+    d.rules[0].actions = vec![vesper3d::viewer::game::GameAction::StopTimer {
+        timer: "missing-timer".into(),
+    }];
+    check(&d);
     let mut value = serde_json::to_value(&valid).unwrap();
     value["script"] = "anything".into();
     assert!(serde_json::from_value::<GameDocument>(value).is_err());
@@ -178,6 +269,9 @@ fn game_state_mirror_rejects_reordered_or_invalid_snapshots_and_fits_budget() {
     let worst = GameState {
         counters: vec![-1_000_000; 8],
         enabled: u16::MAX,
+        enabled_zones: u16::MAX,
+        mover_targets: u16::MAX,
+        active_timers: u16::MAX,
         fired: u16::MAX,
         completed: true,
     };
@@ -378,4 +472,346 @@ fn fallible_world_startup_reports_physics_errors() {
     room.compiled.scene.materials.remove(&material);
     assert!(HeadlessWorld::try_with_room(room).is_err());
     assert!(GameDocument::load(Path::new("assets/games/three-switches/game.json")).is_ok());
+}
+
+#[test]
+fn trigger_volumes_fire_on_enter_and_exit_with_shared_rules() {
+    let mut loaded = fixture();
+    loaded.document.trigger_zones = vec![
+        vesper3d::viewer::game::TriggerZone {
+            id: "plate-a".into(),
+            bounds: vesper3d::viewer::controller::Collider {
+                min: V(0.0, 0.0, 0.0),
+                max: V(2.0, 1.0, 2.0),
+            },
+            enabled: true,
+        },
+        vesper3d::viewer::game::TriggerZone {
+            id: "exit-zone".into(),
+            bounds: vesper3d::viewer::controller::Collider {
+                min: V(4.0, 0.0, 4.0),
+                max: V(6.0, 2.0, 6.0),
+            },
+            enabled: false,
+        },
+    ];
+    loaded.document.counters.insert("plate_steps".into(), 0);
+    loaded.document.counters.insert("plate_exits".into(), 0);
+    loaded.document.rules = vec![
+        vesper3d::viewer::game::Rule {
+            id: "step-plate-a".into(),
+            on_interact: None,
+            on_enter: Some("plate-a".into()),
+            on_exit: None,
+            on_timer: None,
+            condition: None,
+            once: false,
+            actions: vec![
+                vesper3d::viewer::game::GameAction::Increment {
+                    counter: "plate_steps".into(),
+                    amount: 1,
+                },
+                vesper3d::viewer::game::GameAction::SetEnabled {
+                    entity: "exit-zone".into(),
+                    enabled: true,
+                },
+            ],
+        },
+        vesper3d::viewer::game::Rule {
+            id: "exit-plate-a".into(),
+            on_interact: None,
+            on_enter: None,
+            on_exit: Some("plate-a".into()),
+            on_timer: None,
+            condition: None,
+            once: false,
+            actions: vec![vesper3d::viewer::game::GameAction::Increment {
+                counter: "plate_exits".into(),
+                amount: 1,
+            }],
+        },
+        vesper3d::viewer::game::Rule {
+            id: "reach-exit-zone".into(),
+            on_interact: None,
+            on_enter: Some("exit-zone".into()),
+            on_exit: None,
+            on_timer: None,
+            condition: None,
+            once: true,
+            actions: vec![vesper3d::viewer::game::GameAction::Complete],
+        },
+    ];
+    let mut world = loaded.world().unwrap();
+    world.join(1);
+
+    let steps_idx = world
+        .game
+        .as_ref()
+        .unwrap()
+        .document()
+        .counters
+        .keys()
+        .position(|k| k == "plate_steps")
+        .unwrap();
+    let exits_idx = world
+        .game
+        .as_ref()
+        .unwrap()
+        .document()
+        .counters
+        .keys()
+        .position(|k| k == "plate_exits")
+        .unwrap();
+
+    // Initial position outside plate-a
+    assert_eq!(world.game.as_ref().unwrap().state().counters[steps_idx], 0);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[exits_idx], 0);
+
+    // Move player inside plate-a (1.0, 0.0, 1.0)
+    world.player_mut(1).unwrap().position = V(1.0, 1.68, 1.0);
+    world.step();
+    // Entering plate-a triggers increment and enables exit-zone
+    assert_eq!(world.game.as_ref().unwrap().state().counters[steps_idx], 1);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[exits_idx], 0);
+    assert!(world.game.as_ref().unwrap().zone_enabled(1)); // exit-zone enabled!
+
+    // Stepping again while remaining inside does NOT re-fire on_enter
+    world.step();
+    assert_eq!(world.game.as_ref().unwrap().state().counters[steps_idx], 1);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[exits_idx], 0);
+
+    // Move player outside plate-a (-5.0, 0.0, -5.0)
+    world.player_mut(1).unwrap().position = V(-5.0, 1.68, -5.0);
+    world.step();
+    // Exiting plate-a triggers plate_exits increment!
+    assert_eq!(world.game.as_ref().unwrap().state().counters[steps_idx], 1);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[exits_idx], 1);
+
+    // Step again outside, no change
+    world.step();
+    assert_eq!(world.game.as_ref().unwrap().state().counters[exits_idx], 1);
+
+    // Now move player into the newly enabled exit-zone (5.0, 0.0, 5.0)
+    assert!(!world.game.as_ref().unwrap().state().completed);
+    world.player_mut(1).unwrap().position = V(5.0, 1.68, 5.0);
+    world.step();
+    assert!(world.game.as_ref().unwrap().state().completed);
+}
+
+#[test]
+fn kinematic_movers_translate_colliders_and_respond_to_rules() {
+    let mut loaded = fixture();
+    // Declare a mover on "exit" translating up by 2.0 metres over 10 ticks
+    loaded.document.movers = vec![vesper3d::viewer::game::Mover {
+        id: "exit-door".into(),
+        entity: "exit".into(),
+        translation: V(0., 2.0, 0.),
+        duration_ticks: 10,
+        initial_open: false,
+    }];
+    // Rule: pressing button-a opens the mover
+    loaded.document.rules.push(vesper3d::viewer::game::Rule {
+        id: "open-exit-door".into(),
+        on_interact: Some("button-a".into()),
+        on_enter: None,
+        on_exit: None,
+        on_timer: None,
+        condition: None,
+        once: true,
+        actions: vec![vesper3d::viewer::game::GameAction::SetMover {
+            mover: "exit-door".into(),
+            open: true,
+        }],
+    });
+    let mut world = loaded.world().unwrap();
+    world.join(1);
+
+    let base_bounds = world.game.as_ref().unwrap().movers()[0]
+        .base_collider
+        .clone();
+    assert_eq!(world.game.as_ref().unwrap().mover_progress(0), Some(0.0));
+    assert!(!world.game.as_ref().unwrap().mover_open(0));
+
+    // Player interacts with button-a
+    press(&mut world, 1, -3.);
+    assert!(world.game.as_ref().unwrap().mover_open(0));
+
+    // Step through the 10 ticks
+    for tick in 1..=10 {
+        world.step();
+        let expected_progress = tick as f32 / 10.0;
+        let progress = world.game.as_ref().unwrap().mover_progress(0).unwrap();
+        assert!((progress - expected_progress).abs() < 0.001);
+
+        let current_bounds = world.game.as_ref().unwrap().mover_bounds(0).unwrap();
+        let expected_min_y = base_bounds.min.1 + 2.0 * expected_progress;
+        assert!((current_bounds.min.1 - expected_min_y).abs() < 0.001);
+
+        // Verify room.colliders was updated dynamically
+        let room_collider = world
+            .room
+            .colliders
+            .iter()
+            .find(|c| {
+                (c.min.0 - base_bounds.min.0).abs() < 0.001
+                    && (c.min.2 - base_bounds.min.2).abs() < 0.001
+            })
+            .unwrap();
+        assert!((room_collider.min.1 - expected_min_y).abs() < 0.001);
+    }
+
+    // Now at tick 10, mover progress is 1.0 (fully open)
+    assert!((world.game.as_ref().unwrap().mover_progress(0).unwrap() - 1.0).abs() < 0.001);
+
+    // Stepping further keeps it clamped at 1.0
+    world.step();
+    assert!((world.game.as_ref().unwrap().mover_progress(0).unwrap() - 1.0).abs() < 0.001);
+}
+
+#[test]
+fn timers_count_down_and_dispatch_delayed_actions() {
+    let mut loaded = fixture();
+    loaded.document.timers = vec![
+        vesper3d::viewer::game::TimerDefinition {
+            id: "delay-bomb".into(),
+            duration_ticks: 3,
+            repeats: false,
+            auto_start: false,
+        },
+        vesper3d::viewer::game::TimerDefinition {
+            id: "pulse".into(),
+            duration_ticks: 2,
+            repeats: true,
+            auto_start: false,
+        },
+    ];
+    loaded.document.counters.insert("ticks_fired".into(), 0);
+    loaded.document.counters.insert("pulses_fired".into(), 0);
+    loaded.document.rules = vec![
+        vesper3d::viewer::game::Rule {
+            id: "start-timers".into(),
+            on_interact: Some("button-a".into()),
+            on_enter: None,
+            on_exit: None,
+            on_timer: None,
+            condition: None,
+            once: true,
+            actions: vec![
+                vesper3d::viewer::game::GameAction::StartTimer {
+                    timer: "delay-bomb".into(),
+                },
+                vesper3d::viewer::game::GameAction::StartTimer {
+                    timer: "pulse".into(),
+                },
+            ],
+        },
+        vesper3d::viewer::game::Rule {
+            id: "on-delay-bomb".into(),
+            on_interact: None,
+            on_enter: None,
+            on_exit: None,
+            on_timer: Some("delay-bomb".into()),
+            condition: None,
+            once: false,
+            actions: vec![vesper3d::viewer::game::GameAction::Increment {
+                counter: "ticks_fired".into(),
+                amount: 1,
+            }],
+        },
+        vesper3d::viewer::game::Rule {
+            id: "on-pulse".into(),
+            on_interact: None,
+            on_enter: None,
+            on_exit: None,
+            on_timer: Some("pulse".into()),
+            condition: None,
+            once: false,
+            actions: vec![vesper3d::viewer::game::GameAction::Increment {
+                counter: "pulses_fired".into(),
+                amount: 1,
+            }],
+        },
+        vesper3d::viewer::game::Rule {
+            id: "stop-pulse".into(),
+            on_interact: Some("button-b".into()),
+            on_enter: None,
+            on_exit: None,
+            on_timer: None,
+            condition: None,
+            once: true,
+            actions: vec![vesper3d::viewer::game::GameAction::StopTimer {
+                timer: "pulse".into(),
+            }],
+        },
+    ];
+    let mut world = loaded.world().unwrap();
+    world.join(1);
+
+    let ticks_idx = world
+        .game
+        .as_ref()
+        .unwrap()
+        .document()
+        .counters
+        .keys()
+        .position(|k| k == "ticks_fired")
+        .unwrap();
+    let pulses_idx = world
+        .game
+        .as_ref()
+        .unwrap()
+        .document()
+        .counters
+        .keys()
+        .position(|k| k == "pulses_fired")
+        .unwrap();
+
+    assert_eq!(world.game.as_ref().unwrap().state().counters[ticks_idx], 0);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[pulses_idx], 0);
+    assert!(!world.game.as_ref().unwrap().timer_active(0));
+    assert!(!world.game.as_ref().unwrap().timer_active(1));
+
+    // Player interacts with button-a to start both timers
+    press(&mut world, 1, -3.);
+    assert!(world.game.as_ref().unwrap().timer_active(0));
+    assert!(world.game.as_ref().unwrap().timer_active(1));
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(0), Some(3));
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(1), Some(2));
+
+    // Tick 1
+    world.step();
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(0), Some(2));
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(1), Some(1));
+    assert_eq!(world.game.as_ref().unwrap().state().counters[ticks_idx], 0);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[pulses_idx], 0);
+
+    // Tick 2: pulse reaches 0, fires, auto-resets to 2
+    world.step();
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(0), Some(1));
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(1), Some(2));
+    assert_eq!(world.game.as_ref().unwrap().state().counters[ticks_idx], 0);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[pulses_idx], 1);
+
+    // Tick 3: delay-bomb reaches 0, fires, stops; pulse decrements to 1
+    world.step();
+    assert!(!world.game.as_ref().unwrap().timer_active(0));
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(0), None);
+    assert_eq!(world.game.as_ref().unwrap().timer_remaining(1), Some(1));
+    assert_eq!(world.game.as_ref().unwrap().state().counters[ticks_idx], 1);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[pulses_idx], 1);
+
+    // Tick 4: pulse fires again
+    world.step();
+    assert_eq!(world.game.as_ref().unwrap().state().counters[ticks_idx], 1);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[pulses_idx], 2);
+
+    // Stop pulse via button-b
+    press(&mut world, 1, -1.);
+    assert!(!world.game.as_ref().unwrap().timer_active(1));
+
+    // Step further, no more increments
+    world.step();
+    world.step();
+    assert_eq!(world.game.as_ref().unwrap().state().counters[ticks_idx], 1);
+    assert_eq!(world.game.as_ref().unwrap().state().counters[pulses_idx], 2);
 }

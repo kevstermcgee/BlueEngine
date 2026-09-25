@@ -168,6 +168,9 @@ impl HeadlessWorld {
             physics.drop_for_player(id);
         }
         self.players.remove(&id);
+        if let Some(game) = &mut self.game {
+            game.forget_player(id);
+        }
     }
     /// Neutralize active movement intent for a player (used on input sequence timeout/stale frames).
     pub fn neutralize_input(&mut self, id: u64) {
@@ -309,6 +312,10 @@ impl HeadlessWorld {
     /// Advance every player one tick and increment the world tick, even when empty.
     /// Consume pending jump edges once; retain all other movement intent.
     pub fn step(&mut self) {
+        if let Some(game) = &mut self.game {
+            game.step_movers(&mut self.room);
+            game.step_timers();
+        }
         for (&id, player) in &mut self.players {
             player
                 .controller
@@ -318,6 +325,9 @@ impl HeadlessWorld {
                 if let Some(game) = &mut self.game {
                     game.interact(&self.room, &player.controller, id);
                 }
+            }
+            if let Some(game) = &mut self.game {
+                game.step_triggers(&player.controller, id);
             }
         }
 
@@ -347,6 +357,9 @@ impl HeadlessWorld {
                     }
                 }
             }
+        }
+        if let Some(game) = &mut self.game {
+            game.apply_mover_colliders(&mut self.room);
         }
         self.last_physics_time_us = t_phys.elapsed().as_secs_f64() * 1_000_000.0;
         self.tick += 1;

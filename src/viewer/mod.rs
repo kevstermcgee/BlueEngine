@@ -37,3 +37,15 @@ pub mod metrics;
 pub mod net;
 pub mod server;
 pub mod spatial;
+
+pub mod blueprint;
+pub mod gen;
+pub mod lint;
+pub mod mcp;
+pub mod newgame;
+pub mod pathing;
+pub mod reach;
+pub mod scenario;
+pub mod symbols;
+pub mod ui_check;
+pub mod verify;

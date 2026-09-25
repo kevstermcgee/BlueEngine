@@ -15,8 +15,12 @@ fn discovery_and_parser_share_command_signatures() {
     assert!(output.status.success());
     let doc: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(doc["commands"].as_array().unwrap().len(), COMMANDS.len());
-    for (name, _) in COMMANDS {
-        let output = native(&[name, "extra", "extra", "extra", "extra"]);
+    for (name, sig) in COMMANDS {
+        let max_args = sig.split_whitespace().count();
+        let extras: Vec<&str> = (0..=max_args).map(|_| "extra").collect();
+        let mut cmd_args = vec![*name];
+        cmd_args.extend(extras);
+        let output = native(&cmd_args);
         assert!(!output.status.success());
         let error: Value = serde_json::from_slice(&output.stderr).unwrap();
         assert!(

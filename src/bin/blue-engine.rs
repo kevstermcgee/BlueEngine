@@ -551,6 +551,7 @@ async fn main() {
                         Packet::GameState { tick, state } => {
                             if let Some(game) = &mut game {
                                 game.accept_snapshot(tick, state);
+                                game.step_movers(&mut room);
                             }
                         }
                         Packet::Snapshot(snap) => {
@@ -822,9 +823,16 @@ async fn main() {
             }
             if net_transport.is_none() {
                 if let Some(game) = &mut game {
+                    if simulation_steps > 0 {
+                        game.step_movers(&mut room);
+                        game.step_timers();
+                    }
                     pending_game_interaction |= keys.pressed(KeyCode::E) && skip_look == 0;
                     if simulation_steps > 0 && std::mem::take(&mut pending_game_interaction) {
                         game.interact(&room, &controller, 1);
+                    }
+                    if simulation_steps > 0 {
+                        game.step_triggers(&controller, 1);
                     }
                 } else if keys.pressed(KeyCode::E) && skip_look == 0 {
                     let ray = camera_rig
@@ -1106,6 +1114,47 @@ async fn main() {
         }
         prop_view.draw(&prop_physics);
         gl_use_default_material();
+        if let Some(game) = &game {
+            let aimed = game
+                .target(&room, &controller)
+                .filter(|_| !game.state().completed);
+            for (i, zone) in game.trigger_zones().iter().enumerate() {
+                let center = mesh::vec((zone.min + zone.max) * 0.5);
+                let size = mesh::vec(zone.max - zone.min);
+                let color = if game.zone_enabled(i) {
+                    Color::new(0.2, 0.75, 1.0, 0.35)
+                } else {
+                    Color::new(0.4, 0.4, 0.4, 0.15)
+                };
+                draw_cube_wires(center, size, color);
+            }
+            for (i, target) in game.targets().iter().enumerate() {
+                let center = mesh::vec((target.min + target.max) * 0.5);
+                let size = mesh::vec(target.max - target.min);
+                if !game.enabled(i) {
+                    draw_cube(
+                        center,
+                        size * 1.002,
+                        None,
+                        Color::new(0.02, 0.03, 0.05, 0.6),
+                    );
+                    draw_cube_wires(center, size * 1.002, Color::new(0.5, 0.2, 0.2, 0.4));
+                } else if aimed == Some(i) {
+                    draw_cube_wires(center, size * 1.025, Color::new(1.0, 0.84, 0.2, 0.95));
+                }
+            }
+            for i in 0..game.mover_count() {
+                if let Some(bounds) = game.mover_bounds(i) {
+                    let progress = game.mover_progress(i).unwrap_or(0.);
+                    if progress > 0.001 {
+                        let center = mesh::vec((bounds.min + bounds.max) * 0.5);
+                        let size = mesh::vec(bounds.max - bounds.min);
+                        draw_cube(center, size * 1.001, None, Color::new(0.3, 0.45, 0.65, 0.9));
+                        draw_cube_wires(center, size * 1.001, Color::new(0.4, 0.7, 0.95, 0.8));
+                    }
+                }
+            }
+        }
         if view.show_body {
             character.draw(
                 &render_controller,
@@ -1280,7 +1329,28 @@ async fn main() {
             );
         }
         if active || capture_dir.is_some() {
-            draw_circle(sw * 0.5, sh * 0.5, 2., Color::new(0.92, 0.96, 1., 0.85));
+            let (crosshair_color, crosshair_radius) = if let Some(game) = &game {
+                if let Some(target) = game
+                    .target(&room, &controller)
+                    .filter(|_| !game.state().completed)
+                {
+                    if game.enabled(target) {
+                        (Color::new(0.25, 0.95, 0.55, 0.95), 3.5)
+                    } else {
+                        (Color::new(0.95, 0.35, 0.35, 0.85), 2.5)
+                    }
+                } else {
+                    (Color::new(0.92, 0.96, 1., 0.85), 2.)
+                }
+            } else if prop_physics
+                .target(&room, view.aim(&controller, &room))
+                .is_some()
+            {
+                (Color::new(1., 0.82, 0.3, 0.95), 3.0)
+            } else {
+                (Color::new(0.92, 0.96, 1., 0.85), 2.)
+            };
+            draw_circle(sw * 0.5, sh * 0.5, crosshair_radius, crosshair_color);
             if let Some(hit) = if loadout.selected == Weapon::Pistol {
                 &loadout.pistol.impact
             } else {

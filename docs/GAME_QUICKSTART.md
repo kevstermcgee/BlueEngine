@@ -29,12 +29,15 @@ A rule example:
 ```
 
 Actions: `increment(counter,amount)`, `set_counter(counter,value)`,
-`set_enabled(entity,enabled)`, `complete`. Optional condition: `{"counter":"switches","equals":3}`.
-Omitted/null on_interact matches any declared enabled target. Rules run in document order;
-later rules see earlier changes. Once applies globally per match. Complete ends interactions.
-Enabled controls interaction eligibility only; it does not move/hide geometry or collision.
-Targets require line of sight within 2.5 metres. Limits: 8 counters, 16 targets/rules,
-4 actions/rule, 8 spawns; counters clamp to +/-1,000,000. No timers, scripts or physical doors.
+`set_enabled(entity,enabled)`, `set_mover(mover,open)`, `start_timer(timer)`, `stop_timer(timer)`, `complete`. Optional condition: `{"counter":"switches","equals":3}`.
+Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
+`on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.
+Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete ends interactions.
+Enabled controls interaction and trigger zone eligibility. Kinematic `movers` smoothly translate box colliders
+between closed and open states over `duration_ticks`, dynamically blocking or opening pathways for players.
+`timers` provide deterministic fixed-tick countdowns (`duration_ticks`, `auto_start`, `repeats`) to dispatch delayed actions.
+Targets require line of sight within 2.5 metres. Limits: 8 counters, 16 targets/zones, 16 movers, 16 timers, 16 rules,
+4 actions/rule, 8 spawns; counters clamp to +/-1,000,000. No arbitrary scripts or irregular geometry mutation.
 
 Multiplayer: launch `be2-headless --game my-game/game.json --server 127.0.0.1:7777`,
 then `be2 --game my-game/game.json --connect 127.0.0.1:7777` for each client.

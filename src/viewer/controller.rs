@@ -61,7 +61,7 @@ impl Collider {
             && self.min.1 < feet + height - 0.0001
             && self.overlaps_xz(p, radius)
     }
-    fn overlaps_xz(&self, p: V, radius: f32) -> bool {
+    pub fn overlaps_xz(&self, p: V, radius: f32) -> bool {
         let x = p.0.clamp(self.min.0, self.max.0);
         let z = p.2.clamp(self.min.2, self.max.2);
         (p.0 - x).powi(2) + (p.2 - z).powi(2) < radius * radius

@@ -28,6 +28,8 @@ pub struct MapDocument {
     pub entities: Vec<Entity>,
     #[serde(default)]
     pub spatial: Option<super::spatial::RoomGraph>,
+    #[serde(default)]
+    pub checks: Option<super::verify::ChecksBlock>,
 }
 fn finite(v: V) -> bool {
     [v.0, v.1, v.2]
@@ -62,6 +64,7 @@ impl MapDocument {
                 .collect(),
             entities: r.entities,
             spatial: r.spatial,
+            checks: None,
         })
     }
     pub fn load(path: &Path) -> Result<Self> {

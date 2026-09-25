@@ -58,6 +58,7 @@ impl SceneBuilder {
             colliders: BTreeMap::new(),
             entities: Vec::new(),
             spatial: None,
+            checks: None,
         }
         .apply(&self.edits)
     }

@@ -290,6 +290,147 @@
         "graphical --capture-game smoke"
       ],
       "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors."
+    },
+    "mcp": {
+      "files": [
+        "src/viewer/mcp.rs",
+        "tools/mcp_server.py"
+      ],
+      "checks": [
+        "native MCP stdio server"
+      ],
+      "note": "Native Model Context Protocol (MCP) server directly exposing level authoring, inspection, pathing, linting, and simulation tools over stdio JSON-RPC."
+    },
+    "blueprint": {
+      "files": [
+        "src/viewer/blueprint.rs",
+        "src/viewer/spatial.rs"
+      ],
+      "checks": [
+        "blueprint compilation and spatial room graph"
+      ],
+      "note": "Declarative multi-room level compiler generating validated maps with door cutouts, spawns, catalog props, and spatial RoomGraphs.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_blueprint_compiler_and_spatial_graph"
+        }
+      ]
+    },
+    "static_lint": {
+      "files": [
+        "src/viewer/lint.rs",
+        "src/viewer/reach.rs"
+      ],
+      "checks": [
+        "static design linting and reachability"
+      ],
+      "note": "Level design static analysis catching floating/sunk props, dropped hazards, perimeter leaks, overlaps, headroom violations, and unreachable entities.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_static_lint_and_reachability"
+        }
+      ]
+    },
+    "pathing_and_walk": {
+      "files": [
+        "src/viewer/pathing.rs"
+      ],
+      "checks": [
+        "A* pathfinding and 60 Hz physics walk simulation"
+      ],
+      "note": "Capsule clearance A* pathfinding and 60 Hz physics walk simulation with collision blocker diagnostics and SVG diagram generation.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_pathing_and_physical_walk"
+        }
+      ]
+    },
+    "procedural_gen": {
+      "files": [
+        "src/viewer/gen.rs"
+      ],
+      "checks": [
+        "procedural scatter and line placement"
+      ],
+      "note": "Deterministic procedural scatter and line placement with ground snapping and collision avoidance.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_procedural_scatter_and_line"
+        }
+      ]
+    },
+    "simulation_scenarios": {
+      "files": [
+        "src/viewer/scenario.rs"
+      ],
+      "checks": [
+        "headless simulation scenarios and replay trace verification"
+      ],
+      "note": "Headless scenario runner with multi-player scripted inputs and bit-for-bit deterministic replay trace divergence debugger.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_deterministic_simulation_and_replay_verification"
+        }
+      ]
+    },
+    "verification_framework": {
+      "files": [
+        "src/viewer/verify.rs"
+      ],
+      "checks": [
+        "unified self-verifying map checks"
+      ],
+      "note": "Single-command map verification executing lint, reachability, physical walks, object assertions, and scenarios in one shot.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_verification_framework"
+        }
+      ]
+    },
+    "source_navigator": {
+      "files": [
+        "src/viewer/symbols.rs"
+      ],
+      "checks": [
+        "source code index, search, and outline"
+      ],
+      "note": "High-performance Rust source navigator indexing modules, functions, structs, enums, signatures, and cross-references.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_source_code_navigator"
+        }
+      ]
+    },
+    "ui_auditor": {
+      "files": [
+        "src/viewer/ui_check.rs"
+      ],
+      "checks": [
+        "headless multi-resolution UI layout audit"
+      ],
+      "note": "Headless 2D UI layout auditor validating all screens across 9 standard resolutions for overlap, text truncation, and responsive pause menu constraints.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_headless_ui_layout_auditor"
+        }
+      ]
+    },
+    "game_scaffolding": {
+      "files": [
+        "src/viewer/newgame.rs"
+      ],
+      "checks": [
+        "new standalone game project scaffolding"
+      ],
+      "note": "Scaffolds complete, independent game repositories with pinned vesper3d dependency, blueprint, map, launcher, test scripts, and CI."
     }
   }
 }

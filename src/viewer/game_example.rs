@@ -35,6 +35,9 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
         rules.push(Rule {
             id: format!("press-{id}"),
             on_interact: Some((*id).into()),
+            on_enter: None,
+            on_exit: None,
+            on_timer: None,
             condition: None,
             once: true,
             actions: vec![
@@ -52,6 +55,9 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
     rules.push(Rule {
         id: "unlock-exit".into(),
         on_interact: None,
+        on_enter: None,
+        on_exit: None,
+        on_timer: None,
         condition: Some(Condition {
             counter: "switches".into(),
             equals: 3,
@@ -65,6 +71,9 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
     rules.push(Rule {
         id: "finish".into(),
         on_interact: Some("exit".into()),
+        on_enter: None,
+        on_exit: None,
+        on_timer: None,
         condition: None,
         once: true,
         actions: vec![GameAction::Complete],
@@ -94,6 +103,9 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
                 enabled: *id != "exit",
             })
             .collect(),
+        trigger_zones: Vec::new(),
+        movers: Vec::new(),
+        timers: Vec::new(),
         rules,
     };
     game.validate(&map)?;
