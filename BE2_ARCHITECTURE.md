@@ -57,8 +57,10 @@ profiles/actions. A general behavior document/controller/action boundary is futu
 DedicatedServer (`viewer/server.rs`) and Packet/UdpTransport (`viewer/net.rs`) provide
 60 Hz authority and 20 Hz snapshots. Input sequence numbers reject duplicates and
 out-of-order commands. Socket ownership gates disconnects. Reconnect reservations
-are address-bound and expire after 60 seconds. These are development sessions,
-not cryptographic authentication.
+are address-bound and expire after 60 seconds. With `--auth-key`, the server uses
+HMAC-SHA256 challenge-response with random nonces/salts, issues session tokens, and
+authenticates later datagrams with replay protection. Without that flag the raw-UDP
+session remains unauthenticated. Neither mode encrypts payloads.
 
 Clients acknowledge snapshot ticks. The server computes deltas against acknowledged
 history; clients reject mismatched baselines and request keyframes. Periodic full
@@ -74,8 +76,11 @@ The fingerprint is non-cryptographic FNV-1a for accidental mismatch detection on
 
 JSON encoding/decoding enforces a 1400-byte datagram ceiling; it does not chunk oversized
 snapshots. Malformed/oversized datagrams are dropped without terminating the server;
-receive work is bounded per call and server poll. Compact binary serialization, authenticated transport, reconnect tokens
-and content negotiation remain planned. Room overlap resolves by minimum stable ID.
+receive work is bounded per call and server poll. Compact binary serialization,
+encrypted executable transport, reconnect-token migration and content negotiation
+remain planned. `viewer/net/quic.rs` implements a QUIC/TLS datagram transport behind
+the transport trait, but the current client and dedicated-server binaries use
+`UdpTransport`. Room overlap resolves by minimum stable ID.
 Tests cover two-client UDP and separate server processes, loss/reordering, contention,
 combat occlusion, content mismatch, capacity and malformed packets.
 

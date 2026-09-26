@@ -21,6 +21,8 @@ Cargo package/binaries remain `be2`; the library remains `vesper3d` for compatib
 cargo run --locked --bin be2
 cargo run --locked --no-default-features --bin be2-headless -- --server 127.0.0.1:4000
 cargo run --locked --bin be2 -- --connect 127.0.0.1:4000
+cargo run --locked --no-default-features --bin be2-headless -- --server 127.0.0.1:4000 --auth-key "LONG_RANDOM_SECRET"
+cargo run --locked --bin be2 -- --connect 127.0.0.1:4000 --auth-key "LONG_RANDOM_SECRET"
 cargo run --locked --no-default-features --bin be2-tools -- describe
 cargo run --locked --no-default-features --bin be2-tools -- export-lab lab.json
 cargo run --locked --bin be2 -- --map lab.json
@@ -41,11 +43,14 @@ Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement 
   catalog assets, bounded discovery and route/capture tools.
 - SceneBuilder/prelude for static boxes and catalog props; ID-based impulse/position APIs.
 
-Networking is development-grade JSON/UDP with a 1400-byte packet limit. There is no
-cryptographic authentication, encryption, binary codec or session-token migration.
-Large snapshots can exceed that limit; bounded encoding is not snapshot chunking.
-Map fingerprints detect accidental mismatch, not hostile forgery. Map v1 does not
-encode custom game rules, multiplayer spawn profiles or arbitrary dynamic meshes.
+Networking is development-grade JSON/UDP with a 1400-byte packet limit. Supplying
+`--auth-key` on both peers enables HMAC-SHA256 challenge-response, server-issued
+session tokens, authenticated datagrams and replay protection. It does not encrypt
+payloads, hide metadata or provide session migration. Large snapshots can exceed the
+packet limit; bounded encoding is not snapshot chunking. Map fingerprints detect
+accidental mismatch, not hostile forgery. Map v1 does not encode custom game rules,
+multiplayer spawn profiles or arbitrary dynamic meshes. See the
+[hosting guide](docs/HOSTING.md) for the runnable server's exact security boundary.
 
 ## Validation
 

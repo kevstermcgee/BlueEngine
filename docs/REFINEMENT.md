@@ -1,5 +1,10 @@
 # BlueEngine refinement — 2026-09-24
 
+> Historical validation snapshot. Protocol 3, GameDocument v1 and optional
+> HMAC-authenticated UDP sessions were added later. Use
+> [BE2_ARCHITECTURE.md](../BE2_ARCHITECTURE.md), the root README and
+> `be2-tools describe` for the current contract.
+
 ## Goal and scope
 
 Continue BlueEngineAntigravity at 3b337cc as BlueEngine, preserving history and MIT
@@ -58,8 +63,9 @@ verified four checkpoints across 120 ticks of two in-memory runs.
    loop, arbitrary-mesh rigid-body or gameplay scripting framework.
 2. **Bounded production replication and sessions.** Add compact binary encoding,
    snapshot chunking/bandwidth budgets, server-issued reconnect tokens and an
-   authenticated transport. Current JSON/UDP and FNV map fingerprints are development
-   compatibility checks, not encryption/authentication; both peers must rebuild for v2.
+   authenticated transport. At the time of this pass, JSON/UDP and FNV map
+   fingerprints were development compatibility checks rather than authentication or
+   encryption; both peers had to rebuild for protocol 2.
 3. **Durable replay and measured performance guards.** Record versioned traces with
    content identity and ordered joins/inputs, compare Windows/Linux fixtures, then
    establish release/allocation baselines before changing lazy-body architecture.

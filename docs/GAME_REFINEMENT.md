@@ -1,5 +1,10 @@
 # GameDocument refinement — 2026-09-24
 
+> Historical validation snapshot. Timers, kinematic movers and optional authenticated
+> UDP sessions were added after this report; use `be2-tools game-describe`,
+> `be2-headless --help`, [GAME_QUICKSTART.md](GAME_QUICKSTART.md), and
+> [BE2_ARCHITECTURE.md](../BE2_ARCHITECTURE.md) for the current contract.
+
 The feedback correctly identified the next missing layer: map authoring alone cannot
 produce a playable objective. This pass implements a deliberately bounded version
 instead of a general scripting framework.
@@ -40,6 +45,7 @@ Automated tests run on this Windows host; no cross-platform runtime claim is mad
 
 No timers, general event graph, physical door animation, per-player counters, selectable
 profile collection, script runtime, or data-driven weapons. Enabled toggles interaction
-eligibility only. The game fixture is intentionally simple test geometry. Multiplayer
-remains development UDP without authentication; checksums do not prove cross-platform
-bitwise determinism. No durable replay/event-log format was added.
+eligibility only. The game fixture is intentionally simple test geometry. At the time
+of this pass, multiplayer was development UDP without authentication; checksums did
+not prove cross-platform bitwise determinism. No durable replay/event-log format was
+added in this pass.

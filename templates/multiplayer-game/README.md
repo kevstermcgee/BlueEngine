@@ -1,6 +1,6 @@
 # BlueEngine Multiplayer Game Template
 
-A clean, production-ready starter template for building authoritative multiplayer games with BlueEngine.
+A starter template for building authoritative multiplayer prototypes with BlueEngine.
 
 Harvested directly from real-world lessons building and shipping **Feta**.
 
@@ -22,7 +22,10 @@ Harvested directly from real-world lessons building and shipping **Feta**.
 - **Remote Interpolation**: Remote entities smoothed via interpolation buffers.
 - **Reliable Action Counters**: Monotonically increasing counters for jumps, primary, secondary, and interact actions that survive packet loss.
 - **Server Lag Compensation**: Bounded historical pose buffer (`PoseHistory<T>`) for fair hitscan combat with rewind clamping.
-- **Encrypted QUIC Transport**: Datagram transport over TLS 1.3 with pinned certificates.
+- **Transport Boundary**: The template uses the `DatagramTransport` abstraction but
+  currently instantiates raw `UdpTransport`. Its join key is sent in the initial
+  `Hello`; it is access control for local prototyping, not encryption or the engine's
+  HMAC-authenticated session handshake.
 
 ---
 
@@ -60,6 +63,11 @@ cargo run -- --server 0.0.0.0:4000 --key my-secret-join-key
 ```bash
 cargo run -- --connect 127.0.0.1:4000 --key my-secret-join-key
 ```
+
+Do not expose this template server directly to an untrusted network without replacing
+its raw-UDP handshake. For the engine's authenticated UDP path, use `be2-headless` and
+`be2` with matching `--auth-key` values as described in
+[`docs/HOSTING.md`](../../docs/HOSTING.md).
 
 ---
 

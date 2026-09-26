@@ -42,4 +42,7 @@ Targets require line of sight within 2.5 metres. Limits: 8 counters, 16 targets/
 Multiplayer: launch `be2-headless --game my-game/game.json --server 127.0.0.1:7777`,
 then `be2 --game my-game/game.json --connect 127.0.0.1:7777` for each client.
 Both sides need identical map and game semantics. The server owns rules/state;
-clients send interaction intent. These are development UDP sessions without authentication.
+clients send interaction intent. For an authenticated session, add the same
+`--auth-key "LONG_RANDOM_SECRET"` to both commands. Authentication uses
+challenge-response, session tokens and replay protection; the development UDP
+transport still does not encrypt payloads.
