@@ -14,6 +14,7 @@ pub fn panel(x: f32, y: f32, w: f32, h: f32, color: mq::Color) {
 }
 pub fn button(label: &str, rect: mq::Rect, selected: bool, enabled: bool) -> bool {
     let hover = rect.contains(mq::Vec2::from(mq::mouse_position()));
+    let (pad_focus, pad_click) = navigation_button(enabled);
     let active = selected || (hover && enabled);
     panel(
         rect.x,
@@ -42,7 +43,10 @@ pub fn button(label: &str, rect: mq::Rect, selected: bool, enabled: bool) -> boo
             MUTED
         },
     );
-    enabled && hover && mq::is_mouse_button_pressed(mq::MouseButton::Left)
+    if pad_focus {
+        mq::draw_rectangle_lines(rect.x, rect.y, rect.w, rect.h, 3., ACCENT);
+    }
+    enabled && ((hover && mq::is_mouse_button_pressed(mq::MouseButton::Left)) || pad_click)
 }
 pub fn fit(s: &str, width: f32, size: f32) -> String {
     let mut out = s.to_owned();
@@ -75,4 +79,105 @@ pub fn paragraph(s: &str, x: f32, mut y: f32, width: f32, size: f32) {
         }
     }
     text(&line, x, y, size, MUTED);
+}
+
+#[derive(Default)]
+struct Navigation {
+    surface: u8,
+    focus: usize,
+    count: usize,
+    next: usize,
+    active: bool,
+    accept: bool,
+}
+thread_local! { static NAV: std::cell::RefCell<Navigation> = std::cell::RefCell::new(Navigation::default()); }
+/// Enumerate enabled controls once per frame. Overlays use distinct focus scopes.
+pub fn begin_navigation(surface: u8) {
+    use vesper3d::viewer::gamepad::Button;
+    let pad = super::input::pad();
+    NAV.with(|cell| {
+        let mut n = cell.borrow_mut();
+        if n.surface != surface {
+            *n = Navigation {
+                surface,
+                ..Default::default()
+            };
+        }
+        let next = pad.pressed(Button::DPadDown) || pad.pressed(Button::DPadRight);
+        let previous = pad.pressed(Button::DPadUp) || pad.pressed(Button::DPadLeft);
+        if next || previous {
+            n.active = true;
+            let count = n.count.max(1);
+            n.focus = if next {
+                (n.focus + 1) % count
+            } else {
+                (n.focus + count - 1) % count
+            };
+        }
+        n.accept = surface != 0 && pad.pressed(Button::South);
+        if n.accept {
+            n.active = true;
+        }
+        n.focus = n.focus.min(n.count.saturating_sub(1));
+        n.next = 0;
+    });
+}
+fn navigation_button(enabled: bool) -> (bool, bool) {
+    NAV.with(|cell| {
+        let mut n = cell.borrow_mut();
+        if !enabled || n.surface == 0 {
+            return (false, false);
+        }
+        let focused = n.active && n.next == n.focus;
+        n.next += 1;
+        let click = focused && n.accept;
+        if click {
+            n.accept = false;
+        }
+        (focused, click)
+    })
+}
+pub fn end_navigation() {
+    NAV.with(|n| {
+        let mut n = n.borrow_mut();
+        n.count = n.next;
+    });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn only_focused_enabled_control_consumes_confirmation() {
+        NAV.with(|n| {
+            *n.borrow_mut() = Navigation {
+                surface: 2,
+                focus: 1,
+                active: true,
+                accept: true,
+                ..Default::default()
+            }
+        });
+        assert_eq!(navigation_button(false), (false, false));
+        assert_eq!(navigation_button(true), (false, false));
+        assert_eq!(navigation_button(true), (true, true));
+        assert_eq!(navigation_button(true), (false, false));
+        end_navigation();
+        NAV.with(|n| {
+            let n = n.borrow();
+            assert_eq!(n.count, 3);
+            assert!(!n.accept);
+        });
+    }
+    #[test]
+    fn paused_scope_does_not_activate_underlying_controls() {
+        NAV.with(|n| {
+            *n.borrow_mut() = Navigation {
+                active: true,
+                accept: true,
+                ..Default::default()
+            }
+        });
+        assert_eq!(navigation_button(true), (false, false));
+    }
 }

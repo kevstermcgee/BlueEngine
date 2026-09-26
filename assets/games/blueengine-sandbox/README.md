@@ -172,3 +172,21 @@ The creative smoke path exercises real app placement, deletion, undo, character
 switching and map reload, then captures setup, world preview, palette and pause
 screens. It writes only its own output directory. It does not simulate physical
 keyboard/mouse events.
+
+
+## Xbox controller
+
+The sandbox polls native controllers every frame, including menus and hot-plug.
+The workbench header reports the connected device or initialization error.
+- Left stick: move; right stick: look; A: jump; B: crouch; LS click: sprint.
+- Y: open Play/Create from the workbench or the asset palette in a world.
+- D-pad: move menu focus; A: choose; B: back; Start: pause/resume.
+- LB/RB: scroll the workbench or page the asset palette.
+- RT: place; LT: cancel preview; RB: rotate; View: toggle grid.
+- D-pad up/down: placement distance; hold LB with up/down for height.
+- D-pad left: undo; D-pad right: remove aimed placed object; X: copy aimed asset.
+- RS click: first/third-person camera. Keyboard and mouse remain available.
+
+`--sign-capture NEW_DIR` captures the atrium's Red apple label from nine camera
+angles for regression inspection. Signs test against world depth but never write
+depth, preventing overlapping transparent glyph tiles from erasing letter strokes.

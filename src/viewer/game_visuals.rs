@@ -6,12 +6,25 @@ use std::collections::VecDeque;
 
 pub struct SurfaceRenderer {
     material: Material,
+    sign_material: Material,
     signs: Vec<Mesh>,
 }
 impl SurfaceRenderer {
     pub fn new() -> Result<Self, macroquad::Error> {
         Ok(Self {
             signs: Vec::new(),
+            // Glyph tiles overlap. Transparent pixels must never write depth and
+            // randomly erase neighboring letters as the camera moves.
+            sign_material: load_material(
+                ShaderSource::Glsl {
+                    vertex: SIGN_VERTEX,
+                    fragment: SIGN_FRAGMENT,
+                },
+                MaterialParams {
+                    pipeline_params: sign_pipeline(),
+                    ..Default::default()
+                },
+            )?,
             material: load_material(
                 ShaderSource::Glsl {
                     vertex: WORLD_VERTEX,
@@ -43,10 +56,49 @@ impl SurfaceRenderer {
         for mesh in meshes {
             draw_mesh(mesh);
         }
-        gl_use_default_material();
+        gl_use_material(&self.sign_material);
         for sign in &self.signs {
             draw_mesh(sign);
         }
+        gl_use_default_material();
+    }
+}
+fn sign_pipeline() -> miniquad::PipelineParams {
+    miniquad::PipelineParams {
+        depth_test: miniquad::Comparison::LessOrEqual,
+        depth_write: false,
+        color_blend: Some(miniquad::BlendState::new(
+            miniquad::Equation::Add,
+            miniquad::BlendFactor::Value(miniquad::BlendValue::SourceAlpha),
+            miniquad::BlendFactor::OneMinusValue(miniquad::BlendValue::SourceAlpha),
+        )),
+        ..Default::default()
+    }
+}
+const SIGN_VERTEX: &str = r#"#version 100
+attribute vec3 position; attribute vec2 texcoord; attribute vec4 color0;
+uniform mat4 Model; uniform mat4 Projection;
+varying mediump vec2 uv; varying lowp vec4 tint;
+void main(){gl_Position=Projection*Model*vec4(position,1.);uv=texcoord;tint=color0/255.;}
+"#;
+const SIGN_FRAGMENT: &str = r#"#version 100
+precision mediump float;
+uniform sampler2D Texture;
+varying mediump vec2 uv; varying lowp vec4 tint;
+void main(){vec4 c=texture2D(Texture,uv)*tint;if(c.a<0.001)discard;gl_FragColor=c;}
+"#;
+
+#[cfg(test)]
+mod sign_tests {
+    #[test]
+    fn overlapping_letters_do_not_occlude_each_other_but_walls_do() {
+        let pipeline = super::sign_pipeline();
+        assert!(!pipeline.depth_write);
+        assert_eq!(
+            pipeline.depth_test,
+            macroquad::miniquad::Comparison::LessOrEqual
+        );
+        assert!(pipeline.color_blend.is_some());
     }
 }
 const WORLD_VERTEX: &str = r#"#version 100

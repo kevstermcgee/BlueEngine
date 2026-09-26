@@ -24,6 +24,7 @@ use vesper3d::viewer::{
     game_client::{self, GameShell},
     game_text,
     game_visuals::SurfaceRenderer,
+    gamepad::Button,
     room::Room,
     simulation::PlayerStepper,
     wrench::Wrench,
@@ -114,6 +115,7 @@ fn posed_meshes(meshes: &[mq::Mesh], at: V, turns: u8) -> Vec<mq::Mesh> {
         .collect()
 }
 struct App {
+    gamepads: Option<vesper3d::viewer::gamepad::Gamepads>,
     root: PathBuf,
     save_directory: PathBuf,
     catalog: content::Catalog,
@@ -166,6 +168,7 @@ impl App {
         );
         let save_directory = root.join(".be2-work/sandbox-worlds");
         Ok(Self {
+            gamepads: input::initialize_pad(),
             root,
             save_directory,
             catalog,
@@ -623,8 +626,14 @@ impl App {
         let rows = ((bottom - top) / 56.).floor().max(1.) as usize;
         let max_scroll = items.len().saturating_sub(rows);
         self.scroll = self.scroll.min(max_scroll);
-        if enabled && mq::mouse_position().0 < left {
-            let scroll = mq::mouse_wheel().1;
+        if enabled {
+            let pad = input::pad();
+            let scroll = if mq::mouse_position().0 < left {
+                mq::mouse_wheel().1
+            } else {
+                0.
+            } + u8::from(pad.pressed(Button::LeftTrigger)) as f32
+                - u8::from(pad.pressed(Button::RightTrigger)) as f32;
             if scroll < 0. {
                 self.scroll = (self.scroll + 1).min(max_scroll);
             } else if scroll > 0. {
@@ -679,14 +688,14 @@ impl App {
             );
         }
         ui::text(
-            "Scroll list / arrows to select",
+            "D-pad: focus   A: choose   LB/RB: scroll",
             22.,
             h - 48.,
             13.,
             ui::MUTED,
         );
         ui::text(
-            "Tab: walk preview / browser   Esc: menu",
+            "Y: Play/Create   Tab: preview   Start: menu",
             22.,
             h - 27.,
             13.,
@@ -695,7 +704,13 @@ impl App {
         let x = left + 24.;
         let rw = w - x - 24.;
         ui::panel(x, 22., rw, 86., mq::Color::new(0.06, 0.13, 0.20, 0.94));
-        ui::text("CONTENT WORKBENCH", x + 18., 45., 12., ui::ACCENT);
+        ui::text(
+            &ui::fit(&input::status(), rw - 36., 12.),
+            x + 18.,
+            45.,
+            12.,
+            ui::ACCENT,
+        );
         ui::text(
             &ui::fit(self.title(), rw - 36., 32.),
             x + 18.,
@@ -1082,7 +1097,7 @@ impl App {
         ui::panel(x, y, pw, ph, ui::PAPER);
         ui::text("PLAY / CREATE", x + 24., y + 35., 25., ui::INK);
         ui::text(
-            "Choose a world and a character. Your saved build loads automatically.",
+            "D-pad: select   A: confirm   B: back. Saved builds load automatically.",
             x + 24.,
             y + 61.,
             14.,
@@ -1155,7 +1170,7 @@ impl App {
         ui::panel(x, y, pw, ph, ui::PAPER);
         ui::text("CREATIVE ASSETS", x + 24., y + 37., 27., ui::INK);
         ui::text(
-            "Choose an asset, aim its preview, then click to place. Esc closes this palette.",
+            "D-pad: select   A: choose   LB/RB: pages   B: close. RT places the preview.",
             x + 24.,
             y + 63.,
             14.,
@@ -1192,7 +1207,9 @@ impl App {
         let rows = ((ph - 204.) / 53.).floor().max(1.) as usize;
         let pages = items.len().div_ceil(rows * 2).max(1);
         self.spawn_scroll = self.spawn_scroll.min(pages - 1);
-        let wheel = mq::mouse_wheel().1;
+        let pad = input::pad();
+        let wheel = mq::mouse_wheel().1 + u8::from(pad.pressed(Button::LeftTrigger)) as f32
+            - u8::from(pad.pressed(Button::RightTrigger)) as f32;
         if wheel < 0. {
             self.spawn_scroll = (self.spawn_scroll + 1).min(pages - 1);
         }
@@ -1277,6 +1294,17 @@ impl App {
 
     fn update(&mut self) -> Result<()> {
         input::poll(foreground());
+        input::poll_pad(
+            &mut self.gamepads,
+            foreground(),
+            self.browser || self.setup || self.asset_menu || self.shell.paused,
+            self.shell.paused,
+        );
+        let pad = input::pad();
+        if self.browser && !self.shell.paused && pad.pressed(Button::North) {
+            self.setup = true;
+            self.search_focus = false;
+        }
         if self.asset_menu && !self.shell.paused {
             self.search_focus = true;
         }
@@ -1318,7 +1346,7 @@ impl App {
             return Ok(());
         }
         if !self.browser && !self.asset_menu && !self.setup && self.shell.playing() {
-            if input::pressed(mq::KeyCode::V) {
+            if input::pressed(mq::KeyCode::V) || pad.pressed(Button::North) {
                 self.asset_menu = self.world_map.is_some();
                 self.setup = self.world_map.is_none();
                 self.search_focus = self.asset_menu;
@@ -1332,36 +1360,47 @@ impl App {
             let mouse = mq::mouse_delta_position();
             self.stage.player.yaw -= mouse.x * 2.5;
             self.stage.player.pitch = (self.stage.player.pitch + mouse.y * 2.5).clamp(-1.45, 1.45);
-            if input::pressed(mq::KeyCode::Q) {
+            let look = pad.look_delta(mq::get_frame_time());
+            self.stage.player.look(look[0], look[1], 1., false);
+            if input::pressed(mq::KeyCode::Q) || pad.pressed(Button::RightThumb) {
                 self.perspective.toggle();
             }
             if input::pressed(mq::KeyCode::Home) {
                 self.stage.reset(self.kind)?;
             }
             if let Some(p) = &mut self.pending {
-                if input::pressed(mq::KeyCode::R) {
+                if input::pressed(mq::KeyCode::R) || pad.pressed(Button::RightTrigger) {
                     p.turns = (p.turns + 1) % 4;
                 }
-                if input::pressed(mq::KeyCode::G) {
+                if input::pressed(mq::KeyCode::G) || pad.pressed(Button::Select) {
                     p.snap = !p.snap;
                 }
-                let scroll = mq::mouse_wheel().1;
-                if input::down(mq::KeyCode::LeftShift) {
+                let reach = (u8::from(pad.down(Button::DPadUp)) as f32
+                    - u8::from(pad.down(Button::DPadDown)) as f32)
+                    * mq::get_frame_time().min(0.1)
+                    * 8.;
+                let scroll = mq::mouse_wheel().1 + reach;
+                if input::down(mq::KeyCode::LeftShift) || pad.down(Button::LeftTrigger) {
                     p.elevation = (p.elevation + scroll * 0.25).clamp(-10., 30.);
                 } else {
                     p.distance = (p.distance + scroll * 0.5).clamp(2., 30.);
                 }
             }
             self.position_pending();
-            if mq::is_mouse_button_pressed(mq::MouseButton::Right) {
+            if mq::is_mouse_button_pressed(mq::MouseButton::Right)
+                || pad.pressed(Button::LeftTrigger2)
+            {
                 self.pending = None;
             }
-            if mq::is_mouse_button_pressed(mq::MouseButton::Left) && self.pending.is_some() {
+            if (mq::is_mouse_button_pressed(mq::MouseButton::Left)
+                || pad.pressed(Button::RightTrigger2))
+                && self.pending.is_some()
+            {
                 if let Err(error) = self.place_pending() {
                     self.notice = error.to_string();
                 }
             }
-            if input::pressed(mq::KeyCode::Z) {
+            if input::pressed(mq::KeyCode::Z) || pad.pressed(Button::DPadLeft) {
                 if let Some(previous) = self.undo.last().cloned() {
                     if let Err(error) = self.apply_edit(previous, false, false) {
                         self.notice = error.to_string();
@@ -1371,7 +1410,7 @@ impl App {
                     }
                 }
             }
-            if input::pressed(mq::KeyCode::Delete) {
+            if input::pressed(mq::KeyCode::Delete) || pad.pressed(Button::DPadRight) {
                 let id = self.stage.room.hit(self.aim_ray(), 4.5).and_then(|hit| {
                     self.stage
                         .doc
@@ -1394,7 +1433,7 @@ impl App {
             if input::pressed(mq::KeyCode::B) {
                 self.bounds = !self.bounds;
             }
-            if input::pressed(mq::KeyCode::E) {
+            if input::pressed(mq::KeyCode::E) || pad.pressed(Button::West) {
                 if let Some(e) = self.stage.room.focus(self.aim_ray()) {
                     let label = e.label.clone();
                     if let Some(index) = self.catalog.assets.iter().position(|a| a.name == label) {
@@ -1415,22 +1454,28 @@ impl App {
             let before = self.stage.player.position;
             self.ticks += self.stage.stepper.advance(
                 &mut self.stage.player,
-                Movement {
+                pad.movement(Movement {
                     forward,
                     right,
                     sprint: input::down(mq::KeyCode::LeftShift)
                         || input::down(mq::KeyCode::RightShift),
                     jump: input::pressed(mq::KeyCode::Space),
                     crouch: input::down(mq::KeyCode::C) || input::down(mq::KeyCode::LeftControl),
-                },
+                }),
                 mq::get_frame_time(),
                 &self.stage.room.colliders,
             ) as u64;
             let distance = (self.stage.player.position - before).length();
-            self.actor
-                .update(distance, mq::get_frame_time(), forward != 0. || right != 0.);
-            self.skin
-                .update(distance, mq::get_frame_time(), forward != 0. || right != 0.);
+            self.actor.update(
+                distance,
+                mq::get_frame_time(),
+                forward != 0. || right != 0. || pad.left_stick != [0., 0.],
+            );
+            self.skin.update(
+                distance,
+                mq::get_frame_time(),
+                forward != 0. || right != 0. || pad.left_stick != [0., 0.],
+            );
         } else {
             self.stage.player.stop();
             self.stage.stepper.reset(&self.stage.player);
@@ -1438,6 +1483,17 @@ impl App {
         Ok(())
     }
     fn draw(&mut self) -> Result<bool> {
+        ui::begin_navigation(if self.shell.paused {
+            0
+        } else if self.setup {
+            2
+        } else if self.asset_menu {
+            3
+        } else if self.browser {
+            1
+        } else {
+            0
+        });
         self.draw_world();
         if self.browser {
             self.browser_ui()?;
@@ -1490,9 +1546,9 @@ impl App {
                 mq::Color::new(0.04, 0.10, 0.15, 0.90),
             );
             let hint = if let Some(p) = &self.pending {
-                format!("{}  |  Click: place   R: rotate   Wheel: reach   Shift+wheel: height   G: snap {}   Right click: cancel", self.catalog.assets[p.asset].name, if p.snap {"ON"} else {"OFF"})
+                format!("{}  |  RT: place  RB: rotate  D-pad: reach  LB: height  LT: cancel | Click: place   R: rotate   Wheel: reach   Shift+wheel: height   G: snap {}   Right click: cancel", self.catalog.assets[p.asset].name, if p.snap {"ON"} else {"OFF"})
             } else {
-                "V: assets   E: copy aimed asset   Delete: remove placed object   Z: undo   Tab: workbench   Q: camera".into()
+                "Y/V: assets   X/E: copy   D-pad right/Delete: remove   D-pad left/Z: undo   RS/Q: camera   Start: menu".into()
             };
             ui::text(
                 &ui::fit(&hint, mq::screen_width() - 60., 14.),
@@ -1518,15 +1574,16 @@ impl App {
         if self.shell.paused {
             self.search_focus = false;
         }
+        ui::end_navigation();
         Ok(self.shell.local_menu(
             "BlueEngineSandbox",
             &[
-                "WASD / arrows: move. Mouse: look.",
-                "Space: jump. Shift: sprint. C: crouch.",
-                "V: asset palette. Click: place. Right click: cancel.",
-                "R: rotate. Wheel: reach. Shift+wheel: height.",
-                "G: snap. Delete: remove. Z: undo. Home: spawn.",
-                "F / F11: fullscreen. Esc: menu.",
+                "Move: WASD / LS. Look: mouse / RS.",
+                "Jump: Space / A. Sprint: LS click. Crouch: B.",
+                "Assets: V / Y. Place: click / RT. Cancel: LT.",
+                "Rotate: R / RB. D-pad up/down: reach; LB: height.",
+                "D-pad left: undo; right: delete. View: grid.",
+                "Menu: Esc / Start. D-pad: select. A: confirm.",
             ],
         ))
     }
@@ -1645,9 +1702,22 @@ async fn run() -> Result<()> {
     if args.iter().any(|arg| arg == "--play") {
         app.start_play()?;
     }
+    let sign_capture = value("--sign-capture").map(PathBuf::from);
+    if sign_capture.is_some() {
+        let i = app
+            .catalog
+            .maps
+            .iter()
+            .position(|m| m.id == "atrium")
+            .ok_or("Missing atrium")?;
+        app.select(Tab::Maps, i)?;
+        app.browser = false;
+        app.perspective = Perspective::First;
+    }
     let creative_capture = value("--creative-smoke").map(PathBuf::from);
-    let capture = creative_capture
+    let capture = sign_capture
         .clone()
+        .or(creative_capture.clone())
         .or_else(|| value("--capture").map(PathBuf::from));
     if let Some(dir) = &capture {
         std::fs::create_dir_all(dir)?;
@@ -1658,9 +1728,18 @@ async fn run() -> Result<()> {
     }
     let mut frames = 0;
     loop {
+        if sign_capture.is_some() {
+            let eye = V(-5.6 + (frames as f32 * 0.04).sin() * 1.6, 1.25, 34.5);
+            let direction = V(-5.6, 0.4, 31.5) - eye;
+            app.stage.player.position = eye;
+            app.stage.player.yaw = direction.0.atan2(-direction.2);
+            app.stage.player.pitch = (direction.1 / direction.length()).asin();
+            app.stage.stepper.reset(&app.stage.player);
+        }
         if capture.is_none() {
             app.update()?;
         } else {
+            input::poll_pad(&mut app.gamepads, false, true, false);
             app.shell.begin_frame(false);
         }
         if app.draw()? {
@@ -1668,6 +1747,17 @@ async fn run() -> Result<()> {
         }
         if frames > 10 {
             app.frame_times.push(mq::get_frame_time() * 1000.);
+        }
+        if let Some(dir) = &sign_capture {
+            if frames % 15 == 0 {
+                capture_frame(dir, &format!("sign-{frames:03}.png")).await;
+            }
+            if frames >= 120 {
+                break;
+            }
+            frames += 1;
+            mq::next_frame().await;
+            continue;
         }
         if let Some(dir) = &capture {
             if frames == 10 && creative_capture.is_some() {

@@ -556,6 +556,7 @@
     "native_controllers": {
       "files": [
         "src/viewer/gamepad.rs",
+        "src/bin/sandbox/input.rs",
         "src/bin/blue-engine.rs",
         "docs/CONTROLLERS.md"
       ],

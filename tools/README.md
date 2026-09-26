@@ -192,3 +192,9 @@ with the host's focus status. Device I/O never enters the fixed-step simulation.
 See [bindings, API and platform requirements](../docs/CONTROLLERS.md). Controller
 regressions run with `cargo test --locked --lib gamepad`; the normal headless build
 must continue to pass `python tools/check_headless.py` without gilrs.
+
+
+Sandbox Xbox input uses the same native backend for movement, look, menus and
+creative placement; the header reports device status. `--sign-capture NEW_DIR`
+checks moving-view sign rendering. SurfaceRenderer's sign pipeline reads world
+depth without writing it, so transparent glyph rectangles cannot erase neighbors.

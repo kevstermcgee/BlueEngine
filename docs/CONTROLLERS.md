@@ -65,3 +65,8 @@ rendering-free dependency graph. Hardware acceptance requires a real mapped pad:
 connect before/after launch, select each character, test every binding, unplug
 while moving, reconnect, pause/resume, change camera, lose/regain focus, then test
 WASD/arrows and cursor capture alongside the controller.
+
+
+The BlueEngineSandbox executable also polls this backend, including while menus
+are open. Its creative bindings and D-pad menu navigation are documented in
+[the sandbox guide](../assets/games/blueengine-sandbox/README.md#xbox-controller).

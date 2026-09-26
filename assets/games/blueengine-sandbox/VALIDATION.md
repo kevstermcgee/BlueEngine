@@ -98,3 +98,33 @@ Live keyboard/mouse verification for this update was unavailable because the UI
 helper failed to initialize (failed to write kernel assets, OS error 3). Scripted
 application captures and persistence checks ran successfully; they do not replace
 physical input, cursor capture or fullscreen interaction testing.
+
+
+## Xbox input and moving-view text repair — 2026-09-26
+
+The supplied recording showed camera-dependent missing strokes in 3D sign text.
+Transparent glyph tiles overlapped and wrote depth. Signs now use a dedicated
+alpha-blended pipeline with depth testing and no depth writes. Nine camera-angle
+captures of the Red apple sign completed; inspected views preserve all strokes.
+
+The sandbox now polls the native controller backend and binds analog movement,
+look, creative editing, pause menus, and scoped D-pad/A/B UI navigation. Device
+status appears in the workbench header. Backend lifetime belongs to App so Windows
+worker threads are joined before TLS teardown. Final sign, browser and creative
+capture processes all exited successfully (code 0), with empty stderr. Creative
+placement, deletion, undo, character switching and persistence smoke checks passed.
+
+Full be2 check passed (check-20260926T214844534821Z). Added regressions cover
+transparent-sign depth policy, confirmation consumption and paused UI scopes.
+Final executable Clippy and optimized builds passed after lifecycle cleanup.
+The desktop package includes rebuilt sandbox and stock client executables.
+
+Physical Xbox controls remain unverified: the UI automation helper could not
+initialize (OS error 3), and native WGI/XInput probes saw no controller at test
+time. Windows listed the Xbox Wireless Adapter only; the user was asked to
+reconnect by USB or re-pair the controller for a follow-up detection check.
+
+Follow-up after wireless re-pairing: Windows lists an active XINPUT HID device,
+and the installed sandbox displays "Controller: Xbox One Game Controller".
+Native device detection and clean application exit are confirmed. Physical button
+and stick gameplay still requires user verification.
