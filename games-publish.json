@@ -43,5 +43,24 @@
         "destination": "previews"
       }
     ]
-  }
+  },
+  "playables": [
+    {
+      "slug": "three-switches",
+      "name": "Three Switches",
+      "entry": "games/three-switches/game.json",
+      "files": ["games/three-switches"],
+      "arguments": ["--game", "content/games/three-switches/game.json"]
+    },
+    {
+      "slug": "first-light",
+      "name": "First Light",
+      "entry": "demos/examples/first-light.json",
+      "files": [
+        "demos/examples/first-light.json",
+        "demos/examples/first-light.wav"
+      ],
+      "arguments": ["--map", "content/demos/examples/first-light.json"]
+    }
+  ]
 }
