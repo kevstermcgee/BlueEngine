@@ -282,8 +282,7 @@
     },
     "fps_foundation": {
       "files": [
-        "src/viewer/fps.rs",
-        "games/bluedm"
+        "src/viewer/fps.rs"
       ],
       "checks": [
         "fps module tests in both feature configurations",

@@ -41,7 +41,9 @@ jobs:
           path: _games_repo
 
       - name: Export curated content
-        run: python scripts/publish_games.py export --output _games_repo --revision "$GITHUB_SHA"
+        run: |
+          python -m unittest scripts.test_publish_games -v
+          python scripts/publish_games.py export --output _games_repo --revision "$GITHUB_SHA"
 
       - name: Commit and push changes
         working-directory: _games_repo

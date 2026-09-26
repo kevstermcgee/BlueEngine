@@ -1,16 +1,16 @@
 {
-  "version": 1,
+  "version": 2,
   "source_repository": "kevstermcgee/BlueEngine",
   "target_repository": "kevstermcgee/BlueEngineGames",
+  "preserve": [
+    "games/bluedm",
+    "games/riftwake"
+  ],
   "collections": {
     "games": [
       {
         "source": "assets/games",
         "destination": "."
-      },
-      {
-        "source": "games/bluedm",
-        "destination": "bluedm"
       }
     ],
     "prototypes": [

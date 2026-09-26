@@ -1,13 +1,22 @@
 # Publishing to BlueEngineGames
 
-`BlueEngineGames` is the public, browsable copy of games, prototypes, test content,
-and demos produced with BlueEngine. BlueEngine remains the source of truth.
+`BlueEngineGames` is the public, browsable home for games, prototypes, test content,
+and demos produced with BlueEngine. BlueEngine remains the source of truth for copied
+engine examples; independently maintained games can remain source-of-truth in the
+companion repository.
 
 The publication list is explicit in `games-publish.json`. Each entry maps a tracked
 file or directory into one of four stable collections: `games/`, `prototypes/`,
 `tests/`, or `demos/`. Add a manifest entry when new engine-made content is ready to
 share; do not point it at build directories, logs, secrets, or unreviewed scratch
 output.
+
+Manifest version 2 also supports a `preserve` array for independently maintained
+paths such as `games/riftwake`. A preserved path must live below one of the four
+collection roots, cannot overlap another preserved path, and cannot collide with a
+copied manifest destination. During export, an existing preserved tree is carried
+forward byte-for-byte while other stale files are removed. The catalog records the
+preserved path names separately; it does not claim their files came from BlueEngine.
 
 Validate the complete export without changing any files:
 

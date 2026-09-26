@@ -41,8 +41,8 @@ def load_manifest(root: Path) -> dict:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as error:
         raise PublishError(f"cannot read {MANIFEST_NAME}: {error}") from error
-    if data.get("version") != 1:
-        raise PublishError("games-publish.json must have version 1")
+    if data.get("version") != 2:
+        raise PublishError("games-publish.json must have version 2")
     if not isinstance(data.get("target_repository"), str):
         raise PublishError("target_repository must be a string")
     collections = data.get("collections")
@@ -80,6 +80,21 @@ def load_manifest(root: Path) -> dict:
             not isinstance(value, str) or "\n" in value or "\r" in value for value in arguments
         ):
             raise PublishError(f"playables[{index}].arguments must be an array of single-line strings")
+    preserve = data.get("preserve", [])
+    if not isinstance(preserve, list):
+        raise PublishError("preserve must be an array")
+    preserved_paths = []
+    for index, value in enumerate(preserve):
+        path = safe_relative(value, f"preserve[{index}]")
+        if len(path.parts) < 2 or path.parts[0] not in CATEGORIES:
+            raise PublishError(f"preserve[{index}] must name content inside a managed collection")
+        preserved_paths.append(path)
+    if len(set(preserved_paths)) != len(preserved_paths):
+        raise PublishError("preserve paths must be unique")
+    for index, path in enumerate(preserved_paths):
+        for other in preserved_paths[index + 1 :]:
+            if path in other.parents or other in path.parents:
+                raise PublishError("preserve paths cannot contain one another")
     return data
 
 
@@ -144,6 +159,7 @@ def export_tree(root: Path, staging: Path, manifest: dict, revision: str) -> dic
         "target_repository": manifest["target_repository"],
         "collections": counts,
         "playables": manifest["playables"],
+        "preserved_paths": manifest.get("preserve", []),
         "files": sorted(catalog_files, key=lambda item: item["path"]),
     }
     published_paths = set(emitted)
@@ -176,6 +192,19 @@ def publish(root: Path, output: Path, revision: str) -> dict:
     with tempfile.TemporaryDirectory(prefix="games-publish-", dir=output.parent) as temp:
         staging = Path(temp)
         catalog = export_tree(root, staging, manifest, revision)
+        emitted = {item["path"] for item in catalog["files"]}
+        for value in manifest.get("preserve", []):
+            preserved = safe_relative(value, "preserve")
+            source = output / preserved
+            if not source.exists():
+                continue
+            prefix = preserved.as_posix().rstrip("/") + "/"
+            if preserved.as_posix() in emitted or any(path.startswith(prefix) for path in emitted):
+                raise PublishError(f"preserved path overlaps published content: {preserved.as_posix()}")
+            for candidate, nested in files_under(source):
+                target = staging / preserved / nested
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(candidate, target, follow_symlinks=False)
         for category in CATEGORIES:
             target = output / category
             if target.exists():
