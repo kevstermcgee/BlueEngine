@@ -33,7 +33,9 @@ pub use session::*;
 pub use transport::*;
 
 pub const PROTOCOL_VERSION: u32 = 3;
-pub const MAX_PACKET_BYTES: usize = 1400; // Safe MTU size
+/// Cross-transport payload ceiling. It fits one QUIC datagram without fragmentation
+/// and is therefore also enforced by the development UDP codec.
+pub const MAX_PACKET_BYTES: usize = 1100;
 
 /// Replicated network state for one player.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

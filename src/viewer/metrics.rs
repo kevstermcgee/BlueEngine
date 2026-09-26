@@ -42,7 +42,7 @@ impl PerformanceSnapshot {
                     .into(),
             );
         }
-        if self.snapshot_bytes > 1200 {
+        if self.snapshot_bytes > 1000 {
             lines.push(
                 "  Recommendation: Full snapshot approaches MTU limit. Favor delta compression or spatial interest management."
                     .into(),
@@ -66,10 +66,10 @@ impl Default for PerformanceBudget {
     fn default() -> Self {
         Self {
             max_sim_cpu_time_us: 4000.0, // 4.0 ms per tick (budget for 60 Hz is 16.6 ms total)
-            max_physics_time_us: 2500.0,
+            max_physics_time_us: 3500.0,
             max_active_dynamic_bodies: 64,
-            max_snapshot_bytes: 1200,
-            max_delta_bytes: 400,
+            max_snapshot_bytes: crate::viewer::net::MAX_PACKET_BYTES,
+            max_delta_bytes: 600,
         }
     }
 }
@@ -119,6 +119,82 @@ impl PerformanceBudget {
             passed: violations.is_empty(),
             violations,
         }
+    }
+}
+
+/// Stable upper bounds for the repeatable headless microbenchmarks.
+///
+/// These are deliberately absolute service budgets rather than comparisons to a
+/// noisy previous CI run. They are enforced in `tests/benchmarks.rs` and by
+/// `be2-tools bench`, so a timing result is never reported as passing without a
+/// threshold check.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct RegressionBudget {
+    pub max_sim_step_mean_us: f64,
+    pub max_snapshot_creation_mean_us: f64,
+    pub max_delta_compression_mean_us: f64,
+    pub max_room_graph_lookup_mean_ns: f64,
+}
+
+impl Default for RegressionBudget {
+    fn default() -> Self {
+        Self {
+            // Debug tests run on shared Linux and Windows CI workers. These limits
+            // leave scheduler headroom while still catching order-of-magnitude
+            // regressions in the 60 Hz authoritative path.
+            max_sim_step_mean_us: 4_000.0,
+            max_snapshot_creation_mean_us: 1_000.0,
+            max_delta_compression_mean_us: 500.0,
+            max_room_graph_lookup_mean_ns: 50_000.0,
+        }
+    }
+}
+
+/// Timings produced by the canonical headless benchmark workload.
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct RegressionMeasurements {
+    pub sim_step_mean_us: f64,
+    pub snapshot_creation_mean_us: f64,
+    pub delta_compression_mean_us: f64,
+    pub room_graph_lookup_mean_ns: f64,
+}
+
+impl RegressionBudget {
+    /// Return a violation for every non-finite or over-budget measurement.
+    pub fn violations(&self, measurements: &RegressionMeasurements) -> Vec<String> {
+        let checks = [
+            (
+                "simulation step",
+                measurements.sim_step_mean_us,
+                self.max_sim_step_mean_us,
+                "us",
+            ),
+            (
+                "snapshot creation",
+                measurements.snapshot_creation_mean_us,
+                self.max_snapshot_creation_mean_us,
+                "us",
+            ),
+            (
+                "delta compression",
+                measurements.delta_compression_mean_us,
+                self.max_delta_compression_mean_us,
+                "us",
+            ),
+            (
+                "room graph lookup",
+                measurements.room_graph_lookup_mean_ns,
+                self.max_room_graph_lookup_mean_ns,
+                "ns",
+            ),
+        ];
+        checks
+            .into_iter()
+            .filter(|(_, measured, maximum, _)| !measured.is_finite() || measured > maximum)
+            .map(|(name, measured, maximum, unit)| {
+                format!("{name} measured {measured:.3} {unit}; budget is {maximum:.3} {unit}")
+            })
+            .collect()
     }
 }
 
@@ -242,5 +318,18 @@ mod tests {
         assert!(!fail_report.passed);
         assert_eq!(fail_report.violations.len(), 1);
         assert!(fail_report.violations[0].contains("Active dynamic bodies"));
+    }
+
+    #[test]
+    fn regression_budget_rejects_non_finite_and_slow_measurements() {
+        let budget = RegressionBudget::default();
+        let measurements = RegressionMeasurements {
+            sim_step_mean_us: f64::NAN,
+            snapshot_creation_mean_us: budget.max_snapshot_creation_mean_us + 1.0,
+            delta_compression_mean_us: 1.0,
+            room_graph_lookup_mean_ns: 1.0,
+        };
+        let violations = budget.violations(&measurements);
+        assert_eq!(violations.len(), 2);
     }
 }

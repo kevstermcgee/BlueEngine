@@ -40,7 +40,7 @@ RUN chown -R blueengine:blueengine /app
 
 USER blueengine
 
-# Default authoritative server port (UDP)
+# QUIC uses UDP at the network layer.
 EXPOSE 7777/udp
 
 # Healthcheck
@@ -48,4 +48,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
   CMD pidof be2-headless || exit 1
 
 ENTRYPOINT ["/usr/local/bin/be2-headless"]
-CMD ["0.0.0.0:7777"]
+CMD ["--server", "0.0.0.0:7777", "--transport", "production"]

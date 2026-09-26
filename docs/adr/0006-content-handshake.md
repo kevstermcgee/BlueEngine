@@ -1,6 +1,6 @@
 # 0006: Content compatibility handshake
 
-Status: Accepted. Extends the transport boundary described in 0001.
+Status: Accepted for the content handshake. Transport conclusions superseded by 0008.
 
 ## Context
 The existing dedicated UDP server has sequence rejection, stale-input expiry,

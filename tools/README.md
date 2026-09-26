@@ -120,7 +120,7 @@ Map schema v1 is for portable, static, matte primitive maps. It accepts unparent
 - `replay-test` runs an automated 120-tick determinism and state checkpoint verification test.
 - `net-test` runs deterministic multiplayer client-side prediction and server reconciliation under artificial network latency and packet loss.
 - `net-proxy LISTEN UPSTREAM [PRESET]` runs a live UDP network impairment proxy with Gilbert-Elliott burst loss, Gaussian latency/jitter (Box-Muller), packet duplication, and standard bad network presets (`bad-wifi`, `mobile-3g`, `satellite`, `congested-bursty`).
-- `bench` benchmarks simulation steps, snapshot creation, delta compression, and room graph lookups.
+- `bench` measures simulation steps, snapshot creation, delta compression, and room graph lookups; it returns nonzero when a checked-in regression budget is exceeded.
 - `inspect-performance` measures memory, allocation, and tick budgets.
 - `validate-budget` validates engine performance budgets and reports any violations.
 - `new-game NAME DIRECTORY` scaffolds a complete game project with starter map and rule definitions.
@@ -139,7 +139,7 @@ For gameplay, graphics, audio, networking or new reusable prop types, use `FEATU
 5. Update this guide and the feature index when entry points or contracts change. Record tested platforms and remaining limits in VALIDATION.md.
 6. Build and package. Keep useful source, routes and patches tracked; keep scratch exports and logs out of the final asset set.
 
-To remove a feature, inspect all references with `rg`, remove its runtime path and assets intentionally, then update callers, tests, feature flags and documentation together. Never remove a dependency solely because it appears unused in one binary: the offline renderer and headless build share this crate. For PulseNet, preserve the rendering-free authoritative simulation boundary.
+To remove a feature, inspect all references with `rg`, remove its runtime path and assets intentionally, then update callers, tests, feature flags and documentation together. Never remove a dependency solely because it appears unused in one binary: the offline renderer and headless build share this crate. For networking, preserve the rendering-free, transport-agnostic authoritative boundary and the explicit development/production profiles.
 
 Accessory origins are at their bottom center. Framed prints are 1.10 m wide by 0.80 m tall and face +Z; place the back against a wall facing that direction. All accessory kinds create inspection entities and conservative collision bounds. Place tabletop pieces on an existing surface. Catalogue aliases: framed_art_1, framed_botanical_1, sculpture_1, vase_plant_1, bowl_1.
 

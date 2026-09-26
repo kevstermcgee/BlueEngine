@@ -1,7 +1,7 @@
 # BlueEngine refinement — 2026-09-24
 
-> Historical validation snapshot. Protocol 3, GameDocument v1 and optional
-> HMAC-authenticated UDP sessions were added later. Use
+> Historical validation snapshot. Protocol 3, GameDocument v1, transport-agnostic
+> authority, production QUIC/TLS and optional HMAC client authentication were added later. Use
 > [BE2_ARCHITECTURE.md](../BE2_ARCHITECTURE.md), the root README and
 > `be2-tools describe` for the current contract.
 
@@ -30,7 +30,7 @@ network correctness. No legacy-map polish or large game implementation was added
 - Protocol **2** requires an initial map fingerprint. Canonical graph ordering makes
   fingerprints repeatable. Mismatched maps and full servers reject sessions.
 - Malformed/oversized UDP is discarded instead of terminating the server; whole
-  datagrams are received before enforcing 1400 bytes. Receive work is bounded.
+  datagrams were received before enforcing the then-current 1400-byte limit. Receive work is bounded.
 - Overlapping room membership resolves by smallest stable ID, avoiding randomized
   HashMap iteration affecting spatial interest.
 - Current README/architecture/capability truth replaces contradictory multiplayer
@@ -51,9 +51,10 @@ server process, loss/reordering, ownership contention and combat occlusion.
 
 A debug-build diagnostic run measured mean simulation tick 680 microseconds,
 snapshot creation 0.71 microseconds, delta creation 0.28 microseconds, and room lookup
-207 nanoseconds. These are single-machine smoke measurements, not a calibrated
-release benchmark, before/after speedup or regression guarantee. Existing replay-test
-verified four checkpoints across 120 ticks of two in-memory runs.
+207 nanoseconds. These were single-machine smoke measurements, not a calibrated
+release benchmark. Current `be2-tools bench` and `tests/benchmarks.rs` enforce shared
+absolute service budgets on heterogeneous CI; see the current architecture for their
+scope. Existing replay-test verified four checkpoints across 120 ticks of two in-memory runs.
 
 ## Limits and next three priorities
 

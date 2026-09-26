@@ -2,6 +2,9 @@
 
 This directory provides production-tested systemd service units and deployment configurations for hosting BlueEngine games and authoritative dedicated servers on Linux hosts.
 
+Deployment examples select the `production` QUIC/TLS transport explicitly. The raw
+UDP `development` profile is for local testing and is not a secure deployment mode.
+
 ## Files
 
 - `systemd/blueengine-server.service.example`: Hardened systemd unit file with resource limits, isolation, and auto-restart.
@@ -28,6 +31,7 @@ The example service includes:
    ```bash
    cat << 'EOF' > ~/.config/blueengine/server.env
    BLUE_JOIN_KEY=replace-with-your-secure-join-key
+   BLUE_TLS_CERT_FILE=/home/user/.config/blueengine/server-cert.der
    BLUE_TLS_KEY_FILE=/home/user/.config/blueengine/server-key.der
    EOF
    chmod 600 ~/.config/blueengine/server.env
@@ -45,3 +49,8 @@ The example service includes:
    ```bash
    journalctl --user -u blueengine-server.service -f
    ```
+
+For Docker Compose, place the public DER certificate and matching PKCS#8 DER private
+key at `deploy/secrets/server-cert.der` and `deploy/secrets/server-key.der`; Compose
+mounts both as secrets. Give clients the public certificate through
+`BLUE_TLS_CERT_FILE`. Never commit the private key.

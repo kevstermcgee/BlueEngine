@@ -24,12 +24,12 @@ The toolkit is project-local; do not install plugins or add external services me
 
 BE2 is one Rust package with the compatibility library name `vesper3d`. The
 `be2` client and `be2-headless` runner share concrete movement/simulation types;
-DedicatedServer provides authoritative UDP matches, prediction, acknowledged
-deltas and per-player prop ownership. Optional `--auth-key` sessions use
-HMAC-SHA256 challenge-response, session tokens and replay protection over raw UDP;
-they do not encrypt payloads. The QUIC/TLS transport module is not wired into the
-client or dedicated-server executable. Protocol 3 checks map content before creating
-a session.
+DedicatedServer is generic over the datagram transport and provides authoritative
+matches, prediction, acknowledged deltas and per-player prop ownership. Executables
+name the raw, unencrypted UDP profile `development` and the pinned-certificate
+QUIC/TLS 1.3 profile `production`. Optional `--auth-key` adds client
+challenge-response, session tokens and replay protection to either profile. Protocol
+3 checks map content before creating a session.
 `client` gates graphics/audio; `offline` gates the inherited output renderer.
 
 - Feature-to-file/check lookup: tools/FEATURES.json (maintain this existing map).

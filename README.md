@@ -19,8 +19,8 @@ Cargo package/binaries remain `be2`; the library remains `vesper3d` for compatib
 
 ```sh
 cargo run --locked --bin be2
-cargo run --locked --no-default-features --bin be2-headless -- --server 127.0.0.1:4000
-cargo run --locked --bin be2 -- --connect 127.0.0.1:4000
+cargo run --locked --no-default-features --bin be2-headless -- --server 127.0.0.1:4000 --transport development
+cargo run --locked --bin be2 -- --connect 127.0.0.1:4000 --transport development
 cargo run --locked --no-default-features --bin be2-headless -- --server 127.0.0.1:4000 --auth-key "LONG_RANDOM_SECRET"
 cargo run --locked --bin be2 -- --connect 127.0.0.1:4000 --auth-key "LONG_RANDOM_SECRET"
 cargo run --locked --no-default-features --bin be2-tools -- describe
@@ -37,19 +37,21 @@ Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement 
 ## Current capabilities and limits
 
 - Shared 60 Hz player simulation; graphics/audio-free headless build; Rapier props.
-- Dedicated UDP server, client prediction, interpolation, spatial interest,
+- Transport-agnostic authoritative server, client prediction, interpolation, spatial interest,
   acknowledged deltas/keyframe recovery and authoritative prop ownership/combat.
 - Validated MapDocument authoring, stable semantic IDs, transactional edits,
   catalog assets, bounded discovery and route/capture tools.
 - SceneBuilder/prelude for static boxes and catalog props; ID-based impulse/position APIs.
 
-Networking is development-grade JSON/UDP with a 1400-byte packet limit. Supplying
-`--auth-key` on both peers enables HMAC-SHA256 challenge-response, server-issued
-session tokens, authenticated datagrams and replay protection. It does not encrypt
-payloads, hide metadata or provide session migration. Large snapshots can exceed the
+Networking uses one JSON packet path with an 1100-byte cross-transport ceiling.
+`--transport development` (the compatibility default) is raw, unencrypted UDP for
+local work and impairment testing. `--transport production` uses QUIC datagrams over
+TLS 1.3 and pins the server certificate selected by `BLUE_TLS_CERT_FILE` (or the
+bundled default); the server loads its PKCS#8 key from `BLUE_TLS_KEY_FILE`. Supplying `--auth-key` on both peers additionally enables
+client HMAC challenge-response, session tokens and replay protection. Neither profile
+hides traffic metadata or provides session migration. Large snapshots can exceed the
 packet limit; bounded encoding is not snapshot chunking. Map fingerprints detect
-accidental mismatch, not hostile forgery. Map v1 does not encode custom game rules,
-multiplayer spawn profiles or arbitrary dynamic meshes. See the
+accidental mismatch, not hostile forgery. See the
 [hosting guide](docs/HOSTING.md) for the runnable server's exact security boundary.
 
 ## Validation
@@ -57,8 +59,9 @@ multiplayer spawn profiles or arbitrary dynamic meshes. See the
 `python tools/be2.py check` runs formatting, rustdoc, tests and Clippy in both feature
 configurations. CI runs on Linux and Windows. Focused suites cover prototype APIs,
 native capability evidence, content handshakes, malformed packets and multiplayer
-including a separate server process. See [the refinement report](docs/REFINEMENT.md)
-for this pass's measured results and remaining work.
+including a separate server process and a QUIC authoritative handshake. Headless
+microbenchmarks enforce checked-in absolute regression budgets in tests and in
+`be2-tools bench`. See [the refinement report](docs/REFINEMENT.md) for context.
 
 ## History and attribution
 

@@ -7,7 +7,7 @@ use vesper3d::{
     viewer::{
         authoring::{write_new, Edit, MapDocument},
         controller::{Controller, Movement},
-        metrics::PerformanceBudget,
+        metrics::{PerformanceBudget, RegressionBudget, RegressionMeasurements},
         net::{InputFrame, NetworkSimulator, PredictionBuffer},
         simulation::HeadlessWorld,
     },
@@ -159,12 +159,15 @@ fn run() -> Result<()> {
             let budget = PerformanceBudget::default();
             let validation = budget.validate(&perf);
             let report = json!({
-                "ok": true,
+                "ok": validation.passed,
                 "passed": validation.passed,
                 "violations": validation.violations,
                 "metrics": perf,
             });
             println!("{}", serde_json::to_string_pretty(&report)?);
+            if !validation.passed {
+                return Err("Performance budget exceeded".into());
+            }
         }
         "net-test" => {
             let mut world = HeadlessWorld::new()?;
@@ -323,7 +326,7 @@ fn run() -> Result<()> {
             // 2. Snapshot computation benchmark (1000 iterations)
             let t0 = std::time::Instant::now();
             for _ in 0..1000 {
-                let _ = world.snapshot(world.tick);
+                std::hint::black_box(world.snapshot(world.tick));
             }
             let snapshot_us = t0.elapsed().as_secs_f64() * 1_000_000. / 1000.;
 
@@ -336,7 +339,7 @@ fn run() -> Result<()> {
             }
             let t0 = std::time::Instant::now();
             for _ in 0..1000 {
-                let _ = snap2.compute_delta(&snap1);
+                std::hint::black_box(snap2.compute_delta(&snap1));
             }
             let delta_us = t0.elapsed().as_secs_f64() * 1_000_000. / 1000.;
 
@@ -344,20 +347,30 @@ fn run() -> Result<()> {
             let t0 = std::time::Instant::now();
             for i in 0..10000 {
                 let p = V((i as f32 % 10.0) - 5.0, 1.0, (i as f32 % 10.0) - 5.0);
-                let _ = world.room_graph.find_room_at(p);
+                std::hint::black_box(world.room_graph.find_room_at(p));
             }
             let room_lookup_ns = t0.elapsed().as_secs_f64() * 1_000_000_000. / 10000.;
 
+            let measurements = RegressionMeasurements {
+                sim_step_mean_us: sim_step_us,
+                snapshot_creation_mean_us: snapshot_us,
+                delta_compression_mean_us: delta_us,
+                room_graph_lookup_mean_ns: room_lookup_ns,
+            };
+            let budget = RegressionBudget::default();
+            let violations = budget.violations(&measurements);
+            let passed = violations.is_empty();
             let results = json!({
-                "ok": true,
-                "benchmarks": {
-                    "sim_step_mean_us": sim_step_us,
-                    "snapshot_creation_mean_us": snapshot_us,
-                    "delta_compression_mean_us": delta_us,
-                    "room_graph_lookup_mean_ns": room_lookup_ns,
-                }
+                "ok": passed,
+                "passed": passed,
+                "benchmarks": measurements,
+                "budget": budget,
+                "violations": violations,
             });
             println!("{}", serde_json::to_string_pretty(&results)?);
+            if !passed {
+                return Err("Benchmark regression budget exceeded".into());
+            }
         }
         "catalog" => println!(
             "{}",

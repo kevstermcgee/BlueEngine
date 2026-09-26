@@ -108,6 +108,8 @@
     "multiplayer": {
       "files": [
         "src/viewer/net.rs",
+        "src/viewer/net/transport.rs",
+        "src/viewer/net/quic.rs",
         "src/viewer/net/session.rs",
         "src/viewer/net/proxy.rs",
         "src/viewer/doc_drift.rs",
@@ -118,12 +120,13 @@
         "tests/multiplayer_transport.rs",
         "tests/content_handshake.rs",
         "tests/secure_net.rs",
+        "tests/transport_profiles.rs",
         "tests/doc_drift.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test doc_drift"
+        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift"
       ],
-      "note": "Dedicated UDP server, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat; protocol 3 rejects mismatched map fingerprints. Authenticated live multiplayer with HMAC-SHA256 challenge-response, session tokens, replay protection, and high-fidelity network impairment proxy with Gilbert-Elliott burst loss.",
+      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 3 rejects mismatched content; optional HMAC supplies client authentication on either profile.",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -146,10 +149,26 @@
           "test": "test_live_udp_proxy_forwarding"
         },
         {
+          "suite": "transport_profiles",
+          "test": "authoritative_handshake_runs_over_quic"
+        },
+        {
           "suite": "doc_drift",
           "test": "test_documentation_drift_protection"
         }
       ]
+    },
+    "performance_regression_budgets": {
+      "files": [
+        "src/viewer/metrics.rs",
+        "src/bin/be2-tools.rs",
+        "tests/benchmarks.rs"
+      ],
+      "checks": [
+        "cargo test --locked --no-default-features --test benchmarks",
+        "be2-tools bench"
+      ],
+      "note": "Canonical headless measurements are checked against shared absolute service ceilings; tests and the CLI fail nonzero on regression. Thresholds include heterogeneous CI headroom and are not hardware-normalized baselines."
     },
     "offline_renderer": {
       "files": [

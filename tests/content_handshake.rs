@@ -51,8 +51,8 @@ fn mismatch_and_capacity_rejections_do_not_create_sessions() {
 #[test]
 fn old_or_garbage_packets_fail_closed() {
     assert!(Packet::decode(br#"{"Hello":{"protocol_version":1,"player_id":0}}"#).is_err());
-    assert!(Packet::decode(&vec![0; 1401]).is_err());
-    for size in 0..=1400 {
+    assert!(Packet::decode(&vec![0; 1101]).is_err());
+    for size in 0..=1100 {
         assert!(Packet::decode(&vec![0xff; size]).is_err());
     }
     let bytes = Packet::Hello {

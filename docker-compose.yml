@@ -12,6 +12,11 @@ services:
     environment:
       - RUST_BACKTRACE=1
       - BLUE_ENGINE_MAP=house
+      - BLUE_TLS_CERT_FILE=/run/secrets/blueengine_tls_cert
+      - BLUE_TLS_KEY_FILE=/run/secrets/blueengine_tls_key
+    secrets:
+      - blueengine_tls_cert
+      - blueengine_tls_key
     volumes:
       - ./target:/app/data:ro
     security_opt:
@@ -19,4 +24,10 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,noexec,nosuid,size=64m
-    command: ["0.0.0.0:7777"]
+    command: ["--server", "0.0.0.0:7777", "--transport", "production"]
+
+secrets:
+  blueengine_tls_cert:
+    file: ./deploy/secrets/server-cert.der
+  blueengine_tls_key:
+    file: ./deploy/secrets/server-key.der

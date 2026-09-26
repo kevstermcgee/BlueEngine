@@ -16,8 +16,8 @@ retains its historical best-effort physics behavior for compatibility.
 
 `client` gates Macroquad graphics/audio and Windows window/input support. `offline`
 gates the inherited output renderer. `--no-default-features` includes neither:
-Serde, Rapier and standard-library UDP remain. `be2-headless --server` binds a UDP
-socket; without that flag it runs bounded local simulation/benchmark ticks.
+Serde, Rapier and networking remain. `be2-headless --server` runs the selected
+datagram profile; without that flag it runs bounded local simulation/benchmark ticks.
 
 ## Authoring and prototype API
 
@@ -54,8 +54,9 @@ profiles/actions. A general behavior document/controller/action boundary is futu
 
 ## Networking
 
-DedicatedServer (`viewer/server.rs`) and Packet/UdpTransport (`viewer/net.rs`) provide
-60 Hz authority and 20 Hz snapshots. Input sequence numbers reject duplicates and
+DedicatedServer (`viewer/server.rs`) is generic over `DatagramTransport`; packet
+encoding/decoding sits above the concrete socket. Both UDP and QUIC therefore run the
+same 60 Hz authority and 20 Hz snapshot path. Input sequence numbers reject duplicates and
 out-of-order commands. Socket ownership gates disconnects. Reconnect reservations
 are address-bound and expire after 60 seconds. With `--auth-key`, the server uses
 HMAC-SHA256 challenge-response with random nonces/salts, issues session tokens, and
@@ -74,23 +75,27 @@ contents are canonicalized. Mismatched content and full servers are rejected bef
 session allocation. The client displays the rejection. Old clients must rebuild.
 The fingerprint is non-cryptographic FNV-1a for accidental mismatch detection only.
 
-JSON encoding/decoding enforces a 1400-byte datagram ceiling; it does not chunk oversized
+JSON encoding/decoding enforces an 1100-byte cross-transport datagram ceiling; it does not chunk oversized
 snapshots. Malformed/oversized datagrams are dropped without terminating the server;
 receive work is bounded per call and server poll. Compact binary serialization,
-encrypted executable transport, reconnect-token migration and content negotiation
-remain planned. `viewer/net/quic.rs` implements a QUIC/TLS datagram transport behind
-the transport trait, but the current client and dedicated-server binaries use
-`UdpTransport`. Room overlap resolves by minimum stable ID.
+reconnect-token migration and content negotiation remain planned. Executables expose
+raw UDP as `--transport development` and pinned-certificate QUIC/TLS 1.3 as
+`--transport production`; production servers require `BLUE_TLS_KEY_FILE`. Optional
+HMAC authentication supplies client identity on either profile. Room overlap resolves
+by minimum stable ID.
 Tests cover two-client UDP and separate server processes, loss/reordering, contention,
-combat occlusion, content mismatch, capacity and malformed packets.
+combat occlusion, content mismatch, capacity, malformed packets and a QUIC handshake
+through the authoritative server.
 
 ## Measurement and remaining limits
 
 `be2-tools bench`, `inspect-performance`, `validate-budget` and `replay-test` provide
-current diagnostics. Replay-test compares two in-memory runs; it is not a durable
-versioned trace format. Quantized checksums help diagnose divergence but do not prove
-cross-platform bitwise determinism. There is no calibrated benchmark baseline or
-allocation regression guard yet. See [refinement report](docs/REFINEMENT.md).
+current diagnostics. `be2-tools bench` and `tests/benchmarks.rs` enforce the same
+checked-in absolute budgets for simulation steps, snapshots, deltas and room lookup;
+budget failures return nonzero. These are service ceilings suitable for heterogeneous
+CI, not hardware-normalized baselines or allocation guards. Replay-test compares two
+in-memory runs and quantized checksums do not prove cross-platform bitwise determinism.
+See [refinement report](docs/REFINEMENT.md).
 
 No arbitrary gameplay scripting, account service or required MCP
 adapter is implemented. [ADRs](docs/adr/README.md) record settled boundaries.

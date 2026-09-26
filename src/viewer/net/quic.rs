@@ -22,8 +22,21 @@ use tokio::sync::{mpsc as async_mpsc, oneshot, Semaphore};
 /// Bundled default self-signed certificate for local / pinned connections.
 pub const DEFAULT_CERTIFICATE: &[u8] = include_bytes!("../../../assets/network/server-cert.der");
 
+/// Load the pinned DER certificate selected for this deployment.
+///
+/// Clients and servers may point `BLUE_TLS_CERT_FILE` at the same public certificate.
+/// Without it, the bundled development pin is used for compatibility.
+pub fn trusted_certificate() -> crate::Result<Vec<u8>> {
+    std::env::var_os("BLUE_TLS_CERT_FILE")
+        .map(std::path::PathBuf::from)
+        .map_or_else(
+            || Ok(DEFAULT_CERTIFICATE.to_vec()),
+            |path| Ok(std::fs::read(path)?),
+        )
+}
+
 /// Safe datagram payload budget to guarantee single-packet datagram delivery without fragmentation.
-pub const PAYLOAD: usize = 1100;
+pub const PAYLOAD: usize = super::MAX_PACKET_BYTES;
 
 /// Server identity holding DER certificate and private key.
 pub struct Identity {
@@ -50,7 +63,7 @@ impl Identity {
             )?;
 
         Ok(Self {
-            certificate: DEFAULT_CERTIFICATE.to_vec(),
+            certificate: trusted_certificate()?,
             private_key: std::fs::read(path)?,
         })
     }

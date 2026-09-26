@@ -39,10 +39,12 @@ between closed and open states over `duration_ticks`, dynamically blocking or op
 Targets require line of sight within 2.5 metres. Limits: 8 counters, 16 targets/zones, 16 movers, 16 timers, 16 rules,
 4 actions/rule, 8 spawns; counters clamp to +/-1,000,000. No arbitrary scripts or irregular geometry mutation.
 
-Multiplayer: launch `be2-headless --game my-game/game.json --server 127.0.0.1:7777`,
-then `be2 --game my-game/game.json --connect 127.0.0.1:7777` for each client.
+Multiplayer development: launch `be2-headless --game my-game/game.json --server 127.0.0.1:7777 --transport development`,
+then `be2 --game my-game/game.json --connect 127.0.0.1:7777 --transport development` for each client.
 Both sides need identical map and game semantics. The server owns rules/state;
 clients send interaction intent. For an authenticated session, add the same
 `--auth-key "LONG_RANDOM_SECRET"` to both commands. Authentication uses
-challenge-response, session tokens and replay protection; the development UDP
-transport still does not encrypt payloads.
+challenge-response, session tokens and replay protection; development UDP does not
+encrypt payloads. For deployment use `--transport production` on both peers, set
+`BLUE_TLS_CERT_FILE` to their shared public DER certificate, and set
+`BLUE_TLS_KEY_FILE` to the server's matching PKCS#8 DER private key.

@@ -19,8 +19,8 @@ use vesper3d::{
         maps::{self, MapId},
         mesh,
         net::{
-            InputFrame, InterpolationBuffer, Packet, PlayerNetState, PredictionBuffer,
-            UdpTransport, PROTOCOL_VERSION,
+            DatagramTransport, Identity, InputFrame, InterpolationBuffer, Packet, PlayerNetState,
+            PredictionBuffer, SecureSocket, TransportProfile, UdpTransport, PROTOCOL_VERSION,
         },
         prop_physics::PropPhysics,
         server::DedicatedServer,
@@ -250,6 +250,18 @@ async fn main() {
     next_frame().await;
     let started = std::time::Instant::now();
     let args: Vec<String> = std::env::args().collect();
+    let transport_profile = match args
+        .windows(2)
+        .find(|a| a[0] == "--transport")
+        .map(|a| a[1].parse::<TransportProfile>())
+        .transpose()
+    {
+        Ok(profile) => profile.unwrap_or_default(),
+        Err(error) => {
+            error_screen(error).await;
+            return;
+        }
+    };
     let physics_capture = args.iter().any(|a| a == "--capture-physics");
     let house_capture = args.iter().any(|a| a == "--capture-house");
     let map = if args.iter().any(|a| a == "--studio") {
@@ -411,11 +423,17 @@ async fn main() {
                 None
             }
         });
+    let client_auth_key = args
+        .windows(2)
+        .find(|a| a[0] == "--auth-key" || a[0] == "--auth")
+        .map(|a| a[1].clone());
 
     if let Some(ref s_addr) = host_mode {
         let s_addr_clone = s_addr.clone();
         let host_game = game_file.cloned();
         let host_map = map_file.cloned();
+        let host_transport = transport_profile;
+        let host_auth_key = client_auth_key.clone();
         std::thread::spawn(move || {
             let world = if let Some(path) = host_game {
                 vesper3d::viewer::game::GameDocument::load(std::path::Path::new(&path))
@@ -430,14 +448,32 @@ async fn main() {
                 );
                 room.and_then(vesper3d::viewer::simulation::HeadlessWorld::try_with_room)
             };
-            match world.and_then(|world| DedicatedServer::with_world(&s_addr_clone, world)) {
-                Ok(mut server) => {
-                    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-                    if let Err(error) = server.run_realtime(stop, None) {
-                        eprintln!("Host stopped: {error}");
+            let result = world.and_then(|world| match host_transport {
+                TransportProfile::Development => {
+                    let transport = UdpTransport::bind(&s_addr_clone)?;
+                    let mut server = DedicatedServer::with_transport(transport, world)?;
+                    if let Some(key) = host_auth_key.as_deref() {
+                        server = server.with_auth(key);
                     }
+                    server.run_realtime(
+                        std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+                        None,
+                    )
                 }
-                Err(error) => eprintln!("Could not start host: {error}"),
+                TransportProfile::Production => {
+                    let transport = SecureSocket::server(s_addr_clone.parse()?, Identity::load()?)?;
+                    let mut server = DedicatedServer::with_transport(transport, world)?;
+                    if let Some(key) = host_auth_key.as_deref() {
+                        server = server.with_auth(key);
+                    }
+                    server.run_realtime(
+                        std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
+                        None,
+                    )
+                }
+            });
+            if let Err(error) = result {
+                eprintln!("Could not run {host_transport} host: {error}");
             }
         });
         std::thread::sleep(std::time::Duration::from_millis(100));
@@ -459,23 +495,42 @@ async fn main() {
                 .ok_or_else(|| "Failed to resolve address".to_string())
         });
         match parsed {
-            Ok(dest) => match UdpTransport::bind("0.0.0.0:0") {
-                Ok(transport) => {
-                    let _ = transport.send_packet(
-                        &Packet::Hello {
-                            protocol_version: PROTOCOL_VERSION,
-                            content_hash,
-                            player_id: 0,
-                        },
-                        dest,
-                    );
-                    (Some(transport), Some(dest))
+            Ok(dest) => {
+                let transport: vesper3d::Result<Box<dyn DatagramTransport>> =
+                    match transport_profile {
+                        TransportProfile::Development => {
+                            let bind = if dest.is_ipv4() {
+                                "0.0.0.0:0"
+                            } else {
+                                "[::]:0"
+                            };
+                            UdpTransport::bind(bind)
+                                .map(|transport| Box::new(transport) as Box<dyn DatagramTransport>)
+                        }
+                        TransportProfile::Production => {
+                            vesper3d::viewer::net::trusted_certificate()
+                                .and_then(|certificate| SecureSocket::client(dest, certificate))
+                                .map(|transport| Box::new(transport) as Box<dyn DatagramTransport>)
+                        }
+                    };
+                match transport {
+                    Ok(transport) => {
+                        let _ = transport.send_packet(
+                            &Packet::Hello {
+                                protocol_version: PROTOCOL_VERSION,
+                                content_hash,
+                                player_id: 0,
+                            },
+                            dest,
+                        );
+                        (Some(transport), Some(dest))
+                    }
+                    Err(e) => {
+                        eprintln!("Failed to start {transport_profile} transport: {e}");
+                        (None, None)
+                    }
                 }
-                Err(e) => {
-                    eprintln!("Failed to bind local UDP socket: {e}");
-                    (None, None)
-                }
-            },
+            }
             Err(e) => {
                 eprintln!("Invalid server address '{addr_str}': {e}");
                 (None, None)
@@ -484,11 +539,6 @@ async fn main() {
     } else {
         (None, None)
     };
-
-    let client_auth_key = args
-        .windows(2)
-        .find(|a| a[0] == "--auth-key" || a[0] == "--auth")
-        .map(|a| a[1].clone());
 
     let mut net_player_id: Option<u64> = None;
     let mut net_session_token: Option<vesper3d::viewer::net::SessionToken> = None;
@@ -525,7 +575,8 @@ async fn main() {
                 last_hello_sent = std::time::Instant::now();
             }
 
-            while let Ok(Some((packet, src))) = transport.recv_packet() {
+            let incoming = transport.receive_packets().unwrap_or_default();
+            for (packet, src) in incoming {
                 if src == server_addr {
                     let mut incoming_snap = None;
                     match packet {

@@ -1,6 +1,6 @@
 //! Authoritative dedicated multiplayer server for Blue Engine V2.
 //!
-//! Manages UDP socket communication, connection handshakes, player sessions,
+//! Manages transport-agnostic datagram communication, connection handshakes, player sessions,
 //! fixed 60 Hz simulation stepping with Rapier physics, graceful disconnects,
 //! timeouts, and spatial room interest replication.
 
@@ -8,7 +8,8 @@ use crate::math::V;
 use crate::viewer::{
     net::{
         random_nonce, random_salt, random_token, verify_auth_proof, ConnectionNonce,
-        HandshakeLimiter, Packet, SessionRegistry, SessionToken, UdpTransport, PROTOCOL_VERSION,
+        DatagramTransport, HandshakeLimiter, Packet, SessionRegistry, SessionToken, UdpTransport,
+        PROTOCOL_VERSION,
     },
     simulation::HeadlessWorld,
     test_lab::{SPAWN_PLAYER_1, SPAWN_PLAYER_2},
@@ -42,9 +43,9 @@ pub struct ClientSession {
     pub action_tracker: crate::viewer::net::action_counters::ActionCountersTracker,
 }
 
-/// Authoritative dedicated server running HeadlessWorld over UDP.
-pub struct DedicatedServer {
-    pub transport: UdpTransport,
+/// Authoritative dedicated server running [`HeadlessWorld`] over any datagram transport.
+pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
+    pub transport: T,
     pub world: HeadlessWorld,
     pub sessions: HashMap<u64, ClientSession>,
     pub clients: HashMap<SocketAddr, u64>,
@@ -58,7 +59,7 @@ pub struct DedicatedServer {
     pub session_registry: SessionRegistry<u64>,
 }
 
-impl DedicatedServer {
+impl DedicatedServer<UdpTransport> {
     /// Bind to a local address (e.g. `"0.0.0.0:4000"` or `"127.0.0.1:0"`) with the default Test Lab map.
     pub fn bind(addr: &str) -> crate::Result<Self> {
         let world = HeadlessWorld::new()?;
@@ -68,6 +69,13 @@ impl DedicatedServer {
     /// Bind to a local address with a custom authoritative simulation world.
     pub fn with_world(addr: &str, world: HeadlessWorld) -> crate::Result<Self> {
         let transport = UdpTransport::bind(addr)?;
+        Self::with_transport(transport, world)
+    }
+}
+
+impl<T: DatagramTransport> DedicatedServer<T> {
+    /// Construct an authoritative server over an already configured transport.
+    pub fn with_transport(transport: T, world: HeadlessWorld) -> crate::Result<Self> {
         let local_addr = transport.local_addr()?;
         Ok(Self {
             transport,
@@ -362,10 +370,7 @@ impl DedicatedServer {
     /// Poll and process all pending incoming network packets non-blockingly.
     pub fn poll_network(&mut self) -> crate::Result<usize> {
         let mut count = 0;
-        while count < 256 {
-            let Some((packet, src)) = self.transport.recv_packet()? else {
-                break;
-            };
+        for (packet, src) in self.transport.receive_packets()?.into_iter().take(256) {
             count += 1;
             match packet {
                 Packet::Hello {

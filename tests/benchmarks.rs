@@ -4,6 +4,7 @@ use vesper3d::{
     viewer::{
         controller::{Controller, Movement},
         lifecycle::{LifecycleRegistry, LifecycleState},
+        metrics::RegressionBudget,
         net::{InputFrame, PlayerNetState, PredictionBuffer},
         simulation::{HeadlessWorld, TICK_SECONDS},
         spatial::RoomGraph,
@@ -25,6 +26,10 @@ fn benchmark_simulation_step_throughput() {
     let mean_us = elapsed.as_secs_f64() * 1_000_000. / ticks as f64;
     println!("Throughput: {ticks} ticks in {elapsed:?} (mean {mean_us:.2} µs/tick)");
     assert_eq!(world.tick, 500);
+    assert!(
+        mean_us <= RegressionBudget::default().max_sim_step_mean_us,
+        "simulation step regression: {mean_us:.3} us exceeds budget"
+    );
 }
 
 #[test]
@@ -44,12 +49,27 @@ fn benchmark_snapshot_and_delta_throughput() {
     let iters = 2000;
     let start = Instant::now();
     for _ in 0..iters {
+        std::hint::black_box(world.snapshot(world.tick));
+    }
+    let snapshot_mean_us = start.elapsed().as_secs_f64() * 1_000_000. / iters as f64;
+    println!("Snapshot creation: mean {snapshot_mean_us:.3} µs/op");
+    assert!(
+        snapshot_mean_us <= RegressionBudget::default().max_snapshot_creation_mean_us,
+        "snapshot creation regression: {snapshot_mean_us:.3} us exceeds budget"
+    );
+
+    let start = Instant::now();
+    for _ in 0..iters {
         let delta = snap2.compute_delta(&snap1);
         let reconstructed = delta.apply_to(&snap1);
         assert_eq!(reconstructed.tick, snap2.tick);
     }
     let mean_us = start.elapsed().as_secs_f64() * 1_000_000. / iters as f64;
     println!("Delta compression roundtrip: mean {mean_us:.3} µs/op");
+    assert!(
+        mean_us <= RegressionBudget::default().max_delta_compression_mean_us,
+        "delta compression regression: {mean_us:.3} us exceeds budget"
+    );
 }
 
 #[test]
@@ -101,6 +121,10 @@ fn benchmark_room_graph_spatial_queries() {
     }
     let mean_ns = start.elapsed().as_secs_f64() * 1_000_000_000. / iters as f64;
     println!("Room graph spatial lookup: mean {mean_ns:.1} ns/query");
+    assert!(
+        mean_ns <= RegressionBudget::default().max_room_graph_lookup_mean_ns,
+        "room graph lookup regression: {mean_ns:.3} ns exceeds budget"
+    );
 }
 
 #[test]

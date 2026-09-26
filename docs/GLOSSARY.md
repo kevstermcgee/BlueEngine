@@ -17,7 +17,9 @@
 | Scene | Vesper visual description; scene-only export omits map collision and entities. |
 | Prop / prefab | Reusable object geometry or data template. Neither implies possession or a disguise mechanic. |
 | Route / ray | Controller reachability along explicit waypoints / visibility against render geometry. Neither substitutes for the other. |
-| PulseNet | Planned transport integration, not included in this repository. |
+| Development transport | Raw unencrypted UDP, retained for local work, compatibility tests and the impairment proxy. |
+| Production transport | QUIC datagrams over TLS 1.3 with a pinned server certificate; selected explicitly with `--transport production`. |
+| PulseNet | The transport boundary implemented by `DatagramTransport`; both executable profiles use the same packet/server path. |
 | Orchestrator / match server | Future deployment concepts; BE2 currently implements neither a matchmaking orchestrator nor an online match server. |
 
 Coordinates are metres with Y up; sizes named `half_extents` are half the full dimensions. Prop origins are at their bottoms. Consult each API for orientation and bounds conventions.

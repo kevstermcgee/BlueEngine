@@ -2,7 +2,26 @@
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::time::Instant;
-use vesper3d::viewer::{controller::Movement, server::DedicatedServer, simulation::HeadlessWorld};
+use vesper3d::viewer::{
+    controller::Movement,
+    net::{DatagramTransport, Identity, SecureSocket, TransportProfile, UdpTransport},
+    server::DedicatedServer,
+    simulation::HeadlessWorld,
+};
+
+fn run_server<T: DatagramTransport>(
+    transport: T,
+    world: HeadlessWorld,
+    auth_key: Option<&str>,
+    ticks: Option<u64>,
+) -> vesper3d::Result<()> {
+    let stop_signal = Arc::new(AtomicBool::new(false));
+    let mut server = DedicatedServer::with_transport(transport, world)?;
+    if let Some(key) = auth_key {
+        server = server.with_auth(key);
+    }
+    server.run_realtime(stop_signal, ticks)
+}
 
 fn main() -> vesper3d::Result<()> {
     let args: Vec<_> = std::env::args().skip(1).collect();
@@ -12,6 +31,7 @@ fn main() -> vesper3d::Result<()> {
     let mut game_file = None;
     let mut server_addr = None;
     let mut auth_key = None;
+    let mut transport_profile = TransportProfile::Development;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -40,6 +60,13 @@ fn main() -> vesper3d::Result<()> {
                         .clone(),
                 );
             }
+            "--transport" => {
+                index += 1;
+                transport_profile = args
+                    .get(index)
+                    .ok_or("--transport needs development or production")?
+                    .parse()?;
+            }
             "--ticks" => {
                 index += 1;
                 let t: u64 = args.get(index).ok_or("--ticks needs a number")?.parse()?;
@@ -56,10 +83,12 @@ fn main() -> vesper3d::Result<()> {
             "--realtime" => realtime = true,
             "--help" => {
                 println!(
-                    "be2-headless [--server [ADDR]] [--listen ADDR] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE]\n\
+                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE]\n\
                      Modes:\n\
                        --server [ADDR]   Run authoritative dedicated multiplayer server (default 0.0.0.0:4000)\n\
-                       --auth-key KEY    Require cryptographic challenge-response authentication\n\
+                       --transport development  Raw UDP for local development (default)\n\
+                       --transport production   QUIC/TLS 1.3; BLUE_TLS_CERT_FILE pin + required BLUE_TLS_KEY_FILE\n\
+                       --auth-key KEY    Additionally require client challenge-response authentication\n\
                        (no --server)     Run local benchmark simulation"
                 );
                 return Ok(());
@@ -83,13 +112,23 @@ fn main() -> vesper3d::Result<()> {
     };
 
     if let Some(addr) = server_addr {
-        let stop_signal = Arc::new(AtomicBool::new(false));
-        let mut server = DedicatedServer::with_world(&addr, world)?;
-        if let Some(key) = auth_key {
-            server = server.with_auth(&key);
+        println!("[Server] Selected {transport_profile} transport");
+        match transport_profile {
+            TransportProfile::Development => {
+                let transport = UdpTransport::bind(&addr)?;
+                run_server(transport, world, auth_key.as_deref(), ticks)?;
+            }
+            TransportProfile::Production => {
+                let address = addr.parse()?;
+                let transport = SecureSocket::server(address, Identity::load()?)?;
+                run_server(transport, world, auth_key.as_deref(), ticks)?;
+            }
         }
-        server.run_realtime(stop_signal, ticks)?;
         return Ok(());
+    }
+
+    if transport_profile != TransportProfile::Development {
+        return Err("--transport only applies with --server".into());
     }
 
     // Benchmark mode:

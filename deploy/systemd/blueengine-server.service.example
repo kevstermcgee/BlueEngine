@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 WorkingDirectory=%h/BlueEngine
-ExecStart=%h/.local/bin/be2-headless --server 0.0.0.0:4000
+ExecStart=%h/.local/bin/be2-headless --server 0.0.0.0:4000 --transport production --auth-key ${BLUE_JOIN_KEY}
 EnvironmentFile=%h/.config/blueengine/server.env
 Restart=on-failure
 RestartSec=5
