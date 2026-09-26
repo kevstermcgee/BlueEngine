@@ -3,6 +3,11 @@
 <img src="assets/branding/blueengine.png" alt="BlueEngine official logo" width="128" height="128">
 
 An AI-first Rust 3D engine foundation for building small, testable prototypes.
+
+Curated games, prototypes, test content, and demos are copied automatically to
+[BlueEngineGames](https://github.com/kevstermcgee/BlueEngineGames). See
+[`docs/GAMES_PUBLISHING.md`](docs/GAMES_PUBLISHING.md) to validate an export or add
+new content to the publication manifest.
 Continues the complete BlueEngineAntigravity history. The primary development
 fixture is **Blue Test Lab**; furnished legacy maps remain reusable reference assets.
 

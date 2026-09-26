@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "source_repository": "kevstermcgee/BlueEngine",
+  "target_repository": "kevstermcgee/BlueEngineGames",
+  "collections": {
+    "games": [
+      {
+        "source": "assets/games",
+        "destination": "."
+      }
+    ],
+    "prototypes": [
+      {
+        "source": "examples/prototype.rs",
+        "destination": "rust-api"
+      },
+      {
+        "source": "templates/multiplayer-game",
+        "destination": "multiplayer-game"
+      }
+    ],
+    "tests": [
+      {
+        "source": "assets/maps/starters",
+        "destination": "starter-maps"
+      },
+      {
+        "source": "examples/network_smoke.rs",
+        "destination": "network"
+      },
+      {
+        "source": "examples/validate_expanded_maps.rs",
+        "destination": "validation"
+      }
+    ],
+    "demos": [
+      {
+        "source": "examples",
+        "destination": "examples"
+      },
+      {
+        "source": "previews",
+        "destination": "previews"
+      }
+    ]
+  }
+}
