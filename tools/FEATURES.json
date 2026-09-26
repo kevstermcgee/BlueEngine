@@ -280,6 +280,19 @@
       ],
       "note": "Scientist primary wrench and scroll-selected black pistol with infinite ammo prototype, hitscan raycasts, recoil, muzzle flash, third-person aiming and audio."
     },
+    "fps_foundation": {
+      "files": [
+        "src/viewer/fps.rs",
+        "games/bluedm"
+      ],
+      "checks": [
+        "fps module tests in both feature configurations",
+        "BlueDM standalone crate tests",
+        "BlueDM two-client UDP smoke",
+        "Cobalt Foundry audit, lint and reachability"
+      ],
+      "note": "Rendering-independent FPS domain: validated catalogs, ten-firearm starter armory, deterministic fixed-tick fire/reload/burst timing, reproducible spread, smooth ADS/FOV, operative archetypes, and authoritative team deathmatch health/scoring/respawns. Games own presentation, hit-shape policy and their transport shell."
+    },
     "prototype_api": {
       "files": [
         "src/prelude.rs",

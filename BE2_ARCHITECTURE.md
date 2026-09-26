@@ -51,7 +51,10 @@ Body poses update collision, semantic bounds and dynamic geometry. Per-player
 ownership tables reject contention and release held props on disconnect. Clients
 reconcile held state from authoritative snapshots. Static rendering is baked once;
 prop meshes reuse transforms. Scientist/Feta and wrench/pistol remain demo-coupled
-profiles/actions. A general behavior document/controller/action boundary is future work.
+profiles/actions. New FPS games use the separate rendering-independent `viewer::fps`
+domain for weapon catalogs/state, smooth ADS and team-deathmatch rules; games retain
+their presentation, hit-shape policy and transport messages. A general arbitrary
+behavior document/controller/action boundary remains future work.
 
 ## Networking
 
@@ -73,6 +76,9 @@ history; clients reject mismatched baselines and request keyframes. Periodic ful
 keyframes provide another recovery path. Replication includes prop orientation,
 velocities, sleeping state and holder. Combat resolves nearer static geometry before
 applying prop impulses. Constants in weapons.rs/wrench.rs define ranges/cooldowns.
+The reusable FPS domain is deliberately above this stock packet path; BlueDM shows a
+game-owned protocol that consumes the shared combat rules without coupling them to a
+specific renderer or transport profile.
 
 Protocol 5 requires the initial content fingerprint, captured before physics
 extraction from scene, collision, semantic data and the spatial graph. HashMap/HashSet

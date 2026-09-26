@@ -7,6 +7,10 @@
       {
         "source": "assets/games",
         "destination": "."
+      },
+      {
+        "source": "games/bluedm",
+        "destination": "bluedm"
       }
     ],
     "prototypes": [

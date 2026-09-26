@@ -29,6 +29,7 @@ pub mod content;
 
 mod landscaping;
 
+pub mod fps;
 pub mod prop_physics;
 pub mod weapons;
 

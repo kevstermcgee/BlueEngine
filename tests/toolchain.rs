@@ -27,7 +27,7 @@ fn test_blueprint_compiler_and_spatial_graph() {
             id: "main_hall".into(),
             rect: [-5.0, -5.0, 5.0, 5.0],
             floor_color: Some([0.3, 0.4, 0.5]),
-            wall_color: None,
+            wall_color: Some([0.15, 0.25, 0.35]),
             lamp: true,
         }],
         doors: vec![],
@@ -45,6 +45,16 @@ fn test_blueprint_compiler_and_spatial_graph() {
     };
 
     let doc = compile_blueprint(&spec).expect("Blueprint should compile");
+    let wall = doc
+        .scene
+        .nodes
+        .iter()
+        .find(|node| node.id.starts_with("main_hall_wall"))
+        .expect("compiled wall");
+    assert_eq!(
+        doc.scene.materials[&wall.material].color,
+        V(0.15, 0.25, 0.35)
+    );
     assert_eq!(doc.name, "Test Blueprint");
     assert!(
         doc.spatial.is_some(),

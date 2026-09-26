@@ -37,8 +37,10 @@ pub struct DoorSpec {
     pub between: [String; 2],
     #[serde(default = "default_door_width")]
     pub width: f32,
+    /// Signed offset in metres from the midpoint of the shared boundary.
+    /// Zero centers the opening; this is not an absolute world coordinate.
     #[serde(default)]
-    pub at: Option<f32>, // offset along shared boundary
+    pub at: Option<f32>,
 }
 
 fn default_door_width() -> f32 {
@@ -282,6 +284,21 @@ pub fn compile_blueprint(spec: &BlueprintSpec) -> Result<MapDocument> {
     // 3. Walls generation with door cutouts
     let mut wall_counter = 0;
     for room in &spec.rooms {
+        let wall_material = if let Some(color) = room.wall_color {
+            let material_id = format!("mat_wall_{}", room.id);
+            scene.materials.insert(
+                material_id.clone(),
+                Material {
+                    color: V(color[0], color[1], color[2]),
+                    roughness: 0.9,
+                    metallic: 0.0,
+                    ..Default::default()
+                },
+            );
+            material_id
+        } else {
+            default_wall_mat.clone()
+        };
         let [min_x, min_z, max_x, max_z] = room.rect;
         let edges = [
             // (p1, p2, is_horizontal)
@@ -340,7 +357,7 @@ pub fn compile_blueprint(spec: &BlueprintSpec) -> Result<MapDocument> {
                 scene.nodes.push(Node {
                     id: seg_id.clone(),
                     shape: Shape::Box,
-                    material: default_wall_mat.clone(),
+                    material: wall_material.clone(),
                     pos: Track::Fixed(V(center_x, h * 0.5, center_z)),
                     scale: Track::Fixed(V(half_wx, h * 0.5, half_wz)),
                     ..Default::default()

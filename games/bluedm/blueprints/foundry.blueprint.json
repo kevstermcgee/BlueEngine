@@ -1,0 +1,42 @@
+{
+  "name": "BlueDM - Cobalt Foundry",
+  "height": 4.6,
+  "wall_thickness": 0.24,
+  "rooms": [
+    {"id":"azure-bay","rect":[-22,-7,-14,7],"floor_color":[0.10,0.20,0.30],"wall_color":[0.12,0.24,0.36],"lamp":true},
+    {"id":"west-low","rect":[-14,-7,-4,0],"floor_color":[0.24,0.27,0.29],"wall_color":[0.32,0.35,0.37],"lamp":true},
+    {"id":"west-high","rect":[-14,0,-4,7],"floor_color":[0.17,0.22,0.26],"wall_color":[0.25,0.31,0.35],"lamp":true},
+    {"id":"reactor-low","rect":[-4,-7,6,0],"floor_color":[0.28,0.25,0.19],"wall_color":[0.38,0.34,0.25],"lamp":true},
+    {"id":"reactor-high","rect":[-4,0,6,7],"floor_color":[0.22,0.18,0.14],"wall_color":[0.34,0.28,0.20],"lamp":true},
+    {"id":"east-high","rect":[6,0,16,7],"floor_color":[0.25,0.20,0.22],"wall_color":[0.36,0.27,0.29],"lamp":true},
+    {"id":"east-low","rect":[6,-7,16,0],"floor_color":[0.29,0.24,0.26],"wall_color":[0.38,0.30,0.32],"lamp":true},
+    {"id":"crimson-bay","rect":[16,-7,24,7],"floor_color":[0.30,0.12,0.15],"wall_color":[0.40,0.16,0.20],"lamp":true}
+  ],
+  "doors": [
+    {"between":["azure-bay","west-low"],"width":2.4,"at":0.0},
+    {"between":["azure-bay","west-high"],"width":2.4,"at":0.0},
+    {"between":["west-low","west-high"],"width":2.1,"at":0.0},
+    {"between":["west-low","reactor-low"],"width":2.5,"at":0.0},
+    {"between":["west-high","reactor-high"],"width":2.5,"at":0.0},
+    {"between":["reactor-low","reactor-high"],"width":2.2,"at":0.0},
+    {"between":["reactor-low","east-low"],"width":2.5,"at":0.0},
+    {"between":["reactor-high","east-high"],"width":2.5,"at":0.0},
+    {"between":["east-low","east-high"],"width":2.1,"at":0.0},
+    {"between":["east-low","crimson-bay"],"width":2.4,"at":0.0},
+    {"between":["east-high","crimson-bay"],"width":2.4,"at":0.0}
+  ],
+  "spawns": [
+    {"id":"azure-primary","room":"azure-bay","offset":[-2.4,0]},
+    {"id":"crimson-primary","room":"crimson-bay","offset":[2.4,0]}
+  ],
+  "fill": [
+    {"room":"azure-bay","kind":"table","count":2,"seed":101},
+    {"room":"west-low","kind":"chair","count":3,"seed":202},
+    {"room":"west-high","kind":"woven-basket","count":4,"seed":303},
+    {"room":"reactor-low","kind":"sculpture","count":3,"seed":404},
+    {"room":"reactor-high","kind":"potted-cactus","count":4,"seed":505},
+    {"room":"east-high","kind":"woven-basket","count":4,"seed":606},
+    {"room":"east-low","kind":"chair","count":3,"seed":707},
+    {"room":"crimson-bay","kind":"table","count":2,"seed":808}
+  ]
+}

@@ -51,6 +51,9 @@ Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement 
 - Validated MapDocument authoring, stable semantic IDs, transactional edits,
   a structured and extensible asset catalog, bounded discovery and route/capture tools.
 - SceneBuilder/prelude for static boxes and catalog props; ID-based impulse/position APIs.
+- Reusable rendering-free FPS foundation with validated weapon catalogs, ten starter
+  firearms, deterministic fire/reload/spread, smooth ADS and authoritative TDM rules.
+  [`BlueDM`](games/bluedm/README.md) is the standalone online reference game.
 
 Networking uses one JSON packet path with an 1100-byte cross-transport ceiling.
 `--transport development` (the compatibility default) is raw, unencrypted UDP for
