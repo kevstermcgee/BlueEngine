@@ -434,7 +434,11 @@ fn run() -> Result<()> {
         "new-game" => {
             let name = arg(1)?;
             let dir = arg(2)?;
-            vesper3d::viewer::newgame::scaffold_new_game(name, Path::new(dir), None)?;
+            vesper3d::viewer::newgame::scaffold_new_game(
+                name,
+                Path::new(dir),
+                a.get(3).map(String::as_str),
+            )?;
             println!("{}", json!({"ok": true, "name": name, "directory": dir}));
         }
         "blueprint-example" => {

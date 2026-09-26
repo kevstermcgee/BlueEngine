@@ -1,19 +1,16 @@
 //! BlueEngine's local, reproducible content workbench. No network service required.
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 #[allow(dead_code)]
-mod character;
+use vesper3d::viewer::character;
 #[path = "sandbox/content.rs"]
 mod content;
-#[path = "sandbox/creative.rs"]
-mod creative;
-#[path = "sandbox/characters.rs"]
-mod fun_characters;
+use vesper3d::viewer::character_skins as fun_characters;
+use vesper3d::viewer::creative;
 #[path = "sandbox/input.rs"]
 mod input;
-#[path = "sandbox/ui.rs"]
-mod ui;
+use vesper3d::viewer::game_ui as ui;
 #[allow(dead_code)]
-mod wrench_view;
+use vesper3d::viewer::wrench_view;
 
 use macroquad::prelude as mq;
 use std::path::{Path, PathBuf};
@@ -115,7 +112,7 @@ fn posed_meshes(meshes: &[mq::Mesh], at: V, turns: u8) -> Vec<mq::Mesh> {
         .collect()
 }
 struct App {
-    gamepads: Option<vesper3d::viewer::gamepad::Gamepads>,
+    controls: vesper3d::viewer::game_input::ClientInput,
     root: PathBuf,
     save_directory: PathBuf,
     catalog: content::Catalog,
@@ -151,7 +148,7 @@ struct App {
     spawn_query: String,
     spawn_scroll: usize,
     pending: Option<Pending>,
-    undo: Vec<MapDocument>,
+    undo: creative::History,
     input_delay: u8,
 }
 impl App {
@@ -168,7 +165,7 @@ impl App {
         );
         let save_directory = root.join(".be2-work/sandbox-worlds");
         Ok(Self {
-            gamepads: input::initialize_pad(),
+            controls: vesper3d::viewer::game_input::ClientInput::new(),
             root,
             save_directory,
             catalog,
@@ -204,7 +201,7 @@ impl App {
             spawn_query: String::new(),
             spawn_scroll: 0,
             pending: None,
-            undo: Vec::new(),
+            undo: creative::History::default(),
             input_delay: 0,
         })
     }
@@ -627,7 +624,7 @@ impl App {
         let max_scroll = items.len().saturating_sub(rows);
         self.scroll = self.scroll.min(max_scroll);
         if enabled {
-            let pad = input::pad();
+            let pad = self.controls.gamepad().clone();
             let scroll = if mq::mouse_position().0 < left {
                 mq::mouse_wheel().1
             } else {
@@ -705,7 +702,7 @@ impl App {
         let rw = w - x - 24.;
         ui::panel(x, 22., rw, 86., mq::Color::new(0.06, 0.13, 0.20, 0.94));
         ui::text(
-            &ui::fit(&input::status(), rw - 36., 12.),
+            &ui::fit(self.controls.status(), rw - 36., 12.),
             x + 18.,
             45.,
             12.,
@@ -861,16 +858,9 @@ impl App {
             .aim(&self.stage.player, &self.stage.room)
     }
     fn world_save(&self, map: usize) -> Result<PathBuf> {
-        let id = &self.catalog.maps[map].id;
-        if id.is_empty()
-            || !id
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
-        {
-            return Err("Invalid map save identifier".into());
-        }
-        Ok(self.save_directory.join(format!("{id}.json")))
+        creative::save_path(&self.save_directory, &self.catalog.maps[map].id)
     }
+
     fn save_path(&self) -> Result<PathBuf> {
         self.world_save(
             self.world_map
@@ -949,25 +939,20 @@ impl App {
         let Some(p) = &mut self.pending else {
             return;
         };
-        let b = creative::bounds(&p.doc.entities[0].bounds, V::ZERO, p.turns);
-        let center = (b.min + b.max) * 0.5;
-        let half = (b.max - b.min) * 0.5;
-        p.at = if let Some(hit) = self.stage.room.hit(ray, p.distance) {
-            let support = hit.n.0.abs() * half.0 + hit.n.1.abs() * half.1 + hit.n.2.abs() * half.2;
-            hit.p + hit.n * (support + 0.005) - center
-        } else {
-            ray.at(p.distance) - center
-        };
-        p.at.1 += p.elevation;
-        if p.snap {
-            p.at = V(
-                (p.at.0 * 4.).round() / 4.,
-                (p.at.1 * 4.).round() / 4.,
-                (p.at.2 * 4.).round() / 4.,
-            );
+        match creative::placement_position(
+            &self.stage.room,
+            ray,
+            &p.doc.entities[0].bounds,
+            p.turns,
+            p.distance,
+            p.elevation,
+            p.snap.then_some(0.25),
+        ) {
+            Ok(at) => p.at = at,
+            Err(error) => self.notice = error.to_string(),
         }
-        p.at.1 = p.at.1.max(0.);
     }
+
     fn place_pending(&mut self) -> Result<()> {
         let p = self.pending.as_ref().ok_or("Choose an asset first")?;
         let doc = creative::place(&self.stage.doc, &p.doc, p.at, p.turns, &self.stage.player)?;
@@ -996,10 +981,7 @@ impl App {
         };
         creative::save(&doc, &self.save_path()?)?;
         if remember {
-            if self.undo.len() == 16 {
-                self.undo.remove(0);
-            }
-            self.undo.push(self.stage.doc.clone());
+            self.undo.remember(self.stage.doc.clone());
         }
         if addition {
             self.stage.meshes.extend(meshes);
@@ -1207,7 +1189,7 @@ impl App {
         let rows = ((ph - 204.) / 53.).floor().max(1.) as usize;
         let pages = items.len().div_ceil(rows * 2).max(1);
         self.spawn_scroll = self.spawn_scroll.min(pages - 1);
-        let pad = input::pad();
+        let pad = self.controls.gamepad().clone();
         let wheel = mq::mouse_wheel().1 + u8::from(pad.pressed(Button::LeftTrigger)) as f32
             - u8::from(pad.pressed(Button::RightTrigger)) as f32;
         if wheel < 0. {
@@ -1294,13 +1276,8 @@ impl App {
 
     fn update(&mut self) -> Result<()> {
         input::poll(foreground());
-        input::poll_pad(
-            &mut self.gamepads,
-            foreground(),
-            self.browser || self.setup || self.asset_menu || self.shell.paused,
-            self.shell.paused,
-        );
-        let pad = input::pad();
+        self.controls.poll(foreground());
+        let pad = self.controls.gamepad().clone();
         if self.browser && !self.shell.paused && pad.pressed(Button::North) {
             self.setup = true;
             self.search_focus = false;
@@ -1314,7 +1291,11 @@ impl App {
         if !foreground() {
             self.shell.paused = true;
         }
-        if (self.asset_menu || self.setup) && input::pressed(mq::KeyCode::Escape) {
+        if (self.asset_menu || self.setup)
+            && (input::pressed(mq::KeyCode::Escape)
+                || pad.pressed(Button::East)
+                || pad.pressed(Button::Start))
+        {
             self.asset_menu = false;
             self.setup = false;
             self.search_focus = false;
@@ -1323,13 +1304,15 @@ impl App {
             return Ok(());
         }
         // Text entry must not treat letters F/C/etc. as game shortcuts.
-        self.shell.begin_frame_with_input(
+        let keys = if self.search_focus {
+            search_keys
+        } else {
+            input::pressed
+        };
+        self.shell.begin_frame_with_actions(
             !self.browser && !self.asset_menu && !self.setup,
-            if self.search_focus {
-                search_keys
-            } else {
-                input::pressed
-            },
+            foreground(),
+            self.controls.shell_actions(self.shell.paused, keys),
         );
         if let Some(child) = &mut self.physics_child {
             let _ = child.try_wait();
@@ -1483,17 +1466,20 @@ impl App {
         Ok(())
     }
     fn draw(&mut self) -> Result<bool> {
-        ui::begin_navigation(if self.shell.paused {
-            0
-        } else if self.setup {
-            2
-        } else if self.asset_menu {
-            3
-        } else if self.browser {
-            1
-        } else {
-            0
-        });
+        ui::begin_navigation(
+            if self.shell.paused {
+                0
+            } else if self.setup {
+                2
+            } else if self.asset_menu {
+                3
+            } else if self.browser {
+                1
+            } else {
+                0
+            },
+            self.controls.navigation(),
+        );
         self.draw_world();
         if self.browser {
             self.browser_ui()?;
@@ -1739,7 +1725,7 @@ async fn run() -> Result<()> {
         if capture.is_none() {
             app.update()?;
         } else {
-            input::poll_pad(&mut app.gamepads, false, true, false);
+            app.controls.poll(false);
             app.shell.begin_frame(false);
         }
         if app.draw()? {

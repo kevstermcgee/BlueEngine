@@ -122,9 +122,7 @@ fn calibration_clearances_distinguish_rat_crouch_and_standing_human() {
         );
     }
 }
-#[allow(dead_code)]
-#[path = "../src/bin/sandbox/creative.rs"]
-mod creative;
+use vesper3d::viewer::creative;
 
 fn creative_base() -> MapDocument {
     SceneBuilder::new("Creative test")

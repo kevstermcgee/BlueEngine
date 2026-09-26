@@ -1,5 +1,13 @@
+//! Shared immediate-mode game UI. One navigation scope per window/render thread.
+//! Call begin_navigation before enabled buttons and end_navigation afterwards.
+#[derive(Default, Clone, Copy)]
+pub struct NavigationInput {
+    pub next: bool,
+    pub previous: bool,
+    pub accept: bool,
+}
+use super::game_text;
 use macroquad::prelude as mq;
-use vesper3d::viewer::game_text;
 
 pub const PAPER: mq::Color = mq::Color::new(0.94, 0.95, 0.92, 1.);
 pub const INK: mq::Color = mq::Color::new(0.08, 0.16, 0.22, 1.);
@@ -92,9 +100,7 @@ struct Navigation {
 }
 thread_local! { static NAV: std::cell::RefCell<Navigation> = std::cell::RefCell::new(Navigation::default()); }
 /// Enumerate enabled controls once per frame. Overlays use distinct focus scopes.
-pub fn begin_navigation(surface: u8) {
-    use vesper3d::viewer::gamepad::Button;
-    let pad = super::input::pad();
+pub fn begin_navigation(surface: u8, input: NavigationInput) {
     NAV.with(|cell| {
         let mut n = cell.borrow_mut();
         if n.surface != surface {
@@ -103,8 +109,8 @@ pub fn begin_navigation(surface: u8) {
                 ..Default::default()
             };
         }
-        let next = pad.pressed(Button::DPadDown) || pad.pressed(Button::DPadRight);
-        let previous = pad.pressed(Button::DPadUp) || pad.pressed(Button::DPadLeft);
+        let next = input.next;
+        let previous = input.previous;
         if next || previous {
             n.active = true;
             let count = n.count.max(1);
@@ -114,7 +120,7 @@ pub fn begin_navigation(surface: u8) {
                 (n.focus + count - 1) % count
             };
         }
-        n.accept = surface != 0 && pad.pressed(Button::South);
+        n.accept = surface != 0 && input.accept;
         if n.accept {
             n.active = true;
         }

@@ -1,16 +1,16 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+use vesper3d::viewer::character;
 use vesper3d::viewer::controller::CharacterKind;
-mod character;
 mod impact_audio;
 mod platform_window;
 mod prop_view;
-mod wrench_view;
 use macroquad::{
     input::utils::{register_input_subscriber, repeat_all_miniquad_input},
     prelude::*,
 };
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
+use vesper3d::viewer::wrench_view;
 use vesper3d::{
     math::V,
     viewer::{

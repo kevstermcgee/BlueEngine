@@ -42,3 +42,5 @@ fn main() -> Result<()> {
     Ok(())
 }
 ```
+
+Shared standalone-game infrastructure: [gameplay kit](SHARED_GAMEPLAY.md). New games should use `ClientInput`, `GameShell`, `MapPlayer`, the shared avatar/UI modules and the public headless `creative` API instead of copying sandbox code.

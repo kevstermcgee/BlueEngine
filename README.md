@@ -96,3 +96,5 @@ asset/offline-renderer compatibility; current runtime guidance is linked above.
 Try the data-driven objective demo with `Launch Three Switches.cmd` (after a release build), or `be2 --game assets/games/three-switches/game.json`. See [game quickstart](docs/GAME_QUICKSTART.md) and [implementation evidence and limits](docs/GAME_REFINEMENT.md).
 
 Playable game presentation follows [the shared presentation contract](docs/GAME_PRESENTATION.md). Use the `presentation` feature for `GameShell` and cached static rendering.
+
+Shared standalone-game infrastructure: [gameplay kit](docs/SHARED_GAMEPLAY.md). New games should use `ClientInput`, `GameShell`, `MapPlayer`, the shared avatar/UI modules and the public headless `creative` API instead of copying sandbox code.

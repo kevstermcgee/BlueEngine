@@ -58,7 +58,7 @@ impl GamepadFrame {
             -self.right_stick[1] * 2.5 * dt,
         ]
     }
-    fn button(&mut self, button: Button, down: bool) {
+    pub(super) fn button(&mut self, button: Button, down: bool) {
         if down {
             if self.down.insert(button) {
                 self.pressed.insert(button);

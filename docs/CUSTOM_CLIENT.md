@@ -18,19 +18,19 @@ second-version type mismatch:
 
 ```toml
 [dependencies]
-vesper3d = { package = "be2", path = "../BlueEngine", default-features = false }
+vesper3d = { package = "be2", path = "../BlueEngine", default-features = false, features = ["client"] }
 macroquad = { version = "=0.4.14", default-features = false, features = ["audio"] }
 ```
 
-Keep the engine dependency rendering-free unless the application deliberately calls
-client-only modules. Submit held movement every display frame, preserve jump and
+Enable `client` for the shared visible client; use no default features for a rendering-free host. Submit held movement every display frame, preserve jump and
 interaction as press edges, and advance `HeadlessWorld::step` in fixed 1/60-second
 increments. Cap catch-up work after long frames. Read copied public state such as
 `player`, `prop_position`, and `GameRuntime::state`; do not mutate results to make
 tests pass.
 
-The example draws deliberately simple application-owned geometry. It is an integration
-boundary, not a second stock renderer. Use `be2 --game` when document-driven presentation
+The example uses the shared MapPlayer static renderer, input, camera, characters and menus. Use `be2 --game` when document-driven presentation
 is sufficient, including replicated target visibility and movers.
 
 Playable game presentation follows [the shared presentation contract](GAME_PRESENTATION.md). Use the `presentation` feature for `GameShell` and cached static rendering.
+
+See [the shared gameplay kit](SHARED_GAMEPLAY.md) for the playable starter, public creative APIs, feature gates and runtime boundaries.

@@ -440,3 +440,40 @@ fn tube(m: &mut Mesh, center: Vec3, r: f32, length: f32, color: Color) {
             .extend([base, base + 1, base + 2, base, base + 2, base + 3]);
     }
 }
+
+/// Append a shaded cuboid to a cached cosmetic mesh; size is full width/height/depth.
+pub fn box_part(mesh: &mut Mesh, center: Vec3, size: Vec3, color: Color) {
+    let corners = [
+        vec3(-1., -1., -1.),
+        vec3(1., -1., -1.),
+        vec3(1., 1., -1.),
+        vec3(-1., 1., -1.),
+        vec3(-1., -1., 1.),
+        vec3(1., -1., 1.),
+        vec3(1., 1., 1.),
+        vec3(-1., 1., 1.),
+    ];
+    for (face, light) in [
+        ([0, 3, 2, 1], 0.90),
+        ([4, 5, 6, 7], 0.70),
+        ([0, 4, 7, 3], 0.55),
+        ([1, 2, 6, 5], 0.80),
+        ([3, 7, 6, 2], 1.0),
+        ([0, 1, 5, 4], 0.40),
+    ] {
+        let base = mesh.vertices.len() as u16;
+        for i in face {
+            let p = center + corners[i] * size * 0.5;
+            mesh.vertices.push(Vertex::new(
+                p.x,
+                p.y,
+                p.z,
+                0.,
+                0.,
+                Color::new(color.r * light, color.g * light, color.b * light, 1.),
+            ));
+        }
+        mesh.indices
+            .extend([base, base + 1, base + 2, base, base + 2, base + 3]);
+    }
+}

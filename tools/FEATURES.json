@@ -69,7 +69,7 @@
     "wrench": {
       "files": [
         "src/viewer/wrench.rs",
-        "src/bin/wrench_view/mod.rs",
+        "src/viewer/wrench_view.rs",
         "src/bin/impact_audio/mod.rs"
       ],
       "checks": [
@@ -92,7 +92,7 @@
     "camera_character": {
       "files": [
         "src/viewer/camera.rs",
-        "src/bin/character/mod.rs",
+        "src/viewer/character.rs",
         "src/bin/blue-engine.rs",
         "src/viewer/controller.rs"
       ],
@@ -268,8 +268,8 @@
     "weapons": {
       "files": [
         "src/viewer/weapons.rs",
-        "src/bin/wrench_view/mod.rs",
-        "src/bin/character/mod.rs",
+        "src/viewer/wrench_view.rs",
+        "src/viewer/character.rs",
         "src/bin/impact_audio/mod.rs",
         "assets/audio/pistol-shot.wav",
         "src/bin/blue-engine.rs"
@@ -566,6 +566,28 @@
         "manual controller hot-plug, focus, keyboard layouts, camera and cursor capture"
       ],
       "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds."
+    },
+    "shared_gameplay": {
+      "files": [
+        "src/viewer/game_input.rs",
+        "src/viewer/game_ui.rs",
+        "src/viewer/local_client.rs",
+        "templates/native_focus.rs",
+        "src/viewer/creative.rs",
+        "src/viewer/character_skins.rs",
+        "src/viewer/character.rs",
+        "src/viewer/wrench_view.rs",
+        "src/viewer/newgame.rs",
+        "examples/custom_client.rs",
+        "docs/SHARED_GAMEPLAY.md",
+        "tests/shared_gameplay.rs"
+      ],
+      "checks": [
+        "public-API shared_gameplay and sandbox tests",
+        "default and headless check",
+        "generated external Cargo game build and world/menu captures"
+      ],
+      "note": "Reusable native controls, menu focus, eight avatars, fixed-step static-map starter, asset placement, safe saves and bounded undo. Sandbox consumes these modules. New-game emits a playable static client and separately validated stock GameDocument. Dynamic rules use the stock runtime."
     }
   }
 }

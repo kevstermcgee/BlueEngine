@@ -123,7 +123,7 @@ Map schema v1 is for portable, static, matte primitive maps. It accepts unparent
 - `bench` measures simulation steps, snapshot creation, delta compression, and room graph lookups; it returns nonzero when a checked-in regression budget is exceeded.
 - `inspect-performance` measures memory, allocation, and tick budgets.
 - `validate-budget` validates engine performance budgets and reports any violations.
-- `new-game NAME DIRECTORY` scaffolds a complete game project with starter map and rule definitions.
+- `new-game NAME DIRECTORY [ENGINE_PATH]` scaffolds a complete game project with starter map and rule definitions.
 - `ui-check` audits UI layout geometry and text fit across aspect ratios.
 - `mcp` runs the Model Context Protocol (MCP) JSON-RPC stdio server exposing engine tools directly to AI agents.
 - `doc-check [ROOT]` runs automated documentation drift protection, validating that all CLI commands, signatures, links, embedded JSON blocks, and feature files remain synchronized.
@@ -198,3 +198,5 @@ Sandbox Xbox input uses the same native backend for movement, look, menus and
 creative placement; the header reports device status. `--sign-capture NEW_DIR`
 checks moving-view sign rendering. SurfaceRenderer's sign pipeline reads world
 depth without writing it, so transparent glyph rectangles cannot erase neighbors.
+
+Shared standalone-game infrastructure: [gameplay kit](../docs/SHARED_GAMEPLAY.md). New games should use `ClientInput`, `GameShell`, `MapPlayer`, the shared avatar/UI modules and the public headless `creative` API instead of copying sandbox code.

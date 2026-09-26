@@ -41,7 +41,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("sim", "SCENARIO.json [TRACE.json]"),
     ("replay-trace", "TRACE.json [GAME.json]"),
     ("src", "ACTION [QUERY]"),
-    ("new-game", "NAME DIRECTORY"),
+    ("new-game", "NAME DIRECTORY [ENGINE_PATH]"),
     ("ui-check", ""),
     ("mcp", ""),
     ("net-proxy", "LISTEN UPSTREAM [PRESET]"),

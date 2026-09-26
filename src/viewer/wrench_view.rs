@@ -1,5 +1,5 @@
+use crate::viewer::wrench::Wrench;
 use macroquad::prelude::*;
-use vesper3d::viewer::wrench::Wrench;
 
 // A small dedicated depth buffer keeps the held tool out of room geometry.
 pub struct View {
@@ -89,7 +89,7 @@ impl View {
         let shift = vec3(0.40 - 0.24 * swing, -0.40 + 0.06 * swing, -0.90);
         self.draw_pose(rotation, shift, false);
     }
-    pub fn draw_pistol(&mut self, pistol: &vesper3d::viewer::weapons::Pistol) {
+    pub fn draw_pistol(&mut self, pistol: &crate::viewer::weapons::Pistol) {
         self.draw_pose(
             Quat::from_rotation_x(pistol.recoil() * 0.22),
             vec3(
@@ -391,41 +391,7 @@ fn metal_quad(mesh: &mut Mesh, points: [Vec3; 4], color: Color) {
         .extend([base, base + 1, base + 2, base, base + 2, base + 3]);
 }
 
-pub(super) fn box_part(mesh: &mut Mesh, center: Vec3, size: Vec3, color: Color) {
-    let corners = [
-        vec3(-1., -1., -1.),
-        vec3(1., -1., -1.),
-        vec3(1., 1., -1.),
-        vec3(-1., 1., -1.),
-        vec3(-1., -1., 1.),
-        vec3(1., -1., 1.),
-        vec3(1., 1., 1.),
-        vec3(-1., 1., 1.),
-    ];
-    for (face, light) in [
-        ([0, 3, 2, 1], 0.90),
-        ([4, 5, 6, 7], 0.70),
-        ([0, 4, 7, 3], 0.55),
-        ([1, 2, 6, 5], 0.80),
-        ([3, 7, 6, 2], 1.0),
-        ([0, 1, 5, 4], 0.40),
-    ] {
-        let base = mesh.vertices.len() as u16;
-        for i in face {
-            let p = center + corners[i] * size * 0.5;
-            mesh.vertices.push(Vertex::new(
-                p.x,
-                p.y,
-                p.z,
-                0.,
-                0.,
-                Color::new(color.r * light, color.g * light, color.b * light, 1.),
-            ));
-        }
-        mesh.indices
-            .extend([base, base + 1, base + 2, base, base + 2, base + 3]);
-    }
-}
+pub(super) use crate::viewer::game_visuals::box_part;
 
 pub(super) fn swing_amount(wrench: &Wrench) -> f32 {
     let p = wrench.phase().unwrap_or(0.);
@@ -439,5 +405,11 @@ pub(super) fn swing_amount(wrench: &Wrench) -> f32 {
         -0.25 + 1.25 * smooth((p - 0.20) / 0.20)
     } else {
         1. - smooth((p - 0.40) / 0.60)
+    }
+}
+
+impl Default for View {
+    fn default() -> Self {
+        Self::new()
     }
 }

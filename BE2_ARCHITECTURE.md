@@ -149,3 +149,5 @@ without delaying player-follow or look. Render and local aim use the same rig po
 Collision is rechecked for the interpolated pose; first-person remains unchanged.
 
 Standalone client presentation lives in `viewer/game_client.rs` behind `presentation`; `viewer/presentation.rs` is rendering-free bounded pose smoothing. `HeadlessWorld::with_static_room` preserves authored static collision without catalog rigid-body extraction. See docs/GAME_PRESENTATION.md.
+
+Shared standalone-game infrastructure: [gameplay kit](docs/SHARED_GAMEPLAY.md). New games should use `ClientInput`, `GameShell`, `MapPlayer`, the shared avatar/UI modules and the public headless `creative` API instead of copying sandbox code.

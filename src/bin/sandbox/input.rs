@@ -72,7 +72,7 @@ pub fn poll(focused: bool) {
     #[cfg(not(windows))]
     let _ = focused;
 }
-fn keyboard_pressed(key: KeyCode) -> bool {
+pub fn pressed(key: KeyCode) -> bool {
     #[cfg(windows)]
     {
         KEYS.with(|k| k.borrow().pressed.contains(&key))
@@ -98,65 +98,4 @@ pub fn axes() -> (f32, f32) {
         held(KeyCode::W, KeyCode::Up) - held(KeyCode::S, KeyCode::Down),
         held(KeyCode::D, KeyCode::Right) - held(KeyCode::A, KeyCode::Left),
     )
-}
-
-use vesper3d::viewer::gamepad::{Button, GamepadFrame, Gamepads};
-struct Pad {
-    frame: GamepadFrame,
-    menu: bool,
-    paused: bool,
-    status: String,
-}
-thread_local! {
-    static PAD: std::cell::RefCell<Pad> = std::cell::RefCell::new(Pad {
-        frame: GamepadFrame::default(), menu: true, paused: false,
-        status: "Controller: disconnected".into(),
-    });
-}
-// The application owns the backend. Windows terminates worker threads before
-// TLS destruction, so a thread-local gilrs owner would panic while joining them.
-pub fn initialize_pad() -> Option<Gamepads> {
-    match Gamepads::new() {
-        Ok(backend) => Some(backend),
-        Err(error) => {
-            PAD.with(|p| p.borrow_mut().status = format!("Controller unavailable: {error}"));
-            None
-        }
-    }
-}
-pub fn poll_pad(backend: &mut Option<Gamepads>, focused: bool, menu: bool, paused: bool) {
-    PAD.with(|cell| {
-        let mut pad = cell.borrow_mut();
-        pad.menu = menu;
-        pad.paused = paused;
-        if let Some(backend) = backend {
-            pad.frame = backend.poll(focused);
-            pad.status = backend
-                .connected()
-                .next()
-                .map(|(_, name)| format!("Controller: {name}"))
-                .unwrap_or_else(|| "Controller: disconnected".into());
-        }
-    });
-}
-pub fn pad() -> GamepadFrame {
-    PAD.with(|p| p.borrow().frame.clone())
-}
-pub fn status() -> String {
-    PAD.with(|p| p.borrow().status.clone())
-}
-pub fn pressed(key: KeyCode) -> bool {
-    keyboard_pressed(key)
-        || PAD.with(|cell| {
-            let p = cell.borrow();
-            match key {
-                KeyCode::Escape => {
-                    p.frame.pressed(Button::Start) || (p.menu && p.frame.pressed(Button::East))
-                }
-                KeyCode::Enter if p.paused => p.frame.pressed(Button::South),
-                KeyCode::Up if p.paused => p.frame.pressed(Button::DPadUp),
-                KeyCode::Down if p.paused => p.frame.pressed(Button::DPadDown),
-                _ => false,
-            }
-        })
 }

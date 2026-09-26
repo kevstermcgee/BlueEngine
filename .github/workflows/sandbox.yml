@@ -7,6 +7,9 @@ on:
       - assets/**
       - scripts/*sandbox*.py
       - tests/sandbox.rs
+      - tests/shared_gameplay.rs
+      - examples/**
+      - templates/**
       - Cargo.toml
       - Cargo.lock
       - .github/workflows/sandbox.yml
@@ -29,8 +32,16 @@ jobs:
         run: cargo build --release --locked --bin blueengine-sandbox --bin be2 --bin be2-tools
       - name: Validate content and movement
         run: |
-          cargo test --release --locked --test sandbox
+          cargo test --release --locked --test sandbox --test shared_gameplay
           python scripts/validate_sandbox.py
+      - name: Build an independent generated game
+        shell: pwsh
+        run: |
+          $starter = Join-Path $env:RUNNER_TEMP "blueengine-starter"
+          ./target/release/be2-tools.exe new-game shared-starter $starter ($env:GITHUB_WORKSPACE -replace '\\', '/')
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo build --release --manifest-path "$starter/Cargo.toml"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Package
         run: python scripts/package_sandbox.py --output .be2-work/BlueEngineSandbox
       - uses: actions/upload-artifact@v4

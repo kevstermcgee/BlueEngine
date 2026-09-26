@@ -1,7 +1,7 @@
 //! Rendering-free creative placement and per-map persistence.
+use crate::{math::Mat, prelude::*, scene::Track, viewer::controller::Collider};
 use std::collections::HashSet;
 use std::path::Path;
-use vesper3d::{math::Mat, prelude::*, scene::Track, viewer::controller::Collider};
 
 pub fn rotate(p: V, turns: u8) -> V {
     match turns % 4 {
@@ -33,19 +33,44 @@ pub fn bounds(b: &Collider, at: V, turns: u8) -> Collider {
     }
 }
 /// Extract only the catalog specimen, never its studio floor, walls or grid.
-pub fn specimen(mut doc: MapDocument) -> Result<MapDocument> {
-    doc.scene.nodes.retain(|n| n.id.starts_with("specimen/"));
-    doc.colliders
-        .retain(|id, _| id == "specimen" || id.starts_with("specimen/"));
-    doc.entities.retain(|e| e.id == "specimen");
+pub fn specimen(doc: MapDocument) -> Result<MapDocument> {
+    extract(doc, "specimen")
+}
+/// Extract a single semantic asset into canonical placement IDs. The root entity
+/// and root-prefixed nodes/colliders belong to the asset; surrounding scenery does not.
+/// Static transforms only. Animated tracks would invalidate placement collision.
+pub fn extract(mut doc: MapDocument, root: &str) -> Result<MapDocument> {
+    if root.is_empty() {
+        return Err("Asset root must not be empty".into());
+    }
+    let prefix = format!("{root}/");
+    let belongs = |id: &str| id == root || id.starts_with(&prefix);
+    doc.scene.nodes.retain(|n| belongs(&n.id));
+    doc.colliders.retain(|id, _| belongs(id));
+    doc.entities.retain(|e| e.id == root);
+    if doc.scene.nodes.is_empty() || doc.entities.len() != 1 {
+        return Err("Asset needs geometry and one root entity".into());
+    }
+    for node in &mut doc.scene.nodes {
+        if !matches!(node.pos, Track::Fixed(_))
+            || !matches!(node.rot, Track::Fixed(_))
+            || !matches!(node.scale, Track::Fixed(_))
+        {
+            return Err("Creative placement supports static transforms only".into());
+        }
+        node.id = format!("specimen{}", &node.id[root.len()..]);
+    }
+    doc.colliders = doc
+        .colliders
+        .into_iter()
+        .map(|(id, b)| (format!("specimen{}", &id[root.len()..]), b))
+        .collect();
+    doc.entities[0].id = "specimen".into();
     let used: HashSet<_> = doc.scene.nodes.iter().map(|n| n.material.clone()).collect();
     doc.scene.materials.retain(|id, _| used.contains(id));
     doc.default_spawn = None;
     doc.spatial = None;
     doc.checks = None;
-    if doc.scene.nodes.is_empty() || doc.entities.len() != 1 {
-        return Err("This catalog item has no placeable specimen".into());
-    }
     doc.validate()?;
     Ok(doc)
 }
@@ -53,7 +78,18 @@ pub fn next_id(doc: &MapDocument) -> String {
     let mut n = 1;
     loop {
         let id = format!("creative-{n}");
-        if !doc.entities.iter().any(|e| e.id == id) {
+        if !doc.entities.iter().any(|e| e.id == id)
+            && !doc
+                .scene
+                .nodes
+                .iter()
+                .any(|n| n.id == id || n.id.starts_with(&format!("{id}/")))
+            && !doc
+                .colliders
+                .keys()
+                .chain(doc.scene.materials.keys())
+                .any(|key| key == &id || key.starts_with(&format!("{id}/")))
+        {
             return id;
         }
         n += 1;
@@ -78,6 +114,7 @@ pub fn place(
     {
         return Err("This world has reached its 256 placed-object limit".into());
     }
+    let asset = specimen(asset.clone())?;
     let mut result = doc.clone();
     let id = next_id(doc);
     let rename = |name: &str| name.replacen("specimen", &id, 1);
@@ -133,7 +170,9 @@ pub fn remove(doc: &MapDocument, id: &str) -> Result<MapDocument> {
     }
     let prefix = format!("{id}/");
     let mut next = doc.clone();
-    next.scene.nodes.retain(|n| !n.id.starts_with(&prefix));
+    next.scene
+        .nodes
+        .retain(|n| n.id != id && !n.id.starts_with(&prefix));
     next.scene
         .materials
         .retain(|name, _| !name.starts_with(&prefix));
@@ -165,4 +204,79 @@ pub fn save(doc: &MapDocument, path: &Path) -> Result<()> {
     drop(file);
     std::fs::rename(temporary, path)?;
     Ok(())
+}
+
+/// Confine map IDs to one portable child filename. The caller owns the save directory.
+pub fn save_path(directory: &Path, id: &str) -> Result<std::path::PathBuf> {
+    if id.is_empty()
+        || id.len() > 64
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return Err("Invalid map save identifier".into());
+    }
+    Ok(directory.join(format!("{id}.json")))
+}
+/// Collision-aware preview position shared by editors and creative games.
+pub fn placement_position(
+    room: &super::room::Room,
+    ray: crate::math::Ray,
+    asset: &Collider,
+    turns: u8,
+    reach: f32,
+    elevation: f32,
+    grid: Option<f32>,
+) -> Result<V> {
+    if !ray.o.finite()
+        || !ray.d.finite()
+        || !reach.is_finite()
+        || reach <= 0.
+        || !elevation.is_finite()
+        || grid.is_some_and(|g| !g.is_finite() || g <= 0.)
+    {
+        return Err("Invalid placement preview parameters".into());
+    }
+    let b = bounds(asset, V::ZERO, turns);
+    let center = (b.min + b.max) * 0.5;
+    let half = (b.max - b.min) * 0.5;
+    let mut at = if let Some(hit) = room.hit(ray, reach) {
+        let support = hit.n.0.abs() * half.0 + hit.n.1.abs() * half.1 + hit.n.2.abs() * half.2;
+        hit.p + hit.n * (support + 0.005) - center
+    } else {
+        ray.at(reach) - center
+    };
+    at.1 += elevation;
+    if let Some(g) = grid {
+        at = V(
+            (at.0 / g).round() * g,
+            (at.1 / g).round() * g,
+            (at.2 / g).round() * g,
+        );
+    }
+    at.1 = at.1.max(0.);
+    Ok(at)
+}
+/// Bounded document snapshots. Record only after an edit and persistence succeed;
+/// peek before validating an undo, and pop only once the restore succeeds.
+#[derive(Default)]
+pub struct History {
+    entries: std::collections::VecDeque<MapDocument>,
+}
+impl History {
+    pub fn remember(&mut self, doc: MapDocument) {
+        if self.entries.len() == 16 {
+            self.entries.pop_front();
+        }
+        self.entries.push_back(doc);
+    }
+    pub fn last(&self) -> Option<&MapDocument> {
+        self.entries.back()
+    }
+    pub fn pop(&mut self) -> Option<MapDocument> {
+        self.entries.pop_back()
+    }
+    pub fn clear(&mut self) {
+        self.entries.clear();
+    }
 }

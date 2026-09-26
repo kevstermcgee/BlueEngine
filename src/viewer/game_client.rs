@@ -53,6 +53,30 @@ impl miniquad::EventHandler for Focus {
     }
 }
 
+/// One frame of focus-aware menu edges. Never store held actions as presses.
+#[derive(Default, Clone, Copy)]
+pub struct ShellActions {
+    pub fullscreen: bool,
+    pub pause: bool,
+    pub diagnostics: bool,
+    pub release_cursor: bool,
+    pub next: bool,
+    pub previous: bool,
+    pub accept: bool,
+}
+impl ShellActions {
+    pub fn from_keys(pressed: impl Fn(KeyCode) -> bool) -> Self {
+        Self {
+            fullscreen: pressed(KeyCode::F) || pressed(KeyCode::F11),
+            pause: pressed(KeyCode::Escape),
+            diagnostics: pressed(KeyCode::F3),
+            release_cursor: pressed(KeyCode::LeftAlt),
+            next: pressed(KeyCode::Down),
+            previous: pressed(KeyCode::Up),
+            accept: pressed(KeyCode::Enter),
+        }
+    }
+}
 pub struct GameShell {
     pub paused: bool,
     pub fullscreen: bool,
@@ -63,7 +87,7 @@ pub struct GameShell {
     controls: bool,
     selection: usize,
     suppress: bool,
-    key_pressed: fn(KeyCode) -> bool,
+    actions: ShellActions,
 }
 impl Default for GameShell {
     fn default() -> Self {
@@ -82,7 +106,7 @@ impl GameShell {
             controls: false,
             selection: 0,
             suppress: false,
-            key_pressed: is_key_pressed,
+            actions: ShellActions::default(),
         }
     }
     pub fn begin_frame(&mut self, connected: bool) {
@@ -90,30 +114,42 @@ impl GameShell {
     }
     /// An executable can supply focus-aware native key edges without unsafe library code.
     pub fn begin_frame_with_input(&mut self, connected: bool, pressed: fn(KeyCode) -> bool) {
-        self.key_pressed = pressed;
+        self.begin_frame_with_actions(connected, true, ShellActions::from_keys(pressed));
+    }
+    /// Combine native focus and device actions. Poll input even while menus are open.
+    pub fn begin_frame_with_actions(
+        &mut self,
+        connected: bool,
+        focused: bool,
+        actions: ShellActions,
+    ) {
+        self.actions = if focused {
+            actions
+        } else {
+            ShellActions::default()
+        };
         repeat_all_miniquad_input(&mut self.focus, self.subscriber);
         self.suppress = false;
-        if !self.focus.active {
+        if !self.focus.active || !focused {
             self.paused = true;
         }
-        if self.focus.active && ((self.key_pressed)(KeyCode::F) || (self.key_pressed)(KeyCode::F11))
-        {
+        if self.focus.active && self.actions.fullscreen {
             self.fullscreen = !self.fullscreen;
             set_fullscreen(self.fullscreen);
             self.suppress = true;
         }
-        if self.focus.active && (self.key_pressed)(KeyCode::Escape) {
+        if self.focus.active && self.actions.pause {
             self.paused = !self.paused;
             self.controls = false;
             self.suppress = true;
         }
-        if (self.key_pressed)(KeyCode::F3) {
+        if self.actions.diagnostics {
             self.diagnostics = !self.diagnostics;
         }
-        if (self.key_pressed)(KeyCode::LeftAlt) {
+        if self.actions.release_cursor {
             self.paused = true;
         }
-        let capture = connected && !self.paused && self.focus.active;
+        let capture = connected && !self.paused && self.focus.active && focused;
         if capture != self.captured {
             set_cursor_grab(capture);
             show_mouse(!capture);
@@ -166,16 +202,16 @@ impl GameShell {
                 pw - 48. * scale,
                 42. * scale,
                 true,
-            ) || (self.key_pressed)(KeyCode::Enter)
+            ) || self.actions.accept
             {
                 self.controls = false;
                 self.suppress = true;
             }
         } else {
-            if (self.key_pressed)(KeyCode::Down) {
+            if self.actions.next {
                 self.selection = (self.selection + 1) % 3;
             }
-            if (self.key_pressed)(KeyCode::Up) {
+            if self.actions.previous {
                 self.selection = (self.selection + 2) % 3;
             }
             for (i, label) in ["Resume", "Controls", "Quit game"].iter().enumerate() {
@@ -187,7 +223,7 @@ impl GameShell {
                     46. * scale,
                     self.selection == i,
                 );
-                if clicked || (self.selection == i && (self.key_pressed)(KeyCode::Enter)) {
+                if clicked || (self.selection == i && self.actions.accept) {
                     self.suppress = true;
                     match i {
                         0 => self.paused = false,

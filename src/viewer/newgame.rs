@@ -1,4 +1,4 @@
-//! `be2-tools new-game <NAME> [DIR]`: Scaffolds a standalone, green game project.
+//! `be2-tools new-game NAME DIR [ENGINE_PATH]`: Scaffolds a standalone, green game project.
 //!
 //! The generated project does not copy or fork the engine; it pins `vesper3d` as a
 //! dependency. It comes fully equipped with a declarative blueprint, pre-compiled map,
@@ -15,6 +15,13 @@ pub fn scaffold_new_game(
     target_dir: &Path,
     engine_rel_path: Option<&str>,
 ) -> Result<()> {
+    if name.is_empty()
+        || !name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+    {
+        return Err("Game name must be a Cargo-compatible identifier".into());
+    }
     if target_dir.exists() && target_dir.read_dir()?.next().is_some() {
         return Err(format!(
             "Target directory '{}' already exists and is not empty",
@@ -30,7 +37,7 @@ pub fn scaffold_new_game(
     fs::create_dir_all(target_dir.join("scripts"))?;
     fs::create_dir_all(target_dir.join(".github").join("workflows"))?;
 
-    let engine_path_str = engine_rel_path.unwrap_or("../BlueEngine");
+    let engine_path_str = serde_json::to_string(engine_rel_path.unwrap_or("../BlueEngine"))?;
 
     // 1. Cargo.toml
     let cargo_toml = format!(
@@ -40,10 +47,13 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-vesper3d = {{ path = "{engine_path_str}", features = ["client", "offline"] }}
+vesper3d = {{ package = "be2", path = {engine_path_str}, default-features = false, features = ["client"] }}
+macroquad = {{ version = "=0.4.14", default-features = false, features = ["audio"] }}
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-tokio = {{ version = "1", features = ["full"] }}
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = {{ version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }}
 "#
     );
     fs::write(target_dir.join("Cargo.toml"), cargo_toml)?;
@@ -77,7 +87,7 @@ tokio = {{ version = "1", features = ["full"] }}
         spawns: vec![SpawnSpec {
             id: "player1".into(),
             room: "lobby".into(),
-            offset: Some([-3.0, 0.0]),
+            offset: Some([0.0, 0.0]),
         }],
         fill: vec![
             FillSpec {
@@ -106,45 +116,67 @@ tokio = {{ version = "1", features = ["full"] }}
     fs::write(target_dir.join("maps").join("main.json"), map_json)?;
 
     // 4. game.json
-    let game_json = serde_json::json!({
-        "schema_version": 1,
-        "name": name,
-        "map": "maps/main.json",
-        "tick_rate": 60,
-        "counters": {
-            "score": 0
-        },
-        "rules": [
-            {
-                "event": "on_enter",
-                "target": "courtyard",
-                "condition": null,
-                "action": "increment",
-                "counter": "score",
-                "amount": 1,
-                "once": true
-            }
-        ]
-    });
+    let spawn = map_doc
+        .default_spawn
+        .ok_or("Starter blueprint has no spawn")?;
+    let game = super::game::GameDocument {
+        schema_version: 1,
+        name: name.into(),
+        map: "maps/main.json".into(),
+        player_profile: Default::default(),
+        spawn_points: vec![super::game::SpawnPoint {
+            id: "player1".into(),
+            feet: spawn.feet,
+            yaw: spawn.yaw,
+        }],
+        counters: std::collections::BTreeMap::from([("visits".into(), 0)]),
+        interactables: vec![],
+        trigger_zones: vec![super::game::TriggerZone {
+            id: "courtyard".into(),
+            bounds: super::controller::Collider {
+                min: crate::math::V(1., 0., -3.),
+                max: crate::math::V(7., 2., 3.),
+            },
+            enabled: true,
+        }],
+        movers: vec![],
+        timers: vec![],
+        rules: vec![super::game::Rule {
+            id: "visit-courtyard".into(),
+            on_interact: None,
+            on_enter: Some("courtyard".into()),
+            on_exit: None,
+            on_timer: None,
+            condition: None,
+            once: true,
+            actions: vec![super::game::GameAction::Increment {
+                counter: "visits".into(),
+                amount: 1,
+            }],
+        }],
+    };
+    game.validate(&map_doc)?;
     fs::write(
         target_dir.join("game.json"),
-        serde_json::to_string_pretty(&game_json)?,
+        serde_json::to_string_pretty(&game)?,
     )?;
 
     // 5. src/main.rs
-    let main_rs = r#"use std::path::Path;
-use vesper3d::viewer::game::GameDocument;
-
-#[tokio::main]
+    let main_rs = r#"mod platform;
+use vesper3d::viewer::{authoring::MapDocument, game_client, local_client};
+fn window() -> macroquad::conf::Conf { game_client::window_config("BlueEngine game") }
+#[macroquad::main(window)]
 async fn main() -> vesper3d::Result<()> {
-    println!("Launching BlueEngine Game...");
-    let game_doc = GameDocument::load(Path::new("game.json"))?;
-    let world = game_doc.world()?;
-    println!("Game '{}' loaded successfully with content hash: {:016x}", game_doc.name, world.content_hash);
-    Ok(())
+    let map = MapDocument::load(std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/maps/main.json")))?;
+    local_client::run_map_with_focus(map, platform::focused).await
 }
 "#;
     fs::write(target_dir.join("src").join("main.rs"), main_rs)?;
+
+    fs::write(
+        target_dir.join("src/platform.rs"),
+        include_str!("../../templates/native_focus.rs"),
+    )?;
 
     // 6. scripts/blue and scripts/blue.ps1
     let blue_sh = r#"#!/usr/bin/env bash
@@ -202,7 +234,8 @@ switch ($cmd) {
 - Project scaffolding initialized with BlueEngine v0.2.0.
 - Declarative blueprint created in `blueprints/main.blueprint.json`.
 - Starter map compiled to `maps/main.json`.
-- Authoritative game logic configured in `game.json`.
+- Valid stock-client game document written to `game.json`.
+- Playable local static-map client uses shared input, camera, characters and pause menus.
 
 ## Next Steps
 - Add custom gameplay rules to `game.json`.
@@ -218,7 +251,12 @@ switch ($cmd) {
 This is a standalone BlueEngine game project. **The engine is not duplicated in this repo**; it is pinned via `vesper3d` in `Cargo.toml`.
 
 ## Presentation baseline
-Follow the engine docs/GAME_PRESENTATION.md: F fullscreen, Escape menu, minimal HUD, coherent map materials and fixed-step smooth motion.
+Follow engine docs/SHARED_GAMEPLAY.md and docs/GAME_PRESENTATION.md.
+The starter uses local_client::run_map: native controllers, WASD/arrows, collision-safe
+camera, cached rendering, avatar selection and pause menus are inherited.
+This is a static-map client. To execute GameDocument rules or dynamic physics,
+launch the stock engine client with `be2 --game game.json`; do not silently ignore
+those rules in a custom client. Shared creative editing is opt-in via viewer::creative.
 
 ## Working with Maps
 - Edit `blueprints/main.blueprint.json` to alter room layouts, doors, and prop placements.

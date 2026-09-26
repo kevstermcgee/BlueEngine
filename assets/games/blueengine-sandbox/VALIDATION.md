@@ -128,3 +128,31 @@ Follow-up after wireless re-pairing: Windows lists an active XINPUT HID device,
 and the installed sandbox displays "Controller: Xbox One Game Controller".
 Native device detection and clean application exit are confirmed. Physical button
 and stick gameplay still requires user verification.
+
+
+## Shared-engine integration audit — 2026-09-26
+
+The sandbox now imports public engine creative placement/save/history, scoped UI,
+controller adapter, all character presentations and held-tool rendering. Shared
+input snapshots feed GameShell; no native device backend lives in TLS. Rendering
+features stay optional and the creative API remains available headlessly.
+
+The new-game generator now creates a playable static-map client, correct Cargo
+package alias, a clear spawn, valid GameDocument, and an application-owned native
+focus adapter. Both public-API tests and an independent generated Cargo project's
+optimized build passed. Human (astronaut/ranger) and Feta world captures and the
+actual pause menu were inspected. All capture processes exited cleanly.
+
+Final be2 check passed: 225 default tests, 192 no-default tests,
+formatting, rustdoc in both configurations, Clippy in both configurations and
+headless/authoring guards. Presentation-only library build also passed. Report:
+`.be2-work/check-20260926T221954565736Z/report.json`.
+Sandbox creative smoke passed placement, deletion, undo, character/map switching
+and save reload. Moving-camera sign captures retain full letter strokes. CI now
+builds an independently generated game to catch integration drift.
+
+The static starter deliberately does not run GameDocument rules or dynamic prop
+physics; those use the stock game runtime. Palette/catalog/layout policies stay
+sandbox-specific. Physical controls/fullscreen were not re-exercised during this
+refactor; the preceding pass confirmed detection of the user's Xbox controller.
+See docs/SHARED_GAMEPLAY.md for public APIs, feature gates and use instructions.

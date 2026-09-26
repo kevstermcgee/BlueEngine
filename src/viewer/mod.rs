@@ -62,3 +62,20 @@ pub mod verify;
 pub mod game_text;
 #[cfg(feature = "presentation")]
 pub mod game_visuals;
+
+#[cfg(feature = "presentation")]
+pub mod character_skins;
+/// Rendering-independent placement, safe removal and atomic map saves.
+pub mod creative;
+#[cfg(feature = "client")]
+pub mod game_input;
+#[cfg(feature = "presentation")]
+pub mod game_ui;
+
+#[cfg(feature = "presentation")]
+pub mod character;
+#[cfg(feature = "presentation")]
+pub mod wrench_view;
+
+#[cfg(feature = "client")]
+pub mod local_client;

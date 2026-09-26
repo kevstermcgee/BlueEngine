@@ -1,8 +1,8 @@
 //! Cosmetic skins sharing the unmodified Scientist controller/hull.
 //! Meshes are cached; only rigid limb transforms change while walking.
-use super::wrench_view::box_part;
+use super::controller::Controller;
+use super::game_visuals::box_part;
 use macroquad::prelude::*;
-use vesper3d::viewer::controller::Controller;
 
 pub const NAMES: [&str; 8] = [
     "Scientist",
@@ -121,7 +121,7 @@ fn star(m: &mut Mesh, center: Vec3, radius: f32, color: Color) {
 impl Skin {
     pub fn new(index: usize) -> Self {
         // Keep the retired wizard model available for later without listing it.
-        let index = [0, 1, 3, 4, 5, 6, 7, 8][index];
+        let index = [0, 1, 3, 4, 5, 6, 7, 8][index.min(7)];
         let mut parts = vec![];
         let mut torso = mesh();
         let cloth = match index {
@@ -561,5 +561,48 @@ impl Skin {
                 .extend(part.mesh.indices.iter().map(|i| i + base));
         }
         draw_mesh(&self.posed);
+    }
+}
+
+/// Complete eight-character roster with cached presentation. Cosmetics never
+/// change collision: Feta uses the rat profile, all other IDs use Scientist.
+pub struct Avatar {
+    index: usize,
+    original: super::character::Character,
+    skin: Skin,
+    tool: super::wrench_view::View,
+    wrench: super::wrench::Wrench,
+}
+impl Avatar {
+    pub fn new(id: &str) -> crate::Result<Self> {
+        let index = IDS
+            .iter()
+            .position(|&value| value == id)
+            .ok_or("Unknown character ID")?;
+        Ok(Self {
+            index,
+            original: Default::default(),
+            skin: Skin::new(index),
+            tool: super::wrench_view::View::new(),
+            wrench: Default::default(),
+        })
+    }
+    pub fn kind(&self) -> super::controller::CharacterKind {
+        if self.index == 1 {
+            super::controller::CharacterKind::Feta
+        } else {
+            super::controller::CharacterKind::Scientist
+        }
+    }
+    pub fn update(&mut self, distance: f32, seconds: f32, moving: bool) {
+        self.original.update(distance, seconds, moving);
+        self.skin.update(distance, seconds, moving);
+    }
+    pub fn draw(&mut self, player: &Controller) {
+        if self.index < 2 {
+            self.original.draw(player, &self.wrench, &self.tool, false);
+        } else {
+            self.skin.draw(player);
+        }
     }
 }
