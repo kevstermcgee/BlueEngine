@@ -26,12 +26,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out BlueEngine
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
 
       - name: Check out BlueEngineGames
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: kevstermcgee/BlueEngineGames
           ssh-key: ${{ secrets.GAMES_REPO_DEPLOY_KEY }}
