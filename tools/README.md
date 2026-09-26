@@ -14,7 +14,7 @@ python tools/be2.py features
 python tools/be2.py map help
 ```
 
-Read tools/FEATURES.json to locate a feature's implementation, dependencies and checks. Inspect `git status --short` before edits; preserve existing work. `doctor` reports tools without installing or changing anything. Rust 1.87+ is required, along with rustfmt and Clippy. FFmpeg is needed for the full offline test suite. Linux graphical builds require ALSA development headers (`libasound2-dev`); this revision was tested on Windows only.
+Read tools/FEATURES.json to locate a feature's implementation, dependencies and checks. Inspect `git status --short` before edits; preserve existing work. `doctor` reports tools without installing or changing anything. Rust 1.87+ is required, along with rustfmt and Clippy. FFmpeg is needed for the full offline test suite. Linux graphical builds require ALSA development headers (`libasound2-dev`), plus `libudev-dev` and `pkg-config` for native gamepads; this revision was tested on Windows only.
 
 The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headless and tooling release outputs so packages cannot accidentally include a graphics-enabled headless executable. Missing dependencies and failed checks return nonzero; commands do not continue past failures. Check logs go in ignored `.be2-work/check-*/`.
 
@@ -183,3 +183,12 @@ asset palette, click places a static prop, R rotates, wheel changes reach,
 Shift+wheel changes height, G toggles grid, Delete removes placed props, Z undoes.
 Per-map saves are in `.be2-work/sandbox-worlds`; `--creative-smoke NEW_DIR` runs
 isolated placement/save/reload checks and captures. See the sandbox README.
+
+## Native controllers
+
+The optional `gamepad` feature exposes `viewer::gamepad::Gamepads` independently
+of graphics; `client` enables it by default. Poll once per frame, including menus,
+with the host's focus status. Device I/O never enters the fixed-step simulation.
+See [bindings, API and platform requirements](../docs/CONTROLLERS.md). Controller
+regressions run with `cargo test --locked --lib gamepad`; the normal headless build
+must continue to pass `python tools/check_headless.py` without gilrs.

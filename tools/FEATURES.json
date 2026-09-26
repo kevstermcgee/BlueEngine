@@ -552,6 +552,19 @@
         "optimized browser/walk/menu captures and live input checks"
       ],
       "note": "Local shared-controller workbench: complete registered prop/prefab browser, map selection, static collision inspection, eight selectable characters, per-map creative saves, searchable in-world prop palette, preview/rotate/grid placement, protected deletion and undo, snapshot export and explicit stock-client physics sessions."
+    },
+    "native_controllers": {
+      "files": [
+        "src/viewer/gamepad.rs",
+        "src/bin/blue-engine.rs",
+        "docs/CONTROLLERS.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib gamepad",
+        "python tools/check_headless.py",
+        "manual controller hot-plug, focus, keyboard layouts, camera and cursor capture"
+      ],
+      "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds."
     }
   }
 }

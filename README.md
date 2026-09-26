@@ -47,6 +47,10 @@ Use the same map/game on both peers. Protocol 5 rejects different initial conten
 Output files must be new. `export-house` and assets/maps/starters retain reference maps.
 WASD/arrows move, mouse looks, Space jumps, Ctrl/C crouches, E carries/drops,
 left click uses the demo tool, scroll selects tools, Q changes perspective, Esc pauses.
+Native controllers are enabled in the client: left/right sticks move/look, A/Cross
+jumps, B/Circle crouches, X/Square interacts, Y/Triangle changes perspective,
+left stick click sprints, RT/R2 uses the tool, bumpers select tools, and Start pauses.
+D-pad and A/Cross select characters and pause-menu items. See [controller support](docs/CONTROLLERS.md).
 Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement and simple interaction objectives; see [game quickstart](docs/GAME_QUICKSTART.md).
 
 ## Current capabilities and limits

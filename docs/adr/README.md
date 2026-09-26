@@ -17,3 +17,5 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0008: One authoritative path over explicit transport profiles](0008-transport-profiles.md)
 - [0009: Explicit playable content lifecycle](0009-playable-content-lifecycle.md)
 - [0010: Reusable rendering-independent FPS domain](0010-reusable-fps-domain.md)
+
+- [0011: Optional native controller input](0011-native-controllers.md)
