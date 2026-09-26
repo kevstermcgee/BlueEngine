@@ -148,6 +148,10 @@
           },
           "enabled": {
             "type": "boolean"
+          },
+          "visible": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -413,6 +417,29 @@
                       "type": "integer",
                       "minimum": -1000000,
                       "maximum": 1000000
+                    }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "action",
+                    "entity",
+                    "visible"
+                  ],
+                  "properties": {
+                    "action": {
+                      "const": "set_visible"
+                    },
+                    "entity": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[A-Za-z0-9_/-]+$"
+                    },
+                    "visible": {
+                      "type": "boolean"
                     }
                   }
                 },

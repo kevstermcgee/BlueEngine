@@ -6,6 +6,9 @@ Boxes: center/half extents. Props: bottom origin; catalog physics rules.
 `impulse(id:&str,V)->bool`; `prop_position(id:&str)->Option<V>`.
 IDs are owned; unknown IDs fail. Jump is an edge; movement persists.
 Run: `cargo run --no-default-features --example prototype`.
+For a nonstandard window or renderer, continue with [CUSTOM_CLIENT.md](CUSTOM_CLIENT.md).
+For input-driven acceptance tests, use the existing scenario driver in
+[BEHAVIORAL_TESTING.md](BEHAVIORAL_TESTING.md) instead of building a shell harness.
 ```rust
 use vesper3d::prelude::*;
 

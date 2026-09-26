@@ -8,7 +8,10 @@ use vesper3d::viewer::{
     maps::MapId,
     pathing::execute_walk,
     reach::analyze_reach,
-    scenario::{run_scenario, verify_replay_trace, PlayerConfig, Scenario, TimedInput},
+    scenario::{
+        evaluate_scenario, load_scenario, run_scenario, verify_replay_trace, PlayerConfig,
+        Scenario, TimedInput,
+    },
     symbols::SourceIndex,
     ui_check::audit_all_screens,
     verify::{verify_map, ChecksBlock, LintCheck},
@@ -165,6 +168,28 @@ fn test_deterministic_simulation_and_replay_verification() {
         "Simulation replay must be 100% bit-for-bit deterministic"
     );
     assert_eq!(divergence.verified_checkpoints, trace.checkpoints.len());
+}
+
+#[test]
+fn test_committed_behavior_scenario_resolves_game_and_reports_assertions() {
+    let path =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("assets/games/three-switches/scenario.json");
+    let mut scenario = load_scenario(&path).expect("scenario should load relative game path");
+    let report = evaluate_scenario(&scenario).expect("scenario should run");
+    assert!(report.ok, "{:?}", report.assertions);
+    assert_eq!(report.assertions.len(), 1);
+    assert!(report.assertions[0].ok);
+    assert!(
+        verify_replay_trace(&report.trace, None)
+            .expect("game trace should retain its game path")
+            .deterministic
+    );
+
+    scenario.assertions[0].counter_equals = Some(99);
+    let failed = evaluate_scenario(&scenario).expect("failed assertions should be reported");
+    assert!(!failed.ok);
+    assert_eq!(failed.trace.total_ticks, scenario.ticks);
+    assert!(!failed.assertions[0].ok);
 }
 
 #[test]

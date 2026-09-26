@@ -126,7 +126,7 @@
       "checks": [
         "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift"
       ],
-      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 3 rejects mismatched content; optional HMAC supplies client authentication on either profile.",
+      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 4 rejects mismatched content; optional HMAC supplies client authentication on either profile.",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -325,7 +325,18 @@
         "game_documents integration tests",
         "graphical --capture-game smoke"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors."
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors."
+    },
+    "custom_clients": {
+      "files": [
+        "examples/custom_client.rs",
+        "docs/CUSTOM_CLIENT.md",
+        "src/prelude.rs"
+      ],
+      "checks": [
+        "cargo check --locked --example custom_client"
+      ],
+      "note": "Documented application-owned window/render/input boundary over BlueEngine-owned fixed simulation, including the supported Macroquad version for external crates."
     },
     "mcp": {
       "files": [
@@ -401,12 +412,14 @@
     },
     "simulation_scenarios": {
       "files": [
-        "src/viewer/scenario.rs"
+        "src/viewer/scenario.rs",
+        "docs/BEHAVIORAL_TESTING.md",
+        "assets/games/three-switches/scenario.json"
       ],
       "checks": [
         "headless simulation scenarios and replay trace verification"
       ],
-      "note": "Headless scenario runner with multi-player scripted inputs and bit-for-bit deterministic replay trace divergence debugger.",
+      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics.",
       "evidence": [
         {
           "suite": "toolchain",

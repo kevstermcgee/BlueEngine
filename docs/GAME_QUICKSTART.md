@@ -29,15 +29,21 @@ A rule example:
 ```
 
 Actions: `increment(counter,amount)`, `set_counter(counter,value)`,
-`set_enabled(entity,enabled)`, `set_mover(mover,open)`, `start_timer(timer)`, `stop_timer(timer)`, `complete`. Optional condition: `{"counter":"switches","equals":3}`.
+`set_enabled(entity,enabled)`, `set_visible(entity,visible)`, `set_mover(mover,open)`, `start_timer(timer)`, `stop_timer(timer)`, `complete`. Optional condition: `{"counter":"switches","equals":3}`.
 Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
 `on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.
 Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete ends interactions.
-Enabled controls interaction and trigger zone eligibility. Kinematic `movers` smoothly translate box colliders
+Enabled controls interaction and trigger zone eligibility. Visibility is separately
+replicated for interactable geometry and never changes collision or eligibility; use
+both actions when an object should disappear and stop responding. Kinematic `movers` smoothly translate box colliders
 between closed and open states over `duration_ticks`, dynamically blocking or opening pathways for players.
 `timers` provide deterministic fixed-tick countdowns (`duration_ticks`, `auto_start`, `repeats`) to dispatch delayed actions.
 Targets require line of sight within 2.5 metres. Limits: 8 counters, 16 targets/zones, 16 movers, 16 timers, 16 rules,
 4 actions/rule, 8 spawns; counters clamp to +/-1,000,000. No arbitrary scripts or irregular geometry mutation.
+
+Run input-driven assertions against the real public boundary with
+`be2-tools sim assets/games/three-switches/scenario.json`; see
+[behavioral testing](BEHAVIORAL_TESTING.md).
 
 Multiplayer development: launch `be2-headless --game my-game/game.json --server 127.0.0.1:7777 --transport development`,
 then `be2 --game my-game/game.json --connect 127.0.0.1:7777 --transport development` for each client.

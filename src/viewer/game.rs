@@ -44,6 +44,9 @@ pub struct SpawnPoint {
 pub struct Interactable {
     pub entity: String,
     pub enabled: bool,
+    /// Presentation state only. Hidden targets retain collision and interaction eligibility.
+    #[serde(default = "default_true")]
+    pub visible: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -86,6 +89,7 @@ pub enum GameAction {
     Increment { counter: String, amount: i32 },
     SetCounter { counter: String, value: i32 },
     SetEnabled { entity: String, enabled: bool },
+    SetVisible { entity: String, visible: bool },
     SetMover { mover: String, open: bool },
     StartTimer { timer: String },
     StopTimer { timer: String },
@@ -358,6 +362,7 @@ impl GameDocument {
                     GameAction::SetEnabled { entity, .. } => {
                         target_exists(entity) || zone_exists(entity)
                     }
+                    GameAction::SetVisible { entity, .. } => target_exists(entity),
                     GameAction::SetMover { mover, .. } => mover_exists(mover),
                     GameAction::StartTimer { timer } | GameAction::StopTimer { timer } => {
                         timer_exists(timer)
@@ -379,7 +384,10 @@ impl GameDocument {
 pub struct GameState {
     pub counters: Vec<i32>,
     pub enabled: u16,
-    #[serde(default)]
+    /// Visible interactable geometry. This never changes collision or eligibility.
+    #[serde(default, rename = "v", alias = "visible")]
+    pub visible: u16,
+    #[serde(default, rename = "z", alias = "enabled_zones")]
     pub enabled_zones: u16,
     #[serde(default)]
     pub mover_targets: u16,
@@ -399,6 +407,7 @@ enum Effect {
     Increment(usize, i32),
     Set(usize, i32),
     EnableInteractable(usize, bool),
+    SetVisible(usize, bool),
     EnableZone(usize, bool),
     SetMover(usize, bool),
     StartTimer(usize),
@@ -424,6 +433,13 @@ fn apply_effects(state: &mut GameState, effects: &[Effect]) {
                     state.enabled |= 1 << i;
                 } else {
                     state.enabled &= !(1 << i);
+                }
+            }
+            Effect::SetVisible(i, visible) => {
+                if visible {
+                    state.visible |= 1 << i;
+                } else {
+                    state.visible &= !(1 << i);
                 }
             }
             Effect::EnableZone(i, enabled) => {
@@ -556,6 +572,9 @@ impl GameRuntime {
                             panic!("Validated action target missing: {}", entity);
                         }
                     }
+                    GameAction::SetVisible { entity, visible } => {
+                        Effect::SetVisible(target_index[entity.as_str()], *visible)
+                    }
                     GameAction::SetMover { mover, open } => {
                         Effect::SetMover(mover_index[mover.as_str()], *open)
                     }
@@ -678,6 +697,12 @@ impl GameRuntime {
                 enabled_zones |= 1 << i;
             }
         }
+        let mut visible = 0;
+        for (i, target) in document.interactables.iter().enumerate() {
+            if target.visible {
+                visible |= 1 << i;
+            }
+        }
         let mut mover_targets = 0;
         for (i, mover) in document.movers.iter().enumerate() {
             if mover.initial_open {
@@ -693,6 +718,7 @@ impl GameRuntime {
         let state = GameState {
             counters: document.counters.values().copied().collect(),
             enabled,
+            visible,
             enabled_zones,
             mover_targets,
             active_timers,
@@ -904,6 +930,7 @@ impl GameRuntime {
                 .iter()
                 .any(|v| !(-MAX_COUNTER..=MAX_COUNTER).contains(v))
             || state.enabled & !mask(self.targets.len()) != 0
+            || state.visible & !mask(self.targets.len()) != 0
             || state.enabled_zones & !mask(self.trigger_zones.len()) != 0
             || state.mover_targets & !mask(self.movers.len()) != 0
             || state.active_timers & !mask(self.timers.len()) != 0
@@ -923,6 +950,23 @@ impl GameRuntime {
     }
     pub fn enabled(&self, index: usize) -> bool {
         index < self.targets.len() && self.state.enabled & (1 << index) != 0
+    }
+    pub fn visible(&self, index: usize) -> bool {
+        index < self.targets.len() && self.state.visible & (1 << index) != 0
+    }
+    pub fn enabled_entity(&self, entity: &str) -> Option<bool> {
+        self.document
+            .interactables
+            .iter()
+            .position(|target| target.entity == entity)
+            .map(|index| self.enabled(index))
+    }
+    pub fn visible_entity(&self, entity: &str) -> Option<bool> {
+        self.document
+            .interactables
+            .iter()
+            .position(|target| target.entity == entity)
+            .map(|index| self.visible(index))
     }
     pub fn zone_enabled(&self, index: usize) -> bool {
         index < self.trigger_zones.len() && self.state.enabled_zones & (1 << index) != 0

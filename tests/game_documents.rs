@@ -59,6 +59,53 @@ fn three_switches_unlock_exit_with_shared_deterministic_rules() {
 }
 
 #[test]
+fn visibility_is_replicated_but_independent_from_collision_and_eligibility() {
+    let loaded = fixture();
+    let button_collider = loaded.map.colliders["button-a"].clone();
+    let mut world = loaded.world().unwrap();
+    world.join(1);
+    assert_eq!(
+        world.game.as_ref().unwrap().visible_entity("button-a"),
+        Some(true)
+    );
+    press(&mut world, 1, -3.);
+    let game = world.game.as_ref().unwrap();
+    assert_eq!(game.visible_entity("button-a"), Some(false));
+    assert_eq!(game.enabled_entity("button-a"), Some(false));
+    assert!(
+        world
+            .room
+            .colliders
+            .iter()
+            .any(|collider| collider.min == button_collider.min
+                && collider.max == button_collider.max)
+    );
+
+    let mut presentation_only = fixture();
+    presentation_only.document.rules[0].actions =
+        vec![vesper3d::viewer::game::GameAction::SetVisible {
+            entity: "button-a".into(),
+            visible: false,
+        }];
+    let mut world = presentation_only.world().unwrap();
+    world.join(1);
+    press(&mut world, 1, -3.);
+    assert_eq!(
+        world.game.as_ref().unwrap().visible_entity("button-a"),
+        Some(false)
+    );
+    assert_eq!(
+        world.game.as_ref().unwrap().enabled_entity("button-a"),
+        Some(true)
+    );
+    press(&mut world, 1, -3.);
+    assert_eq!(
+        world.game.as_ref().unwrap().enabled_entity("button-a"),
+        Some(true)
+    );
+}
+
+#[test]
 fn validation_rejects_unknown_fields_references_duplicates_and_bad_spawns() {
     let loaded = fixture();
     let valid = loaded.document.clone();
@@ -269,21 +316,23 @@ fn game_state_mirror_rejects_reordered_or_invalid_snapshots_and_fits_budget() {
     let worst = GameState {
         counters: vec![-1_000_000; 8],
         enabled: u16::MAX,
+        visible: u16::MAX,
         enabled_zones: u16::MAX,
         mover_targets: u16::MAX,
         active_timers: u16::MAX,
         fired: u16::MAX,
         completed: true,
     };
+    let encoded = Packet::GameState {
+        tick: u64::MAX,
+        state: worst,
+    }
+    .encode()
+    .unwrap();
     assert!(
-        Packet::GameState {
-            tick: u64::MAX,
-            state: worst
-        }
-        .encode()
-        .unwrap()
-        .len()
-            < 256
+        encoded.len() < 256,
+        "game state packet is {} bytes",
+        encoded.len()
     );
 }
 

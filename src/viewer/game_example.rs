@@ -49,6 +49,10 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
                     entity: (*id).into(),
                     enabled: false,
                 },
+                GameAction::SetVisible {
+                    entity: (*id).into(),
+                    visible: false,
+                },
             ],
         });
     }
@@ -101,6 +105,7 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
             .map(|id| Interactable {
                 entity: (*id).into(),
                 enabled: *id != "exit",
+                visible: true,
             })
             .collect(),
         trigger_zones: Vec::new(),

@@ -29,7 +29,7 @@ matches, prediction, acknowledged deltas and per-player prop ownership. Executab
 name the raw, unencrypted UDP profile `development` and the pinned-certificate
 QUIC/TLS 1.3 profile `production`. Optional `--auth-key` adds client
 challenge-response, session tokens and replay protection to either profile. Protocol
-3 checks map content before creating a session.
+4 checks map/game content before creating a session and replicates presentation state.
 `client` gates graphics/audio; `offline` gates the inherited output renderer.
 
 - Feature-to-file/check lookup: tools/FEATURES.json (maintain this existing map).

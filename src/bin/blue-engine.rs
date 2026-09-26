@@ -330,7 +330,14 @@ async fn main() {
         }
     };
     let mut prop_view = prop_view::Props::new(&prop_physics);
-    let meshes = mesh::bake_tagged(&room.world, &room.render_tags());
+    let (meshes, game_meshes) = if let Some(game) = &game {
+        mesh::bake_tagged_entities(&room.world, &room.render_tags(), game.targets())
+    } else {
+        (
+            mesh::bake_tagged(&room.world, &room.render_tags()),
+            Vec::new(),
+        )
+    };
     let material = match mesh::material() {
         Ok(m) => m,
         Err(e) => {
@@ -339,7 +346,11 @@ async fn main() {
         }
     };
     let setup_seconds = started.elapsed().as_secs_f32();
-    let triangles: usize = meshes.iter().map(|m| m.indices.len() / 3).sum();
+    let triangles: usize = meshes
+        .iter()
+        .chain(game_meshes.iter().flatten())
+        .map(|m| m.indices.len() / 3)
+        .sum();
     let props_capture = args.iter().any(|a| a == "--capture-props");
     let motion_capture = args.iter().any(|a| a == "--capture-motion");
     let character_capture = args.iter().any(|a| a == "--capture-character");
@@ -1192,11 +1203,28 @@ async fn main() {
         for m in &meshes {
             draw_mesh(m);
         }
+        if let Some(game) = &game {
+            for (index, entity_meshes) in game_meshes.iter().enumerate() {
+                let moving = game
+                    .document()
+                    .movers
+                    .iter()
+                    .position(|mover| mover.entity == game.document().interactables[index].entity)
+                    .and_then(|mover| game.mover_progress(mover))
+                    .is_some_and(|progress| progress > 0.001);
+                if game.visible(index) && !moving {
+                    for mesh in entity_meshes {
+                        draw_mesh(mesh);
+                    }
+                }
+            }
+        }
         prop_view.draw(&prop_physics);
         gl_use_default_material();
         if let Some(game) = &game {
             let aimed = game
                 .target(&room, &controller)
+                .filter(|index| game.visible(*index))
                 .filter(|_| !game.state().completed);
             for (i, zone) in game.trigger_zones().iter().enumerate() {
                 let center = mesh::vec((zone.min + zone.max) * 0.5);
@@ -1209,6 +1237,9 @@ async fn main() {
                 draw_cube_wires(center, size, color);
             }
             for (i, target) in game.targets().iter().enumerate() {
+                if !game.visible(i) {
+                    continue;
+                }
                 let center = mesh::vec((target.min + target.max) * 0.5);
                 let size = mesh::vec(target.max - target.min);
                 if !game.enabled(i) {
@@ -1303,6 +1334,7 @@ async fn main() {
                 text(&status, 30., 70., 20., INK);
                 if let Some(index) = game
                     .target(&room, &controller)
+                    .filter(|index| game.visible(*index))
                     .filter(|_| !game.state().completed)
                 {
                     let target = &game.document().interactables[index].entity;
@@ -1412,6 +1444,7 @@ async fn main() {
             let (crosshair_color, crosshair_radius) = if let Some(game) = &game {
                 if let Some(target) = game
                     .target(&room, &controller)
+                    .filter(|index| game.visible(*index))
                     .filter(|_| !game.state().completed)
                 {
                     if game.enabled(target) {
@@ -1749,7 +1782,7 @@ async fn main() {
                 }
             {
                 let mean = samples.iter().sum::<f32>() / samples.len() as f32;
-                let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nvertices={}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\nwrench_hits={}\naudio_plays={}\n",platform_window::report(),screen_width(),screen_height(),meshes.iter().map(|m|m.vertices.len()).sum::<usize>(),meshes.len(),mean*1000.,wrench.hits,impact_audio.plays);
+                let report=format!("{}viewport={}x{}\nstartup_seconds={setup_seconds:.3}\ntriangles={triangles}\nvertices={}\nbatches={}\nmean_frame_ms={:.3}\ncaptured_eye_heights={captured_heights:?}\nwrench_hits={}\naudio_plays={}\n",platform_window::report(),screen_width(),screen_height(),meshes.iter().chain(game_meshes.iter().flatten()).map(|m|m.vertices.len()).sum::<usize>(),meshes.len()+game_meshes.iter().map(Vec::len).sum::<usize>(),mean*1000.,wrench.hits,impact_audio.plays);
                 let props_report:Vec<_> = prop_physics.props.iter().map(|p| serde_json::json!({"id":p.id,"position":[p.transform.p.0,p.transform.p.1,p.transform.p.2]})).collect();
                 let _ = std::fs::write(
                     dir.join("physics-report.json"),

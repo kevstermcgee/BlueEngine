@@ -14,7 +14,7 @@ play and HeadlessWorld; the server verifies range/occlusion and handles interact
 edges in stable player order. Conditions observe previous actions, once flags are
 match-wide, and completion stops subsequent interactions. No recursive dispatch.
 
-Protocol 3 fingerprints canonical game semantics plus initial map content (excluding
+Protocol 4 fingerprints canonical game semantics plus initial map content (excluding
 the map file location). Game state is a separate full snapshot at 20 Hz with monotonically
 accepted ticks. At maximum configured state it fits 256 bytes, so existing movement
 snapshot budgets remain independent. Repeated state recovers dropped packets; joins
@@ -26,8 +26,10 @@ Native describe/schema/example/validate make a source-free three-switches protot
 possible. Validation confines map references, checks spawn clearance and rejects
 unknown fields/references before starting physics. Controller profiles retain legacy
 Scientist/Feta behavior. Static targets must match box geometry/collision/entity bounds.
-Enabled means interaction eligibility, never physical door movement or visibility.
-Weapons remain demo code and are disabled in game mode. Timers, multiple profiles,
+Enabled means interaction eligibility. Visibility is a separate replicated bitset for
+interactable geometry; hiding never removes collision or eligibility, so rules commonly
+set both. Movers remain the physical transition mechanism. Weapons remain demo code
+and are disabled in game mode. Multiple profiles,
 triggers beyond E, durable event replay and arbitrary scripts are deferred.
 
 Evidence: tests/game_documents.rs covers shared deterministic transitions, real UDP

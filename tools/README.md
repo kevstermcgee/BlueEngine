@@ -116,7 +116,7 @@ Map schema v1 is for portable, static, matte primitive maps. It accepts unparent
 ## Simulation, tracing, and multiplayer verification
 
 - `sim SCENARIO.json [TRACE.json]` runs an authoritative headless simulation scenario and writes an execution trace.
-- `replay-trace TRACE.json` replays a simulation trace tick-by-tick and verifies deterministic state checksums.
+- `replay-trace TRACE.json [GAME.json]` replays a simulation trace tick-by-tick and verifies deterministic state checksums; game scenarios retain their resolved game path, and the optional argument overrides it.
 - `replay-test` runs an automated 120-tick determinism and state checkpoint verification test.
 - `net-test` runs deterministic multiplayer client-side prediction and server reconciliation under artificial network latency and packet loss.
 - `net-proxy LISTEN UPSTREAM [PRESET]` runs a live UDP network impairment proxy with Gilbert-Elliott burst loss, Gaussian latency/jitter (Box-Muller), packet duplication, and standard bad network presets (`bad-wifi`, `mobile-3g`, `satellite`, `congested-bursty`).

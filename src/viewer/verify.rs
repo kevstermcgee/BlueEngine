@@ -15,7 +15,7 @@ use super::{
     lint::lint_map,
     pathing::{execute_walk, Waypoint},
     reach::analyze_reach,
-    scenario::{run_scenario, Scenario},
+    scenario::run_scenario,
 };
 use crate::math::V;
 use serde::{Deserialize, Serialize};
@@ -240,11 +240,8 @@ pub fn verify_map(
     // 5. Scenario check if specified
     if let Some(scen_path) = &checks.scenario {
         let t_start = Instant::now();
-        let res = std::fs::read_to_string(scen_path)
-            .map_err(|e| format!("failed to read scenario {scen_path}: {e}"))
-            .and_then(|str| {
-                serde_json::from_str::<Scenario>(&str).map_err(|e| format!("parse error: {e}"))
-            })
+        let res = super::scenario::load_scenario(std::path::Path::new(scen_path))
+            .map_err(|e| format!("failed to load scenario {scen_path}: {e}"))
             .and_then(|scen| run_scenario(&scen).map(|_| ()).map_err(|e| e.to_string()));
 
         let (ok, detail) = match res {

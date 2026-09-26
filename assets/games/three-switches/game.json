@@ -38,19 +38,23 @@
   "interactables": [
     {
       "entity": "button-a",
-      "enabled": true
+      "enabled": true,
+      "visible": true
     },
     {
       "entity": "button-b",
-      "enabled": true
+      "enabled": true,
+      "visible": true
     },
     {
       "entity": "button-c",
-      "enabled": true
+      "enabled": true,
+      "visible": true
     },
     {
       "entity": "exit",
-      "enabled": false
+      "enabled": false,
+      "visible": true
     }
   ],
   "rules": [
@@ -69,6 +73,11 @@
           "action": "set_enabled",
           "entity": "button-a",
           "enabled": false
+        },
+        {
+          "action": "set_visible",
+          "entity": "button-a",
+          "visible": false
         }
       ]
     },
@@ -87,6 +96,11 @@
           "action": "set_enabled",
           "entity": "button-b",
           "enabled": false
+        },
+        {
+          "action": "set_visible",
+          "entity": "button-b",
+          "visible": false
         }
       ]
     },
@@ -105,6 +119,11 @@
           "action": "set_enabled",
           "entity": "button-c",
           "enabled": false
+        },
+        {
+          "action": "set_visible",
+          "entity": "button-c",
+          "visible": false
         }
       ]
     },

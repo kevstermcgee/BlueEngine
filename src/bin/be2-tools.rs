@@ -92,12 +92,13 @@ fn run() -> Result<()> {
             json!({
                 "ok":true,"schema_version":1,"schema_command":"game-schema", "example":"game-example NEW_DIRECTORY",
                 "event":"authoritative nearest-visible interaction within 2.5 metres (E intent), spatial trigger zones (on_enter/on_exit), or timers (on_timer)",
-                "actions":["increment","set_counter","set_enabled","set_mover","start_timer","stop_timer","complete"],
+                "actions":["increment","set_counter","set_enabled","set_visible","set_mover","start_timer","stop_timer","complete"],
                 "conditions":"counter equals integer; null means unconditional",
                 "limits":{"game_bytes":64000,"spawns":8,"counters":8,"interactables":16,"trigger_zones":16,"movers":16,"timers":16,"rules":16,"actions_per_rule":4,"counter_magnitude":1000000},
                 "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match",
                 "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds; trigger zones declare spatial AABB bounds; movers translate colliders smoothly",
                 "set_enabled":"interaction and trigger zone eligibility only; never changes visibility or collision",
+                "set_visible":"interactable presentation only; never changes eligibility or collision",
                 "profiles":"one shared validated movement profile; spawns use feet coordinates and round-robin server IDs",
                 "map":"relative child file inside game directory; loaded content participates in fingerprint",
                 "unsupported":["recursive events","custom weapon actions","per-player inventory"]
@@ -582,28 +583,37 @@ fn run() -> Result<()> {
             }
         }
         "sim" => {
-            let scen_bytes = std::fs::read(arg(1)?)?;
-            let scen: vesper3d::viewer::scenario::Scenario = serde_json::from_slice(&scen_bytes)?;
-            let (trace, _) = vesper3d::viewer::scenario::run_scenario(&scen)?;
-            let last_chk = trace.checkpoints.last().map(|c| c.checksum).unwrap_or(0);
+            let scen = vesper3d::viewer::scenario::load_scenario(std::path::Path::new(arg(1)?))?;
+            let report = vesper3d::viewer::scenario::evaluate_scenario(&scen)?;
+            let last_chk = report
+                .trace
+                .checkpoints
+                .last()
+                .map(|c| c.checksum)
+                .unwrap_or(0);
             if let Ok(trace_out) = arg(2) {
-                save(trace_out, &trace)?;
+                save(trace_out, &report.trace)?;
             }
             println!(
                 "{}",
                 json!({
-                    "ok": true,
+                    "ok": report.ok,
                     "scenario": scen.name,
-                    "ticks": trace.total_ticks,
-                    "final_checksum": format!("0x{:016x}", last_chk)
+                    "ticks": report.trace.total_ticks,
+                    "final_checksum": format!("0x{:016x}", last_chk),
+                    "assertions": report.assertions,
                 })
             );
+            if !report.ok {
+                std::process::exit(1);
+            }
         }
         "replay-trace" => {
             let trace_bytes = std::fs::read(arg(1)?)?;
             let trace: vesper3d::viewer::scenario::SimulationTrace =
                 serde_json::from_slice(&trace_bytes)?;
-            let rep = vesper3d::viewer::scenario::verify_replay_trace(&trace, None)?;
+            let game_path = arg(2).ok();
+            let rep = vesper3d::viewer::scenario::verify_replay_trace(&trace, game_path)?;
             println!("{}", serde_json::to_string_pretty(&rep)?);
             if !rep.deterministic {
                 std::process::exit(1);

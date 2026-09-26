@@ -39,7 +39,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("line", "MAP.json KIND COUNT X1,Z1,X2,Z2 OUT.json"),
     ("verify", "MAP.json [CHECKS.json]"),
     ("sim", "SCENARIO.json [TRACE.json]"),
-    ("replay-trace", "TRACE.json"),
+    ("replay-trace", "TRACE.json [GAME.json]"),
     ("src", "ACTION [QUERY]"),
     ("new-game", "NAME DIRECTORY"),
     ("ui-check", ""),

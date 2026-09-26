@@ -69,7 +69,7 @@ keyframes provide another recovery path. Replication includes prop orientation,
 velocities, sleeping state and holder. Combat resolves nearer static geometry before
 applying prop impulses. Constants in weapons.rs/wrench.rs define ranges/cooldowns.
 
-Protocol 3 requires the initial content fingerprint, captured before physics
+Protocol 4 requires the initial content fingerprint, captured before physics
 extraction from scene, collision, semantic data and the spatial graph. HashMap/HashSet
 contents are canonicalized. Mismatched content and full servers are rejected before
 session allocation. The client displays the rejection. Old clients must rebuild.
@@ -104,9 +104,17 @@ adapter is implemented. [ADRs](docs/adr/README.md) record settled boundaries.
 
 GameDocument v1 (`viewer/game.rs`) compiles validated rules to indices, separate from
 MapDocument geometry. `viewer/profile.rs` supplies movement dimensions and speeds.
-Local play and HeadlessWorld share ordered interaction transitions. Protocol 3 adds
+Local play and HeadlessWorld share ordered interaction transitions. Protocol 4 adds
 game semantics to the content fingerprint and repeats bounded full GameState snapshots
-independently of movement deltas. See docs/GAME_QUICKSTART.md and ADR 0007.
+independently of movement deltas. Interactable visibility is replicated separately
+from eligibility and never changes collision; the stock client bakes those semantic
+boxes into independently drawable batches. See docs/GAME_QUICKSTART.md and ADR 0007.
+
+`viewer/scenario.rs` is the reusable behavioral-driver boundary. Timestamped public
+inputs drive real fixed ticks, while structured outcomes inspect positions, counters,
+completion, eligibility and visibility. Scenario-relative game paths keep committed
+tests portable; replay traces remain a determinism diagnostic rather than a behavior
+oracle.
 
 Player overlap recovery handles props dropped/moved into a character before movement.
 It chooses the nearest clear horizontal candidate within four metres, preserves feet

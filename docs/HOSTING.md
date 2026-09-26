@@ -27,7 +27,7 @@ target/release/be2 --connect 127.0.0.1:4000 --transport development --map assets
 ```
 
 Use `--game FILE` instead of `--map FILE` for a GameDocument. Do not pass both.
-Protocol 3 rejects clients whose initial map/game fingerprint differs from the server.
+Protocol 4 rejects clients whose initial map/game fingerprint differs from the server.
 
 These development commands preserve compatibility and need no certificate. Do not
 expose this profile as a production Internet service.

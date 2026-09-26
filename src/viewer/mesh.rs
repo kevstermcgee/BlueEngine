@@ -13,12 +13,34 @@ pub fn bake(world: &World) -> Vec<Mesh> {
     bake_tagged(world, &[])
 }
 pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -> Vec<Mesh> {
-    let mut meshes = vec![Mesh {
-        vertices: vec![],
-        indices: vec![],
-        texture: None,
-    }];
+    bake_tagged_entities(world, tags, &[]).0
+}
+
+/// Bake selected semantic boxes separately so a client can change their presentation
+/// without rebuilding the static world. Entity order in the result matches `entities`.
+pub fn bake_tagged_entities(
+    world: &World,
+    tags: &[(super::controller::Collider, f32)],
+    entity_bounds: &[super::controller::Collider],
+) -> (Vec<Mesh>, Vec<Vec<Mesh>>) {
+    let new_group = || {
+        vec![Mesh {
+            vertices: vec![],
+            indices: vec![],
+            texture: None,
+        }]
+    };
+    let mut groups: Vec<Vec<Mesh>> = (0..=entity_bounds.len()).map(|_| new_group()).collect();
     for instance in &world.instances {
+        let same_bounds = |bounds: &super::controller::Collider| {
+            (instance.bounds.lo - bounds.min).length() < 0.001
+                && (instance.bounds.hi - bounds.max).length() < 0.001
+        };
+        let group = entity_bounds
+            .iter()
+            .position(same_bounds)
+            .map_or(0, |index| index + 1);
+        let meshes = &mut groups[group];
         let center = (instance.bounds.lo + instance.bounds.hi) * 0.5;
         let tag = tags
             .iter()
@@ -143,26 +165,29 @@ pub fn bake_tagged(world: &World, tags: &[(super::controller::Collider, f32)]) -
         }
     }
     // Exact vertex sharing preserves normals, material tags and baked illumination.
-    for mesh in &mut meshes {
-        let mut seen = std::collections::HashMap::new();
-        let mut unique: Vec<Vertex> = Vec::new();
-        for index in &mut mesh.indices {
-            let v = mesh.vertices[*index as usize];
-            let key = (
-                v.position.to_array().map(f32::to_bits),
-                v.normal.to_array().map(f32::to_bits),
-                v.uv.to_array().map(f32::to_bits),
-                v.color,
-            );
-            *index = *seen.entry(key).or_insert_with(|| {
-                let i = unique.len() as u16;
-                unique.push(v);
-                i
-            });
+    for meshes in &mut groups {
+        for mesh in meshes {
+            let mut seen = std::collections::HashMap::new();
+            let mut unique: Vec<Vertex> = Vec::new();
+            for index in &mut mesh.indices {
+                let v = mesh.vertices[*index as usize];
+                let key = (
+                    v.position.to_array().map(f32::to_bits),
+                    v.normal.to_array().map(f32::to_bits),
+                    v.uv.to_array().map(f32::to_bits),
+                    v.color,
+                );
+                *index = *seen.entry(key).or_insert_with(|| {
+                    let i = unique.len() as u16;
+                    unique.push(v);
+                    i
+                });
+            }
+            mesh.vertices = unique;
         }
-        mesh.vertices = unique;
     }
-    meshes
+    let entity_groups = groups.split_off(1);
+    (groups.pop().unwrap_or_default(), entity_groups)
 }
 
 fn shade(world: &World, instance: &Instance, p: V, n: V) -> V {

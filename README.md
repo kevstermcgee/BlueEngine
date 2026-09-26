@@ -11,6 +11,8 @@ fixture is **Blue Test Lab**; furnished legacy maps remain reusable reference as
 - Content authors: `python tools/author.py describe`, then [tools/AUTHORING.md](tools/AUTHORING.md).
 - Native discovery: `be2-tools describe`, `be2-tools search multiplayer`, `be2-tools catalog`.
 - Rust prototypes: [30-line quickstart](docs/AI_QUICKSTART.md), `cargo run --locked --no-default-features --example prototype`.
+- Custom presentation: [visible-client boundary](docs/CUSTOM_CLIENT.md), `cargo run --locked --example custom_client`.
+- Behavioral tests: [scripted headless scenarios](docs/BEHAVIORAL_TESTING.md).
 - Engine maintenance: [AGENTS.md](AGENTS.md), [current architecture](BE2_ARCHITECTURE.md), [decisions](docs/adr/README.md).
 
 Cargo package/binaries remain `be2`; the library remains `vesper3d` for compatibility.
@@ -28,7 +30,7 @@ cargo run --locked --no-default-features --bin be2-tools -- export-lab lab.json
 cargo run --locked --bin be2 -- --map lab.json
 ```
 
-Use the same map on both peers. Protocol 3 rejects different initial content.
+Use the same map/game on both peers. Protocol 4 rejects different initial content.
 Output files must be new. `export-house` and assets/maps/starters retain reference maps.
 WASD/arrows move, mouse looks, Space jumps, Ctrl/C crouches, E carries/drops,
 left click uses the demo tool, scroll selects tools, Q changes perspective, Esc pauses.

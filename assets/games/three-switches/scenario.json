@@ -1,0 +1,22 @@
+{
+  "name": "press first switch",
+  "game_path": "game.json",
+  "ticks": 2,
+  "players": [
+    { "id": 1 }
+  ],
+  "inputs": [
+    { "tick": 1, "player": 1, "yaw": 0.0, "pitch": 0.0, "interact": true }
+  ],
+  "assertions": [
+    {
+      "tick": 1,
+      "counter": "switches",
+      "counter_equals": 1,
+      "target": "button-a",
+      "enabled_equals": false,
+      "visible_equals": false,
+      "completed_equals": false
+    }
+  ]
+}
