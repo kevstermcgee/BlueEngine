@@ -7,9 +7,8 @@
 use crate::math::V;
 use crate::viewer::{
     net::{
-        random_nonce, random_salt, random_token, verify_auth_proof, ConnectionNonce,
-        DatagramTransport, HandshakeLimiter, Packet, SessionRegistry, SessionToken, UdpTransport,
-        PROTOCOL_VERSION,
+        random_auth_challenge, verify_auth_proof, ConnectionNonce, DatagramTransport,
+        HandshakeLimiter, Packet, SessionRegistry, SessionToken, UdpTransport, PROTOCOL_VERSION,
     },
     simulation::HeadlessWorld,
     test_lab::{SPAWN_PLAYER_1, SPAWN_PLAYER_2},
@@ -148,8 +147,19 @@ impl<T: DatagramTransport> DedicatedServer<T> {
 
         // If authentication key is required, send cryptographic AuthChallenge
         if self.auth_key.is_some() {
-            let nonce = random_nonce().unwrap_or([req_id, now.elapsed().as_nanos() as u64]);
-            let salt = random_salt().unwrap_or([0u8; 16]);
+            let (nonce, salt) = match random_auth_challenge() {
+                Ok(challenge) => challenge,
+                Err(detail) => {
+                    eprintln!("[Server] Rejected authentication challenge for {src}: {detail}");
+                    let _ = self.transport.send_packet(
+                        &Packet::Rejected {
+                            reason: "Server could not create secure credentials".into(),
+                        },
+                        src,
+                    );
+                    return;
+                }
+            };
             self.pending_challenges.insert(src, (nonce, salt, now));
             let challenge = Packet::AuthChallenge { nonce, salt };
             let _ = self.transport.send_packet(&challenge, src);
@@ -195,10 +205,23 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             return;
         }
 
-        let token = random_token().unwrap_or([player_id, 0xcafe]);
-        let _ = self
+        let token = match self
             .session_registry
-            .register(src, [player_id, 0], now, player_id);
+            .register(src, [player_id, 0], now, player_id)
+        {
+            Ok(token) => token,
+            Err(error) => {
+                self.world.leave(player_id);
+                eprintln!("[Server] Could not register client from {src}: {error}");
+                let _ = self.transport.send_packet(
+                    &Packet::Rejected {
+                        reason: format!("Could not create session: {error}"),
+                    },
+                    src,
+                );
+                return;
+            }
+        };
 
         self.clients.insert(src, player_id);
         self.sessions.insert(
@@ -330,8 +353,20 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             return;
         }
 
-        let token = random_token().unwrap_or([assigned_id, 0xcafe]);
-        let _ = self.session_registry.register(src, nonce, now, assigned_id);
+        let token = match self.session_registry.register(src, nonce, now, assigned_id) {
+            Ok(token) => token,
+            Err(error) => {
+                self.world.leave(assigned_id);
+                eprintln!("[Server] Could not register authenticated client from {src}: {error}");
+                let _ = self.transport.send_packet(
+                    &Packet::Rejected {
+                        reason: format!("Could not create session: {error}"),
+                    },
+                    src,
+                );
+                return;
+            }
+        };
 
         self.clients.insert(src, assigned_id);
         self.sessions.insert(
@@ -405,6 +440,8 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                                 continue;
                             }
                             session.last_seen = Instant::now();
+                            self.session_registry
+                                .touch(&session.session_token, session.last_seen);
                             session.last_client_tick = frame.client_tick;
                             session.last_input_tick = self.world.tick;
                             if frame.ack_server_tick > session.last_acked_tick {
@@ -467,6 +504,8 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                                 continue;
                             }
                             session.last_seen = Instant::now();
+                            self.session_registry
+                                .touch(&session.session_token, session.last_seen);
                             session.last_client_tick = frame.client_tick;
                             session.last_input_tick = self.world.tick;
                             if frame.ack_server_tick > session.last_acked_tick {
@@ -528,7 +567,6 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                     if self.clients.get(&src) == Some(&player_id) {
                         if let Some(session) = self.sessions.get(&player_id) {
                             if self.auth_key.is_some()
-                                && session_token.is_some()
                                 && session_token != Some(session.session_token)
                             {
                                 eprintln!(
@@ -563,15 +601,12 @@ impl<T: DatagramTransport> DedicatedServer<T> {
 
     /// Check for timed-out client sessions and remove them from the world.
     pub fn check_timeouts(&mut self) -> Vec<u64> {
-        let timeout = self.client_timeout;
-        let mut timed_out = Vec::new();
-        for (&id, session) in &self.sessions {
-            if session.last_seen.elapsed() > timeout {
-                timed_out.push((id, session.addr));
-            }
-        }
+        self.session_registry.set_timeout(self.client_timeout);
+        let timed_out = self.session_registry.evict_timeouts(Instant::now());
         let mut ids = Vec::new();
-        for (id, addr) in timed_out {
+        for entry in timed_out {
+            let id = entry.data;
+            let addr = entry.peer;
             self.world.leave(id);
             self.sessions.remove(&id);
             self.clients.remove(&addr);

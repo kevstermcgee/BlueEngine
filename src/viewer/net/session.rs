@@ -101,6 +101,10 @@ impl<T> SessionRegistry<T> {
         self.sessions.len() >= self.max_sessions
     }
 
+    pub fn set_timeout(&mut self, timeout: Duration) {
+        self.timeout = timeout;
+    }
+
     pub fn get(&self, token: &SessionToken) -> Option<&SessionEntry<T>> {
         self.sessions.get(token)
     }
@@ -131,21 +135,42 @@ impl<T> SessionRegistry<T> {
         now: Instant,
         data: T,
     ) -> crate::Result<SessionToken> {
+        self.register_with_token_source(peer, nonce, now, data, random_token)
+    }
+
+    fn register_with_token_source<F>(
+        &mut self,
+        peer: SocketAddr,
+        nonce: ConnectionNonce,
+        now: Instant,
+        data: T,
+        mut token_source: F,
+    ) -> crate::Result<SessionToken>
+    where
+        F: FnMut() -> crate::Result<SessionToken>,
+    {
         // If this peer already has an active session with matching nonce, return existing token
-        if let Some(existing_token) = self.peer_index.get(&peer) {
-            if let Some(entry) = self.sessions.get_mut(existing_token) {
+        let existing_token = self.peer_index.get(&peer).copied();
+        if let Some(existing_token) = existing_token {
+            if let Some(entry) = self.sessions.get_mut(&existing_token) {
                 if entry.nonce == nonce {
                     entry.last_seen = now;
-                    return Ok(*existing_token);
+                    return Ok(existing_token);
                 }
             }
         }
 
-        if self.is_full() {
+        // Rebinding a known peer replaces its old entry and therefore does not consume
+        // another capacity slot. Generate the replacement credential before mutating
+        // either index so an entropy failure leaves the registry unchanged.
+        if existing_token.is_none() && self.is_full() {
             return Err("Server session capacity reached".into());
         }
 
-        let token = random_token()?;
+        let token = token_source()?;
+        if self.sessions.contains_key(&token) {
+            return Err("OS randomness produced a duplicate session token".into());
+        }
         let entry = SessionEntry {
             peer,
             nonce,
@@ -156,6 +181,9 @@ impl<T> SessionRegistry<T> {
             data,
         };
 
+        if let Some(existing_token) = existing_token {
+            self.sessions.remove(&existing_token);
+        }
         self.sessions.insert(token, entry);
         self.peer_index.insert(peer, token);
         Ok(token)
@@ -228,6 +256,25 @@ pub fn random_salt() -> crate::Result<[u8; 16]> {
 /// Generate random connection nonce.
 pub fn random_nonce() -> crate::Result<ConnectionNonce> {
     random_token()
+}
+
+/// Generate all random material for one authentication challenge.
+///
+/// No challenge is returned unless both the nonce and salt were obtained from
+/// the operating system random source.
+pub fn random_auth_challenge() -> crate::Result<(ConnectionNonce, [u8; 16])> {
+    auth_challenge_with_sources(random_nonce, random_salt)
+}
+
+fn auth_challenge_with_sources<N, S>(
+    mut nonce_source: N,
+    mut salt_source: S,
+) -> crate::Result<(ConnectionNonce, [u8; 16])>
+where
+    N: FnMut() -> crate::Result<ConnectionNonce>,
+    S: FnMut() -> crate::Result<[u8; 16]>,
+{
+    Ok((nonce_source()?, salt_source()?))
 }
 
 /// Constant-time slice comparison to prevent timing side channels.
@@ -384,6 +431,101 @@ pub fn verify_auth_proof(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn peer(port: u16) -> SocketAddr {
+        SocketAddr::from(([127, 0, 0, 1], port))
+    }
+
+    #[test]
+    fn registry_rebind_and_cleanup_keep_both_indexes_consistent() {
+        let now = Instant::now();
+        let mut registry = SessionRegistry::new(1, Duration::from_millis(10));
+        let first = registry
+            .register_with_token_source(peer(4000), [1, 0], now, 7, || Ok([10, 11]))
+            .unwrap();
+        assert_eq!(registry.get_by_peer(&peer(4000)).unwrap().token, first);
+
+        let rebound = registry
+            .register_with_token_source(peer(4000), [2, 0], now, 7, || Ok([20, 21]))
+            .unwrap();
+        assert_ne!(first, rebound);
+        assert_eq!(registry.count(), 1);
+        assert!(registry.get(&first).is_none());
+        assert_eq!(registry.get_by_peer(&peer(4000)).unwrap().token, rebound);
+
+        assert_eq!(registry.remove(&rebound).unwrap().data, 7);
+        assert_eq!(registry.count(), 0);
+        assert!(registry.get_by_peer(&peer(4000)).is_none());
+    }
+
+    #[test]
+    fn registry_randomness_failure_is_atomic_and_fails_closed() {
+        let now = Instant::now();
+        let mut registry = SessionRegistry::new(1, Duration::from_secs(5));
+        let token = registry
+            .register_with_token_source(peer(4001), [1, 0], now, 1, || Ok([30, 31]))
+            .unwrap();
+
+        let error = registry
+            .register_with_token_source(peer(4001), [2, 0], now, 2, || {
+                Err("simulated entropy failure".into())
+            })
+            .unwrap_err();
+        assert!(error.to_string().contains("entropy failure"));
+        assert_eq!(registry.count(), 1);
+        assert_eq!(registry.get(&token).unwrap().data, 1);
+        assert_eq!(registry.get_by_peer(&peer(4001)).unwrap().token, token);
+    }
+
+    #[test]
+    fn registry_timeout_eviction_clears_peer_index_for_reuse() {
+        let now = Instant::now();
+        let mut registry = SessionRegistry::new(1, Duration::from_millis(10));
+        registry
+            .register_with_token_source(peer(4002), [1, 0], now, 3, || Ok([40, 41]))
+            .unwrap();
+
+        let expired = registry.evict_timeouts(now + Duration::from_millis(11));
+        assert_eq!(expired.len(), 1);
+        assert_eq!(expired[0].data, 3);
+        assert_eq!(registry.count(), 0);
+        assert!(registry.get_by_peer(&peer(4002)).is_none());
+
+        registry
+            .register_with_token_source(peer(4003), [1, 0], now, 4, || Ok([50, 51]))
+            .unwrap();
+        assert_eq!(registry.count(), 1);
+    }
+
+    #[test]
+    fn repeated_join_disconnect_cycles_do_not_exhaust_registry_capacity() {
+        let now = Instant::now();
+        let mut registry = SessionRegistry::new(2, Duration::from_secs(5));
+        for sequence in 0..10u64 {
+            let token = registry
+                .register_with_token_source(peer(4100), [sequence, 0], now, sequence, || {
+                    Ok([sequence + 100, sequence + 200])
+                })
+                .unwrap();
+            assert_eq!(registry.count(), 1);
+            assert_eq!(registry.remove(&token).unwrap().data, sequence);
+            assert_eq!(registry.count(), 0);
+            assert!(registry.get_by_peer(&peer(4100)).is_none());
+        }
+    }
+
+    #[test]
+    fn authentication_challenge_fails_when_either_random_source_fails() {
+        let nonce_failure =
+            auth_challenge_with_sources(|| Err("nonce entropy unavailable".into()), || Ok([7; 16]))
+                .unwrap_err();
+        assert!(nonce_failure.to_string().contains("nonce entropy"));
+
+        let salt_failure =
+            auth_challenge_with_sources(|| Ok([1, 2]), || Err("salt entropy unavailable".into()))
+                .unwrap_err();
+        assert!(salt_failure.to_string().contains("salt entropy"));
+    }
 
     #[test]
     fn test_sha256_known_vector() {

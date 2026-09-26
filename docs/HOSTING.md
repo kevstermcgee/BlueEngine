@@ -63,8 +63,11 @@ target/release/be2 --connect server.example:4000 --transport production --map as
 This mode uses HMAC-SHA256 challenge-response: the client sends a derived proof, not
 the secret itself.
 The server issues a session token, authenticates later datagrams and rejects replayed
-packets. TLS authenticates the server; `--auth-key` adds application-level client
-authentication. QUIC encrypts payloads but does not hide addresses, packet sizes or
+packets. A keyed disconnect must include that exact token; missing or incorrect
+credentials are rejected. If the operating system cannot provide secure randomness,
+the server rejects the handshake instead of issuing predictable credentials. TLS
+authenticates the server; `--auth-key` adds application-level client authentication.
+QUIC encrypts payloads but does not hide addresses, packet sizes or
 traffic timing, provide accounts, or migrate BlueEngine sessions to a new address.
 
 ## Network setup
