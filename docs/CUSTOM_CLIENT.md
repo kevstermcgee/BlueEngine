@@ -32,3 +32,5 @@ tests pass.
 The example draws deliberately simple application-owned geometry. It is an integration
 boundary, not a second stock renderer. Use `be2 --game` when document-driven presentation
 is sufficient, including replicated target visibility and movers.
+
+Playable game presentation follows [the shared presentation contract](GAME_PRESENTATION.md). Use the `presentation` feature for `GameShell` and cached static rendering.

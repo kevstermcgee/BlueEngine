@@ -23,7 +23,8 @@ required-features = ["client"]
 [features]
 default = ["client", "offline"]
 offline = ["dep:png", "dep:ctrlc"]
-client = ["dep:macroquad", "dep:windows-sys"]
+presentation = ["dep:macroquad"]
+client = ["presentation", "dep:windows-sys"]
 
 [[bin]]
 name = "be2-headless"

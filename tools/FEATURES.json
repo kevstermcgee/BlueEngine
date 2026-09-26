@@ -519,6 +519,22 @@
         "new standalone game project scaffolding"
       ],
       "note": "Scaffolds complete, independent game repositories with pinned vesper3d dependency, blueprint, map, launcher, test scripts, and CI."
+    },
+    "game_presentation": {
+      "files": [
+        "src/viewer/game_client.rs",
+        "src/viewer/presentation.rs",
+        "docs/GAME_PRESENTATION.md",
+        "src/viewer/game_text.rs",
+        "src/viewer/game_visuals.rs",
+        "assets/ui/LICENSE_LIBERATION"
+      ],
+      "checks": [
+        "presentation module tests",
+        "BlueDM movement UDP regression",
+        "game still/menu captures and live controls"
+      ],
+      "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation."
     }
   }
 }

@@ -63,3 +63,7 @@ Use `assets/branding/blueengine.ico` as the official BlueEngine icon and
 explicitly specifies otherwise. This is the user-approved white rat on a blue tile,
 originally `scripts/test_lab.ico`. Preserve the artwork; do not regenerate, replace
 or redesign it as part of routine engine/game work. See assets/branding/README.md.
+
+For every playable game, follow docs/GAME_PRESENTATION.md. Use the shared GameShell for F fullscreen and Escape menus, keep the default HUD minimal, cache shaded geometry, and verify real movement/tick rate in optimized builds. Static games must explicitly opt out of automatic movable-prop simulation.
+
+For game UI use the immutable `game_text` atlas and verify readability after fullscreen changes. Camera extrapolation must sweep the real collision hull. Weapon art must have a recognizable silhouette and firing feedback; tiny flat rectangles are not a finished viewmodel.

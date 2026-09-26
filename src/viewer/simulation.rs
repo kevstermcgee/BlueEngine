@@ -101,6 +101,13 @@ pub struct HeadlessWorld {
     pub last_physics_time_us: f64,
 }
 impl HeadlessWorld {
+    /// Use authored static collision without promoting catalog objects to rigid bodies.
+    /// Choose this for games that do not replicate or render moving props. This keeps
+    /// server collision identical to the map shown by a static client.
+    pub fn with_static_room(room: Room) -> Self {
+        let content_hash = super::content::fingerprint(&room);
+        Self::from_initialized_room(room, None, content_hash)
+    }
     /// Build the default Blue Test Lab. Returns an error if map construction fails.
     pub fn new() -> crate::Result<Self> {
         Self::try_with_room(super::maps::build(super::maps::MapId::TestLab)?)

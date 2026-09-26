@@ -169,3 +169,7 @@ Character engine edits: `CharacterKind` / `Controller::for_character` in control
 
 
 Furniture clearance: runtime room loading replaces matching table/desk/chair/bench/workbench semantic envelopes with contained visible-part collision bounds. Use a furniture noun as the final label word (e.g. Student desk or Dining table). Keep the full entity envelope for selection/ownership. Solid pedestals remain solid. Existing shipped maps need no data rewrite. Tests: tests/furniture_clearance.rs; moved furniture ghost-proxy regression in prop_physics.rs.
+
+Playable game presentation follows [the shared presentation contract](../docs/GAME_PRESENTATION.md). Use the `presentation` feature for `GameShell` and cached static rendering.
+
+The same presentation feature exposes `game_text` for stable UI/signage, `game_visuals` for cached materials/weapons, and collision-safe local pose smoothing. See the contract for rendering order and authoritative-versus-cosmetic responsibilities.

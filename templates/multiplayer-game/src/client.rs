@@ -24,6 +24,7 @@ use vesper3d::viewer::{
 pub struct GameClient {
     pub ui: MenuUi,
     keys: Keys,
+    fullscreen: bool,
     controller: Controller,
     transport: Option<UdpTransport>,
     server_addr: Option<SocketAddr>,
@@ -47,6 +48,7 @@ impl GameClient {
         Ok(Self {
             ui: MenuUi::new(),
             keys: Keys::new(),
+            fullscreen: false,
             controller: Controller::for_character(CharacterKind::Scientist),
             transport: None,
             server_addr: None,
@@ -102,6 +104,10 @@ impl GameClient {
     pub fn update(&mut self) -> vesper3d::Result<bool> {
         let focused = foreground();
         self.keys.poll(focused);
+        if focused && (self.keys.pressed(KeyCode::F) || self.keys.pressed(KeyCode::F11)) {
+            self.fullscreen = !self.fullscreen;
+            set_fullscreen(self.fullscreen);
+        }
 
         // Receive network packets
         let dgrams = if let Some(ref mut t) = self.transport {
@@ -143,7 +149,7 @@ impl GameClient {
                                 }
                             }
 
-                            if state.phase == MatchPhase::Playing && self.ui.screen != AppScreen::Playing {
+                            if state.phase == MatchPhase::Playing && self.ui.screen != AppScreen::Playing && self.ui.screen != AppScreen::Paused {
                                 self.ui.screen = AppScreen::Playing;
                                 capture(true);
                             } else if state.phase == MatchPhase::Finished && self.ui.screen != AppScreen::Results {

@@ -57,15 +57,15 @@ tokio = {{ version = "1", features = ["full"] }}
             RoomSpec {
                 id: "lobby".into(),
                 rect: [-6.0, -4.0, 0.0, 4.0],
-                floor_color: Some([0.35, 0.40, 0.45]),
-                wall_color: None,
+                floor_color: Some([0.18, 0.30, 0.31]),
+                wall_color: Some([0.72, 0.64, 0.46]),
                 lamp: true,
             },
             RoomSpec {
                 id: "courtyard".into(),
                 rect: [0.0, -4.0, 8.0, 4.0],
-                floor_color: Some([0.45, 0.50, 0.40]),
-                wall_color: None,
+                floor_color: Some([0.42, 0.31, 0.18]),
+                wall_color: Some([0.72, 0.64, 0.46]),
                 lamp: true,
             },
         ],
@@ -162,7 +162,7 @@ case "$cmd" in
     cargo build --release
     ;;
   play)
-    cargo run
+    cargo run --release
     ;;
   *)
     echo "Usage: scripts/blue {check|build-all|play}"
@@ -185,7 +185,7 @@ switch ($cmd) {
         cargo build --release
     }
     "play" {
-        cargo run
+        cargo run --release
     }
     default {
         Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|play}"
@@ -216,6 +216,9 @@ switch ($cmd) {
         r#"# {name} - AI Agent Guide
 
 This is a standalone BlueEngine game project. **The engine is not duplicated in this repo**; it is pinned via `vesper3d` in `Cargo.toml`.
+
+## Presentation baseline
+Follow the engine docs/GAME_PRESENTATION.md: F fullscreen, Escape menu, minimal HUD, coherent map materials and fixed-step smooth motion.
 
 ## Working with Maps
 - Edit `blueprints/main.blueprint.json` to alter room layouts, doors, and prop placements.

@@ -1,5 +1,6 @@
 //! UI menus and HUD screens for the game template.
 use macroquad::prelude::*;
+use vesper3d::viewer::game_text::draw_text;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AppScreen {

@@ -2,6 +2,7 @@
 //! See docs/CUSTOM_CLIENT.md for the ownership boundary and external Cargo setup.
 use macroquad::prelude as mq;
 use vesper3d::prelude::*;
+use vesper3d::viewer::game_client::GameShell;
 
 #[macroquad::main("BlueEngine custom client")]
 async fn main() -> Result<()> {
@@ -15,16 +16,24 @@ async fn main() -> Result<()> {
     let mut yaw = 0.;
     let mut pitch = 0.;
     let mut accumulator = 0.;
+    let mut shell = GameShell::new();
     loop {
+        shell.begin_frame(true);
         let mouse = mq::mouse_delta_position();
-        yaw -= mouse.x * 0.0025;
-        pitch = (pitch - mouse.y * 0.0025).clamp(-1.4, 1.4);
-        let input = Movement {
-            forward: axis(mq::KeyCode::W, mq::KeyCode::S),
-            right: axis(mq::KeyCode::D, mq::KeyCode::A),
-            sprint: mq::is_key_down(mq::KeyCode::LeftShift),
-            jump: mq::is_key_pressed(mq::KeyCode::Space),
-            crouch: mq::is_key_down(mq::KeyCode::LeftControl),
+        if shell.playing() {
+            yaw -= mouse.x * 2.5;
+            pitch = (pitch + mouse.y * 2.5).clamp(-1.4, 1.4);
+        }
+        let input = if shell.playing() {
+            Movement {
+                forward: axis(mq::KeyCode::W, mq::KeyCode::S),
+                right: axis(mq::KeyCode::D, mq::KeyCode::A),
+                sprint: mq::is_key_down(mq::KeyCode::LeftShift),
+                jump: mq::is_key_pressed(mq::KeyCode::Space),
+                crouch: mq::is_key_down(mq::KeyCode::LeftControl),
+            }
+        } else {
+            Movement::default()
         };
         world.input(1, input, yaw, pitch);
 
@@ -66,9 +75,21 @@ async fn main() -> Result<()> {
             mq::draw_sphere(mq::vec3(ball.0, ball.1, ball.2), 0.2, None, mq::RED);
         }
         mq::set_default_camera();
-        mq::draw_text("WASD + mouse, Space, Shift, Ctrl", 20., 32., 24., mq::WHITE);
+        if shell.menu(
+            "BlueEngine",
+            &[
+                "WASD   Move",
+                "Mouse   Look",
+                "Space   Jump",
+                "Shift   Sprint    Ctrl   Crouch",
+                "F   Fullscreen    Esc   Menu",
+            ],
+        ) {
+            break;
+        }
         mq::next_frame().await;
     }
+    Ok(())
 }
 
 fn axis(positive: mq::KeyCode, negative: mq::KeyCode) -> f32 {
