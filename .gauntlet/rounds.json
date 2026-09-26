@@ -1,0 +1,12 @@
+{
+  "rounds": {
+    "BlueEngine-02": {
+      "date": "2026-09-26",
+      "commit": "a0f9ada86fbc4d7f2a65891a45f95c4571499fbd",
+      "combos": [
+        "slot4:turn-based-tactics+plan",
+        "stretch:save_resume"
+      ]
+    }
+  }
+}
