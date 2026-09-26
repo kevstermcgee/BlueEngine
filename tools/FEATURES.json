@@ -303,7 +303,7 @@
         "Riftwake two-client UDP smoke",
         "Riftwake graphical capture"
       ],
-      "note": "Opt-in, rendering-independent arena FPS layer: validated accelerated ground/air movement, friction, held-jump momentum chaining, 90-degree camera policy, launch volumes, timed pickups, deterministic projectiles and splash falloff, armor, free-for-all frags and fixed-tick respawns. Existing default movement remains unchanged."
+      "note": "Opt-in, rendering-independent arena FPS layer: validated accelerated ground/air movement, configurable grounded step-up, friction, held-jump momentum chaining, 90-degree camera policy, launch volumes, timed pickups, deterministic projectiles and splash falloff, armor, free-for-all frags and fixed-tick respawns. Existing default movement remains unchanged."
     },
     "prototype_api": {
       "files": [

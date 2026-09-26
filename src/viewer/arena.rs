@@ -28,6 +28,8 @@ pub struct ArenaMovementConfig {
     pub stop_speed: f32,
     pub gravity: f32,
     pub jump_speed: f32,
+    /// Maximum ledge height climbed during grounded horizontal movement.
+    pub step_height: f32,
     pub radius: f32,
     pub height: f32,
     pub eye_height: f32,
@@ -44,6 +46,7 @@ impl Default for ArenaMovementConfig {
             stop_speed: 2.5,
             gravity: 24.0,
             jump_speed: 8.2,
+            step_height: 0.46,
             radius: 0.34,
             height: 1.72,
             eye_height: 1.56,
@@ -62,6 +65,7 @@ impl ArenaMovementConfig {
             self.stop_speed,
             self.gravity,
             self.jump_speed,
+            self.step_height,
             self.radius,
             self.height,
             self.eye_height,
@@ -184,17 +188,13 @@ impl ArenaBody {
 
         let feet = self.feet();
         let dx = V(self.velocity.0 * dt, 0.0, 0.0);
-        if self.blocked(feet + dx, colliders) {
+        if !self.move_horizontal(feet, dx, colliders) {
             self.velocity.0 = 0.0;
-        } else {
-            self.position.0 += dx.0;
         }
         let feet = self.feet();
         let dz = V(0.0, 0.0, self.velocity.2 * dt);
-        if self.blocked(feet + dz, colliders) {
+        if !self.move_horizontal(feet, dz, colliders) {
             self.velocity.2 = 0.0;
-        } else {
-            self.position.2 += dz.2;
         }
 
         let old_feet = self.feet();
@@ -240,6 +240,39 @@ impl ArenaBody {
                 self.config.radius,
             )
         })
+    }
+
+    fn move_horizontal(&mut self, feet: V, delta: V, colliders: &[Collider]) -> bool {
+        let target = feet + delta;
+        if !self.blocked(target, colliders) {
+            self.position.0 += delta.0;
+            self.position.2 += delta.2;
+            return true;
+        }
+        if !self.grounded {
+            return false;
+        }
+        let mut step_top = feet.1;
+        for collider in colliders.iter().filter(|collider| {
+            collider.overlaps_body(
+                target + V(0.0, self.config.eye_height, 0.0),
+                target.1,
+                self.config.height,
+                self.config.radius,
+            )
+        }) {
+            let rise = collider.max.1 - feet.1;
+            if rise <= 0.001 || rise > self.config.step_height {
+                return false;
+            }
+            step_top = step_top.max(collider.max.1);
+        }
+        let stepped = V(target.0, step_top, target.2);
+        if self.blocked(stepped, colliders) {
+            return false;
+        }
+        self.position = stepped + V(0.0, self.config.eye_height, 0.0);
+        true
     }
 
     fn apply_friction(&mut self, dt: f32) {
@@ -555,6 +588,48 @@ mod tests {
         );
         assert!(!body.grounded);
         assert!(body.speed() >= before - 0.1);
+    }
+
+    #[test]
+    fn grounded_controller_climbs_box_stairs_without_jumping() {
+        let mut body = ArenaBody::spawn(V(0.0, 0.0, 1.2), 0.0, Default::default()).unwrap();
+        let colliders = [
+            Collider {
+                min: V(-2.0, -1.0, -4.0),
+                max: V(2.0, 0.0, 3.0),
+            },
+            Collider {
+                min: V(-1.0, 0.0, 0.2),
+                max: V(1.0, 0.3, 0.7),
+            },
+            Collider {
+                min: V(-1.0, 0.0, -0.3),
+                max: V(1.0, 0.6, 0.2),
+            },
+            Collider {
+                min: V(-1.0, 0.0, -10.0),
+                max: V(1.0, 0.9, -0.3),
+            },
+        ];
+        for _ in 0..35 {
+            body.step(
+                ArenaInput {
+                    forward: 1.0,
+                    ..Default::default()
+                },
+                1.0 / 60.0,
+                &colliders,
+            );
+        }
+        assert!(
+            body.feet().2 < -0.7,
+            "controller did not traverse the stairs"
+        );
+        assert!(
+            (body.feet().1 - 0.9).abs() < 0.01,
+            "unexpected stair height: {:?}",
+            body.feet()
+        );
     }
 
     #[test]

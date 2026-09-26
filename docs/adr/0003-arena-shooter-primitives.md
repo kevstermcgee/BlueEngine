@@ -15,7 +15,7 @@ into the default controller would change existing games and blur its contract.
 ## Decision
 
 `viewer::arena` is a rendering-independent, opt-in domain layer. It owns a validated
-fixed-step `ArenaBody`, explicit `LaunchVolume`, `TimedPickup`, deterministic `Projectile`
+fixed-step `ArenaBody` with configurable grounded step-up, explicit `LaunchVolume`, `TimedPickup`, deterministic `Projectile`
 and free-for-all `FragMatch`. It also declares the shared 90-degree arena camera default.
 Games retain presentation, map layout, weapon identity, collision-query policy and
 transport shells. The default controller and FPS/TDM foundation remain unchanged.
