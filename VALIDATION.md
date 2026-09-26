@@ -207,3 +207,29 @@ All four launcher JSON maps expanded to approximately 2x gross floor/yard area. 
 ## Feta furniture clearance (2026-09-23)
 
 Procedural and JSON room loading now refines table/desk/chair/bench collision envelopes into visible-part bounds. Tests cover Feta standing passage, Scientist exclusion, quarter-turn furniture, fixed/dynamic cases, solid legs and undersides, all four shipped map desks, and moved furniture without ghost proxies. Full seven-stage check passed: .be2-work/check-20260923T211414339288Z/report.json. Client/tools/headless release builds installed in bin, including BE2.exe and BE2-decor.exe; hashes/backups: .be2-work/feta-clearance. Four audits and all 46 shipped routes passed with packaged tools. School/Feta client capture and menu reviewed. Movement mappings and character dimensions are unchanged; no manual keyboard-input retest in this collision-only pass.
+
+
+## Native controllers — 2026-09-26
+
+Implemented optional gilrs input and stock-client bindings on Windows x64 with
+Rust 1.98.1. `python tools/be2.py check` passed all nine steps: formatting, both
+warning-free library rustdoc builds, 210 default-feature tests, 182 headless tests,
+both all-target Clippy configurations, headless dependency guard and authoring
+boundary check. The five controller tests also passed with only `gamepad` enabled
+(`cargo test --locked --no-default-features --features gamepad --lib gamepad`).
+Debug symbols and incremental compilation were disabled via local environment
+variables after the initial debug build exhausted disk space; no project build
+profile was changed.
+
+The Windows client completed `--studio --capture` and `--studio --capture-camera`;
+studio stills and the actual pause-menu capture were visually inspected at 960x600.
+Native backend initialization reported no error. These scripted captures do not
+exercise physical input or establish performance of an optimized build.
+
+No physical controller interaction was tested. Hot-plug/focus/edge behavior has
+unit coverage; real device mapping, both keyboard layouts, cursor recapture,
+controller menu navigation and simultaneous keyboard/mouse/controller use still
+need live acceptance testing. Linux/macOS builds and devices were not tested here.
+The stock executable's full foreground-process check remains Windows-specific.
+Settings sliders still require the mouse; custom games must adopt the documented
+input API. See docs/CONTROLLERS.md for bindings, platform prerequisites and scope.

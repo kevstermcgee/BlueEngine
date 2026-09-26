@@ -16,6 +16,7 @@ use vesper3d::{
     viewer::{
         camera::{CameraRig, Perspective},
         controller::{Controller, Movement},
+        gamepad::{Button as PadButton, GamepadFrame, Gamepads},
         maps::{self, MapId},
         mesh,
         net::{
@@ -416,6 +417,13 @@ async fn main() {
         Perspective::default()
     };
     let mut keys = Keys::default();
+    let mut gamepads = Gamepads::new()
+        .map_err(|error| {
+            eprintln!("Controller input unavailable: {error}");
+        })
+        .ok();
+    let mut menu_selection = 0usize;
+    let mut character_selection = 0usize;
     let subscriber = register_input_subscriber();
     let mut active = false;
     let mut settings_open = false;
@@ -778,6 +786,10 @@ async fn main() {
 
         let previous_position = controller.position;
         let focused = foreground();
+        let pad = gamepads
+            .as_mut()
+            .map(|pads| pads.poll(focused))
+            .unwrap_or_default();
         keys.poll(focused);
         repeat_all_miniquad_input(&mut keys, subscriber);
         if !focused {
@@ -804,7 +816,7 @@ async fn main() {
             maximize_pending = !fullscreen;
             skip_look = 3;
         }
-        if focused && keys.pressed(KeyCode::Q) {
+        if focused && (keys.pressed(KeyCode::Q) || pad.pressed(PadButton::North)) {
             perspective.toggle();
             skip_look = 3;
         }
@@ -816,7 +828,10 @@ async fn main() {
         }
         if character_chosen
             && focused
-            && (keys.pressed(KeyCode::Escape) || keys.pressed(KeyCode::Tab))
+            && (keys.pressed(KeyCode::Escape)
+                || keys.pressed(KeyCode::Tab)
+                || pad.pressed(PadButton::Start)
+                || (!active && pad.pressed(PadButton::East)))
         {
             if settings_open {
                 settings_open = false;
@@ -845,6 +860,15 @@ async fn main() {
             },
         );
         if active && capture_dir.is_none() {
+            // Do not let menu confirmation or held controls leak into the resume frame.
+            let gameplay_pad = if skip_look == 0 {
+                pad.clone()
+            } else {
+                GamepadFrame::default()
+            };
+            let interact = keys.pressed(KeyCode::E) || gameplay_pad.pressed(PadButton::West);
+            let fire = is_mouse_button_pressed(MouseButton::Left)
+                || gameplay_pad.pressed(PadButton::RightTrigger2);
             if skip_look > 0 {
                 skip_look -= 1;
             } else {
@@ -856,11 +880,13 @@ async fn main() {
                     invert,
                 );
             }
+            let look = gameplay_pad.look_delta(get_frame_time());
+            controller.look(look[0], look[1], 1., invert);
             // Preserve even a complete tap occurring between two rendered frames.
             let mut movement_keys = keys.down.clone();
             movement_keys.extend(keys.pressed.iter().copied());
             let (f, r) = axes(&movement_keys);
-            let movement = Movement {
+            let movement = gameplay_pad.movement(Movement {
                 forward: f,
                 right: r,
                 sprint: keys.down.contains(&KeyCode::LeftShift)
@@ -869,7 +895,7 @@ async fn main() {
                 crouch: movement_keys.contains(&KeyCode::LeftControl)
                     || movement_keys.contains(&KeyCode::RightControl)
                     || movement_keys.contains(&KeyCode::C),
-            };
+            });
             let simulation_steps =
                 stepper.advance(&mut controller, movement, get_frame_time(), &room.colliders);
             if let (Some(ref transport), Some(server_addr), Some(_)) =
@@ -881,13 +907,9 @@ async fn main() {
                     movement,
                     yaw: controller.yaw,
                     pitch: controller.pitch,
-                    fire_wrench: game.is_none()
-                        && is_mouse_button_pressed(MouseButton::Left)
-                        && loadout.selected == Weapon::Wrench,
-                    fire_pistol: game.is_none()
-                        && is_mouse_button_pressed(MouseButton::Left)
-                        && loadout.selected == Weapon::Pistol,
-                    interact: keys.pressed(KeyCode::E),
+                    fire_wrench: game.is_none() && fire && loadout.selected == Weapon::Wrench,
+                    fire_pistol: game.is_none() && fire && loadout.selected == Weapon::Pistol,
+                    interact,
                     ack_server_tick: client_acked_server_tick,
                     session_token: net_session_token,
                 };
@@ -896,7 +918,8 @@ async fn main() {
             }
             loadout.pistol.tick(get_frame_time());
             if loadout.scroll(
-                mouse_wheel().1,
+                mouse_wheel().1 + f32::from(gameplay_pad.pressed(PadButton::RightTrigger))
+                    - f32::from(gameplay_pad.pressed(PadButton::LeftTrigger)),
                 controller.character_kind(),
                 skip_look == 0 && active,
                 prop_physics.held().is_some(),
@@ -909,7 +932,7 @@ async fn main() {
                     active,
                     prop_physics.held().is_some(),
                 )
-                && is_mouse_button_pressed(MouseButton::Left)
+                && fire
             {
                 if loadout.selected == Weapon::Wrench {
                     wrench.start(active, skip_look == 0);
@@ -929,14 +952,14 @@ async fn main() {
                         game.step_movers(&mut room);
                         game.step_timers();
                     }
-                    pending_game_interaction |= keys.pressed(KeyCode::E) && skip_look == 0;
+                    pending_game_interaction |= interact && skip_look == 0;
                     if simulation_steps > 0 && std::mem::take(&mut pending_game_interaction) {
                         game.interact(&room, &controller, 1);
                     }
                     if simulation_steps > 0 {
                         game.step_triggers(&controller, 1);
                     }
-                } else if keys.pressed(KeyCode::E) && skip_look == 0 {
+                } else if interact && skip_look == 0 {
                     let ray = camera_rig
                         .view(perspective, &controller, &room)
                         .aim(&controller, &room);
@@ -1489,6 +1512,9 @@ async fn main() {
         }
 
         if !character_chosen {
+            if pad.pressed(PadButton::DPadUp) || pad.pressed(PadButton::DPadDown) {
+                character_selection = 1 - character_selection;
+            }
             let scale = menu_scale();
             let (w, h) = (sw / scale, sh / scale);
             let mut camera = Camera2D::from_display_rect(Rect::new(0., 0., w, h));
@@ -1499,7 +1525,11 @@ async fn main() {
             let y = (h - 330.) * 0.5;
             text("Choose your character", x, y + 36., 36., INK);
             text(&room.name, x, y + 72., 20., MUTED);
-            let feta = button("Feta  /  Lab rat", Rect::new(x, y + 102., 460., 56.), true);
+            let feta = button(
+                "Feta  /  Lab rat",
+                Rect::new(x, y + 102., 460., 56.),
+                character_selection == 0,
+            ) || (character_selection == 0 && pad.pressed(PadButton::South));
             text(
                 "Small, white, red-eyed. Fast on all four paws.",
                 x,
@@ -1510,8 +1540,8 @@ async fn main() {
             let scientist = button(
                 "The Scientist  /  Seeker",
                 Rect::new(x, y + 214., 460., 56.),
-                false,
-            );
+                character_selection == 1,
+            ) || (character_selection == 1 && pad.pressed(PadButton::South));
             text(
                 "Lab coat, eyeglasses, wrench and pistol.",
                 x,
@@ -1588,11 +1618,19 @@ async fn main() {
                 INK,
             );
             if !settings_open {
+                if pad.pressed(PadButton::DPadDown) {
+                    menu_selection = (menu_selection + 1) % 3;
+                }
+                if pad.pressed(PadButton::DPadUp) {
+                    menu_selection = (menu_selection + 2) % 3;
+                }
+                let confirm = pad.pressed(PadButton::South);
                 if button(
                     if entered { "Resume" } else { "Start" },
                     Rect::new(left, y + 78., width, 48.),
-                    true,
+                    menu_selection == 0,
                 ) || (focused && keys.pressed(KeyCode::Enter))
+                    || (menu_selection == 0 && confirm)
                 {
                     active = true;
                     entered = true;
@@ -1604,10 +1642,20 @@ async fn main() {
                     capture(true);
                     skip_look = 3;
                 }
-                if button("Settings", Rect::new(left, y + 140., width, 48.), false) {
+                if button(
+                    "Settings",
+                    Rect::new(left, y + 140., width, 48.),
+                    menu_selection == 1,
+                ) || (menu_selection == 1 && confirm)
+                {
                     settings_open = true;
                 }
-                if button("Quit", Rect::new(left, y + 202., width, 48.), false) {
+                if button(
+                    "Quit",
+                    Rect::new(left, y + 202., width, 48.),
+                    menu_selection == 2,
+                ) || (menu_selection == 2 && confirm)
+                {
                     break;
                 }
             } else {

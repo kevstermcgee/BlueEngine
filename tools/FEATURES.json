@@ -535,6 +535,19 @@
         "game still/menu captures and live controls"
       ],
       "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation."
+    },
+    "native_controllers": {
+      "files": [
+        "src/viewer/gamepad.rs",
+        "src/bin/blue-engine.rs",
+        "docs/CONTROLLERS.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib gamepad",
+        "python tools/check_headless.py",
+        "manual controller hot-plug, focus, keyboard layouts, camera and cursor capture"
+      ],
+      "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds."
     }
   }
 }

@@ -4,6 +4,8 @@ pub mod game;
 #[cfg(feature = "presentation")]
 pub mod game_client;
 pub mod game_example;
+#[cfg(feature = "gamepad")]
+pub mod gamepad;
 #[cfg(feature = "client")]
 pub mod input;
 pub mod interaction;

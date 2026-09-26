@@ -14,7 +14,11 @@ DedicatedServer adds sequencing and six-tick (100 ms) stale-input neutralization
 `new` and `try_with_room` report physics initialization errors. Legacy `with_room`
 retains its historical best-effort physics behavior for compatibility.
 
-`client` gates Macroquad graphics/audio and Windows window/input support. `offline`
+`client` gates Macroquad graphics/audio, native gamepads and Windows window/input support.
+The optional `gamepad` feature also works without graphics: `viewer/gamepad.rs`
+polls gilrs devices and produces frame snapshots; the executable merges those
+with keyboard/mouse before the existing fixed-step and network input paths. See
+[controller contract](docs/CONTROLLERS.md) and [ADR 0011](docs/adr/0011-native-controllers.md). `offline`
 gates the inherited output renderer. `--no-default-features` includes neither:
 Serde, Rapier and networking remain. `be2-headless --server` runs the selected
 datagram profile; without that flag it runs bounded local simulation/benchmark ticks.
