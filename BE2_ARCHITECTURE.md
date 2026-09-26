@@ -26,8 +26,9 @@ an optional room/portal graph. Both runtimes load it through `--map`. Blue Test 
 is the built-in default; native `export-lab` and `export-house` produce editable
 snapshots. Vesper scene assets alone do not include playable collision/entities.
 
-SceneBuilder batches existing validated edits. Boxes include static collision;
-catalog props use existing rigid-body extraction. `build` returns MapDocument;
+SceneBuilder batches existing validated edits and requires an explicit standalone spawn.
+`box_body` includes static collision and a semantic entity; `structural_box` creates
+visual collision without a reachability target. Catalog props use existing rigid-body extraction. `build` returns MapDocument;
 `world` constructs a fallible HeadlessWorld. `prelude` exposes the minimal shared
 surface. Stable-ID `impulse` and copied `prop_position` avoid retaining body borrows.
 See [API audit](docs/API_AUDIT.md) and [quickstart](docs/AI_QUICKSTART.md).
@@ -73,7 +74,7 @@ keyframes provide another recovery path. Replication includes prop orientation,
 velocities, sleeping state and holder. Combat resolves nearer static geometry before
 applying prop impulses. Constants in weapons.rs/wrench.rs define ranges/cooldowns.
 
-Protocol 4 requires the initial content fingerprint, captured before physics
+Protocol 5 requires the initial content fingerprint, captured before physics
 extraction from scene, collision, semantic data and the spatial graph. HashMap/HashSet
 contents are canonicalized. Mismatched content and full servers are rejected before
 session allocation. The client displays the rejection. Old clients must rebuild.
@@ -108,7 +109,7 @@ adapter is implemented. [ADRs](docs/adr/README.md) record settled boundaries.
 
 GameDocument v1 (`viewer/game.rs`) compiles validated rules to indices, separate from
 MapDocument geometry. `viewer/profile.rs` supplies movement dimensions and speeds.
-Local play and HeadlessWorld share ordered interaction transitions. Protocol 4 adds
+Local play and HeadlessWorld share ordered interaction transitions. Protocol 5 adds
 game semantics to the content fingerprint and repeats bounded full GameState snapshots
 independently of movement deltas. Interactable visibility is replicated separately
 from eligibility and never changes collision; the stock client bakes those semantic
@@ -119,6 +120,11 @@ inputs drive real fixed ticks, while structured outcomes inspect positions, coun
 completion, eligibility and visibility. Scenario-relative game paths keep committed
 tests portable; replay traces remain a determinism diagnostic rather than a behavior
 oracle.
+
+`HeadlessWorld::change_map` and `change_game` construct replacement content before
+committing it, preserve the authoritative tick, and respawn existing player IDs.
+Game state and props reset. Network hosts must coordinate the new protocol-5 content
+hash with clients before transitioning; the world API does not distribute assets.
 
 Player overlap recovery handles props dropped/moved into a character before movement.
 It chooses the nearest clear horizontal candidate within four metres, preserves feet

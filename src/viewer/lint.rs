@@ -179,17 +179,18 @@ pub fn lint_map(doc: &MapDocument, strict: bool, ignore_codes: &[String]) -> Lin
     }
 
     // 4. Spawn point clearance
-    let spawn = if let Some(sp) = doc.entities.iter().find(|e| e.id.starts_with("spawn")) {
-        V(
-            (sp.bounds.min.0 + sp.bounds.max.0) * 0.5,
-            sp.bounds.min.1,
-            (sp.bounds.min.2 + sp.bounds.max.2) * 0.5,
-        )
-    } else {
-        V(0., 0., 4.6)
-    };
+    let spawn = doc.default_spawn.map(|spawn| spawn.feet);
     let radius = CharacterKind::Scientist.radius();
-    if !ignores.contains("spawn-blocked") {
+    if spawn.is_none() && !ignores.contains("missing-spawn") {
+        findings.push(Finding {
+            code: "missing-spawn".into(),
+            severity: Severity::Error,
+            message: "Map has no explicit default_spawn".into(),
+            at: None,
+            ids: vec![],
+        });
+    }
+    if let Some(spawn) = spawn.filter(|_| !ignores.contains("spawn-blocked")) {
         for (id, c) in &doc.colliders {
             if c.overlaps_body(
                 V(spawn.0, spawn.1 + STANDING_HEIGHT * 0.5, spawn.2),
@@ -212,9 +213,13 @@ pub fn lint_map(doc: &MapDocument, strict: bool, ignore_codes: &[String]) -> Lin
     }
 
     // 5. Reachability, leaks, drops, and unreachable items
-    let reach = analyze_reach(doc, Some(spawn));
+    let reach = spawn.and_then(|spawn| analyze_reach(doc, Some(spawn)).ok());
     if !ignores.contains("unreachable") {
-        for uid in &reach.unreachable_entities {
+        for uid in reach
+            .as_ref()
+            .into_iter()
+            .flat_map(|report| &report.unreachable_entities)
+        {
             findings.push(Finding {
                 code: "unreachable".into(),
                 severity: Severity::Error,
@@ -226,7 +231,11 @@ pub fn lint_map(doc: &MapDocument, strict: bool, ignore_codes: &[String]) -> Lin
     }
 
     if !ignores.contains("leak") {
-        for leak in reach.perimeter_leaks.iter().take(3) {
+        for leak in reach
+            .as_ref()
+            .into_iter()
+            .flat_map(|report| report.perimeter_leaks.iter().take(3))
+        {
             findings.push(Finding {
                 code: "leak".into(),
                 severity: Severity::Error,
@@ -241,7 +250,11 @@ pub fn lint_map(doc: &MapDocument, strict: bool, ignore_codes: &[String]) -> Lin
     }
 
     if !ignores.contains("drop") {
-        for drop in reach.drop_hazards.iter().take(5) {
+        for drop in reach
+            .as_ref()
+            .into_iter()
+            .flat_map(|report| report.drop_hazards.iter().take(5))
+        {
             findings.push(Finding {
                 code: "drop".into(),
                 severity: Severity::Warn,

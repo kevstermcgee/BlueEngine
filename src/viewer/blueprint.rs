@@ -5,7 +5,7 @@
 //! colliders, materials, floor slabs, wall segments, door portals, and spatial graphs.
 
 use super::{
-    authoring::MapDocument,
+    authoring::{MapDocument, MapSpawn},
     controller::Collider,
     interaction::Action,
     props::{self, PropKind},
@@ -503,12 +503,24 @@ pub fn compile_blueprint(spec: &BlueprintSpec) -> Result<MapDocument> {
         None
     };
 
+    let default_spawn = entities
+        .iter()
+        .find(|entity| entity.id.starts_with("spawn"))
+        .map(|entity| MapSpawn {
+            feet: V(
+                (entity.bounds.min.0 + entity.bounds.max.0) * 0.5,
+                entity.bounds.min.1,
+                (entity.bounds.min.2 + entity.bounds.max.2) * 0.5,
+            ),
+            yaw: 0.,
+        });
     let doc = MapDocument {
         schema_version: 1,
         name: spec.name.clone(),
         scene,
         colliders,
         entities,
+        default_spawn,
         spatial,
         checks: None,
     };

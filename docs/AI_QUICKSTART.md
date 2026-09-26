@@ -1,6 +1,6 @@
 # BlueEngine prototype API
 `use vesper3d::prelude::*;` Metres, +Y up; yaw 0 faces -Z; angles radians.
-Boxes: center/half extents. Props: bottom origin; catalog physics rules.
+Boxes: center/half extents. `structural_box` omits semantic reachability. Props: bottom origin; catalog physics rules.
 `build()->Result<MapDocument>`; `world()->Result<HeadlessWorld>`.
 `input(id:u64,Movement,yaw:f32,pitch:f32)->bool`; `step()` = 1/60s.
 `impulse(id:&str,V)->bool`; `prop_position(id:&str)->Option<V>`.
@@ -14,6 +14,7 @@ use vesper3d::prelude::*;
 
 fn main() -> Result<()> {
     let mut world = SceneBuilder::new("Prototype")
+        .spawn(V(0., 0., 4.6), -0.10)
         .box_body("floor", V(0., -0.1, 0.), V(8., 0.1, 8.), V::ONE)
         .prop("ball", "apple", V(2., 1., 0.))
         .world()?;

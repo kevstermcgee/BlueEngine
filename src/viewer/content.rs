@@ -20,11 +20,12 @@ pub fn fingerprint(room: &Room) -> u64 {
         )
     });
     let bytes = serde_json::to_vec(&(
-        1_u32,
+        2_u32,
         &room.name,
         &room.compiled.scene,
         &room.colliders,
         &room.entities,
+        &room.default_spawn,
         spatial,
     ))
     .expect("Room content consists only of serializable owned data");

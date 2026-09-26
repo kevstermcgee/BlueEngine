@@ -47,6 +47,10 @@ fn fixture(kind: &str, rotated: bool) -> Room {
             bounds,
             action: Action::Inspect,
         }],
+        default_spawn: Some(vesper3d::viewer::authoring::MapSpawn {
+            feet: V(0., 0., 4.6),
+            yaw: -0.10,
+        }),
         spatial: None,
         checks: None,
     }

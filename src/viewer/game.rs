@@ -17,6 +17,8 @@ use std::{
 
 pub const MAX_COUNTER: i32 = 1_000_000;
 pub const INTERACT_REACH: f32 = 2.5;
+pub const MAX_GAME_COUNTERS: usize = 32;
+pub const MAX_GAME_FLAGS: usize = 64;
 
 fn default_true() -> bool {
     true
@@ -192,16 +194,16 @@ impl GameDocument {
             || self.name.len() > 100
             || self.spawn_points.is_empty()
             || self.spawn_points.len() > 8
-            || self.counters.len() > 8
+            || self.counters.len() > MAX_GAME_COUNTERS
             || (self.interactables.is_empty() && self.trigger_zones.is_empty())
-            || self.interactables.len() > 16
-            || self.trigger_zones.len() > 16
-            || self.movers.len() > 16
-            || self.timers.len() > 16
+            || self.interactables.len() > MAX_GAME_FLAGS
+            || self.trigger_zones.len() > MAX_GAME_FLAGS
+            || self.movers.len() > MAX_GAME_FLAGS
+            || self.timers.len() > MAX_GAME_FLAGS
             || self.rules.is_empty()
-            || self.rules.len() > 16
+            || self.rules.len() > MAX_GAME_FLAGS
         {
-            return Err("Game v1: version=1, name 1..100 bytes, spawns 1..8, counters <=8, interactables/zones <=16 (at least 1 total), movers <=16, timers <=16, rules 1..16".into());
+            return Err("Game v1: version=1, name 1..100 bytes, spawns 1..8, counters <=32, interactables/zones <=64 (at least 1 total), movers <=64, timers <=64, rules 1..64".into());
         }
         if !unique(self.spawn_points.iter().map(|s| s.id.as_str()))
             || !unique(self.interactables.iter().map(|s| s.entity.as_str()))
@@ -383,17 +385,17 @@ impl GameDocument {
 #[serde(deny_unknown_fields)]
 pub struct GameState {
     pub counters: Vec<i32>,
-    pub enabled: u16,
+    pub enabled: u64,
     /// Visible interactable geometry. This never changes collision or eligibility.
     #[serde(default, rename = "v", alias = "visible")]
-    pub visible: u16,
+    pub visible: u64,
     #[serde(default, rename = "z", alias = "enabled_zones")]
-    pub enabled_zones: u16,
+    pub enabled_zones: u64,
     #[serde(default)]
-    pub mover_targets: u16,
+    pub mover_targets: u64,
     #[serde(default)]
-    pub active_timers: u16,
-    pub fired: u16,
+    pub active_timers: u64,
+    pub fired: u64,
     pub completed: bool,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -517,7 +519,7 @@ pub struct GameRuntime {
     zone_rules_enter: Vec<Vec<CompiledRule>>,
     zone_rules_exit: Vec<Vec<CompiledRule>>,
     timer_rules: Vec<Vec<CompiledRule>>,
-    player_zones: BTreeMap<u64, u16>,
+    player_zones: BTreeMap<u64, u64>,
 }
 impl GameRuntime {
     pub fn compile(document: GameDocument, map: &MapDocument) -> Result<Self> {
@@ -918,10 +920,10 @@ impl GameRuntime {
     /// Validate a full authoritative state before replacing the client mirror.
     fn accept_state(&mut self, state: GameState) -> bool {
         let mask = |count: usize| {
-            if count == 16 {
-                u16::MAX
+            if count == MAX_GAME_FLAGS {
+                u64::MAX
             } else {
-                (1_u16 << count) - 1
+                (1_u64 << count) - 1
             }
         };
         if state.counters.len() != self.document.counters.len()
@@ -1015,7 +1017,7 @@ impl GameRuntime {
             return;
         }
         let prev_mask = self.player_zones.get(&player_id).copied().unwrap_or(0);
-        let mut curr_mask = 0u16;
+        let mut curr_mask = 0u64;
 
         for (i, zone) in self.trigger_zones.iter().enumerate() {
             if zone.overlaps_body(

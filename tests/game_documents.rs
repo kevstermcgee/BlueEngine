@@ -6,8 +6,9 @@ use std::{
 use vesper3d::{
     math::V,
     viewer::{
+        authoring::Edit,
         controller::{Controller, Movement},
-        game::{GameDocument, GameRuntime, GameState, LoadedGame},
+        game::{GameAction, GameDocument, GameRuntime, GameState, Interactable, LoadedGame, Rule},
         game_example,
         net::{InputFrame, Packet, UdpTransport, PROTOCOL_VERSION},
         profile::ControllerProfile,
@@ -259,6 +260,7 @@ fn game_interactions_require_range_line_of_sight_and_registered_player() {
             center: V(-3., 1.5, 2.),
             half_extents: V(0.5, 0.5, 0.1),
             color: V::ONE,
+            structural: false,
         }])
         .unwrap();
     let mut world = loaded.world().unwrap();
@@ -314,13 +316,13 @@ fn game_state_mirror_rejects_reordered_or_invalid_snapshots_and_fits_budget() {
     assert_eq!(replica.state(), &state);
     assert!(replica.accept_snapshot(11, state));
     let worst = GameState {
-        counters: vec![-1_000_000; 8],
-        enabled: u16::MAX,
-        visible: u16::MAX,
-        enabled_zones: u16::MAX,
-        mover_targets: u16::MAX,
-        active_timers: u16::MAX,
-        fired: u16::MAX,
+        counters: vec![-1_000_000; 32],
+        enabled: u64::MAX,
+        visible: u64::MAX,
+        enabled_zones: u64::MAX,
+        mover_targets: u64::MAX,
+        active_timers: u64::MAX,
+        fired: u64::MAX,
         completed: true,
     };
     let encoded = Packet::GameState {
@@ -330,10 +332,51 @@ fn game_state_mirror_rejects_reordered_or_invalid_snapshots_and_fits_budget() {
     .encode()
     .unwrap();
     assert!(
-        encoded.len() < 256,
+        encoded.len() < vesper3d::viewer::net::MAX_PACKET_BYTES,
         "game state packet is {} bytes",
         encoded.len()
     );
+}
+
+#[test]
+fn sixty_four_flag_boundary_compiles_and_accepts_full_masks() {
+    let mut loaded = fixture();
+    let mut edits = Vec::new();
+    for i in loaded.document.interactables.len()..64 {
+        let id = format!("capacity-{i}");
+        edits.push(Edit::AddBox {
+            id: id.clone(),
+            label: id.clone(),
+            center: V(20. + i as f32, 1., 20.),
+            half_extents: V(0.1, 0.1, 0.1),
+            color: V::ONE,
+            structural: false,
+        });
+        loaded.document.interactables.push(Interactable {
+            entity: id,
+            enabled: true,
+            visible: true,
+        });
+    }
+    loaded.map = loaded.map.apply(&edits).unwrap();
+    for i in loaded.document.rules.len()..64 {
+        loaded.document.rules.push(Rule {
+            id: format!("capacity-rule-{i}"),
+            on_interact: Some(loaded.document.interactables[i].entity.clone()),
+            on_enter: None,
+            on_exit: None,
+            on_timer: None,
+            condition: None,
+            once: true,
+            actions: vec![GameAction::Complete],
+        });
+    }
+    let mut runtime = GameRuntime::compile(loaded.document, &loaded.map).unwrap();
+    let mut state = runtime.state().clone();
+    state.enabled = u64::MAX;
+    state.visible = u64::MAX;
+    state.fired = u64::MAX;
+    assert!(runtime.accept_snapshot(1, state));
 }
 
 fn poll_until(server: &mut DedicatedServer, done: impl Fn(&DedicatedServer) -> bool) {
@@ -513,6 +556,7 @@ fn source_free_example_validates_runs_headless_and_preserves_output() {
 #[test]
 fn fallible_world_startup_reports_physics_errors() {
     let map = vesper3d::prelude::SceneBuilder::new("broken physics")
+        .spawn(V(0., 0., 4.6), -0.10)
         .prop("apple", "apple", V(2., 0., 0.))
         .build()
         .unwrap();

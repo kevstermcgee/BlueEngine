@@ -295,7 +295,7 @@ async fn main() {
             || maps::build(map),
             |p| {
                 vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(p))
-                    .and_then(|d| d.build())
+                    .and_then(|d| d.build_standalone())
             },
         )
     };
@@ -386,10 +386,21 @@ async fn main() {
     } else {
         CharacterKind::Scientist
     };
-    let mut controller = game.as_ref().map_or_else(
-        || Controller::for_character(capture_kind),
-        |g| g.controller(1),
-    );
+    let mut controller = if let Some(game) = &game {
+        game.controller(1)
+    } else {
+        let Some(spawn) = room.default_spawn else {
+            error_screen("Standalone map requires default_spawn").await;
+            return;
+        };
+        match Controller::for_character_at(capture_kind, spawn.feet, spawn.yaw) {
+            Ok(controller) => controller,
+            Err(e) => {
+                error_screen(&format!("Invalid map spawn: {e}")).await;
+                return;
+            }
+        }
+    };
     let mut character_chosen = capture_dir.is_some() || game.is_some();
     let mut stepper = PlayerStepper::default();
     let mut wrench = Wrench::default();
@@ -454,7 +465,7 @@ async fn main() {
                     || maps::build(map),
                     |path| {
                         vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(&path))
-                            .and_then(|document| document.build())
+                            .and_then(|document| document.build_standalone())
                     },
                 );
                 room.and_then(vesper3d::viewer::simulation::HeadlessWorld::try_with_room)

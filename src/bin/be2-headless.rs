@@ -105,7 +105,8 @@ fn main() -> vesper3d::Result<()> {
         vesper3d::viewer::game::GameDocument::load(std::path::Path::new(path))?.world()?
     } else if let Some(ref path) = map_file {
         HeadlessWorld::try_with_room(
-            vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(path))?.build()?,
+            vesper3d::viewer::authoring::MapDocument::load(std::path::Path::new(path))?
+                .build_standalone()?,
         )?
     } else {
         HeadlessWorld::new()?

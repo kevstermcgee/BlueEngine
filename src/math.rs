@@ -75,6 +75,12 @@ impl V {
     pub fn norm(self) -> Self {
         self / self.length().max(1e-12)
     }
+    /// Return a unit-length vector, or the zero vector when `self` is zero.
+    ///
+    /// This is the conventional-name alias for [`Self::norm`].
+    pub fn normalize(self) -> Self {
+        self.norm()
+    }
     pub fn min(self, b: Self) -> Self {
         Self(self.0.min(b.0), self.1.min(b.1), self.2.min(b.2))
     }
@@ -228,6 +234,12 @@ mod tests {
         let m = Mat::trs(V(2., 4., -3.), V(32., 74., 12.), V(2., 0.4, 3.));
         let p = V(5., -2., 0.2);
         assert!((m.inverse().point(m.point(p)) - p).length() < 1e-4);
+    }
+    #[test]
+    fn normalize_is_zero_safe_norm_alias() {
+        assert_eq!(V::ZERO.normalize(), V::ZERO);
+        assert_eq!(V(3., 0., 4.).normalize(), V(3., 0., 4.).norm());
+        assert!((V(3., 0., 4.).normalize().length() - 1.).abs() < 1e-6);
     }
     #[test]
     fn slab_parallel_boundary() {

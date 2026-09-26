@@ -32,7 +32,7 @@ pub use reliable_command::*;
 pub use session::*;
 pub use transport::*;
 
-pub const PROTOCOL_VERSION: u32 = 4;
+pub const PROTOCOL_VERSION: u32 = 5;
 /// Cross-transport payload ceiling. It fits one QUIC datagram without fragmentation
 /// and is therefore also enforced by the development UDP codec.
 pub const MAX_PACKET_BYTES: usize = 1100;

@@ -117,7 +117,7 @@
     },
     "counters": {
       "type": "object",
-      "maxProperties": 8,
+      "maxProperties": 32,
       "propertyNames": {
         "type": "string",
         "minLength": 1,
@@ -156,7 +156,7 @@
         }
       },
       "minItems": 0,
-      "maxItems": 16
+      "maxItems": 64
     },
     "trigger_zones": {
       "type": "array",
@@ -211,7 +211,7 @@
         }
       },
       "minItems": 0,
-      "maxItems": 16
+      "maxItems": 64
     },
     "movers": {
       "type": "array",
@@ -257,7 +257,7 @@
         }
       },
       "minItems": 0,
-      "maxItems": 16
+      "maxItems": 64
     },
     "timers": {
       "type": "array",
@@ -289,7 +289,7 @@
         }
       },
       "minItems": 0,
-      "maxItems": 16
+      "maxItems": 64
     },
     "rules": {
       "type": "array",
@@ -572,7 +572,7 @@
         }
       },
       "minItems": 1,
-      "maxItems": 16
+      "maxItems": 64
     }
   },
   "$schema": "https://json-schema.org/draft/2020-12/schema",

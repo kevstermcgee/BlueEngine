@@ -247,6 +247,7 @@ pub fn build() -> crate::Result<Room> {
         dynamic_world: World::new(vec![]),
         colliders: b.colliders,
         entities: b.entities,
+        default_spawn: Some(super::authoring::MapSpawn::legacy()),
         spatial: Some(spatial),
     })
 }

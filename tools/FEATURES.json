@@ -126,7 +126,7 @@
       "checks": [
         "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift"
       ],
-      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 4 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials.",
+      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 5 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials.",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -292,7 +292,7 @@
         "cargo test --locked --no-default-features --test prototype",
         "cargo run --locked --no-default-features --example prototype"
       ],
-      "note": "SceneBuilder batches ordinary map edits; static boxes plus catalog props include collision and semantic IDs. World impulse/prop_position use IDs, not borrowed body indices. No generic scripting or arbitrary dynamic mesh builder.",
+      "note": "SceneBuilder requires an explicit spawn and batches ordinary map edits; box_body includes a semantic ID while structural_box creates visual collision without a reachability target. World impulse/prop_position use IDs, not borrowed body indices. HeadlessWorld supports transactional map/game replacement with player respawn; network hosts must coordinate content changes. No generic scripting or arbitrary dynamic mesh builder.",
       "evidence": [
         {
           "suite": "prototype",
@@ -300,7 +300,7 @@
         },
         {
           "suite": "prototype",
-          "test": "quickstart_is_the_compiled_thirty_line_example"
+          "test": "quickstart_is_the_compiled_example"
         }
       ]
     },
@@ -386,7 +386,7 @@
       "checks": [
         "static design linting and reachability"
       ],
-      "note": "Level design static analysis catching floating/sunk props, dropped hazards, perimeter leaks, overlaps, headroom violations, and unreachable entities.",
+      "note": "Level design static analysis catching missing/blocked explicit spawns, floating/sunk props, dropped hazards, perimeter leaks, overlaps, headroom violations, and unreachable semantic entities; structural boxes are excluded.",
       "evidence": [
         {
           "suite": "toolchain",

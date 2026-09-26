@@ -144,7 +144,9 @@ pub fn verify_map(
         let t_start = Instant::now();
         let reach_rep = analyze_reach(doc, None);
         for rk in &checks.reach {
-            let reached = !reach_rep.unreachable_entities.contains(&rk.entity);
+            let reached = reach_rep
+                .as_ref()
+                .is_ok_and(|report| !report.unreachable_entities.contains(&rk.entity));
             outcomes.push(SingleCheckOutcome {
                 name: format!("reach:{}", rk.entity),
                 ok: reached,
@@ -154,7 +156,10 @@ pub fn verify_map(
                         .clone()
                         .unwrap_or_else(|| "entity reachable from spawn".into())
                 } else {
-                    format!("entity '{}' cannot be reached by player", rk.entity)
+                    reach_rep.as_ref().map_or_else(
+                        |e| e.to_string(),
+                        |_| format!("entity '{}' cannot be reached by player", rk.entity),
+                    )
                 },
             });
         }
@@ -166,12 +171,21 @@ pub fn verify_map(
         let from_v = wk
             .from
             .map(|p| V(p[0], 0.0, p[1]))
-            .unwrap_or(V(0.0, 0.0, 4.6));
+            .or_else(|| doc.default_spawn.map(|spawn| spawn.feet));
         let to_v = wk
             .to
             .map(|p| V(p[0], 0.0, p[1]))
             .unwrap_or(V(0.0, 0.0, 0.0));
 
+        let Some(from_v) = from_v else {
+            outcomes.push(SingleCheckOutcome {
+                name: format!("walk:{}", wk.name),
+                ok: false,
+                duration_ms: t_start.elapsed().as_millis() as u64,
+                detail: "walk requires from or map.default_spawn".into(),
+            });
+            continue;
+        };
         let walk_res = execute_walk(doc, from_v, to_v, wk.waypoints.clone());
         outcomes.push(SingleCheckOutcome {
             name: format!("walk:{}", wk.name),

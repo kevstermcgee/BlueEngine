@@ -9,9 +9,10 @@
 
 use super::{
     authoring::MapDocument,
-    controller::{CharacterKind, Collider, STANDING_HEIGHT},
+    controller::{CharacterKind, Collider, EYE_HEIGHT, STANDING_HEIGHT},
 };
 use crate::math::V;
+use crate::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashSet, VecDeque};
 
@@ -82,23 +83,14 @@ pub fn is_blocked(
         .any(|c| c.overlaps_body(p, feet, height, radius))
 }
 
-pub fn analyze_reach(doc: &MapDocument, start_pos: Option<V>) -> ReachReport {
+pub fn analyze_reach(doc: &MapDocument, start_pos: Option<V>) -> Result<ReachReport> {
     let radius = CharacterKind::Scientist.radius();
     let height = STANDING_HEIGHT;
     let colliders: Vec<Collider> = doc.colliders.values().cloned().collect();
 
-    // Determine start position (spawn entity from map or default)
-    let start = start_pos.unwrap_or_else(|| {
-        if let Some(sp) = doc.entities.iter().find(|e| e.id.starts_with("spawn")) {
-            V(
-                (sp.bounds.min.0 + sp.bounds.max.0) * 0.5,
-                sp.bounds.min.1,
-                (sp.bounds.min.2 + sp.bounds.max.2) * 0.5,
-            )
-        } else {
-            V(0., 0., 4.6)
-        }
-    });
+    let start = start_pos
+        .or_else(|| doc.default_spawn.map(|spawn| spawn.feet))
+        .ok_or("Reachability analysis requires default_spawn or an explicit start position")?;
     let start_feet =
         ground_support_at(start.0, start.2, start.1, radius, &colliders).unwrap_or(start.1);
 
@@ -215,20 +207,17 @@ pub fn analyze_reach(doc: &MapDocument, start_pos: Option<V>) -> ReachReport {
         }
     }
 
-    // Check entity reachability (within 2.5m of any visited point)
+    // Check distance from a reachable player eye to the closest point on each entity.
+    // Entity centers are unsuitable for large objects such as doors and walls.
     let mut unreachable = Vec::new();
     for entity in &doc.entities {
-        let center_x = (entity.bounds.min.0 + entity.bounds.max.0) * 0.5;
-        let center_y = (entity.bounds.min.1 + entity.bounds.max.1) * 0.5;
-        let center_z = (entity.bounds.min.2 + entity.bounds.max.2) * 0.5;
-
         let reached = visited.iter().any(|&(gx, gy, gz)| {
             let vx = gx as f32 * CELL_SIZE;
-            let vy = gy as f32 * 0.1;
+            let vy = gy as f32 * 0.1 + EYE_HEIGHT;
             let vz = gz as f32 * CELL_SIZE;
-            let dx = center_x - vx;
-            let dy = center_y - vy;
-            let dz = center_z - vz;
+            let dx = vx.clamp(entity.bounds.min.0, entity.bounds.max.0) - vx;
+            let dy = vy.clamp(entity.bounds.min.1, entity.bounds.max.1) - vy;
+            let dz = vz.clamp(entity.bounds.min.2, entity.bounds.max.2) - vz;
             (dx * dx + dy * dy + dz * dz).sqrt() <= 2.5
         });
 
@@ -246,7 +235,7 @@ pub fn analyze_reach(doc: &MapDocument, start_pos: Option<V>) -> ReachReport {
     leaks.sort_by(|a, b| a[0].partial_cmp(&b[0]).unwrap());
     leaks.dedup_by(|a, b| (a[0] - b[0]).abs() < 0.3 && (a[2] - b[2]).abs() < 0.3);
 
-    ReachReport {
+    Ok(ReachReport {
         ok: unreachable.is_empty() && leaks.is_empty(),
         start: [start.0, start_feet, start.2],
         reachable_cells: visited.len(),
@@ -255,5 +244,5 @@ pub fn analyze_reach(doc: &MapDocument, start_pos: Option<V>) -> ReachReport {
         unreachable_entities: unreachable,
         drop_hazards: drops,
         perimeter_leaks: leaks,
-    }
+    })
 }

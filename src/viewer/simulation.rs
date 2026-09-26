@@ -17,6 +17,7 @@
 //! # Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
 //! ```
 use super::{
+    authoring::MapDocument,
     controller::{Collider, Controller, Movement},
     room::Room,
 };
@@ -149,18 +150,58 @@ impl HeadlessWorld {
         if self.players.len() >= 8 || self.players.contains_key(&id) {
             return false;
         }
+        let controller = if let Some(game) = &self.game {
+            game.controller(id)
+        } else {
+            let Some(spawn) = self.room.default_spawn else {
+                return false;
+            };
+            let Ok(controller) = Controller::for_profile(Default::default(), spawn.feet, spawn.yaw)
+            else {
+                return false;
+            };
+            controller
+        };
         self.players.insert(
             id,
             Player {
-                controller: self
-                    .game
-                    .as_ref()
-                    .map_or_else(Controller::default, |g| g.controller(id)),
+                controller,
                 input: Movement::default(),
                 interact: false,
             },
         );
         true
+    }
+
+    /// Transactionally replace standalone map content and respawn current players.
+    /// Network hosts must coordinate the new content hash with clients before calling this.
+    pub fn change_map(&mut self, map: &MapDocument) -> crate::Result<()> {
+        if map.default_spawn.is_none() {
+            return Err("Map transition requires an explicit default_spawn".into());
+        }
+        let next = Self::try_with_room(map.build()?)?;
+        self.replace_content(next)
+    }
+
+    /// Transactionally replace map and game rules, resetting game state and respawning players.
+    /// Network hosts must coordinate the new content hash with clients before calling this.
+    pub fn change_game(&mut self, game: super::game::LoadedGame) -> crate::Result<()> {
+        let next = game.world()?;
+        self.replace_content(next)
+    }
+
+    fn replace_content(&mut self, mut next: Self) -> crate::Result<()> {
+        let player_ids: Vec<_> = self.players.keys().copied().collect();
+        next.tick = self.tick;
+        for id in player_ids {
+            if !next.join(id) {
+                return Err(
+                    format!("Could not respawn player {id} during content transition").into(),
+                );
+            }
+        }
+        *self = next;
+        Ok(())
     }
     /// Remove state and pending input. Release any held prop owned by this player.
     pub fn leave(&mut self, id: u64) {
@@ -450,8 +491,12 @@ impl HeadlessWorld {
             for value in &game.state().counters {
                 mix_u64(*value as u64);
             }
-            mix_u64(u64::from(game.state().enabled));
-            mix_u64(u64::from(game.state().fired));
+            mix_u64(game.state().enabled);
+            mix_u64(game.state().visible);
+            mix_u64(game.state().enabled_zones);
+            mix_u64(game.state().mover_targets);
+            mix_u64(game.state().active_timers);
+            mix_u64(game.state().fired);
             mix_u64(u64::from(game.state().completed));
         }
         hash

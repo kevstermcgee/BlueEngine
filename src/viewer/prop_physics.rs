@@ -649,6 +649,7 @@ mod tests {
             compiled,
             colliders,
             entities,
+            default_spawn: Some(crate::viewer::authoring::MapSpawn::legacy()),
             spatial: None,
         }
     }

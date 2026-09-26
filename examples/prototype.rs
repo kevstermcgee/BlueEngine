@@ -2,6 +2,7 @@ use vesper3d::prelude::*;
 
 fn main() -> Result<()> {
     let mut world = SceneBuilder::new("Prototype")
+        .spawn(V(0., 0., 4.6), -0.10)
         .box_body("floor", V(0., -0.1, 0.), V(8., 0.1, 8.), V::ONE)
         .prop("ball", "apple", V(2., 1., 0.))
         .world()?;

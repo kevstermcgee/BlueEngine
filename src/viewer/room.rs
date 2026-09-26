@@ -25,6 +25,8 @@ pub struct Room {
     pub dynamic_world: World,
     pub colliders: Vec<Collider>,
     pub entities: Vec<Entity>,
+    /// Default standalone spawn. Games use their own validated spawn points.
+    pub default_spawn: Option<super::authoring::MapSpawn>,
     /// Optional embedded spatial room graph for portals and interest management.
     pub spatial: Option<super::spatial::RoomGraph>,
 }
@@ -470,6 +472,7 @@ pub fn build() -> crate::Result<Room> {
         dynamic_world: World::new(vec![]),
         colliders: b.colliders,
         entities: b.entities,
+        default_spawn: Some(super::authoring::MapSpawn::legacy()),
         spatial: None,
     }
     .with_furniture_colliders())

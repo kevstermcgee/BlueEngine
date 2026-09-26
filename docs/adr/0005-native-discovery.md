@@ -11,7 +11,7 @@ Embed the existing feature index into native describe/search commands. Share the
 command signatures with the parser and help output. Keep search bounded to ten
 records and 100 input bytes. Add evidence suite/test names to important capabilities;
 CI checks that referenced paths/tests exist and runs those integration suites.
-The quickstart embeds the exact compiled 30-line example, checked by a test.
+The quickstart embeds the exact compact compiled example, checked by a test.
 
 ## Consequences
 No additional index, service, runtime Python logic or mandatory MCP dependency.

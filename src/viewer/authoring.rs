@@ -1,6 +1,6 @@
 //! Portable static map documents and transactional edits. No renderer dependency.
 use super::{
-    controller::{Collider, Controller},
+    controller::Collider,
     interaction::Action,
     props::{self, PropKind},
     room::{Entity, Room},
@@ -26,10 +26,28 @@ pub struct MapDocument {
     pub scene: Scene,
     pub colliders: BTreeMap<String, Collider>,
     pub entities: Vec<Entity>,
+    /// Default feet position/yaw for standalone play and spatial analysis.
+    /// GameDocument spawn points override this value.
+    #[serde(default)]
+    pub default_spawn: Option<MapSpawn>,
     #[serde(default)]
     pub spatial: Option<super::spatial::RoomGraph>,
     #[serde(default)]
     pub checks: Option<super::verify::ChecksBlock>,
+}
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MapSpawn {
+    pub feet: V,
+    pub yaw: f32,
+}
+impl MapSpawn {
+    pub(crate) const fn legacy() -> Self {
+        Self {
+            feet: V(0., 0., 4.6),
+            yaw: -0.10,
+        }
+    }
 }
 fn finite(v: V) -> bool {
     [v.0, v.1, v.2]
@@ -63,6 +81,7 @@ impl MapDocument {
                 .map(|(i, c)| (format!("collider-{i}"), c))
                 .collect(),
             entities: r.entities,
+            default_spawn: r.default_spawn,
             spatial: r.spatial,
             checks: None,
         })
@@ -141,12 +160,21 @@ impl MapDocument {
                 );
             }
         }
-        if self
-            .colliders
-            .values()
-            .any(|c| c.blocks(Controller::default().position))
-        {
-            return Err("Default player spawn is blocked".into());
+        if let Some(spawn) = self.default_spawn {
+            if !finite(spawn.feet)
+                || spawn.feet.1 < 0.
+                || !spawn.yaw.is_finite()
+                || self.colliders.values().any(|c| {
+                    c.overlaps_body(
+                        spawn.feet,
+                        spawn.feet.1,
+                        super::controller::STANDING_HEIGHT,
+                        super::controller::RADIUS,
+                    )
+                })
+            {
+                return Err("Invalid or blocked default spawn".into());
+            }
         }
         Ok(())
     }
@@ -162,9 +190,17 @@ impl MapDocument {
             dynamic_world: crate::geometry::World::new(vec![]),
             colliders: self.colliders.values().cloned().collect(),
             entities: self.entities.clone(),
+            default_spawn: self.default_spawn,
             spatial: self.spatial.clone(),
         }
         .with_furniture_colliders())
+    }
+    /// Build content for standalone play, where a default spawn is mandatory.
+    pub fn build_standalone(&self) -> Result<Room> {
+        if self.default_spawn.is_none() {
+            return Err("Standalone map requires default_spawn".into());
+        }
+        self.build()
     }
     pub fn apply(&self, operations: &[Edit]) -> Result<Self> {
         let mut next = self.clone();
@@ -187,6 +223,7 @@ impl MapDocument {
                 center,
                 half_extents,
                 color,
+                structural,
             } => {
                 self.free_id(id)?;
                 if !finite(*color)
@@ -213,14 +250,14 @@ impl MapDocument {
                     scale: Track::Fixed(*half_extents),
                     ..Default::default()
                 });
-                self.attach(
-                    id,
-                    label,
-                    Collider {
-                        min: *center - *half_extents,
-                        max: *center + *half_extents,
-                    },
-                );
+                let bounds = Collider {
+                    min: *center - *half_extents,
+                    max: *center + *half_extents,
+                };
+                self.colliders.insert(id.clone(), bounds.clone());
+                if !structural {
+                    self.attach_entity(id, label, bounds);
+                }
             }
             Edit::AddProp {
                 id,
@@ -270,14 +307,12 @@ impl MapDocument {
                     .unwrap()
                     .half_extents;
                 let center = *origin + V(0., h.1, 0.);
-                self.attach(
-                    id,
-                    label,
-                    Collider {
-                        min: center - h,
-                        max: center + h,
-                    },
-                );
+                let bounds = Collider {
+                    min: center - h,
+                    max: center + h,
+                };
+                self.colliders.insert(id.clone(), bounds.clone());
+                self.attach_entity(id, label, bounds);
             }
             Edit::Translate {
                 nodes,
@@ -336,8 +371,7 @@ impl MapDocument {
         }
         Ok(())
     }
-    fn attach(&mut self, id: &str, label: &str, b: Collider) {
-        self.colliders.insert(id.into(), b.clone());
+    fn attach_entity(&mut self, id: &str, label: &str, b: Collider) {
         self.entities.push(Entity {
             id: id.into(),
             label: label.into(),
@@ -376,6 +410,9 @@ pub enum Edit {
         center: V,
         half_extents: V,
         color: V,
+        /// Structural boxes have visual geometry and collision but no semantic entity.
+        #[serde(default)]
+        structural: bool,
     },
     AddProp {
         id: String,

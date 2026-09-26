@@ -22,6 +22,7 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
             },
             center: V(-3. + i as f32 * 2., 1.5, 1.),
             half_extents: V(0.3, 0.3, 0.3),
+            structural: false,
             color: if *id == "exit" {
                 V(0.2, 0.85, 0.4)
             } else {

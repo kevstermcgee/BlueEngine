@@ -6,6 +6,7 @@ use vesper3d::prelude::*;
 #[macroquad::main("BlueEngine custom client")]
 async fn main() -> Result<()> {
     let mut world = SceneBuilder::new("Custom client")
+        .spawn(V(0., 0., 4.6), -0.10)
         .box_body("floor", V(0., -0.1, 0.), V(8., 0.1, 8.), V(0.25, 0.3, 0.4))
         .prop("ball", "apple", V(2., 1., 0.))
         .world()?;

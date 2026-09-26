@@ -298,20 +298,22 @@ fn call_tool(name: &str, args: &Value) -> Value {
             let path_str = args.get("map_path").and_then(Value::as_str).unwrap_or("");
             match MapDocument::load(Path::new(path_str)) {
                 Ok(doc) => {
-                    let start = args.get("start").and_then(Value::as_array).map(|arr| {
+                    let start = args.get("start").and_then(Value::as_array).and_then(|arr| {
                         let v: Vec<f32> = arr
                             .iter()
                             .filter_map(Value::as_f64)
                             .map(|f| f as f32)
                             .collect();
                         if v.len() >= 3 {
-                            V(v[0], v[1], v[2])
+                            Some(V(v[0], v[1], v[2]))
                         } else {
-                            V(0.0, 0.0, 4.6)
+                            None
                         }
                     });
-                    let rep = analyze_reach(&doc, start);
-                    serde_json::to_value(&rep).unwrap()
+                    match analyze_reach(&doc, start) {
+                        Ok(rep) => serde_json::to_value(&rep).unwrap(),
+                        Err(e) => json!({"ok": false, "error": e.to_string()}),
+                    }
                 }
                 Err(e) => json!({"ok": false, "error": e.to_string()}),
             }

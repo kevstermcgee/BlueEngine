@@ -70,12 +70,12 @@ Patch files are JSON arrays. Every field is explicit and unknown fields are reje
 
 ```json
 [
-  {"op":"add_box","id":"cover-cabinet","label":"Cabinet","center":[2,1,-8],"half_extents":[0.6,1,0.4],"color":[0.45,0.25,0.12]},
+  {"op":"add_box","id":"cover-cabinet","label":"Cabinet","center":[2,1,-8],"half_extents":[0.6,1,0.4],"color":[0.45,0.25,0.12],"structural":false},
   {"op":"add_prop","id":"spare-chair","label":"Chair","kind":"chair","origin":[-2,0,-9]}
 ]
 ```
 
-`add_box` creates a matte box, matching collision proxy and inspect entity. Sizes are **half extents**, positions are metres, Y is up, RGB values are linear 0..1. `add_prop` reuses cereal, chair, table, apple, framed-art, framed-botanical, sculpture, vase-plant or bowl geometry; origin is the bottom of the prop. Both reject occupied IDs. Use `select` to enumerate the resulting components.
+`add_box` creates a matte box and matching collision proxy. It also creates an inspect entity unless `structural:true`; use structural boxes for floors, walls and ceilings that should not be reachability targets. Sizes are **half extents**, positions are metres, Y is up, RGB values are linear 0..1. `add_prop` reuses cereal, chair, table, apple, framed-art, framed-botanical, sculpture, vase-plant or bowl geometry; origin is the bottom of the prop. Both reject occupied IDs. Use `select` to enumerate the resulting components.
 
 ```json
 [
@@ -92,9 +92,9 @@ Use the actual lists returned by `select`; do not assume a future prop still has
 
 Map schema v1 is for portable, static, matte primitive maps. It accepts unparented box/sphere/cylinder/cone nodes with fixed positive scales; no animation, repeats, imported meshes, external audio or custom monitor/crystal actions. The legacy studio stays available via `--studio` and is not exported by this schema. Runtime entity text is owned, so loading maps does not leak strings or need unsafe code.
 
-`audit` validates schema/version/IDs/transforms/bounds, compiles the map, verifies default spawn clearance, reports counts and flags exact duplicate collision boxes. Duplicate boxes are advisory; overlap alone does not mean an error. It cannot prove the absence of every visual gap, floating object, trapped region or gameplay imbalance.
+`audit` validates schema/version/IDs/transforms/bounds, requires and verifies `default_spawn`, compiles the map, reports counts and flags exact duplicate collision boxes. Duplicate boxes are advisory; overlap alone does not mean an error. It cannot prove the absence of every visual gap, floating object, trapped region or gameplay imbalance.
 
-`route` uses the real controller at 60 Hz, starting at the normal spawn. A route is a JSON array of `{x,z,feet,crouch?}`. Each straight waypoint leg has a 60-second simulation budget. It is a reachability regression, **not a pathfinder**: insert waypoints around obstacles. It returns failure at the first blocked waypoint. The supplied upstairs and garden routes exercise important house circulation.
+`route` uses the real controller at 60 Hz, starting at the map's explicit `default_spawn`. A route is a JSON array of `{x,z,feet,crouch?}`. Each straight waypoint leg has a 60-second simulation budget. It is a reachability regression, **not a pathfinder**: insert waypoints around obstacles. It returns failure at the first blocked waypoint. The supplied upstairs and garden routes exercise important house circulation.
 
 `ray` tests actual render geometry between two points, not just physics proxies. It reports the first blocking surface and node ID. Use it for line of sight and cover checks. A clear ray does not imply a player can fit through a gap.
 

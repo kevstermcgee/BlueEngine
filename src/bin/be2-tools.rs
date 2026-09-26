@@ -94,7 +94,7 @@ fn run() -> Result<()> {
                 "event":"authoritative nearest-visible interaction within 2.5 metres (E intent), spatial trigger zones (on_enter/on_exit), or timers (on_timer)",
                 "actions":["increment","set_counter","set_enabled","set_visible","set_mover","start_timer","stop_timer","complete"],
                 "conditions":"counter equals integer; null means unconditional",
-                "limits":{"game_bytes":64000,"spawns":8,"counters":8,"interactables":16,"trigger_zones":16,"movers":16,"timers":16,"rules":16,"actions_per_rule":4,"counter_magnitude":1000000},
+                "limits":{"game_bytes":64000,"spawns":8,"counters":32,"interactables":64,"trigger_zones":64,"movers":64,"timers":64,"rules":64,"actions_per_rule":4,"counter_magnitude":1000000},
                 "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match",
                 "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds; trigger zones declare spatial AABB bounds; movers translate colliders smoothly",
                 "set_enabled":"interaction and trigger zone eligibility only; never changes visibility or collision",
@@ -521,7 +521,7 @@ fn run() -> Result<()> {
         }
         "reach" => {
             let d = MapDocument::load(Path::new(arg(1)?))?;
-            let rep = vesper3d::viewer::reach::analyze_reach(&d, None);
+            let rep = vesper3d::viewer::reach::analyze_reach(&d, None)?;
             println!("{}", serde_json::to_string_pretty(&rep)?);
             if !rep.ok {
                 std::process::exit(1);
@@ -776,6 +776,8 @@ v.as_array().unwrap().iter().map(|x|(x["id"].as_str().unwrap().to_owned(),x.clon
                     );
                 }
                 "audit" => {
+                    d.default_spawn
+                        .ok_or("Map audit requires an explicit default_spawn")?;
                     let r = d.build()?;
                     let mut overlaps = Vec::new();
                     let entries: Vec<_> = d.colliders.iter().collect();
@@ -845,7 +847,10 @@ v.as_array().unwrap().iter().map(|x|(x["id"].as_str().unwrap().to_owned(),x.clon
                         return Err("Route needs 1..100 waypoints".into());
                     }
                     let r = d.build()?;
-                    let mut p = Controller::default();
+                    let spawn = d
+                        .default_spawn
+                        .ok_or("Route simulation requires map.default_spawn")?;
+                    let mut p = Controller::for_profile(Default::default(), spawn.feet, spawn.yaw)?;
                     for (i, w) in route.iter().enumerate() {
                         if [w.x, w.z, w.feet]
                             .iter()

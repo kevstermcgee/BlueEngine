@@ -269,6 +269,7 @@ mod tests {
             .unwrap(),
             colliders: vec![],
             entities: vec![],
+            default_spawn: None,
             spatial: None,
         };
         let g_house = RoomGraph::for_room(&house_room);
@@ -289,6 +290,7 @@ mod tests {
                 max: V(10.0, 4.0, 10.0),
             }],
             entities: vec![],
+            default_spawn: None,
             spatial: None,
         };
         let g_custom = RoomGraph::for_room(&custom_room);

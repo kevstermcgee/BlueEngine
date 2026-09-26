@@ -70,7 +70,7 @@ fn test_static_lint_and_reachability() {
     assert_eq!(lint_res.errors, 0, "TestLab should have 0 lint errors");
 
     // Reachability
-    let reach_res = analyze_reach(&lab, None);
+    let reach_res = analyze_reach(&lab, None).unwrap();
     assert!(reach_res.ok, "Reachability analysis should succeed");
     assert!(
         reach_res.reachable_cells > 0,

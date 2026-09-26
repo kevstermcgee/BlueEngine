@@ -1,5 +1,5 @@
 //! Declarative authoring over the existing validated map contract, without borrowed handles.
-use super::authoring::{Edit, MapDocument};
+use super::authoring::{Edit, MapDocument, MapSpawn};
 use super::simulation::HeadlessWorld;
 use crate::{math::V, scene::Scene, Result};
 use std::collections::BTreeMap;
@@ -11,15 +11,23 @@ use std::collections::BTreeMap;
 pub struct SceneBuilder {
     name: String,
     edits: Vec<Edit>,
+    default_spawn: Option<MapSpawn>,
 }
 
 impl SceneBuilder {
-    /// Start an empty map. Include at least one box or catalog prop before building.
+    /// Start an empty map. Set [`Self::spawn`] and include geometry before building.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             edits: Vec::new(),
+            default_spawn: None,
         }
+    }
+
+    /// Set the required standalone player spawn using feet coordinates and yaw radians.
+    pub fn spawn(mut self, feet: V, yaw: f32) -> Self {
+        self.default_spawn = Some(MapSpawn { feet, yaw });
+        self
     }
 
     /// Add a static box: metres, Y-up, center and positive half extents, linear RGB.
@@ -31,6 +39,27 @@ impl SceneBuilder {
             center,
             half_extents,
             color,
+            structural: false,
+        });
+        self
+    }
+
+    /// Add visual static collision without creating a semantic gameplay entity.
+    pub fn structural_box(
+        mut self,
+        id: impl Into<String>,
+        center: V,
+        half_extents: V,
+        color: V,
+    ) -> Self {
+        let id = id.into();
+        self.edits.push(Edit::AddBox {
+            label: id.clone(),
+            id,
+            center,
+            half_extents,
+            color,
+            structural: true,
         });
         self
     }
@@ -51,12 +80,16 @@ impl SceneBuilder {
     /// Validate the complete transaction, including spawn clearance, and compile it.
     /// Returns the ordinary MapDocument used by both `be2 --map` and the headless host.
     pub fn build(self) -> Result<MapDocument> {
+        let default_spawn = self
+            .default_spawn
+            .ok_or("SceneBuilder requires spawn(feet, yaw)")?;
         MapDocument {
             schema_version: 1,
             name: self.name,
             scene: Scene::default(),
             colliders: BTreeMap::new(),
             entities: Vec::new(),
+            default_spawn: Some(default_spawn),
             spatial: None,
             checks: None,
         }

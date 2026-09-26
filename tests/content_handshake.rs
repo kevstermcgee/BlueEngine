@@ -20,6 +20,9 @@ fn content_hash_is_stable_and_covers_collision_and_graph() {
     let mut room = build(MapId::TestLab).unwrap();
     room.spatial.as_mut().unwrap().portals[0].is_open = false;
     assert_ne!(hash, fingerprint(&room));
+    let mut room = build(MapId::TestLab).unwrap();
+    room.default_spawn.as_mut().unwrap().feet.0 += 1.;
+    assert_ne!(hash, fingerprint(&room));
 }
 
 #[test]

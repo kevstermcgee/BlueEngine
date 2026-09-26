@@ -166,6 +166,11 @@ impl Default for Controller {
 impl Controller {
     /// Spawn a character at the normal map entrance, with matching eye/body height.
     pub fn for_character(kind: CharacterKind) -> Self {
+        Self::for_character_at(kind, V(0., 0., 4.6), -0.10)
+            .expect("Built-in character profile and spawn are valid")
+    }
+    /// Spawn a rendered character at explicit feet coordinates and yaw.
+    pub fn for_character_at(kind: CharacterKind, feet: V, yaw: f32) -> crate::Result<Self> {
         let profile = if kind == CharacterKind::Feta {
             ControllerProfile {
                 height: 0.30,
@@ -180,13 +185,19 @@ impl Controller {
         } else {
             ControllerProfile::default()
         };
-        Self {
+        if !feet.finite() || !yaw.is_finite() {
+            return Err("Nonfinite spawn".into());
+        }
+        Ok(Self {
             kind,
             profile,
             body_height: profile.height,
-            position: V(0., profile.eye_height, 4.6),
+            position: profile.eye_at(feet),
+            feet: feet.1,
+            yaw,
+            pitch: 0.,
             ..Self::default()
-        }
+        })
     }
     /// Create a generic controller at a feet position, with no rendering metadata.
     pub fn for_profile(profile: ControllerProfile, feet: V, yaw: f32) -> crate::Result<Self> {

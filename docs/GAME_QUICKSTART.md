@@ -38,7 +38,7 @@ replicated for interactable geometry and never changes collision or eligibility;
 both actions when an object should disappear and stop responding. Kinematic `movers` smoothly translate box colliders
 between closed and open states over `duration_ticks`, dynamically blocking or opening pathways for players.
 `timers` provide deterministic fixed-tick countdowns (`duration_ticks`, `auto_start`, `repeats`) to dispatch delayed actions.
-Targets require line of sight within 2.5 metres. Limits: 8 counters, 16 targets/zones, 16 movers, 16 timers, 16 rules,
+Targets require line of sight within 2.5 metres. Limits: 32 counters, 64 targets/zones, 64 movers, 64 timers, 64 rules,
 4 actions/rule, 8 spawns; counters clamp to +/-1,000,000. No arbitrary scripts or irregular geometry mutation.
 
 Run input-driven assertions against the real public boundary with

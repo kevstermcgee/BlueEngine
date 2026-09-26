@@ -84,7 +84,8 @@ fn edits_are_transactional_and_sync_added_object_components() {
             label: "Blocked".into(),
             center: V(0., 1., 4.6),
             half_extents: V(1., 1., 1.),
-            color: V(1., 0., 0.)
+            color: V(1., 0., 0.),
+            structural: false,
         }])
         .is_err());
     assert_eq!(serde_json::to_value(&d).unwrap(), original);
