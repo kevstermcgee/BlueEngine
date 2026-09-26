@@ -111,6 +111,15 @@ fn test_authenticated_handshake_and_session_token_enforcement() {
         other => panic!("Expected Welcome, got {:?}", other),
     };
     assert_eq!(assigned_id, 1);
+    assert_eq!(
+        server
+            .session_registry
+            .get_by_peer(&client.local_addr().unwrap())
+            .expect("authoritative registry entry")
+            .token,
+        session_token,
+        "Welcome and registry must use the same session token"
+    );
 
     // 5. Input enforcement: unauthorized input with bogus session token must be dropped
     let bogus_token = [9999, 8888];
@@ -164,7 +173,24 @@ fn test_authenticated_handshake_and_session_token_enforcement() {
             < vesper3d::viewer::test_lab::SPAWN_PLAYER_1.2
     );
 
-    // 7. Anti-spoofing disconnect: mismatched token rejected
+    // 7. A keyed session requires a credential; omission is not accepted.
+    client
+        .send_packet(
+            &Packet::Disconnect {
+                player_id: assigned_id,
+                session_token: None,
+            },
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
+    assert_eq!(
+        server.sessions.len(),
+        1,
+        "Session survives disconnect with omitted credentials"
+    );
+
+    // 8. Anti-spoofing disconnect: mismatched token rejected
     client
         .send_packet(
             &Packet::Disconnect {
@@ -181,7 +207,7 @@ fn test_authenticated_handshake_and_session_token_enforcement() {
         "Session survives spoofed disconnect"
     );
 
-    // 8. Graceful disconnect with matching session token
+    // 9. Graceful disconnect with matching session token
     client
         .send_packet(
             &Packet::Disconnect {
@@ -193,6 +219,11 @@ fn test_authenticated_handshake_and_session_token_enforcement() {
         .unwrap();
     server.poll_network().unwrap();
     assert_eq!(server.sessions.len(), 0, "Session cleanly removed");
+    assert_eq!(
+        server.session_registry.count(),
+        0,
+        "Registry entry is removed with the client session"
+    );
 }
 
 #[test]

@@ -60,8 +60,12 @@ same 60 Hz authority and 20 Hz snapshot path. Input sequence numbers reject dupl
 out-of-order commands. Socket ownership gates disconnects. Reconnect reservations
 are address-bound and expire after 60 seconds. With `--auth-key`, the server uses
 HMAC-SHA256 challenge-response with random nonces/salts, issues session tokens, and
-authenticates later datagrams with replay protection. Without that flag the raw-UDP
-session remains unauthenticated. Neither mode encrypts payloads.
+authenticates later datagrams with replay protection. The session registry is the
+authoritative owner of each token and timeout; registration, reconnect, timeout and
+disconnect cleanup update both token and peer indexes atomically. Credential entropy
+failures reject the connection, and keyed disconnects require the exact token.
+Without that flag the raw-UDP session remains unauthenticated. Neither mode encrypts
+payloads.
 
 Clients acknowledge snapshot ticks. The server computes deltas against acknowledged
 history; clients reject mismatched baselines and request keyframes. Periodic full

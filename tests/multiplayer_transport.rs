@@ -932,6 +932,11 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         1,
         "Session count after Client 2 disconnects"
     );
+    assert_eq!(
+        server.session_registry.count(),
+        1,
+        "Registry count after Client 2 disconnects"
+    );
     assert!(
         server.world.player(2).is_none(),
         "Player 2 removed from world"
@@ -970,6 +975,11 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         2,
         "Session count after Client 2 reconnects"
     );
+    assert_eq!(
+        server.session_registry.count(),
+        2,
+        "Registry count after Client 2 reconnects"
+    );
     assert!(
         server.world.player(2).is_some(),
         "Player 2 reinstated in world"
@@ -1005,6 +1015,11 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         "Both silent clients timed out"
     );
     assert_eq!(server.sessions.len(), 0, "All sessions dropped on timeout");
+    assert_eq!(
+        server.session_registry.count(),
+        0,
+        "Timeout cleanup removes all authoritative registry entries"
+    );
 }
 
 #[test]
