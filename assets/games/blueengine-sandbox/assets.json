@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "pack": {
+    "id": "sandbox",
+    "name": "BlueEngineSandbox kit",
+    "version": "1.0.0",
+    "scope": "game-local",
+    "license": "MIT"
+  },
+  "assets": [
+    {
+      "id": "shipping-crate",
+      "label": "Shipping crate",
+      "description": "Reusable sandbox shipping crate. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/shipping-crate.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "shipping-crate"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.6,
+          0.6,
+          0.6
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    },
+    {
+      "id": "pallet",
+      "label": "Timber pallet",
+      "description": "Reusable sandbox timber pallet. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/pallet.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "pallet"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.7,
+          0.09,
+          0.55
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    },
+    {
+      "id": "bollard",
+      "label": "Safety bollard",
+      "description": "Reusable sandbox safety bollard. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/bollard.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "bollard"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.16,
+          0.6,
+          0.16
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    },
+    {
+      "id": "planter",
+      "label": "Courtyard planter",
+      "description": "Reusable sandbox courtyard planter. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/planter.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "planter"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.7,
+          0.55,
+          0.7
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    },
+    {
+      "id": "pine",
+      "label": "Low-poly pine",
+      "description": "Reusable sandbox low-poly pine. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/pine.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "pine"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          1.0,
+          2.0,
+          1.0
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    },
+    {
+      "id": "gantry",
+      "label": "Modular gantry",
+      "description": "Reusable sandbox modular gantry. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/gantry.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "gantry"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          2.2,
+          1.7,
+          0.22
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    },
+    {
+      "id": "bench",
+      "label": "Courtyard bench",
+      "description": "Reusable sandbox courtyard bench. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/bench.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "bench"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          1.15,
+          0.48,
+          0.35
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    },
+    {
+      "id": "work-light",
+      "label": "Work light",
+      "description": "Reusable sandbox work light. MIT; generated primitive geometry.",
+      "type": "prefab",
+      "source": {
+        "path": "kit/work-light.json",
+        "format": "vesper-scene-v1",
+        "method": "generated"
+      },
+      "taxonomy": {
+        "categories": [
+          "environment"
+        ],
+        "tags": [
+          "sandbox",
+          "work-light"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.35,
+          1.4,
+          0.35
+        ]
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "compound"
+      },
+      "lifecycle": {
+        "status": "experimental"
+      }
+    }
+  ]
+}

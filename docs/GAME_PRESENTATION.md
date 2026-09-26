@@ -63,3 +63,5 @@ not full input prediction/reconciliation. Test floor, wall and stair approaches.
 Windows executables should choose one source for keyboard edges. OR-ing asynchronous
 native edges with delayed window-event edges can toggle the same menu twice. Keep OS
 queries in the executable and pass a single callback to GameShell.
+
+Local applications that actually freeze their simulation use `GameShell::local_menu` instead of `menu`; it preserves the shared controls and displays an accurate local-pause caption.

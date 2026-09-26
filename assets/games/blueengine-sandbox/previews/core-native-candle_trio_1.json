@@ -1,0 +1,1618 @@
+{
+  "schema_version": 1,
+  "name": "Candle trio on tray",
+  "scene": {
+    "version": 1,
+    "size": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "duration": 6.0,
+    "camera": {
+      "pos": [
+        1.4918529,
+        1.1934823,
+        1.4918529
+      ],
+      "target": [
+        0.0,
+        0.47,
+        0.0
+      ],
+      "fov": 42.0,
+      "orbit": 0.0,
+      "aperture": 0.0,
+      "focus": 10.0,
+      "ease": "smooth"
+    },
+    "world": {
+      "sky": [
+        0.36,
+        0.55,
+        0.73
+      ],
+      "horizon": [
+        0.16,
+        0.22,
+        0.28
+      ],
+      "ambient": 0.65,
+      "fog": 0,
+      "exposure": 1.15,
+      "bloom": 0.22
+    },
+    "materials": {
+      "floor": {
+        "color": [
+          0.34,
+          0.4,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-north": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-south": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-east": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-west": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "decor-cream": {
+        "color": [
+          0.88,
+          0.81,
+          0.66
+        ],
+        "roughness": 1.0,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "decor-ink": {
+        "color": [
+          0.045,
+          0.065,
+          0.07
+        ],
+        "roughness": 1.0,
+        "metallic": 0.0,
+        "emission": 0.0,
+        "checker": null
+      },
+      "grid-x-7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x0": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z0": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      }
+    },
+    "lights": [
+      {
+        "pos": [
+          -4.0,
+          8.0,
+          5.0
+        ],
+        "color": [
+          1.0,
+          0.88,
+          0.72
+        ],
+        "power": 90.0,
+        "radius": 1.2
+      }
+    ],
+    "nodes": [
+      {
+        "id": "floor",
+        "shape": "box",
+        "material": "floor",
+        "pos": [
+          0,
+          -0.15,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          8,
+          0.15,
+          8
+        ]
+      },
+      {
+        "id": "edge-north",
+        "shape": "box",
+        "material": "edge-north",
+        "pos": [
+          0,
+          0.6,
+          -8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          8,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-south",
+        "shape": "box",
+        "material": "edge-south",
+        "pos": [
+          0,
+          0.6,
+          8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          8,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-east",
+        "shape": "box",
+        "material": "edge-east",
+        "pos": [
+          8,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          8
+        ]
+      },
+      {
+        "id": "edge-west",
+        "shape": "box",
+        "material": "edge-west",
+        "pos": [
+          -8,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          8
+        ]
+      },
+      {
+        "id": "specimen/0",
+        "shape": "box",
+        "material": "decor-ink",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.018,
+          0.0
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.25,
+          0.018,
+          0.18
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/1",
+        "shape": "cylinder",
+        "material": "decor-cream",
+        "parent": null,
+        "pos": [
+          -0.14,
+          0.171,
+          -0.04
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.055,
+          0.135,
+          0.055
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/2",
+        "shape": "cylinder",
+        "material": "decor-ink",
+        "parent": null,
+        "pos": [
+          -0.14,
+          0.317,
+          -0.04
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.006,
+          0.011,
+          0.006
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/3",
+        "shape": "cylinder",
+        "material": "decor-cream",
+        "parent": null,
+        "pos": [
+          0.02,
+          0.126,
+          -0.06
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.055,
+          0.09,
+          0.055
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/4",
+        "shape": "cylinder",
+        "material": "decor-ink",
+        "parent": null,
+        "pos": [
+          0.02,
+          0.227,
+          -0.06
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.006,
+          0.011,
+          0.006
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/5",
+        "shape": "cylinder",
+        "material": "decor-cream",
+        "parent": null,
+        "pos": [
+          0.13,
+          0.096,
+          0.08
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.055,
+          0.06,
+          0.055
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/6",
+        "shape": "cylinder",
+        "material": "decor-ink",
+        "parent": null,
+        "pos": [
+          0.13,
+          0.167,
+          0.08
+        ],
+        "rot": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "scale": [
+          0.006,
+          0.011,
+          0.006
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "grid-x-7",
+        "shape": "box",
+        "material": "grid-x-7",
+        "pos": [
+          -7,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-7",
+        "shape": "box",
+        "material": "grid-z-7",
+        "pos": [
+          0,
+          0.006,
+          -7
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-6",
+        "shape": "box",
+        "material": "grid-x-6",
+        "pos": [
+          -6,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-6",
+        "shape": "box",
+        "material": "grid-z-6",
+        "pos": [
+          0,
+          0.006,
+          -6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-5",
+        "shape": "box",
+        "material": "grid-x-5",
+        "pos": [
+          -5,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-5",
+        "shape": "box",
+        "material": "grid-z-5",
+        "pos": [
+          0,
+          0.006,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-4",
+        "shape": "box",
+        "material": "grid-x-4",
+        "pos": [
+          -4,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-4",
+        "shape": "box",
+        "material": "grid-z-4",
+        "pos": [
+          0,
+          0.006,
+          -4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-3",
+        "shape": "box",
+        "material": "grid-x-3",
+        "pos": [
+          -3,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-3",
+        "shape": "box",
+        "material": "grid-z-3",
+        "pos": [
+          0,
+          0.006,
+          -3
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-2",
+        "shape": "box",
+        "material": "grid-x-2",
+        "pos": [
+          -2,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-2",
+        "shape": "box",
+        "material": "grid-z-2",
+        "pos": [
+          0,
+          0.006,
+          -2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-1",
+        "shape": "box",
+        "material": "grid-x-1",
+        "pos": [
+          -1,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-1",
+        "shape": "box",
+        "material": "grid-z-1",
+        "pos": [
+          0,
+          0.006,
+          -1
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x0",
+        "shape": "box",
+        "material": "grid-x0",
+        "pos": [
+          0,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z0",
+        "shape": "box",
+        "material": "grid-z0",
+        "pos": [
+          0,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x1",
+        "shape": "box",
+        "material": "grid-x1",
+        "pos": [
+          1,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z1",
+        "shape": "box",
+        "material": "grid-z1",
+        "pos": [
+          0,
+          0.006,
+          1
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x2",
+        "shape": "box",
+        "material": "grid-x2",
+        "pos": [
+          2,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z2",
+        "shape": "box",
+        "material": "grid-z2",
+        "pos": [
+          0,
+          0.006,
+          2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x3",
+        "shape": "box",
+        "material": "grid-x3",
+        "pos": [
+          3,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z3",
+        "shape": "box",
+        "material": "grid-z3",
+        "pos": [
+          0,
+          0.006,
+          3
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x4",
+        "shape": "box",
+        "material": "grid-x4",
+        "pos": [
+          4,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z4",
+        "shape": "box",
+        "material": "grid-z4",
+        "pos": [
+          0,
+          0.006,
+          4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x5",
+        "shape": "box",
+        "material": "grid-x5",
+        "pos": [
+          5,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z5",
+        "shape": "box",
+        "material": "grid-z5",
+        "pos": [
+          0,
+          0.006,
+          5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x6",
+        "shape": "box",
+        "material": "grid-x6",
+        "pos": [
+          6,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z6",
+        "shape": "box",
+        "material": "grid-z6",
+        "pos": [
+          0,
+          0.006,
+          6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x7",
+        "shape": "box",
+        "material": "grid-x7",
+        "pos": [
+          7,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z7",
+        "shape": "box",
+        "material": "grid-z7",
+        "pos": [
+          0,
+          0.006,
+          7
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      }
+    ],
+    "audio": null
+  },
+  "colliders": {
+    "floor": {
+      "min": [
+        -8,
+        -0.3,
+        -8
+      ],
+      "max": [
+        8,
+        0.0,
+        8
+      ]
+    },
+    "edge-north": {
+      "min": [
+        -8,
+        0.0,
+        -8.18
+      ],
+      "max": [
+        8,
+        1.2,
+        -7.82
+      ]
+    },
+    "edge-south": {
+      "min": [
+        -8,
+        0.0,
+        7.82
+      ],
+      "max": [
+        8,
+        1.2,
+        8.18
+      ]
+    },
+    "edge-east": {
+      "min": [
+        7.82,
+        0.0,
+        -8
+      ],
+      "max": [
+        8.18,
+        1.2,
+        8
+      ]
+    },
+    "edge-west": {
+      "min": [
+        -8.18,
+        0.0,
+        -8
+      ],
+      "max": [
+        -7.82,
+        1.2,
+        8
+      ]
+    },
+    "specimen": {
+      "min": [
+        -0.25,
+        0.0,
+        -0.18
+      ],
+      "max": [
+        0.25,
+        0.36,
+        0.18
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "specimen",
+      "label": "Candle trio on tray",
+      "bounds": {
+        "min": [
+          -0.25,
+          0.0,
+          -0.18
+        ],
+        "max": [
+          0.25,
+          0.36,
+          0.18
+        ]
+      },
+      "action": "inspect"
+    }
+  ],
+  "default_spawn": {
+    "feet": [
+      0,
+      0,
+      5
+    ],
+    "yaw": 0
+  }
+}

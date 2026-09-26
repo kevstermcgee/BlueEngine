@@ -1,0 +1,39 @@
+name: Sandbox validation and Windows package
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - src/**
+      - assets/**
+      - scripts/*sandbox*.py
+      - tests/sandbox.rs
+      - Cargo.toml
+      - Cargo.lock
+      - .github/workflows/sandbox.yml
+permissions:
+  contents: read
+jobs:
+  sandbox:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Check catalog and generated content
+        run: |
+          python scripts/build_sandbox_content.py --check
+          python tools/assets.py --include assets/games/blueengine-sandbox/assets.json validate
+      - name: Build optimized sandbox and native tools
+        run: cargo build --release --locked --bin blueengine-sandbox --bin be2 --bin be2-tools
+      - name: Validate content and movement
+        run: |
+          cargo test --release --locked --test sandbox
+          python scripts/validate_sandbox.py
+      - name: Package
+        run: python scripts/package_sandbox.py --output .be2-work/BlueEngineSandbox
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BlueEngineSandbox-Windows
+          path: .be2-work/BlueEngineSandbox

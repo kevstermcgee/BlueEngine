@@ -1,0 +1,1940 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "core/native/chair_wooden_1",
+      "name": "Wooden chair",
+      "description": "Reusable native wooden chair prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-chair.json",
+      "half": [
+        0.26,
+        0.47,
+        0.26
+      ],
+      "tags": "chair furniture prefab seat wood wooden",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-chair_wooden_1.json"
+    },
+    {
+      "id": "core/native/table_wooden_1",
+      "name": "Wooden table",
+      "description": "Reusable native wooden table prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-table.json",
+      "half": [
+        0.8,
+        0.4,
+        0.5
+      ],
+      "tags": "dining furniture prefab table wood wooden",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-table_wooden_1.json"
+    },
+    {
+      "id": "core/native/apple_red",
+      "name": "Red apple",
+      "description": "Reusable native red apple prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-apple.json",
+      "half": [
+        0.1,
+        0.12,
+        0.1
+      ],
+      "tags": "apple food fruit kitchen prefab red",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-apple_red.json"
+    },
+    {
+      "id": "core/native/cereal_box_1",
+      "name": "Cereal box",
+      "description": "Reusable native cereal box prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-cereal-box.json",
+      "half": [
+        0.14,
+        0.22,
+        0.07
+      ],
+      "tags": "box carton cereal food kitchen prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-cereal_box_1.json"
+    },
+    {
+      "id": "core/native/framed_art_1",
+      "name": "Framed sunset print",
+      "description": "Reusable native framed sunset print prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-framed-art.json",
+      "half": [
+        0.55,
+        0.4,
+        0.055
+      ],
+      "tags": "accessory art decor framed framed-art prefab print sunset",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-framed_art_1.json"
+    },
+    {
+      "id": "core/native/framed_botanical_1",
+      "name": "Framed botanical print",
+      "description": "Reusable native framed botanical print prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-framed-botanical.json",
+      "half": [
+        0.55,
+        0.4,
+        0.055
+      ],
+      "tags": "accessory botanical decor framed framed-botanical prefab print",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-framed_botanical_1.json"
+    },
+    {
+      "id": "core/native/sculpture_1",
+      "name": "Abstract terracotta sculpture",
+      "description": "Reusable native abstract terracotta sculpture prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-sculpture.json",
+      "half": [
+        0.25,
+        0.4,
+        0.19
+      ],
+      "tags": "abstract accessory decor prefab sculpture terracotta",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-sculpture_1.json"
+    },
+    {
+      "id": "core/native/vase_plant_1",
+      "name": "Leafy ceramic vase",
+      "description": "Reusable native leafy ceramic vase prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-vase-plant.json",
+      "half": [
+        0.38,
+        0.48,
+        0.3
+      ],
+      "tags": "accessory ceramic decor leafy plant prefab vase vase-plant",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-vase_plant_1.json"
+    },
+    {
+      "id": "core/native/bowl_1",
+      "name": "Ceramic catchall bowl",
+      "description": "Reusable native ceramic catchall bowl prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-bowl.json",
+      "half": [
+        0.24,
+        0.08,
+        0.24
+      ],
+      "tags": "accessory bowl catchall ceramic decor prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-bowl_1.json"
+    },
+    {
+      "id": "core/native/table_lamp_1",
+      "name": "Table lamp",
+      "description": "Reusable native table lamp prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-table-lamp.json",
+      "half": [
+        0.23,
+        0.35,
+        0.23
+      ],
+      "tags": "accessory decor desk lamp lighting prefab table",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-table_lamp_1.json"
+    },
+    {
+      "id": "core/native/book_stack_1",
+      "name": "Stacked books",
+      "description": "Reusable native stacked books prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-book-stack.json",
+      "half": [
+        0.25,
+        0.105,
+        0.18
+      ],
+      "tags": "accessory book books decor prefab shelf stack stacked",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-book_stack_1.json"
+    },
+    {
+      "id": "core/native/candle_trio_1",
+      "name": "Candle trio on tray",
+      "description": "Reusable native candle trio on tray prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-candle-trio.json",
+      "half": [
+        0.25,
+        0.18,
+        0.18
+      ],
+      "tags": "accessory candle candles decor on prefab table tray trio",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-candle_trio_1.json"
+    },
+    {
+      "id": "core/native/potted_cactus_1",
+      "name": "Potted cactus",
+      "description": "Reusable native potted cactus prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-potted-cactus.json",
+      "half": [
+        0.23,
+        0.4,
+        0.18
+      ],
+      "tags": "accessory cactus decor plant potted prefab succulent",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-potted_cactus_1.json"
+    },
+    {
+      "id": "core/native/flower_vase_1",
+      "name": "Daisy vase",
+      "description": "Reusable native daisy vase prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-flower-vase.json",
+      "half": [
+        0.3,
+        0.4,
+        0.25
+      ],
+      "tags": "accessory daisy decor flower flowers plant prefab vase",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-flower_vase_1.json"
+    },
+    {
+      "id": "core/native/tall_vase_1",
+      "name": "Tall ceramic vase",
+      "description": "Reusable native tall ceramic vase prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-tall-vase.json",
+      "half": [
+        0.2,
+        0.34,
+        0.2
+      ],
+      "tags": "accessory ceramic decor prefab tall vase",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-tall_vase_1.json"
+    },
+    {
+      "id": "core/native/mantel_clock_1",
+      "name": "Mantel clock",
+      "description": "Reusable native mantel clock prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-mantel-clock.json",
+      "half": [
+        0.29,
+        0.22,
+        0.12
+      ],
+      "tags": "accessory clock decor mantel prefab shelf",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-mantel_clock_1.json"
+    },
+    {
+      "id": "core/native/woven_basket_1",
+      "name": "Woven-style basket",
+      "description": "Reusable native woven-style basket prop with engine-authored geometry.",
+      "group": "Native props",
+      "source": "assets/props/be2-woven-basket.json",
+      "half": [
+        0.3,
+        0.19,
+        0.23
+      ],
+      "tags": "accessory basket decor prefab storage style woven",
+      "map": "assets/games/blueengine-sandbox/previews/core-native-woven_basket_1.json"
+    },
+    {
+      "id": "core/interiors/student-desk",
+      "name": "Student desk",
+      "description": "Reusable data-only student desk interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/student-desk.json",
+      "half": [
+        0.58,
+        0.39,
+        0.37
+      ],
+      "tags": "desk interior prefab student",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-student-desk.json"
+    },
+    {
+      "id": "core/interiors/backpack",
+      "name": "School backpack",
+      "description": "Reusable data-only school backpack interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/backpack.json",
+      "half": [
+        0.18,
+        0.22,
+        0.13
+      ],
+      "tags": "backpack interior prefab school",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-backpack.json"
+    },
+    {
+      "id": "core/interiors/locker",
+      "name": "Student locker",
+      "description": "Reusable data-only student locker interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/locker.json",
+      "half": [
+        0.25,
+        1,
+        0.295
+      ],
+      "tags": "interior locker prefab student",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-locker.json"
+    },
+    {
+      "id": "core/interiors/file-cabinet",
+      "name": "Filing cabinet",
+      "description": "Reusable data-only filing cabinet interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/file-cabinet.json",
+      "half": [
+        0.32,
+        0.68,
+        0.38
+      ],
+      "tags": "cabinet file filing interior prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-file-cabinet.json"
+    },
+    {
+      "id": "core/interiors/waste-bin",
+      "name": "Waste bin",
+      "description": "Reusable data-only waste bin interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/waste-bin.json",
+      "half": [
+        0.18,
+        0.25,
+        0.18
+      ],
+      "tags": "bin interior prefab waste",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-waste-bin.json"
+    },
+    {
+      "id": "core/interiors/computer",
+      "name": "Desktop computer and keyboard",
+      "description": "Reusable data-only desktop computer and keyboard interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/computer.json",
+      "half": [
+        0.34,
+        0.28,
+        0.28
+      ],
+      "tags": "and computer desktop interior keyboard prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-computer.json"
+    },
+    {
+      "id": "core/interiors/papers",
+      "name": "Paperwork and pen",
+      "description": "Reusable data-only paperwork and pen interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/papers.json",
+      "half": [
+        0.15,
+        0.013,
+        0.12
+      ],
+      "tags": "and interior papers paperwork pen prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-papers.json"
+    },
+    {
+      "id": "core/interiors/mug",
+      "name": "Coffee mug",
+      "description": "Reusable data-only coffee mug interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/mug.json",
+      "half": [
+        0.096,
+        0.09,
+        0.075
+      ],
+      "tags": "coffee interior mug prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-mug.json"
+    },
+    {
+      "id": "core/interiors/printer",
+      "name": "Office printer",
+      "description": "Reusable data-only office printer interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/printer.json",
+      "half": [
+        0.31,
+        0.2,
+        0.39
+      ],
+      "tags": "interior office prefab printer",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-printer.json"
+    },
+    {
+      "id": "core/interiors/coffee-machine",
+      "name": "Coffee machine",
+      "description": "Reusable data-only coffee machine interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/coffee-machine.json",
+      "half": [
+        0.18,
+        0.31,
+        0.18
+      ],
+      "tags": "coffee interior machine prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-coffee-machine.json"
+    },
+    {
+      "id": "core/interiors/microwave",
+      "name": "Microwave",
+      "description": "Reusable data-only microwave interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/microwave.json",
+      "half": [
+        0.32,
+        0.18,
+        0.245
+      ],
+      "tags": "interior microwave prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-microwave.json"
+    },
+    {
+      "id": "core/interiors/register",
+      "name": "Checkout register",
+      "description": "Reusable data-only checkout register interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/register.json",
+      "half": [
+        0.28,
+        0.3,
+        0.24
+      ],
+      "tags": "checkout interior prefab register",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-register.json"
+    },
+    {
+      "id": "core/interiors/bottle",
+      "name": "Drink bottle",
+      "description": "Reusable data-only drink bottle interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/bottle.json",
+      "half": [
+        0.055,
+        0.18,
+        0.055
+      ],
+      "tags": "bottle drink interior prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-bottle.json"
+    },
+    {
+      "id": "core/interiors/snack-bag",
+      "name": "Snack packet",
+      "description": "Reusable data-only snack packet interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/snack-bag.json",
+      "half": [
+        0.075,
+        0.13,
+        0.041
+      ],
+      "tags": "bag interior packet prefab snack",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-snack-bag.json"
+    },
+    {
+      "id": "core/interiors/carton",
+      "name": "Stock carton",
+      "description": "Reusable data-only stock carton interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/carton.json",
+      "half": [
+        0.3,
+        0.242,
+        0.256
+      ],
+      "tags": "carton interior prefab stock",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-carton.json"
+    },
+    {
+      "id": "core/interiors/lunch-tray",
+      "name": "Lunch tray",
+      "description": "Reusable data-only lunch tray interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/lunch-tray.json",
+      "half": [
+        0.24,
+        0.035,
+        0.16
+      ],
+      "tags": "interior lunch prefab tray",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-lunch-tray.json"
+    },
+    {
+      "id": "core/interiors/wall-window",
+      "name": "Opaque daylight window panel",
+      "description": "Reusable data-only opaque daylight window panel interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/wall-window.json",
+      "half": [
+        0.94,
+        0.65,
+        0.18
+      ],
+      "tags": "daylight interior opaque panel prefab wall window",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-wall-window.json"
+    },
+    {
+      "id": "core/interiors/bench",
+      "name": "Bench",
+      "description": "Reusable data-only bench interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/bench.json",
+      "half": [
+        1,
+        0.24,
+        0.25
+      ],
+      "tags": "bench interior prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-bench.json"
+    },
+    {
+      "id": "core/interiors/bookcase",
+      "name": "Bookshelf",
+      "description": "Reusable data-only bookshelf interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/bookcase.json",
+      "half": [
+        0.55,
+        0.8,
+        0.2
+      ],
+      "tags": "bookcase bookshelf interior prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-bookcase.json"
+    },
+    {
+      "id": "core/interiors/soap-dispenser",
+      "name": "Soap dispenser",
+      "description": "Reusable data-only soap dispenser interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/soap-dispenser.json",
+      "half": [
+        0.08,
+        0.143,
+        0.055
+      ],
+      "tags": "dispenser interior prefab soap",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-soap-dispenser.json"
+    },
+    {
+      "id": "core/interiors/math-board",
+      "name": "Blackboard - Math",
+      "description": "Reusable data-only blackboard - math interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/math-board.json",
+      "half": [
+        1.75,
+        0.68,
+        0.21
+      ],
+      "tags": "blackboard board interior math prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-math-board.json"
+    },
+    {
+      "id": "core/interiors/reading-board",
+      "name": "Blackboard - Reading",
+      "description": "Reusable data-only blackboard - reading interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/reading-board.json",
+      "half": [
+        1.75,
+        0.68,
+        0.21
+      ],
+      "tags": "blackboard board interior prefab reading",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-reading-board.json"
+    },
+    {
+      "id": "core/interiors/closed-double-door",
+      "name": "Closed exterior double doors",
+      "description": "Reusable data-only closed exterior double doors interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/closed-double-door.json",
+      "half": [
+        1.5,
+        1.35,
+        0.14
+      ],
+      "tags": "closed door doors double exterior interior prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-closed-double-door.json"
+    },
+    {
+      "id": "core/interiors/wall-clock",
+      "name": "Wall clock",
+      "description": "Reusable data-only wall clock interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/wall-clock.json",
+      "half": [
+        0.25,
+        0.26,
+        0.055
+      ],
+      "tags": "clock interior prefab wall",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-wall-clock.json"
+    },
+    {
+      "id": "core/interiors/plain-basket",
+      "name": "Plain storage basket",
+      "description": "Reusable data-only plain storage basket interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/plain-basket.json",
+      "half": [
+        0.3,
+        0.19,
+        0.23
+      ],
+      "tags": "basket interior plain prefab storage",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-plain-basket.json"
+    },
+    {
+      "id": "core/interiors/retail-shelf",
+      "name": "Simple freestanding shop shelf",
+      "description": "Reusable data-only simple freestanding shop shelf interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/retail-shelf.json",
+      "half": [
+        0.5,
+        0.85,
+        1.33
+      ],
+      "tags": "freestanding interior prefab retail shelf shop simple",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-retail-shelf.json"
+    },
+    {
+      "id": "core/interiors/sofa-two-seat",
+      "name": "Two seat sofa",
+      "description": "Reusable data-only two seat sofa interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/sofa-two-seat.json",
+      "half": [
+        0.9,
+        0.46,
+        0.4
+      ],
+      "tags": "interior prefab seat sofa two",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-sofa-two-seat.json"
+    },
+    {
+      "id": "core/interiors/pencil-cup",
+      "name": "Pencil cup",
+      "description": "Reusable data-only pencil cup interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/pencil-cup.json",
+      "half": [
+        0.06,
+        0.14,
+        0.06
+      ],
+      "tags": "cup interior pencil prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-pencil-cup.json"
+    },
+    {
+      "id": "core/interiors/trophy",
+      "name": "School trophy",
+      "description": "Reusable data-only school trophy interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/trophy.json",
+      "half": [
+        0.15,
+        0.28,
+        0.1
+      ],
+      "tags": "interior prefab school trophy",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-trophy.json"
+    },
+    {
+      "id": "core/interiors/water-dispenser",
+      "name": "Water dispenser",
+      "description": "Reusable data-only water dispenser interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/water-dispenser.json",
+      "half": [
+        0.2,
+        0.67,
+        0.25
+      ],
+      "tags": "dispenser interior prefab water",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-water-dispenser.json"
+    },
+    {
+      "id": "core/interiors/toilet-fixture",
+      "name": "Toilet",
+      "description": "Reusable data-only toilet interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/toilet-fixture.json",
+      "half": [
+        0.3,
+        0.5,
+        0.46
+      ],
+      "tags": "fixture interior prefab toilet",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-toilet-fixture.json"
+    },
+    {
+      "id": "core/interiors/sink-vanity",
+      "name": "Sink vanity",
+      "description": "Reusable data-only sink vanity interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/sink-vanity.json",
+      "half": [
+        0.57,
+        0.61,
+        0.38
+      ],
+      "tags": "interior prefab sink vanity",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-sink-vanity.json"
+    },
+    {
+      "id": "core/interiors/toilet-roll",
+      "name": "Toilet roll holder",
+      "description": "Reusable data-only toilet roll holder interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/toilet-roll.json",
+      "half": [
+        0.13,
+        0.15,
+        0.15
+      ],
+      "tags": "holder interior prefab roll toilet",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-toilet-roll.json"
+    },
+    {
+      "id": "core/interiors/orange",
+      "name": "Orange",
+      "description": "Reusable data-only orange interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/orange.json",
+      "half": [
+        0.085,
+        0.085,
+        0.085
+      ],
+      "tags": "interior orange prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-orange.json"
+    },
+    {
+      "id": "core/interiors/pear",
+      "name": "Green pear",
+      "description": "Reusable data-only green pear interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/pear.json",
+      "half": [
+        0.075,
+        0.12,
+        0.075
+      ],
+      "tags": "green interior pear prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-pear.json"
+    },
+    {
+      "id": "core/interiors/carrot",
+      "name": "Carrot",
+      "description": "Reusable data-only carrot interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/carrot.json",
+      "half": [
+        0.04,
+        0.16,
+        0.04
+      ],
+      "tags": "carrot interior prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-carrot.json"
+    },
+    {
+      "id": "core/interiors/bread-loaf",
+      "name": "Bread loaf",
+      "description": "Reusable data-only bread loaf interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/bread-loaf.json",
+      "half": [
+        0.17,
+        0.095,
+        0.065
+      ],
+      "tags": "bread interior loaf prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-bread-loaf.json"
+    },
+    {
+      "id": "core/interiors/produce-stand",
+      "name": "Divided produce display",
+      "description": "Reusable data-only divided produce display interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/produce-stand.json",
+      "half": [
+        0.75,
+        0.46,
+        0.54
+      ],
+      "tags": "display divided interior prefab produce stand",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-produce-stand.json"
+    },
+    {
+      "id": "core/interiors/small-cubby",
+      "name": "Open cubby unit",
+      "description": "Reusable data-only open cubby unit interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/small-cubby.json",
+      "half": [
+        0.75,
+        0.65,
+        0.2
+      ],
+      "tags": "cubby interior open prefab small unit",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-small-cubby.json"
+    },
+    {
+      "id": "core/interiors/cubby-bin",
+      "name": "Small cubby bin",
+      "description": "Reusable data-only small cubby bin interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/cubby-bin.json",
+      "half": [
+        0.2,
+        0.14,
+        0.15
+      ],
+      "tags": "bin cubby interior prefab small",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-cubby-bin.json"
+    },
+    {
+      "id": "core/interiors/floor-lamp-drum",
+      "name": "Floor lamp - linen drum",
+      "description": "Reusable data-only floor lamp - linen drum interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/floor-lamp-drum.json",
+      "half": [
+        0.285,
+        0.875,
+        0.285
+      ],
+      "tags": "drum floor interior lamp linen prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-floor-lamp-drum.json"
+    },
+    {
+      "id": "core/interiors/floor-lamp-reading",
+      "name": "Floor lamp - reading",
+      "description": "Reusable data-only floor lamp - reading interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/floor-lamp-reading.json",
+      "half": [
+        0.33,
+        0.78,
+        0.2
+      ],
+      "tags": "floor interior lamp prefab reading",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-floor-lamp-reading.json"
+    },
+    {
+      "id": "core/interiors/table-lamp-ceramic",
+      "name": "Table lamp - ceramic",
+      "description": "Reusable data-only table lamp - ceramic interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/table-lamp-ceramic.json",
+      "half": [
+        0.17,
+        0.265,
+        0.17
+      ],
+      "tags": "ceramic interior lamp prefab table",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-table-lamp-ceramic.json"
+    },
+    {
+      "id": "core/interiors/painting-coast",
+      "name": "Framed coastal landscape",
+      "description": "Reusable data-only framed coastal landscape interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/painting-coast.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "coast coastal framed interior landscape painting prefab",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-painting-coast.json"
+    },
+    {
+      "id": "core/interiors/painting-sunset",
+      "name": "Framed sunset landscape",
+      "description": "Reusable data-only framed sunset landscape interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/painting-sunset.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "framed interior landscape painting prefab sunset",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-painting-sunset.json"
+    },
+    {
+      "id": "core/interiors/painting-geometric",
+      "name": "Framed geometric study",
+      "description": "Reusable data-only framed geometric study interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/painting-geometric.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "framed geometric interior painting prefab study",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-painting-geometric.json"
+    },
+    {
+      "id": "core/interiors/painting-botanical",
+      "name": "Framed leaf study",
+      "description": "Reusable data-only framed leaf study interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/painting-botanical.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "botanical framed interior leaf painting prefab study",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-painting-botanical.json"
+    },
+    {
+      "id": "core/interiors/school-solar-print",
+      "name": "Framed solar system print",
+      "description": "Reusable data-only framed solar system print interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/school-solar-print.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "framed interior prefab print school solar system",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-school-solar-print.json"
+    },
+    {
+      "id": "core/interiors/school-shape-print",
+      "name": "Framed shapes print",
+      "description": "Reusable data-only framed shapes print interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/school-shape-print.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "framed interior prefab print school shape shapes",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-school-shape-print.json"
+    },
+    {
+      "id": "core/interiors/market-citrus-print",
+      "name": "Framed citrus poster",
+      "description": "Reusable data-only framed citrus poster interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/market-citrus-print.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "citrus framed interior market poster prefab print",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-market-citrus-print.json"
+    },
+    {
+      "id": "core/interiors/market-coffee-print",
+      "name": "Framed coffee poster",
+      "description": "Reusable data-only framed coffee poster interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/market-coffee-print.json",
+      "half": [
+        0.56,
+        0.46,
+        0.044
+      ],
+      "tags": "coffee framed interior market poster prefab print",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-market-coffee-print.json"
+    },
+    {
+      "id": "core/interiors/shopping-basket",
+      "name": "Shopping basket with carry handles",
+      "description": "Reusable data-only shopping basket with carry handles interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/shopping-basket.json",
+      "half": [
+        0.3,
+        0.244,
+        0.21
+      ],
+      "tags": "basket carry handles interior prefab shopping with",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-shopping-basket.json"
+    },
+    {
+      "id": "core/interiors/shopping-basket-stack",
+      "name": "Nested shopping basket stack",
+      "description": "Reusable data-only nested shopping basket stack interior prefab.",
+      "group": "Interior prefabs",
+      "source": "assets/props/interiors/shopping-basket-stack.json",
+      "half": [
+        0.3,
+        0.329,
+        0.21
+      ],
+      "tags": "basket interior nested prefab shopping stack",
+      "map": "assets/games/blueengine-sandbox/previews/core-interiors-shopping-basket-stack.json"
+    },
+    {
+      "id": "sandbox/shipping-crate",
+      "name": "Shipping crate",
+      "description": "Reusable sandbox shipping crate. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/shipping-crate.json",
+      "half": [
+        0.6,
+        0.6,
+        0.6
+      ],
+      "tags": "sandbox outdoor industrial modular shipping-crate",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-shipping-crate.json"
+    },
+    {
+      "id": "sandbox/pallet",
+      "name": "Timber pallet",
+      "description": "Reusable sandbox timber pallet. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/pallet.json",
+      "half": [
+        0.7,
+        0.09,
+        0.55
+      ],
+      "tags": "sandbox outdoor industrial modular pallet",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-pallet.json"
+    },
+    {
+      "id": "sandbox/bollard",
+      "name": "Safety bollard",
+      "description": "Reusable sandbox safety bollard. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/bollard.json",
+      "half": [
+        0.16,
+        0.6,
+        0.16
+      ],
+      "tags": "sandbox outdoor industrial modular bollard",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-bollard.json"
+    },
+    {
+      "id": "sandbox/planter",
+      "name": "Courtyard planter",
+      "description": "Reusable sandbox courtyard planter. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/planter.json",
+      "half": [
+        0.7,
+        0.55,
+        0.7
+      ],
+      "tags": "sandbox outdoor industrial modular planter",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-planter.json"
+    },
+    {
+      "id": "sandbox/pine",
+      "name": "Low-poly pine",
+      "description": "Reusable sandbox low-poly pine. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/pine.json",
+      "half": [
+        1.0,
+        2.0,
+        1.0
+      ],
+      "tags": "sandbox outdoor industrial modular pine",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-pine.json"
+    },
+    {
+      "id": "sandbox/gantry",
+      "name": "Modular gantry",
+      "description": "Reusable sandbox modular gantry. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/gantry.json",
+      "half": [
+        2.2,
+        1.7,
+        0.22
+      ],
+      "tags": "sandbox outdoor industrial modular gantry",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-gantry.json"
+    },
+    {
+      "id": "sandbox/bench",
+      "name": "Courtyard bench",
+      "description": "Reusable sandbox courtyard bench. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/bench.json",
+      "half": [
+        1.15,
+        0.48,
+        0.35
+      ],
+      "tags": "sandbox outdoor industrial modular bench",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-bench.json"
+    },
+    {
+      "id": "sandbox/work-light",
+      "name": "Work light",
+      "description": "Reusable sandbox work light. MIT; generated primitive geometry.",
+      "group": "Sandbox kit",
+      "source": "assets/games/blueengine-sandbox/kit/work-light.json",
+      "half": [
+        0.35,
+        1.4,
+        0.35
+      ],
+      "tags": "sandbox outdoor industrial modular work-light",
+      "map": "assets/games/blueengine-sandbox/previews/sandbox-work-light.json"
+    }
+  ],
+  "maps": [
+    {
+      "id": "atrium",
+      "name": "Asset Atrium",
+      "description": "A walkable collection of every registered prop and prefab. Central blue aisle; E inspects an exhibit.",
+      "group": "Sandbox maps",
+      "path": "assets/games/blueengine-sandbox/maps/atrium.json",
+      "signs": [
+        {
+          "text": "Wooden chair",
+          "position": [
+            -18.5,
+            0.25,
+            31.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Wooden table",
+          "position": [
+            -12.5,
+            0.25,
+            31.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Red apple",
+          "position": [
+            -6.5,
+            0.25,
+            31.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Cereal box",
+          "position": [
+            3.5,
+            0.25,
+            31.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Framed sunset print",
+          "position": [
+            9.5,
+            0.25,
+            31.5
+          ],
+          "height": 0.25263157894736843
+        },
+        {
+          "text": "Framed botanical print",
+          "position": [
+            15.5,
+            0.25,
+            31.5
+          ],
+          "height": 0.21818181818181817
+        },
+        {
+          "text": "Abstract terracotta sculpture",
+          "position": [
+            -18.5,
+            0.25,
+            26.5
+          ],
+          "height": 0.16551724137931034
+        },
+        {
+          "text": "Leafy ceramic vase",
+          "position": [
+            -12.5,
+            0.25,
+            26.5
+          ],
+          "height": 0.26666666666666666
+        },
+        {
+          "text": "Ceramic catchall bowl",
+          "position": [
+            -6.5,
+            0.25,
+            26.5
+          ],
+          "height": 0.22857142857142856
+        },
+        {
+          "text": "Table lamp",
+          "position": [
+            3.5,
+            0.25,
+            26.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Stacked books",
+          "position": [
+            9.5,
+            0.25,
+            26.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Candle trio on tray",
+          "position": [
+            15.5,
+            0.25,
+            26.5
+          ],
+          "height": 0.25263157894736843
+        },
+        {
+          "text": "Potted cactus",
+          "position": [
+            -18.5,
+            0.25,
+            21.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Daisy vase",
+          "position": [
+            -12.5,
+            0.25,
+            21.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Tall ceramic vase",
+          "position": [
+            -6.5,
+            0.25,
+            21.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Mantel clock",
+          "position": [
+            3.5,
+            0.25,
+            21.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Woven-style basket",
+          "position": [
+            9.5,
+            0.25,
+            21.5
+          ],
+          "height": 0.26666666666666666
+        },
+        {
+          "text": "Student desk",
+          "position": [
+            15.5,
+            0.25,
+            21.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "School backpack",
+          "position": [
+            -18.5,
+            0.25,
+            16.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Student locker",
+          "position": [
+            -12.5,
+            0.25,
+            16.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Filing cabinet",
+          "position": [
+            -6.5,
+            0.25,
+            16.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Waste bin",
+          "position": [
+            3.5,
+            0.25,
+            16.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Desktop computer and keyboard",
+          "position": [
+            9.5,
+            0.25,
+            16.5
+          ],
+          "height": 0.16551724137931034
+        },
+        {
+          "text": "Paperwork and pen",
+          "position": [
+            15.5,
+            0.25,
+            16.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Coffee mug",
+          "position": [
+            -18.5,
+            0.25,
+            11.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Office printer",
+          "position": [
+            -12.5,
+            0.25,
+            11.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Coffee machine",
+          "position": [
+            -6.5,
+            0.25,
+            11.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Microwave",
+          "position": [
+            3.5,
+            0.25,
+            11.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Checkout register",
+          "position": [
+            9.5,
+            0.25,
+            11.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Drink bottle",
+          "position": [
+            15.5,
+            0.25,
+            11.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Snack packet",
+          "position": [
+            -18.5,
+            0.25,
+            6.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Stock carton",
+          "position": [
+            -12.5,
+            0.25,
+            6.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Lunch tray",
+          "position": [
+            -6.5,
+            0.25,
+            6.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Opaque daylight window panel",
+          "position": [
+            3.5,
+            0.25,
+            6.5
+          ],
+          "height": 0.17142857142857143
+        },
+        {
+          "text": "Bench",
+          "position": [
+            9.5,
+            0.25,
+            6.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Bookshelf",
+          "position": [
+            15.5,
+            0.25,
+            6.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Soap dispenser",
+          "position": [
+            -18.5,
+            0.25,
+            1.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Blackboard - Math",
+          "position": [
+            -12.5,
+            0.25,
+            1.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Blackboard - Reading",
+          "position": [
+            -6.5,
+            0.25,
+            1.5
+          ],
+          "height": 0.24
+        },
+        {
+          "text": "Closed exterior double doors",
+          "position": [
+            3.5,
+            0.25,
+            1.5
+          ],
+          "height": 0.17142857142857143
+        },
+        {
+          "text": "Wall clock",
+          "position": [
+            9.5,
+            0.25,
+            1.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Plain storage basket",
+          "position": [
+            15.5,
+            0.25,
+            1.5
+          ],
+          "height": 0.24
+        },
+        {
+          "text": "Simple freestanding shop shelf",
+          "position": [
+            -18.5,
+            0.25,
+            -3.5
+          ],
+          "height": 0.16000000000000003
+        },
+        {
+          "text": "Two seat sofa",
+          "position": [
+            -12.5,
+            0.25,
+            -3.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Pencil cup",
+          "position": [
+            -6.5,
+            0.25,
+            -3.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "School trophy",
+          "position": [
+            3.5,
+            0.25,
+            -3.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Water dispenser",
+          "position": [
+            9.5,
+            0.25,
+            -3.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Toilet",
+          "position": [
+            15.5,
+            0.25,
+            -3.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Sink vanity",
+          "position": [
+            -18.5,
+            0.25,
+            -8.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Toilet roll holder",
+          "position": [
+            -12.5,
+            0.25,
+            -8.5
+          ],
+          "height": 0.26666666666666666
+        },
+        {
+          "text": "Orange",
+          "position": [
+            -6.5,
+            0.25,
+            -8.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Green pear",
+          "position": [
+            3.5,
+            0.25,
+            -8.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Carrot",
+          "position": [
+            9.5,
+            0.25,
+            -8.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Bread loaf",
+          "position": [
+            15.5,
+            0.25,
+            -8.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Divided produce display",
+          "position": [
+            -18.5,
+            0.25,
+            -13.5
+          ],
+          "height": 0.20869565217391306
+        },
+        {
+          "text": "Open cubby unit",
+          "position": [
+            -12.5,
+            0.25,
+            -13.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Small cubby bin",
+          "position": [
+            -6.5,
+            0.25,
+            -13.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Floor lamp - linen drum",
+          "position": [
+            3.5,
+            0.25,
+            -13.5
+          ],
+          "height": 0.20869565217391306
+        },
+        {
+          "text": "Floor lamp - reading",
+          "position": [
+            9.5,
+            0.25,
+            -13.5
+          ],
+          "height": 0.24
+        },
+        {
+          "text": "Table lamp - ceramic",
+          "position": [
+            15.5,
+            0.25,
+            -13.5
+          ],
+          "height": 0.24
+        },
+        {
+          "text": "Framed coastal landscape",
+          "position": [
+            -18.5,
+            0.25,
+            -18.5
+          ],
+          "height": 0.2
+        },
+        {
+          "text": "Framed sunset landscape",
+          "position": [
+            -12.5,
+            0.25,
+            -18.5
+          ],
+          "height": 0.20869565217391306
+        },
+        {
+          "text": "Framed geometric study",
+          "position": [
+            -6.5,
+            0.25,
+            -18.5
+          ],
+          "height": 0.21818181818181817
+        },
+        {
+          "text": "Framed leaf study",
+          "position": [
+            3.5,
+            0.25,
+            -18.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Framed solar system print",
+          "position": [
+            9.5,
+            0.25,
+            -18.5
+          ],
+          "height": 0.192
+        },
+        {
+          "text": "Framed shapes print",
+          "position": [
+            15.5,
+            0.25,
+            -18.5
+          ],
+          "height": 0.25263157894736843
+        },
+        {
+          "text": "Framed citrus poster",
+          "position": [
+            -18.5,
+            0.25,
+            -23.5
+          ],
+          "height": 0.24
+        },
+        {
+          "text": "Framed coffee poster",
+          "position": [
+            -12.5,
+            0.25,
+            -23.5
+          ],
+          "height": 0.24
+        },
+        {
+          "text": "Shopping basket with carry handles",
+          "position": [
+            -6.5,
+            0.25,
+            -23.5
+          ],
+          "height": 0.14117647058823532
+        },
+        {
+          "text": "Nested shopping basket stack",
+          "position": [
+            3.5,
+            0.25,
+            -23.5
+          ],
+          "height": 0.17142857142857143
+        },
+        {
+          "text": "Shipping crate",
+          "position": [
+            9.5,
+            0.25,
+            -23.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Timber pallet",
+          "position": [
+            15.5,
+            0.25,
+            -23.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Safety bollard",
+          "position": [
+            -18.5,
+            0.25,
+            -28.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Courtyard planter",
+          "position": [
+            -12.5,
+            0.25,
+            -28.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Low-poly pine",
+          "position": [
+            -6.5,
+            0.25,
+            -28.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Modular gantry",
+          "position": [
+            3.5,
+            0.25,
+            -28.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Courtyard bench",
+          "position": [
+            9.5,
+            0.25,
+            -28.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "Work light",
+          "position": [
+            15.5,
+            0.25,
+            -28.5
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "BLUEENGINE / ASSET ATRIUM",
+          "position": [
+            -5,
+            3.7,
+            -36
+          ],
+          "height": 0.28
+        }
+      ]
+    },
+    {
+      "id": "calibration",
+      "name": "Calibration Range",
+      "description": "Metric grid, 16 cm stairs, cover and 0.42 / 1.18 / 1.90 m clearance tunnels for both character profiles.",
+      "group": "Sandbox maps",
+      "path": "assets/games/blueengine-sandbox/maps/calibration.json",
+      "signs": [
+        {
+          "text": "0.42 m CLEARANCE",
+          "position": [
+            7.2,
+            0.7,
+            7.6
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "1.18 m CLEARANCE",
+          "position": [
+            7.2,
+            1.46,
+            1.6
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "1.90 m CLEARANCE",
+          "position": [
+            7.2,
+            2.1799999999999997,
+            -4.4
+          ],
+          "height": 0.28
+        },
+        {
+          "text": "MOVEMENT / SCALE / COLLISION",
+          "position": [
+            -5,
+            2.4,
+            -19
+          ],
+          "height": 0.28
+        }
+      ]
+    },
+    {
+      "id": "courtyard",
+      "name": "Cedar Courtyard",
+      "description": "Open outdoor circulation, shaded seating and planted corners. A general-purpose social and visibility test map.",
+      "group": "Sandbox maps",
+      "path": "assets/games/blueengine-sandbox/maps/courtyard.json",
+      "signs": [
+        {
+          "text": "CEDAR / COURTYARD",
+          "position": [
+            -4,
+            2.7,
+            -20
+          ],
+          "height": 0.28
+        }
+      ]
+    },
+    {
+      "id": "foundry",
+      "name": "Foundry Yard",
+      "description": "Two open loading sheds, pallets, crates, work lights and a clear central vehicle lane. Test interiors, cover and sightlines.",
+      "group": "Sandbox maps",
+      "path": "assets/games/blueengine-sandbox/maps/foundry.json",
+      "signs": [
+        {
+          "text": "FOUNDRY / LOADING YARD",
+          "position": [
+            -5,
+            3.6,
+            -21
+          ],
+          "height": 0.28
+        }
+      ]
+    },
+    {
+      "id": "house",
+      "name": "House",
+      "description": "Original furnished BlueEngine starter, including its expanded grounds.",
+      "group": "Starter maps",
+      "path": "assets/games/blueengine-sandbox/maps/house.json",
+      "signs": []
+    },
+    {
+      "id": "school-wing",
+      "name": "School Wing",
+      "description": "Original furnished BlueEngine starter, including its expanded grounds.",
+      "group": "Starter maps",
+      "path": "assets/games/blueengine-sandbox/maps/school-wing.json",
+      "signs": []
+    },
+    {
+      "id": "office",
+      "name": "Office",
+      "description": "Original furnished BlueEngine starter, including its expanded grounds.",
+      "group": "Starter maps",
+      "path": "assets/games/blueengine-sandbox/maps/office.json",
+      "signs": []
+    },
+    {
+      "id": "convenience-store",
+      "name": "Convenience Store",
+      "description": "Original furnished BlueEngine starter, including its expanded grounds.",
+      "group": "Starter maps",
+      "path": "assets/games/blueengine-sandbox/maps/convenience-store.json",
+      "signs": []
+    },
+    {
+      "id": "test-lab",
+      "name": "Blue Test Lab",
+      "description": "The native engine test fixture, including its original assets and collision geometry.",
+      "group": "Engine maps",
+      "path": "builtin:test-lab",
+      "signs": []
+    }
+  ]
+}

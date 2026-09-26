@@ -12,6 +12,12 @@ new content to the publication manifest. Ready-to-play Windows packages are on t
 Continues the complete BlueEngineAntigravity history. The primary development
 fixture is **Blue Test Lab**; furnished legacy maps remain reusable reference assets.
 
+## BlueEngineSandbox
+
+Run `cargo run --release --locked --bin blueengine-sandbox` for the central asset,
+character and map workbench. Includes 78 specimens, four new maps and six cosmetic
+character skins alongside the original content. See the [sandbox guide](assets/games/blueengine-sandbox/README.md).
+
 ## Start here
 
 - Content authors: `python tools/author.py describe`, then [tools/AUTHORING.md](tools/AUTHORING.md).

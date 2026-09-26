@@ -34,6 +34,11 @@ path = "src/bin/be2-headless.rs"
 name = "be2-tools"
 path = "src/bin/be2-tools.rs"
 
+[[bin]]
+name = "blueengine-sandbox"
+path = "src/bin/blueengine-sandbox.rs"
+required-features = ["client"]
+
 [[example]]
 name = "custom_client"
 required-features = ["client"]

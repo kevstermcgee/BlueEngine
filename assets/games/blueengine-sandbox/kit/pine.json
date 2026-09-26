@@ -1,0 +1,183 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      1.4918529,
+      1.1934823,
+      1.4918529
+    ],
+    "target": [
+      0.0,
+      0.47,
+      0.0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.36,
+      0.55,
+      0.73
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.65,
+    "fog": 0,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "pine-0": {
+      "color": [
+        0.51,
+        0.31,
+        0.15
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pine-1": {
+      "color": [
+        0.1,
+        0.31,
+        0.25
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pine-2": {
+      "color": [
+        0.15,
+        0.42,
+        0.3
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pine-3": {
+      "color": [
+        0.22,
+        0.49,
+        0.33
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "pine-0",
+      "shape": "box",
+      "material": "pine-0",
+      "pos": [
+        0,
+        0.65,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.15,
+        0.65,
+        0.15
+      ]
+    },
+    {
+      "id": "pine-1",
+      "shape": "cone",
+      "material": "pine-1",
+      "pos": [
+        0,
+        1.5,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "pine-2",
+      "shape": "cone",
+      "material": "pine-2",
+      "pos": [
+        0,
+        2.5,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.8,
+        0.9,
+        0.8
+      ]
+    },
+    {
+      "id": "pine-3",
+      "shape": "cone",
+      "material": "pine-3",
+      "pos": [
+        0,
+        3.35,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.5,
+        0.65,
+        0.5
+      ]
+    }
+  ],
+  "audio": null
+}

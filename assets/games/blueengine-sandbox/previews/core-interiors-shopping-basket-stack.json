@@ -1,0 +1,6478 @@
+{
+  "schema_version": 1,
+  "name": "Nested shopping basket stack",
+  "scene": {
+    "version": 1,
+    "size": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "duration": 6.0,
+    "camera": {
+      "pos": [
+        1.4918529,
+        1.1934823,
+        1.4918529
+      ],
+      "target": [
+        0.0,
+        0.47,
+        0.0
+      ],
+      "fov": 42.0,
+      "orbit": 0.0,
+      "aperture": 0.0,
+      "focus": 10.0,
+      "ease": "smooth"
+    },
+    "world": {
+      "sky": [
+        0.36,
+        0.55,
+        0.73
+      ],
+      "horizon": [
+        0.16,
+        0.22,
+        0.28
+      ],
+      "ambient": 0.65,
+      "fog": 0,
+      "exposure": 1.15,
+      "bloom": 0.22
+    },
+    "materials": {
+      "floor": {
+        "color": [
+          0.34,
+          0.4,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-north": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-south": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-east": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-west": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "life-blue": {
+        "color": [
+          0.075,
+          0.26,
+          0.44
+        ],
+        "roughness": 1,
+        "metallic": 0,
+        "emission": 0,
+        "checker": null
+      },
+      "life-ink": {
+        "color": [
+          0.045,
+          0.065,
+          0.08
+        ],
+        "roughness": 1,
+        "metallic": 0,
+        "emission": 0,
+        "checker": null
+      },
+      "grid-x-7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x-1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z-1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x0": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z0": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z1": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z2": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z3": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z4": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z5": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z6": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-x7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "grid-z7": {
+        "color": [
+          0.48,
+          0.57,
+          0.62
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      }
+    },
+    "lights": [
+      {
+        "pos": [
+          -4.0,
+          8.0,
+          5.0
+        ],
+        "color": [
+          1.0,
+          0.88,
+          0.72
+        ],
+        "power": 90.0,
+        "radius": 1.2
+      }
+    ],
+    "nodes": [
+      {
+        "id": "floor",
+        "shape": "box",
+        "material": "floor",
+        "pos": [
+          0,
+          -0.15,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          8,
+          0.15,
+          8
+        ]
+      },
+      {
+        "id": "edge-north",
+        "shape": "box",
+        "material": "edge-north",
+        "pos": [
+          0,
+          0.6,
+          -8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          8,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-south",
+        "shape": "box",
+        "material": "edge-south",
+        "pos": [
+          0,
+          0.6,
+          8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          8,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-east",
+        "shape": "box",
+        "material": "edge-east",
+        "pos": [
+          8,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          8
+        ]
+      },
+      {
+        "id": "edge-west",
+        "shape": "box",
+        "material": "edge-west",
+        "pos": [
+          -8,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          8
+        ]
+      },
+      {
+        "id": "specimen/0",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.009,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.24939999999999998,
+          0.009,
+          0.17200000000000001
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/1",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.038,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.258,
+          0.02,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/2",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.038,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.258,
+          0.02,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/3",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.25111999999999995,
+          0.038,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.02,
+          0.16684000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/4",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.25111999999999995,
+          0.038,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.02,
+          0.16684000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/5",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.265,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.258,
+          0.015,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/6",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.265,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.258,
+          0.015,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/7",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.25111999999999995,
+          0.265,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.015,
+          0.16684000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/8",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.25111999999999995,
+          0.265,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.015,
+          0.16684000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/9",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.24595999999999998,
+          0.154,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/10",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.24595999999999998,
+          0.154,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/11",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.1634,
+          0.154,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/12",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.1634,
+          0.154,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/13",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.0817,
+          0.154,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/14",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.0817,
+          0.154,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/15",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.154,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/16",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.154,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/17",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0817,
+          0.154,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/18",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0817,
+          0.154,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/19",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.1634,
+          0.154,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/20",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.1634,
+          0.154,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/21",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.24595999999999998,
+          0.154,
+          -0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/22",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.24595999999999998,
+          0.154,
+          0.17372
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.01032,
+          0.096,
+          0.00688
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/23",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.25111999999999995,
+          0.154,
+          -0.1462
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.096,
+          0.01204
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/24",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.25111999999999995,
+          0.154,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.096,
+          0.01204
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/25",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.25111999999999995,
+          0.154,
+          0.1462
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.096,
+          0.01204
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/26",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.25111999999999995,
+          0.154,
+          -0.1462
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.096,
+          0.01204
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/27",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.25111999999999995,
+          0.154,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.096,
+          0.01204
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/28",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.25111999999999995,
+          0.154,
+          0.1462
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00688,
+          0.096,
+          0.01204
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/29",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.291,
+          -0.12040000000000001
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.23220000000000002,
+          0.011,
+          0.01032
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/30",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.291,
+          0.12040000000000001
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.23220000000000002,
+          0.011,
+          0.01032
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/31",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.094,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.2697,
+          0.009,
+          0.18600000000000003
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/32",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.123,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.279,
+          0.02,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/33",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.123,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.279,
+          0.02,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/34",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.27156,
+          0.123,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.02,
+          0.18042000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/35",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.27156,
+          0.123,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.02,
+          0.18042000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/36",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.35000000000000003,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.279,
+          0.015,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/37",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.35000000000000003,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.279,
+          0.015,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/38",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.27156,
+          0.35000000000000003,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.015,
+          0.18042000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/39",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.27156,
+          0.35000000000000003,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.015,
+          0.18042000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/40",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.26598,
+          0.239,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/41",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.26598,
+          0.239,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/42",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.17670000000000002,
+          0.239,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/43",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.17670000000000002,
+          0.239,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/44",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.08835000000000001,
+          0.239,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/45",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.08835000000000001,
+          0.239,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/46",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.239,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/47",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.239,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/48",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.08835000000000001,
+          0.239,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/49",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.08835000000000001,
+          0.239,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/50",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.17670000000000002,
+          0.239,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/51",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.17670000000000002,
+          0.239,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/52",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.26598,
+          0.239,
+          -0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/53",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.26598,
+          0.239,
+          0.18786000000000003
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.011160000000000002,
+          0.096,
+          0.00744
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/54",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.27156,
+          0.239,
+          -0.15810000000000002
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.096,
+          0.01302
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/55",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.27156,
+          0.239,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.096,
+          0.01302
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/56",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.27156,
+          0.239,
+          0.15810000000000002
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.096,
+          0.01302
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/57",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.27156,
+          0.239,
+          -0.15810000000000002
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.096,
+          0.01302
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/58",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.27156,
+          0.239,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.096,
+          0.01302
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/59",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.27156,
+          0.239,
+          0.15810000000000002
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.00744,
+          0.096,
+          0.01302
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/60",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.376,
+          -0.1302
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.25110000000000005,
+          0.011,
+          0.011160000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/61",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.376,
+          0.1302
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.25110000000000005,
+          0.011,
+          0.011160000000000002
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/62",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.17900000000000002,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.29,
+          0.009,
+          0.2
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/63",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.20800000000000002,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.02,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/64",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.20800000000000002,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.02,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/65",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.292,
+          0.20800000000000002,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.02,
+          0.194
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/66",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.292,
+          0.20800000000000002,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.02,
+          0.194
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/67",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.43500000000000005,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.015,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/68",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.43500000000000005,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.015,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/69",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.292,
+          0.43500000000000005,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.015,
+          0.194
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/70",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.292,
+          0.43500000000000005,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.015,
+          0.194
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/71",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.286,
+          0.324,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/72",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.286,
+          0.324,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/73",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.19,
+          0.324,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/74",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.19,
+          0.324,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/75",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.095,
+          0.324,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/76",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.095,
+          0.324,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/77",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.324,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/78",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.324,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/79",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.095,
+          0.324,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/80",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.095,
+          0.324,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/81",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.19,
+          0.324,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/82",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.19,
+          0.324,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/83",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.286,
+          0.324,
+          -0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/84",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.286,
+          0.324,
+          0.202
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.096,
+          0.008
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/85",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.292,
+          0.324,
+          -0.17
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.096,
+          0.014
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/86",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.292,
+          0.324,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.096,
+          0.014
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/87",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          -0.292,
+          0.324,
+          0.17
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.096,
+          0.014
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/88",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.292,
+          0.324,
+          -0.17
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.096,
+          0.014
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/89",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.292,
+          0.324,
+          0.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.096,
+          0.014
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/90",
+        "shape": "box",
+        "material": "life-blue",
+        "parent": null,
+        "pos": [
+          0.292,
+          0.324,
+          0.17
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.008,
+          0.096,
+          0.014
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/91",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          -0.263,
+          0.542,
+          -0.095
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.092,
+          0.012
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/92",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.263,
+          0.542,
+          -0.095
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.092,
+          0.012
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/93",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.646,
+          -0.095
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.275,
+          0.012,
+          0.012
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/94",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          -0.263,
+          0.542,
+          0.095
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.092,
+          0.012
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/95",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.263,
+          0.542,
+          0.095
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.092,
+          0.012
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "specimen/96",
+        "shape": "box",
+        "material": "life-ink",
+        "parent": null,
+        "pos": [
+          0.0,
+          0.646,
+          0.095
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.275,
+          0.012,
+          0.012
+        ],
+        "ease": "smooth",
+        "motion": {
+          "bob": 0.0,
+          "frequency": 1.0,
+          "phase": 0.0,
+          "spin": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "orbit": 0.0,
+          "orbit_speed": 30.0,
+          "walk": 0.0,
+          "wave": 0.0
+        },
+        "visible": null,
+        "mesh": null,
+        "tube": 0.22,
+        "repeat": {
+          "count": 1,
+          "step": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "ring": 0.0,
+          "jitter": [
+            0.0,
+            0.0,
+            0.0
+          ],
+          "seed": 1
+        }
+      },
+      {
+        "id": "grid-x-7",
+        "shape": "box",
+        "material": "grid-x-7",
+        "pos": [
+          -7,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-7",
+        "shape": "box",
+        "material": "grid-z-7",
+        "pos": [
+          0,
+          0.006,
+          -7
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-6",
+        "shape": "box",
+        "material": "grid-x-6",
+        "pos": [
+          -6,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-6",
+        "shape": "box",
+        "material": "grid-z-6",
+        "pos": [
+          0,
+          0.006,
+          -6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-5",
+        "shape": "box",
+        "material": "grid-x-5",
+        "pos": [
+          -5,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-5",
+        "shape": "box",
+        "material": "grid-z-5",
+        "pos": [
+          0,
+          0.006,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-4",
+        "shape": "box",
+        "material": "grid-x-4",
+        "pos": [
+          -4,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-4",
+        "shape": "box",
+        "material": "grid-z-4",
+        "pos": [
+          0,
+          0.006,
+          -4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-3",
+        "shape": "box",
+        "material": "grid-x-3",
+        "pos": [
+          -3,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-3",
+        "shape": "box",
+        "material": "grid-z-3",
+        "pos": [
+          0,
+          0.006,
+          -3
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-2",
+        "shape": "box",
+        "material": "grid-x-2",
+        "pos": [
+          -2,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-2",
+        "shape": "box",
+        "material": "grid-z-2",
+        "pos": [
+          0,
+          0.006,
+          -2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x-1",
+        "shape": "box",
+        "material": "grid-x-1",
+        "pos": [
+          -1,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z-1",
+        "shape": "box",
+        "material": "grid-z-1",
+        "pos": [
+          0,
+          0.006,
+          -1
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x0",
+        "shape": "box",
+        "material": "grid-x0",
+        "pos": [
+          0,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z0",
+        "shape": "box",
+        "material": "grid-z0",
+        "pos": [
+          0,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x1",
+        "shape": "box",
+        "material": "grid-x1",
+        "pos": [
+          1,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z1",
+        "shape": "box",
+        "material": "grid-z1",
+        "pos": [
+          0,
+          0.006,
+          1
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x2",
+        "shape": "box",
+        "material": "grid-x2",
+        "pos": [
+          2,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z2",
+        "shape": "box",
+        "material": "grid-z2",
+        "pos": [
+          0,
+          0.006,
+          2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x3",
+        "shape": "box",
+        "material": "grid-x3",
+        "pos": [
+          3,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z3",
+        "shape": "box",
+        "material": "grid-z3",
+        "pos": [
+          0,
+          0.006,
+          3
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x4",
+        "shape": "box",
+        "material": "grid-x4",
+        "pos": [
+          4,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z4",
+        "shape": "box",
+        "material": "grid-z4",
+        "pos": [
+          0,
+          0.006,
+          4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x5",
+        "shape": "box",
+        "material": "grid-x5",
+        "pos": [
+          5,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z5",
+        "shape": "box",
+        "material": "grid-z5",
+        "pos": [
+          0,
+          0.006,
+          5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x6",
+        "shape": "box",
+        "material": "grid-x6",
+        "pos": [
+          6,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z6",
+        "shape": "box",
+        "material": "grid-z6",
+        "pos": [
+          0,
+          0.006,
+          6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      },
+      {
+        "id": "grid-x7",
+        "shape": "box",
+        "material": "grid-x7",
+        "pos": [
+          7,
+          0.006,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.009,
+          0.005,
+          7
+        ]
+      },
+      {
+        "id": "grid-z7",
+        "shape": "box",
+        "material": "grid-z7",
+        "pos": [
+          0,
+          0.006,
+          7
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          7,
+          0.005,
+          0.009
+        ]
+      }
+    ],
+    "audio": null
+  },
+  "colliders": {
+    "floor": {
+      "min": [
+        -8,
+        -0.3,
+        -8
+      ],
+      "max": [
+        8,
+        0.0,
+        8
+      ]
+    },
+    "edge-north": {
+      "min": [
+        -8,
+        0.0,
+        -8.18
+      ],
+      "max": [
+        8,
+        1.2,
+        -7.82
+      ]
+    },
+    "edge-south": {
+      "min": [
+        -8,
+        0.0,
+        7.82
+      ],
+      "max": [
+        8,
+        1.2,
+        8.18
+      ]
+    },
+    "edge-east": {
+      "min": [
+        7.82,
+        0.0,
+        -8
+      ],
+      "max": [
+        8.18,
+        1.2,
+        8
+      ]
+    },
+    "edge-west": {
+      "min": [
+        -8.18,
+        0.0,
+        -8
+      ],
+      "max": [
+        -7.82,
+        1.2,
+        8
+      ]
+    },
+    "specimen": {
+      "min": [
+        -0.3,
+        0.0,
+        -0.21
+      ],
+      "max": [
+        0.3,
+        0.658,
+        0.21
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "specimen",
+      "label": "Nested shopping basket stack",
+      "bounds": {
+        "min": [
+          -0.3,
+          0.0,
+          -0.21
+        ],
+        "max": [
+          0.3,
+          0.658,
+          0.21
+        ]
+      },
+      "action": "inspect"
+    }
+  ],
+  "default_spawn": {
+    "feet": [
+      0,
+      0,
+      5
+    ],
+    "yaw": 0
+  }
+}

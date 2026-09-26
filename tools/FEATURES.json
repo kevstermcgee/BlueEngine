@@ -535,6 +535,23 @@
         "game still/menu captures and live controls"
       ],
       "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation."
+    },
+    "sandbox": {
+      "files": [
+        "src/bin/blueengine-sandbox.rs",
+        "src/bin/sandbox",
+        "assets/games/blueengine-sandbox",
+        "scripts/build_sandbox_content.py",
+        "scripts/validate_sandbox.py",
+        "scripts/package_sandbox.py",
+        "tests/sandbox.rs"
+      ],
+      "checks": [
+        "cargo test --locked --test sandbox",
+        "python scripts/validate_sandbox.py",
+        "optimized browser/walk/menu captures and live input checks"
+      ],
+      "note": "Local shared-controller workbench: complete registered prop/prefab browser, map selection, static collision inspection, eight selectable characters, per-map creative saves, searchable in-world prop palette, preview/rotate/grid placement, protected deletion and undo, snapshot export and explicit stock-client physics sessions."
     }
   }
 }

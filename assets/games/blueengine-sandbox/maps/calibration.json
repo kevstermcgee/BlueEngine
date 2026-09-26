@@ -1,0 +1,3300 @@
+{
+  "schema_version": 1,
+  "name": "Calibration Range",
+  "scene": {
+    "version": 1,
+    "size": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "duration": 6.0,
+    "camera": {
+      "pos": [
+        1.4918529,
+        1.1934823,
+        1.4918529
+      ],
+      "target": [
+        0.0,
+        0.47,
+        0.0
+      ],
+      "fov": 42.0,
+      "orbit": 0.0,
+      "aperture": 0.0,
+      "focus": 10.0,
+      "ease": "smooth"
+    },
+    "world": {
+      "sky": [
+        0.36,
+        0.55,
+        0.73
+      ],
+      "horizon": [
+        0.16,
+        0.22,
+        0.28
+      ],
+      "ambient": 0.65,
+      "fog": 0,
+      "exposure": 1.15,
+      "bloom": 0.22
+    },
+    "materials": {
+      "floor": {
+        "color": [
+          0.34,
+          0.4,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-north": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-south": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-east": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-west": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--18": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--16": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--14": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--12": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--10": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--8": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--6": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--4": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line--2": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-0": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-2": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-4": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-6": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-8": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-10": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-12": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-14": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-16": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "line-18": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--20": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--18": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--16": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--14": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--12": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--10": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--8": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--6": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--4": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross--2": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-0": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-2": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-4": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-6": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-8": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-10": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-12": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-14": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-16": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-18": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "cross-20": {
+        "color": [
+          0.63,
+          0.69,
+          0.68
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-0": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-1": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-2": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-3": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-4": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-5": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-6": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "step-7": {
+        "color": [
+          0.21,
+          0.43,
+          0.6
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "landing": {
+        "color": [
+          0.08,
+          0.35,
+          0.58
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "tunnel-0-7": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "tunnel-0-11": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lintel-0": {
+        "color": [
+          0.76,
+          0.52,
+          0.22
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "sign-0": {
+        "color": [
+          0.87,
+          0.92,
+          0.91
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "tunnel-1-7": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "tunnel-1-11": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lintel-1": {
+        "color": [
+          0.76,
+          0.52,
+          0.22
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "sign-1": {
+        "color": [
+          0.87,
+          0.92,
+          0.91
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "tunnel-2-7": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "tunnel-2-11": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lintel-2": {
+        "color": [
+          0.76,
+          0.52,
+          0.22
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "sign-2": {
+        "color": [
+          0.87,
+          0.92,
+          0.91
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-0": {
+        "color": [
+          0.51,
+          0.31,
+          0.15
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-1": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-2": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-3": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-4": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "sign-3": {
+        "color": [
+          0.87,
+          0.92,
+          0.91
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      }
+    },
+    "lights": [
+      {
+        "pos": [
+          -4.0,
+          8.0,
+          5.0
+        ],
+        "color": [
+          1.0,
+          0.88,
+          0.72
+        ],
+        "power": 90.0,
+        "radius": 1.2
+      }
+    ],
+    "nodes": [
+      {
+        "id": "floor",
+        "shape": "box",
+        "material": "floor",
+        "pos": [
+          0,
+          -0.15,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          20,
+          0.15,
+          22
+        ]
+      },
+      {
+        "id": "edge-north",
+        "shape": "box",
+        "material": "edge-north",
+        "pos": [
+          0,
+          0.6,
+          -22
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          20,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-south",
+        "shape": "box",
+        "material": "edge-south",
+        "pos": [
+          0,
+          0.6,
+          22
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          20,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-east",
+        "shape": "box",
+        "material": "edge-east",
+        "pos": [
+          20,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          22
+        ]
+      },
+      {
+        "id": "edge-west",
+        "shape": "box",
+        "material": "edge-west",
+        "pos": [
+          -20,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          22
+        ]
+      },
+      {
+        "id": "line--18",
+        "shape": "box",
+        "material": "line--18",
+        "pos": [
+          -18,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--16",
+        "shape": "box",
+        "material": "line--16",
+        "pos": [
+          -16,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--14",
+        "shape": "box",
+        "material": "line--14",
+        "pos": [
+          -14,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--12",
+        "shape": "box",
+        "material": "line--12",
+        "pos": [
+          -12,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--10",
+        "shape": "box",
+        "material": "line--10",
+        "pos": [
+          -10,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--8",
+        "shape": "box",
+        "material": "line--8",
+        "pos": [
+          -8,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--6",
+        "shape": "box",
+        "material": "line--6",
+        "pos": [
+          -6,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--4",
+        "shape": "box",
+        "material": "line--4",
+        "pos": [
+          -4,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line--2",
+        "shape": "box",
+        "material": "line--2",
+        "pos": [
+          -2,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-0",
+        "shape": "box",
+        "material": "line-0",
+        "pos": [
+          0,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-2",
+        "shape": "box",
+        "material": "line-2",
+        "pos": [
+          2,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-4",
+        "shape": "box",
+        "material": "line-4",
+        "pos": [
+          4,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-6",
+        "shape": "box",
+        "material": "line-6",
+        "pos": [
+          6,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-8",
+        "shape": "box",
+        "material": "line-8",
+        "pos": [
+          8,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-10",
+        "shape": "box",
+        "material": "line-10",
+        "pos": [
+          10,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-12",
+        "shape": "box",
+        "material": "line-12",
+        "pos": [
+          12,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-14",
+        "shape": "box",
+        "material": "line-14",
+        "pos": [
+          14,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-16",
+        "shape": "box",
+        "material": "line-16",
+        "pos": [
+          16,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "line-18",
+        "shape": "box",
+        "material": "line-18",
+        "pos": [
+          18,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.012,
+          0.005,
+          20
+        ]
+      },
+      {
+        "id": "cross--20",
+        "shape": "box",
+        "material": "cross--20",
+        "pos": [
+          0,
+          0.005,
+          -20
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--18",
+        "shape": "box",
+        "material": "cross--18",
+        "pos": [
+          0,
+          0.005,
+          -18
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--16",
+        "shape": "box",
+        "material": "cross--16",
+        "pos": [
+          0,
+          0.005,
+          -16
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--14",
+        "shape": "box",
+        "material": "cross--14",
+        "pos": [
+          0,
+          0.005,
+          -14
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--12",
+        "shape": "box",
+        "material": "cross--12",
+        "pos": [
+          0,
+          0.005,
+          -12
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--10",
+        "shape": "box",
+        "material": "cross--10",
+        "pos": [
+          0,
+          0.005,
+          -10
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--8",
+        "shape": "box",
+        "material": "cross--8",
+        "pos": [
+          0,
+          0.005,
+          -8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--6",
+        "shape": "box",
+        "material": "cross--6",
+        "pos": [
+          0,
+          0.005,
+          -6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--4",
+        "shape": "box",
+        "material": "cross--4",
+        "pos": [
+          0,
+          0.005,
+          -4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross--2",
+        "shape": "box",
+        "material": "cross--2",
+        "pos": [
+          0,
+          0.005,
+          -2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-0",
+        "shape": "box",
+        "material": "cross-0",
+        "pos": [
+          0,
+          0.005,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-2",
+        "shape": "box",
+        "material": "cross-2",
+        "pos": [
+          0,
+          0.005,
+          2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-4",
+        "shape": "box",
+        "material": "cross-4",
+        "pos": [
+          0,
+          0.005,
+          4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-6",
+        "shape": "box",
+        "material": "cross-6",
+        "pos": [
+          0,
+          0.005,
+          6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-8",
+        "shape": "box",
+        "material": "cross-8",
+        "pos": [
+          0,
+          0.005,
+          8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-10",
+        "shape": "box",
+        "material": "cross-10",
+        "pos": [
+          0,
+          0.005,
+          10
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-12",
+        "shape": "box",
+        "material": "cross-12",
+        "pos": [
+          0,
+          0.005,
+          12
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-14",
+        "shape": "box",
+        "material": "cross-14",
+        "pos": [
+          0,
+          0.005,
+          14
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-16",
+        "shape": "box",
+        "material": "cross-16",
+        "pos": [
+          0,
+          0.005,
+          16
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-18",
+        "shape": "box",
+        "material": "cross-18",
+        "pos": [
+          0,
+          0.005,
+          18
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "cross-20",
+        "shape": "box",
+        "material": "cross-20",
+        "pos": [
+          0,
+          0.005,
+          20
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          18,
+          0.005,
+          0.012
+        ]
+      },
+      {
+        "id": "step-0",
+        "shape": "box",
+        "material": "step-0",
+        "pos": [
+          -10,
+          0.08,
+          8.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.08,
+          0.3
+        ]
+      },
+      {
+        "id": "step-1",
+        "shape": "box",
+        "material": "step-1",
+        "pos": [
+          -10,
+          0.16,
+          7.4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.16,
+          0.3
+        ]
+      },
+      {
+        "id": "step-2",
+        "shape": "box",
+        "material": "step-2",
+        "pos": [
+          -10,
+          0.24,
+          6.8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.24,
+          0.3
+        ]
+      },
+      {
+        "id": "step-3",
+        "shape": "box",
+        "material": "step-3",
+        "pos": [
+          -10,
+          0.32,
+          6.2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.32,
+          0.3
+        ]
+      },
+      {
+        "id": "step-4",
+        "shape": "box",
+        "material": "step-4",
+        "pos": [
+          -10,
+          0.4,
+          5.6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.4,
+          0.3
+        ]
+      },
+      {
+        "id": "step-5",
+        "shape": "box",
+        "material": "step-5",
+        "pos": [
+          -10,
+          0.48,
+          5.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.48,
+          0.3
+        ]
+      },
+      {
+        "id": "step-6",
+        "shape": "box",
+        "material": "step-6",
+        "pos": [
+          -10,
+          0.56,
+          4.4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.56,
+          0.3
+        ]
+      },
+      {
+        "id": "step-7",
+        "shape": "box",
+        "material": "step-7",
+        "pos": [
+          -10,
+          0.64,
+          3.8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.64,
+          0.3
+        ]
+      },
+      {
+        "id": "landing",
+        "shape": "box",
+        "material": "landing",
+        "pos": [
+          -10,
+          0.64,
+          2
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2,
+          0.64,
+          1.4
+        ]
+      },
+      {
+        "id": "tunnel-0-7",
+        "shape": "box",
+        "material": "tunnel-0-7",
+        "pos": [
+          7,
+          1.5,
+          6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.15,
+          1.5,
+          1.5
+        ]
+      },
+      {
+        "id": "tunnel-0-11",
+        "shape": "box",
+        "material": "tunnel-0-11",
+        "pos": [
+          11,
+          1.5,
+          6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.15,
+          1.5,
+          1.5
+        ]
+      },
+      {
+        "id": "lintel-0",
+        "shape": "box",
+        "material": "lintel-0",
+        "pos": [
+          9,
+          0.57,
+          6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.85,
+          0.15,
+          1.5
+        ]
+      },
+      {
+        "id": "sign-0",
+        "shape": "box",
+        "material": "sign-0",
+        "pos": [
+          9.0,
+          0.85,
+          7.56
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.8,
+          0.22,
+          0.035
+        ]
+      },
+      {
+        "id": "tunnel-1-7",
+        "shape": "box",
+        "material": "tunnel-1-7",
+        "pos": [
+          7,
+          1.5,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.15,
+          1.5,
+          1.5
+        ]
+      },
+      {
+        "id": "tunnel-1-11",
+        "shape": "box",
+        "material": "tunnel-1-11",
+        "pos": [
+          11,
+          1.5,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.15,
+          1.5,
+          1.5
+        ]
+      },
+      {
+        "id": "lintel-1",
+        "shape": "box",
+        "material": "lintel-1",
+        "pos": [
+          9,
+          1.3299999999999998,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.85,
+          0.15,
+          1.5
+        ]
+      },
+      {
+        "id": "sign-1",
+        "shape": "box",
+        "material": "sign-1",
+        "pos": [
+          9.0,
+          1.6099999999999999,
+          1.56
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.8,
+          0.22,
+          0.035
+        ]
+      },
+      {
+        "id": "tunnel-2-7",
+        "shape": "box",
+        "material": "tunnel-2-7",
+        "pos": [
+          7,
+          1.5,
+          -6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.15,
+          1.5,
+          1.5
+        ]
+      },
+      {
+        "id": "tunnel-2-11",
+        "shape": "box",
+        "material": "tunnel-2-11",
+        "pos": [
+          11,
+          1.5,
+          -6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.15,
+          1.5,
+          1.5
+        ]
+      },
+      {
+        "id": "lintel-2",
+        "shape": "box",
+        "material": "lintel-2",
+        "pos": [
+          9,
+          2.05,
+          -6
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.85,
+          0.15,
+          1.5
+        ]
+      },
+      {
+        "id": "sign-2",
+        "shape": "box",
+        "material": "sign-2",
+        "pos": [
+          9.0,
+          2.3299999999999996,
+          -4.44
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          1.8,
+          0.22,
+          0.035
+        ]
+      },
+      {
+        "id": "cover-0/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          -14.0,
+          0.6,
+          -14.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "cover-0/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          -14.555,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-0/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          -14.555,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-0/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          -13.445,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-0/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          -13.445,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-1/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          -8.0,
+          0.6,
+          -14.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "cover-1/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          -8.555,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-1/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          -8.555,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-1/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          -7.445,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-1/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          -7.445,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-2/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          -2.0,
+          0.6,
+          -14.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "cover-2/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          -2.555,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-2/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          -2.555,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-2/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          -1.4449999999999998,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-2/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          -1.4449999999999998,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-3/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          4.0,
+          0.6,
+          -14.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "cover-3/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          3.445,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-3/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          3.445,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-3/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          4.555,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-3/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          4.555,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-4/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          10.0,
+          0.6,
+          -14.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "cover-4/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          9.445,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-4/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          9.445,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-4/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          10.555,
+          0.6,
+          -14.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "cover-4/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          10.555,
+          0.6,
+          -13.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "sign-3",
+        "shape": "box",
+        "material": "sign-3",
+        "pos": [
+          0.0,
+          2.55,
+          -19.04
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          5.0,
+          0.22,
+          0.035
+        ]
+      }
+    ],
+    "audio": null
+  },
+  "colliders": {
+    "floor": {
+      "min": [
+        -20,
+        -0.3,
+        -22
+      ],
+      "max": [
+        20,
+        0.0,
+        22
+      ]
+    },
+    "edge-north": {
+      "min": [
+        -20,
+        0.0,
+        -22.18
+      ],
+      "max": [
+        20,
+        1.2,
+        -21.82
+      ]
+    },
+    "edge-south": {
+      "min": [
+        -20,
+        0.0,
+        21.82
+      ],
+      "max": [
+        20,
+        1.2,
+        22.18
+      ]
+    },
+    "edge-east": {
+      "min": [
+        19.82,
+        0.0,
+        -22
+      ],
+      "max": [
+        20.18,
+        1.2,
+        22
+      ]
+    },
+    "edge-west": {
+      "min": [
+        -20.18,
+        0.0,
+        -22
+      ],
+      "max": [
+        -19.82,
+        1.2,
+        22
+      ]
+    },
+    "step-0": {
+      "min": [
+        -12,
+        0.0,
+        7.7
+      ],
+      "max": [
+        -8,
+        0.16,
+        8.3
+      ]
+    },
+    "step-1": {
+      "min": [
+        -12,
+        0.0,
+        7.1
+      ],
+      "max": [
+        -8,
+        0.32,
+        7.7
+      ]
+    },
+    "step-2": {
+      "min": [
+        -12,
+        0.0,
+        6.5
+      ],
+      "max": [
+        -8,
+        0.48,
+        7.1
+      ]
+    },
+    "step-3": {
+      "min": [
+        -12,
+        0.0,
+        5.9
+      ],
+      "max": [
+        -8,
+        0.64,
+        6.5
+      ]
+    },
+    "step-4": {
+      "min": [
+        -12,
+        0.0,
+        5.3
+      ],
+      "max": [
+        -8,
+        0.8,
+        5.9
+      ]
+    },
+    "step-5": {
+      "min": [
+        -12,
+        0.0,
+        4.7
+      ],
+      "max": [
+        -8,
+        0.96,
+        5.3
+      ]
+    },
+    "step-6": {
+      "min": [
+        -12,
+        0.0,
+        4.1
+      ],
+      "max": [
+        -8,
+        1.12,
+        4.7
+      ]
+    },
+    "step-7": {
+      "min": [
+        -12,
+        0.0,
+        3.5
+      ],
+      "max": [
+        -8,
+        1.28,
+        4.1
+      ]
+    },
+    "landing": {
+      "min": [
+        -12,
+        0.0,
+        0.6
+      ],
+      "max": [
+        -8,
+        1.28,
+        3.4
+      ]
+    },
+    "tunnel-0-7": {
+      "min": [
+        6.85,
+        0.0,
+        4.5
+      ],
+      "max": [
+        7.15,
+        3.0,
+        7.5
+      ]
+    },
+    "tunnel-0-11": {
+      "min": [
+        10.85,
+        0.0,
+        4.5
+      ],
+      "max": [
+        11.15,
+        3.0,
+        7.5
+      ]
+    },
+    "lintel-0": {
+      "min": [
+        7.15,
+        0.42,
+        4.5
+      ],
+      "max": [
+        10.85,
+        0.72,
+        7.5
+      ]
+    },
+    "tunnel-1-7": {
+      "min": [
+        6.85,
+        0.0,
+        -1.5
+      ],
+      "max": [
+        7.15,
+        3.0,
+        1.5
+      ]
+    },
+    "tunnel-1-11": {
+      "min": [
+        10.85,
+        0.0,
+        -1.5
+      ],
+      "max": [
+        11.15,
+        3.0,
+        1.5
+      ]
+    },
+    "lintel-1": {
+      "min": [
+        7.15,
+        1.18,
+        -1.5
+      ],
+      "max": [
+        10.85,
+        1.48,
+        1.5
+      ]
+    },
+    "tunnel-2-7": {
+      "min": [
+        6.85,
+        0.0,
+        -7.5
+      ],
+      "max": [
+        7.15,
+        3.0,
+        -4.5
+      ]
+    },
+    "tunnel-2-11": {
+      "min": [
+        10.85,
+        0.0,
+        -7.5
+      ],
+      "max": [
+        11.15,
+        3.0,
+        -4.5
+      ]
+    },
+    "lintel-2": {
+      "min": [
+        7.15,
+        1.9,
+        -7.5
+      ],
+      "max": [
+        10.85,
+        2.2,
+        -4.5
+      ]
+    },
+    "cover-0/0": {
+      "min": [
+        -14.58,
+        0.02,
+        -14.58
+      ],
+      "max": [
+        -13.42,
+        1.18,
+        -13.42
+      ]
+    },
+    "cover-0/1": {
+      "min": [
+        -14.6,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        -14.51,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-0/2": {
+      "min": [
+        -14.6,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        -14.51,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-0/3": {
+      "min": [
+        -13.49,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        -13.4,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-0/4": {
+      "min": [
+        -13.49,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        -13.4,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-1/0": {
+      "min": [
+        -8.58,
+        0.02,
+        -14.58
+      ],
+      "max": [
+        -7.42,
+        1.18,
+        -13.42
+      ]
+    },
+    "cover-1/1": {
+      "min": [
+        -8.6,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        -8.51,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-1/2": {
+      "min": [
+        -8.6,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        -8.51,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-1/3": {
+      "min": [
+        -7.49,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        -7.4,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-1/4": {
+      "min": [
+        -7.49,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        -7.4,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-2/0": {
+      "min": [
+        -2.58,
+        0.02,
+        -14.58
+      ],
+      "max": [
+        -1.42,
+        1.18,
+        -13.42
+      ]
+    },
+    "cover-2/1": {
+      "min": [
+        -2.6,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        -2.51,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-2/2": {
+      "min": [
+        -2.6,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        -2.51,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-2/3": {
+      "min": [
+        -1.49,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        -1.4,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-2/4": {
+      "min": [
+        -1.49,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        -1.4,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-3/0": {
+      "min": [
+        3.42,
+        0.02,
+        -14.58
+      ],
+      "max": [
+        4.58,
+        1.18,
+        -13.42
+      ]
+    },
+    "cover-3/1": {
+      "min": [
+        3.4,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        3.49,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-3/2": {
+      "min": [
+        3.4,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        3.49,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-3/3": {
+      "min": [
+        4.51,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        4.6,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-3/4": {
+      "min": [
+        4.51,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        4.6,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-4/0": {
+      "min": [
+        9.42,
+        0.02,
+        -14.58
+      ],
+      "max": [
+        10.58,
+        1.18,
+        -13.42
+      ]
+    },
+    "cover-4/1": {
+      "min": [
+        9.4,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        9.49,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-4/2": {
+      "min": [
+        9.4,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        9.49,
+        1.2,
+        -13.4
+      ]
+    },
+    "cover-4/3": {
+      "min": [
+        10.51,
+        0.0,
+        -14.6
+      ],
+      "max": [
+        10.6,
+        1.2,
+        -14.51
+      ]
+    },
+    "cover-4/4": {
+      "min": [
+        10.51,
+        0.0,
+        -13.49
+      ],
+      "max": [
+        10.6,
+        1.2,
+        -13.4
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "cover-0",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          -14.6,
+          0.0,
+          -14.6
+        ],
+        "max": [
+          -13.4,
+          1.2,
+          -13.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "cover-1",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          -8.6,
+          0.0,
+          -14.6
+        ],
+        "max": [
+          -7.4,
+          1.2,
+          -13.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "cover-2",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          -2.6,
+          0.0,
+          -14.6
+        ],
+        "max": [
+          -1.4,
+          1.2,
+          -13.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "cover-3",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          3.4,
+          0.0,
+          -14.6
+        ],
+        "max": [
+          4.6,
+          1.2,
+          -13.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "cover-4",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          9.4,
+          0.0,
+          -14.6
+        ],
+        "max": [
+          10.6,
+          1.2,
+          -13.4
+        ]
+      },
+      "action": "inspect"
+    }
+  ],
+  "default_spawn": {
+    "feet": [
+      0,
+      0,
+      18
+    ],
+    "yaw": 0
+  }
+}

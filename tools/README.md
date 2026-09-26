@@ -173,3 +173,13 @@ Furniture clearance: runtime room loading replaces matching table/desk/chair/ben
 Playable game presentation follows [the shared presentation contract](../docs/GAME_PRESENTATION.md). Use the `presentation` feature for `GameShell` and cached static rendering.
 
 The same presentation feature exposes `game_text` for stable UI/signage, `game_visuals` for cached materials/weapons, and collision-safe local pose smoothing. See the contract for rendering order and authoritative-versus-cosmetic responsibilities.
+
+## Sandbox workbench
+
+`cargo run --release --locked --bin blueengine-sandbox` opens the catalog browser, character studio and map test client. Regenerate content with `python scripts/build_sandbox_content.py`, then run `python scripts/validate_sandbox.py` and the sandbox Rust integration suite. See [the workbench guide](../assets/games/blueengine-sandbox/README.md).
+
+Sandbox creative play: Play / Create pairs any map with a character. V opens the
+asset palette, click places a static prop, R rotates, wheel changes reach,
+Shift+wheel changes height, G toggles grid, Delete removes placed props, Z undoes.
+Per-map saves are in `.be2-work/sandbox-worlds`; `--creative-smoke NEW_DIR` runs
+isolated placement/save/reload checks and captures. See the sandbox README.

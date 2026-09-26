@@ -1,0 +1,303 @@
+{
+  "version": 1,
+  "size": [
+    1280,
+    720
+  ],
+  "fps": 30,
+  "duration": 6.0,
+  "camera": {
+    "pos": [
+      1.4918529,
+      1.1934823,
+      1.4918529
+    ],
+    "target": [
+      0.0,
+      0.47,
+      0.0
+    ],
+    "fov": 42.0,
+    "orbit": 0.0,
+    "aperture": 0.0,
+    "focus": 10.0,
+    "ease": "smooth"
+  },
+  "world": {
+    "sky": [
+      0.36,
+      0.55,
+      0.73
+    ],
+    "horizon": [
+      0.16,
+      0.22,
+      0.28
+    ],
+    "ambient": 0.65,
+    "fog": 0,
+    "exposure": 1.15,
+    "bloom": 0.22
+  },
+  "materials": {
+    "pallet-0": {
+      "color": [
+        0.51,
+        0.31,
+        0.15
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pallet-1": {
+      "color": [
+        0.51,
+        0.31,
+        0.15
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pallet-2": {
+      "color": [
+        0.51,
+        0.31,
+        0.15
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pallet-3": {
+      "color": [
+        0.51,
+        0.31,
+        0.15
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pallet-4": {
+      "color": [
+        0.51,
+        0.31,
+        0.15
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pallet-5": {
+      "color": [
+        0.11,
+        0.16,
+        0.2
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pallet-6": {
+      "color": [
+        0.11,
+        0.16,
+        0.2
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    },
+    "pallet-7": {
+      "color": [
+        0.11,
+        0.16,
+        0.2
+      ],
+      "roughness": 0.85,
+      "metallic": 0,
+      "emission": 0
+    }
+  },
+  "lights": [
+    {
+      "pos": [
+        -4.0,
+        8.0,
+        5.0
+      ],
+      "color": [
+        1.0,
+        0.88,
+        0.72
+      ],
+      "power": 90.0,
+      "radius": 1.2
+    }
+  ],
+  "nodes": [
+    {
+      "id": "pallet-0",
+      "shape": "box",
+      "material": "pallet-0",
+      "pos": [
+        0,
+        0.13,
+        -0.475
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.05,
+        0.075
+      ]
+    },
+    {
+      "id": "pallet-1",
+      "shape": "box",
+      "material": "pallet-1",
+      "pos": [
+        0,
+        0.13,
+        -0.2375
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.05,
+        0.075
+      ]
+    },
+    {
+      "id": "pallet-2",
+      "shape": "box",
+      "material": "pallet-2",
+      "pos": [
+        0,
+        0.13,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.05,
+        0.075
+      ]
+    },
+    {
+      "id": "pallet-3",
+      "shape": "box",
+      "material": "pallet-3",
+      "pos": [
+        0,
+        0.13,
+        0.2375
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.05,
+        0.075
+      ]
+    },
+    {
+      "id": "pallet-4",
+      "shape": "box",
+      "material": "pallet-4",
+      "pos": [
+        0,
+        0.13,
+        0.475
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.7,
+        0.05,
+        0.075
+      ]
+    },
+    {
+      "id": "pallet-5",
+      "shape": "box",
+      "material": "pallet-5",
+      "pos": [
+        -0.6,
+        0.04,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.04,
+        0.55
+      ]
+    },
+    {
+      "id": "pallet-6",
+      "shape": "box",
+      "material": "pallet-6",
+      "pos": [
+        0,
+        0.04,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.04,
+        0.55
+      ]
+    },
+    {
+      "id": "pallet-7",
+      "shape": "box",
+      "material": "pallet-7",
+      "pos": [
+        0.6,
+        0.04,
+        0
+      ],
+      "rot": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.08,
+        0.04,
+        0.55
+      ]
+    }
+  ],
+  "audio": null
+}

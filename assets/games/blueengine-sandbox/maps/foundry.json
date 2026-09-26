@@ -1,0 +1,6412 @@
+{
+  "schema_version": 1,
+  "name": "Foundry Yard",
+  "scene": {
+    "version": 1,
+    "size": [
+      1280,
+      720
+    ],
+    "fps": 30,
+    "duration": 6.0,
+    "camera": {
+      "pos": [
+        1.4918529,
+        1.1934823,
+        1.4918529
+      ],
+      "target": [
+        0.0,
+        0.47,
+        0.0
+      ],
+      "fov": 42.0,
+      "orbit": 0.0,
+      "aperture": 0.0,
+      "focus": 10.0,
+      "ease": "smooth"
+    },
+    "world": {
+      "sky": [
+        0.36,
+        0.55,
+        0.73
+      ],
+      "horizon": [
+        0.16,
+        0.22,
+        0.28
+      ],
+      "ambient": 0.65,
+      "fog": 0,
+      "exposure": 1.15,
+      "bloom": 0.22
+    },
+    "materials": {
+      "floor": {
+        "color": [
+          0.34,
+          0.4,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-north": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-south": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-east": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "edge-west": {
+        "color": [
+          0.17,
+          0.24,
+          0.3
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shed-back--15": {
+        "color": [
+          0.24,
+          0.37,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shed-side--15--1": {
+        "color": [
+          0.24,
+          0.37,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shed-side--15-1": {
+        "color": [
+          0.24,
+          0.37,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "roof--15": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-0": {
+        "color": [
+          0.51,
+          0.31,
+          0.15
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-1": {
+        "color": [
+          0.51,
+          0.31,
+          0.15
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-2": {
+        "color": [
+          0.51,
+          0.31,
+          0.15
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-3": {
+        "color": [
+          0.51,
+          0.31,
+          0.15
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-4": {
+        "color": [
+          0.51,
+          0.31,
+          0.15
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-5": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-6": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "pallet-7": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-0": {
+        "color": [
+          0.51,
+          0.31,
+          0.15
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-1": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-2": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-3": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shipping-crate-4": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "work-light-0": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "work-light-1": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "work-light-2": {
+        "color": [
+          0.96,
+          0.76,
+          0.27
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "work-light-3": {
+        "color": [
+          0.95,
+          0.94,
+          0.75
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shed-back-15": {
+        "color": [
+          0.24,
+          0.37,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shed-side-15--1": {
+        "color": [
+          0.24,
+          0.37,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "shed-side-15-1": {
+        "color": [
+          0.24,
+          0.37,
+          0.44
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "roof-15": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "gantry-0": {
+        "color": [
+          0.08,
+          0.35,
+          0.58
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "gantry-1": {
+        "color": [
+          0.08,
+          0.35,
+          0.58
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "gantry-2": {
+        "color": [
+          0.08,
+          0.35,
+          0.58
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "bollard-0": {
+        "color": [
+          0.94,
+          0.6,
+          0.12
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "bollard-1": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "bollard-2": {
+        "color": [
+          0.11,
+          0.16,
+          0.2
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane--20": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane--16": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane--12": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane--8": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane--4": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane-0": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane-4": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane-8": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane-12": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane-16": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "lane-20": {
+        "color": [
+          0.93,
+          0.72,
+          0.25
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      },
+      "sign-0": {
+        "color": [
+          0.87,
+          0.92,
+          0.91
+        ],
+        "roughness": 0.85,
+        "metallic": 0,
+        "emission": 0
+      }
+    },
+    "lights": [
+      {
+        "pos": [
+          -4.0,
+          8.0,
+          5.0
+        ],
+        "color": [
+          1.0,
+          0.88,
+          0.72
+        ],
+        "power": 90.0,
+        "radius": 1.2
+      }
+    ],
+    "nodes": [
+      {
+        "id": "floor",
+        "shape": "box",
+        "material": "floor",
+        "pos": [
+          0,
+          -0.15,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          24,
+          0.15,
+          24
+        ]
+      },
+      {
+        "id": "edge-north",
+        "shape": "box",
+        "material": "edge-north",
+        "pos": [
+          0,
+          0.6,
+          -24
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          24,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-south",
+        "shape": "box",
+        "material": "edge-south",
+        "pos": [
+          0,
+          0.6,
+          24
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          24,
+          0.6,
+          0.18
+        ]
+      },
+      {
+        "id": "edge-east",
+        "shape": "box",
+        "material": "edge-east",
+        "pos": [
+          24,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          24
+        ]
+      },
+      {
+        "id": "edge-west",
+        "shape": "box",
+        "material": "edge-west",
+        "pos": [
+          -24,
+          0.6,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          0.6,
+          24
+        ]
+      },
+      {
+        "id": "shed-back--15",
+        "shape": "box",
+        "material": "shed-back--15",
+        "pos": [
+          -15,
+          2.5,
+          -12
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          6,
+          2.5,
+          0.25
+        ]
+      },
+      {
+        "id": "shed-side--15--1",
+        "shape": "box",
+        "material": "shed-side--15--1",
+        "pos": [
+          -21,
+          2.5,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.25,
+          2.5,
+          7
+        ]
+      },
+      {
+        "id": "shed-side--15-1",
+        "shape": "box",
+        "material": "shed-side--15-1",
+        "pos": [
+          -9,
+          2.5,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.25,
+          2.5,
+          7
+        ]
+      },
+      {
+        "id": "roof--15",
+        "shape": "box",
+        "material": "roof--15",
+        "pos": [
+          -15,
+          5.1,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          6.3,
+          0.15,
+          7.3
+        ]
+      },
+      {
+        "id": "pallet--15-0/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          -19.0,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-0/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          -19.0,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-0/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          -19.0,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-0/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          -19.0,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-0/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          -19.0,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-0/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          -19.6,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-0/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          -19.0,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-0/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          -18.4,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate--15-0/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          -19.0,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate--15-0/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          -19.555,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-0/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          -19.555,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-0/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          -18.445,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-0/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          -18.445,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "pallet--15-1/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          -16.4,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-1/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          -16.4,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-1/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          -16.4,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-1/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          -16.4,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-1/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          -16.4,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-1/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          -17.0,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-1/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          -16.4,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-1/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          -15.799999999999999,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate--15-1/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          -16.4,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate--15-1/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          -16.955,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-1/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          -16.955,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-1/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          -15.844999999999999,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-1/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          -15.844999999999999,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "pallet--15-2/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          -13.8,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-2/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          -13.8,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-2/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          -13.8,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-2/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          -13.8,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-2/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          -13.8,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-2/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          -14.4,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-2/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          -13.8,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-2/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          -13.200000000000001,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate--15-2/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          -13.8,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate--15-2/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          -14.355,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-2/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          -14.355,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-2/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          -13.245000000000001,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-2/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          -13.245000000000001,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "pallet--15-3/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          -11.2,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-3/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          -11.2,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-3/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          -11.2,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-3/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          -11.2,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-3/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          -11.2,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet--15-3/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          -11.799999999999999,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-3/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          -11.2,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet--15-3/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          -10.6,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate--15-3/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          -11.2,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate--15-3/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          -11.754999999999999,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-3/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          -11.754999999999999,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-3/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          -10.645,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate--15-3/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          -10.645,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "light--15--4/0",
+        "shape": "box",
+        "material": "work-light-0",
+        "pos": [
+          -19.0,
+          0.06,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.35,
+          0.06,
+          0.35
+        ]
+      },
+      {
+        "id": "light--15--4/1",
+        "shape": "box",
+        "material": "work-light-1",
+        "pos": [
+          -19.0,
+          1.3,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.055,
+          1.25,
+          0.055
+        ]
+      },
+      {
+        "id": "light--15--4/2",
+        "shape": "box",
+        "material": "work-light-2",
+        "pos": [
+          -19.0,
+          2.65,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.15,
+          0.12
+        ]
+      },
+      {
+        "id": "light--15--4/3",
+        "shape": "box",
+        "material": "work-light-3",
+        "pos": [
+          -19.0,
+          2.65,
+          -1.875
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.1,
+          0.01
+        ]
+      },
+      {
+        "id": "light--15-4/0",
+        "shape": "box",
+        "material": "work-light-0",
+        "pos": [
+          -11.0,
+          0.06,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.35,
+          0.06,
+          0.35
+        ]
+      },
+      {
+        "id": "light--15-4/1",
+        "shape": "box",
+        "material": "work-light-1",
+        "pos": [
+          -11.0,
+          1.3,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.055,
+          1.25,
+          0.055
+        ]
+      },
+      {
+        "id": "light--15-4/2",
+        "shape": "box",
+        "material": "work-light-2",
+        "pos": [
+          -11.0,
+          2.65,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.15,
+          0.12
+        ]
+      },
+      {
+        "id": "light--15-4/3",
+        "shape": "box",
+        "material": "work-light-3",
+        "pos": [
+          -11.0,
+          2.65,
+          -1.875
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.1,
+          0.01
+        ]
+      },
+      {
+        "id": "shed-back-15",
+        "shape": "box",
+        "material": "shed-back-15",
+        "pos": [
+          15,
+          2.5,
+          -12
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          6,
+          2.5,
+          0.25
+        ]
+      },
+      {
+        "id": "shed-side-15--1",
+        "shape": "box",
+        "material": "shed-side-15--1",
+        "pos": [
+          9,
+          2.5,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.25,
+          2.5,
+          7
+        ]
+      },
+      {
+        "id": "shed-side-15-1",
+        "shape": "box",
+        "material": "shed-side-15-1",
+        "pos": [
+          21,
+          2.5,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.25,
+          2.5,
+          7
+        ]
+      },
+      {
+        "id": "roof-15",
+        "shape": "box",
+        "material": "roof-15",
+        "pos": [
+          15,
+          5.1,
+          -5
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          6.3,
+          0.15,
+          7.3
+        ]
+      },
+      {
+        "id": "pallet-15-0/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          11.0,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-0/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          11.0,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-0/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          11.0,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-0/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          11.0,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-0/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          11.0,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-0/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          10.4,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-0/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          11.0,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-0/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          11.6,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate-15-0/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          11.0,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate-15-0/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          10.445,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-0/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          10.445,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-0/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          11.555,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-0/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          11.555,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "pallet-15-1/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          13.6,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-1/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          13.6,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-1/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          13.6,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-1/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          13.6,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-1/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          13.6,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-1/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          13.0,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-1/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          13.6,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-1/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          14.2,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate-15-1/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          13.6,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate-15-1/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          13.045,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-1/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          13.045,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-1/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          14.155,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-1/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          14.155,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "pallet-15-2/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          16.2,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-2/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          16.2,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-2/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          16.2,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-2/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          16.2,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-2/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          16.2,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-2/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          15.6,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-2/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          16.2,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-2/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          16.8,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate-15-2/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          16.2,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate-15-2/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          15.645,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-2/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          15.645,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-2/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          16.755,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-2/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          16.755,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "pallet-15-3/0",
+        "shape": "box",
+        "material": "pallet-0",
+        "pos": [
+          18.8,
+          0.13,
+          -9.475
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-3/1",
+        "shape": "box",
+        "material": "pallet-1",
+        "pos": [
+          18.8,
+          0.13,
+          -9.2375
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-3/2",
+        "shape": "box",
+        "material": "pallet-2",
+        "pos": [
+          18.8,
+          0.13,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-3/3",
+        "shape": "box",
+        "material": "pallet-3",
+        "pos": [
+          18.8,
+          0.13,
+          -8.7625
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-3/4",
+        "shape": "box",
+        "material": "pallet-4",
+        "pos": [
+          18.8,
+          0.13,
+          -8.525
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.7,
+          0.05,
+          0.075
+        ]
+      },
+      {
+        "id": "pallet-15-3/5",
+        "shape": "box",
+        "material": "pallet-5",
+        "pos": [
+          18.2,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-3/6",
+        "shape": "box",
+        "material": "pallet-6",
+        "pos": [
+          18.8,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "pallet-15-3/7",
+        "shape": "box",
+        "material": "pallet-7",
+        "pos": [
+          19.400000000000002,
+          0.04,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.08,
+          0.04,
+          0.55
+        ]
+      },
+      {
+        "id": "crate-15-3/0",
+        "shape": "box",
+        "material": "shipping-crate-0",
+        "pos": [
+          18.8,
+          0.78,
+          -9.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.58,
+          0.58,
+          0.58
+        ]
+      },
+      {
+        "id": "crate-15-3/1",
+        "shape": "box",
+        "material": "shipping-crate-1",
+        "pos": [
+          18.245,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-3/2",
+        "shape": "box",
+        "material": "shipping-crate-2",
+        "pos": [
+          18.245,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-3/3",
+        "shape": "box",
+        "material": "shipping-crate-3",
+        "pos": [
+          19.355,
+          0.78,
+          -9.555
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "crate-15-3/4",
+        "shape": "box",
+        "material": "shipping-crate-4",
+        "pos": [
+          19.355,
+          0.78,
+          -8.445
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.045,
+          0.6,
+          0.045
+        ]
+      },
+      {
+        "id": "light-15--4/0",
+        "shape": "box",
+        "material": "work-light-0",
+        "pos": [
+          11.0,
+          0.06,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.35,
+          0.06,
+          0.35
+        ]
+      },
+      {
+        "id": "light-15--4/1",
+        "shape": "box",
+        "material": "work-light-1",
+        "pos": [
+          11.0,
+          1.3,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.055,
+          1.25,
+          0.055
+        ]
+      },
+      {
+        "id": "light-15--4/2",
+        "shape": "box",
+        "material": "work-light-2",
+        "pos": [
+          11.0,
+          2.65,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.15,
+          0.12
+        ]
+      },
+      {
+        "id": "light-15--4/3",
+        "shape": "box",
+        "material": "work-light-3",
+        "pos": [
+          11.0,
+          2.65,
+          -1.875
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.1,
+          0.01
+        ]
+      },
+      {
+        "id": "light-15-4/0",
+        "shape": "box",
+        "material": "work-light-0",
+        "pos": [
+          19.0,
+          0.06,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.35,
+          0.06,
+          0.35
+        ]
+      },
+      {
+        "id": "light-15-4/1",
+        "shape": "box",
+        "material": "work-light-1",
+        "pos": [
+          19.0,
+          1.3,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.055,
+          1.25,
+          0.055
+        ]
+      },
+      {
+        "id": "light-15-4/2",
+        "shape": "box",
+        "material": "work-light-2",
+        "pos": [
+          19.0,
+          2.65,
+          -2.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.3,
+          0.15,
+          0.12
+        ]
+      },
+      {
+        "id": "light-15-4/3",
+        "shape": "box",
+        "material": "work-light-3",
+        "pos": [
+          19.0,
+          2.65,
+          -1.875
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.24,
+          0.1,
+          0.01
+        ]
+      },
+      {
+        "id": "gantry--18/0",
+        "shape": "box",
+        "material": "gantry-0",
+        "pos": [
+          -2.0,
+          1.5,
+          -18.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          1.5,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry--18/1",
+        "shape": "box",
+        "material": "gantry-1",
+        "pos": [
+          2.0,
+          1.5,
+          -18.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          1.5,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry--18/2",
+        "shape": "box",
+        "material": "gantry-2",
+        "pos": [
+          0.0,
+          3.2,
+          -18.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2.2,
+          0.2,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry--6/0",
+        "shape": "box",
+        "material": "gantry-0",
+        "pos": [
+          -2.0,
+          1.5,
+          -6.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          1.5,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry--6/1",
+        "shape": "box",
+        "material": "gantry-1",
+        "pos": [
+          2.0,
+          1.5,
+          -6.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          1.5,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry--6/2",
+        "shape": "box",
+        "material": "gantry-2",
+        "pos": [
+          0.0,
+          3.2,
+          -6.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2.2,
+          0.2,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry-6/0",
+        "shape": "box",
+        "material": "gantry-0",
+        "pos": [
+          -2.0,
+          1.5,
+          6.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          1.5,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry-6/1",
+        "shape": "box",
+        "material": "gantry-1",
+        "pos": [
+          2.0,
+          1.5,
+          6.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.18,
+          1.5,
+          0.22
+        ]
+      },
+      {
+        "id": "gantry-6/2",
+        "shape": "box",
+        "material": "gantry-2",
+        "pos": [
+          0.0,
+          3.2,
+          6.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          2.2,
+          0.2,
+          0.22
+        ]
+      },
+      {
+        "id": "bollard--7-4/0",
+        "shape": "box",
+        "material": "bollard-0",
+        "pos": [
+          -7.0,
+          0.5,
+          4.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.5,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard--7-4/1",
+        "shape": "box",
+        "material": "bollard-1",
+        "pos": [
+          -7.0,
+          1.05,
+          4.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard--7-4/2",
+        "shape": "box",
+        "material": "bollard-2",
+        "pos": [
+          -7.0,
+          0.04,
+          4.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.04,
+          0.16
+        ]
+      },
+      {
+        "id": "bollard--7-8/0",
+        "shape": "box",
+        "material": "bollard-0",
+        "pos": [
+          -7.0,
+          0.5,
+          8.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.5,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard--7-8/1",
+        "shape": "box",
+        "material": "bollard-1",
+        "pos": [
+          -7.0,
+          1.05,
+          8.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard--7-8/2",
+        "shape": "box",
+        "material": "bollard-2",
+        "pos": [
+          -7.0,
+          0.04,
+          8.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.04,
+          0.16
+        ]
+      },
+      {
+        "id": "bollard--7-12/0",
+        "shape": "box",
+        "material": "bollard-0",
+        "pos": [
+          -7.0,
+          0.5,
+          12.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.5,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard--7-12/1",
+        "shape": "box",
+        "material": "bollard-1",
+        "pos": [
+          -7.0,
+          1.05,
+          12.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard--7-12/2",
+        "shape": "box",
+        "material": "bollard-2",
+        "pos": [
+          -7.0,
+          0.04,
+          12.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.04,
+          0.16
+        ]
+      },
+      {
+        "id": "bollard-7-4/0",
+        "shape": "box",
+        "material": "bollard-0",
+        "pos": [
+          7.0,
+          0.5,
+          4.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.5,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard-7-4/1",
+        "shape": "box",
+        "material": "bollard-1",
+        "pos": [
+          7.0,
+          1.05,
+          4.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard-7-4/2",
+        "shape": "box",
+        "material": "bollard-2",
+        "pos": [
+          7.0,
+          0.04,
+          4.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.04,
+          0.16
+        ]
+      },
+      {
+        "id": "bollard-7-8/0",
+        "shape": "box",
+        "material": "bollard-0",
+        "pos": [
+          7.0,
+          0.5,
+          8.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.5,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard-7-8/1",
+        "shape": "box",
+        "material": "bollard-1",
+        "pos": [
+          7.0,
+          1.05,
+          8.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard-7-8/2",
+        "shape": "box",
+        "material": "bollard-2",
+        "pos": [
+          7.0,
+          0.04,
+          8.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.04,
+          0.16
+        ]
+      },
+      {
+        "id": "bollard-7-12/0",
+        "shape": "box",
+        "material": "bollard-0",
+        "pos": [
+          7.0,
+          0.5,
+          12.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.5,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard-7-12/1",
+        "shape": "box",
+        "material": "bollard-1",
+        "pos": [
+          7.0,
+          1.05,
+          12.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.05,
+          0.1
+        ]
+      },
+      {
+        "id": "bollard-7-12/2",
+        "shape": "box",
+        "material": "bollard-2",
+        "pos": [
+          7.0,
+          0.04,
+          12.0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.16,
+          0.04,
+          0.16
+        ]
+      },
+      {
+        "id": "lane--20",
+        "shape": "box",
+        "material": "lane--20",
+        "pos": [
+          0,
+          0.008,
+          -20
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane--16",
+        "shape": "box",
+        "material": "lane--16",
+        "pos": [
+          0,
+          0.008,
+          -16
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane--12",
+        "shape": "box",
+        "material": "lane--12",
+        "pos": [
+          0,
+          0.008,
+          -12
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane--8",
+        "shape": "box",
+        "material": "lane--8",
+        "pos": [
+          0,
+          0.008,
+          -8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane--4",
+        "shape": "box",
+        "material": "lane--4",
+        "pos": [
+          0,
+          0.008,
+          -4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane-0",
+        "shape": "box",
+        "material": "lane-0",
+        "pos": [
+          0,
+          0.008,
+          0
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane-4",
+        "shape": "box",
+        "material": "lane-4",
+        "pos": [
+          0,
+          0.008,
+          4
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane-8",
+        "shape": "box",
+        "material": "lane-8",
+        "pos": [
+          0,
+          0.008,
+          8
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane-12",
+        "shape": "box",
+        "material": "lane-12",
+        "pos": [
+          0,
+          0.008,
+          12
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane-16",
+        "shape": "box",
+        "material": "lane-16",
+        "pos": [
+          0,
+          0.008,
+          16
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "lane-20",
+        "shape": "box",
+        "material": "lane-20",
+        "pos": [
+          0,
+          0.008,
+          20
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          0.1,
+          0.008,
+          0.85
+        ]
+      },
+      {
+        "id": "sign-0",
+        "shape": "box",
+        "material": "sign-0",
+        "pos": [
+          0.0,
+          3.75,
+          -21.04
+        ],
+        "rot": [
+          0,
+          0,
+          0
+        ],
+        "scale": [
+          5.0,
+          0.22,
+          0.035
+        ]
+      }
+    ],
+    "audio": null
+  },
+  "colliders": {
+    "floor": {
+      "min": [
+        -24,
+        -0.3,
+        -24
+      ],
+      "max": [
+        24,
+        0.0,
+        24
+      ]
+    },
+    "edge-north": {
+      "min": [
+        -24,
+        0.0,
+        -24.18
+      ],
+      "max": [
+        24,
+        1.2,
+        -23.82
+      ]
+    },
+    "edge-south": {
+      "min": [
+        -24,
+        0.0,
+        23.82
+      ],
+      "max": [
+        24,
+        1.2,
+        24.18
+      ]
+    },
+    "edge-east": {
+      "min": [
+        23.82,
+        0.0,
+        -24
+      ],
+      "max": [
+        24.18,
+        1.2,
+        24
+      ]
+    },
+    "edge-west": {
+      "min": [
+        -24.18,
+        0.0,
+        -24
+      ],
+      "max": [
+        -23.82,
+        1.2,
+        24
+      ]
+    },
+    "shed-back--15": {
+      "min": [
+        -21,
+        0.0,
+        -12.25
+      ],
+      "max": [
+        -9,
+        5.0,
+        -11.75
+      ]
+    },
+    "shed-side--15--1": {
+      "min": [
+        -21.25,
+        0.0,
+        -12
+      ],
+      "max": [
+        -20.75,
+        5.0,
+        2
+      ]
+    },
+    "shed-side--15-1": {
+      "min": [
+        -9.25,
+        0.0,
+        -12
+      ],
+      "max": [
+        -8.75,
+        5.0,
+        2
+      ]
+    },
+    "roof--15": {
+      "min": [
+        -21.3,
+        4.95,
+        -12.3
+      ],
+      "max": [
+        -8.7,
+        5.25,
+        2.3
+      ]
+    },
+    "pallet--15-0/0": {
+      "min": [
+        -19.7,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        -18.3,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet--15-0/1": {
+      "min": [
+        -19.7,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        -18.3,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet--15-0/2": {
+      "min": [
+        -19.7,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        -18.3,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet--15-0/3": {
+      "min": [
+        -19.7,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        -18.3,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet--15-0/4": {
+      "min": [
+        -19.7,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        -18.3,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet--15-0/5": {
+      "min": [
+        -19.68,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -19.52,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-0/6": {
+      "min": [
+        -19.08,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -18.92,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-0/7": {
+      "min": [
+        -18.48,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -18.32,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate--15-0/0": {
+      "min": [
+        -19.58,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        -18.42,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate--15-0/1": {
+      "min": [
+        -19.6,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -19.51,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-0/2": {
+      "min": [
+        -19.6,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -19.51,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate--15-0/3": {
+      "min": [
+        -18.49,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -18.4,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-0/4": {
+      "min": [
+        -18.49,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -18.4,
+        1.38,
+        -8.4
+      ]
+    },
+    "pallet--15-1/0": {
+      "min": [
+        -17.1,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        -15.7,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet--15-1/1": {
+      "min": [
+        -17.1,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        -15.7,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet--15-1/2": {
+      "min": [
+        -17.1,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        -15.7,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet--15-1/3": {
+      "min": [
+        -17.1,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        -15.7,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet--15-1/4": {
+      "min": [
+        -17.1,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        -15.7,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet--15-1/5": {
+      "min": [
+        -17.08,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -16.92,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-1/6": {
+      "min": [
+        -16.48,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -16.32,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-1/7": {
+      "min": [
+        -15.88,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -15.72,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate--15-1/0": {
+      "min": [
+        -16.98,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        -15.82,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate--15-1/1": {
+      "min": [
+        -17.0,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -16.91,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-1/2": {
+      "min": [
+        -17.0,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -16.91,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate--15-1/3": {
+      "min": [
+        -15.89,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -15.8,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-1/4": {
+      "min": [
+        -15.89,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -15.8,
+        1.38,
+        -8.4
+      ]
+    },
+    "pallet--15-2/0": {
+      "min": [
+        -14.5,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        -13.1,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet--15-2/1": {
+      "min": [
+        -14.5,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        -13.1,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet--15-2/2": {
+      "min": [
+        -14.5,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        -13.1,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet--15-2/3": {
+      "min": [
+        -14.5,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        -13.1,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet--15-2/4": {
+      "min": [
+        -14.5,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        -13.1,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet--15-2/5": {
+      "min": [
+        -14.48,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -14.32,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-2/6": {
+      "min": [
+        -13.88,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -13.72,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-2/7": {
+      "min": [
+        -13.28,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -13.12,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate--15-2/0": {
+      "min": [
+        -14.38,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        -13.22,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate--15-2/1": {
+      "min": [
+        -14.4,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -14.31,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-2/2": {
+      "min": [
+        -14.4,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -14.31,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate--15-2/3": {
+      "min": [
+        -13.29,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -13.2,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-2/4": {
+      "min": [
+        -13.29,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -13.2,
+        1.38,
+        -8.4
+      ]
+    },
+    "pallet--15-3/0": {
+      "min": [
+        -11.9,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        -10.5,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet--15-3/1": {
+      "min": [
+        -11.9,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        -10.5,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet--15-3/2": {
+      "min": [
+        -11.9,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        -10.5,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet--15-3/3": {
+      "min": [
+        -11.9,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        -10.5,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet--15-3/4": {
+      "min": [
+        -11.9,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        -10.5,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet--15-3/5": {
+      "min": [
+        -11.88,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -11.72,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-3/6": {
+      "min": [
+        -11.28,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -11.12,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet--15-3/7": {
+      "min": [
+        -10.68,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        -10.52,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate--15-3/0": {
+      "min": [
+        -11.78,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        -10.62,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate--15-3/1": {
+      "min": [
+        -11.8,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -11.71,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-3/2": {
+      "min": [
+        -11.8,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -11.71,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate--15-3/3": {
+      "min": [
+        -10.69,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        -10.6,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate--15-3/4": {
+      "min": [
+        -10.69,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        -10.6,
+        1.38,
+        -8.4
+      ]
+    },
+    "light--15--4/0": {
+      "min": [
+        -19.35,
+        0.0,
+        -2.35
+      ],
+      "max": [
+        -18.65,
+        0.12,
+        -1.65
+      ]
+    },
+    "light--15--4/1": {
+      "min": [
+        -19.055,
+        0.05,
+        -2.055
+      ],
+      "max": [
+        -18.945,
+        2.55,
+        -1.945
+      ]
+    },
+    "light--15--4/2": {
+      "min": [
+        -19.3,
+        2.5,
+        -2.12
+      ],
+      "max": [
+        -18.7,
+        2.8,
+        -1.88
+      ]
+    },
+    "light--15--4/3": {
+      "min": [
+        -19.24,
+        2.55,
+        -1.885
+      ],
+      "max": [
+        -18.76,
+        2.75,
+        -1.865
+      ]
+    },
+    "light--15-4/0": {
+      "min": [
+        -11.35,
+        0.0,
+        -2.35
+      ],
+      "max": [
+        -10.65,
+        0.12,
+        -1.65
+      ]
+    },
+    "light--15-4/1": {
+      "min": [
+        -11.055,
+        0.05,
+        -2.055
+      ],
+      "max": [
+        -10.945,
+        2.55,
+        -1.945
+      ]
+    },
+    "light--15-4/2": {
+      "min": [
+        -11.3,
+        2.5,
+        -2.12
+      ],
+      "max": [
+        -10.7,
+        2.8,
+        -1.88
+      ]
+    },
+    "light--15-4/3": {
+      "min": [
+        -11.24,
+        2.55,
+        -1.885
+      ],
+      "max": [
+        -10.76,
+        2.75,
+        -1.865
+      ]
+    },
+    "shed-back-15": {
+      "min": [
+        9,
+        0.0,
+        -12.25
+      ],
+      "max": [
+        21,
+        5.0,
+        -11.75
+      ]
+    },
+    "shed-side-15--1": {
+      "min": [
+        8.75,
+        0.0,
+        -12
+      ],
+      "max": [
+        9.25,
+        5.0,
+        2
+      ]
+    },
+    "shed-side-15-1": {
+      "min": [
+        20.75,
+        0.0,
+        -12
+      ],
+      "max": [
+        21.25,
+        5.0,
+        2
+      ]
+    },
+    "roof-15": {
+      "min": [
+        8.7,
+        4.95,
+        -12.3
+      ],
+      "max": [
+        21.3,
+        5.25,
+        2.3
+      ]
+    },
+    "pallet-15-0/0": {
+      "min": [
+        10.3,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        11.7,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet-15-0/1": {
+      "min": [
+        10.3,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        11.7,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet-15-0/2": {
+      "min": [
+        10.3,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        11.7,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet-15-0/3": {
+      "min": [
+        10.3,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        11.7,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet-15-0/4": {
+      "min": [
+        10.3,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        11.7,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet-15-0/5": {
+      "min": [
+        10.32,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        10.48,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-0/6": {
+      "min": [
+        10.92,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        11.08,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-0/7": {
+      "min": [
+        11.52,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        11.68,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate-15-0/0": {
+      "min": [
+        10.42,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        11.58,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate-15-0/1": {
+      "min": [
+        10.4,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        10.49,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-0/2": {
+      "min": [
+        10.4,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        10.49,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate-15-0/3": {
+      "min": [
+        11.51,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        11.6,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-0/4": {
+      "min": [
+        11.51,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        11.6,
+        1.38,
+        -8.4
+      ]
+    },
+    "pallet-15-1/0": {
+      "min": [
+        12.9,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        14.3,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet-15-1/1": {
+      "min": [
+        12.9,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        14.3,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet-15-1/2": {
+      "min": [
+        12.9,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        14.3,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet-15-1/3": {
+      "min": [
+        12.9,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        14.3,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet-15-1/4": {
+      "min": [
+        12.9,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        14.3,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet-15-1/5": {
+      "min": [
+        12.92,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        13.08,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-1/6": {
+      "min": [
+        13.52,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        13.68,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-1/7": {
+      "min": [
+        14.12,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        14.28,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate-15-1/0": {
+      "min": [
+        13.02,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        14.18,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate-15-1/1": {
+      "min": [
+        13.0,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        13.09,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-1/2": {
+      "min": [
+        13.0,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        13.09,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate-15-1/3": {
+      "min": [
+        14.11,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        14.2,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-1/4": {
+      "min": [
+        14.11,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        14.2,
+        1.38,
+        -8.4
+      ]
+    },
+    "pallet-15-2/0": {
+      "min": [
+        15.5,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        16.9,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet-15-2/1": {
+      "min": [
+        15.5,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        16.9,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet-15-2/2": {
+      "min": [
+        15.5,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        16.9,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet-15-2/3": {
+      "min": [
+        15.5,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        16.9,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet-15-2/4": {
+      "min": [
+        15.5,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        16.9,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet-15-2/5": {
+      "min": [
+        15.52,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        15.68,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-2/6": {
+      "min": [
+        16.12,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        16.28,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-2/7": {
+      "min": [
+        16.72,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        16.88,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate-15-2/0": {
+      "min": [
+        15.62,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        16.78,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate-15-2/1": {
+      "min": [
+        15.6,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        15.69,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-2/2": {
+      "min": [
+        15.6,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        15.69,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate-15-2/3": {
+      "min": [
+        16.71,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        16.8,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-2/4": {
+      "min": [
+        16.71,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        16.8,
+        1.38,
+        -8.4
+      ]
+    },
+    "pallet-15-3/0": {
+      "min": [
+        18.1,
+        0.08,
+        -9.55
+      ],
+      "max": [
+        19.5,
+        0.18,
+        -9.4
+      ]
+    },
+    "pallet-15-3/1": {
+      "min": [
+        18.1,
+        0.08,
+        -9.3125
+      ],
+      "max": [
+        19.5,
+        0.18,
+        -9.1625
+      ]
+    },
+    "pallet-15-3/2": {
+      "min": [
+        18.1,
+        0.08,
+        -9.075
+      ],
+      "max": [
+        19.5,
+        0.18,
+        -8.925
+      ]
+    },
+    "pallet-15-3/3": {
+      "min": [
+        18.1,
+        0.08,
+        -8.8375
+      ],
+      "max": [
+        19.5,
+        0.18,
+        -8.6875
+      ]
+    },
+    "pallet-15-3/4": {
+      "min": [
+        18.1,
+        0.08,
+        -8.6
+      ],
+      "max": [
+        19.5,
+        0.18,
+        -8.45
+      ]
+    },
+    "pallet-15-3/5": {
+      "min": [
+        18.12,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        18.28,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-3/6": {
+      "min": [
+        18.72,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        18.88,
+        0.08,
+        -8.45
+      ]
+    },
+    "pallet-15-3/7": {
+      "min": [
+        19.32,
+        0.0,
+        -9.55
+      ],
+      "max": [
+        19.48,
+        0.08,
+        -8.45
+      ]
+    },
+    "crate-15-3/0": {
+      "min": [
+        18.22,
+        0.2,
+        -9.58
+      ],
+      "max": [
+        19.38,
+        1.36,
+        -8.42
+      ]
+    },
+    "crate-15-3/1": {
+      "min": [
+        18.2,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        18.29,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-3/2": {
+      "min": [
+        18.2,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        18.29,
+        1.38,
+        -8.4
+      ]
+    },
+    "crate-15-3/3": {
+      "min": [
+        19.31,
+        0.18,
+        -9.6
+      ],
+      "max": [
+        19.4,
+        1.38,
+        -9.51
+      ]
+    },
+    "crate-15-3/4": {
+      "min": [
+        19.31,
+        0.18,
+        -8.49
+      ],
+      "max": [
+        19.4,
+        1.38,
+        -8.4
+      ]
+    },
+    "light-15--4/0": {
+      "min": [
+        10.65,
+        0.0,
+        -2.35
+      ],
+      "max": [
+        11.35,
+        0.12,
+        -1.65
+      ]
+    },
+    "light-15--4/1": {
+      "min": [
+        10.945,
+        0.05,
+        -2.055
+      ],
+      "max": [
+        11.055,
+        2.55,
+        -1.945
+      ]
+    },
+    "light-15--4/2": {
+      "min": [
+        10.7,
+        2.5,
+        -2.12
+      ],
+      "max": [
+        11.3,
+        2.8,
+        -1.88
+      ]
+    },
+    "light-15--4/3": {
+      "min": [
+        10.76,
+        2.55,
+        -1.885
+      ],
+      "max": [
+        11.24,
+        2.75,
+        -1.865
+      ]
+    },
+    "light-15-4/0": {
+      "min": [
+        18.65,
+        0.0,
+        -2.35
+      ],
+      "max": [
+        19.35,
+        0.12,
+        -1.65
+      ]
+    },
+    "light-15-4/1": {
+      "min": [
+        18.945,
+        0.05,
+        -2.055
+      ],
+      "max": [
+        19.055,
+        2.55,
+        -1.945
+      ]
+    },
+    "light-15-4/2": {
+      "min": [
+        18.7,
+        2.5,
+        -2.12
+      ],
+      "max": [
+        19.3,
+        2.8,
+        -1.88
+      ]
+    },
+    "light-15-4/3": {
+      "min": [
+        18.76,
+        2.55,
+        -1.885
+      ],
+      "max": [
+        19.24,
+        2.75,
+        -1.865
+      ]
+    },
+    "gantry--18/0": {
+      "min": [
+        -2.18,
+        0.0,
+        -18.22
+      ],
+      "max": [
+        -1.82,
+        3.0,
+        -17.78
+      ]
+    },
+    "gantry--18/1": {
+      "min": [
+        1.82,
+        0.0,
+        -18.22
+      ],
+      "max": [
+        2.18,
+        3.0,
+        -17.78
+      ]
+    },
+    "gantry--18/2": {
+      "min": [
+        -2.2,
+        3.0,
+        -18.22
+      ],
+      "max": [
+        2.2,
+        3.4,
+        -17.78
+      ]
+    },
+    "gantry--6/0": {
+      "min": [
+        -2.18,
+        0.0,
+        -6.22
+      ],
+      "max": [
+        -1.82,
+        3.0,
+        -5.78
+      ]
+    },
+    "gantry--6/1": {
+      "min": [
+        1.82,
+        0.0,
+        -6.22
+      ],
+      "max": [
+        2.18,
+        3.0,
+        -5.78
+      ]
+    },
+    "gantry--6/2": {
+      "min": [
+        -2.2,
+        3.0,
+        -6.22
+      ],
+      "max": [
+        2.2,
+        3.4,
+        -5.78
+      ]
+    },
+    "gantry-6/0": {
+      "min": [
+        -2.18,
+        0.0,
+        5.78
+      ],
+      "max": [
+        -1.82,
+        3.0,
+        6.22
+      ]
+    },
+    "gantry-6/1": {
+      "min": [
+        1.82,
+        0.0,
+        5.78
+      ],
+      "max": [
+        2.18,
+        3.0,
+        6.22
+      ]
+    },
+    "gantry-6/2": {
+      "min": [
+        -2.2,
+        3.0,
+        5.78
+      ],
+      "max": [
+        2.2,
+        3.4,
+        6.22
+      ]
+    },
+    "bollard--7-4/0": {
+      "min": [
+        -7.1,
+        0.0,
+        3.9
+      ],
+      "max": [
+        -6.9,
+        1.0,
+        4.1
+      ]
+    },
+    "bollard--7-4/1": {
+      "min": [
+        -7.1,
+        1.0,
+        3.9
+      ],
+      "max": [
+        -6.9,
+        1.1,
+        4.1
+      ]
+    },
+    "bollard--7-4/2": {
+      "min": [
+        -7.16,
+        0.0,
+        3.84
+      ],
+      "max": [
+        -6.84,
+        0.08,
+        4.16
+      ]
+    },
+    "bollard--7-8/0": {
+      "min": [
+        -7.1,
+        0.0,
+        7.9
+      ],
+      "max": [
+        -6.9,
+        1.0,
+        8.1
+      ]
+    },
+    "bollard--7-8/1": {
+      "min": [
+        -7.1,
+        1.0,
+        7.9
+      ],
+      "max": [
+        -6.9,
+        1.1,
+        8.1
+      ]
+    },
+    "bollard--7-8/2": {
+      "min": [
+        -7.16,
+        0.0,
+        7.84
+      ],
+      "max": [
+        -6.84,
+        0.08,
+        8.16
+      ]
+    },
+    "bollard--7-12/0": {
+      "min": [
+        -7.1,
+        0.0,
+        11.9
+      ],
+      "max": [
+        -6.9,
+        1.0,
+        12.1
+      ]
+    },
+    "bollard--7-12/1": {
+      "min": [
+        -7.1,
+        1.0,
+        11.9
+      ],
+      "max": [
+        -6.9,
+        1.1,
+        12.1
+      ]
+    },
+    "bollard--7-12/2": {
+      "min": [
+        -7.16,
+        0.0,
+        11.84
+      ],
+      "max": [
+        -6.84,
+        0.08,
+        12.16
+      ]
+    },
+    "bollard-7-4/0": {
+      "min": [
+        6.9,
+        0.0,
+        3.9
+      ],
+      "max": [
+        7.1,
+        1.0,
+        4.1
+      ]
+    },
+    "bollard-7-4/1": {
+      "min": [
+        6.9,
+        1.0,
+        3.9
+      ],
+      "max": [
+        7.1,
+        1.1,
+        4.1
+      ]
+    },
+    "bollard-7-4/2": {
+      "min": [
+        6.84,
+        0.0,
+        3.84
+      ],
+      "max": [
+        7.16,
+        0.08,
+        4.16
+      ]
+    },
+    "bollard-7-8/0": {
+      "min": [
+        6.9,
+        0.0,
+        7.9
+      ],
+      "max": [
+        7.1,
+        1.0,
+        8.1
+      ]
+    },
+    "bollard-7-8/1": {
+      "min": [
+        6.9,
+        1.0,
+        7.9
+      ],
+      "max": [
+        7.1,
+        1.1,
+        8.1
+      ]
+    },
+    "bollard-7-8/2": {
+      "min": [
+        6.84,
+        0.0,
+        7.84
+      ],
+      "max": [
+        7.16,
+        0.08,
+        8.16
+      ]
+    },
+    "bollard-7-12/0": {
+      "min": [
+        6.9,
+        0.0,
+        11.9
+      ],
+      "max": [
+        7.1,
+        1.0,
+        12.1
+      ]
+    },
+    "bollard-7-12/1": {
+      "min": [
+        6.9,
+        1.0,
+        11.9
+      ],
+      "max": [
+        7.1,
+        1.1,
+        12.1
+      ]
+    },
+    "bollard-7-12/2": {
+      "min": [
+        6.84,
+        0.0,
+        11.84
+      ],
+      "max": [
+        7.16,
+        0.08,
+        12.16
+      ]
+    }
+  },
+  "entities": [
+    {
+      "id": "pallet--15-0",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          -19.7,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          -18.3,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate--15-0",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          -19.6,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          -18.4,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "pallet--15-1",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          -17.1,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          -15.7,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate--15-1",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          -17.0,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          -15.8,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "pallet--15-2",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          -14.5,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          -13.1,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate--15-2",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          -14.4,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          -13.2,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "pallet--15-3",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          -11.9,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          -10.5,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate--15-3",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          -11.8,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          -10.6,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "light--15--4",
+      "label": "Work light",
+      "bounds": {
+        "min": [
+          -19.35,
+          0.0,
+          -2.35
+        ],
+        "max": [
+          -18.65,
+          2.8,
+          -1.65
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "light--15-4",
+      "label": "Work light",
+      "bounds": {
+        "min": [
+          -11.35,
+          0.0,
+          -2.35
+        ],
+        "max": [
+          -10.65,
+          2.8,
+          -1.65
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "pallet-15-0",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          10.3,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          11.7,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate-15-0",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          10.4,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          11.6,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "pallet-15-1",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          12.9,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          14.3,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate-15-1",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          13.0,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          14.2,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "pallet-15-2",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          15.5,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          16.9,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate-15-2",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          15.6,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          16.8,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "pallet-15-3",
+      "label": "Timber pallet",
+      "bounds": {
+        "min": [
+          18.1,
+          0.0,
+          -9.55
+        ],
+        "max": [
+          19.5,
+          0.18,
+          -8.45
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "crate-15-3",
+      "label": "Shipping crate",
+      "bounds": {
+        "min": [
+          18.2,
+          0.18,
+          -9.6
+        ],
+        "max": [
+          19.4,
+          1.38,
+          -8.4
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "light-15--4",
+      "label": "Work light",
+      "bounds": {
+        "min": [
+          10.65,
+          0.0,
+          -2.35
+        ],
+        "max": [
+          11.35,
+          2.8,
+          -1.65
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "light-15-4",
+      "label": "Work light",
+      "bounds": {
+        "min": [
+          18.65,
+          0.0,
+          -2.35
+        ],
+        "max": [
+          19.35,
+          2.8,
+          -1.65
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "gantry--18",
+      "label": "Modular gantry",
+      "bounds": {
+        "min": [
+          -2.2,
+          0.0,
+          -18.22
+        ],
+        "max": [
+          2.2,
+          3.4,
+          -17.78
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "gantry--6",
+      "label": "Modular gantry",
+      "bounds": {
+        "min": [
+          -2.2,
+          0.0,
+          -6.22
+        ],
+        "max": [
+          2.2,
+          3.4,
+          -5.78
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "gantry-6",
+      "label": "Modular gantry",
+      "bounds": {
+        "min": [
+          -2.2,
+          0.0,
+          5.78
+        ],
+        "max": [
+          2.2,
+          3.4,
+          6.22
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "bollard--7-4",
+      "label": "Safety bollard",
+      "bounds": {
+        "min": [
+          -7.16,
+          0.0,
+          3.84
+        ],
+        "max": [
+          -6.84,
+          1.2,
+          4.16
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "bollard--7-8",
+      "label": "Safety bollard",
+      "bounds": {
+        "min": [
+          -7.16,
+          0.0,
+          7.84
+        ],
+        "max": [
+          -6.84,
+          1.2,
+          8.16
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "bollard--7-12",
+      "label": "Safety bollard",
+      "bounds": {
+        "min": [
+          -7.16,
+          0.0,
+          11.84
+        ],
+        "max": [
+          -6.84,
+          1.2,
+          12.16
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "bollard-7-4",
+      "label": "Safety bollard",
+      "bounds": {
+        "min": [
+          6.84,
+          0.0,
+          3.84
+        ],
+        "max": [
+          7.16,
+          1.2,
+          4.16
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "bollard-7-8",
+      "label": "Safety bollard",
+      "bounds": {
+        "min": [
+          6.84,
+          0.0,
+          7.84
+        ],
+        "max": [
+          7.16,
+          1.2,
+          8.16
+        ]
+      },
+      "action": "inspect"
+    },
+    {
+      "id": "bollard-7-12",
+      "label": "Safety bollard",
+      "bounds": {
+        "min": [
+          6.84,
+          0.0,
+          11.84
+        ],
+        "max": [
+          7.16,
+          1.2,
+          12.16
+        ]
+      },
+      "action": "inspect"
+    }
+  ],
+  "default_spawn": {
+    "feet": [
+      0,
+      0,
+      20
+    ],
+    "yaw": 0
+  }
+}

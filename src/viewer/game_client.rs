@@ -126,6 +126,13 @@ impl GameShell {
     }
     /// Draw a small, keyboard/mouse accessible overlay. Returns true on Quit.
     pub fn menu(&mut self, title: &str, controls: &[&str]) -> bool {
+        self.menu_with_status(title, controls, "MENU  /  ONLINE MATCH CONTINUES")
+    }
+    /// Shared pause menu for an application that pauses its local simulation.
+    pub fn local_menu(&mut self, title: &str, controls: &[&str]) -> bool {
+        self.menu_with_status(title, controls, "MENU  /  LOCAL SESSION PAUSED")
+    }
+    fn menu_with_status(&mut self, title: &str, controls: &[&str], status: &str) -> bool {
         if !self.paused {
             return false;
         }
@@ -141,13 +148,7 @@ impl GameShell {
         let ink = Color::from_rgba(24, 43, 53, 255);
         draw_rectangle(x, y, pw, ph, Color::from_rgba(243, 242, 232, 250));
         draw_text(title, x + 28. * scale, y + 43. * scale, 29. * scale, ink);
-        draw_text(
-            "MENU  /  ONLINE MATCH CONTINUES",
-            x + 28. * scale,
-            y + 68. * scale,
-            14. * scale,
-            ink,
-        );
+        draw_text(status, x + 28. * scale, y + 68. * scale, 14. * scale, ink);
         if self.controls {
             for (i, line) in controls.iter().enumerate() {
                 draw_text(
