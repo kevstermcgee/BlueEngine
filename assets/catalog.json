@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "blueengine/core",
+  "name": "BlueEngine Core Asset Library",
+  "description": "Curated, reusable assets shipped with BlueEngine. The catalog is an index over real source assets, not a second asset store.",
+  "policy": {
+    "selection_order": ["reuse", "modify", "generate", "import"],
+    "default_scope": "game-local",
+    "promotion_rule": "Promote an asset only after it has been reused by more than one game or provides a broadly useful primitive.",
+    "required_provenance": ["method", "license"],
+    "principle": "Grow the shared vocabulary from proven game work; do not predict a giant universal library."
+  },
+  "packs": [
+    {
+      "id": "core/native",
+      "name": "Native interactive props",
+      "source": "tools/authoring.json",
+      "adapter": "authoring-assets-v1",
+      "scope": "shared",
+      "stability": "stable",
+      "license": "MIT"
+    },
+    {
+      "id": "core/interiors",
+      "name": "Interior prefab foundation",
+      "source": "assets/props/interiors/catalog.json",
+      "adapter": "interior-prefabs-v1",
+      "scope": "shared",
+      "stability": "stable",
+      "license": "MIT"
+    }
+  ]
+}

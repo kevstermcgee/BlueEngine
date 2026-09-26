@@ -26,6 +26,13 @@ Inspect the PNGs under `edits/review/captures`, including the menu. Launch `bin/
 
 `describe` combines the native catalog with curated units, supported operations and explicit limitations. It includes binary and metadata hashes. This is capability discovery, not full Rust reflection. `query` searches a small curated index of assets, recipes and topics, returning five hits by default and at most twenty. It reads neither engine source nor repository-wide files. It uses local token matching, not embeddings or a semantic model. A missing result does not authorize inventing a capability.
 
+For broad asset discovery, use `python tools/assets.py search TEXT`. It presents the
+native props and interior prefabs through one structured metadata contract with
+qualified IDs, dimensions, provenance, lifecycle, tags, aliases, placement support,
+and physics policy. `--include GAME_ASSETS.json` adds a conforming game-local pack
+without editing the core registry. See `assets/README.md` and use Reuse → Modify →
+Generate → Import; built-ins are a foundation, not a restriction.
+
 `tools/authoring.json` is the author-facing knowledge/dependency index. `tools/FEATURES.json` remains a separate maintenance map to engine files and checks. A source-symbol database has been deferred: it would help engine maintenance, but is unnecessary for this bounded content interface and would need reliable parsing and invalidation. Never substitute a regex index for authoritative Rust dependency analysis.
 
 ## Executable feedback
@@ -38,7 +45,7 @@ Use `--capture --baseline PREVIOUS/report.json` to compare with an explicitly se
 
 Map v1 supports static primitive geometry, collision and inspect entities. It cannot express new gameplay, network transport, Prop Hunt rounds, disguise mechanics, imported meshes or animation. Building those features requires separate engine development. The source-free objective is met for the supported content workflow, not arbitrary game creation.
 
-Keep the packaged binaries current using the existing build/package workflow after engine changes. `describe` checks catalogue compatibility but does not prove the binary matches the working source. For metadata/recipe changes run `python -m unittest discover -s tools -p test_author.py -v`. For engine changes run all existing Rust checks as directed in AGENTS.md. Add catalogue entries only for real instantiable assets; do not publish imagined variants. Update the index and add native integration coverage with each new recipe or command.
+Keep the packaged binaries current using the existing build/package workflow after engine changes. `describe` checks catalogue compatibility but does not prove the binary matches the working source. For metadata/recipe changes run `python -m unittest discover -s tools -p "test_*.py" -v`. For engine changes run all existing Rust checks as directed in AGENTS.md. Add catalogue entries only for real instantiable assets; do not publish imagined variants. Update the index and add native integration coverage with each new recipe or command.
 
 ## Starter maps
 

@@ -210,6 +210,20 @@
       ],
       "note": "Packaged-native static map authoring; curated metadata and local bounded token search; no engine source reads, embeddings or arbitrary gameplay scripting."
     },
+    "asset_library": {
+      "files": [
+        "assets/catalog.json",
+        "assets/asset-pack.schema.json",
+        "assets/README.md",
+        "tools/assets.py",
+        "tools/test_assets.py"
+      ],
+      "checks": [
+        "python tools/assets.py validate",
+        "python -m unittest tools.test_assets -v"
+      ],
+      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import."
+    },
     "interior_prefabs": {
       "files": [
         "assets/props/interiors",

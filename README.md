@@ -15,6 +15,7 @@ fixture is **Blue Test Lab**; furnished legacy maps remain reusable reference as
 ## Start here
 
 - Content authors: `python tools/author.py describe`, then [tools/AUTHORING.md](tools/AUTHORING.md).
+- Asset discovery: `python tools/assets.py search "desk lamp"`; see the [asset library contract](assets/README.md).
 - Native discovery: `be2-tools describe`, `be2-tools search multiplayer`, `be2-tools catalog`.
 - Rust prototypes: [30-line quickstart](docs/AI_QUICKSTART.md), `cargo run --locked --no-default-features --example prototype`.
 - Custom presentation: [visible-client boundary](docs/CUSTOM_CLIENT.md), `cargo run --locked --example custom_client`.
@@ -48,7 +49,7 @@ Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement 
 - Transport-agnostic authoritative server, client prediction, interpolation, spatial interest,
   acknowledged deltas/keyframe recovery and authoritative prop ownership/combat.
 - Validated MapDocument authoring, stable semantic IDs, transactional edits,
-  catalog assets, bounded discovery and route/capture tools.
+  a structured and extensible asset catalog, bounded discovery and route/capture tools.
 - SceneBuilder/prelude for static boxes and catalog props; ID-based impulse/position APIs.
 
 Networking uses one JSON packet path with an 1100-byte cross-transport ceiling.

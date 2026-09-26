@@ -54,7 +54,8 @@
       ],
       "scene": "assets/props/be2-chair.json",
       "collision": "native conservative bounds",
-      "origin": "bottom"
+      "origin": "bottom",
+      "dimensions_m": [0.52, 0.94, 0.52]
     },
     {
       "id": "table_wooden_1",
@@ -67,7 +68,8 @@
       ],
       "scene": "assets/props/be2-table.json",
       "collision": "native conservative bounds",
-      "origin": "bottom"
+      "origin": "bottom",
+      "dimensions_m": [1.6, 0.8, 1.0]
     },
     {
       "id": "apple_red",
@@ -80,7 +82,8 @@
       ],
       "scene": "assets/props/be2-apple.json",
       "collision": "native conservative bounds",
-      "origin": "bottom"
+      "origin": "bottom",
+      "dimensions_m": [0.2, 0.24, 0.2]
     },
     {
       "id": "cereal_box_1",
@@ -93,7 +96,8 @@
       ],
       "scene": "assets/props/be2-cereal-box.json",
       "collision": "native conservative bounds",
-      "origin": "bottom"
+      "origin": "bottom",
+      "dimensions_m": [0.28, 0.44, 0.14]
     },
     {
       "id": "framed_art_1",
@@ -106,7 +110,8 @@
       ],
       "scene": "assets/props/be2-framed-art.json",
       "collision": "native conservative bounds",
-      "origin": "bottom; art faces +Z"
+      "origin": "bottom; art faces +Z",
+      "dimensions_m": [1.1, 0.8, 0.11]
     },
     {
       "id": "framed_botanical_1",
@@ -119,7 +124,8 @@
       ],
       "scene": "assets/props/be2-framed-botanical.json",
       "collision": "native conservative bounds",
-      "origin": "bottom; art faces +Z"
+      "origin": "bottom; art faces +Z",
+      "dimensions_m": [1.1, 0.8, 0.11]
     },
     {
       "id": "sculpture_1",
@@ -132,7 +138,8 @@
       ],
       "scene": "assets/props/be2-sculpture.json",
       "collision": "native conservative bounds",
-      "origin": "bottom; art faces +Z"
+      "origin": "bottom",
+      "dimensions_m": [0.5, 0.8, 0.38]
     },
     {
       "id": "vase_plant_1",
@@ -145,7 +152,8 @@
       ],
       "scene": "assets/props/be2-vase-plant.json",
       "collision": "native conservative bounds",
-      "origin": "bottom; art faces +Z"
+      "origin": "bottom",
+      "dimensions_m": [0.76, 0.96, 0.6]
     },
     {
       "id": "bowl_1",
@@ -158,7 +166,8 @@
       ],
       "scene": "assets/props/be2-bowl.json",
       "collision": "native conservative bounds",
-      "origin": "bottom; art faces +Z"
+      "origin": "bottom",
+      "dimensions_m": [0.48, 0.16, 0.48]
     },
     {
       "id": "table_lamp_1",

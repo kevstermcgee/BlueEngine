@@ -147,7 +147,7 @@ The catalogue also supports table-lamp, book-stack, candle-trio, potted-cactus, 
 
 ## Interior furnishing prefabs
 
-Use `python tools/place_interior.py --list` for 23 additional data-only templates (furniture, clutter, written boards and closed doors). Place with `python tools/place_interior.py MAP ASSET OUTPUT --id ID --at=X,Y,Z --yaw 90`. The native audit validates the result before a new file is created. This separate helper supports quarter turns and conservative inspection/collision bounds; these are not extra native add_prop kinds. See assets/props/interiors/README.md.
+Use `python tools/assets.py search TEXT` to discover both native props and all 53 data-only interior templates through one metadata API. Place interior templates with `python tools/place_interior.py MAP ASSET OUTPUT --id ID --at=X,Y,Z --yaw 90`. The native audit validates the result before a new file is created. This separate helper supports quarter turns and conservative inspection/collision bounds; these are not extra native add_prop kinds. See assets/README.md and assets/props/interiors/README.md.
 
 ## Engine API reference
 
