@@ -95,6 +95,10 @@ engine behavior. Reuse the shipped asset/map data with the normal authoring tool
 
 ## Verification
 
+Game-only edits use the generated `python scripts/check.py`; `--content-only` is the
+no-Cargo iteration path. Setup and guarantees are in [the change workflow](CHANGE_WORKFLOW.md).
+The full engine suite below is for changes to the shared engine implementation.
+
 `python tools/be2.py check` covers default/headless tests, docs and Clippy.
 `tests/shared_gameplay.rs` exercises public placement and scaffold contracts;
 `tests/sandbox.rs` now exercises the public creative API across all 78 assets.

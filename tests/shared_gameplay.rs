@@ -66,6 +66,23 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     let main = std::fs::read_to_string(dir.join("src/main.rs")).unwrap();
     assert!(main.contains("local_client::run_map"));
     assert!(!main.contains("src/bin/sandbox"));
+    let guide = std::fs::read_to_string(dir.join("AGENTS.md")).unwrap();
+    assert!(guide.len() < 3000);
+    assert!(guide.contains("--content-only"));
+    assert_eq!(
+        std::fs::read_to_string(dir.join("CLAUDE.md")).unwrap(),
+        "@AGENTS.md\n"
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("scripts/check.py")).unwrap(),
+        include_str!("../templates/game_check.py")
+    );
+    let windows = std::fs::read_to_string(dir.join("scripts/blue.ps1")).unwrap();
+    assert!(windows.contains("exit $LASTEXITCODE"));
+    assert!(windows.contains("python scripts/check.py @CheckArgs"));
+    let unix = std::fs::read_to_string(dir.join("scripts/blue")).unwrap();
+    assert!(unix.contains("python scripts/check.py \"$@\""));
+    assert!(!unix.contains("cargo check"));
     assert!(scaffold_new_game("shared-starter", &dir, None).is_err());
     std::fs::remove_dir_all(dir).unwrap();
 }

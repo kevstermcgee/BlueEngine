@@ -1,6 +1,22 @@
 {
   "format": 1,
   "features": {
+    "change_workflow": {
+      "files": [
+        "tools/workflow.py",
+        "tools/be2.py",
+        "tools/test_workflow.py",
+        "templates/game_check.py",
+        "tools/test_game_check.py",
+        "docs/CHANGE_WORKFLOW.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_workflow tools.test_game_check",
+        "shared_gameplay scaffold integration test",
+        "generated external project content and locked Cargo checks"
+      ],
+      "note": "Build-free bounded context lookup from this index; conservative Git change plans with full fallback. Generated games have compact local instructions and a fail-fast content/project runner with persistent logs. No validation result caching; content-only checks do not certify Rust or manual behavior."
+    },
     "map_geometry": {
       "files": [
         "src/viewer/house.rs",
@@ -518,7 +534,7 @@
       "checks": [
         "new standalone game project scaffolding"
       ],
-      "note": "Scaffolds complete, independent game repositories with pinned vesper3d dependency, blueprint, map, launcher, test scripts, and CI."
+      "note": "Scaffolds independent game projects with a vesper3d path dependency, blueprint, map, launcher, compact AGENTS.md and shared content/project check runner. Record the engine revision and commit the generated Cargo.lock; path dependencies are not revision pins."
     },
     "game_presentation": {
       "files": [

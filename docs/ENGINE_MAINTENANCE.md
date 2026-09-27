@@ -1,0 +1,80 @@
+# Engine maintenance contracts
+
+Load this guide for engine or tooling changes, not ordinary game/content work.
+Paths below are relative to the repository root. Use `python tools/be2.py context QUERY`
+to select relevant contracts before reading source. The root AGENTS.md owns workflow
+selection; the invariants and manual checks below still apply to relevant changes.
+
+For **content authoring**, start with `python tools/author.py describe` and tools/AUTHORING.md. Discover reusable content first with `python tools/assets.py search TEXT`; the asset workflow is Reuse → Modify → Generate → Import, not “built-ins only.” Use query/assets/recipes/schema and native map tools; do not load engine source into context. The supported workflow includes static maps, inspectable props and bounded GameDocument v1 prototypes (docs/GAME_QUICKSTART.md). Report unsupported gameplay requirements as engine work rather than inventing APIs. The architecture-reading and Rust-check requirements below apply to **engine maintenance**, not data-only authoring.
+
+For runtime changes, consult BE2_ARCHITECTURE.md and the matching feature record.
+BLUE_ARCHITECTURE.md is historical viewer context. Read AI_REFERENCE.md for Vesper
+scene-contract changes and ARCHITECTURE.md before changing the offline renderer.
+
+Keep the engine and authoring API native Rust. Keep player movement independent from the frame rate and from rendering. Preserve the library's unsafe-code prohibition; Windows input/focus queries and own-window lifecycle calls belong only in the executable.
+
+Preserve completed outputs on failure. Never shell-interpolate scene values. Keep semantic entity IDs stable for future interaction components.
+
+Curated games, prototypes, test content and demos are published to BlueEngineGames
+through `games-publish.json`. Run `python scripts/publish_games.py check` after
+changing that manifest or any published source. See docs/GAMES_PUBLISHING.md; never
+publish build output, logs, credentials or unreviewed scratch files.
+
+Run `cargo fmt --check`, `cargo test --locked`, and `cargo clippy --all-targets --locked -- -D warnings` for engine changes. When changing visuals, render and inspect stills and the actual pause menu. Exercise both key layouts and cursor capture after input changes. Update the AI reference for scene-contract changes. Do not claim untested platforms or interactions work.
+
+For BE2, read BE2_ARCHITECTURE.md first. Also validate cargo test --locked --no-default-features and cargo clippy --all-targets --locked --no-default-features -- -D warnings. Keep PulseNet separate from the renderer.
+
+## Agent editing tools
+
+Use `python tools/be2.py context QUERY` before choosing an edit path; consult
+tools/README.md for the relevant workflow. Use `python tools/be2.py doctor` for setup,
+`map help` for the native editor, and `check` for required validation with persistent
+logs. Map documents load through `--map FILE` in both client and headless runtime.
+The default map remains procedural Rust unless explicitly changed.
+
+Map edits should use explicit IDs and preserve matching visual, collision and entity components. Export into new files, review `diff`, run relevant `route`/`ray` checks, and inspect captures. Generated room-N/collider-N IDs are stable within one exported document, not guaranteed across new exports from modified Rust. Keep new object IDs stable. tools/README.md explains schema limits and the distinction between data edits and code feature edits.
+
+The toolkit is project-local; do not install plugins or add external services merely to use it. Update the feature index and editing guide when adding a new subsystem or tool. Package commands include tracked working files and newly built binaries; stage intended new files first, and report dirty state and checks honestly.
+
+## Compact engine map
+
+BE2 is one Rust package with the compatibility library name `vesper3d`. The
+`be2` client and `be2-headless` runner share concrete movement/simulation types;
+DedicatedServer is generic over the datagram transport and provides authoritative
+matches, prediction, acknowledged deltas and per-player prop ownership. Executables
+name the raw, unencrypted UDP profile `development` and the pinned-certificate
+QUIC/TLS 1.3 profile `production`. Optional `--auth-key` adds client
+challenge-response, session tokens and replay protection to either profile. Protocol
+5 checks map/game content before creating a session and replicates widened bounded game state.
+`client` gates graphics/audio; `offline` gates the inherited output renderer.
+
+- Feature-to-file/check lookup: tools/FEATURES.json (maintain this existing map).
+- Simulation contract: src/viewer/simulation.rs; physics: src/viewer/controller.rs.
+- Static map contract: src/viewer/authoring.rs; CLI: src/bin/be2-tools.rs.
+- Client wiring/UI: src/bin/blue-engine.rs; headless driver: src/bin/be2-headless.rs.
+- Current architecture: BE2_ARCHITECTURE.md; decisions: docs/adr/README.md;
+  vocabulary: docs/GLOSSARY.md; context review: docs/CONTEXT_REVIEW.md.
+- Prototype API: docs/AI_QUICKSTART.md, src/prelude.rs, examples/prototype.rs.
+- Native discovery: be2-tools describe; be2-tools search TEXT.
+- Behavior evidence: tests/simulation_flow.rs, tests/authoring.rs, tests/multiplayer_transport.rs.
+
+Build: `cargo build --locked` or
+`cargo build --locked --no-default-features --bin be2-headless`.
+Run `python tools/be2.py check` for the complete checks, including library rustdoc.
+Read API docs with `cargo doc --locked --no-deps --lib --open`; add
+`--no-default-features` for the rendering-free surface. Document public contract
+changes and failure/edge semantics alongside code. Add ADRs for meaningful design
+decisions; do not add traits or duplicate generated indexes solely for navigation.
+CLAUDE.md imports the root AGENTS.md; keep shared task routing there.
+
+## Official branding
+
+Use `assets/branding/blueengine.ico` as the official BlueEngine icon and
+`assets/branding/blueengine.png` as the default project logo unless the user
+explicitly specifies otherwise. This is the user-approved white rat on a blue tile,
+originally `scripts/test_lab.ico`. Preserve the artwork; do not regenerate, replace
+or redesign it as part of routine engine/game work. See assets/branding/README.md.
+
+For every playable game, follow docs/GAME_PRESENTATION.md. Use the shared GameShell for F fullscreen and Escape menus, keep the default HUD minimal, cache shaded geometry, and verify real movement/tick rate in optimized builds. Static games must explicitly opt out of automatic movable-prop simulation.
+
+For game UI use the immutable `game_text` atlas and verify readability after fullscreen changes. Camera extrapolation must sweep the real collision hull. Weapon art must have a recognizable silhouette and firing feedback; tiny flat rectangles are not a finished viewmodel.

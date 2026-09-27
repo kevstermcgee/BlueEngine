@@ -21,3 +21,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0011: Optional native controller input](0011-native-controllers.md)
 
 - [0012: Shared gameplay kit](0012-shared-gameplay-kit.md)
+- [0013: Demand-loaded context and conservative validation scopes](0013-scoped-change-workflow.md)

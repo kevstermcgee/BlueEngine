@@ -2,7 +2,11 @@
 
 For source-free content authoring, start with `python tools/author.py describe` and [AUTHORING.md](AUTHORING.md). This compact JSON interface uses packaged binaries and adds bounded discovery, asset IDs, parameterized recipes and persistent regression reports without Cargo or engine source reads. The development runner below remains available for engine maintenance/builds.
 
-Start with native `be2-tools describe` and `be2-tools search TEXT`; `export-lab NEW.json` exports the default Test Lab. Engine maintainers also read AGENTS.md and BE2_ARCHITECTURE.md. This toolkit lives with the repository, uses no AI service, and works for humans, Codex or other agents. The native editor is Rust; the workflow runner uses Python 3.10+ and only its standard library. No plugin installation is needed.
+For capability lookup use `python tools/be2.py context QUERY`: no Cargo, native binary,
+or source reads. The default is three feature records. Native `be2-tools describe`
+and `be2-tools search TEXT` remain available; `export-lab NEW.json` exports the Test Lab.
+Engine maintainers follow AGENTS.md and the matching subsystem contract. This toolkit
+uses no AI service or plugins; Python runners require 3.10+ and the standard library.
 
 ## First five minutes
 
@@ -10,11 +14,16 @@ Run from the repository root:
 
 ```sh
 python tools/be2.py doctor
-python tools/be2.py features
+python tools/be2.py context movement
 python tools/be2.py map help
 ```
 
-Read tools/FEATURES.json to locate a feature's implementation, dependencies and checks. Inspect `git status --short` before edits; preserve existing work. `doctor` reports tools without installing or changing anything. Rust 1.87+ is required, along with rustfmt and Clippy. FFmpeg is needed for the full offline test suite. Linux graphical builds require ALSA development headers (`libasound2-dev`), plus `libudev-dev` and `pkg-config` for native gamepads; this revision was tested on Windows only.
+`context` selects records from tools/FEATURES.json; its evidence is not an exhaustive
+dependency graph. Use `check --changed --plan` for executable check selection.
+Inspect `git status --short` before edits; preserve existing work. `doctor` reports
+tools without installing or changing anything. Rust 1.87+, rustfmt and Clippy are
+required. FFmpeg is needed for offline tests. Linux graphical builds require
+`libasound2-dev`, `libudev-dev` and `pkg-config`.
 
 The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headless and tooling release outputs so packages cannot accidentally include a graphics-enabled headless executable. Missing dependencies and failed checks return nonzero; commands do not continue past failures. Check logs go in ignored `.be2-work/check-*/`.
 
@@ -24,6 +33,9 @@ The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headles
 |---|---|
 | `python tools/be2.py doctor` | Read-only local toolchain and Git report |
 | `python tools/be2.py features` | Machine-readable feature/file/check index |
+| `python tools/be2.py context QUERY --limit 3` | Small feature packet from the index; no build or source reads |
+| `python tools/be2.py check --changed --plan` | Read-only plan over staged, unstaged and untracked changes |
+| `python tools/be2.py check --changed --base REV` | Execute reviewed scopes or conservatively fall back to full checks |
 | `python tools/be2.py check` | Formatting, both test configurations, both Clippy configurations; persistent logs and JSON result |
 | `python tools/be2.py build client` | Locked release client and offline renderer |
 | `python tools/be2.py build headless` | Locked release server simulation with default features disabled |

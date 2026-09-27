@@ -26,7 +26,8 @@ character skins alongside the original content. See the [sandbox guide](assets/g
 - Rust prototypes: [compact quickstart](docs/AI_QUICKSTART.md), `cargo run --locked --no-default-features --example prototype`.
 - Custom presentation: [visible-client boundary](docs/CUSTOM_CLIENT.md), `cargo run --locked --example custom_client`.
 - Behavioral tests: [scripted headless scenarios](docs/BEHAVIORAL_TESTING.md).
-- Engine maintenance: [AGENTS.md](AGENTS.md), [current architecture](BE2_ARCHITECTURE.md), [decisions](docs/adr/README.md).
+- Find a capability without building or reading source: `python tools/be2.py context movement`.
+- Engine maintenance: [AGENTS.md](AGENTS.md), [scoped workflow](docs/CHANGE_WORKFLOW.md); load architecture only for the relevant subsystem.
 
 Cargo package/binaries remain `be2`; the library remains `vesper3d` for compatibility.
 
@@ -79,7 +80,10 @@ accidental mismatch, not hostile forgery. See the
 ## Validation
 
 `python tools/be2.py check` runs formatting, rustdoc, tests and Clippy in both feature
-configurations. CI runs on Linux and Windows. Focused suites cover prototype APIs,
+configurations. `check --changed --plan` explains a conservative change-specific plan;
+unknown inputs retain every engine gate. Generated games use their own project check,
+with `--content-only` for content iteration. See [workflow and limits](docs/CHANGE_WORKFLOW.md).
+CI runs the full suite on Linux and Windows. Focused suites cover prototype APIs,
 native capability evidence, content handshakes, malformed packets and multiplayer
 including a separate server process and a QUIC authoritative handshake. Headless
 microbenchmarks enforce checked-in absolute regression budgets in tests and in

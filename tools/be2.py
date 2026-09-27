@@ -11,6 +11,8 @@ import subprocess
 import sys
 import zipfile
 
+import workflow
+
 ROOT = Path(__file__).resolve().parents[1]
 WORK = ROOT / '.be2-work'
 SUFFIX = '.exe' if os.name == 'nt' else ''
@@ -18,16 +20,19 @@ SUFFIX = '.exe' if os.name == 'nt' else ''
 
 def invoke(args, *, env=None, log=None, capture=False, timeout=None):
     print('+ ' + ' '.join(map(str, args)), file=sys.stderr)
+    buffered = capture or log or os.name == 'nt'
     result = subprocess.run(list(map(str, args)), cwd=ROOT, env=env,
-                            stdout=subprocess.PIPE if capture or log else None,
-                            stderr=subprocess.STDOUT if capture or log else None,
-                            text=True, timeout=timeout)
+                            stdout=subprocess.PIPE if buffered else None,
+                            stderr=subprocess.STDOUT if buffered else None,
+                            text=True, timeout=timeout, **workflow.console_options())
     if log:
         Path(log).write_text(result.stdout, encoding='utf-8')
     if result.returncode:
         if result.stdout:
-            print(result.stdout, file=sys.stderr)
+            print(result.stdout[-4000:] if log else result.stdout, file=sys.stderr)
         raise RuntimeError(f'Command failed ({result.returncode}); log: {log or "console"}')
+    if buffered and not (capture or log) and result.stdout:
+        print(result.stdout, end='')
     return result.stdout
 
 
@@ -72,24 +77,13 @@ def doctor():
         raise RuntimeError('Rust toolchain is missing; see tools/README.md')
 
 
-def check():
+def check(plan):
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     directory = WORK / ('check-' + stamp)
     directory.mkdir(parents=True)
-    commands = [
-        ['cargo', 'fmt', '--check'],
-        ['cargo', 'rustdoc', '--locked', '--lib', '--', '-D', 'warnings'],
-        ['cargo', 'rustdoc', '--locked', '--lib', '--no-default-features', '--', '-D', 'warnings'],
-        ['cargo', 'test', '--locked'],
-        ['cargo', 'clippy', '--all-targets', '--locked', '--', '-D', 'warnings'],
-        ['cargo', 'test', '--locked', '--no-default-features'],
-        ['cargo', 'clippy', '--all-targets', '--locked', '--no-default-features', '--', '-D', 'warnings'],
-        [sys.executable, 'tools/check_headless.py'],
-        [sys.executable, 'tools/check_authoring.py'],
-    ]
-    report = {'ok': False, 'checks': []}
+    report = {'ok': False, 'plan': plan, 'checks': []}
     try:
-        for i, cmd in enumerate(commands):
+        for i, cmd in enumerate(plan['commands']):
             log = directory / f'{i+1}.log'
             item = {'command': cmd, 'log': log.name, 'ok': False}
             report['checks'].append(item)
@@ -153,7 +147,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
     sub.add_parser('doctor')
-    sub.add_parser('check')
+    c = sub.add_parser('check')
+    c.add_argument('--changed', action='store_true', help='Select checks from the complete Git diff')
+    c.add_argument('--base', default='HEAD', help='Compare current files against this commit (default HEAD)')
+    c.add_argument('--plan', action='store_true', help='Print the plan without running checks')
+    c = sub.add_parser('context', help='Bounded feature context without a native build or source reads')
+    c.add_argument('query'); c.add_argument('--limit', type=int, default=3)
     b = sub.add_parser('build'); b.add_argument('kind', choices=['client', 'headless', 'tools', 'all'])
     c = sub.add_parser('capture'); c.add_argument('destination'); c.add_argument('--map')
     p = sub.add_parser('package'); p.add_argument('destination')
@@ -161,7 +160,14 @@ def main():
     sub.add_parser('features')
     args = parser.parse_args()
     if args.command == 'doctor': doctor()
-    elif args.command == 'check': check()
+    elif args.command == 'check':
+        if not args.changed and args.base != 'HEAD':
+            parser.error('--base requires --changed')
+        revision, paths = workflow.changed_paths(ROOT, args.base) if args.changed else (None, None)
+        plan = workflow.validation_plan(paths, revision)
+        if args.plan: print(json.dumps(plan, indent=2))
+        else: check(plan)
+    elif args.command == 'context': print(json.dumps(workflow.context(ROOT, args.query, args.limit), indent=2))
     elif args.command == 'build':
         for kind in ['client', 'headless', 'tools'] if args.kind == 'all' else [args.kind]:
             print(build(kind))
@@ -174,6 +180,6 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (RuntimeError, OSError, ValueError, subprocess.TimeoutExpired) as error:
+    except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as error:
         print(json.dumps({'ok': False, 'error': str(error)}), file=sys.stderr)
         sys.exit(1)

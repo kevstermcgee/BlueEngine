@@ -1,8 +1,8 @@
 //! `be2-tools new-game NAME DIR [ENGINE_PATH]`: Scaffolds a standalone, green game project.
 //!
-//! The generated project does not copy or fork the engine; it pins `vesper3d` as a
+//! The generated project does not copy or fork the engine; it uses `vesper3d` as a
 //! dependency. It comes fully equipped with a declarative blueprint, pre-compiled map,
-//! `game.json`, AI instructions (`CLAUDE.md`), `STATUS.md`, and shell runners
+//! `game.json`, AI instructions (`AGENTS.md`), `STATUS.md`, and shell runners
 //! (`scripts/blue` and `scripts/blue.ps1`).
 
 use super::blueprint::{compile_blueprint, BlueprintSpec, DoorSpec, FillSpec, RoomSpec, SpawnSpec};
@@ -178,7 +178,12 @@ async fn main() -> vesper3d::Result<()> {
         include_str!("../../templates/native_focus.rs"),
     )?;
 
-    // 6. scripts/blue and scripts/blue.ps1
+    // 6. One validation implementation for both shells; logs stay out of AI context.
+    fs::write(
+        target_dir.join("scripts/check.py"),
+        include_str!("../../templates/game_check.py"),
+    )?;
+    fs::write(target_dir.join(".gitignore"), "/target/\n/.blue-check/\n")?;
     let blue_sh = r#"#!/usr/bin/env bash
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -187,8 +192,8 @@ cd "$ROOT"
 cmd="${1:-help}"
 case "$cmd" in
   check)
-    cargo check
-    cargo test
+    shift
+    python scripts/check.py "$@"
     ;;
   build-all)
     cargo build --release
@@ -203,21 +208,23 @@ esac
 "#;
     fs::write(target_dir.join("scripts").join("blue"), blue_sh)?;
 
-    let blue_ps1 = r#"param([string]$cmd = "help")
+    let blue_ps1 = r#"param([string]$cmd = "help", [Parameter(ValueFromRemainingArguments=$true)][string[]]$CheckArgs)
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 switch ($cmd) {
     "check" {
-        cargo check
-        cargo test
+        python scripts/check.py @CheckArgs
+        exit $LASTEXITCODE
     }
     "build-all" {
         cargo build --release
+        exit $LASTEXITCODE
     }
     "play" {
         cargo run --release
+        exit $LASTEXITCODE
     }
     default {
         Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|play}"
@@ -226,7 +233,7 @@ switch ($cmd) {
 "#;
     fs::write(target_dir.join("scripts").join("blue.ps1"), blue_ps1)?;
 
-    // 7. STATUS.md and CLAUDE.md
+    // 7. Compact local instructions; engine maintenance context is demand-loaded.
     let status_md = format!(
         r#"# {name} Status
 
@@ -245,13 +252,20 @@ switch ($cmd) {
     );
     fs::write(target_dir.join("STATUS.md"), status_md)?;
 
-    let claude_md = format!(
+    let agents_md = format!(
         r#"# {name} - AI Agent Guide
 
-This is a standalone BlueEngine game project. **The engine is not duplicated in this repo**; it is pinned via `vesper3d` in `Cargo.toml`.
+This is a standalone game. BlueEngine is a path dependency (`vesper3d` in Cargo.toml),
+not a pinned engine revision. Read this game's files first. Do not load engine source
+or run engine-wide checks for game-only edits. Record the engine revision when shipping.
+
+For an unfamiliar API, run `python tools/be2.py context QUERY` in the engine checkout;
+read only the returned relevant contracts. Missing capability means engine work,
+not permission to invent an API. Engine changes follow the engine's AGENTS.md.
 
 ## Presentation baseline
-Follow engine docs/SHARED_GAMEPLAY.md and docs/GAME_PRESENTATION.md.
+For presentation changes read engine docs/GAME_PRESENTATION.md; for custom loops or
+shared controls read docs/SHARED_GAMEPLAY.md. Keep the official engine branding.
 The starter uses local_client::run_map: native controllers, WASD/arrows, collision-safe
 camera, cached rendering, avatar selection and pause menus are inherited.
 This is a static-map client. To execute GameDocument rules or dynamic physics,
@@ -260,14 +274,24 @@ those rules in a custom client. Shared creative editing is opt-in via viewer::cr
 
 ## Working with Maps
 - Edit `blueprints/main.blueprint.json` to alter room layouts, doors, and prop placements.
-- Run `be2-tools build blueprints/main.blueprint.json maps/main.json` to compile into the map.
-- Run `be2-tools lint maps/main.json` to verify map integrity before committing.
+- Compile into a NEW map file, validate it, then deliberately adopt it; native outputs never overwrite.
+- Keep visual, collision and semantic IDs together. Discover reusable assets before creating new ones.
+- Add map `checks` and behavioral scenarios for the behavior being changed.
 
 ## Running Tests
-- `scripts/blue check` (or `.\scripts\blue.ps1 check` on Windows)
+- Setup once: `cargo generate-lockfile`; commit Cargo.lock. Set BE2_TOOLS to a matching
+  be2-tools binary (engine `python tools/be2.py build tools` prints its directory).
+- `python scripts/check.py`: map audit/lint, declared map checks, GameDocument validation,
+  and this game's locked Cargo tests (compilation included). JSON summary points to logs.
+- `python scripts/check.py --content-only`: fast content iteration, no Cargo;
+  does not certify Rust edits. Add `--scenario PATH` for each relevant behavior scenario.
+- Before delivery run the full project check once on final files. Inspect world/menu
+  captures, exercise changed inputs/fullscreen, and measure movement/ticks in release builds.
+- Shell wrappers delegate to the same runner and propagate failures.
 "#
     );
-    fs::write(target_dir.join("CLAUDE.md"), claude_md)?;
+    fs::write(target_dir.join("AGENTS.md"), agents_md)?;
+    fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
 
     Ok(())
 }
