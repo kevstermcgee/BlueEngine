@@ -66,4 +66,4 @@ queries in the executable and pass a single callback to GameShell.
 
 Local applications that actually freeze their simulation use `GameShell::local_menu` instead of `menu`; it preserves the shared controls and displays an accurate local-pause caption.
 
-Shared standalone-game infrastructure: [gameplay kit](SHARED_GAMEPLAY.md). New games should use `ClientInput`, `GameShell`, `MapPlayer`, the shared avatar/UI modules and the public headless `creative` API instead of copying sandbox code.
+Shared standalone-game infrastructure: [gameplay kit](SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.

@@ -137,12 +137,17 @@
         "tests/content_handshake.rs",
         "tests/secure_net.rs",
         "tests/transport_profiles.rs",
-        "tests/doc_drift.rs"
+        "tests/doc_drift.rs",
+        "src/viewer/net/replication.rs",
+        "tests/replication_budget.rs",
+        "tests/replication_sockets.rs",
+        "docs/adr/0014-bounded-replication.md"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift"
+        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift",
+        "cargo test --locked --no-default-features --test replication_budget --test replication_sockets"
       ],
-      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 5 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials.",
+      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 7 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials. GameState includes restart round and authoritative mover tick positions; sequenced commands from old rounds are discarded. Bounded partial-world replication retains one acknowledged baseline and one retryable packet per peer, respects active payload limits, rotates fair/priority records and peers, and exposes queue/delivery counters. Supports 1024 relevant records with individually budgeted records; protocol 7 binds replication/resync to sessions. See HOSTING.md for limits and RTT tradeoffs.",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -171,6 +176,14 @@
         {
           "suite": "doc_drift",
           "test": "test_documentation_drift_protection"
+        },
+        {
+          "suite": "replication_budget",
+          "test": "loss_duplication_reordering_saturation_and_recovery_converge"
+        },
+        {
+          "suite": "replication_sockets",
+          "test": "quic_two_clients_receive_multi_packet_world"
         }
       ]
     },
@@ -596,14 +609,29 @@
         "src/viewer/newgame.rs",
         "examples/custom_client.rs",
         "docs/SHARED_GAMEPLAY.md",
-        "tests/shared_gameplay.rs"
+        "tests/shared_gameplay.rs",
+        "src/viewer/game_session.rs",
+        "src/viewer/playable.rs",
+        "src/viewer/prop_view.rs",
+        "templates/game_runtime_test.rs",
+        "tests/game_runtime.rs"
       ],
       "checks": [
-        "public-API shared_gameplay and sandbox tests",
-        "default and headless check",
-        "generated external Cargo game build and world/menu captures"
+        "cargo test --locked --no-default-features --test game_runtime --test shared_gameplay",
+        "default and headless full check",
+        "generated external Cargo game test/build, release world/win/reset/menu captures"
       ],
-      "note": "Reusable native controls, menu focus, eight avatars, fixed-step static-map starter, asset placement, safe saves and bounded undo. Sandbox consumes these modules. New-game emits a playable static client and separately validated stock GameDocument. Dynamic rules use the stock runtime."
+      "note": "Standard new-game and stock --game consume playable::run_game_with_options: local HeadlessWorld authority without sockets, or server-owned state with shared prediction/interpolation. Authored objectives, timers, movers, dynamic props and win/restart run through the same simulation. Protocol 7 replicates round identity and mover positions. Graphics-free GameSession supports scripted clients and tests. MapPlayer/run_map is a static viewer only. Any joined player can restart after completion; existing packet-size limits remain.",
+      "evidence": [
+        {
+          "suite": "game_runtime",
+          "test": "generated_game_runs_rules_physics_pause_and_transactional_restart"
+        },
+        {
+          "suite": "game_runtime",
+          "test": "generated_content_runs_on_separate_headless_process_with_two_scripted_clients"
+        }
+      ]
     }
   }
 }

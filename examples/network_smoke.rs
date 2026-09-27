@@ -92,6 +92,8 @@ impl Scenario {
             .map(|_| UdpTransport::bind("127.0.0.1:0"))
             .collect::<Result<_, _>>()?;
 
+        let mut baselines = vec![None; self.client_count];
+        let mut tokens = vec![None; self.client_count];
         let mut welcomed = vec![false; self.client_count];
         let mut snapshots_received = vec![0u64; self.client_count];
         let mut deltas_received = vec![0u64; self.client_count];
@@ -122,15 +124,34 @@ impl Scenario {
                         continue;
                     }
                     match packet {
-                        Packet::Welcome { player_id, .. } => {
+                        Packet::Welcome {
+                            player_id,
+                            session_token,
+                            ..
+                        } => {
+                            tokens[i] = session_token;
                             welcomed[i] = true;
                             assigned_ids[i] = player_id;
                         }
-                        Packet::Snapshot(_) => {
-                            snapshots_received[i] += 1;
-                        }
-                        Packet::Delta(_) => {
-                            deltas_received[i] += 1;
+                        packet @ (Packet::Snapshot(_) | Packet::Delta(_)) => {
+                            if matches!(&packet, Packet::Snapshot(_)) {
+                                snapshots_received[i] += 1;
+                            } else {
+                                deltas_received[i] += 1;
+                            }
+                            if vesper3d::viewer::net::receive_update(&mut baselines[i], packet)
+                                .is_err()
+                            {
+                                if let Some(session) = tokens[i] {
+                                    c.send_packet(
+                                        &Packet::Resynchronize {
+                                            session,
+                                            after_tick: baselines[i].as_ref().map_or(0, |s| s.tick),
+                                        },
+                                        server_addr,
+                                    )?;
+                                }
+                            }
                         }
                         Packet::Rejected { reason } => {
                             return Err(format!("Client {i} rejected by server: {reason}").into());
@@ -154,8 +175,8 @@ impl Scenario {
                         fire_wrench: false,
                         fire_pistol: false,
                         interact: false,
-                        ack_server_tick: client_tick.saturating_sub(2),
-                        session_token: None,
+                        ack_server_tick: baselines[i].as_ref().map_or(0, |s| s.tick),
+                        session_token: tokens[i],
                     };
                     let _ = c.send_packet(&Packet::Input(input), server_addr);
                 }
@@ -173,7 +194,7 @@ impl Scenario {
                 let _ = c.send_packet(
                     &Packet::Disconnect {
                         player_id: assigned_ids[i],
-                        session_token: None,
+                        session_token: tokens[i],
                     },
                     server_addr,
                 );

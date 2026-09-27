@@ -15,11 +15,46 @@ pub struct Datagram {
     pub data: Vec<u8>,
 }
 
+/// Local submission outcome. Acceptance is NOT peer receipt; only a protocol ack
+/// confirms that. Backpressure retains ownership at the caller for bounded retry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SendOutcome {
+    Accepted { bytes: usize },
+    Backpressured,
+}
+
 /// Abstract datagram transport interface.
 /// Allows swapping between raw UDP, secure QUIC/TLS 1.3, or simulated loopback transports.
 pub trait DatagramTransport {
     /// Send raw datagram bytes to a remote peer.
     fn send(&self, peer: PeerId, data: &[u8]) -> crate::Result<usize>;
+
+    /// Active per-peer datagram payload budget, including the protocol envelope.
+    fn payload_limit(&self, _peer: PeerId) -> usize {
+        super::MAX_PACKET_BYTES
+    }
+
+    fn try_send(&self, peer: PeerId, data: &[u8]) -> crate::Result<SendOutcome> {
+        if data.len() > self.payload_limit(peer).min(super::MAX_PACKET_BYTES) {
+            return Err(format!(
+                "Datagram needs {} bytes, active payload limit is {}",
+                data.len(),
+                self.payload_limit(peer)
+            )
+            .into());
+        }
+        match self.send(peer, data) {
+            Ok(n) if n == data.len() => Ok(SendOutcome::Accepted { bytes: n }),
+            Ok(_) => Err("Transport accepted a partial datagram".into()),
+            Err(e)
+                if e.downcast_ref::<std::io::Error>()
+                    .is_some_and(|e| e.kind() == std::io::ErrorKind::WouldBlock) =>
+            {
+                Ok(SendOutcome::Backpressured)
+            }
+            Err(e) => Err(e),
+        }
+    }
 
     /// Poll all available incoming datagrams without blocking.
     fn receive(&mut self) -> crate::Result<Vec<Datagram>>;
@@ -27,9 +62,19 @@ pub trait DatagramTransport {
     /// The local socket address this transport is bound to.
     fn local_addr(&self) -> crate::Result<SocketAddr>;
 
+    /// Submission-aware packet send; backpressure is not a fatal connection error.
+    fn try_send_packet(&self, packet: &Packet, peer: PeerId) -> crate::Result<SendOutcome> {
+        self.try_send(peer, &packet.encode()?)
+    }
+
     /// Encode and send one protocol packet over this transport.
     fn send_packet(&self, packet: &Packet, peer: PeerId) -> crate::Result<usize> {
-        self.send(peer, &packet.encode()?)
+        match self.try_send(peer, &packet.encode()?)? {
+            SendOutcome::Accepted { bytes } => Ok(bytes),
+            SendOutcome::Backpressured => {
+                Err(std::io::Error::from(std::io::ErrorKind::WouldBlock).into())
+            }
+        }
     }
 
     /// Receive and decode all currently available protocol packets.

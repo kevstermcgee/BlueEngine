@@ -680,7 +680,13 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
     for tick in 1..=30 {
         if c1_rx.keyframe_needed {
             client1_net
-                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .send_packet(
+                    &Packet::Resynchronize {
+                        session: server.sessions[&1].session_token,
+                        after_tick: c1_rx.latest_acked_tick(),
+                    },
+                    server_addr,
+                )
                 .unwrap();
         }
         // Client 1 inputs (moving forward)
@@ -696,7 +702,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c1_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&1].session_token),
         };
         c1_controller.update(inp1.movement, TICK_SECONDS, &server.world.room.colliders);
         c1_pred.push(inp1.clone(), c1_controller.clone());
@@ -706,7 +712,13 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
 
         if c2_rx.keyframe_needed {
             client2_net
-                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .send_packet(
+                    &Packet::Resynchronize {
+                        session: server.sessions[&2].session_token,
+                        after_tick: c2_rx.latest_acked_tick(),
+                    },
+                    server_addr,
+                )
                 .unwrap();
         }
         // Client 2 inputs (strafing right)
@@ -722,7 +734,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&2].session_token),
         };
         c2_controller.update(inp2.movement, TICK_SECONDS, &server.world.room.colliders);
         c2_pred.push(inp2.clone(), c2_controller.clone());
@@ -838,7 +850,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c1_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&1].session_token),
         };
         let _ = client1_net.send_packet(&Packet::Input(inp1), server_addr);
 
@@ -851,7 +863,7 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&2].session_token),
         };
         let _ = client2_net.send_packet(&Packet::Input(inp2), server_addr);
 
@@ -942,6 +954,19 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         "Player 2 removed from world"
     );
 
+    // Confirm the preceding update before asking for the next bounded delta.
+    client1_net
+        .send_packet(
+            &Packet::Input(InputFrame {
+                client_tick: server.sessions[&1].last_client_tick + 1,
+                ack_server_tick: c1_rx.latest_acked_tick(),
+                session_token: Some(server.sessions[&1].session_token),
+                ..Default::default()
+            }),
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
     // Server broadcasts snapshot without Player 2
     server.broadcast_snapshots();
     let mut c1_saw_c2_leave = false;
@@ -994,6 +1019,18 @@ fn dedicated_server_two_clients_movement_disconnect_reconnect_and_prop_physics()
         _ => panic!("Expected welcome on reconnect"),
     }
 
+    client1_net
+        .send_packet(
+            &Packet::Input(InputFrame {
+                client_tick: server.sessions[&1].last_client_tick + 1,
+                ack_server_tick: c1_rx.latest_acked_tick(),
+                session_token: Some(server.sessions[&1].session_token),
+                ..Default::default()
+            }),
+            server_addr,
+        )
+        .unwrap();
+    server.poll_network().unwrap();
     // Broadcast synchronized state to both clients
     server.broadcast_snapshots();
     let mut c1_saw_c2_return = false;
@@ -1135,7 +1172,18 @@ fn process_dedicated_server_two_clients_end_to_end() {
     // Client 1 receives server snapshots showing Client 2 moving
     let mut c1_rx = TestClientReceiver::new();
     let mut c1_saw_c2 = false;
-    for _ in 0..30 {
+    for ack_tick in 31..61 {
+        client1
+            .send_packet(
+                &Packet::Input(InputFrame {
+                    client_tick: ack_tick,
+                    ack_server_tick: c1_rx.latest_acked_tick(),
+                    session_token: c1_rx.baseline.as_ref().and_then(|s| s.session),
+                    ..Default::default()
+                }),
+                server_addr,
+            )
+            .unwrap();
         while let Ok(Some((pkt, _))) = client1.recv_packet() {
             if let Some(snap) = c1_rx.receive(pkt) {
                 if snap.players.iter().any(|p| p.id == 2) {
@@ -1166,7 +1214,18 @@ fn process_dedicated_server_two_clients_end_to_end() {
 
     // Client 1 receives snapshot showing Client 2 has disconnected
     let mut c1_saw_disconnect = false;
-    for _ in 0..30 {
+    for ack_tick in 61..91 {
+        client1
+            .send_packet(
+                &Packet::Input(InputFrame {
+                    client_tick: ack_tick,
+                    ack_server_tick: c1_rx.latest_acked_tick(),
+                    session_token: c1_rx.baseline.as_ref().and_then(|s| s.session),
+                    ..Default::default()
+                }),
+                server_addr,
+            )
+            .unwrap();
         while let Ok(Some((pkt, _))) = client1.recv_packet() {
             if let Some(snap) = c1_rx.receive(pkt) {
                 if !snap.players.iter().any(|p| p.id == 2) {
@@ -1841,7 +1900,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: tick == 15 || tick == 45,
             ack_server_tick: c1_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&1].session_token),
         };
         client1
             .send_packet(&Packet::Input(inp1), server_addr)
@@ -1859,7 +1918,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&2].session_token),
         };
         client2
             .send_packet(&Packet::Input(inp2), server_addr)
@@ -1907,7 +1966,13 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
         }
         if c1_rx.keyframe_needed {
             client1
-                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .send_packet(
+                    &Packet::Resynchronize {
+                        session: server.sessions[&1].session_token,
+                        after_tick: c1_rx.latest_acked_tick(),
+                    },
+                    server_addr,
+                )
                 .unwrap();
         }
 
@@ -1923,7 +1988,13 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
         }
         if c2_rx.keyframe_needed {
             client2
-                .send_packet(&Packet::RequestKeyframe, server_addr)
+                .send_packet(
+                    &Packet::Resynchronize {
+                        session: server.sessions[&2].session_token,
+                        after_tick: c2_rx.latest_acked_tick(),
+                    },
+                    server_addr,
+                )
                 .unwrap();
         }
     }
@@ -1939,7 +2010,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: c1_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&1].session_token),
         };
         client1
             .send_packet(&Packet::Input(inp1), server_addr)
@@ -1954,7 +2025,7 @@ fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
             fire_pistol: false,
             interact: false,
             ack_server_tick: c2_rx.latest_acked_tick(),
-            session_token: None,
+            session_token: Some(server.sessions[&2].session_token),
         };
         client2
             .send_packet(&Packet::Input(inp2), server_addr)

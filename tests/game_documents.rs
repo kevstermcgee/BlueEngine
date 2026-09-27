@@ -316,6 +316,8 @@ fn game_state_mirror_rejects_reordered_or_invalid_snapshots_and_fits_budget() {
     assert_eq!(replica.state(), &state);
     assert!(replica.accept_snapshot(11, state));
     let worst = GameState {
+        round: u64::MAX,
+        mover_ticks: vec![3600; 64],
         counters: vec![-1_000_000; 32],
         enabled: u64::MAX,
         visible: u64::MAX,
@@ -326,6 +328,7 @@ fn game_state_mirror_rejects_reordered_or_invalid_snapshots_and_fits_budget() {
         completed: true,
     };
     let encoded = Packet::GameState {
+        session: Some([u64::MAX; 2]),
         tick: u64::MAX,
         state: worst,
     }
@@ -457,6 +460,7 @@ fn two_udp_clients_share_authoritative_rules_and_game_mismatch_is_rejected() {
     clients[0]
         .send_packet(
             &Packet::GameState {
+                session: None,
                 tick: 1,
                 state: GameState {
                     completed: true,
@@ -482,7 +486,8 @@ fn two_udp_clients_share_authoritative_rules_and_game_mismatch_is_rejected() {
         let mut mirror = GameRuntime::compile(loaded.document, &loaded.map).unwrap();
         let deadline = Instant::now() + Duration::from_secs(2);
         while !mirror.state().completed {
-            if let Some((Packet::GameState { tick, state }, _)) = client.recv_packet().unwrap() {
+            if let Some((Packet::GameState { tick, state, .. }, _)) = client.recv_packet().unwrap()
+            {
                 mirror.accept_snapshot(tick, state);
             }
             assert!(Instant::now() < deadline);

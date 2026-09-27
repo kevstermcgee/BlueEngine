@@ -1,6 +1,6 @@
 //! Ready-to-play local static-map client. No hidden prop physics or network host.
-//! For authoritative GameDocument rules/dynamic objects use the stock `be2 --game`
-//! runtime. Custom games can reuse MapPlayer and own their loop/actions.
+//! For authored rules/dynamic props/outcomes use `playable::run_game_with_focus`.
+//! This API is intentionally a viewer; it does not load or execute GameDocument.
 use super::{
     authoring::MapDocument,
     camera::{CameraRig, Perspective},

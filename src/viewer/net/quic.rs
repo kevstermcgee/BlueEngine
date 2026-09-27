@@ -13,7 +13,10 @@ use rustls::pki_types::{CertificateDer, PrivatePkcs8KeyDer};
 use std::{
     collections::HashMap,
     net::SocketAddr,
-    sync::{mpsc, Arc, Mutex},
+    sync::{
+        atomic::{AtomicU64, Ordering},
+        mpsc, Arc, Mutex,
+    },
     thread,
     time::Duration,
 };
@@ -100,9 +103,38 @@ enum Mode {
     },
 }
 
+/// Aggregate transport counters; none of these certify remote delivery.
+#[derive(Default, Debug)]
+pub struct TransportCounters {
+    pub queued: AtomicU64,
+    pub queue_full: AtomicU64,
+    pub submitted: AtomicU64,
+    pub worker_dropped: AtomicU64,
+    pub incoming_dropped: AtomicU64,
+}
+fn submit(connection: &Connection, bytes: Vec<u8>, counters: &TransportCounters) {
+    // Quinn's default send_datagram evicts old datagrams on saturation. Avoid
+    // eviction and account for the rejected submission instead. Authority retries
+    // its immutable packet until an application acknowledgement arrives.
+    if connection.datagram_send_buffer_space() < bytes.len()
+        || connection.send_datagram(bytes.into()).is_err()
+    {
+        counters.worker_dropped.fetch_add(1, Ordering::Relaxed);
+    } else {
+        counters.submitted.fetch_add(1, Ordering::Relaxed);
+    }
+}
+fn deliver(incoming: &Incoming, address: SocketAddr, bytes: Vec<u8>, counters: &TransportCounters) {
+    if incoming.try_send((address, bytes)).is_err() {
+        counters.incoming_dropped.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
 /// Bounded synchronous facade over one dedicated async network thread.
 pub struct SecureSocket {
     address: SocketAddr,
+    connections: Connections,
+    pub counters: Arc<TransportCounters>,
     send: async_mpsc::Sender<(SocketAddr, Vec<u8>)>,
     receive: mpsc::Receiver<(SocketAddr, Vec<u8>)>,
     error: Arc<Mutex<Option<String>>>,
@@ -149,6 +181,10 @@ impl SecureSocket {
         let (ready_tx, ready_rx) = mpsc::sync_channel(1);
         let error = Arc::new(Mutex::new(None));
         let worker_error = error.clone();
+        let connections: Connections = Arc::new(Mutex::new(HashMap::new()));
+        let worker_connections = connections.clone();
+        let counters = Arc::new(TransportCounters::default());
+        let worker_counters = counters.clone();
 
         let worker = thread::Builder::new()
             .name("blue-quic".into())
@@ -175,6 +211,8 @@ impl SecureSocket {
                     };
                     let _ = ready_tx.send(endpoint.local_addr().map_err(|e| e.to_string()));
 
+                    let connections = worker_connections;
+                    let counters = worker_counters;
                     if let Some(server) = remote {
                         let sni_name = sni.unwrap_or_else(|| "feta.local".into());
                         let attempt = match endpoint.connect(server, &sni_name) {
@@ -195,16 +233,17 @@ impl SecureSocket {
                             }
                         };
 
+                        connections.lock().unwrap().insert(server, connection.clone());
                         loop {
                             tokio::select! {
                                 _ = &mut stopped => break,
                                 packet = outgoing.recv() => match packet {
-                                    Some((_, bytes)) => { let _ = connection.send_datagram(bytes.into()); },
+                                    Some((_, bytes)) => { submit(&connection, bytes, &counters); },
                                     None => break,
                                 },
                                 packet = connection.read_datagram() => match packet {
                                     Ok(bytes) if bytes.len() <= PAYLOAD => {
-                                        let _ = incoming.try_send((server, bytes.to_vec()));
+                                        deliver(&incoming, server, bytes.to_vec(), &counters);
                                     },
                                     Ok(_) => {},
                                     Err(_) => {
@@ -216,7 +255,6 @@ impl SecureSocket {
                         }
                         connection.close(0u8.into(), b"client exit");
                     } else {
-                        let connections: Connections = Arc::new(Mutex::new(HashMap::new()));
                         let permits = Arc::new(Semaphore::new(8));
                         loop {
                             tokio::select! {
@@ -224,8 +262,8 @@ impl SecureSocket {
                                 packet = outgoing.recv() => match packet {
                                     Some((addr, bytes)) => {
                                         if let Some(c) = connections.lock().unwrap().get(&addr) {
-                                            let _ = c.send_datagram(bytes.into());
-                                        }
+                                            submit(c, bytes, &counters);
+                                        } else { counters.worker_dropped.fetch_add(1, Ordering::Relaxed); }
                                     },
                                     None => break,
                                 },
@@ -241,10 +279,11 @@ impl SecureSocket {
                                     };
                                     let connections = connections.clone();
                                     let incoming = incoming.clone();
+                                    let counters = counters.clone();
                                     tokio::spawn(async move {
                                         let _permit = permit;
                                         if let Ok(Ok(connection)) = tokio::time::timeout(Duration::from_secs(5), candidate).await {
-                                            receive_connection(connection, connections, incoming).await;
+                                            receive_connection(connection, connections, incoming, counters).await;
                                         }
                                     });
                                 }
@@ -262,6 +301,8 @@ impl SecureSocket {
 
         Ok(Self {
             address,
+            connections,
+            counters,
             send,
             receive,
             error,
@@ -275,11 +316,18 @@ impl SecureSocket {
     }
 
     pub fn send_to(&self, bytes: &[u8], address: SocketAddr) -> crate::Result<usize> {
-        if bytes.len() > PAYLOAD {
+        if bytes.len() > self.payload_limit(address) {
             return Err("Secure datagram exceeds payload budget".into());
         }
         match self.send.try_send((address, bytes.to_vec())) {
-            Ok(()) | Err(async_mpsc::error::TrySendError::Full(_)) => Ok(bytes.len()),
+            Ok(()) => {
+                self.counters.queued.fetch_add(1, Ordering::Relaxed);
+                Ok(bytes.len())
+            }
+            Err(async_mpsc::error::TrySendError::Full(_)) => {
+                self.counters.queue_full.fetch_add(1, Ordering::Relaxed);
+                Err(std::io::Error::from(std::io::ErrorKind::WouldBlock).into())
+            }
             Err(_) => Err("Secure connection is closed".into()),
         }
     }
@@ -293,6 +341,13 @@ impl SecureSocket {
 }
 
 impl DatagramTransport for SecureSocket {
+    fn payload_limit(&self, peer: PeerId) -> usize {
+        self.connections
+            .lock()
+            .unwrap()
+            .get(&peer)
+            .map_or(PAYLOAD, |c| c.max_datagram_size().unwrap_or(0).min(PAYLOAD))
+    }
     fn send(&self, peer: PeerId, data: &[u8]) -> crate::Result<usize> {
         self.send_to(data, peer)
     }
@@ -362,7 +417,12 @@ fn setup(
     }
 }
 
-async fn receive_connection(connection: Connection, connections: Connections, incoming: Incoming) {
+async fn receive_connection(
+    connection: Connection,
+    connections: Connections,
+    incoming: Incoming,
+    counters: Arc<TransportCounters>,
+) {
     let address = connection.remote_address();
     {
         let mut map = connections.lock().unwrap();
@@ -386,9 +446,34 @@ async fn receive_connection(connection: Connection, connections: Connections, in
         if count > 240 || bytes.len() > PAYLOAD {
             break;
         }
-        let _ = incoming.try_send((address, bytes.to_vec()));
+        deliver(&incoming, address, bytes.to_vec(), &counters);
     }
 
     connections.lock().unwrap().remove(&address);
     connection.close(0u8.into(), b"session ended");
+}
+
+#[cfg(test)]
+mod queue_regression {
+    use super::*;
+    #[test]
+    fn saturated_queue_does_not_report_acceptance() {
+        let (send, _outgoing) = async_mpsc::channel(1);
+        let (_incoming, receive) = mpsc::sync_channel(1);
+        let socket = SecureSocket {
+            address: "127.0.0.1:1".parse().unwrap(),
+            send,
+            receive,
+            connections: Arc::new(Mutex::new(HashMap::new())),
+            counters: Arc::new(TransportCounters::default()),
+            error: Arc::new(Mutex::new(None)),
+            stop: None,
+            worker: None,
+        };
+        socket.send_to(&[1], socket.address).unwrap();
+        assert!(
+            socket.send_to(&[2], socket.address).is_err(),
+            "full queue reported success"
+        );
+    }
 }

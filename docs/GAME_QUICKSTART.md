@@ -1,4 +1,20 @@
-# Playable prototypes without source access
+# Playable games and source-free prototypes
+
+For a standalone Rust game, use the standard generator:
+
+```sh
+be2-tools new-game my-game ../my-game
+cargo run --release --manifest-path ../my-game/Cargo.toml
+cargo test --manifest-path ../my-game/Cargo.toml --no-default-features
+```
+
+Its main loads `GameDocument::load(.../game.json)` and awaits
+`playable::run_game_with_focus(game, platform::focused)`. The shared runtime runs
+authored rules, objectives and dynamic props locally without a server. Aim at the
+blue terminal and press E to win; press E again to reset. E also picks up/drops props.
+Use `--connect ADDR` for server-owned multiplayer with the same content. The existing
+static `local_client::run_map` viewer is intentionally not a gameplay runner.
+See [shared gameplay](SHARED_GAMEPLAY.md) for configuration and capture options.
 
 Use `be2-tools game-describe` for limits and semantics, `game-schema` for JSON shape.
 With a source checkout, build once: `cargo build --locked --bins`. Commands below
@@ -13,6 +29,7 @@ target/debug/be2-headless --game my-game/game.json --ticks 600
 
 Start exploring, move with WASD or arrow keys, aim at each blue switch and press E.
 Three switches unlock the green exit; press E there to complete the objective.
+Press E again to restart the loaded game; online, any joined player may restart.
 Escape opens the menu. The committed example is `assets/games/three-switches/game.json`.
 
 `game.json` references a sibling/child map. Edit movement values in `player_profile`,

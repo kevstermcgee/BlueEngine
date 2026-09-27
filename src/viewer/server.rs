@@ -20,7 +20,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 pub const STALE_INPUT_WINDOW_TICKS: u64 = 6; // 100 ms at 60 Hz
-pub const KEYFRAME_INTERVAL: u32 = 20; // Full snapshot every 20 snapshots (~1s at 20 Hz)
+pub const KEYFRAME_INTERVAL: u32 = 20; // Legacy compatibility constant; recovery is now explicit.
 
 /// Session tracking state for one connected client.
 #[derive(Clone, Debug)]
@@ -34,17 +34,24 @@ pub struct ClientSession {
     pub last_acked_tick: u64,
     pub pistol_cooldown: f32,
     pub wrench_cooldown: f32,
+    /// Legacy history is no longer populated; use replication.baseline().
     pub snapshot_history: std::collections::VecDeque<crate::viewer::net::WorldSnapshot>,
     pub snapshots_since_keyframe: u32,
     pub keyframe_requested: bool,
+    pub resync_after_tick: u64,
     pub session_token: SessionToken,
     pub authenticated: bool,
+    pub replication: crate::viewer::net::ReplicationSender,
+    pub game_replication: crate::viewer::net::ReplicationCounters,
     pub action_tracker: crate::viewer::net::action_counters::ActionCountersTracker,
 }
 
 /// Authoritative dedicated server running [`HeadlessWorld`] over any datagram transport.
 pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
     pub transport: T,
+    /// First actionable replication failure. Checked runners propagate it.
+    pub replication_error: Option<String>,
+    replication_round: usize,
     pub world: HeadlessWorld,
     pub sessions: HashMap<u64, ClientSession>,
     pub clients: HashMap<SocketAddr, u64>,
@@ -78,6 +85,8 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         let local_addr = transport.local_addr()?;
         Ok(Self {
             transport,
+            replication_error: None,
+            replication_round: 0,
             world,
             sessions: HashMap::new(),
             clients: HashMap::new(),
@@ -105,6 +114,22 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             2 => SPAWN_PLAYER_2,
             n => V((n as f32 - 1.0) * 1.5, 1.68, 6.0),
         }
+    }
+
+    fn welcome_existing(&self, src: SocketAddr) -> bool {
+        let Some(session) = self.clients.get(&src).and_then(|id| self.sessions.get(id)) else {
+            return false;
+        };
+        let _ = self.transport.send_packet(
+            &Packet::Welcome {
+                player_id: session.player_id,
+                server_tick: self.world.tick,
+                map_name: self.world.room.name.clone(),
+                session_token: Some(session.session_token),
+            },
+            src,
+        );
+        true
     }
 
     /// Handle client connection handshake (`Packet::Hello`).
@@ -142,6 +167,11 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                 },
                 src,
             );
+            return;
+        }
+
+        // Hello retries resend the welcome without resetting authority or replication.
+        if self.welcome_existing(src) {
             return;
         }
 
@@ -236,9 +266,12 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                 last_acked_tick: 0,
                 pistol_cooldown: 0.0,
                 wrench_cooldown: 0.0,
-                snapshot_history: std::collections::VecDeque::with_capacity(64),
+                snapshot_history: std::collections::VecDeque::new(),
+                replication: crate::viewer::net::ReplicationSender::for_session(token),
+                game_replication: Default::default(),
                 snapshots_since_keyframe: 0,
                 keyframe_requested: false,
+                resync_after_tick: 0,
                 session_token: token,
                 authenticated: true,
                 action_tracker: Default::default(),
@@ -319,6 +352,10 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             }
         }
 
+        if self.welcome_existing(src) {
+            return;
+        }
+
         let assigned_id = if let Some(&existing_id) = self.clients.get(&src) {
             existing_id
         } else if player_id > 0
@@ -381,9 +418,12 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                 last_acked_tick: 0,
                 pistol_cooldown: 0.0,
                 wrench_cooldown: 0.0,
-                snapshot_history: std::collections::VecDeque::with_capacity(64),
+                snapshot_history: std::collections::VecDeque::new(),
+                replication: crate::viewer::net::ReplicationSender::for_session(token),
+                game_replication: Default::default(),
                 snapshots_since_keyframe: 0,
                 keyframe_requested: false,
+                resync_after_tick: 0,
                 session_token: token,
                 authenticated: true,
                 action_tracker: Default::default(),
@@ -444,7 +484,9 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                                 .touch(&session.session_token, session.last_seen);
                             session.last_client_tick = frame.client_tick;
                             session.last_input_tick = self.world.tick;
-                            if frame.ack_server_tick > session.last_acked_tick {
+                            if frame.session_token == Some(session.session_token)
+                                && session.replication.acknowledge(frame.ack_server_tick)
+                            {
                                 session.last_acked_tick = frame.ack_server_tick;
                             }
 
@@ -469,7 +511,9 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                         // Multiplayer prop interaction with contention resolution
                         if frame.interact {
                             if self.world.game.is_some() {
-                                self.world.request_interaction(player_id);
+                                if let Err(error) = self.world.game_action(player_id) {
+                                    eprintln!("Game action failed: {error}");
+                                }
                             } else if let Some(p) = self.world.player(player_id) {
                                 let ray = p.ray();
                                 if let Some(ref mut physics) = self.world.prop_physics {
@@ -487,7 +531,15 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                         }
                     }
                 }
-                Packet::SequencedInput(frame) => {
+                Packet::SequencedInput(mut frame) => {
+                    if self
+                        .world
+                        .game
+                        .as_ref()
+                        .is_some_and(|g| frame.round != g.state().round)
+                    {
+                        continue;
+                    }
                     if let Some(&player_id) = self.clients.get(&src) {
                         let mut should_fire_pistol = false;
                         let mut should_fire_wrench = false;
@@ -508,11 +560,14 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                                 .touch(&session.session_token, session.last_seen);
                             session.last_client_tick = frame.client_tick;
                             session.last_input_tick = self.world.tick;
-                            if frame.ack_server_tick > session.last_acked_tick {
+                            if frame.session_token == Some(session.session_token)
+                                && session.replication.acknowledge(frame.ack_server_tick)
+                            {
                                 session.last_acked_tick = frame.ack_server_tick;
                             }
 
                             let edges = session.action_tracker.update(&frame.counters);
+                            frame.movement.jump = edges.jump;
                             if edges.secondary && session.wrench_cooldown <= 0.0 {
                                 session.wrench_cooldown = crate::viewer::wrench::SWING_TIME;
                                 should_fire_wrench = true;
@@ -535,7 +590,9 @@ impl<T: DatagramTransport> DedicatedServer<T> {
 
                         if should_interact {
                             if self.world.game.is_some() {
-                                self.world.request_interaction(player_id);
+                                if let Err(error) = self.world.game_action(player_id) {
+                                    eprintln!("Game action failed: {error}");
+                                }
                             } else if let Some(p) = self.world.player(player_id) {
                                 let ray = p.ray();
                                 if let Some(ref mut physics) = self.world.prop_physics {
@@ -552,10 +609,17 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                         }
                     }
                 }
-                Packet::RequestKeyframe => {
+                Packet::Resynchronize {
+                    session: token,
+                    after_tick,
+                } => {
                     if let Some(&player_id) = self.clients.get(&src) {
                         if let Some(session) = self.sessions.get_mut(&player_id) {
-                            session.keyframe_requested = true;
+                            if session.session_token == token {
+                                session.keyframe_requested = true;
+                                session.resync_after_tick =
+                                    session.resync_after_tick.max(after_tick);
+                            }
                         }
                     }
                 }
@@ -617,52 +681,82 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         ids
     }
 
-    /// Broadcast spatially filtered snapshots to each connected client with per-client acknowledged delta tracking.
+    /// Compatibility wrapper; failures are latched and logged once, never hidden.
+    /// Checked runners return them; custom loops can use try_broadcast_snapshots.
     pub fn broadcast_snapshots(&mut self) {
-        for (&id, session) in &mut self.sessions {
-            if let Some(game) = &self.world.game {
-                let _ = self.transport.send_packet(
-                    &Packet::GameState {
-                        tick: self.world.tick,
-                        state: game.state().clone(),
-                    },
-                    session.addr,
-                );
+        if self.replication_error.is_some() {
+            return;
+        }
+        if let Err(error) = self.try_broadcast_snapshots() {
+            eprintln!("[Server] Replication stopped: {error}");
+            self.replication_error = Some(error.to_string());
+        }
+    }
+
+    /// At most one world packet and one independent game-state record per peer.
+    /// Queue saturation is normal backpressure. Other errors remain actionable.
+    pub fn try_broadcast_snapshots(&mut self) -> crate::Result<()> {
+        use crate::viewer::net::{SendOutcome, MAX_PACKET_BYTES};
+        let mut peers: Vec<_> = self.sessions.keys().copied().collect();
+        peers.sort_unstable();
+        let count = peers.len().max(1);
+        peers.rotate_left(self.replication_round % count);
+        let game_first = (self.replication_round / count).is_multiple_of(2);
+        self.replication_round = self.replication_round.wrapping_add(1);
+        for id in peers {
+            let session = self.sessions.get_mut(&id).unwrap();
+            if session.keyframe_requested {
+                session
+                    .replication
+                    .resynchronize_after(session.resync_after_tick);
+                session.keyframe_requested = false;
+                session.last_acked_tick = session.replication.baseline().map_or(0, |s| s.tick);
+            }
+            // World gets first access to a congested queue. Alternate ordering
+            // by broadcast to avoid starving the independent game-state lane.
+            let game = self.world.game.as_ref().map(|g| Packet::GameState {
+                session: Some(session.session_token),
+                tick: self.world.tick,
+                state: g.state().clone(),
+            });
+            let send_game = |session: &mut ClientSession| -> crate::Result<()> {
+                if let Some(packet) = &game {
+                    let bytes = serde_json::to_vec(packet)?;
+                    let limit = self
+                        .transport
+                        .payload_limit(session.addr)
+                        .min(MAX_PACKET_BYTES);
+                    if bytes.len() > limit {
+                        return Err(format!("GameState record requires {} bytes; active transport allows {limit}. Reduce counters/movers or use a transport with sufficient payload", bytes.len()).into());
+                    }
+                    match self.transport.try_send(session.addr, &bytes) {
+                        Ok(SendOutcome::Accepted { bytes }) => {
+                            session.game_replication.accepted_packets += 1;
+                            session.game_replication.accepted_bytes += bytes as u64;
+                        }
+                        Ok(SendOutcome::Backpressured) => {
+                            session.game_replication.backpressured += 1
+                        }
+                        Err(e) => {
+                            session.game_replication.send_errors += 1;
+                            return Err(e);
+                        }
+                    }
+                }
+                Ok(())
+            };
+            if game_first {
+                send_game(session)?;
             }
             let snap = self.world.snapshot_for_player(id, session.last_client_tick);
-            let acked_base = if session.last_acked_tick > 0 {
-                session
-                    .snapshot_history
-                    .iter()
-                    .find(|s| s.tick == session.last_acked_tick)
-            } else {
-                None
-            };
-
-            let send_keyframe = session.keyframe_requested
-                || acked_base.is_none()
-                || session.snapshots_since_keyframe >= KEYFRAME_INTERVAL;
-
-            if send_keyframe {
-                let _ = self
-                    .transport
-                    .send_packet(&Packet::Snapshot(snap.clone()), session.addr);
-                session.snapshots_since_keyframe = 0;
-                session.keyframe_requested = false;
-            } else {
-                let base = acked_base.unwrap();
-                let delta = snap.compute_delta(base);
-                let _ = self
-                    .transport
-                    .send_packet(&Packet::Delta(delta), session.addr);
-                session.snapshots_since_keyframe += 1;
-            }
-
-            session.snapshot_history.push_back(snap);
-            if session.snapshot_history.len() > 60 {
-                session.snapshot_history.pop_front();
+            session
+                .replication
+                .send(&self.transport, session.addr, &snap, id)?;
+            if !game_first {
+                send_game(session)?;
             }
         }
+        Ok(())
     }
 
     /// Step authoritative simulation one tick, neutralize stale inputs, and broadcast snapshots every 3 ticks (20 Hz).
@@ -690,6 +784,9 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             self.poll_network()?;
             self.check_timeouts();
             self.step();
+            if let Some(error) = &self.replication_error {
+                return Err(error.clone().into());
+            }
         }
         Ok(())
     }
@@ -715,6 +812,9 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             self.poll_network()?;
             self.check_timeouts();
             self.step();
+            if let Some(error) = &self.replication_error {
+                return Err(error.clone().into());
+            }
 
             if let Some(max) = max_ticks {
                 if self.world.tick >= max {
@@ -735,6 +835,26 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                     runner.metrics.mean_us(),
                     runner.metrics.max_us
                 );
+                let accepted: u64 = self
+                    .sessions
+                    .values()
+                    .map(|s| {
+                        s.replication.counters.accepted_bytes + s.game_replication.accepted_bytes
+                    })
+                    .sum();
+                let blocked: u64 = self
+                    .sessions
+                    .values()
+                    .map(|s| {
+                        s.replication.counters.backpressured + s.game_replication.backpressured
+                    })
+                    .sum();
+                let retries: u64 = self
+                    .sessions
+                    .values()
+                    .map(|s| s.replication.counters.retries)
+                    .sum();
+                println!("[Server] Replication local_accepted_bytes={accepted} backpressured={blocked} retries={retries}");
                 runner.metrics.reset();
                 last_status = Instant::now();
             }

@@ -79,3 +79,9 @@ pub mod wrench_view;
 
 #[cfg(feature = "client")]
 pub mod local_client;
+
+pub mod game_session;
+#[cfg(feature = "client")]
+pub mod playable;
+#[cfg(feature = "presentation")]
+pub mod prop_view;

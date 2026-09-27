@@ -64,7 +64,7 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
         .world()
         .unwrap();
     let main = std::fs::read_to_string(dir.join("src/main.rs")).unwrap();
-    assert!(main.contains("local_client::run_map"));
+    assert!(main.contains("playable::run_game_with_options"));
     assert!(!main.contains("src/bin/sandbox"));
     let guide = std::fs::read_to_string(dir.join("AGENTS.md")).unwrap();
     assert!(guide.len() < 3000);

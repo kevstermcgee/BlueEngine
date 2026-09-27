@@ -135,6 +135,7 @@ pub struct GameDocument {
     pub rules: Vec<Rule>,
 }
 
+#[derive(Clone)]
 pub struct LoadedGame {
     pub document: GameDocument,
     pub map: MapDocument,
@@ -384,6 +385,12 @@ impl GameDocument {
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GameState {
+    /// Authoritative restart generation; clients discard prediction across rounds.
+    #[serde(default)]
+    pub round: u64,
+    /// Authoritative mover positions in fixed ticks. Mirrors never advance rules.
+    #[serde(default)]
+    pub mover_ticks: Vec<u32>,
     pub counters: Vec<i32>,
     pub enabled: u64,
     /// Visible interactable geometry. This never changes collision or eligibility.
@@ -718,6 +725,12 @@ impl GameRuntime {
             }
         }
         let state = GameState {
+            round: 0,
+            mover_ticks: document
+                .movers
+                .iter()
+                .map(|m| if m.initial_open { m.duration_ticks } else { 0 })
+                .collect(),
             counters: document.counters.values().copied().collect(),
             enabled,
             visible,
@@ -776,6 +789,9 @@ impl GameRuntime {
             timer_rules,
             player_zones: BTreeMap::new(),
         })
+    }
+    pub(crate) fn set_round(&mut self, round: u64) {
+        self.state.round = round;
     }
     pub fn state(&self) -> &GameState {
         &self.state
@@ -879,6 +895,7 @@ impl GameRuntime {
                 mover.current_ticks -= 1;
             }
         }
+        self.state.mover_ticks = self.movers.iter().map(|m| m.current_ticks).collect();
         self.apply_mover_colliders(room);
     }
     pub fn apply_mover_colliders(&mut self, room: &mut Room) {
@@ -926,7 +943,13 @@ impl GameRuntime {
                 (1_u64 << count) - 1
             }
         };
-        if state.counters.len() != self.document.counters.len()
+        if state.mover_ticks.len() != self.movers.len()
+            || state
+                .mover_ticks
+                .iter()
+                .zip(&self.movers)
+                .any(|(t, m)| *t > m.duration_ticks)
+            || state.counters.len() != self.document.counters.len()
             || state
                 .counters
                 .iter()
@@ -939,6 +962,9 @@ impl GameRuntime {
             || state.fired & !mask(self.document.rules.len()) != 0
         {
             return false;
+        }
+        for (mover, ticks) in self.movers.iter_mut().zip(&state.mover_ticks) {
+            mover.current_ticks = *ticks;
         }
         self.state = state;
         true
@@ -1096,12 +1122,14 @@ impl GameRuntime {
 
 impl LoadedGame {
     pub fn world(self) -> Result<super::simulation::HeadlessWorld> {
+        let original = self.clone();
         let runtime = GameRuntime::compile(self.document, &self.map)?;
         let room = self.map.build()?;
         let hash = runtime.content_hash(&room);
         let mut world = super::simulation::HeadlessWorld::try_with_room(room)?;
         world.content_hash = hash;
         world.game = Some(runtime);
+        world.initial_game = Some(original);
         Ok(world)
     }
 }

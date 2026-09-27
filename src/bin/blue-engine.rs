@@ -142,6 +142,11 @@ fn axes(keys: &HashSet<KeyCode>) -> (f32, f32) {
         held(KeyCode::D, KeyCode::Right) - held(KeyCode::A, KeyCode::Left),
     )
 }
+#[cfg(windows)]
+fn native_game_key(vk: i32) -> i16 {
+    // Executable-owned, read-only key query for the shared input adapter.
+    unsafe { windows_sys::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(vk) }
+}
 fn foreground() -> bool {
     #[cfg(windows)]
     {
@@ -277,6 +282,33 @@ async fn main() {
     if game_file.is_some() && map_file.is_some() {
         error_screen("Choose --game or --map, not both").await;
         return;
+    }
+    if let Some(path) = game_file {
+        if !args.iter().any(|a| a.starts_with("--capture-")) {
+            let result =
+                match vesper3d::viewer::game::GameDocument::load(std::path::Path::new(path)) {
+                    Ok(game) => match vesper3d::viewer::playable::GameOptions::from_args(&args) {
+                        Ok(options) => {
+                            #[cfg(windows)]
+                            let options = {
+                                let mut options = options;
+                                options.keyboard = Some(native_game_key);
+                                options
+                            };
+                            vesper3d::viewer::playable::run_game_with_options(
+                                game, options, foreground,
+                            )
+                            .await
+                        }
+                        Err(error) => Err(error),
+                    },
+                    Err(error) => Err(error),
+                };
+            if let Err(error) = result {
+                error_screen(&error.to_string()).await;
+            }
+            return;
+        }
     }
     let loaded_game = if let Some(path) = game_file {
         match vesper3d::viewer::game::GameDocument::load(std::path::Path::new(path)) {
@@ -580,6 +612,7 @@ async fn main() {
         InterpolationBuffer<vesper3d::viewer::net::PropNetState>,
     > = HashMap::new();
     let mut client_baseline_snapshot: Option<vesper3d::viewer::net::WorldSnapshot> = None;
+    let mut reconciled_player_tick = 0;
     let mut client_acked_server_tick = 0u64;
     let mut remote_controllers: HashMap<u64, Controller> = HashMap::new();
     let mut remote_characters: HashMap<u64, character::Character> = HashMap::new();
@@ -657,32 +690,43 @@ async fn main() {
                             character_chosen = true;
                             active = true;
                         }
-                        Packet::GameState { tick, state } => {
+                        Packet::GameState {
+                            tick,
+                            state,
+                            session,
+                        } if session == net_session_token => {
                             if let Some(game) = &mut game {
                                 game.accept_snapshot(tick, state);
                                 game.step_movers(&mut room);
                             }
                         }
-                        Packet::Snapshot(snap) => {
-                            client_baseline_snapshot = Some(snap.clone());
-                            client_acked_server_tick = snap.tick;
-                            incoming_snap = Some(snap);
-                        }
-                        Packet::Delta(delta) => {
-                            if let Some(ref base) = client_baseline_snapshot {
-                                if delta.base_tick == base.tick {
-                                    let reconstructed = delta.apply_to(base);
-                                    client_baseline_snapshot = Some(reconstructed.clone());
-                                    client_acked_server_tick = reconstructed.tick;
-                                    incoming_snap = Some(reconstructed);
-                                } else {
-                                    // Delta base mismatch due to packet loss or reordering: request keyframe recovery
-                                    let _ = transport
-                                        .send_packet(&Packet::RequestKeyframe, server_addr);
+                        packet @ (Packet::Snapshot(_) | Packet::Delta(_)) => {
+                            let session = match &packet {
+                                Packet::Snapshot(s) => s.session,
+                                Packet::Delta(d) => d.session,
+                                _ => unreachable!(),
+                            };
+                            if session != net_session_token {
+                                continue;
+                            }
+                            match vesper3d::viewer::net::receive_update(
+                                &mut client_baseline_snapshot,
+                                packet,
+                            ) {
+                                Ok(Some(snap)) => {
+                                    client_acked_server_tick = snap.tick;
+                                    incoming_snap = Some(snap);
                                 }
-                            } else {
-                                let _ =
-                                    transport.send_packet(&Packet::RequestKeyframe, server_addr);
+                                Ok(None) => {}
+                                Err(_) => {
+                                    let _ = transport.try_send_packet(
+                                        &Packet::Resynchronize {
+                                            session: net_session_token.unwrap_or_default(),
+                                            after_tick: client_acked_server_tick,
+                                        },
+                                        server_addr,
+                                    );
+                                }
                             }
                         }
                         Packet::Pong { send_time_ms, .. } => {
@@ -695,7 +739,12 @@ async fn main() {
                     if let Some(snap) = incoming_snap {
                         last_server_tick = snap.tick;
                         if let Some(my_id) = net_player_id {
-                            if let Some(my_server) = snap.players.iter().find(|p| p.id == my_id) {
+                            if let Some(my_server) = snap
+                                .players
+                                .iter()
+                                .find(|p| p.id == my_id && p.tick > reconciled_player_tick)
+                            {
+                                reconciled_player_tick = my_server.tick;
                                 prediction_buffer.reconcile(
                                     snap.ack_client_tick,
                                     my_server,

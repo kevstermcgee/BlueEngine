@@ -82,6 +82,7 @@ pub struct Player {
 }
 /// Match-local world, bounded to eight players. No socket, renderer or window.
 pub struct HeadlessWorld {
+    pub(crate) initial_game: Option<super::game::LoadedGame>,
     /// Optional authoritative declarative game rules/state.
     pub game: Option<super::game::GameRuntime>,
     /// Initial content fingerprint, captured before physics extracts/moves geometry.
@@ -141,6 +142,7 @@ impl HeadlessWorld {
         let room_graph = super::spatial::RoomGraph::for_room(&room);
         Self {
             game: None,
+            initial_game: None,
             content_hash,
             room,
             room_graph,
@@ -197,6 +199,30 @@ impl HeadlessWorld {
         self.replace_content(next)
     }
 
+    /// Restart the loaded game transactionally, preserving player IDs and monotonic ticks.
+    /// Resets props, ownership, counters, timers, movers, triggers and player intent.
+    pub fn restart_game(&mut self) -> crate::Result<()> {
+        let original = self
+            .initial_game
+            .as_ref()
+            .ok_or("No loaded game to restart")?;
+        let mut next = original.clone().world()?;
+        let round = self.game.as_ref().map_or(0, |g| g.state().round) + 1;
+        next.game.as_mut().unwrap().set_round(round);
+        self.replace_content(next)
+    }
+    /// Shared action policy: interact/carry during play; restart a completed game.
+    /// Any registered player may restart. Unknown players cannot change the world.
+    pub fn game_action(&mut self, id: u64) -> crate::Result<bool> {
+        if !self.players.contains_key(&id) {
+            return Ok(false);
+        }
+        if self.game.as_ref().is_some_and(|g| g.state().completed) {
+            self.restart_game()?;
+            return Ok(true);
+        }
+        Ok(self.request_interaction(id))
+    }
     fn replace_content(&mut self, mut next: Self) -> crate::Result<()> {
         let player_ids: Vec<_> = self.players.keys().copied().collect();
         next.tick = self.tick;
@@ -370,8 +396,15 @@ impl HeadlessWorld {
                 .update(player.input, TICK_SECONDS, &self.room.colliders);
             player.input.jump = false;
             if std::mem::take(&mut player.interact) {
-                if let Some(game) = &mut self.game {
-                    game.interact(&self.room, &player.controller, id);
+                let handled = self
+                    .game
+                    .as_mut()
+                    .and_then(|game| game.interact(&self.room, &player.controller, id))
+                    .is_some();
+                if !handled {
+                    if let Some(physics) = &mut self.prop_physics {
+                        physics.toggle_for_player(id, &self.room, player.controller.ray());
+                    }
                 }
             }
             if let Some(game) = &mut self.game {
@@ -495,6 +528,10 @@ impl HeadlessWorld {
         }
 
         if let Some(game) = &self.game {
+            mix_u64(game.state().round);
+            for value in &game.state().mover_ticks {
+                mix_u64(u64::from(*value));
+            }
             for value in &game.state().counters {
                 mix_u64(*value as u64);
             }
@@ -564,6 +601,7 @@ impl HeadlessWorld {
             .collect();
 
         super::net::WorldSnapshot {
+            session: None,
             tick: self.tick,
             ack_client_tick,
             players,
@@ -651,6 +689,7 @@ impl HeadlessWorld {
             .collect();
 
         super::net::WorldSnapshot {
+            session: None,
             tick: self.tick,
             ack_client_tick,
             players,

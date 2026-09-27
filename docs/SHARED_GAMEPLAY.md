@@ -6,7 +6,9 @@ application-specific.
 
 | Capability | Engine API | Features |
 |---|---|---|
-| Playable static-map starter | `local_client::run_map`, `MapPlayer` | client |
+| Authored local/online game | `playable::run_game_with_options`, `GameOptions` | client |
+| Graphics-free local/online session | `game_session::{GameSession, GameInput}` | none |
+| Static viewer (no rules or dynamic props) | `local_client::run_map`, `MapPlayer` | client |
 | Keyboard/mouse + native controllers | `game_input::ClientInput` | client |
 | Pause/fullscreen/focus input snapshots | `game_client::GameShell`, `ShellActions` | presentation |
 | Buttons, fitted text, scoped controller focus | `game_ui` | presentation |
@@ -24,27 +26,46 @@ All paths are under `vesper3d::viewer`. The compatibility crate name remains
 
 Run `be2-tools new-game my-game ../my-game` from a checkout named BlueEngine.
 The generated Cargo dependency points to `../BlueEngine`; adjust it for another
-layout, or supply the optional third argument `ENGINE_PATH` to `new-game`. `cargo run --release --manifest-path ../my-game/Cargo.toml` opens a playable
-map, not a console-only loader. The starter uses the shared window configuration,
-static renderer, collision, camera, Xbox controls, avatar and pause menu. Add
-`-- --character astronaut --third-person` to select a character/view.
+layout, or supply the optional third argument `ENGINE_PATH` to `new-game`.
 
-`examples/custom_client.rs` is the small in-repository version. External Cargo:
-
-```toml
-vesper3d = { package = "be2", path = "../BlueEngine", default-features = false, features = ["client"] }
-macroquad = { version = "=0.4.14", default-features = false, features = ["audio"] }
+```sh
+be2-tools new-game my-game ../my-game
+cargo run --release --manifest-path ../my-game/Cargo.toml
+cargo test --manifest-path ../my-game/Cargo.toml --no-default-features
 ```
 
-The generated executable includes the supplied native foreground adapter on Windows
-and calls `run_map_with_focus`; native OS queries remain application-owned.
-Non-Windows focus currently relies on GameShell minimization events.
+The generated executable loads `game.json` and calls
+`playable::run_game_with_options(game, options, platform::focused).await`. It opens no socket
+unless `--connect ADDR` or `--server [ADDR]` is requested. The starter includes an
+interactive blue terminal, a carryable dynamic apple, and a courtyard trigger.
+WASD/arrows move; E/X interacts or carries. Once complete, E/X restarts the game.
+The generated headless test exercises movement, physics, completion, pause and reset.
+Adapt that test when changing the authored objective.
 
-The starter intentionally uses static map collision. It does not simulate invisible
-moving props. Its valid `game.json` can be launched by the stock `be2 --game` client
-for declarative rules, movers, dynamic physics and authoritative gameplay. Adding
-rules to that file does not make the static `run_map` loop execute them. For custom
-rules, use the existing HeadlessWorld/GameRuntime contracts and own the game loop.
+To play online, start `be2-headless --game ../my-game/game.json --server 127.0.0.1:4000`,
+then run the generated executable with `--connect 127.0.0.1:4000`. Both peers need
+identical content. `--transport production` and `--auth-key` use the same existing
+QUIC/authentication path as the stock client; see HOSTING.md. Protocol 7 adds round
+identity and actual mover positions; both peers must rebuild.
+
+Local authority is HeadlessWorld, including rules, timers, triggers and prop physics.
+Online clients never step those systems: GameRuntime accepts server state and mover
+positions; the existing PredictionBuffer and InterpolationBuffer handle movement
+and prop presentation. Local pause freezes the world. Online menus neutralize local
+input while the server keeps running. Any joined player may restart a completed
+round. Restart preserves IDs and the monotonic tick, but resets players, props,
+ownership, objectives, timers and movers. Old-round sequenced input is rejected.
+
+`GameOptions` exposes connection/profile, cosmetics, perspective and verification
+options. `--character astronaut --third-person` changes presentation only; the
+GameDocument still owns the movement profile. Native foreground/key-state queries remain in
+the generated executable. `options.keyboard = platform::keyboard()` supplies the
+Windows adapter to shared ClientInput; the library owns key-edge tracking and
+focus gating. `run_game_with_focus` remains the simpler window-event input entry. Non-Windows focus relies on GameShell minimization events.
+
+`local_client::run_map` and `MapPlayer` remain lightweight static viewers. They do
+not load game documents, execute rules or simulate props. `examples/custom_client.rs`
+illustrates that intentionally narrower viewer, not the generated gameplay path.
 
 ## Custom loops
 
@@ -102,7 +123,15 @@ The full engine suite below is for changes to the shared engine implementation.
 `python tools/be2.py check` covers default/headless tests, docs and Clippy.
 `tests/shared_gameplay.rs` exercises public placement and scaffold contracts;
 `tests/sandbox.rs` now exercises the public creative API across all 78 assets.
-Build a generated project as an external Cargo consumer too. `run_map` accepts
+Build a generated project as an external Cargo consumer too. Both runners accept
 `--capture NEW_DIR` for world/pause screenshots; sandbox `--sign-capture NEW_DIR`
 and `--creative-smoke NEW_DIR` cover the regression scenes. Captures do not replace
 physical input, cursor capture and fullscreen testing.
+
+The gameplay runner also accepts `--playback INPUTS.json --capture NEW_DIRECTORY`.
+INPUTS is an array of `GameInput` frames (one per 60 Hz tick; omitted fields default).
+It drives the same local session and renderer, saves actual world/win/reset/menu
+images and a `run.json` trace, then exits. Playback is local-only and explicitly
+bypasses device/focus gating; interactive controls still require a live playtest.
+World replication progresses through bounded partial updates under the existing
+1100-byte ceiling. See HOSTING.md for entity, record and acknowledgement limits.

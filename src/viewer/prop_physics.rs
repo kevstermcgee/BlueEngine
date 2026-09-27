@@ -47,6 +47,7 @@ pub struct PropPhysics {
     held_by_player: HashMap<u64, usize>,
     player_by_held: HashMap<usize, u64>,
     debt: f32,
+    network_dirty: bool,
 }
 fn vector(v: V) -> Vector<Real> {
     Vector::new(v.0, v.1, v.2)
@@ -141,6 +142,7 @@ impl PropPhysics {
             held_by_player: HashMap::new(),
             player_by_held: HashMap::new(),
             debt: 0.,
+            network_dirty: false,
         };
         let source = &room.compiled.scene;
         let mut used = HashSet::new();
@@ -513,6 +515,7 @@ impl PropPhysics {
                 iso.translation.vector = vector(pos);
                 body.set_position(iso, true);
                 p.transform = matrix(&iso);
+                self.network_dirty = true;
                 return true;
             }
         }
@@ -560,6 +563,7 @@ impl PropPhysics {
                     body.wake_up(true);
                 }
                 p.transform = matrix(&iso);
+                self.network_dirty = true;
                 return true;
             }
         }
@@ -571,9 +575,10 @@ impl PropPhysics {
             .props
             .iter()
             .any(|p| self.bodies.get(p.handle).is_some_and(|b| !b.is_sleeping()));
-        if !any_active && !room.dynamic_world.instances.is_empty() {
+        if !any_active && !self.network_dirty && !room.dynamic_world.instances.is_empty() {
             return;
         }
+        self.network_dirty = false;
         room.colliders.clone_from(&self.static_colliders);
         let held_indices: HashSet<usize> = self.player_by_held.keys().copied().collect();
         let mut instances = vec![];

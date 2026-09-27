@@ -21,3 +21,15 @@ copied into generated games. The map palette/catalog and creative editing policy
 remain opt-in application behavior. The small static client does not execute
 GameDocument rules or dynamic physics; the stock client remains the full runtime.
 Native foreground queries stay in the host executable. See SHARED_GAMEPLAY.md.
+
+## Follow-up: generated gameplay runtime
+
+The static viewer remains supported, but new-game now consumes the shared authored
+runner also used by ordinary stock `--game` launches. A rendering-free GameSession
+adapts local HeadlessWorld authority or online prediction/snapshot presentation;
+applications no longer assemble a second rules loop. The existing prop renderer is
+promoted into the library. Restart caches authored content and preserves player IDs
+and monotonic ticks; any joined player may restart after completion. Protocol 6
+replicates round identity and mover progress, rejecting old-round sequenced commands.
+This deliberately retains bounded GameDocument behavior instead of introducing
+another game framework or arbitrary scripting system.

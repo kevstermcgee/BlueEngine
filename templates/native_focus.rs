@@ -15,3 +15,21 @@ pub fn focused() -> bool {
 pub fn focused() -> bool {
     true
 } // GameShell additionally handles minimization.
+
+/// Native key-state hook for the shared runner; no engine source is copied.
+#[allow(dead_code)] // Older static-viewer hosts only use focused().
+pub fn keyboard() -> Option<fn(i32) -> i16> {
+    #[cfg(windows)]
+    {
+        Some(read_key)
+    }
+    #[cfg(not(windows))]
+    {
+        None
+    }
+}
+#[cfg(windows)]
+fn read_key(vk: i32) -> i16 {
+    // Read-only bound virtual-key query; the engine tracks edges and focus.
+    unsafe { windows_sys::Win32::UI::Input::KeyboardAndMouse::GetAsyncKeyState(vk) }
+}

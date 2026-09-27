@@ -5,7 +5,7 @@
 //! `game.json`, AI instructions (`AGENTS.md`), `STATUS.md`, and shell runners
 //! (`scripts/blue` and `scripts/blue.ps1`).
 
-use super::blueprint::{compile_blueprint, BlueprintSpec, DoorSpec, FillSpec, RoomSpec, SpawnSpec};
+use super::blueprint::{compile_blueprint, BlueprintSpec, DoorSpec, RoomSpec, SpawnSpec};
 use crate::Result;
 use std::fs;
 use std::path::Path;
@@ -46,14 +46,23 @@ name = "{name}"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["client"]
+client = ["vesper3d/client", "dep:macroquad", "dep:windows-sys"]
+
+[[bin]]
+name = "{name}"
+path = "src/main.rs"
+required-features = ["client"]
+
 [dependencies]
-vesper3d = {{ package = "be2", path = {engine_path_str}, default-features = false, features = ["client"] }}
-macroquad = {{ version = "=0.4.14", default-features = false, features = ["audio"] }}
+vesper3d = {{ package = "be2", path = {engine_path_str}, default-features = false }}
+macroquad = {{ optional = true, version = "=0.4.14", default-features = false, features = ["audio"] }}
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = {{ version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading"] }}
+windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_UI_Input_KeyboardAndMouse"] }}
 "#
     );
     fs::write(target_dir.join("Cargo.toml"), cargo_toml)?;
@@ -89,20 +98,7 @@ windows-sys = {{ version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging"
             room: "lobby".into(),
             offset: Some([0.0, 0.0]),
         }],
-        fill: vec![
-            FillSpec {
-                room: "lobby".into(),
-                kind: "chair".into(),
-                count: 2,
-                seed: 42,
-            },
-            FillSpec {
-                room: "courtyard".into(),
-                kind: "potted-cactus".into(),
-                count: 2,
-                seed: 101,
-            },
-        ],
+        fill: vec![],
     };
     let bp_json = serde_json::to_string_pretty(&blueprint)?;
     fs::write(
@@ -111,7 +107,22 @@ windows-sys = {{ version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging"
     )?;
 
     // 3. Compile map
-    let map_doc = compile_blueprint(&blueprint)?;
+    let map_doc = compile_blueprint(&blueprint)?.apply(&[
+        super::authoring::Edit::AddBox {
+            id: "objective".into(),
+            label: "Activate the blue terminal".into(),
+            center: crate::math::V(-3., 1.4, -1.8),
+            half_extents: crate::math::V(0.35, 0.35, 0.2),
+            structural: false,
+            color: crate::math::V(0.15, 0.5, 0.9),
+        },
+        super::authoring::Edit::AddProp {
+            id: "apple".into(),
+            label: "Carryable apple".into(),
+            kind: "apple".into(),
+            origin: crate::math::V(-2., 0.5, -0.5),
+        },
+    ])?;
     let map_json = serde_json::to_string_pretty(&map_doc)?;
     fs::write(target_dir.join("maps").join("main.json"), map_json)?;
 
@@ -130,7 +141,11 @@ windows-sys = {{ version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging"
             yaw: spawn.yaw,
         }],
         counters: std::collections::BTreeMap::from([("visits".into(), 0)]),
-        interactables: vec![],
+        interactables: vec![super::game::Interactable {
+            entity: "objective".into(),
+            enabled: true,
+            visible: true,
+        }],
         trigger_zones: vec![super::game::TriggerZone {
             id: "courtyard".into(),
             bounds: super::controller::Collider {
@@ -141,19 +156,31 @@ windows-sys = {{ version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging"
         }],
         movers: vec![],
         timers: vec![],
-        rules: vec![super::game::Rule {
-            id: "visit-courtyard".into(),
-            on_interact: None,
-            on_enter: Some("courtyard".into()),
-            on_exit: None,
-            on_timer: None,
-            condition: None,
-            once: true,
-            actions: vec![super::game::GameAction::Increment {
-                counter: "visits".into(),
-                amount: 1,
-            }],
-        }],
+        rules: vec![
+            super::game::Rule {
+                id: "activate-terminal".into(),
+                on_interact: Some("objective".into()),
+                on_enter: None,
+                on_exit: None,
+                on_timer: None,
+                condition: None,
+                once: true,
+                actions: vec![super::game::GameAction::Complete],
+            },
+            super::game::Rule {
+                id: "visit-courtyard".into(),
+                on_interact: None,
+                on_enter: Some("courtyard".into()),
+                on_exit: None,
+                on_timer: None,
+                condition: None,
+                once: true,
+                actions: vec![super::game::GameAction::Increment {
+                    counter: "visits".into(),
+                    amount: 1,
+                }],
+            },
+        ],
     };
     game.validate(&map_doc)?;
     fs::write(
@@ -163,12 +190,14 @@ windows-sys = {{ version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging"
 
     // 5. src/main.rs
     let main_rs = r#"mod platform;
-use vesper3d::viewer::{authoring::MapDocument, game_client, local_client};
+use vesper3d::viewer::{game::GameDocument, game_client, playable};
 fn window() -> macroquad::conf::Conf { game_client::window_config("BlueEngine game") }
 #[macroquad::main(window)]
 async fn main() -> vesper3d::Result<()> {
-    let map = MapDocument::load(std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/maps/main.json")))?;
-    local_client::run_map_with_focus(map, platform::focused).await
+    let game = GameDocument::load(std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/game.json")))?;
+    let mut options = playable::GameOptions::from_args(&std::env::args().collect::<Vec<_>>())?;
+    options.keyboard = platform::keyboard();
+    playable::run_game_with_options(game, options, platform::focused).await
 }
 "#;
     fs::write(target_dir.join("src").join("main.rs"), main_rs)?;
@@ -176,6 +205,12 @@ async fn main() -> vesper3d::Result<()> {
     fs::write(
         target_dir.join("src/platform.rs"),
         include_str!("../../templates/native_focus.rs"),
+    )?;
+
+    fs::create_dir_all(target_dir.join("tests"))?;
+    fs::write(
+        target_dir.join("tests/gameplay.rs"),
+        include_str!("../../templates/game_runtime_test.rs"),
     )?;
 
     // 6. One validation implementation for both shells; logs stay out of AI context.
@@ -241,13 +276,14 @@ switch ($cmd) {
 - Project scaffolding initialized with BlueEngine v0.2.0.
 - Declarative blueprint created in `blueprints/main.blueprint.json`.
 - Starter map compiled to `maps/main.json`.
-- Valid stock-client game document written to `game.json`.
-- Playable local static-map client uses shared input, camera, characters and pause menus.
+- Authored game document with an interactive terminal and dynamic apple written to `game.json`.
+- Shared authoritative gameplay runs locally; --connect presents server-owned state.
+- E interacts/carries; after completion E restarts the world for all players.
 
 ## Next Steps
 - Add custom gameplay rules to `game.json`.
 - Expand map rooms and layout via blueprint.
-- Implement multiplayer match flow.
+- Test changes locally and against the shared headless server.
 "#
     );
     fs::write(target_dir.join("STATUS.md"), status_md)?;
@@ -266,15 +302,14 @@ not permission to invent an API. Engine changes follow the engine's AGENTS.md.
 ## Presentation baseline
 For presentation changes read engine docs/GAME_PRESENTATION.md; for custom loops or
 shared controls read docs/SHARED_GAMEPLAY.md. Keep the official engine branding.
-The starter uses local_client::run_map: native controllers, WASD/arrows, collision-safe
-camera, cached rendering, avatar selection and pause menus are inherited.
-This is a static-map client. To execute GameDocument rules or dynamic physics,
-launch the stock engine client with `be2 --game game.json`; do not silently ignore
-those rules in a custom client. Shared creative editing is opt-in via viewer::creative.
+The starter uses playable::run_game_with_options: authored rules, dynamic props,
+objectives and replay use shared HeadlessWorld authority. Input, camera, cached
+rendering and menus are inherited. --connect ADDR uses server state and movement
+prediction; local play opens no socket. local_client::run_map is a static viewer only.
 
 ## Working with Maps
 - Edit `blueprints/main.blueprint.json` to alter room layouts, doors, and prop placements.
-- Compile into a NEW map file, validate it, then deliberately adopt it; native outputs never overwrite.
+- Compile into a NEW map file, preserve authored objective/prop additions, then validate and adopt it.
 - Keep visual, collision and semantic IDs together. Discover reusable assets before creating new ones.
 - Add map `checks` and behavioral scenarios for the behavior being changed.
 

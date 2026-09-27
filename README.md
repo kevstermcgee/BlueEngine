@@ -44,7 +44,7 @@ cargo run --locked --no-default-features --bin be2-tools -- export-lab lab.json
 cargo run --locked --bin be2 -- --map lab.json
 ```
 
-Use the same map/game on both peers. Protocol 5 rejects different initial content.
+Use the same map/game on both peers. Protocol 7 rejects different initial content.
 Output files must be new. `export-house` and assets/maps/starters retain reference maps.
 WASD/arrows move, mouse looks, Space jumps, Ctrl/C crouches, E carries/drops,
 left click uses the demo tool, scroll selects tools, Q changes perspective, Esc pauses.
@@ -101,4 +101,4 @@ Try the data-driven objective demo with `Launch Three Switches.cmd` (after a rel
 
 Playable game presentation follows [the shared presentation contract](docs/GAME_PRESENTATION.md). Use the `presentation` feature for `GameShell` and cached static rendering.
 
-Shared standalone-game infrastructure: [gameplay kit](docs/SHARED_GAMEPLAY.md). New games should use `ClientInput`, `GameShell`, `MapPlayer`, the shared avatar/UI modules and the public headless `creative` API instead of copying sandbox code.
+Shared standalone-game infrastructure: [gameplay kit](docs/SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.

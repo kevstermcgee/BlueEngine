@@ -72,26 +72,32 @@ authenticates later datagrams with replay protection. The session registry is th
 authoritative owner of each token and timeout; registration, reconnect, timeout and
 disconnect cleanup update both token and peer indexes atomically. Credential entropy
 failures reject the connection, and keyed disconnects require the exact token.
-Without that flag the raw-UDP session remains unauthenticated. Neither mode encrypts
-payloads.
+Without that flag the raw-UDP session remains unauthenticated. The development profile does not encrypt payloads; production QUIC does.
 
-Clients acknowledge snapshot ticks. The server computes deltas against acknowledged
-history; clients reject mismatched baselines and request keyframes. Periodic full
-keyframes provide another recovery path. Replication includes prop orientation,
-velocities, sleeping state and holder. Combat resolves nearer static geometry before
-applying prop impulses. Constants in weapons.rs/wrench.rs define ranges/cooldowns.
+Clients acknowledge only applied partial-world updates with their session token.
+`ReplicationSender` retains one acknowledged world and one immutable pending packet.
+One world packet per 20 Hz opportunity rotates through dirty records, prioritizing
+the owner, removals and held props without starving the fair slot. The baseline
+contains exactly the represented state; retries never imply acknowledgement.
+There are no periodic whole-world keyframes. A session-bound resync starts a new
+partial keyframe and coalesces duplicate requests using the receiver's tick floor.
+Relevance exits are explicit removals; reentry compares against the committed
+baseline. Reconnects allocate fresh tokens; Hello retries preserve the live session.
+See [ADR 0014](docs/adr/0014-bounded-replication.md) and [limits](docs/HOSTING.md).
+Combat resolves nearer static geometry before applying prop impulses.
+Constants in weapons.rs/wrench.rs define ranges/cooldowns.
 The reusable FPS domain is deliberately above this stock packet path; BlueDM shows a
 game-owned protocol that consumes the shared combat rules without coupling them to a
 specific renderer or transport profile.
 
-Protocol 5 requires the initial content fingerprint, captured before physics
+Protocol 7 requires the initial content fingerprint, captured before physics
 extraction from scene, collision, semantic data and the spatial graph. HashMap/HashSet
 contents are canonicalized. Mismatched content and full servers are rejected before
 session allocation. The client displays the rejection. Old clients must rebuild.
 The fingerprint is non-cryptographic FNV-1a for accidental mismatch detection only.
 
-JSON encoding/decoding enforces an 1100-byte cross-transport datagram ceiling; it does not chunk oversized
-snapshots. Malformed/oversized datagrams are dropped without terminating the server;
+JSON encoding/decoding keeps the 1100-byte ceiling. Partial updates are measured
+against the active transport payload limit, including the session envelope. Malformed/oversized datagrams are dropped without terminating the server;
 receive work is bounded per call and server poll. Compact binary serialization,
 reconnect-token migration and content negotiation remain planned. Executables expose
 raw UDP as `--transport development` and pinned-certificate QUIC/TLS 1.3 as
@@ -119,7 +125,7 @@ adapter is implemented. [ADRs](docs/adr/README.md) record settled boundaries.
 
 GameDocument v1 (`viewer/game.rs`) compiles validated rules to indices, separate from
 MapDocument geometry. `viewer/profile.rs` supplies movement dimensions and speeds.
-Local play and HeadlessWorld share ordered interaction transitions. Protocol 5 adds
+Local play and HeadlessWorld share ordered interaction transitions. Protocol 7 carries
 game semantics to the content fingerprint and repeats bounded full GameState snapshots
 independently of movement deltas. Interactable visibility is replicated separately
 from eligibility and never changes collision; the stock client bakes those semantic
@@ -133,7 +139,7 @@ oracle.
 
 `HeadlessWorld::change_map` and `change_game` construct replacement content before
 committing it, preserve the authoritative tick, and respawn existing player IDs.
-Game state and props reset. Network hosts must coordinate the new protocol-5 content
+Game state and props reset. Network hosts must coordinate the new protocol-7 content
 hash with clients before transitioning; the world API does not distribute assets.
 
 Player overlap recovery handles props dropped/moved into a character before movement.
@@ -150,4 +156,16 @@ Collision is rechecked for the interpolated pose; first-person remains unchanged
 
 Standalone client presentation lives in `viewer/game_client.rs` behind `presentation`; `viewer/presentation.rs` is rendering-free bounded pose smoothing. `HeadlessWorld::with_static_room` preserves authored static collision without catalog rigid-body extraction. See docs/GAME_PRESENTATION.md.
 
-Shared standalone-game infrastructure: [gameplay kit](docs/SHARED_GAMEPLAY.md). New games should use `ClientInput`, `GameShell`, `MapPlayer`, the shared avatar/UI modules and the public headless `creative` API instead of copying sandbox code.
+Shared standalone-game infrastructure: [gameplay kit](docs/SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.
+
+## Shared authored-game runner
+
+Generated clients and ordinary `be2 --game` launches use `viewer/playable.rs`.
+The rendering-free `GameSession` schedules HeadlessWorld locally; online it only
+predicts the local controller and accepts authoritative game/prop/player snapshots.
+`GameState` protocol 7 includes a restart round and bounded mover tick positions.
+Mirrors do not advance authored timers, triggers or movers. The shared world action
+falls back from an authored interaction to prop pickup/drop, and restarts completed
+rounds from a cached LoadedGame. The listen-and-play host owns a DedicatedServer
+thread with a stop/join lifetime guard. Legacy stock capture diagnostics retain their
+specialized fixture path; ordinary gameplay does not use that loop.

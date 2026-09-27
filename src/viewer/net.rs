@@ -21,6 +21,7 @@ pub mod lag_compensation;
 pub mod proxy;
 pub mod quic;
 pub mod reliable_command;
+pub mod replication;
 pub mod session;
 pub mod transport;
 
@@ -29,10 +30,11 @@ pub use lag_compensation::*;
 pub use proxy::*;
 pub use quic::*;
 pub use reliable_command::*;
+pub use replication::*;
 pub use session::*;
 pub use transport::*;
 
-pub const PROTOCOL_VERSION: u32 = 5;
+pub const PROTOCOL_VERSION: u32 = 7;
 /// Cross-transport payload ceiling. It fits one QUIC datagram without fragmentation
 /// and is therefore also enforced by the development UDP codec.
 pub const MAX_PACKET_BYTES: usize = 1100;
@@ -95,9 +97,14 @@ impl PropNetState {
     }
 }
 
-/// Complete authoritative state snapshot for a simulation tick.
+/// A receiver's represented authoritative world. In protocol 7 this is built
+/// incrementally: records may originate from different simulation ticks. `tick`
+/// identifies the applied update to acknowledge, not a guarantee of an atomic
+/// whole-world view. A Snapshot packet replaces the mirror; later deltas extend it.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct WorldSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session: Option<SessionToken>,
     pub tick: u64,
     pub ack_client_tick: u64,
     pub players: Vec<PlayerNetState>,
@@ -145,6 +152,7 @@ impl WorldSnapshot {
         }
 
         DeltaSnapshot {
+            session: self.session,
             base_tick: base.tick,
             target_tick: self.tick,
             ack_client_tick: self.ack_client_tick,
@@ -159,6 +167,8 @@ impl WorldSnapshot {
 /// Compact delta snapshot transmitting only changes and removals between two ticks.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct DeltaSnapshot {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session: Option<SessionToken>,
     pub base_tick: u64,
     pub target_tick: u64,
     pub ack_client_tick: u64,
@@ -192,6 +202,7 @@ impl DeltaSnapshot {
         }
 
         WorldSnapshot {
+            session: self.session,
             tick: self.target_tick,
             ack_client_tick: self.ack_client_tick,
             players,
@@ -211,6 +222,7 @@ pub struct InputFrame {
     pub fire_pistol: bool,
     pub interact: bool,
     #[serde(default)]
+    /// Latest applied world update; never an estimated tick or queue acceptance.
     pub ack_server_tick: u64,
     #[serde(default)]
     pub session_token: Option<SessionToken>,
@@ -227,6 +239,7 @@ pub struct SequencedInputFrame {
     pub aim_tick: u64,
     pub counters: ActionCounters,
     #[serde(default)]
+    /// Latest applied world update; never an estimated tick or queue acceptance.
     pub ack_server_tick: u64,
     #[serde(default)]
     pub session_token: Option<SessionToken>,
@@ -286,12 +299,17 @@ pub enum Packet {
     SequencedInput(SequencedInputFrame),
     /// Small full state, repeated at snapshot rate for independent loss recovery.
     GameState {
+        session: Option<SessionToken>,
         tick: u64,
         state: super::game::GameState,
     },
     Snapshot(WorldSnapshot),
     Delta(DeltaSnapshot),
     RequestKeyframe,
+    Resynchronize {
+        session: SessionToken,
+        after_tick: u64,
+    },
     Ping {
         seq: u32,
         send_time_ms: u64,
@@ -736,6 +754,7 @@ mod tests {
     #[test]
     fn delta_compression_roundtrip() {
         let snap1 = WorldSnapshot {
+            session: None,
             tick: 100,
             ack_client_tick: 50,
             players: vec![PlayerNetState {
