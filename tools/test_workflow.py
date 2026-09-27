@@ -1,16 +1,73 @@
 """Selection tests use real Git changes, not only hand-written path lists."""
 import json
+import runpy
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 from tools import workflow
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 class ContextTests(unittest.TestCase):
+    def test_task_packet_and_diagnostic_routing(self):
+        packet = workflow.context(ROOT, 'add replicated door state')
+        self.assertEqual({item['id'] for item in packet['matches'][:2]},
+                         {'multiplayer', 'game_documents'})
+        self.assertIn('graphics', packet['probably_unnecessary'])
+        self.assertIn('low', packet['confidence'])
+        self.assertLess(len(json.dumps(packet)), 8000)
+        self.assertLessEqual(sum(len(item['read_first']) for item in packet['matches']), 5)
+        for code, owner in [('NET-BUDGET-002', 'multiplayer'),
+                            ('NET-014', 'multiplayer'),
+                            ('ARCH-HEADLESS-001', 'simulation_contract'),
+                            ('API-PUBLIC-001', 'prototype_api')]:
+            self.assertEqual(workflow.context(ROOT, code, 1)['matches'][0]['id'], owner)
+        self.assertEqual(workflow.context(ROOT, 'zyxquantumunknown')['probably_unnecessary'], [])
+
+    def test_boundary_failure_teaches_diagnostic_lookup(self):
+        with patch('subprocess.run', return_value=SimpleNamespace(stdout='macroquad v0.4\n')):
+            with self.assertRaisesRegex(SystemExit, 'ARCH-HEADLESS-001.*macroquad') as error:
+                runpy.run_path(str(ROOT / 'tools/check_headless.py'), run_name='__main__')
+        self.assertIn('python tools/be2.py context ARCH-HEADLESS-001', str(error.exception))
+
+    def test_index_contracts_resolve_and_annotations_stay_queryable(self):
+        features = workflow.index(ROOT)
+        kinds = {'AI-INVARIANT', 'AI-BOUNDARY', 'AI-WARNING', 'AI-HOTPATH',
+                 'AI-COMPAT', 'AI-SECURITY', 'AI-DEPRECATED', 'AI-CANONICAL'}
+        ids = set()
+        for name, feature in features.items():
+            self.assertLess(len(json.dumps(workflow.context(ROOT, name, 1)).encode('utf-8')),
+                            8000, f'INDEX-001 {name}: packet exceeds budget')
+            for dependency in feature.get('depends_on', []):
+                self.assertIn(dependency, features, f'INDEX-001 {name}: missing dependency')
+            for path in feature.get('read_first', []) + ([feature['canonical_example']]
+                                                        if 'canonical_example' in feature else []):
+                self.assertTrue((ROOT / path).exists(), f'INDEX-001 {name}: {path}')
+            for item in feature.get('constraints', []):
+                self.assertNotIn(item['id'], ids, 'INDEX-001 duplicate diagnostic')
+                ids.add(item['id'])
+                self.assertIn(item['kind'], kinds)
+                source = (ROOT / item['source']).read_text(encoding='utf-8')
+                self.assertIn(item['kind'] + ' ' + item['id'] + ':', source,
+                              f"INDEX-001 missing annotation; context {name}")
+                self.assertTrue(item['verify'])
+            for decision in feature.get('decisions', []):
+                self.assertTrue((ROOT / decision['adr']).is_file())
+
+    def test_impact_transitive_directory_unknown_and_cycles(self):
+        result = workflow.impact(ROOT, ['src/viewer/simulation.rs', 'unknown.rs'])
+        self.assertIn('shared_gameplay', result['affected'])
+        self.assertEqual(result['unmapped'], ['unknown.rs'])
+        self.assertIn('sandbox', workflow.impact(ROOT, ['src/bin/sandbox/input.rs'])['owners'])
+        graph = {'a': {'depends_on': ['b']}, 'b': {'depends_on': ['a']}}
+        self.assertEqual(workflow.closure(graph, ['a']), {'a', 'b'})
+        self.assertIsNotNone(workflow.impact(ROOT, [f'unknown{i}' for i in range(11)])['scope_warning'])
+
     def test_bounded_exact_and_unknown(self):
         hit = workflow.context(ROOT, 'movement', 1)
         self.assertEqual(hit['matches'][0]['id'], 'movement')

@@ -15,7 +15,18 @@
         "shared_gameplay scaffold integration test",
         "generated external project content and locked Cargo checks"
       ],
-      "note": "Build-free bounded context lookup from this index; conservative Git change plans with full fallback. Generated games have compact local instructions and a fail-fast content/project runner with persistent logs. No validation result caching; content-only checks do not certify Rust or manual behavior."
+      "note": "Build-free bounded context lookup from this index; conservative Git change plans with full fallback. Generated games have compact local instructions and a fail-fast content/project runner with persistent logs. No validation result caching; content-only checks do not certify Rust or manual behavior.",
+      "depends_on": [
+        "native_discovery"
+      ],
+      "keywords": [
+        "context",
+        "impact",
+        "affected",
+        "verification",
+        "AI",
+        "annotations"
+      ]
     },
     "map_geometry": {
       "files": [
@@ -68,7 +79,10 @@
         "Feta furniture passages, solid legs/undersides, Scientist exclusion, four-map desks",
         "dropped-prop overlap recovery for both characters; wall exclusion and stable feet"
       ],
-      "note": "Keep frame-rate independence and render/headless parity."
+      "note": "Keep frame-rate independence and render/headless parity.",
+      "depends_on": [
+        "simulation_contract"
+      ]
     },
     "graphics": {
       "files": [
@@ -80,7 +94,10 @@
         "menu inspection",
         "render report"
       ],
-      "note": "Simple matte geometry uses tag 3; do not tint it with crystal tag 2. Pause shows Resume/Settings/Quit; controls and options are in Settings."
+      "note": "Simple matte geometry uses tag 3; do not tint it with crystal tag 2. Pause shows Resume/Settings/Quit; controls and options are in Settings.",
+      "depends_on": [
+        "game_presentation"
+      ]
     },
     "wrench": {
       "files": [
@@ -185,6 +202,67 @@
           "suite": "replication_sockets",
           "test": "quic_two_clients_receive_multi_packet_world"
         }
+      ],
+      "depends_on": [
+        "simulation_contract",
+        "game_documents"
+      ],
+      "keywords": [
+        "network",
+        "replication",
+        "replicated",
+        "transport",
+        "payload",
+        "protocol",
+        "NET-BUDGET-002"
+      ],
+      "read_first": [
+        "src/viewer/net/replication.rs",
+        "src/viewer/net.rs",
+        "src/viewer/server.rs",
+        "tests/replication_budget.rs"
+      ],
+      "public_api": [
+        "DatagramTransport",
+        "ReplicationSender::send",
+        "ReplicationSender::acknowledge",
+        "validate_world"
+      ],
+      "contract": {
+        "owns": "Authoritative sessions and bounded acknowledged replication",
+        "inputs": "Bounded client intentions and transport outcomes",
+        "outputs": "Session-bound partial worlds and GameState",
+        "may_depend_on": [
+          "simulation_contract",
+          "game_documents"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio"
+        ],
+        "performance": "One baseline and one retryable packet per peer; active transport payload ceiling",
+        "consumers": [
+          "dedicated server",
+          "network clients"
+        ]
+      },
+      "constraints": [
+        {
+          "id": "NET-BUDGET-002",
+          "kind": "AI-INVARIANT",
+          "text": "Commit only exactly acknowledged represented state; budget each packet against the active transport limit. Queued bytes are not delivery.",
+          "source": "src/viewer/net/replication.rs",
+          "verify": "cargo test --locked --no-default-features --test replication_budget --test replication_sockets"
+        }
+      ],
+      "decisions": [
+        {
+          "id": "NET-014",
+          "rejected": "Raising the packet ceiling or retaining full-world history",
+          "reason": "Bounded partial-world acknowledgements preserve progress under loss and pressure",
+          "reconsider_when": "Transport and measured latency requirements change",
+          "adr": "docs/adr/0014-bounded-replication.md"
+        }
       ]
     },
     "performance_regression_budgets": {
@@ -211,7 +289,8 @@
         "CLI tests",
         "offline export"
       ],
-      "note": "Read ARCHITECTURE.md and AI_REFERENCE.md before changes."
+      "note": "Read ARCHITECTURE.md and AI_REFERENCE.md before changes.",
+      "depends_on": []
     },
     "landscaping": {
       "files": [
@@ -237,7 +316,10 @@
         "verify with routes and captures",
         "explicit baseline comparison"
       ],
-      "note": "Packaged-native static map authoring; curated metadata and local bounded token search; no engine source reads, embeddings or arbitrary gameplay scripting."
+      "note": "Packaged-native static map authoring; curated metadata and local bounded token search; no engine source reads, embeddings or arbitrary gameplay scripting.",
+      "depends_on": [
+        "map_editing"
+      ]
     },
     "asset_library": {
       "files": [
@@ -251,7 +333,8 @@
         "python tools/assets.py validate",
         "python -m unittest tools.test_assets -v"
       ],
-      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import."
+      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import.",
+      "depends_on": []
     },
     "interior_prefabs": {
       "files": [
@@ -277,7 +360,43 @@
         "simulation_flow integration tests in both feature configurations",
         "library rustdoc with warnings denied in both feature configurations"
       ],
-      "note": "Concrete rendering-free simulation; held input persists and jump is consumed once. DedicatedServer enforces input ordering and stale-input expiry."
+      "note": "Concrete rendering-free simulation; held input persists and jump is consumed once. DedicatedServer enforces input ordering and stale-input expiry.",
+      "contract": {
+        "owns": "Concrete fixed-step world and player lifecycle",
+        "inputs": "Movement intentions, explicit ticks",
+        "outputs": "Authoritative player/prop/game state",
+        "may_depend_on": [
+          "controller",
+          "authoring",
+          "physics"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio",
+          "window"
+        ],
+        "performance": "60 Hz; client catch-up capped at eight ticks",
+        "consumers": [
+          "client",
+          "headless",
+          "external games"
+        ]
+      },
+      "constraints": [
+        {
+          "id": "ARCH-HEADLESS-001",
+          "kind": "AI-BOUNDARY",
+          "text": "Rendering-free normal dependency graph excludes graphics, audio and hardware input.",
+          "source": "src/viewer/simulation.rs",
+          "verify": "python tools/check_headless.py"
+        }
+      ],
+      "public_api": [
+        "HeadlessWorld::input",
+        "HeadlessWorld::step",
+        "PlayerStepper",
+        "TICK_SECONDS"
+      ]
     },
     "prop_physics": {
       "files": [
@@ -292,7 +411,10 @@
         "--studio --capture-physics DIR --feta",
         "live E pickup/drop, pause/resume and both movement key layouts"
       ],
-      "note": "Runtime catalog-prop extraction; 120 Hz Rapier compound bodies with per-player authoritative ownership. Large furniture/wall art remain fixed. All eligible bodies are allocated up front; lifecycle sleeping is not lazy allocation."
+      "note": "Runtime catalog-prop extraction; 120 Hz Rapier compound bodies with per-player authoritative ownership. Large furniture/wall art remain fixed. All eligible bodies are allocated up front; lifecycle sleeping is not lazy allocation.",
+      "depends_on": [
+        "simulation_contract"
+      ]
     },
     "weapons": {
       "files": [
@@ -356,6 +478,20 @@
           "suite": "prototype",
           "test": "quickstart_is_the_compiled_example"
         }
+      ],
+      "depends_on": [
+        "simulation_contract",
+        "map_editing"
+      ],
+      "canonical_example": "examples/prototype.rs",
+      "constraints": [
+        {
+          "id": "API-PUBLIC-001",
+          "kind": "AI-COMPAT",
+          "text": "External games compile against the supported vesper3d prelude; do not invent private APIs.",
+          "source": "src/prelude.rs",
+          "verify": "cargo test --locked --no-default-features --test prototype --test shared_gameplay"
+        }
       ]
     },
     "native_discovery": {
@@ -378,7 +514,8 @@
           "suite": "capabilities",
           "test": "feature_paths_and_evidence_resolve_to_suite_tests"
         }
-      ]
+      ],
+      "depends_on": []
     },
     "game_documents": {
       "files": [
@@ -393,7 +530,23 @@
         "game_documents integration tests",
         "graphical --capture-game smoke"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors."
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors.",
+      "depends_on": [
+        "simulation_contract"
+      ],
+      "keywords": [
+        "rule",
+        "door",
+        "objective",
+        "interaction",
+        "counter"
+      ],
+      "read_first": [
+        "src/viewer/game.rs",
+        "src/viewer/game_example.rs",
+        "tests/game_documents.rs"
+      ],
+      "canonical_example": "src/viewer/game_example.rs"
     },
     "custom_clients": {
       "files": [
@@ -404,7 +557,11 @@
       "checks": [
         "cargo check --locked --example custom_client"
       ],
-      "note": "Documented application-owned window/render/input boundary over BlueEngine-owned fixed simulation, including the supported Macroquad version for external crates."
+      "note": "Documented application-owned window/render/input boundary over BlueEngine-owned fixed simulation, including the supported Macroquad version for external crates.",
+      "depends_on": [
+        "shared_gameplay"
+      ],
+      "canonical_example": "examples/custom_client.rs"
     },
     "mcp": {
       "files": [
@@ -493,7 +650,11 @@
           "suite": "toolchain",
           "test": "test_deterministic_simulation_and_replay_verification"
         }
-      ]
+      ],
+      "depends_on": [
+        "game_documents"
+      ],
+      "canonical_example": "assets/games/three-switches/scenario.json"
     },
     "verification_framework": {
       "files": [
@@ -547,7 +708,11 @@
       "checks": [
         "new standalone game project scaffolding"
       ],
-      "note": "Scaffolds independent game projects with a vesper3d path dependency, blueprint, map, launcher, compact AGENTS.md and shared content/project check runner. Record the engine revision and commit the generated Cargo.lock; path dependencies are not revision pins."
+      "note": "Scaffolds independent game projects with a vesper3d path dependency, blueprint, map, launcher, compact AGENTS.md and shared content/project check runner. Record the engine revision and commit the generated Cargo.lock; path dependencies are not revision pins.",
+      "depends_on": [
+        "shared_gameplay",
+        "prototype_api"
+      ]
     },
     "game_presentation": {
       "files": [
@@ -563,7 +728,26 @@
         "BlueDM movement UDP regression",
         "game still/menu captures and live controls"
       ],
-      "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation."
+      "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation.",
+      "depends_on": [
+        "simulation_contract"
+      ],
+      "contract": {
+        "owns": "Window, menus, cosmetic rendering and input adaptation",
+        "inputs": "Shared authoritative state and neutral gameplay inputs",
+        "outputs": "Frames and intentions",
+        "may_depend_on": [
+          "simulation_contract"
+        ],
+        "must_not_depend_on": [
+          "a second authoritative gameplay loop"
+        ],
+        "performance": "Cache static geometry; fixed simulation independent of frame rate",
+        "consumers": [
+          "stock client",
+          "generated games"
+        ]
+      }
     },
     "sandbox": {
       "files": [
@@ -594,7 +778,10 @@
         "python tools/check_headless.py",
         "manual controller hot-plug, focus, keyboard layouts, camera and cursor capture"
       ],
-      "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds."
+      "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds.",
+      "depends_on": [
+        "movement"
+      ]
     },
     "shared_gameplay": {
       "files": [
@@ -631,6 +818,22 @@
           "suite": "game_runtime",
           "test": "generated_content_runs_on_separate_headless_process_with_two_scripted_clients"
         }
+      ],
+      "depends_on": [
+        "simulation_contract",
+        "game_documents",
+        "multiplayer",
+        "game_presentation"
+      ],
+      "read_first": [
+        "src/viewer/game_session.rs",
+        "src/viewer/playable.rs",
+        "tests/game_runtime.rs"
+      ],
+      "public_api": [
+        "GameSession::local",
+        "GameSession::advance",
+        "playable::run_game_with_options"
       ]
     }
   }

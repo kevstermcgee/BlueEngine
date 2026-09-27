@@ -62,7 +62,7 @@ fn oversized_world_makes_wire_progress() {
     server.broadcast_snapshots();
     assert!(
         !server.transport.sent.borrow().is_empty(),
-        "oversized world silently produced no updates"
+        "NET-BUDGET-002: oversized world produced no updates; run python tools/be2.py context NET-BUDGET-002"
     );
 }
 #[test]
@@ -75,7 +75,7 @@ fn rejected_update_is_not_acknowledgement_history() {
             .sessions
             .values()
             .all(|s| s.snapshot_history.is_empty()),
-        "rejected updates entered ack history"
+        "NET-BUDGET-002: rejected update entered ack history; run python tools/be2.py context NET-BUDGET-002"
     );
 }
 

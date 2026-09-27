@@ -12,5 +12,6 @@ if __name__ == '__main__':
     packages = {line.split()[0] for line in result.stdout.splitlines() if line.strip()}
     unexpected = sorted(packages & FORBIDDEN)
     if unexpected:
-        raise SystemExit('Headless dependency regression: ' + ', '.join(unexpected))
-    print('Headless dependency boundary passed')
+        raise SystemExit('ARCH-HEADLESS-001: forbidden headless dependencies: ' + ', '.join(unexpected)
+                         + '\nNext: python tools/be2.py context ARCH-HEADLESS-001')
+    print('PASS ARCH-HEADLESS-001')

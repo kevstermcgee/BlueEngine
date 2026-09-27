@@ -1,38 +1,38 @@
 # Working on BlueEngine
 
-Start with the smallest relevant contract; do not preload architecture documents or
-engine source. BlueEngine is a dependency for game projects, not their working context.
+First run `python tools/be2.py context "<task>" --compact` in this checkout.
+It needs only Python and the feature index, no build. Read the packet's selected
+paths, not the whole repository. Exact feature IDs or diagnostic IDs narrow lookup;
+low confidence means inspect/narrow before editing, never invent an API.
+Use `be2-tools src find/outline/show` for deeper symbol navigation when needed.
 
-| Task | Start here | Validation |
-|---|---|---|
-| Game project | Its local AGENTS.md and game files | Its project check; engine tests only if engine changes |
-| Map/assets/GameDocument | `python tools/author.py describe`, tools/AUTHORING.md | Native audit/verify, relevant routes/scenarios and visual review |
-| Find an engine capability | `python tools/be2.py context QUERY` | Returns at most 3 feature records without Cargo or source reads |
-| Engine/tool maintenance | Matching context record, then docs/ENGINE_MAINTENANCE.md | `python tools/be2.py check --changed --plan`, then `check --changed` |
+After editing: `python tools/be2.py check --changed --plan` reports affected
+features, uncertainty and the verification commands. Then run
+`python tools/be2.py check --changed`. It includes staged/unstaged/untracked files;
+use `--base REV` for committed work. Only reviewed independent Python scopes narrow
+validation. Rust, manifests, content, docs, validation infrastructure and unknown
+paths automatically require full checks. `check` always runs the full suite.
+Feature test suggestions are for iteration; a plan is not passing evidence.
+Keep full Linux/Windows CI. Inspect visuals/controls manually when they change.
 
-`context` searches the existing tools/FEATURES.json; use exact feature IDs to narrow
-results. No match is not an API. Read only relevant contracts, implementation and tests.
-For changed source, use BE2_ARCHITECTURE.md; historical Blue/Vesper architecture is
-needed only for those subsystems. The maintenance guide retains all engine invariants.
+Never violate:
+- Authoritative simulation is shared, fixed-step and rendering-free. Clients send
+  intentions; presentation must not duplicate gameplay authority.
+- Respect active transport limits; queue acceptance is not acknowledgement.
+- Preserve public vesper3d compatibility, semantic IDs and visual/collision agreement.
+- Preserve completed outputs on failure; never shell-interpolate scene values.
+- Preserve official assets/branding artwork. No plugin/service installation needed.
 
-`check` without flags always runs the full suite. `--changed` includes staged,
-unstaged and untracked files against HEAD; use `--base REV` for committed changes.
-Only reviewed independent Python edits get narrower checks. Rust, content, manifests,
-docs, validation infrastructure and unknown paths keep full validation. Plans describe
-scope, not proof of success; no-change plans do not certify the baseline. CI keeps the
-full Linux/Windows gates. Run required checks once on final inputs; repeat for new changes
-or failures, not because another entry point repeats the same instructions.
+Game projects start with their own AGENTS.md and project check. Authoring starts
+with `python tools/author.py describe`; discover assets with
+`python tools/assets.py search TEXT`. Retrieve detailed contracts through context;
+see docs/ENGINE_MAINTENANCE.md only for relevant maintenance obligations.
+Published-source changes also require `python scripts/publish_games.py check`.
 
-Preserve completed outputs on failure; never shell-interpolate scene values. Keep
-semantic IDs stable and visual/collision/entity edits consistent. Discover reusable
-assets with `python tools/assets.py search TEXT` before modifying/generating/importing.
-Unsupported gameplay requirements are engine work; do not invent APIs.
+Expect small tasks to touch 1-4 source files, subsystem work 3-8. Above 10, recheck
+impact; simulation + networking + presentation may belong at a shared lower layer.
+These are prompts to reconsider scope, not limits on necessary work or reading.
 
-Playable games follow docs/GAME_PRESENTATION.md (shared shell, fixed-step movement,
-minimal HUD, cached rendering and release-build playtests). Read docs/SHARED_GAMEPLAY.md
-when extending shared controls or custom loops. Preserve official branding in
-assets/branding; never regenerate it as routine game/engine work.
-
-Run `python scripts/publish_games.py check` after changing games-publish.json or a
-published source. See docs/GAMES_PUBLISHING.md. Keep scratch files, build output,
-logs and credentials out of publication. No plugin/service installation is needed.
+DONE WHEN requested behavior works, focused behavioral evidence and affected checks
+pass, and public docs reflect changed public contracts. STOP. Do not refactor nearby
+code, add speculative abstractions or expand scope. Tasks may override this default.

@@ -1,3 +1,4 @@
+//! AI-INVARIANT NET-BUDGET-002: Only exact acknowledgement commits represented state; respect active payload limits.
 //! Packet-budgeted, acknowledged partial-world replication (protocol 7).
 //!
 //! One immutable update is in flight per peer. Only its exact acknowledgement

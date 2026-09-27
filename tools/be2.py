@@ -9,6 +9,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 import zipfile
 
 import workflow
@@ -19,7 +20,8 @@ SUFFIX = '.exe' if os.name == 'nt' else ''
 
 
 def invoke(args, *, env=None, log=None, capture=False, timeout=None):
-    print('+ ' + ' '.join(map(str, args)), file=sys.stderr)
+    if not log:
+        print('+ ' + ' '.join(map(str, args)), file=sys.stderr)
     buffered = capture or log or os.name == 'nt'
     result = subprocess.run(list(map(str, args)), cwd=ROOT, env=env,
                             stdout=subprocess.PIPE if buffered else None,
@@ -78,6 +80,7 @@ def doctor():
 
 
 def check(plan):
+    started = time.monotonic()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     directory = WORK / ('check-' + stamp)
     directory.mkdir(parents=True)
@@ -91,8 +94,13 @@ def check(plan):
             item['ok'] = True
         report['ok'] = True
     finally:
+        report['elapsed_seconds'] = round(time.monotonic() - started, 3)
+        report['commands_attempted'] = len(report['checks'])
+        report['failed_commands'] = sum(not item['ok'] for item in report['checks'])
         (directory / 'report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-        print(json.dumps({'report': str(directory / 'report.json'), 'ok': report['ok']}))
+        print(json.dumps({'report': str(directory / 'report.json'), 'ok': report['ok'],
+                          'scope': plan['scope'], 'seconds': report['elapsed_seconds'],
+                          'commands': report['commands_attempted']}))
 
 
 def capture(destination, map_file):
@@ -153,6 +161,8 @@ def main():
     c.add_argument('--plan', action='store_true', help='Print the plan without running checks')
     c = sub.add_parser('context', help='Bounded feature context without a native build or source reads')
     c.add_argument('query'); c.add_argument('--limit', type=int, default=3)
+    c.add_argument('--compact', action='store_true', help='Compact JSON; same bounded packet')
+    c.add_argument('--record', action='store_true', help='Save packet size/timing locally for workflow measurement')
     b = sub.add_parser('build'); b.add_argument('kind', choices=['client', 'headless', 'tools', 'all'])
     c = sub.add_parser('capture'); c.add_argument('destination'); c.add_argument('--map')
     p = sub.add_parser('package'); p.add_argument('destination')
@@ -165,9 +175,22 @@ def main():
             parser.error('--base requires --changed')
         revision, paths = workflow.changed_paths(ROOT, args.base) if args.changed else (None, None)
         plan = workflow.validation_plan(paths, revision)
+        if paths is not None:
+            plan['impact'] = workflow.impact(ROOT, paths)
         if args.plan: print(json.dumps(plan, indent=2))
         else: check(plan)
-    elif args.command == 'context': print(json.dumps(workflow.context(ROOT, args.query, args.limit), indent=2))
+    elif args.command == 'context':
+        started = time.monotonic()
+        packet = workflow.context(ROOT, args.query, args.limit)
+        output = json.dumps(packet, separators=(',', ':')) if args.compact else json.dumps(packet, indent=2)
+        if args.record:
+            WORK.mkdir(exist_ok=True)
+            with (WORK / 'context-metrics.jsonl').open('a', encoding='utf-8') as stream:
+                stream.write(json.dumps({'query': args.query, 'bytes': len(output.encode('utf-8')),
+                                         'elapsed_seconds': round(time.monotonic() - started, 4),
+                                         'engine_source_files_opened': 0,
+                                         'documentation_files_opened': 0}) + '\n')
+        print(output)
     elif args.command == 'build':
         for kind in ['client', 'headless', 'tools'] if args.kind == 'all' else [args.kind]:
             print(build(kind))

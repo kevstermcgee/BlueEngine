@@ -1,3 +1,4 @@
+//! AI-BOUNDARY ARCH-HEADLESS-001: Simulation must remain usable without graphics, audio or a window.
 //! Rendering-free simulation shared by the client and dedicated UDP server.
 //!
 //! Callers schedule ticks; this module does not authenticate players or expire inputs.

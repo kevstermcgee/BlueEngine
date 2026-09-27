@@ -1,3 +1,4 @@
+//! AI-COMPAT API-PUBLIC-001: Generated external games consume this supported public surface.
 //! Small rendering-independent surface for prototypes. See `docs/AI_QUICKSTART.md`.
 pub use crate::math::V;
 pub use crate::viewer::authoring::MapDocument;
