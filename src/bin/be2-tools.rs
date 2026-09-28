@@ -432,14 +432,50 @@ fn run() -> Result<()> {
             }
         }
         "new-game" => {
+            use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
             let name = arg(1)?;
             let dir = arg(2)?;
-            vesper3d::viewer::newgame::scaffold_new_game(
-                name,
-                Path::new(dir),
-                a.get(3).map(String::as_str),
-            )?;
-            println!("{}", json!({"ok": true, "name": name, "directory": dir}));
+            // NAME DIRECTORY [ENGINE_PATH] [TEMPLATE]; a lone template name may stand in for the path.
+            let unknown = |t: &str| format!("Unknown template '{t}': use stock or custom-sim");
+            let (engine, template) =
+                match (a.get(3).map(String::as_str), a.get(4).map(String::as_str)) {
+                    (Some(t), None) if Template::parse(t).is_some() => (None, Template::parse(t)),
+                    (engine, Some(t)) => {
+                        (engine, Some(Template::parse(t).ok_or_else(|| unknown(t))?))
+                    }
+                    (engine, None) => (engine, None),
+                };
+            let template = template.unwrap_or_default();
+            scaffold_new_game_with(name, Path::new(dir), engine, template)?;
+            println!(
+                "{}",
+                json!({"ok": true, "name": name, "directory": dir, "template": template.name()})
+            );
+        }
+        "icon" => {
+            use vesper3d::viewer::icon::{signature, write_icon_set, IconSpec};
+            // TITLE DIRECTORY [VARIANT] [--replace]: a title-seeded starter icon set (icon.ico,
+            // icon_{16,32,64}.rgba, icon.png). Existing files are never overwritten without --replace.
+            let title = arg(1)?;
+            let dir = arg(2)?;
+            let mut variant = 0u32;
+            let mut replace = false;
+            for extra in &a[3..] {
+                if extra == "--replace" {
+                    replace = true;
+                } else {
+                    variant = extra
+                        .parse()
+                        .map_err(|_| format!("VARIANT must be a whole number, got '{extra}'"))?;
+                }
+            }
+            let spec = IconSpec::new(title).with_variant(variant);
+            let files = write_icon_set(&spec, Path::new(dir), replace)?;
+            println!(
+                "{}",
+                json!({"ok": true, "title": title, "variant": variant,
+                       "signature": format!("{:016x}", signature(&spec)), "files": files})
+            );
         }
         "blueprint-example" => {
             let example = vesper3d::viewer::blueprint::BlueprintSpec {

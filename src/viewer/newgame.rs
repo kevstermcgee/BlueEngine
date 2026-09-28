@@ -1,26 +1,81 @@
-//! `be2-tools new-game NAME DIR [ENGINE_PATH]`: Scaffolds a standalone, green game project.
+//! `be2-tools new-game NAME DIR [ENGINE_PATH] [TEMPLATE]`: Scaffolds a standalone, green game project.
 //!
 //! The generated project does not copy or fork the engine; it uses `vesper3d` as a
-//! dependency. It comes fully equipped with a declarative blueprint, pre-compiled map,
-//! `game.json`, AI instructions (`AGENTS.md`), `STATUS.md`, and shell runners
-//! (`scripts/blue` and `scripts/blue.ps1`).
+//! dependency. Two starters exist:
+//!
+//! * `stock` (default): a declarative blueprint, pre-compiled map, `game.json` and the shared
+//!   playable runner. For games whose rules fit counters, interactables, timers and triggers.
+//! * `custom-sim`: a pure simulation library plus a window binary that uses the engine's devkit and
+//!   kit. For games with enemies, projectiles, scoring, AI or per-frame physics.
+//!
+//! Both come with AI instructions (`AGENTS.md`), `STATUS.md`, shell runners (`scripts/blue` and
+//! `scripts/blue.ps1`), a project check, and everything a game needs to *ship*: an identity file
+//! (`assets/identity.json`), a generated icon set, a build script that embeds the icon in the exe, and
+//! `scripts/ship.py`, which packages the game into `dist/` and creates and verifies a uniquely named,
+//! uniquely iconned desktop shortcut.
 
 use super::blueprint::{compile_blueprint, BlueprintSpec, DoorSpec, RoomSpec, SpawnSpec};
+use super::icon::{write_icon_set, IconSpec};
+use super::identity::Identity;
 use crate::Result;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
+/// Which starter to generate.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Template {
+    /// Authored rules run by the shared playable runner (`GameDocument`).
+    #[default]
+    Stock,
+    /// A game that owns its simulation: pure library + window binary (devkit and kit).
+    CustomSim,
+}
+
+impl Template {
+    /// The command-line name: `stock` or `custom-sim`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Stock => "stock",
+            Self::CustomSim => "custom-sim",
+        }
+    }
+    /// Parse a command-line name.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text {
+            "stock" => Some(Self::Stock),
+            "custom-sim" => Some(Self::CustomSim),
+            _ => None,
+        }
+    }
+}
+
+/// Scaffold the default (`stock`) starter. See [`scaffold_new_game_with`].
 pub fn scaffold_new_game(
     name: &str,
     target_dir: &Path,
     engine_rel_path: Option<&str>,
 ) -> Result<()> {
-    if name.is_empty()
+    scaffold_new_game_with(name, target_dir, engine_rel_path, Template::Stock)
+}
+
+/// Scaffold a project. `engine_rel_path` is written into `Cargo.toml` as given (relative to the new
+/// project, or absolute; default `../BlueEngine`).
+pub fn scaffold_new_game_with(
+    name: &str,
+    target_dir: &Path,
+    engine_rel_path: Option<&str>,
+    template: Template,
+) -> Result<()> {
+    let mut chars = name.chars();
+    let starts_ok = chars
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '_');
+    if !starts_ok
         || !name
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
     {
-        return Err("Game name must be a Cargo-compatible identifier".into());
+        return Err("Game name must be a Cargo-compatible identifier (letters, digits, - and _, not starting with a digit)".into());
     }
     if target_dir.exists() && target_dir.read_dir()?.next().is_some() {
         return Err(format!(
@@ -29,22 +84,304 @@ pub fn scaffold_new_game(
         )
         .into());
     }
-
+    let engine_arg = engine_rel_path.unwrap_or("../BlueEngine");
+    let project = Project {
+        name,
+        lib: name.replace('-', "_"),
+        dir: target_dir,
+        engine_toml: serde_json::to_string(engine_arg)?,
+        engine_dir: target_dir.join(engine_arg),
+    };
     fs::create_dir_all(target_dir)?;
-    fs::create_dir_all(target_dir.join("src"))?;
-    fs::create_dir_all(target_dir.join("blueprints"))?;
-    fs::create_dir_all(target_dir.join("maps"))?;
-    fs::create_dir_all(target_dir.join("scripts"))?;
-    fs::create_dir_all(target_dir.join(".github").join("workflows"))?;
+    for dir in ["src", "scripts", "assets", "tests"] {
+        fs::create_dir_all(target_dir.join(dir))?;
+    }
+    let identity = match template {
+        Template::Stock => scaffold_stock(&project)?,
+        Template::CustomSim => scaffold_custom_sim(&project)?,
+    };
+    write_shipping_files(&project, identity)?;
+    write_scripts(&project)?;
+    fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
+    Ok(())
+}
 
-    let engine_path_str = serde_json::to_string(engine_rel_path.unwrap_or("../BlueEngine"))?;
+/// What every generated file may refer to.
+struct Project<'a> {
+    name: &'a str,
+    /// The library crate name (`name` with `-` turned into `_`).
+    lib: String,
+    dir: &'a Path,
+    /// `engine_rel_path` as a quoted TOML/JSON string.
+    engine_toml: String,
+    /// Where the engine checkout is, if the path resolves from the new project.
+    engine_dir: PathBuf,
+}
+
+impl Project<'_> {
+    fn write(&self, relative: &str, content: impl AsRef<[u8]>) -> Result<()> {
+        let path = self.dir.join(relative);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, content)?;
+        Ok(())
+    }
+}
+
+/// Replace `{{key}}` placeholders in a template file.
+fn fill(template: &str, values: &[(&str, &str)]) -> String {
+    values
+        .iter()
+        .fold(template.to_owned(), |text, (key, value)| {
+            text.replace(&format!("{{{{{key}}}}}"), value)
+        })
+}
+
+/// The engine checkout's current commit (12 hex characters), read from `.git` without running git:
+/// a detached HEAD, a loose or packed branch ref, or a `.git` file pointing at a worktree.
+pub fn engine_revision(engine_dir: &Path) -> Option<String> {
+    let mut git = engine_dir.join(".git");
+    if git.is_file() {
+        let pointer = fs::read_to_string(&git).ok()?;
+        let target = pointer.trim().strip_prefix("gitdir:")?.trim();
+        git = engine_dir.join(target);
+    }
+    let head = fs::read_to_string(git.join("HEAD")).ok()?;
+    let head = head.trim();
+    let full = match head.strip_prefix("ref: ") {
+        None => head.to_owned(),
+        Some(reference) => {
+            // A worktree keeps its refs in the common directory named by `commondir`.
+            let common = fs::read_to_string(git.join("commondir"))
+                .ok()
+                .map_or_else(|| git.clone(), |c| git.join(c.trim()));
+            fs::read_to_string(common.join(reference))
+                .ok()
+                .map(|s| s.trim().to_owned())
+                .or_else(|| {
+                    fs::read_to_string(common.join("packed-refs"))
+                        .ok()
+                        .and_then(|packed| {
+                            packed.lines().find_map(|line| {
+                                let (sha, name) = line.split_once(' ')?;
+                                (name == reference).then(|| sha.to_owned())
+                            })
+                        })
+                })?
+        }
+    };
+    (full.len() >= 12 && full.bytes().all(|b| b.is_ascii_hexdigit())).then(|| full[..12].to_owned())
+}
+
+fn stock_identity(project: &Project) -> Identity {
+    Identity {
+        package: vec!["game.json".into(), "maps".into()],
+        smoke_args: Some(vec!["--capture".into(), "{dir}".into()]),
+        ..Identity::starter(
+            project.name,
+            "Activate the blue terminal to win.",
+            "WASD move, mouse look, Space jump, E interact, F5/F9 save/load, F fullscreen, Esc menu",
+        )
+    }
+}
+
+fn custom_sim_identity(project: &Project) -> Identity {
+    Identity {
+        smoke_args: Some(
+            [
+                "--capture",
+                "{dir}",
+                "--frames",
+                "30,90",
+                "--exit-after",
+                "100",
+            ]
+            .map(String::from)
+            .to_vec(),
+        ),
+        ..Identity::starter(
+            project.name,
+            "Collect the glowing orbs and stay off the void.",
+            "WASD move, mouse look, Space jump, F5/F9 save/load, F fullscreen, Esc menu",
+        )
+    }
+}
+
+/// Identity, icon set, build script, ship/check tooling, `.gitignore` and the seeded lock file: what
+/// every game needs to be delivered as a packaged program with its own name and icon.
+fn write_shipping_files(project: &Project, mut identity: Identity) -> Result<()> {
+    identity.engine_revision = engine_revision(&project.engine_dir);
+    project.write("assets/identity.json", identity.to_json())?;
+    write_icon_set(
+        &IconSpec::new(&identity.title),
+        &project.dir.join("assets"),
+        false,
+    )?;
+    project.write("build.rs", include_str!("../../templates/game_build.rs"))?;
+    project.write(
+        "scripts/check.py",
+        include_str!("../../templates/game_check.py"),
+    )?;
+    project.write(
+        "scripts/ship.py",
+        include_str!("../../templates/game_ship.py"),
+    )?;
+    project.write(
+        "src/platform.rs",
+        include_str!("../../templates/native_focus.rs"),
+    )?;
+    project.write(
+        "tests/identity.rs",
+        include_str!("../../templates/game_identity_test.rs"),
+    )?;
+    project.write(".gitignore", "/target/\n/.blue-check/\n/dist/\n")?;
+    // Seed the lock file from the engine's so the game builds against the versions the engine was
+    // tested with (and offline builds work). The first Cargo command settles it: it adds this game's
+    // entry and drops crates only the engine's own tests need. `scripts/check.py` does that before
+    // its locked build; `cargo generate-lockfile` would discard the pins.
+    if let Ok(lock) = fs::read(project.engine_dir.join("Cargo.lock")) {
+        project.write("Cargo.lock", lock)?;
+    }
+    Ok(())
+}
+
+fn write_scripts(project: &Project) -> Result<()> {
+    let blue_sh = r#"#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+cmd="${1:-help}"
+case "$cmd" in
+  check)
+    shift
+    python scripts/check.py "$@"
+    ;;
+  build-all)
+    cargo build --release
+    ;;
+  play)
+    cargo run --release
+    ;;
+  package)
+    shift
+    python scripts/ship.py package "$@"
+    ;;
+  shortcut)
+    shift
+    python scripts/ship.py shortcut "$@"
+    ;;
+  ship)
+    shift
+    python scripts/ship.py ship "$@"
+    ;;
+  *)
+    echo "Usage: scripts/blue {check|build-all|play|package|shortcut|ship}"
+    ;;
+esac
+"#;
+    project.write("scripts/blue", blue_sh)?;
+
+    let blue_ps1 = r#"param([string]$cmd = "help", [Parameter(ValueFromRemainingArguments=$true)][string[]]$CheckArgs)
+$ErrorActionPreference = "Stop"
+$Root = Split-Path -Parent $PSScriptRoot
+Set-Location $Root
+
+switch ($cmd) {
+    "check" {
+        python scripts/check.py @CheckArgs
+        exit $LASTEXITCODE
+    }
+    "build-all" {
+        cargo build --release
+        exit $LASTEXITCODE
+    }
+    "play" {
+        cargo run --release
+        exit $LASTEXITCODE
+    }
+    "package" {
+        python scripts/ship.py package @CheckArgs
+        exit $LASTEXITCODE
+    }
+    "shortcut" {
+        python scripts/ship.py shortcut @CheckArgs
+        exit $LASTEXITCODE
+    }
+    "ship" {
+        python scripts/ship.py ship @CheckArgs
+        exit $LASTEXITCODE
+    }
+    default {
+        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|play|package|shortcut|ship}"
+    }
+}
+"#;
+    project.write("scripts/blue.ps1", blue_ps1)
+}
+
+/// The custom-simulation starter: pure library, window binary, determinism tests.
+fn scaffold_custom_sim(project: &Project) -> Result<Identity> {
+    let identity = custom_sim_identity(project);
+    let values = [
+        ("name", project.name),
+        ("lib", project.lib.as_str()),
+        ("title", identity.title.as_str()),
+        ("tagline", identity.tagline.as_str()),
+        ("engine", project.engine_toml.as_str()),
+    ];
+    let files: [(&str, &str); 7] = [
+        (
+            "Cargo.toml",
+            include_str!("../../templates/custom-sim/Cargo.toml"),
+        ),
+        (
+            "AGENTS.md",
+            include_str!("../../templates/custom-sim/AGENTS.md"),
+        ),
+        (
+            "STATUS.md",
+            include_str!("../../templates/custom-sim/STATUS.md"),
+        ),
+        (
+            "src/lib.rs",
+            include_str!("../../templates/custom-sim/src/lib.rs"),
+        ),
+        (
+            "src/main.rs",
+            include_str!("../../templates/custom-sim/src/main.rs"),
+        ),
+        (
+            "tests/determinism.rs",
+            include_str!("../../templates/custom-sim/tests/determinism.rs"),
+        ),
+        (
+            "rustfmt.toml",
+            "max_width = 120\nuse_small_heuristics = \"Max\"\n",
+        ),
+    ];
+    for (path, template) in files {
+        project.write(path, fill(template, &values))?;
+    }
+    Ok(identity)
+}
+
+/// The stock starter: blueprint, map, `game.json` and the shared playable runner.
+fn scaffold_stock(project: &Project) -> Result<Identity> {
+    let name = project.name;
+    fs::create_dir_all(project.dir.join("blueprints"))?;
+    fs::create_dir_all(project.dir.join("maps"))?;
+    let identity = stock_identity(project);
 
     // 1. Cargo.toml
+    let engine_path_str = &project.engine_toml;
     let cargo_toml = format!(
         r#"[package]
 name = "{name}"
 version = "0.1.0"
 edition = "2021"
+description = "{title}: {tagline}"
 
 [features]
 default = ["client"]
@@ -62,10 +399,12 @@ serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
 
 [target.'cfg(windows)'.dependencies]
-windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_UI_Input_KeyboardAndMouse"] }}
-"#
+windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_System_Console", "Win32_UI_Input_KeyboardAndMouse"] }}
+"#,
+        title = identity.title,
+        tagline = identity.tagline
     );
-    fs::write(target_dir.join("Cargo.toml"), cargo_toml)?;
+    project.write("Cargo.toml", cargo_toml)?;
 
     // 2. Blueprint
     let blueprint = BlueprintSpec {
@@ -101,10 +440,7 @@ windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_Win
         fill: vec![],
     };
     let bp_json = serde_json::to_string_pretty(&blueprint)?;
-    fs::write(
-        target_dir.join("blueprints").join("main.blueprint.json"),
-        bp_json,
-    )?;
+    project.write("blueprints/main.blueprint.json", bp_json)?;
 
     // 3. Compile map
     let map_doc = compile_blueprint(&blueprint)?.apply(&[
@@ -124,7 +460,7 @@ windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_Win
         },
     ])?;
     let map_json = serde_json::to_string_pretty(&map_doc)?;
-    fs::write(target_dir.join("maps").join("main.json"), map_json)?;
+    project.write("maps/main.json", map_json)?;
 
     // 4. game.json
     let spawn = map_doc
@@ -132,7 +468,7 @@ windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_Win
         .ok_or("Starter blueprint has no spawn")?;
     let game = super::game::GameDocument {
         schema_version: 1,
-        name: name.into(),
+        name: identity.title.clone(),
         map: "maps/main.json".into(),
         player_profile: Default::default(),
         spawn_points: vec![super::game::SpawnPoint {
@@ -183,92 +519,53 @@ windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_Win
         ],
     };
     game.validate(&map_doc)?;
-    fs::write(
-        target_dir.join("game.json"),
-        serde_json::to_string_pretty(&game)?,
-    )?;
+    project.write("game.json", serde_json::to_string_pretty(&game)?)?;
 
-    // 5. src/main.rs
-    let main_rs = r#"mod platform;
-use vesper3d::viewer::{game::GameDocument, game_client, playable};
-fn window() -> macroquad::conf::Conf { game_client::window_config("BlueEngine game") }
+    // 5. src/main.rs: identity, icon and packaged content beside the exe.
+    let main_rs = r#"#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod platform;
+use vesper3d::viewer::{game::GameDocument, game_client, identity::Identity, playable};
+
+/// Title, tagline and controls live in one file, shared with the build script and `scripts/ship.py`.
+const IDENTITY: &str = include_str!("../assets/identity.json");
+
+fn window() -> macroquad::conf::Conf {
+    platform::attach_console();
+    let identity = Identity::parse(IDENTITY).expect("assets/identity.json is invalid; see scripts/ship.py verify");
+    game_client::window_config_with_icon(
+        &identity.title,
+        game_client::icon_from_rgba(
+            include_bytes!("../assets/icon_16.rgba"),
+            include_bytes!("../assets/icon_32.rgba"),
+            include_bytes!("../assets/icon_64.rgba"),
+        ),
+    )
+}
+
+/// Content next to the executable (a packaged game in dist/), else the project directory (cargo run).
+fn content(file: &str) -> std::path::PathBuf {
+    let beside = std::env::current_exe().ok().and_then(|exe| exe.parent().map(|dir| dir.join(file)));
+    match beside {
+        Some(path) if path.is_file() => path,
+        _ => std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(file),
+    }
+}
+
 #[macroquad::main(window)]
 async fn main() -> vesper3d::Result<()> {
-    let game = GameDocument::load(std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/game.json")))?;
+    let game = GameDocument::load(&content("game.json"))?;
     let mut options = playable::GameOptions::from_args(&std::env::args().collect::<Vec<_>>())?;
     options.keyboard = platform::keyboard();
     playable::run_game_with_options(game, options, platform::focused).await
 }
 "#;
-    fs::write(target_dir.join("src").join("main.rs"), main_rs)?;
-
-    fs::write(
-        target_dir.join("src/platform.rs"),
-        include_str!("../../templates/native_focus.rs"),
-    )?;
-
-    fs::create_dir_all(target_dir.join("tests"))?;
-    fs::write(
-        target_dir.join("tests/gameplay.rs"),
+    project.write("src/main.rs", main_rs)?;
+    project.write(
+        "tests/gameplay.rs",
         include_str!("../../templates/game_runtime_test.rs"),
     )?;
 
-    // 6. One validation implementation for both shells; logs stay out of AI context.
-    fs::write(
-        target_dir.join("scripts/check.py"),
-        include_str!("../../templates/game_check.py"),
-    )?;
-    fs::write(target_dir.join(".gitignore"), "/target/\n/.blue-check/\n")?;
-    let blue_sh = r#"#!/usr/bin/env bash
-set -euo pipefail
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-cd "$ROOT"
-
-cmd="${1:-help}"
-case "$cmd" in
-  check)
-    shift
-    python scripts/check.py "$@"
-    ;;
-  build-all)
-    cargo build --release
-    ;;
-  play)
-    cargo run --release
-    ;;
-  *)
-    echo "Usage: scripts/blue {check|build-all|play}"
-    ;;
-esac
-"#;
-    fs::write(target_dir.join("scripts").join("blue"), blue_sh)?;
-
-    let blue_ps1 = r#"param([string]$cmd = "help", [Parameter(ValueFromRemainingArguments=$true)][string[]]$CheckArgs)
-$ErrorActionPreference = "Stop"
-$Root = Split-Path -Parent $PSScriptRoot
-Set-Location $Root
-
-switch ($cmd) {
-    "check" {
-        python scripts/check.py @CheckArgs
-        exit $LASTEXITCODE
-    }
-    "build-all" {
-        cargo build --release
-        exit $LASTEXITCODE
-    }
-    "play" {
-        cargo run --release
-        exit $LASTEXITCODE
-    }
-    default {
-        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|play}"
-    }
-}
-"#;
-    fs::write(target_dir.join("scripts").join("blue.ps1"), blue_ps1)?;
-
-    // 7. Compact local instructions; engine maintenance context is demand-loaded.
+    // 6. Compact local instructions; engine maintenance context is demand-loaded.
     let status_md = format!(
         r#"# {name} Status
 
@@ -279,54 +576,137 @@ switch ($cmd) {
 - Authored game document with an interactive terminal and dynamic apple written to `game.json`.
 - Shared authoritative gameplay runs locally; --connect presents server-owned state.
 - E interacts/carries; after completion E restarts the world for all players.
+- Identity (`assets/identity.json`), a generated icon set, packaging and desktop-shortcut tooling.
 
 ## Next Steps
 - Add custom gameplay rules to `game.json`.
 - Expand map rooms and layout via blueprint.
+- Edit `assets/identity.json` (real title, tagline, controls) and regenerate the icon.
 - Test changes locally and against the shared headless server.
+- Finish with `scripts/blue ship`.
 "#
     );
-    fs::write(target_dir.join("STATUS.md"), status_md)?;
+    project.write("STATUS.md", status_md)?;
 
     let agents_md = format!(
         r#"# {name} - AI Agent Guide
 
-This is a standalone game. BlueEngine is a path dependency (`vesper3d` in Cargo.toml),
-not a pinned engine revision. Read this game's files first. Do not load engine source
-or run engine-wide checks for game-only edits. Record the engine revision when shipping.
+Standalone game; BlueEngine is a path dependency (`vesper3d` in Cargo.toml), and
+`assets/identity.json` records the engine commit it was built against. Read this game's files
+first; do not load engine source or run engine-wide checks for game-only edits. For an unfamiliar
+API run `python tools/be2.py context QUERY` in the engine checkout; missing capability means
+engine work, not permission to invent an API.
 
-For an unfamiliar API, run `python tools/be2.py context QUERY` in the engine checkout;
-read only the returned relevant contracts. Missing capability means engine work,
-not permission to invent an API. Engine changes follow the engine's AGENTS.md.
-
-## Presentation baseline
-For presentation changes read engine docs/GAME_PRESENTATION.md; for custom loops or
-shared controls read docs/SHARED_GAMEPLAY.md. Keep the official engine branding.
-The starter uses playable::run_game_with_options: authored rules, dynamic props,
-objectives and replay use shared HeadlessWorld authority. Input, camera, cached
-rendering and menus are inherited. --connect ADDR uses server state and movement
-prediction; local play opens no socket. local_client::run_map is a static viewer only.
+Rules that do not fit counters/interactables/timers (enemies, projectiles, scoring, AI, per-frame
+physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its simulation
+(engine docs/SHARED_GAMEPLAY.md "Custom loops", docs/CUSTOM_CLIENT.md).
 
 ## Working with Maps
-- Edit `blueprints/main.blueprint.json` to alter room layouts, doors, and prop placements.
-- Compile into a NEW map file, preserve authored objective/prop additions, then validate and adopt it.
-- Keep visual, collision and semantic IDs together. Discover reusable assets before creating new ones.
+- Edit `blueprints/main.blueprint.json` (rooms, doors, props); compile into a NEW map file,
+  preserve authored objective/prop additions, validate, then adopt it.
+- Keep visual, collision and semantic IDs together; discover reusable assets before creating new ones.
 - Add map `checks` and behavioral scenarios for the behavior being changed.
+- `playable::run_game_with_options` runs authored rules, dynamic props and replay on shared
+  authority; `--connect ADDR` uses server state. F5/F9 save and load (engine docs/SAVE_STATE.md;
+  never hand-write save files). `run_map` is a static viewer only.
 
 ## Running Tests
-- Setup once: `cargo generate-lockfile`; commit Cargo.lock. Set BE2_TOOLS to a matching
-  be2-tools binary (engine `python tools/be2.py build tools` prints its directory).
-- `python scripts/check.py`: map audit/lint, declared map checks, GameDocument validation,
-  and this game's locked Cargo tests (compilation included). JSON summary points to logs.
-- `python scripts/check.py --content-only`: fast content iteration, no Cargo;
-  does not certify Rust edits. Add `--scenario PATH` for each relevant behavior scenario.
-- Before delivery run the full project check once on final files. Inspect world/menu
-  captures, exercise changed inputs/fullscreen, and measure movement/ticks in release builds.
-- Shell wrappers delegate to the same runner and propagate failures.
+- Cargo.lock is seeded from the engine's; any Cargo command settles it. Commit it. Never run
+  `cargo generate-lockfile` (it drops the pins). Set BE2_TOOLS to a matching be2-tools binary
+  (engine `python tools/be2.py build tools` prints its directory).
+- `python scripts/check.py`: map audit/lint, declared checks, GameDocument validation, locked Cargo
+  tests, and the ship gate. `--content-only`: fast content iteration, no Cargo (not certifying Rust).
+  `--skip-ship`: everything except the ship gate. `--scenario PATH` adds a behavior scenario.
+- Inspect world/menu captures (`--capture NEW_DIR`; `python <engine>/tools/contact_sheet.py`).
+
+## Definition of done (every game made with BlueEngine)
+1. `python scripts/check.py` passes on final files; it ends with the ship gate.
+2. The game ships with its own icon and desktop shortcut: set real title/tagline/controls in
+   `assets/identity.json`, regenerate the icon if the title changed (`be2-tools icon TITLE assets
+   --replace`), run `scripts/blue ship` (package in dist/, shortcut named after the game, verified).
+3. You exercised changed controls and looked at real frames; state what you did not verify.
 "#
     );
-    fs::write(target_dir.join("AGENTS.md"), agents_md)?;
-    fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
+    project.write("AGENTS.md", agents_md)?;
+    Ok(identity)
+}
 
-    Ok(())
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp(tag: &str) -> PathBuf {
+        std::env::temp_dir().join(format!(
+            "newgame-{tag}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ))
+    }
+
+    #[test]
+    fn templates_have_names_and_parse_back() {
+        for t in [Template::Stock, Template::CustomSim] {
+            assert_eq!(Template::parse(t.name()), Some(t));
+        }
+        assert_eq!(Template::parse("racing"), None);
+        assert_eq!(Template::default(), Template::Stock);
+    }
+
+    #[test]
+    fn placeholders_are_filled_everywhere_and_unknown_ones_survive() {
+        assert_eq!(
+            fill("{{a}} and {{a}} but {{b}}", &[("a", "x")]),
+            "x and x but {{b}}"
+        );
+    }
+
+    #[test]
+    fn revision_is_read_from_a_detached_head_a_loose_ref_a_packed_ref_and_a_worktree_file() {
+        let sha = "0123456789abcdef0123456789abcdef01234567";
+        let dir = temp("rev");
+        let git = dir.join(".git");
+        fs::create_dir_all(git.join("refs/heads")).unwrap();
+        assert_eq!(engine_revision(&dir), None, "no HEAD yet");
+        fs::write(git.join("HEAD"), format!("{sha}\n")).unwrap();
+        assert_eq!(engine_revision(&dir).as_deref(), Some("0123456789ab"));
+        fs::write(git.join("HEAD"), "ref: refs/heads/main\n").unwrap();
+        assert_eq!(engine_revision(&dir), None, "dangling ref");
+        fs::write(
+            git.join("packed-refs"),
+            format!("# pack-refs\n{sha} refs/heads/main\n"),
+        )
+        .unwrap();
+        assert_eq!(engine_revision(&dir).as_deref(), Some("0123456789ab"));
+        fs::write(
+            git.join("refs/heads/main"),
+            "fedcba9876543210fedcba9876543210fedcba98\n",
+        )
+        .unwrap();
+        assert_eq!(
+            engine_revision(&dir).as_deref(),
+            Some("fedcba987654"),
+            "a loose ref wins"
+        );
+        // A linked worktree: `.git` is a file pointing at the real git directory.
+        let linked = temp("rev-linked");
+        fs::create_dir_all(&linked).unwrap();
+        fs::write(linked.join(".git"), format!("gitdir: {}\n", git.display())).unwrap();
+        assert_eq!(engine_revision(&linked).as_deref(), Some("fedcba987654"));
+        fs::write(git.join("HEAD"), "not a sha\n").unwrap();
+        assert_eq!(engine_revision(&dir), None);
+        fs::remove_dir_all(dir).unwrap();
+        fs::remove_dir_all(linked).unwrap();
+    }
+
+    #[test]
+    fn names_must_be_cargo_compatible_and_directories_empty() {
+        let dir = temp("names");
+        for bad in ["", "2048", "-x", "a b", "a/b", "é"] {
+            assert!(scaffold_new_game(bad, &dir, None).is_err(), "{bad:?}");
+        }
+        assert!(!dir.exists(), "a rejected name creates nothing");
+    }
 }

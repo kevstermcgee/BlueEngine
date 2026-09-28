@@ -7,10 +7,13 @@ pub mod game_client;
 pub mod game_example;
 #[cfg(feature = "gamepad")]
 pub mod gamepad;
+pub mod icon;
 pub mod identity;
 #[cfg(feature = "client")]
 pub mod input;
 pub mod interaction;
+#[cfg(feature = "presentation")]
+pub mod kit;
 #[cfg(feature = "presentation")]
 pub mod mesh;
 pub mod presentation;

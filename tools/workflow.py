@@ -1,6 +1,8 @@
 """Bounded context lookup and conservative validation selection. No Cargo discovery."""
 import json
+from pathlib import Path
 import re
+import shutil
 import subprocess
 import sys
 
@@ -15,6 +17,40 @@ def console_options():
     # CREATE_NO_WINDOW detaches Cargo: its Rust test children can then allocate
     # visible consoles. A hidden NEW_CONSOLE keeps descendants in the same console.
     return {'startupinfo': startup, 'creationflags': subprocess.CREATE_NEW_CONSOLE}
+
+
+LOW_DISK_GB = 15
+
+
+def disk_report(locations, usage=shutil.disk_usage):
+    """Free space where Cargo writes (target, registry, temp).
+
+    A cold engine or game build writes 10-13 GB; when the drive fills, Cargo fails late with os error 112
+    (Windows) or ENOSPC. `locations` maps a label to a path (which need not exist yet); `usage` is
+    injectable for tests. Returns the per-location numbers, plain-English warnings and, when any location is
+    low, the exact environment variables that move Cargo to a drive with room.
+    """
+    found = {}
+    warnings = []
+    for label, path in locations.items():
+        probe = Path(path)
+        while not probe.exists() and probe != probe.parent:
+            probe = probe.parent
+        try:
+            free = usage(probe).free / 1e9
+        except OSError:
+            continue
+        found[label] = {'path': str(path), 'free_gb': round(free, 1)}
+        if free < LOW_DISK_GB:
+            warnings.append(f'{label} ({path}) has {free:.1f} GB free; a build needs about 10-13 GB')
+    hint = None
+    if warnings:
+        hint = ('Point Cargo at a drive with room before building (a generated game inherits the same variables). '
+                'PowerShell: $env:CARGO_TARGET_DIR="D:\\cargo-target"; $env:CARGO_HOME="D:\\cargo-home"; '
+                '$env:TMP="D:\\tmp"; $env:TEMP="D:\\tmp". bash: export CARGO_TARGET_DIR=/d/cargo-target '
+                'CARGO_HOME=/d/cargo-home TMPDIR=/d/tmp. Old target directories are safe to delete, but first check '
+                'that no desktop shortcut or launcher points into them: shortcuts belong on a game\'s dist/ folder.')
+    return {'locations': found, 'warnings': warnings, 'hint': hint}
 
 
 def index(root):
@@ -135,7 +171,8 @@ def full_commands():
         [sys.executable, 'tools/check_headless.py'],
         [sys.executable, 'tools/check_authoring.py'],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
-         'tools.test_assets', 'scripts.test_publish_games'],
+         'tools.test_assets', 'scripts.test_publish_games',
+         'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools'],
     ]
 
 

@@ -77,6 +77,14 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
         std::fs::read_to_string(dir.join("scripts/check.py")).unwrap(),
         include_str!("../templates/game_check.py")
     );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("scripts/ship.py")).unwrap(),
+        include_str!("../templates/game_ship.py")
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("build.rs")).unwrap(),
+        include_str!("../templates/game_build.rs")
+    );
     let windows = std::fs::read_to_string(dir.join("scripts/blue.ps1")).unwrap();
     assert!(windows.contains("exit $LASTEXITCODE"));
     assert!(windows.contains("python scripts/check.py @CheckArgs"));

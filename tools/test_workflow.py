@@ -90,6 +90,31 @@ class ContextTests(unittest.TestCase):
             self.assertTrue(workflow.context(root, 'shared_gameplay')['matches'])
 
 
+class DiskTests(unittest.TestCase):
+    def test_low_space_warns_with_the_variables_that_move_cargo(self):
+        usage = lambda path: SimpleNamespace(free=3e9 if 'small' in Path(path).parts else 900e9)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / 'small').mkdir()
+            (root / 'big').mkdir()
+            report = workflow.disk_report({'target': root / 'small' / 'not-yet' / 'target', 'temp': root / 'big'},
+                                          usage=usage)
+        self.assertEqual(report['locations']['target']['free_gb'], 3.0)
+        self.assertEqual(report['locations']['temp']['free_gb'], 900.0)
+        self.assertEqual(len(report['warnings']), 1)
+        self.assertIn('target', report['warnings'][0])
+        self.assertIn('CARGO_TARGET_DIR', report['hint'])
+        self.assertIn('dist/', report['hint'])
+
+    def test_plenty_of_space_or_an_unreadable_drive_is_quiet(self):
+        roomy = workflow.disk_report({'target': ROOT}, usage=lambda p: SimpleNamespace(free=500e9))
+        self.assertEqual((roomy['warnings'], roomy['hint']), ([], None))
+
+        def broken(path):
+            raise OSError('offline drive')
+        self.assertEqual(workflow.disk_report({'target': ROOT}, usage=broken)['locations'], {})
+
+
 class SelectionTests(unittest.TestCase):
     def test_iteration_reuses_index_and_never_claims_final_validation(self):
         plan = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',

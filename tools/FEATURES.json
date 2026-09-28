@@ -8,7 +8,10 @@
         "tools/test_workflow.py",
         "templates/game_check.py",
         "tools/test_game_check.py",
-        "docs/CHANGE_WORKFLOW.md"
+        "docs/CHANGE_WORKFLOW.md",
+        "tools/contact_sheet.py",
+        "tools/audio_report.py",
+        "tools/test_media_tools.py"
       ],
       "checks": [
         "python -m unittest tools.test_workflow tools.test_game_check",
@@ -88,7 +91,7 @@
         "Feta furniture passages, solid legs/undersides, Scientist exclusion, four-map desks",
         "dropped-prop overlap recovery for both characters; wall exclusion and stable feet"
       ],
-      "note": "Keep frame-rate independence and render/headless parity.",
+      "note": "Keep frame-rate independence and render/headless parity. Controller floor is optional (set_floor(None) for voids), gravity is settable, apply_impulse adds a decaying push for knockback; see docs/CONTROLLERS.md.",
       "depends_on": [
         "simulation_contract"
       ]
@@ -103,7 +106,7 @@
         "menu inspection",
         "render report"
       ],
-      "note": "Simple matte geometry uses tag 3; do not tint it with crystal tag 2. Pause shows Resume/Settings/Quit; controls and options are in Settings.",
+      "note": "Simple matte geometry uses tag 3; do not tint it with crystal tag 2. Pause shows Resume/Settings/Quit; controls and options are in Settings. mesh::Lighting/bake_with choose the baked light; Lighting::house() is the stock look and bake_tagged uses it.",
       "depends_on": [
         "game_presentation"
       ]
@@ -566,7 +569,7 @@
       "checks": [
         "cargo check --locked --example custom_client"
       ],
-      "note": "Documented application-owned window/render/input boundary over BlueEngine-owned fixed simulation, including the supported Macroquad version for external crates.",
+      "note": "Documented application-owned window/render/input boundary over BlueEngine-owned fixed simulation, including the supported Macroquad version for external crates. docs/CUSTOM_CLIENT.md also covers games that own their simulation (custom-sim, devkit, kit).",
       "depends_on": [
         "shared_gameplay"
       ],
@@ -712,12 +715,15 @@
     },
     "game_scaffolding": {
       "files": [
-        "src/viewer/newgame.rs"
+        "src/viewer/newgame.rs",
+        "templates/custom-sim",
+        "templates/game_ship.py",
+        "templates/game_build.rs"
       ],
       "checks": [
         "new standalone game project scaffolding"
       ],
-      "note": "Scaffolds independent game projects with a vesper3d path dependency, blueprint, map, launcher, compact AGENTS.md and shared content/project check runner. Record the engine revision and commit the generated Cargo.lock; path dependencies are not revision pins.",
+      "note": "Scaffolds independent game projects with a vesper3d path dependency, the stock starter (blueprint, map, game.json) or the custom-sim starter (pure simulation library + window binary on devkit and kit), a launcher, compact AGENTS.md, identity, icon set, build script, ship tooling and the shared content/project check runner. Cargo.lock is seeded from the engine's (versions match what the engine was tested with; the first Cargo command settles it) and the engine commit is recorded in assets/identity.json. Path dependencies are not revision pins.",
       "depends_on": [
         "shared_gameplay",
         "prototype_api"
@@ -843,6 +849,266 @@
         "GameSession::local",
         "GameSession::advance",
         "playable::run_game_with_options"
+      ]
+    },
+    "custom_simulation": {
+      "files": [
+        "src/viewer/devkit/mod.rs",
+        "src/viewer/devkit/clock.rs",
+        "src/viewer/devkit/input.rs",
+        "src/viewer/devkit/playback.rs",
+        "src/viewer/devkit/sim.rs",
+        "src/viewer/devkit/save.rs",
+        "src/viewer/devkit/juice.rs",
+        "src/viewer/devkit/rng.rs",
+        "templates/custom-sim",
+        "docs/CUSTOM_CLIENT.md",
+        "docs/GAME_QUICKSTART.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit",
+        "python tools/check_headless.py",
+        "generated custom-sim project: cargo test, real-window --capture/--script/--perf run, ship gate"
+      ],
+      "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files, Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
+      "keywords": [
+        "custom",
+        "simulation",
+        "enemies",
+        "enemy",
+        "projectiles",
+        "projectile",
+        "scoring",
+        "score",
+        "ai",
+        "waves",
+        "arcade",
+        "action",
+        "shooter",
+        "own",
+        "rules",
+        "loop",
+        "frame",
+        "clock",
+        "fixed",
+        "step",
+        "accumulator",
+        "deterministic",
+        "replay",
+        "capture",
+        "screenshot",
+        "perf",
+        "save",
+        "settings",
+        "records",
+        "shake",
+        "juice",
+        "synth",
+        "sound",
+        "sfx",
+        "audio",
+        "procedural",
+        "rng",
+        "random",
+        "seed"
+      ],
+      "contract": {
+        "owns": "Frame timing, fixed-step accumulation, per-tick input, replay/capture/perf plumbing, saves, screen feel, synthesised audio",
+        "inputs": "Device frames and the game's own per-tick Input",
+        "outputs": "Whole fixed ticks, one input per tick, state hashes, capture schedules",
+        "may_depend_on": [
+          "movement"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio devices",
+          "a window",
+          "the wall clock inside the simulation"
+        ],
+        "performance": "Allocation-free per frame except captures; bounded catch-up (eight ticks)",
+        "consumers": [
+          "custom-sim starter",
+          "external games with their own rules"
+        ]
+      },
+      "public_api": [
+        "FrameClock",
+        "FixedStepper",
+        "InputAccumulator",
+        "Simulation",
+        "StateHasher",
+        "assert_deterministic",
+        "Playback",
+        "Timeline",
+        "CapturePlan",
+        "PerfReport",
+        "Rng",
+        "Juice",
+        "Settings",
+        "Snapshot"
+      ],
+      "read_first": [
+        "docs/CUSTOM_CLIENT.md",
+        "templates/custom-sim/src/lib.rs",
+        "src/viewer/devkit/mod.rs"
+      ],
+      "canonical_example": "templates/custom-sim/src/main.rs",
+      "depends_on": [
+        "movement"
+      ],
+      "constraints": [
+        {
+          "id": "ARCH-DEVKIT-001",
+          "kind": "AI-BOUNDARY",
+          "text": "devkit is graphics-free and always compiled: no macroquad, no audio device, no wall clock inside simulation helpers.",
+          "source": "src/viewer/devkit/mod.rs",
+          "verify": "python tools/check_headless.py"
+        }
+      ]
+    },
+    "client_kit": {
+      "files": [
+        "src/viewer/kit/mod.rs",
+        "src/viewer/kit/view.rs",
+        "src/viewer/kit/batch.rs",
+        "src/viewer/kit/look.rs",
+        "src/viewer/kit/fx.rs",
+        "src/viewer/kit/hud.rs",
+        "src/viewer/kit/audio.rs",
+        "src/viewer/kit/capture.rs",
+        "docs/CUSTOM_CLIENT.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib kit",
+        "real-window capture of the custom-sim starter (world, effects, HUD) inspected by eye"
+      ],
+      "note": "Opt-in renderer parts for a game that draws its own world, each independent and without genre logic: View (camera, screen projection), Template/Batch/Tint (small meshes packed per frame into few draw calls), Look/Materials (lit + fog + glow world material, alpha and additive effects, sky; presets daylight/dusk/night), Fx (particles, rings, fireballs, beams, popups, banners), hud (scaled outlined text, panels, bars, vignette, crosshair), SoundBank (off-thread rendered effects and music stems, backend woken during loading), capture::save_frame (reports the real pixel size).",
+      "keywords": [
+        "kit",
+        "renderer",
+        "render",
+        "batch",
+        "batching",
+        "mesh",
+        "meshes",
+        "material",
+        "materials",
+        "shader",
+        "lighting",
+        "light",
+        "fog",
+        "sky",
+        "glow",
+        "particles",
+        "particle",
+        "fx",
+        "effects",
+        "hud",
+        "text",
+        "popup",
+        "banner",
+        "vignette",
+        "crosshair",
+        "sound",
+        "audio",
+        "bank",
+        "music",
+        "screenshot",
+        "camera"
+      ],
+      "contract": {
+        "owns": "Dynamic batched geometry, materials, effect state, HUD drawing helpers and sound playback for custom renderers",
+        "inputs": "Game state read by the window, a Look, real seconds",
+        "outputs": "Draw calls, screenshots, sound",
+        "may_depend_on": [
+          "game_presentation",
+          "custom_simulation"
+        ],
+        "must_not_depend_on": [
+          "gameplay rules",
+          "genre-specific behavior"
+        ],
+        "performance": "Few draw calls per frame; meshes stay under the default 30000-entry draw-call capacities",
+        "consumers": [
+          "custom-sim starter",
+          "external games with their own renderer"
+        ]
+      },
+      "public_api": [
+        "View",
+        "Template",
+        "Batch",
+        "Tint",
+        "Look",
+        "Materials",
+        "Fx",
+        "SoundBank"
+      ],
+      "read_first": [
+        "src/viewer/kit/mod.rs",
+        "templates/custom-sim/src/main.rs"
+      ],
+      "canonical_example": "templates/custom-sim/src/main.rs",
+      "depends_on": [
+        "game_presentation",
+        "custom_simulation"
+      ]
+    },
+    "game_shipping": {
+      "files": [
+        "src/viewer/identity.rs",
+        "src/viewer/icon.rs",
+        "templates/game_ship.py",
+        "templates/game_build.rs",
+        "templates/game_check.py",
+        "tools/test_game_ship.py",
+        "tools/test_game_check.py",
+        "docs/GAME_QUICKSTART.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib identity icon",
+        "python -m unittest tools.test_game_ship tools.test_game_check",
+        "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)"
+      ],
+      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass.",
+      "keywords": [
+        "ship",
+        "shipping",
+        "package",
+        "packaging",
+        "dist",
+        "shortcut",
+        "desktop",
+        "icon",
+        "ico",
+        "lnk",
+        "identity",
+        "title",
+        "name",
+        "launcher",
+        "installer",
+        "gate",
+        "definition",
+        "done",
+        "deliver",
+        "delivery",
+        "exe",
+        "executable",
+        "release"
+      ],
+      "public_api": [
+        "Identity::parse",
+        "icon::write_icon_set",
+        "icon::IconSpec",
+        "game_client::window_config_with_icon"
+      ],
+      "read_first": [
+        "docs/GAME_QUICKSTART.md",
+        "src/viewer/identity.rs",
+        "templates/game_ship.py"
+      ],
+      "depends_on": [
+        "game_scaffolding"
       ]
     }
   }

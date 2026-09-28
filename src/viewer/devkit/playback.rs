@@ -348,7 +348,7 @@ mod tests {
         assert!(play.done());
         assert_eq!(play.next_input(), Pad::default());
         assert_eq!(play.cursor(), 3, "the cursor stops at the end");
-        assert_eq!(play.get(1).fire, true);
+        assert!(play.get(1).fire);
         assert!(
             Playback::<Pad>::from_json(br#"[{"nope":1}]"#).is_err(),
             "unknown fields are rejected"

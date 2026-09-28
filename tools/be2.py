@@ -10,6 +10,7 @@ import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import time
 import zipfile
 
@@ -123,6 +124,10 @@ def doctor():
     result['git_status'] = invoke(['git', 'status', '--short'], capture=True) if shutil.which('git') else 'unavailable'
     if shutil.which('cargo'):
         result['cargo_version'] = invoke(['cargo', '--version'], capture=True).strip()
+    result['disk'] = workflow.disk_report({
+        'target': Path(os.environ.get('CARGO_TARGET_DIR', ROOT / 'target')),
+        'cargo_home': Path(os.environ.get('CARGO_HOME', Path.home() / '.cargo')),
+        'temp': Path(tempfile.gettempdir())})
     result['ready_to_build'] = all(result['programs'][p] for p in ['cargo', 'rustc'])
     print(json.dumps(result, indent=2))
     if not result['ready_to_build']:

@@ -1,8 +1,11 @@
 """Exercise the shipped game runner's failure behavior and validation boundary."""
+import contextlib
 import importlib.util
+import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,6 +16,9 @@ SPEC = importlib.util.spec_from_file_location('game_check', Path(__file__).resol
                                               'templates/game_check.py')
 game_check = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(game_check)
+
+LOCK = ['cargo', 'metadata', '--format-version', '1', '--quiet']
+TEST = ['cargo', 'test', '--locked']
 
 
 class GameCheckTests(unittest.TestCase):
@@ -34,8 +40,9 @@ class GameCheckTests(unittest.TestCase):
         self.assertEqual([cmd[1] for cmd in content], ['audit', 'lint', 'game-validate', 'sim'])
         self.assertEqual(content[0][2], str((self.root / 'maps/main.json').resolve()))
         full = game_check.commands(self.root, self.native)
-        self.assertEqual(full[-1], ['cargo', 'test', '--locked'])
-        self.assertEqual(len(full), 4)
+        # the lock step settles a seeded Cargo.lock; the test step is the only one that compiles
+        self.assertEqual(full[-2:], [LOCK, TEST])
+        self.assertEqual(len(full), 5)
 
     def test_static_client_map_is_checked_even_when_game_uses_another(self):
         (self.root / 'game.json').write_text(json.dumps({'map': 'maps/custom map.json'}))
@@ -69,7 +76,7 @@ class GameCheckTests(unittest.TestCase):
             with patch.object(game_check.subprocess, 'run', side_effect=failure):
                 self.assertFalse(game_check.run(self.root, self.native))
         with patch.object(game_check.subprocess, 'run', side_effect=[
-                subprocess.CompletedProcess([], 0)] * 3 + [subprocess.CompletedProcess([], 1)]):
+                subprocess.CompletedProcess([], 0)] * 4 + [subprocess.CompletedProcess([], 1)]):
             self.assertFalse(game_check.run(self.root, self.native))
         self.assertFalse(game_check.run(self.root, self.root / 'missing'))
 
@@ -115,6 +122,401 @@ class GeneratedGameIntegrationTests(unittest.TestCase):
             self.assertFalse(report['checks'][-1]['ok'])
             log = Path(summary['report']).parent / report['checks'][-1]['log']
             self.assertIn('definitely-missing-object', log.read_text())
+
+
+class RunnerCase(unittest.TestCase):
+    """A temp project plus helpers to run the runner in-process with the tool commands faked."""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        self.root = Path(temp.name)
+        self.native = self.root / 'native tool'
+        self.native.write_bytes(b'test executable')
+
+    def run_check(self, *args, runner=None, **kwargs):
+        """game_check.run with cargo and the native tool faked (exit 0) unless `runner` says otherwise.
+        Returns (ok, printed JSON line, the commands that were run)."""
+        commands, real_run = [], subprocess.run
+
+        def fake(command, **options):
+            commands.append([str(part) for part in command])
+            if runner is not None:
+                answer = runner(command, options, real_run)
+                if answer is not None:
+                    return answer
+            if options.get('stdout') not in (None, subprocess.PIPE, subprocess.DEVNULL):
+                options['stdout'].write('')
+            return subprocess.CompletedProcess(command, 0, stdout='', stderr='')
+
+        out = io.StringIO()
+        with patch.object(game_check.subprocess, 'run', side_effect=fake), contextlib.redirect_stdout(out):
+            ok = game_check.run(self.root, self.native, *args, **kwargs)
+        return ok, json.loads(out.getvalue().strip().splitlines()[-1]), commands
+
+    def report(self):
+        return json.loads(sorted((self.root / '.blue-check').glob('*/report.json'))[-1].read_text())
+
+
+class ProjectsWithoutGameDocumentTests(RunnerCase):
+    """Custom-simulation games have no game.json: the runner must not fail on that."""
+
+    def names(self, **kwargs):
+        return [cmd[1] for cmd in game_check.commands(self.root, self.native, **kwargs)]
+
+    def test_no_game_json_and_no_map_leaves_only_cargo_in_a_full_check(self):
+        self.assertEqual(self.names(content_only=True), [])
+        self.assertEqual(game_check.commands(self.root, self.native), [LOCK, TEST])
+
+    def test_main_map_is_validated_when_it_exists(self):
+        (self.root / 'maps').mkdir()
+        (self.root / 'maps/main.json').write_text('{}')
+        self.assertEqual(self.names(content_only=True), ['audit', 'lint'])
+        self.assertEqual(self.names(), ['audit', 'lint', 'metadata', 'test'])
+
+    def test_authored_checks_run_verify_and_game_validate_is_skipped(self):
+        (self.root / 'maps').mkdir()
+        (self.root / 'maps/main.json').write_text('{"checks": {}}')
+        self.assertEqual(self.names(content_only=True), ['audit', 'lint', 'verify'])
+        self.assertNotIn('game-validate', self.names())
+
+    def test_scenarios_still_run(self):
+        commands = game_check.commands(self.root, self.native, True, ['tests/a.json'])
+        self.assertEqual([cmd[1] for cmd in commands], ['sim'])
+        self.assertEqual(commands[0][2], str((self.root / 'tests/a.json').resolve()))
+
+    def test_a_full_check_of_such_a_game_runs_cargo_test_locked(self):
+        ok, line, commands = self.run_check()
+        self.assertTrue(ok)
+        self.assertEqual(commands, [LOCK, TEST])
+        self.assertEqual([c['name'] for c in self.report()['checks']], ['lock', 'test'])
+
+    def test_a_game_json_without_map_still_reports_the_missing_key(self):
+        (self.root / 'game.json').write_text('{}')
+        ok, line, commands = self.run_check()
+        self.assertFalse(ok)
+        self.assertIn('map', line['error'])
+        self.assertEqual(commands, [])
+
+
+class LockStepTests(RunnerCase):
+    def setUp(self):
+        super().setUp()
+        (self.root / 'game.json').write_text(json.dumps({'map': 'maps/main.json'}))
+        (self.root / 'maps').mkdir()
+        (self.root / 'maps/main.json').write_text('{}')
+
+    def test_full_check_settles_the_lock_then_tests_locked(self):
+        ok, line, commands = self.run_check()
+        self.assertTrue(ok)
+        self.assertEqual([c[1] for c in commands], ['audit', 'lint', 'game-validate', 'metadata', 'test'])
+        self.assertEqual(commands[-2:], [LOCK, TEST])
+        self.assertFalse(any('generate-lockfile' in ' '.join(c) for c in commands))  # that would drop the pins
+
+    def test_lock_step_is_its_own_named_item_in_the_report(self):
+        self.run_check()
+        checks = self.report()['checks']
+        self.assertEqual([c['name'] for c in checks], ['audit', 'lint', 'game-validate', 'lock', 'test'])
+        self.assertEqual(checks[3]['command'], LOCK)
+        self.assertTrue(all(c['ok'] for c in checks))
+
+    def test_lock_runs_whether_or_not_a_lockfile_exists(self):
+        for lock_present in (False, True):
+            (self.root / 'Cargo.lock').unlink(missing_ok=True)
+            if lock_present:
+                (self.root / 'Cargo.lock').write_text('# seeded from the engine\n')
+            with self.subTest(lock_present=lock_present):
+                self.assertEqual(self.run_check()[2][-2], LOCK)
+
+    def test_metadata_output_stays_out_of_the_log_but_errors_are_kept(self):
+        seen = {}
+
+        def runner(command, options, _real):
+            if command == LOCK:
+                seen.update(options)
+                options['stderr'].write('error: failed to parse manifest\n')
+                return subprocess.CompletedProcess(command, 101)
+            return None
+
+        ok, line, commands = self.run_check(runner=runner)
+        self.assertFalse(ok)
+        self.assertIs(seen['stdout'], subprocess.DEVNULL)
+        log = Path(line['error'].split('see ')[-1])
+        self.assertIn('failed to parse manifest', log.read_text())
+        self.assertEqual(commands[-1], LOCK)  # cargo test never started
+
+    def test_content_only_never_touches_cargo(self):
+        ok, line, commands = self.run_check(True)
+        self.assertTrue(ok)
+        self.assertNotIn('cargo', [c[0] for c in commands])
+
+
+SHIP_PASS = {'ok': True, 'checks': [
+    {'name': 'identity', 'status': 'pass', 'detail': 'fine'},
+    {'name': 'package', 'status': 'warn', 'detail': 'dist/x.exe is older than the release build'},
+    {'name': 'shortcut-file', 'status': 'skip', 'detail': 'no desktop'}],
+    'skipped': ['shortcut-file: no desktop', 'launch: not requested (pass --launch)'], 'next': ''}
+SHIP_FAIL = {'ok': False, 'checks': [
+    {'name': 'identity', 'status': 'pass', 'detail': 'fine'},
+    {'name': 'shortcut-file', 'status': 'fail', 'detail': 'C:\\Desktop\\Zed.lnk does not exist: run python scripts/ship.py shortcut'},
+    {'name': 'shortcut-unique', 'status': 'fail', 'detail': 'second failure'}],
+    'skipped': [], 'next': 'python scripts/ship.py shortcut'}
+
+
+class ShipGateTests(RunnerCase):
+    def setUp(self):
+        super().setUp()
+        (self.root / 'game.json').write_text(json.dumps({'map': 'maps/main.json'}))
+        (self.root / 'maps').mkdir()
+        (self.root / 'maps/main.json').write_text('{}')
+        (self.root / 'scripts').mkdir()
+        self.marker = self.root / 'ship-ran.txt'
+
+    def install_ship(self, verdict=None, code=0, raw=None):
+        """A stand-in scripts/ship.py that records that it ran and prints `verdict` (or `raw`)."""
+        body = ('import json, pathlib, sys\n'
+                f'pathlib.Path({str(self.marker)!r}).write_text(" ".join(sys.argv[1:]))\n'
+                + (f'sys.stdout.write({raw!r})\n' if raw is not None else f'print(json.dumps({verdict!r}))\n')
+                + f'sys.exit({code})\n')
+        (self.root / 'scripts/ship.py').write_text(body)
+
+    def run_with_real_ship(self, *args, **kwargs):
+        def runner(command, options, real_run):
+            if command[0] == sys.executable:
+                return real_run(command, **options)
+            return None
+        return self.run_check(*args, runner=runner, **kwargs)
+
+    def test_a_passing_verify_passes_the_check_and_is_recorded(self):
+        self.install_ship(SHIP_PASS)
+        ok, line, commands = self.run_with_real_ship()
+        self.assertTrue(ok, line)
+        self.assertEqual(line['ship'], 'pass')
+        report = self.report()
+        self.assertEqual(report['ship'], SHIP_PASS)  # the parsed verify JSON, not a summary
+        self.assertEqual(report['checks'][-1]['name'], 'ship')  # the last stage
+        self.assertEqual(commands[-1], [sys.executable, str(self.root / 'scripts/ship.py'), 'verify', '--json'])
+        self.assertEqual(self.marker.read_text(), 'verify --json')
+        self.assertIn('ship.shortcut-file: no desktop', report['skipped'])
+        self.assertIn('ship.launch: not requested (pass --launch)', report['skipped'])
+        self.assertEqual(report['warnings'], ['ship.package: dist/x.exe is older than the release build'])
+        self.assertEqual(line['warnings'], report['warnings'])
+
+    def test_a_failing_verify_fails_the_whole_check_with_the_first_failing_check(self):
+        self.install_ship(SHIP_FAIL, code=1)
+        ok, line, _commands = self.run_with_real_ship()
+        self.assertFalse(ok)
+        self.assertEqual(line['ship'], 'fail')
+        expected = ('ship gate: shortcut-file: C:\\Desktop\\Zed.lnk does not exist: run python scripts/ship.py shortcut. '
+                    'Run: python scripts/ship.py ship')
+        self.assertEqual(line['error'], expected)
+        self.assertEqual(self.report()['error'], expected)
+        self.assertEqual(self.report()['ship'], SHIP_FAIL)
+        self.assertFalse(self.report()['ok'])
+
+    def test_the_gate_runs_after_cargo_test_not_before(self):
+        self.install_ship(SHIP_PASS)
+        _ok, _line, commands = self.run_with_real_ship()
+        self.assertEqual([c[1] for c in commands[:-1]], ['audit', 'lint', 'game-validate', 'metadata', 'test'])
+        self.assertTrue(commands[-1][1].endswith('ship.py'))
+
+    def test_a_crashing_or_silent_verify_cannot_pass(self):
+        for name, kwargs in {'garbage': {'raw': 'Traceback (most recent call last)\n'},
+                             'empty': {'raw': ''}, 'exit 2 with an error object': {
+                                 'verdict': {'ok': False, 'error': 'not a game project'}, 'code': 2}}.items():
+            with self.subTest(name):
+                self.install_ship(**kwargs)
+                ok, line, _commands = self.run_with_real_ship()
+                self.assertFalse(ok)
+                self.assertEqual(line['ship'], 'fail')
+                self.assertTrue(line['error'].startswith('ship gate: '), line['error'])
+                self.assertTrue(line['error'].endswith('Run: python scripts/ship.py ship'), line['error'])
+        self.assertIn('not a game project', line['error'])
+
+    def test_a_verdict_with_ok_false_and_no_failing_check_still_fails(self):
+        self.install_ship({'ok': False, 'checks': [], 'skipped': []}, code=1)
+        ok, line, _commands = self.run_with_real_ship()
+        self.assertFalse(ok)
+
+    def test_a_zero_exit_code_alone_is_not_enough(self):
+        self.install_ship({'ok': False, 'checks': [{'name': 'wiring', 'status': 'fail', 'detail': 'x'}]}, code=0)
+        ok, line, _commands = self.run_with_real_ship()
+        self.assertFalse(ok)
+        self.assertIn('wiring', line['error'])
+
+    def test_skip_ship_runs_the_full_check_without_the_gate_and_says_so(self):
+        self.install_ship(SHIP_FAIL, code=1)
+        ok, line, commands = self.run_with_real_ship(skip_ship=True)
+        self.assertTrue(ok)
+        self.assertFalse(self.marker.exists())
+        self.assertEqual(line['ship'], 'skipped: --skip-ship')
+        self.assertEqual(self.report()['ship'], 'skipped: --skip-ship')
+        self.assertIn('ship: skipped: --skip-ship', self.report()['skipped'])
+        self.assertEqual(commands[-1], TEST)  # everything else still ran
+
+    def test_content_only_never_runs_the_gate(self):
+        self.install_ship(SHIP_FAIL, code=1)
+        ok, line, commands = self.run_with_real_ship(True)
+        self.assertTrue(ok)
+        self.assertFalse(self.marker.exists())
+        self.assertEqual(self.report()['ship'], 'not run: content-only')
+        self.assertEqual(line['ship'], 'skipped: content-only')
+        self.assertIn('ship: not run: content-only', self.report()['skipped'])
+
+    def test_a_game_without_ship_py_is_skipped_visibly(self):
+        ok, line, _commands = self.run_with_real_ship()
+        self.assertTrue(ok)
+        self.assertEqual(line['ship'], 'skipped: no scripts/ship.py')
+        self.assertEqual(self.report()['ship'], 'skipped: no scripts/ship.py')
+
+    def test_an_earlier_failure_means_the_gate_never_ran(self):
+        self.install_ship(SHIP_PASS)
+
+        def runner(command, options, real_run):
+            if command == TEST:
+                return subprocess.CompletedProcess(command, 101)
+            return None
+
+        ok, line, _commands = self.run_check(runner=runner)
+        self.assertFalse(ok)
+        self.assertFalse(self.marker.exists())
+        self.assertEqual(line['ship'], 'skipped: an earlier check failed')
+        self.assertIn('Command failed (101)', line['error'])
+
+    def test_the_gate_has_its_own_log(self):
+        self.install_ship(SHIP_PASS)
+        self.run_with_real_ship()
+        item = self.report()['checks'][-1]
+        log = next((self.root / '.blue-check').glob('*/' + item['log']))
+        self.assertIn('"ok": true', log.read_text())
+
+    def test_main_passes_the_flags_through(self):
+        calls = []
+        with patch.object(game_check, 'run', side_effect=lambda *a: calls.append(a) or True), \
+                patch.object(sys, 'argv', ['check.py', '--tools', 'x', '--skip-ship']):
+            self.assertEqual(game_check.main(), 0)
+        self.assertEqual(calls[0][2:], (False, [], True))
+        with patch.object(game_check, 'run', side_effect=lambda *a: calls.append(a) or True), \
+                patch.object(sys, 'argv', ['check.py', '--tools', 'x', '--content-only']):
+            game_check.main()
+        self.assertEqual(calls[1][2:], (True, [], False))
+
+    def test_manual_text_names_the_evidence_and_what_still_needs_eyes(self):
+        self.assertIn('dist/ship.json', game_check.MANUAL)
+        self.assertIn('launch', game_check.MANUAL)
+        self.assertIn('smoke', game_check.MANUAL)
+        self.assertIn('captures', game_check.MANUAL)
+        self.assertIn('controls', game_check.MANUAL)
+        self.run_check(True)
+        self.assertEqual(self.report()['manual'], game_check.MANUAL)
+
+
+GIT = shutil.which('git')
+
+
+def git(directory, *args):
+    subprocess.run(['git', '-C', str(directory), '-c', 'user.name=t', '-c', 'user.email=t@example.com',
+                    '-c', 'commit.gpgsign=false', *args], check=True, capture_output=True,
+                   creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+
+
+@unittest.skipUnless(GIT, 'git is needed to make a stand-in engine checkout')
+class EngineRevisionTests(RunnerCase):
+    def setUp(self):
+        super().setUp()
+        self.game = self.root / 'game'
+        (self.game / 'assets').mkdir(parents=True)
+        self.engine = self.root / 'engine'
+        self.engine.mkdir()
+        git(self.engine, 'init', '-q')
+        (self.engine / 'lib.rs').write_text('// engine')
+        git(self.engine, 'add', '.')
+        git(self.engine, 'commit', '-q', '-m', 'engine')
+        self.head = subprocess.run(['git', '-C', str(self.engine), 'rev-parse', 'HEAD'], capture_output=True, text=True,
+                                   check=True).stdout.strip()
+        self.write_manifest('vesper3d = { package = "be2", path = "../engine", default-features = false }')
+        self.identity({'engine_revision': self.head[:12]})
+
+    def write_manifest(self, dependency):
+        (self.game / 'Cargo.toml').write_text(f'[package]\nname = "g"\n\n[dependencies]\n{dependency}\n')
+
+    def identity(self, data):
+        (self.game / 'assets/identity.json').write_text(json.dumps(dict({'title': 'T'}, **data)))
+
+    def test_matching_revision_is_silent(self):
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+        self.identity({'engine_revision': self.head})  # a full hash also matches
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+        self.identity({'engine_revision': self.head[:12].upper()})
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+
+    def test_different_revision_warns_and_names_both(self):
+        self.identity({'engine_revision': 'deadbeef0000'})
+        warnings = game_check.engine_warnings(self.game)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn('deadbeef0000', warnings[0])
+        self.assertIn(self.head[:12], warnings[0])
+
+    def test_the_warning_reaches_the_report_but_never_fails_the_check(self):
+        (self.game / 'game.json').write_text(json.dumps({'map': 'maps/main.json'}))
+        (self.game / 'maps').mkdir()
+        (self.game / 'maps/main.json').write_text('{}')
+        self.identity({'engine_revision': 'deadbeef0000'})
+        self.root = self.game
+
+        def real_git(command, options, real_run):  # everything else stays faked
+            return real_run(command, **options) if command[0] == 'git' else None
+
+        ok, line, _commands = self.run_check(True, runner=real_git)
+        self.assertTrue(ok)
+        self.assertEqual(len(line['warnings']), 1)
+        self.assertEqual(self.report()['warnings'], line['warnings'])
+
+    def test_the_other_dependency_spellings_are_found(self):
+        self.identity({'engine_revision': 'deadbeef0000'})
+        for dependency in ['be2 = { path = "../engine" }', 'vesper3d = { path = "../engine" }',
+                           'other = { package = "be2", path = "../engine" }']:
+            with self.subTest(dependency=dependency):
+                self.write_manifest(dependency)
+                self.assertEqual(len(game_check.engine_warnings(self.game)), 1)
+
+    def test_python_3_10_style_manifest_reading_finds_the_engine_too(self):
+        self.identity({'engine_revision': 'deadbeef0000'})
+        with patch.dict(sys.modules, {'tomllib': None}):  # `import tomllib` raises ImportError
+            self.assertEqual(game_check.engine_path(self.game), self.engine.resolve())
+            self.assertEqual(len(game_check.engine_warnings(self.game)), 1)
+
+    def test_nothing_to_compare_means_no_warning(self):
+        self.identity({})  # no engine_revision recorded
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+        self.identity({'engine_revision': 'deadbeef0000'})
+        self.write_manifest('serde = "1"')  # no engine path dependency
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+        self.write_manifest('be2 = { path = "../nowhere" }')  # a path that does not exist
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+        (self.game / 'Cargo.toml').unlink()
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+        (self.game / 'assets/identity.json').unlink()
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+        (self.game / 'assets/identity.json').write_text('not json')
+        self.assertEqual(game_check.engine_warnings(self.game), [])
+
+    def test_no_git_means_no_warning(self):
+        self.identity({'engine_revision': 'deadbeef0000'})
+        with patch.object(game_check.shutil, 'which', return_value=None):
+            self.assertEqual(game_check.engine_warnings(self.game), [])
+
+    def test_an_engine_that_is_not_a_git_checkout_means_no_warning(self):
+        self.identity({'engine_revision': 'deadbeef0000'})
+
+        def remove(function, path, _error):  # git marks its object files read-only on Windows
+            os.chmod(path, 0o700)
+            function(path)
+
+        handler = {'onexc': remove} if sys.version_info >= (3, 12) else {'onerror': remove}
+        shutil.rmtree(self.engine / '.git', **handler)
+        with patch.dict(os.environ, {'GIT_CEILING_DIRECTORIES': str(self.root.parent)}):  # do not find a repo above
+            self.assertEqual(game_check.engine_warnings(self.game), [])
 
 
 if __name__ == '__main__':
