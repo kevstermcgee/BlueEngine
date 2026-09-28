@@ -299,7 +299,10 @@ class TempTestCase(unittest.TestCase):
     def setUp(self):
         temp = tempfile.TemporaryDirectory(prefix='shiptest-', ignore_cleanup_errors=True)
         self.addCleanup(temp.cleanup)
-        self.tmp = Path(temp.name)
+        # Some Windows hosts (observed on GitHub's windows-latest runners) set TEMP/TMP to an
+        # 8.3 short-name alias (...\RUNNER~1\...); resolve it once here so every path this fixture
+        # builds matches the long form the shipping tool reports back.
+        self.tmp = Path(temp.name).resolve()
 
 
 # --------------------------------------------------------------------------------------------------
