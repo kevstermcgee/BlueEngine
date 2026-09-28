@@ -1065,12 +1065,9 @@ fn process_dedicated_server_two_clients_end_to_end() {
     use std::time::Duration;
     use vesper3d::viewer::net::{Packet, UdpTransport, PROTOCOL_VERSION};
 
-    // Ensure be2-headless is compiled
-    let bin_path = if cfg!(windows) {
-        "target/debug/be2-headless.exe"
-    } else {
-        "target/debug/be2-headless"
-    };
+    // Cargo builds the binary for this test and reports where it put it, wherever CARGO_TARGET_DIR
+    // (or build.target-dir) points.
+    let bin_path = env!("CARGO_BIN_EXE_be2-headless");
 
     // Start real separate server process
     let mut server_child = Command::new(bin_path)

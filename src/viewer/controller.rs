@@ -9,7 +9,10 @@ pub const JUMP_HEIGHT: f32 = 0.35;
 pub const WALK_SPEED: f32 = 3.2;
 pub const SPRINT_SPEED: f32 = 5.6;
 pub const CROUCH_SPEED: f32 = 1.3;
-const GRAVITY: f32 = 12.;
+/// Default gravity in m/s^2. A jump's launch speed follows it, so `jump_height` stays true at any gravity.
+pub const GRAVITY: f32 = 12.;
+/// Default decay rate (per second) of an impulse's horizontal push; see [`Controller::apply_impulse`].
+pub const PUSH_DRAG: f32 = 3.;
 
 /// Playable body profile shared by rendering and fixed-step movement.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -56,7 +59,10 @@ impl Collider {
     pub fn blocks(&self, p: V) -> bool {
         self.overlaps_body(p, 0., STANDING_HEIGHT, RADIUS)
     }
-    pub(crate) fn overlaps_body(&self, p: V, feet: f32, height: f32, radius: f32) -> bool {
+    /// True when a body of `radius` and `height` standing with its feet at `feet` and centred (in x/z)
+    /// on `p` intersects this box. This is the exact test [`Controller`] uses, so a game can ask the same
+    /// question (spawn checks, projectile hulls) without re-implementing it.
+    pub fn overlaps_body(&self, p: V, feet: f32, height: f32, radius: f32) -> bool {
         self.max.1 > feet + 0.0001
             && self.min.1 < feet + height - 0.0001
             && self.overlaps_xz(p, radius)
@@ -88,6 +94,14 @@ pub struct Controller {
     body_height: f32,
     vertical_velocity: f32,
     grounded: bool,
+    gravity: f32,
+    floor: Option<f32>,
+    push: V,
+    push_drag: f32,
+}
+
+fn no_push(push: &V) -> bool {
+    *push == V::ZERO
 }
 
 /// Complete movement state for authoritative reconciliation and network serialization.
@@ -109,6 +123,9 @@ pub struct ControllerState {
     pub vertical_velocity: f32,
     #[serde(rename = "g")]
     pub grounded: bool,
+    /// Horizontal push from [`Controller::apply_impulse`]; omitted from the wire while zero.
+    #[serde(rename = "k", default, skip_serializing_if = "no_push")]
+    pub push: V,
 }
 
 /// Alias for game compatibility with Feta code.
@@ -125,6 +142,7 @@ impl Controller {
             body_height: self.body_height,
             vertical_velocity: self.vertical_velocity,
             grounded: self.grounded,
+            push: self.push,
         }
     }
 
@@ -141,6 +159,7 @@ impl Controller {
         self.body_height = state.body_height;
         self.vertical_velocity = state.vertical_velocity;
         self.grounded = state.grounded;
+        self.push = state.push;
     }
 
     pub fn restore_kinematic_state(&mut self, state: &ControllerState) {
@@ -160,6 +179,10 @@ impl Default for Controller {
             body_height: STANDING_HEIGHT,
             vertical_velocity: 0.,
             grounded: true,
+            gravity: GRAVITY,
+            floor: Some(0.),
+            push: V::ZERO,
+            push_drag: PUSH_DRAG,
         }
     }
 }
@@ -247,6 +270,10 @@ impl Controller {
     pub fn vertical_velocity(&self) -> f32 {
         self.vertical_velocity
     }
+    /// Overwrite the eye position and the vertical state. This is the supported way to apply an external
+    /// *vertical* change (a moving platform, a teleport, reconciliation with an authority); for a shove
+    /// or knockback use [`Controller::apply_impulse`], which keeps the push alive for a moment.
+    /// [`Controller::restore_network_state`] overwrites the complete state instead.
     pub fn set_physics_state(&mut self, pos: V, vert_vel: f32, grounded: bool) {
         self.position = pos;
         self.feet = pos.1 - (self.body_height - self.profile.head_margin());
@@ -266,8 +293,69 @@ impl Controller {
             d: self.direction(),
         }
     }
+    /// Discard horizontal momentum, including any push from [`Controller::apply_impulse`].
     pub fn stop(&mut self) {
         self.velocity = V(0., 0., 0.);
+        self.push = V::ZERO;
+    }
+    /// Gravity in m/s^2 (default [`GRAVITY`]).
+    pub fn gravity(&self) -> f32 {
+        self.gravity
+    }
+    /// Change gravity for this controller (finite, `0.5..=100`; anything else is ignored). The launch
+    /// speed of a jump follows it, so `jump_height` stays the same while the jump gets quicker or floatier.
+    pub fn set_gravity(&mut self, gravity: f32) {
+        if gravity.is_finite() && (0.5..=100.).contains(&gravity) {
+            self.gravity = gravity;
+        }
+    }
+    /// Height of the implicit ground plane (default `Some(0.)`).
+    pub fn floor(&self) -> Option<f32> {
+        self.floor
+    }
+    /// Set the implicit ground plane. `Some(y)` is an infinite floor at `y` metres; `None` removes it, so
+    /// only colliders support the body and a player who walks off the last tile keeps falling. A game with
+    /// pits, voids or an arena floating in the sky wants `None` (or a floor far below) instead of lifting
+    /// its whole world above y = 0. A non-finite height is ignored.
+    pub fn set_floor(&mut self, floor: Option<f32>) {
+        if floor.is_none_or(f32::is_finite) {
+            self.floor = floor;
+        }
+    }
+    /// The horizontal push currently applied by [`Controller::apply_impulse`], in m/s.
+    pub fn push_velocity(&self) -> V {
+        self.push
+    }
+    /// How fast a push decays, per second (default [`PUSH_DRAG`]; `0..=50`, others ignored). At the default
+    /// a push loses about 95% of its speed in one second; `0` keeps it until something blocks it.
+    pub fn set_push_drag(&mut self, per_second: f32) {
+        if per_second.is_finite() && (0.0..=50.).contains(&per_second) {
+            self.push_drag = per_second;
+        }
+    }
+    /// An instantaneous velocity change in m/s: knockback, a dash, a jump pad, an explosion.
+    ///
+    /// The horizontal part (x, z) becomes a *push* that is added to walking and decays with the push
+    /// drag, so it is not erased by the ~0.1 s that input smoothing takes to converge on the walk
+    /// speed; walls stop it. The vertical part is added to the vertical velocity and, when it is upward,
+    /// leaves the ground. Non-finite impulses are ignored. Impulses are local state of the simulation
+    /// that applies them: an online game must apply them where the authority runs.
+    pub fn apply_impulse(&mut self, impulse: V) {
+        if !impulse.finite() {
+            return;
+        }
+        self.push = self.push + V(impulse.0, 0., impulse.2);
+        self.vertical_velocity += impulse.1;
+        if impulse.1 > 0. {
+            self.grounded = false;
+        }
+    }
+    /// True when this controller's body, placed at `at` (x/z) with its current feet height and body
+    /// height, would intersect any of `colliders`.
+    pub fn blocked_at(&self, at: V, colliders: &[Collider]) -> bool {
+        colliders
+            .iter()
+            .any(|c| c.overlaps_body(at, self.feet, self.body_height, self.profile.radius))
     }
     pub fn look(&mut self, dx: f32, dy: f32, sensitivity: f32, invert: bool) {
         if !dx.is_finite() || !dy.is_finite() {
@@ -368,6 +456,7 @@ impl Controller {
         if let Some(position) = best {
             self.position = position;
             self.velocity = V(0., 0., 0.);
+            self.push = V::ZERO;
         }
     }
     pub fn update(&mut self, input: Movement, dt: f32, colliders: &[Collider]) {
@@ -390,7 +479,7 @@ impl Controller {
             -self.yaw.cos() * forward + self.yaw.sin() * right,
         ) / length;
         if jump && self.grounded {
-            self.vertical_velocity = (2. * GRAVITY * self.profile.jump_height).sqrt();
+            self.vertical_velocity = (2. * self.gravity * self.profile.jump_height).sqrt();
             self.grounded = false;
         }
         let steps = (dt / 0.008).ceil() as usize;
@@ -424,18 +513,25 @@ impl Controller {
                     self.profile.walk_speed
                 };
             self.velocity = self.velocity.lerp(desired, 1. - (-18. * h).exp());
-            let d = self.velocity * h;
+            // A push (knockback) rides on top of walking and decays; a wall stops both.
+            self.push = self.push * (-self.push_drag * h).exp();
+            if self.push.length() < 0.01 {
+                self.push = V::ZERO;
+            }
+            let d = (self.velocity + self.push) * h;
             let px = self.position + V(d.0, 0., 0.);
             if !self.move_horizontal(px, colliders) {
                 self.velocity.0 = 0.;
+                self.push.0 = 0.;
             }
             let pz = self.position + V(0., 0., d.2);
             if !self.move_horizontal(pz, colliders) {
                 self.velocity.2 = 0.;
+                self.push.2 = 0.;
             }
             // Swept vertical movement catches ceilings and landings even on long frames.
-            let dy = self.vertical_velocity * h - 0.5 * GRAVITY * h * h;
-            self.vertical_velocity -= GRAVITY * h;
+            let dy = self.vertical_velocity * h - 0.5 * self.gravity * h * h;
+            self.vertical_velocity -= self.gravity * h;
             let mut next_feet = self.feet + dy;
             self.grounded = false;
             if dy > 0. {
@@ -451,7 +547,7 @@ impl Controller {
                     }
                 }
             } else {
-                let mut support = 0_f32;
+                let mut support = self.floor.unwrap_or(f32::NEG_INFINITY);
                 for c in colliders
                     .iter()
                     .filter(|c| c.overlaps_xz(self.position, self.profile.radius))
@@ -912,5 +1008,263 @@ mod character_tests {
         }
         assert!(rat.position.2 < 2. && rat.position.2 >= 0.25);
         assert!(human.position.2 > 3.);
+    }
+}
+
+#[cfg(test)]
+mod external_force_tests {
+    use super::*;
+
+    const TICK: f32 = 1. / 60.;
+
+    fn run(c: &mut Controller, movement: Movement, ticks: usize, colliders: &[Collider]) {
+        for _ in 0..ticks {
+            c.update(movement, TICK, colliders);
+        }
+    }
+    fn platform() -> Collider {
+        Collider {
+            min: V(-1., 0., -1.),
+            max: V(1., 1., 1.),
+        }
+    }
+    /// Standing on the platform top, facing +x.
+    fn on_platform() -> Controller {
+        Controller::for_profile(
+            Default::default(),
+            V(0., 1., 0.),
+            std::f32::consts::FRAC_PI_2,
+        )
+        .unwrap()
+    }
+    const FORWARD: Movement = Movement {
+        forward: 1.,
+        right: 0.,
+        sprint: false,
+        jump: false,
+        crouch: false,
+    };
+
+    #[test]
+    fn walking_off_a_platform_lands_on_the_default_floor() {
+        let mut c = on_platform();
+        run(&mut c, Movement::default(), 30, &[platform()]);
+        assert!(
+            c.is_grounded() && (c.feet_height() - 1.).abs() < 1e-4,
+            "starts on the platform"
+        );
+        run(&mut c, FORWARD, 180, &[platform()]);
+        assert!(c.position.0 > 3., "walked off the edge");
+        assert_eq!(
+            (c.feet_height(), c.is_grounded()),
+            (0., true),
+            "the implicit floor at y = 0 catches the fall"
+        );
+    }
+
+    #[test]
+    fn without_a_floor_the_player_falls_into_the_void() {
+        let mut c = on_platform();
+        c.set_floor(None);
+        assert_eq!(c.floor(), None);
+        run(&mut c, Movement::default(), 30, &[platform()]);
+        assert!(c.is_grounded(), "colliders still support the body");
+        run(&mut c, FORWARD, 240, &[platform()]);
+        assert!(
+            c.feet_height() < -10. && !c.is_grounded(),
+            "fell to {} and kept going",
+            c.feet_height()
+        );
+    }
+
+    #[test]
+    fn a_floor_can_sit_below_zero() {
+        let mut c = on_platform();
+        c.set_floor(Some(-3.));
+        run(&mut c, FORWARD, 240, &[platform()]);
+        assert_eq!((c.feet_height(), c.is_grounded()), (-3., true));
+        c.set_floor(Some(f32::NAN));
+        assert_eq!(c.floor(), Some(-3.), "a non-finite floor is ignored");
+    }
+
+    fn air_time_and_peak(gravity: f32) -> (usize, f32) {
+        let mut c = Controller::default();
+        c.set_gravity(gravity);
+        let (mut peak, mut ticks) = (0f32, 0);
+        c.update(
+            Movement {
+                jump: true,
+                ..Default::default()
+            },
+            1. / 240.,
+            &[],
+        );
+        while !c.is_grounded() && ticks < 4000 {
+            c.update(Movement::default(), 1. / 240., &[]);
+            peak = peak.max(c.feet_height());
+            ticks += 1;
+        }
+        (ticks, peak)
+    }
+
+    #[test]
+    fn gravity_changes_the_arc_but_not_the_jump_height() {
+        let (normal, peak) = air_time_and_peak(GRAVITY);
+        let (light, light_peak) = air_time_and_peak(GRAVITY / 2.);
+        let (heavy, heavy_peak) = air_time_and_peak(GRAVITY * 2.);
+        for p in [peak, light_peak, heavy_peak] {
+            assert!((p - JUMP_HEIGHT).abs() < 0.01, "peak {p}");
+        }
+        assert!(
+            light as f32 > normal as f32 * 1.3 && (heavy as f32) < normal as f32 * 0.8,
+            "{light} {normal} {heavy}"
+        );
+        let mut c = Controller::default();
+        for bad in [f32::NAN, 0., -5., 1000.] {
+            c.set_gravity(bad);
+            assert_eq!(c.gravity(), GRAVITY, "{bad} is ignored");
+        }
+    }
+
+    #[test]
+    fn an_impulse_carries_the_player_and_decays() {
+        let mut c = Controller {
+            yaw: 0.,
+            ..Default::default()
+        };
+        let start = c.position.0;
+        c.apply_impulse(V(6., 0., 0.));
+        assert_eq!(c.push_velocity(), V(6., 0., 0.));
+        run(&mut c, Movement::default(), 60, &[]);
+        // Integral of 6 * e^(-3t) over one second is 6/3 * (1 - e^-3) = 1.9 m.
+        assert!(
+            (c.position.0 - start - 1.9).abs() < 0.12,
+            "travelled {}",
+            c.position.0 - start
+        );
+        run(&mut c, Movement::default(), 240, &[]);
+        assert_eq!(c.push_velocity(), V::ZERO, "the push dies out");
+        let rest = c.position;
+        run(&mut c, Movement::default(), 30, &[]);
+        assert_eq!(c.position, rest);
+    }
+
+    #[test]
+    fn a_softer_drag_carries_further_and_zero_drag_lasts_until_blocked() {
+        let travel = |drag: f32| {
+            let mut c = Controller {
+                yaw: 0.,
+                ..Default::default()
+            };
+            c.set_push_drag(drag);
+            let start = c.position.0;
+            c.apply_impulse(V(4., 0., 0.));
+            run(&mut c, Movement::default(), 120, &[]);
+            c.position.0 - start
+        };
+        assert!(travel(1.) > travel(3.) * 1.5);
+        assert!(travel(0.) > 7.5, "no drag: 4 m/s for two seconds");
+        let mut c = Controller::default();
+        c.set_push_drag(f32::NAN);
+        c.set_push_drag(-1.);
+        c.apply_impulse(V(1., 0., 0.));
+        run(&mut c, Movement::default(), 30, &[]);
+        assert!(
+            c.push_velocity().0 < 1.,
+            "the default drag is untouched by bad values"
+        );
+    }
+
+    #[test]
+    fn a_wall_stops_a_push() {
+        let wall = Collider {
+            min: V(1., 0., -5.),
+            max: V(1.2, 3., 5.),
+        };
+        let mut c = Controller {
+            yaw: 0.,
+            position: V(0., EYE_HEIGHT, 0.),
+            ..Default::default()
+        };
+        c.apply_impulse(V(10., 0., 0.));
+        run(
+            &mut c,
+            Movement::default(),
+            120,
+            std::slice::from_ref(&wall),
+        );
+        assert!(
+            c.position.0 <= 1. - RADIUS + 0.01 && c.position.0 > 0.5,
+            "stopped at {}",
+            c.position.0
+        );
+        assert_eq!(c.push_velocity().0, 0.);
+    }
+
+    #[test]
+    fn a_vertical_impulse_launches_and_the_player_lands_again() {
+        let mut c = Controller::default();
+        c.apply_impulse(V(0., 5., 0.));
+        assert!(!c.is_grounded());
+        assert_eq!(
+            c.push_velocity(),
+            V::ZERO,
+            "the vertical part is not a push"
+        );
+        run(&mut c, Movement::default(), 15, &[]);
+        assert!(c.feet_height() > 0.5, "launched to {}", c.feet_height());
+        run(&mut c, Movement::default(), 120, &[]);
+        assert_eq!((c.feet_height(), c.is_grounded()), (0., true));
+    }
+
+    #[test]
+    fn stop_and_bad_impulses_clear_or_ignore_the_push() {
+        let mut c = Controller::default();
+        c.apply_impulse(V(f32::NAN, 1., 0.));
+        c.apply_impulse(V(f32::INFINITY, 0., 0.));
+        assert_eq!((c.push_velocity(), c.vertical_velocity()), (V::ZERO, 0.));
+        c.apply_impulse(V(2., 0., 1.));
+        c.apply_impulse(V(1., 0., 0.));
+        assert_eq!(c.push_velocity(), V(3., 0., 1.), "impulses add up");
+        c.stop();
+        assert_eq!(c.push_velocity(), V::ZERO);
+    }
+
+    #[test]
+    fn network_state_carries_the_push_and_stays_compact_without_one() {
+        let mut c = Controller::default();
+        let quiet = serde_json::to_string(&c.network_state()).unwrap();
+        assert!(
+            !quiet.contains("\"k\""),
+            "an idle push costs no bytes: {quiet}"
+        );
+        c.apply_impulse(V(1., 0., 2.));
+        let json = serde_json::to_string(&c.network_state()).unwrap();
+        assert!(json.contains("\"k\""));
+        let mut restored = Controller::default();
+        restored.restore_network_state(&serde_json::from_str(&json).unwrap());
+        assert_eq!(restored.push_velocity(), V(1., 0., 2.));
+        let older: ControllerState = serde_json::from_str(&quiet).unwrap();
+        assert_eq!(
+            older.push,
+            V::ZERO,
+            "payloads from before the push field still parse"
+        );
+    }
+
+    #[test]
+    fn the_body_overlap_test_is_public() {
+        let crate_box = Collider {
+            min: V(1., 0., -1.),
+            max: V(2., 1., 1.),
+        };
+        assert!(crate_box.overlaps_body(V(1.1, 0., 0.), 0., STANDING_HEIGHT, RADIUS));
+        assert!(
+            !crate_box.overlaps_body(V(1.1, 1.5, 0.), 1.5, STANDING_HEIGHT, RADIUS),
+            "feet above the box"
+        );
+        let c = Controller::for_profile(Default::default(), V(0., 0., 0.), 0.).unwrap();
+        assert!(c.blocked_at(V(1.1, 0., 0.), std::slice::from_ref(&crate_box)));
+        assert!(!c.blocked_at(V(-1., 0., 0.), std::slice::from_ref(&crate_box)));
     }
 }

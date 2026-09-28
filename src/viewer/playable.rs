@@ -177,10 +177,12 @@ pub async fn run_game_with_options(
             focused(),
             options.keyboard,
         );
+        // Wall-clock interval between frame starts, not macroquad's get_frame_time(), which is
+        // stamped after the GL flush and turns one stalled frame into a doubled step plus a repeat.
         let seconds = if playback.is_some() || options.capture.is_some() {
             1. / 60.
         } else {
-            get_frame_time()
+            input.frame_seconds()
         };
         let playback_done = playback.as_ref().is_some_and(|p| frame >= p.len());
         if playback.is_some() {

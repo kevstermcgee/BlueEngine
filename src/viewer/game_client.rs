@@ -9,6 +9,8 @@ use macroquad::{
     prelude::*,
 };
 
+/// Window settings shared by the stock client and generated games. The window carries miniquad's
+/// default icon: a game that ships should give it its own with [`window_config_with_icon`].
 pub fn window_config(title: &str) -> macroquad::conf::Conf {
     macroquad::conf::Conf {
         miniquad_conf: Conf {
@@ -22,6 +24,40 @@ pub fn window_config(title: &str) -> macroquad::conf::Conf {
         draw_call_vertex_capacity: 30000,
         draw_call_index_capacity: 30000,
         ..Default::default()
+    }
+}
+
+/// [`window_config`] with the game's own title-bar and taskbar icon. The title should be the game's
+/// `identity.json` title, the same text as its desktop shortcut.
+pub fn window_config_with_icon(
+    title: &str,
+    icon: macroquad::miniquad::conf::Icon,
+) -> macroquad::conf::Conf {
+    let mut conf = window_config(title);
+    conf.miniquad_conf.icon = Some(icon);
+    conf
+}
+
+/// The window icon from the three raw RGBA blobs `be2-tools icon` writes next to the `.ico`
+/// (`assets/icon_16.rgba`, `icon_32.rgba`, `icon_64.rgba`). The array types make a blob of the wrong
+/// size a compile error when it comes straight from `include_bytes!`:
+///
+/// ```ignore
+/// let icon = game_client::icon_from_rgba(
+///     include_bytes!("../assets/icon_16.rgba"),
+///     include_bytes!("../assets/icon_32.rgba"),
+///     include_bytes!("../assets/icon_64.rgba"),
+/// );
+/// ```
+pub fn icon_from_rgba(
+    small: &[u8; 1024],
+    medium: &[u8; 4096],
+    big: &[u8; 16384],
+) -> macroquad::miniquad::conf::Icon {
+    macroquad::miniquad::conf::Icon {
+        small: *small,
+        medium: *medium,
+        big: *big,
     }
 }
 
@@ -109,17 +145,21 @@ impl GameShell {
             actions: ShellActions::default(),
         }
     }
-    pub fn begin_frame(&mut self, connected: bool) {
-        self.begin_frame_with_input(connected, is_key_pressed);
+    /// `capture_cursor` is whether the game wants the mouse captured while it is unpaused and focused:
+    /// `true` in play, `false` on a title or menu screen so the cursor is released and clickable. (An
+    /// online session passes "connected" here, hence the old name.)
+    pub fn begin_frame(&mut self, capture_cursor: bool) {
+        self.begin_frame_with_input(capture_cursor, is_key_pressed);
     }
     /// An executable can supply focus-aware native key edges without unsafe library code.
-    pub fn begin_frame_with_input(&mut self, connected: bool, pressed: fn(KeyCode) -> bool) {
-        self.begin_frame_with_actions(connected, true, ShellActions::from_keys(pressed));
+    pub fn begin_frame_with_input(&mut self, capture_cursor: bool, pressed: fn(KeyCode) -> bool) {
+        self.begin_frame_with_actions(capture_cursor, true, ShellActions::from_keys(pressed));
     }
     /// Combine native focus and device actions. Poll input even while menus are open.
+    /// `capture_cursor` is as for [`GameShell::begin_frame`].
     pub fn begin_frame_with_actions(
         &mut self,
-        connected: bool,
+        capture_cursor: bool,
         focused: bool,
         actions: ShellActions,
     ) {
@@ -149,7 +189,7 @@ impl GameShell {
         if self.actions.release_cursor {
             self.paused = true;
         }
-        let capture = connected && !self.paused && self.focus.active && focused;
+        let capture = capture_cursor && !self.paused && self.focus.active && focused;
         if capture != self.captured {
             set_cursor_grab(capture);
             show_mouse(!capture);

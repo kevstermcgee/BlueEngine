@@ -1,11 +1,13 @@
 //! Real-time adapter. The original scene, geometry and offline renderer remain shared.
 pub mod controller;
+pub mod devkit;
 pub mod game;
 #[cfg(feature = "presentation")]
 pub mod game_client;
 pub mod game_example;
 #[cfg(feature = "gamepad")]
 pub mod gamepad;
+pub mod identity;
 #[cfg(feature = "client")]
 pub mod input;
 pub mod interaction;

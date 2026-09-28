@@ -3,6 +3,7 @@
 //! workers must shut down before Windows TLS teardown. No OS calls live here.
 use super::{
     controller::Movement,
+    devkit::FrameClock,
     game_client::{GameShell, ShellActions},
     game_ui::NavigationInput,
     gamepad::{Button, GamepadFrame, Gamepads},
@@ -15,6 +16,7 @@ pub struct ClientInput {
     status: String,
     focused: bool,
     keyboard: Option<KeyboardFrame>,
+    clock: FrameClock,
 }
 impl Default for ClientInput {
     fn default() -> Self {
@@ -34,7 +36,19 @@ impl ClientInput {
             frame: GamepadFrame::default(),
             focused: false,
             keyboard: None,
+            clock: FrameClock::new(),
         }
+    }
+    /// Length of the current frame in seconds: the wall-clock interval between `begin_frame` calls,
+    /// clamped to 0.1 s. Prefer it to macroquad's `get_frame_time()`, which is stamped after the GL
+    /// flush and reads 33 ms then 1 ms when one frame stalls although frames were presented evenly.
+    /// Feed it to `GameSession::advance`, a `FixedStepper` or your camera.
+    pub fn frame_seconds(&self) -> f32 {
+        self.clock.dt()
+    }
+    /// The clock behind [`ClientInput::frame_seconds`], with its frame and hitch counters.
+    pub fn frame_clock(&self) -> &FrameClock {
+        &self.clock
     }
     /// Poll once per frame, including during pause. Native focus is supplied by the host.
     pub fn poll(&mut self, focused: bool) {
@@ -75,20 +89,26 @@ impl ClientInput {
         }
         a
     }
-    /// The standard frame entry point for new games. Advanced hosts may poll and
-    /// call shell_actions separately to route their own modal screens.
-    pub fn begin_frame(&mut self, shell: &mut GameShell, playing: bool, focused: bool) {
-        self.begin_frame_with_keyboard(shell, playing, focused, None);
+    /// The standard frame entry point for new games: call it once at the top of every frame, including
+    /// while paused. It starts the frame clock, polls devices and updates the shell.
+    ///
+    /// `capture_cursor` is whether the game wants the mouse captured while unpaused and focused. Pass
+    /// `true` while playing and `false` on a title, menu or game-over screen so the cursor is released
+    /// and clickable (an online session passes "connected"). Advanced hosts may poll and call
+    /// `shell_actions` separately to route their own modal screens.
+    pub fn begin_frame(&mut self, shell: &mut GameShell, capture_cursor: bool, focused: bool) {
+        self.begin_frame_with_keyboard(shell, capture_cursor, focused, None);
     }
     /// Optional application-owned Windows key-state reader. A single edge source
     /// avoids mixing delayed window events with native/accessibility input.
     pub fn begin_frame_with_keyboard(
         &mut self,
         shell: &mut GameShell,
-        playing: bool,
+        capture_cursor: bool,
         focused: bool,
         reader: Option<fn(i32) -> i16>,
     ) {
+        self.clock.tick();
         self.poll(focused);
         if let Some(read) = reader {
             self.keyboard
@@ -98,7 +118,7 @@ impl ClientInput {
             self.keyboard = None;
         }
         shell.begin_frame_with_actions(
-            playing,
+            capture_cursor,
             focused,
             self.shell_actions(shell.paused, |key| self.pressed(key)),
         );
@@ -134,14 +154,33 @@ impl ClientInput {
             crouch: self.down(KeyCode::C) || self.down(KeyCode::LeftControl),
         })
     }
-    /// Radian deltas for Controller::look(..., 1.0, false).
+    /// Radian deltas for Controller::look(..., 1.0, false): mouse plus right stick, the stick scaled by
+    /// [`ClientInput::frame_seconds`]. A game that wants its own stick sensitivity uses
+    /// [`ClientInput::mouse_look`] and [`ClientInput::stick_look`] separately.
     pub fn look_delta(&self, shell: &GameShell) -> [f32; 2] {
+        self.look_delta_with(shell, self.frame_seconds())
+    }
+    /// As [`ClientInput::look_delta`] for a frame of `seconds`: fixed-step captures and playback pass
+    /// 1/60 so scripted runs do not depend on the wall clock.
+    pub fn look_delta_with(&self, shell: &GameShell, seconds: f32) -> [f32; 2] {
+        let (mouse, stick) = (self.mouse_look(shell), self.stick_look(shell, seconds));
+        [mouse[0] + stick[0], mouse[1] + stick[1]]
+    }
+    /// Mouse motion this frame as radians for `Controller::look(.., 1.0, ..)`; zero unless playing.
+    pub fn mouse_look(&self, shell: &GameShell) -> [f32; 2] {
         if !self.focused || !shell.playing() {
             return [0.; 2];
         }
         let mouse = mouse_delta_position();
-        let pad = self.frame.look_delta(get_frame_time());
-        [-mouse.x * 2.5 + pad[0], -mouse.y * 2.5 + pad[1]]
+        [-mouse.x * 2.5, -mouse.y * 2.5]
+    }
+    /// Right-stick look for a frame of `seconds` (radians; 2.5 rad/s at full deflection after the
+    /// engine's dead zone); zero unless playing.
+    pub fn stick_look(&self, shell: &GameShell, seconds: f32) -> [f32; 2] {
+        if !self.focused || !shell.playing() {
+            return [0.; 2];
+        }
+        self.frame.look_delta(seconds)
     }
 }
 
@@ -155,6 +194,7 @@ mod tests {
             status: String::new(),
             focused: true,
             keyboard: None,
+            clock: FrameClock::new(),
         }
     }
     #[test]
@@ -166,6 +206,16 @@ mod tests {
         assert!(input.navigation().accept);
         input.focused = false;
         assert!(!input.shell_actions(true, |_| true).accept);
+    }
+    #[test]
+    fn frame_seconds_come_from_the_engine_clock() {
+        let mut input = input();
+        assert_eq!(input.frame_seconds(), 1. / 60., "before the first frame");
+        input.clock.tick_after(std::time::Duration::from_millis(20));
+        assert!((input.frame_seconds() - 0.02).abs() < 1e-4);
+        input.clock.tick_after(std::time::Duration::from_secs(3));
+        assert_eq!(input.frame_seconds(), 0.1, "a stall is clamped to 100 ms");
+        assert_eq!(input.frame_clock().frames(), 2);
     }
     #[test]
     fn start_back_and_dpad_route_to_shared_menus() {
