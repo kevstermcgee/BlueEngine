@@ -43,6 +43,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("src", "ACTION [QUERY]"),
     ("new-game", "NAME DIRECTORY [ENGINE_PATH] [TEMPLATE]"),
     ("icon", "TITLE DIRECTORY [VARIANT] [--replace]"),
+    ("save-info", "FILE [GAME_JSON]"),
     ("ui-check", ""),
     ("mcp", ""),
     ("net-proxy", "LISTEN UPSTREAM [PRESET]"),

@@ -10,6 +10,7 @@ use crate::viewer::{
         random_auth_challenge, verify_auth_proof, ConnectionNonce, DatagramTransport,
         HandshakeLimiter, Packet, SessionRegistry, SessionToken, UdpTransport, PROTOCOL_VERSION,
     },
+    savestate::{SaveSlots, AUTO_SLOT},
     simulation::HeadlessWorld,
     test_lab::{SPAWN_PLAYER_1, SPAWN_PLAYER_2},
 };
@@ -46,6 +47,24 @@ pub struct ClientSession {
     pub action_tracker: crate::viewer::net::action_counters::ActionCountersTracker,
 }
 
+/// What the server's autosave has done so far; a status line or a monitor reads it.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AutosaveStats {
+    /// Saves written successfully.
+    pub written: u64,
+    /// Saves that failed (disk full, folder not writable, ...). The server carries on and tries again.
+    pub failed: u64,
+    /// The most recent failure, as a plain sentence.
+    pub last_error: Option<String>,
+}
+
+struct Autosave {
+    slots: SaveSlots,
+    every_ticks: u64,
+    keep: usize,
+    last_tick: u64,
+}
+
 /// Authoritative dedicated server running [`HeadlessWorld`] over any datagram transport.
 pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
     pub transport: T,
@@ -63,6 +82,9 @@ pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
     pub pending_challenges: HashMap<SocketAddr, (ConnectionNonce, [u8; 16], Instant)>,
     pub handshake_limiter: HandshakeLimiter,
     pub session_registry: SessionRegistry<u64>,
+    /// Outcome of [`Self::with_autosave`] so far.
+    pub autosave_stats: AutosaveStats,
+    autosave: Option<Autosave>,
 }
 
 impl DedicatedServer<UdpTransport> {
@@ -98,7 +120,52 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             pending_challenges: HashMap::new(),
             handshake_limiter: HandshakeLimiter::new(64),
             session_registry: SessionRegistry::new(16, Duration::from_secs(5)),
+            autosave_stats: AutosaveStats::default(),
+            autosave: None,
         })
+    }
+
+    /// Save the world into `slots` as a rotating autosave (`auto` is the newest, then `auto-2`, ... up to `keep`
+    /// files) every `seconds` of game time, and once more when [`Self::run_realtime`] ends. A failing disk is
+    /// counted in [`Self::autosave_stats`] and printed; it never stops the server. Resume with
+    /// `HeadlessWorld::restore_state_with(.., RestoreOptions { players: false })`, which `be2-headless --load`
+    /// does.
+    pub fn with_autosave(mut self, slots: SaveSlots, seconds: f32, keep: usize) -> Self {
+        let every_ticks = (seconds.clamp(0.1, 86_400.) * 60.).round() as u64;
+        self.autosave = Some(Autosave {
+            slots,
+            every_ticks,
+            keep,
+            last_tick: self.world.tick,
+        });
+        self
+    }
+
+    /// Write the autosave now (also what the schedule calls). Returns whether it was written; `false` too when
+    /// no autosave is configured.
+    pub fn autosave_now(&mut self) -> bool {
+        let Some(autosave) = &mut self.autosave else {
+            return false;
+        };
+        autosave.last_tick = self.world.tick;
+        let label = format!("Autosave, tick {}", self.world.tick);
+        let saved = self.world.save_bytes(&label).and_then(|bytes| {
+            autosave
+                .slots
+                .save_ring_framed(AUTO_SLOT, autosave.keep, &bytes)
+        });
+        match saved {
+            Ok(()) => {
+                self.autosave_stats.written += 1;
+                true
+            }
+            Err(error) => {
+                eprintln!("[Server] Autosave failed: {error}");
+                self.autosave_stats.failed += 1;
+                self.autosave_stats.last_error = Some(error.to_string());
+                false
+            }
+        }
     }
 
     /// Configure a shared secret key for mandatory client authentication.
@@ -773,6 +840,13 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         }
 
         self.world.step();
+        if self
+            .autosave
+            .as_ref()
+            .is_some_and(|a| self.world.tick >= a.last_tick + a.every_ticks)
+        {
+            self.autosave_now();
+        }
         if self.world.tick.is_multiple_of(3) {
             self.broadcast_snapshots();
         }
@@ -863,6 +937,9 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             runner.sleep_until_next_tick(elapsed);
         }
 
+        if self.autosave_now() {
+            println!("[Server] Final save written at tick {}", self.world.tick);
+        }
         println!(
             "[Server] Shutdown complete after {} ticks ({:.2}s)",
             self.world.tick,

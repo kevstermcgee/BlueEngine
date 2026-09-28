@@ -3,7 +3,11 @@
 //! The stock runner (`playable::run_game_with_options`) plays a validated `GameDocument`. A game
 //! with enemies, projectiles, scoring, AI or per-frame physics keeps its rules in Rust and owns its
 //! window loop. Everything a hand-written loop needs beyond drawing lives here, is graphics-free,
-//! and is what the `new-game --template custom-sim` scaffold uses:
+//! and is what the `custom-sim` starter (`be2-tools new-game NAME DIR ENGINE_PATH custom-sim`) uses.
+//!
+//! AI-BOUNDARY ARCH-DEVKIT-001: devkit is graphics-free and always compiled: no macroquad, no audio
+//! device and no wall clock inside simulation helpers (`python tools/check_headless.py` enforces the
+//! dependency half).
 //!
 //! | Piece | Job |
 //! |---|---|
@@ -15,7 +19,9 @@
 //! | [`PerfReport`] | frame-time percentiles for a `--perf` flag |
 //! | [`Rng`] | seeded random numbers, so a seed replays a run |
 //! | [`Juice`], [`Pulse`] | screen shake, hit-stop, FOV kick, flash, landing dip |
-//! | [`Settings`], [`Records`], [`load_or_default`], [`store_atomic`] | atomic, never-fatal save files |
+//! | [`Settings`], [`Records`], [`load_or_default`], [`store_atomic`] | atomic, never-fatal settings and high-score files |
+//! | [`Snapshot`], [`snapshot`] | save states of the simulation: F5 / F9, autosaves, migrations, all-or-nothing loads |
+//! | [`synth`] | procedural sound effects, a music loop, WAV writer and loudness/pitch measurement: audio with no recordings |
 //!
 //! The simulation stays authoritative and rendering-free; the window only reads it. One frame of a
 //! custom loop looks like this (this example runs headless):
@@ -52,7 +58,12 @@ mod playback;
 mod rng;
 mod save;
 mod sim;
+pub mod snapshot;
+pub mod synth;
 
+pub use crate::viewer::savestate::{
+    SaveError, SaveHeader, SaveSlots, Source, AUTO_SLOT, QUICK_SLOT,
+};
 pub use clock::{FixedStepper, FrameClock, PerfReport, PerfSummary, MAX_FRAME, TICK, TICK_RATE};
 pub use input::{clean_axis, Edges, InputAccumulator, Tick};
 pub use juice::{Juice, Pulse, MAX_HITSTOP};
@@ -62,3 +73,4 @@ pub use playback::{
 pub use rng::Rng;
 pub use save::{beside_exe, load_or_default, store_atomic, Records, Settings};
 pub use sim::{assert_deterministic, run_inputs, Simulation, StateHasher, Trace};
+pub use snapshot::{Migration, Snapshot};

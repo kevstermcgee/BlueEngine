@@ -1,6 +1,41 @@
 # Playable games and source-free prototypes
 
-For a standalone Rust game, use the standard generator:
+## Pick the starter first
+
+| The game's rules | Starter |
+|---|---|
+| fit counters, interactables, timers, triggers and movers (find things, press switches, open doors, timed objectives) | **stock**: `be2-tools new-game my-game ../my-game` |
+| need enemies, projectiles, scoring, AI, waves, procedural content or per-frame physics: anything `GameDocument` cannot express | **custom-sim**: `be2-tools new-game my-game ../my-game ../BlueEngine custom-sim` |
+
+`GameDocument` deliberately has no scripting, so do not stretch it to fit an action game. A custom-sim
+game keeps its rules in a pure, seeded, fixed-step Rust library (the contract the engine asks of its own
+simulation) and owns its window loop. It builds on the engine's `devkit` (frame clock, fixed stepper,
+input accumulator, deterministic-replay and capture helpers, saves, screen-feel, synthesised audio) and
+`kit` (batched dynamic meshes, materials, effects, HUD, sound); see [custom clients](CUSTOM_CLIENT.md) and
+"Custom loops" in [shared gameplay](SHARED_GAMEPLAY.md). Both starters ship the same way.
+
+## Definition of done (every game made with BlueEngine)
+
+1. `python scripts/check.py` passes on the final files. Its last stage is the **ship gate**, so it fails
+   until step 2 is done (`--skip-ship` runs everything else while iterating; `--content-only` needs no Cargo).
+2. **The game ships as a program with its own identity**, created and verified by script, not by hand:
+   - `assets/identity.json` holds the real title, a tagline and the controls. Change the placeholders the
+     scaffold derived from the project name; a placeholder title (`Game`, `My Game`, ...) fails the gate.
+   - The scaffold generated a title-seeded icon set (`assets/icon.ico`, `icon_{16,32,64}.rgba`, `icon.png`).
+     Draw your own if you like, or regenerate with `be2-tools icon TITLE assets --replace` (add a number,
+     `be2-tools icon TITLE assets 3 --replace`, for a different design when it resembles another shortcut).
+   - `scripts/blue ship` builds a release package in `dist/` (exe, icon, content), creates
+     `<Desktop>/<Title>.lnk` targeting `dist/`, never `target/`, with the tagline and controls as its tooltip,
+     and verifies it: the shortcut's target, start-in and icon, an icon that is distinct from every other
+     shortcut on that desktop, the exe's embedded icon and version info, and (with a display) the window
+     title and window icon read back from a launch through the shortcut plus a smoke capture.
+     Where there is no desktop (CI) those checks report `skipped: no desktop`, never a silent pass.
+     Linux gets a `.desktop` file, macOS a `.command`. `scripts/blue package` and `scripts/blue shortcut`
+     run the halves separately.
+3. You exercised the changed controls and looked at real frames of the shipped program, and you say what
+   you did not verify.
+
+## The stock starter
 
 ```sh
 be2-tools new-game my-game ../my-game
@@ -9,7 +44,7 @@ cargo test --manifest-path ../my-game/Cargo.toml --no-default-features
 ```
 
 Its main loads `GameDocument::load(.../game.json)` and awaits
-`playable::run_game_with_focus(game, platform::focused)`. The shared runtime runs
+`playable::run_game_with_options(game, options, platform::focused)`. The shared runtime runs
 authored rules, objectives and dynamic props locally without a server. Aim at the
 blue terminal and press E to win; press E again to reset. E also picks up/drops props.
 Use `--connect ADDR` for server-owned multiplayer with the same content. The existing
@@ -30,7 +65,8 @@ target/debug/be2-headless --game my-game/game.json --ticks 600
 Start exploring, move with WASD or arrow keys, aim at each blue switch and press E.
 Three switches unlock the green exit; press E there to complete the objective.
 Press E again to restart the loaded game; online, any joined player may restart.
-Escape opens the menu. The committed example is `assets/games/three-switches/game.json`.
+Escape opens the menu; F5 quick-saves and F9 quick-loads (see [save states](SAVE_STATE.md)).
+The committed example is `assets/games/three-switches/game.json`.
 
 `game.json` references a sibling/child map. Edit movement values in `player_profile`,
 feet coordinates/yaw in `spawn_points`, initial `counters`, `interactables` and `rules`.

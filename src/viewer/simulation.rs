@@ -21,8 +21,13 @@ use super::{
     authoring::MapDocument,
     controller::{Collider, Controller, Movement},
     room::Room,
+    savestate::{
+        self,
+        world::{self, PlayerSave, RestoreOptions, WorldState},
+        Expect, Loaded, SaveError, SaveHeader,
+    },
 };
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// Duration in seconds of one shared simulation tick (60 Hz).
 pub const TICK_SECONDS: f32 = 1. / 60.;
@@ -445,6 +450,220 @@ impl HeadlessWorld {
         }
         self.last_physics_time_us = t_phys.elapsed().as_secs_f64() * 1_000_000.0;
         self.tick += 1;
+    }
+
+    /// Capture the complete authoritative state as a [`WorldState`]: players, rule state, prop poses and
+    /// velocities, lifecycle tiers and the world checksum. It fails, rather than producing a file nobody can
+    /// load, when any value is not finite (a simulation that has blown up must not overwrite a good save).
+    pub fn save_state(&self) -> Result<WorldState, SaveError> {
+        let state = WorldState {
+            tick: self.tick,
+            players: self
+                .players
+                .iter()
+                .map(|(&id, p)| PlayerSave {
+                    id,
+                    controller: p.controller.network_state(),
+                    input: p.input,
+                    interact: p.interact,
+                })
+                .collect(),
+            game: self.game.as_ref().map(|g| g.capture()),
+            physics: self.prop_physics.as_ref().map(|p| p.capture()),
+            lifecycle: self.lifecycle.clone(),
+            checksum: self.checksum(),
+        };
+        state.validate()?;
+        Ok(state)
+    }
+
+    /// Restore a saved state, replacing players, rules, props and tick. All-or-nothing: the state is
+    /// validated against this world first (same rules, same props, in-range values), and after applying it
+    /// the world checksum must equal the saved one; on any failure the world is left as it was.
+    pub fn restore_state(&mut self, state: &WorldState) -> Result<(), SaveError> {
+        self.restore_state_with(state, RestoreOptions::default())
+    }
+
+    /// [`Self::restore_state`] with options (a dedicated server resuming a world keeps its own players).
+    pub fn restore_state_with(
+        &mut self,
+        state: &WorldState,
+        options: RestoreOptions,
+    ) -> Result<(), SaveError> {
+        state.validate()?;
+        self.check_restorable(state, options)?;
+        let before = self.save_state().ok();
+        self.apply_state(state, options);
+        if options.players && self.checksum() != state.checksum {
+            if let Some(before) = before {
+                self.apply_state(&before, RestoreOptions::default());
+            }
+            return Err(SaveError::Invalid(
+                "the restored world does not reproduce the saved checksum (the save does not match this build's simulation)".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    fn check_restorable(
+        &self,
+        state: &WorldState,
+        options: RestoreOptions,
+    ) -> Result<(), SaveError> {
+        let invalid = |why: String| SaveError::Invalid(why);
+        match (&self.game, &state.game) {
+            (Some(game), Some(save)) => game.check_save(save).map_err(invalid)?,
+            (None, None) => {}
+            (Some(_), None) => {
+                return Err(invalid(
+                    "the save has no game rules but this world runs a game".into(),
+                ))
+            }
+            (None, Some(_)) => {
+                return Err(invalid(
+                    "the save has game rules but this world has none".into(),
+                ))
+            }
+        }
+        match (&self.prop_physics, &state.physics) {
+            (Some(physics), Some(save)) => {
+                let ids: BTreeSet<u64> = state.players.iter().map(|p| p.id).collect();
+                physics
+                    .check_save(save, options.players.then_some(&ids))
+                    .map_err(invalid)?;
+            }
+            (None, None) => {}
+            (Some(_), None) => {
+                return Err(invalid(
+                    "the save has no prop physics but this world has props".into(),
+                ))
+            }
+            (None, Some(_)) => {
+                return Err(invalid(
+                    "the save has prop physics but this world has none".into(),
+                ))
+            }
+        }
+        let ours: BTreeSet<&str> = self
+            .lifecycle
+            .objects
+            .iter()
+            .map(|o| o.id.as_str())
+            .collect();
+        let theirs: BTreeSet<&str> = state
+            .lifecycle
+            .objects
+            .iter()
+            .map(|o| o.id.as_str())
+            .collect();
+        if ours != theirs || state.lifecycle.objects.len() != self.lifecycle.objects.len() {
+            return Err(invalid(
+                "the save's object list differs from this world's (different map content)".into(),
+            ));
+        }
+        if options.players && self.game.is_none() && self.room.default_spawn.is_none() {
+            return Err(invalid(
+                "this world has no spawn point to place restored players".into(),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Apply a state that [`Self::check_restorable`] accepted; cannot fail.
+    fn apply_state(&mut self, state: &WorldState, options: RestoreOptions) {
+        if options.players {
+            let mut players = BTreeMap::new();
+            for saved in &state.players {
+                let mut controller = match self.players.get(&saved.id) {
+                    Some(existing) => existing.controller.clone(),
+                    None => self.fresh_controller(saved.id),
+                };
+                controller.restore_network_state(&saved.controller);
+                players.insert(
+                    saved.id,
+                    Player {
+                        controller,
+                        input: saved.input,
+                        interact: saved.interact,
+                    },
+                );
+            }
+            self.players = players;
+        }
+        self.tick = state.tick;
+        if let (Some(game), Some(save)) = (&mut self.game, &state.game) {
+            game.restore(save, &mut self.room);
+        }
+        if let (Some(physics), Some(save)) = (&mut self.prop_physics, &state.physics) {
+            physics.restore(save, options.players);
+            physics.sync(&mut self.room);
+        }
+        if let Some(game) = &mut self.game {
+            game.apply_mover_colliders(&mut self.room);
+        }
+        self.lifecycle = state.lifecycle.clone();
+    }
+
+    /// The controller a player starts with: the game's spawn for that id, or the map's default spawn.
+    fn fresh_controller(&self, id: u64) -> Controller {
+        if let Some(game) = &self.game {
+            return game.controller(id);
+        }
+        self.room
+            .default_spawn
+            .and_then(|spawn| {
+                Controller::for_profile(Default::default(), spawn.feet, spawn.yaw).ok()
+            })
+            .unwrap_or_default()
+    }
+
+    /// What a save of this world expects of a file: the `world` kind and this world's content fingerprint.
+    fn save_expectation(&self) -> Expect<'static> {
+        Expect {
+            kind: world::KIND,
+            version: world::VERSION,
+            migrations: world::MIGRATIONS,
+            content: Some(self.content_hash),
+        }
+    }
+
+    /// Serialise the world as a framed, checksummed save (see [`savestate`]).
+    pub fn save_bytes(&self, label: &str) -> Result<Vec<u8>, SaveError> {
+        let state = self.save_state()?;
+        let name = self
+            .game
+            .as_ref()
+            .map_or_else(|| self.room.name.clone(), |g| g.document().name.clone());
+        let header = SaveHeader::new(world::KIND, world::VERSION, label)
+            .with_content(self.content_hash)
+            .with_tick(self.tick)
+            .with_game(&name);
+        savestate::save_bytes(&header, &state)
+    }
+
+    /// Verify, migrate and parse a save without touching the world: wrong kind, newer version, other content,
+    /// corruption and invalid values are refused here.
+    pub fn parse_save(&self, bytes: &[u8]) -> Result<(SaveHeader, WorldState), SaveError> {
+        let (header, state) = savestate::load_bytes::<WorldState>(bytes, self.save_expectation())?;
+        state.validate()?;
+        Ok((header, state))
+    }
+
+    /// [`Self::parse_save`] for a save already read from disk (already verified by the reader).
+    pub fn parse_loaded(&self, loaded: &Loaded) -> Result<(SaveHeader, WorldState), SaveError> {
+        let expect = self.save_expectation();
+        savestate::check_header(&loaded.header, expect)?;
+        let (header, state) =
+            savestate::parse_payload::<WorldState>(loaded.header.clone(), &loaded.payload, expect)?;
+        state.validate()?;
+        Ok((header, state))
+    }
+
+    /// Restore from save-file bytes (see [`Self::parse_save`] and [`Self::restore_state`]).
+    pub fn restore_bytes(&mut self, bytes: &[u8]) -> Result<SaveHeader, SaveError> {
+        let (header, state) = self.parse_save(bytes)?;
+        self.restore_state(&state)?;
+        Ok(header)
     }
 
     /// Calculate a deterministic 64-bit checksum of the world state at the current tick.

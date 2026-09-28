@@ -861,6 +861,7 @@
         "src/viewer/devkit/save.rs",
         "src/viewer/devkit/juice.rs",
         "src/viewer/devkit/rng.rs",
+        "src/viewer/devkit/synth.rs",
         "templates/custom-sim",
         "docs/CUSTOM_CLIENT.md",
         "docs/GAME_QUICKSTART.md"
@@ -1109,6 +1110,109 @@
       ],
       "depends_on": [
         "game_scaffolding"
+      ]
+    },
+    "save_state": {
+      "files": [
+        "src/viewer/savestate/mod.rs",
+        "src/viewer/savestate/world.rs",
+        "src/viewer/savestate/tests.rs",
+        "src/viewer/devkit/snapshot.rs",
+        "src/viewer/simulation.rs",
+        "src/viewer/game_session.rs",
+        "src/viewer/prop_physics.rs",
+        "src/viewer/server.rs",
+        "src/viewer/playable.rs",
+        "src/bin/be2-headless.rs",
+        "tests/save_state.rs",
+        "tests/save_session.rs",
+        "templates/custom-sim/src/lib.rs",
+        "docs/SAVE_STATE.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib savestate devkit::snapshot",
+        "cargo test --locked --test save_state --test save_session",
+        "generated custom-sim project: cargo test (resume exactly from any tick) and a real-window --script \"save@N,load@M\" capture"
+      ],
+      "note": "Native save states for every tier. One framed, versioned file (SHA-256 over every byte, atomic write with a last-good .bak, named slots, autosave ring, payload migrations, content-fingerprint binding); engine worlds (HeadlessWorld::save_bytes/restore_bytes: players, rules, props, lifecycle; not rapier internals) with a checksum-verified, all-or-nothing restore; GameSession F5/F9 and --load/--save-dir in the stock client; DedicatedServer::with_autosave and be2-headless --load/--autosave; devkit::Snapshot for custom simulations with assert_resumes_exactly; be2-tools save-info. What happens after a load depends only on the file. Online clients never save.",
+      "keywords": [
+        "save",
+        "saves",
+        "saving",
+        "load",
+        "loading",
+        "savegame",
+        "quicksave",
+        "quickload",
+        "autosave",
+        "checkpoint",
+        "resume",
+        "continue",
+        "persist",
+        "persistence",
+        "snapshot",
+        "slot",
+        "restore",
+        "backup",
+        "corrupt",
+        "migration",
+        "progress",
+        "f5",
+        "f9"
+      ],
+      "contract": {
+        "owns": "The save file format, atomic writes, slots and backups, verification, migrations, world capture/restore, and the all-or-nothing load",
+        "inputs": "A running HeadlessWorld or Snapshot simulation; save-file bytes",
+        "outputs": "Framed save bytes, typed SaveError, a restored simulation identical to the saved one where physics is at rest",
+        "may_depend_on": [
+          "simulation_contract",
+          "game_documents",
+          "prop_physics"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "a window",
+          "network clients"
+        ],
+        "performance": "One JSON pass each way; a Test Lab world saves in single-digit milliseconds",
+        "consumers": [
+          "stock client",
+          "dedicated server",
+          "custom-sim starter",
+          "external games"
+        ]
+      },
+      "public_api": [
+        "savestate::SaveSlots",
+        "savestate::SaveHeader",
+        "savestate::SaveError",
+        "savestate::describe",
+        "HeadlessWorld::save_bytes",
+        "HeadlessWorld::restore_bytes",
+        "GameSession::save_to_slot",
+        "GameSession::load_from_slot",
+        "devkit::Snapshot",
+        "devkit::snapshot::assert_resumes_exactly",
+        "DedicatedServer::with_autosave"
+      ],
+      "read_first": [
+        "docs/SAVE_STATE.md",
+        "src/viewer/savestate/mod.rs"
+      ],
+      "canonical_example": "templates/custom-sim/src/lib.rs",
+      "depends_on": [
+        "simulation_contract",
+        "game_documents",
+        "prop_physics"
+      ],
+      "constraints": [
+        {
+          "id": "SAVE-ATOMIC-001",
+          "kind": "AI-INVARIANT",
+          "text": "A save never replaces a good file with a partial one, and a file whose bytes do not verify is never loaded.",
+          "source": "src/viewer/savestate/mod.rs",
+          "verify": "cargo test --locked --lib savestate"
+        }
       ]
     }
   }

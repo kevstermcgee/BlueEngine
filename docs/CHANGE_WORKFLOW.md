@@ -36,7 +36,8 @@ Ignored scratch/build files are not change inputs; do not put shipped inputs the
 
 `check` without flags retains every existing gate: formatting, rustdoc, tests and
 Clippy in both feature configurations, the headless dependency boundary and native
-authoring integration. It also runs workflow, asset and publishing Python tests.
+authoring integration. It also runs workflow, asset, publishing, game-ship, game-check
+and media-tools Python tests.
 Feature configurations are grouped to avoid repeated binary rebuilds. CI still runs
 the full Linux/Windows matrix, independent of local scope selection.
 
@@ -55,7 +56,10 @@ starter layout: static client map at maps/main.json and GameDocument at game.jso
 Add checks for any additional runtime maps or custom assets before using it in a
 different layout; it cannot infer application-specific content dependencies.
 
-Generate and commit the game's Cargo.lock once with `cargo generate-lockfile`.
+The scaffold seeds the game's Cargo.lock from the engine's, so the game builds against the dependency
+versions the engine was tested with and offline builds work. The first Cargo command settles it (adds
+the game's own entry, drops crates only the engine's tests need) and `scripts/check.py` does that before
+its locked build; commit the result. Do not run `cargo generate-lockfile`, which discards the pins.
 Point BE2_TOOLS at a native binary from the same engine revision; build it once with
 `python tools/be2.py build tools` in the engine checkout. The build prints its output
 directory. No plugins or services are required.
@@ -78,6 +82,13 @@ regression test checks visibility in both the child and grandchild process.
 Each invocation preserves logs and a JSON report
 under .blue-check with scope, native binary hash and elapsed time. Console output is
 one small result. Missing tools, invalid content, command errors and timeouts fail.
+
+The full project check also ends with the **ship gate** (`scripts/ship.py verify`): the game must have a
+package in `dist/`, its own identity and icon, and a desktop shortcut named after it, verified by reading it
+back and comparing its icon with every other shortcut on the desktop. `--skip-ship` runs the rest while
+iterating; without a desktop the shortcut checks are reported as skipped, never as passed. `scripts/blue
+ship` creates and verifies the package and shortcut. The check also warns when `assets/identity.json`
+records a different engine commit than the checkout the game points at.
 
 Run the full project check on final files before delivery; after it passes, repeat
 only if inputs change or a new concern appears. Presentation/input changes still need

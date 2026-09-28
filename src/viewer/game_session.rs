@@ -5,8 +5,11 @@ use super::{
     controller::{Controller, Movement},
     game::LoadedGame,
     net::*,
+    savestate::{world::WorldState, Loaded, SaveError, SaveHeader, SaveSlots, Source},
     simulation::{HeadlessWorld, TICK_SECONDS},
 };
+
+type SaveResult<T> = std::result::Result<T, SaveError>;
 use crate::Result;
 use std::{
     collections::HashMap,
@@ -131,6 +134,71 @@ impl GameSession {
     pub fn pose(&self) -> Controller {
         self.controller
             .interpolated(&self.previous, (self.remainder * 60.) as f32)
+    }
+    /// True when this session owns its world and can be saved and loaded. An online session mirrors a
+    /// server's world: save on the server (`be2-headless --save`), not on a client.
+    pub fn can_save(&self) -> bool {
+        self.online.is_none()
+    }
+    fn require_local(&self) -> SaveResult<()> {
+        if self.can_save() {
+            Ok(())
+        } else {
+            Err(SaveError::Invalid(
+                "an online game is owned by the server, so it cannot be saved or loaded from a client".into(),
+            ))
+        }
+    }
+    /// Serialise the local game as a framed, checksummed save (see [`savestate`](super::savestate)).
+    pub fn save_bytes(&self, label: &str) -> SaveResult<Vec<u8>> {
+        self.require_local()?;
+        self.world.save_bytes(label)
+    }
+    /// Verify a save and resume the local game from it. All-or-nothing: on any error the game continues
+    /// exactly as it was. Input pending at the moment of the load is dropped.
+    pub fn restore_bytes(&mut self, bytes: &[u8]) -> SaveResult<SaveHeader> {
+        self.require_local()?;
+        let (header, state) = self.world.parse_save(bytes)?;
+        self.resume(state)?;
+        Ok(header)
+    }
+    /// Save the local game into a named slot (atomic, with a last-good backup).
+    pub fn save_to_slot(&self, slots: &SaveSlots, slot: &str, label: &str) -> SaveResult<()> {
+        slots.save_framed(slot, &self.save_bytes(label)?)
+    }
+    /// Load a slot, falling back to its backup when the file is damaged; the returned [`Source`] says which
+    /// one was used.
+    pub fn load_from_slot(
+        &mut self,
+        slots: &SaveSlots,
+        slot: &str,
+    ) -> SaveResult<(SaveHeader, Source)> {
+        self.require_local()?;
+        let loaded = slots.load(slot)?;
+        self.restore_loaded(&loaded)
+    }
+    /// Resume from a save that a [`SaveSlots`] or `savestate::read_save` already read and verified.
+    pub fn restore_loaded(&mut self, loaded: &Loaded) -> SaveResult<(SaveHeader, Source)> {
+        self.require_local()?;
+        let (header, state) = self.world.parse_loaded(loaded)?;
+        self.resume(state)?;
+        Ok((header, loaded.source.clone()))
+    }
+    fn resume(&mut self, state: WorldState) -> SaveResult<()> {
+        if !state.players.iter().any(|p| p.id == 1) {
+            return Err(SaveError::Invalid("the save has no local player".into()));
+        }
+        self.world.restore_state(&state)?;
+        self.controller = self
+            .world
+            .player(1)
+            .expect("player 1 was just restored")
+            .clone();
+        self.previous = self.controller.clone();
+        self.remainder = 0.;
+        self.jump = false;
+        self.interact = false;
+        Ok(())
     }
     /// Poll networking even while paused. Bounded catch-up avoids simulating a stall.
     pub fn advance(&mut self, mut input: GameInput, seconds: f32, playing: bool) -> Result<usize> {

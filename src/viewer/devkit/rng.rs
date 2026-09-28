@@ -4,10 +4,26 @@
 //! reproduces a whole run bit for bit (tests, bots, replays and the balance surveys depend on it).
 //! The generator is xorshift64* seeded through SplitMix64. It is not cryptographic and must never
 //! guard anything; the network layer has its own secure randomness.
+use serde::{Deserialize, Serialize};
 
-/// Seeded xorshift64* generator. `Clone` snapshots the stream, so a copy replays it.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// Seeded xorshift64* generator. `Clone` snapshots the stream, so a copy replays it. It serialises as one
+/// number (its state), so a simulation's random stream goes into a save file and comes back at the same
+/// point; a state of zero, which would repeat forever, is refused when reading.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(try_from = "u64", into = "u64")]
 pub struct Rng(u64);
+
+impl TryFrom<u64> for Rng {
+    type Error = &'static str;
+    fn try_from(state: u64) -> Result<Self, Self::Error> {
+        Self::from_state(state).ok_or("a random generator state of zero never changes")
+    }
+}
+impl From<Rng> for u64 {
+    fn from(rng: Rng) -> u64 {
+        rng.0
+    }
+}
 
 impl Rng {
     /// Any seed is fine, including zero: it is mixed first so small seeds give unrelated streams.
@@ -17,6 +33,14 @@ impl Rng {
         z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
         z ^= z >> 31;
         Self(if z == 0 { 0x2545_F491_4F6C_DD1D } else { z })
+    }
+    /// The generator's whole state; [`Rng::from_state`] resumes the stream from it.
+    pub fn state(&self) -> u64 {
+        self.0
+    }
+    /// Resume a stream saved with [`Rng::state`]. `None` for zero, which is not a reachable state.
+    pub fn from_state(state: u64) -> Option<Self> {
+        (state != 0).then_some(Self(state))
     }
     /// The next 64 random bits.
     pub fn next_u64(&mut self) -> u64 {
@@ -84,6 +108,26 @@ mod tests {
         let sc: Vec<u64> = (0..8).map(|_| c.next_u64()).collect();
         assert_eq!(sa, sb);
         assert_ne!(sa, sc);
+    }
+
+    #[test]
+    fn state_and_serde_resume_the_stream_and_refuse_zero() {
+        let mut a = Rng::new(5);
+        for _ in 0..17 {
+            a.next_u64();
+        }
+        let mut b = Rng::from_state(a.state()).unwrap();
+        let mut c: Rng = serde_json::from_str(&serde_json::to_string(&a).unwrap()).unwrap();
+        for _ in 0..100 {
+            let next = a.next_u64();
+            assert_eq!((b.next_u64(), c.next_u64()), (next, next));
+        }
+        assert!(Rng::from_state(0).is_none());
+        assert!(serde_json::from_str::<Rng>("0").is_err());
+        assert_eq!(
+            serde_json::to_string(&Rng::from_state(u64::MAX).unwrap()).unwrap(),
+            u64::MAX.to_string()
+        );
     }
 
     #[test]

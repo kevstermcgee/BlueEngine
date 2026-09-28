@@ -514,6 +514,14 @@ impl CompiledMover {
     }
 }
 
+fn flag_mask(count: usize) -> u64 {
+    if count >= MAX_GAME_FLAGS {
+        u64::MAX
+    } else {
+        (1_u64 << count) - 1
+    }
+}
+
 pub struct GameRuntime {
     document: GameDocument,
     state: GameState,
@@ -934,33 +942,84 @@ impl GameRuntime {
         self.last_snapshot = Some(tick);
         true
     }
-    /// Validate a full authoritative state before replacing the client mirror.
-    fn accept_state(&mut self, state: GameState) -> bool {
-        let mask = |count: usize| {
-            if count == MAX_GAME_FLAGS {
-                u64::MAX
-            } else {
-                (1_u64 << count) - 1
-            }
-        };
-        if state.mover_ticks.len() != self.movers.len()
-            || state
+    /// True when `state` fits this game: right counts, in-range values, no flag beyond the rules.
+    fn state_is_valid(&self, state: &GameState) -> bool {
+        state.mover_ticks.len() == self.movers.len()
+            && state
                 .mover_ticks
                 .iter()
                 .zip(&self.movers)
-                .any(|(t, m)| *t > m.duration_ticks)
-            || state.counters.len() != self.document.counters.len()
-            || state
+                .all(|(t, m)| *t <= m.duration_ticks)
+            && state.counters.len() == self.document.counters.len()
+            && state
                 .counters
                 .iter()
-                .any(|v| !(-MAX_COUNTER..=MAX_COUNTER).contains(v))
-            || state.enabled & !mask(self.targets.len()) != 0
-            || state.visible & !mask(self.targets.len()) != 0
-            || state.enabled_zones & !mask(self.trigger_zones.len()) != 0
-            || state.mover_targets & !mask(self.movers.len()) != 0
-            || state.active_timers & !mask(self.timers.len()) != 0
-            || state.fired & !mask(self.document.rules.len()) != 0
+                .all(|v| (-MAX_COUNTER..=MAX_COUNTER).contains(v))
+            && state.enabled & !flag_mask(self.targets.len()) == 0
+            && state.visible & !flag_mask(self.targets.len()) == 0
+            && state.enabled_zones & !flag_mask(self.trigger_zones.len()) == 0
+            && state.mover_targets & !flag_mask(self.movers.len()) == 0
+            && state.active_timers & !flag_mask(self.timers.len()) == 0
+            && state.fired & !flag_mask(self.document.rules.len()) == 0
+    }
+    /// Complete rule state for a save: the public state plus timer countdowns and zone occupancy.
+    pub(crate) fn capture(&self) -> super::savestate::world::GameSave {
+        super::savestate::world::GameSave {
+            state: self.state.clone(),
+            timers: self.timers.iter().map(|t| t.remaining_ticks).collect(),
+            zones: self.player_zones.iter().map(|(&p, &m)| (p, m)).collect(),
+        }
+    }
+    /// Check that a saved rule state belongs to this game. Nothing is changed.
+    pub(crate) fn check_save(
+        &self,
+        save: &super::savestate::world::GameSave,
+    ) -> std::result::Result<(), String> {
+        if !self.state_is_valid(&save.state) {
+            return Err(
+                "the saved rule state does not fit this game's counters, movers and flags".into(),
+            );
+        }
+        if save.timers.len() != self.timers.len() {
+            return Err(format!(
+                "the save has {} timers, this game has {}",
+                save.timers.len(),
+                self.timers.len()
+            ));
+        }
+        if save
+            .timers
+            .iter()
+            .zip(&self.timers)
+            .any(|(left, t)| *left > t.duration_ticks)
         {
+            return Err("a saved timer has more time left than its duration".into());
+        }
+        if save
+            .zones
+            .iter()
+            .any(|(_, mask)| mask & !flag_mask(self.trigger_zones.len()) != 0)
+        {
+            return Err("a saved player is inside a trigger zone this game does not have".into());
+        }
+        Ok(())
+    }
+    /// Apply a save that [`Self::check_save`] accepted.
+    pub(crate) fn restore(&mut self, save: &super::savestate::world::GameSave, room: &mut Room) {
+        for (mover, ticks) in self.movers.iter_mut().zip(&save.state.mover_ticks) {
+            mover.current_ticks = *ticks;
+        }
+        self.state = save.state.clone();
+        for (timer, left) in self.timers.iter_mut().zip(&save.timers) {
+            timer.remaining_ticks = *left;
+        }
+        self.player_zones = save.zones.iter().copied().collect();
+        self.last_snapshot = None;
+        self.apply_mover_colliders(room);
+    }
+    /// Validate a full authoritative state before replacing the client mirror.
+    fn accept_state(&mut self, state: GameState) -> bool {
+        if !self.state_is_valid(&state) {
             return false;
         }
         for (mover, ticks) in self.movers.iter_mut().zip(&state.mover_ticks) {

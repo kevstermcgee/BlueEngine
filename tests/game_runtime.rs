@@ -12,13 +12,14 @@ use vesper3d::viewer::{
 struct Fixture(PathBuf);
 impl Fixture {
     fn new() -> Self {
+        // A counter, not just the clock: several tests in this file call `Fixture::new` from their own
+        // thread (cargo runs test functions in parallel within one process), and two threads can read an
+        // identical `SystemTime::now()`, which is not guaranteed to be sub-microsecond on every platform.
+        static NEXT: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let dir = std::env::temp_dir().join(format!(
             "blue-game-runtime-{}-{}",
             std::process::id(),
-            std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_nanos()
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         scaffold_new_game("runtime-proof", &dir, Some(env!("CARGO_MANIFEST_DIR"))).unwrap();
         Self(dir)

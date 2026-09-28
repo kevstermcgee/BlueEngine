@@ -27,7 +27,12 @@ Never violate:
 - Preserve completed outputs on failure; never shell-interpolate scene values.
 - Preserve official assets/branding artwork. No plugin/service installation needed.
 
-Game projects start with their own AGENTS.md and project check. Authoring starts
+Game projects start with their own AGENTS.md and project check. Pick the starter by the rules
+(docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use the stock starter;
+enemies, projectiles, scoring, AI or per-frame physics use `new-game ... custom-sim`. A game is
+done only when it ships with its own icon and desktop shortcut (`scripts/blue ship`; its
+`scripts/check.py` fails until it does). Saving and loading state is engine-owned (docs/SAVE_STATE.md):
+F5/F9 in the stock client, `devkit::Snapshot` for a custom simulation; never hand-write save files. Authoring starts
 with `python tools/author.py describe`; discover assets with
 `python tools/assets.py search TEXT`. Retrieve detailed contracts through context;
 see docs/ENGINE_MAINTENANCE.md only for relevant maintenance obligations.

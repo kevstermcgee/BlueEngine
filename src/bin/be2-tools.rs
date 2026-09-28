@@ -477,6 +477,26 @@ fn run() -> Result<()> {
                        "signature": format!("{:016x}", signature(&spec)), "files": files})
             );
         }
+        "save-info" => {
+            use vesper3d::viewer::{game::GameDocument, savestate};
+            // FILE [GAME_JSON]: read-only. With a game document, also say whether an engine world save
+            // belongs to that game's content (the same check a load makes).
+            let mut report = savestate::describe(Path::new(arg(1)?))?;
+            if let Some(game) = a.get(2) {
+                if report["kind"] == savestate::world::KIND {
+                    let hash = GameDocument::load(Path::new(game))?.world()?.content_hash;
+                    report["game_content"] = json!(savestate::content_string(hash));
+                    report["matches_game"] =
+                        json!(report["content"] == savestate::content_string(hash));
+                } else {
+                    report["matches_game"] = json!(null);
+                    report["note"] =
+                        json!("only engine world saves carry the game's content fingerprint");
+                }
+            }
+            report["ok"] = json!(true);
+            println!("{}", serde_json::to_string_pretty(&report)?);
+        }
         "blueprint-example" => {
             let example = vesper3d::viewer::blueprint::BlueprintSpec {
                 name: "Example Map".into(),

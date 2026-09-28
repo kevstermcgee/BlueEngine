@@ -5,6 +5,7 @@ use std::time::Instant;
 use vesper3d::viewer::{
     controller::Movement,
     net::{DatagramTransport, Identity, SecureSocket, TransportProfile, UdpTransport},
+    savestate::{world::RestoreOptions, SaveSlots},
     server::DedicatedServer,
     simulation::HeadlessWorld,
 };
@@ -14,11 +15,19 @@ fn run_server<T: DatagramTransport>(
     world: HeadlessWorld,
     auth_key: Option<&str>,
     ticks: Option<u64>,
+    autosave: Option<(SaveSlots, f32)>,
 ) -> vesper3d::Result<()> {
     let stop_signal = Arc::new(AtomicBool::new(false));
     let mut server = DedicatedServer::with_transport(transport, world)?;
     if let Some(key) = auth_key {
         server = server.with_auth(key);
+    }
+    if let Some((slots, seconds)) = autosave {
+        println!(
+            "[Server] Autosaving to {} every {seconds} s",
+            slots.dir().display()
+        );
+        server = server.with_autosave(slots, seconds, 3);
     }
     server.run_realtime(stop_signal, ticks)
 }
@@ -32,6 +41,9 @@ fn main() -> vesper3d::Result<()> {
     let mut server_addr = None;
     let mut auth_key = None;
     let mut transport_profile = TransportProfile::Development;
+    let mut save_dir = None;
+    let mut load = None;
+    let mut autosave = None;
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -80,15 +92,41 @@ fn main() -> vesper3d::Result<()> {
                 index += 1;
                 game_file = Some(args.get(index).ok_or("--game needs a file")?.clone());
             }
+            "--save-dir" => {
+                index += 1;
+                save_dir = Some(args.get(index).ok_or("--save-dir needs a folder")?.clone());
+            }
+            "--load" => {
+                index += 1;
+                load = Some(
+                    args.get(index)
+                        .ok_or("--load needs a slot name or save file")?
+                        .clone(),
+                );
+            }
+            "--autosave" => {
+                index += 1;
+                let seconds: f32 = args
+                    .get(index)
+                    .ok_or("--autosave needs a number of seconds")?
+                    .parse()?;
+                if !(0.1..=86_400.).contains(&seconds) {
+                    return Err("--autosave must be between 0.1 and 86400 seconds".into());
+                }
+                autosave = Some(seconds);
+            }
             "--realtime" => realtime = true,
             "--help" => {
                 println!(
-                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE]\n\
+                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE] [--load SLOT_OR_FILE] [--save-dir DIR] [--autosave SECONDS]\n\
                      Modes:\n\
                        --server [ADDR]   Run authoritative dedicated multiplayer server (default 0.0.0.0:4000)\n\
                        --transport development  Raw UDP for local development (default)\n\
                        --transport production   QUIC/TLS 1.3; BLUE_TLS_CERT_FILE pin + required BLUE_TLS_KEY_FILE\n\
                        --auth-key KEY    Additionally require client challenge-response authentication\n\
+                       --load X          Resume the world from a save (a slot in --save-dir, or a file); players are new\n\
+                       --save-dir DIR    Folder of save slots (default: `saves` next to the executable)\n\
+                       --autosave S      Server: write a rotating autosave every S seconds and at shutdown\n\
                        (no --server)     Run local benchmark simulation"
                 );
                 return Ok(());
@@ -101,7 +139,7 @@ fn main() -> vesper3d::Result<()> {
     if map_file.is_some() && game_file.is_some() {
         return Err("Use --map or --game, not both".into());
     }
-    let world = if let Some(ref path) = game_file {
+    let mut world = if let Some(ref path) = game_file {
         vesper3d::viewer::game::GameDocument::load(std::path::Path::new(path))?.world()?
     } else if let Some(ref path) = map_file {
         HeadlessWorld::try_with_room(
@@ -112,17 +150,55 @@ fn main() -> vesper3d::Result<()> {
         HeadlessWorld::new()?
     };
 
+    let slots = save_dir.map_or_else(SaveSlots::beside_exe, SaveSlots::new);
+    if let Some(target) = &load {
+        // Connected sessions are new, so the saved players are not restored (they would be ghosts).
+        let loaded = slots
+            .open(target)
+            .map_err(|e| format!("--load {target}: {e}"))?;
+        let (header, state) = world
+            .parse_loaded(&loaded)
+            .map_err(|e| format!("--load {target}: {e}"))?;
+        world
+            .restore_state_with(&state, RestoreOptions { players: false })
+            .map_err(|e| format!("--load {target}: {e}"))?;
+        println!(
+            "[Server] Resumed \"{}\" at tick {}{}",
+            header.label,
+            world.tick,
+            match &loaded.source {
+                vesper3d::viewer::savestate::Source::Primary => String::new(),
+                vesper3d::viewer::savestate::Source::Backup(why) =>
+                    format!(" (from the previous good save: {why})"),
+            }
+        );
+    }
+    if autosave.is_some() && server_addr.is_none() {
+        return Err("--autosave only applies with --server".into());
+    }
     if let Some(addr) = server_addr {
         println!("[Server] Selected {transport_profile} transport");
         match transport_profile {
             TransportProfile::Development => {
                 let transport = UdpTransport::bind(&addr)?;
-                run_server(transport, world, auth_key.as_deref(), ticks)?;
+                run_server(
+                    transport,
+                    world,
+                    auth_key.as_deref(),
+                    ticks,
+                    autosave.map(|s| (slots, s)),
+                )?;
             }
             TransportProfile::Production => {
                 let address = addr.parse()?;
                 let transport = SecureSocket::server(address, Identity::load()?)?;
-                run_server(transport, world, auth_key.as_deref(), ticks)?;
+                run_server(
+                    transport,
+                    world,
+                    auth_key.as_deref(),
+                    ticks,
+                    autosave.map(|s| (slots, s)),
+                )?;
             }
         }
         return Ok(());
@@ -137,7 +213,6 @@ fn main() -> vesper3d::Result<()> {
     if ticks == 0 || ticks > 10_000_000 {
         return Err("ticks must be 1..10000000".into());
     }
-    let mut world = world;
     world.join(1);
     world.join(2);
     let started = Instant::now();

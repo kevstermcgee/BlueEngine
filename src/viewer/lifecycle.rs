@@ -60,7 +60,7 @@ impl LifecycleState {
 }
 
 /// A tracked prop or scene object managed under the lifecycle system.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct LifecycleObject {
     pub id: String,
     pub label: String,
@@ -119,7 +119,7 @@ impl LifecycleObject {
 }
 
 /// Lifecycle tracking registry for scenes.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 pub struct LifecycleRegistry {
     pub current_generation: Generation,
     pub objects: Vec<LifecycleObject>,

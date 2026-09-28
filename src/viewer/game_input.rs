@@ -260,6 +260,8 @@ impl KeyboardFrame {
             (KeyCode::F, 0x46),
             (KeyCode::F11, 0x7A),
             (KeyCode::F3, 0x72),
+            (KeyCode::F5, 0x74),
+            (KeyCode::F9, 0x78),
             (KeyCode::Q, 0x51),
             (KeyCode::E, 0x45),
             (KeyCode::LeftAlt, 0xA4),

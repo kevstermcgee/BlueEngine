@@ -56,6 +56,33 @@ a radial 18% dead zone rescaled continuously to full travel, after gilrs' native
 filtering. Non-finite samples are neutral. Neither device polling nor render delta
 enters the 60 Hz simulation contract or changes the network protocol.
 
+## What the movement controller owns
+
+`viewer::controller::Controller` is the fixed-step player body shared by the client, the headless world
+and any game that uses it directly. It owns collision against `Collider` boxes (step-up for stairs,
+crouch headroom, swept vertical movement, overlap recovery), horizontal input smoothing (the body
+converges on the target velocity at 18 per second, about 0.1 s) and gravity (12 m/s^2). Three things a
+game with voids or knockback needs are settings, not forks:
+
+| Need | API | Default |
+|---|---|---|
+| No implicit ground: pits, voids, an arena in the sky | `set_floor(None)` (or `Some(y)` for a floor at another height) | an infinite floor at y = 0 |
+| Another gravity (the jump keeps its `jump_height`) | `set_gravity(m_per_s2)` | 12 |
+| A shove, dash, jump pad or explosion | `apply_impulse(V)` then optionally `set_push_drag(per_second)` | horizontal push decays at 3 per second, walls stop it |
+| The exact body-overlap question | `Collider::overlaps_body`, `Controller::blocked_at` | |
+
+`apply_impulse` adds the horizontal part to a *push* that rides on top of walking (so it is not erased by
+the input smoothing) and the vertical part to the vertical velocity, leaving the ground when upward.
+`set_physics_state(position, vertical_velocity, grounded)` is the supported way to apply an external
+*vertical* change (a moving platform, a teleport, reconciliation); `restore_network_state` overwrites the
+complete state, including the push. Floor, gravity and push drag are configuration, not state: they are not
+serialized, so an online game configures every peer the same way. Impulses are local to the simulation that
+applies them; an online game applies them where the authority runs. `be2-tools lint MAP.json` still treats
+y = 0 as ground when it checks for floating props.
+
+Look and stick input: `ClientInput::look_delta` is `mouse_look` plus `stick_look`; the stick term is scaled
+by the engine frame clock (`ClientInput::frame_seconds`), not macroquad's bumpy `get_frame_time()`.
+
 ## Verification
 
 `cargo test --locked --lib gamepad` covers dead zones, analog magnitude, bounded

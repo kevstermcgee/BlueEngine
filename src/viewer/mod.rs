@@ -19,6 +19,7 @@ pub mod mesh;
 pub mod presentation;
 pub mod profile;
 pub mod room;
+pub mod savestate;
 
 pub mod wrench;
 

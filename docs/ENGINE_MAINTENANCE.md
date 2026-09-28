@@ -75,6 +75,13 @@ explicitly specifies otherwise. This is the user-approved white rat on a blue ti
 originally `scripts/test_lab.ico`. Preserve the artwork; do not regenerate, replace
 or redesign it as part of routine engine/game work. See assets/branding/README.md.
 
+That is the *engine's* identity (its own clients and the sandbox). A game made with the engine ships
+its own: a unique title, tagline, icon and desktop shortcut created by `scripts/ship.py` (see
+docs/GAME_QUICKSTART.md, Definition of done). The gate rejects the engine logo as a game's icon, and
+`be2-tools icon TITLE DIRECTORY` generates a title-seeded starter icon so a game with no art is still distinct.
+Runtime modules for such games live in `viewer::devkit` (graphics-free) and `viewer::kit`
+(presentation); keep them free of genre logic, and keep `devkit` in the headless dependency graph.
+
 For every playable game, follow docs/GAME_PRESENTATION.md. Use the shared GameShell for F fullscreen and Escape menus, keep the default HUD minimal, cache shaded geometry, and verify real movement/tick rate in optimized builds. Static games must explicitly opt out of automatic movable-prop simulation.
 
 For game UI use the immutable `game_text` atlas and verify readability after fullscreen changes. Camera extrapolation must sweep the real collision hull. Weapon art must have a recognizable silhouette and firing feedback; tiny flat rectangles are not a finished viewmodel.

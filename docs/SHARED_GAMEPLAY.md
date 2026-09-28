@@ -18,6 +18,11 @@ application-specific.
 | Asset extraction, rotated collision/geometry, aimed previews | `creative::{extract, place, placement_position}` | none |
 | Protected removal, bounded undo, save filenames and atomic saves | `creative::{remove, History, save_path, save}` | none |
 | Fixed-step motion and safe first/third-person camera | `simulation::PlayerStepper`, `camera::CameraRig` | none |
+| Frame clock, fixed stepper, input accumulator, replay/capture/perf helpers, seeded RNG, saves, screen feel, synthesised audio | `devkit::{FrameClock, FixedStepper, InputAccumulator, Simulation, Playback, CapturePlan, Rng, Juice, Settings, synth}` | none |
+| Batched dynamic meshes, materials and lighting, effects, HUD helpers, sound bank | `kit::{Template, Batch, Look, Materials, Fx, hud, SoundBank}` | presentation |
+| Bake a static world with your own light | `mesh::{Lighting, bake_with}` | presentation |
+| Title, tagline, controls and packaging manifest of a shipped game | `identity::Identity` | none |
+| Voids, gravity, knockback impulses, body-overlap test | `controller::Controller::{set_floor, set_gravity, apply_impulse}`, `Collider::overlaps_body` | none |
 
 All paths are under `vesper3d::viewer`. The compatibility crate name remains
 `vesper3d`; the Cargo package name is `be2`.
@@ -26,7 +31,12 @@ All paths are under `vesper3d::viewer`. The compatibility crate name remains
 
 Run `be2-tools new-game my-game ../my-game` from a checkout named BlueEngine.
 The generated Cargo dependency points to `../BlueEngine`; adjust it for another
-layout, or supply the optional third argument `ENGINE_PATH` to `new-game`.
+layout, or supply the optional third argument `ENGINE_PATH` to `new-game`. A fourth
+argument picks the starter: `stock` (this section) or `custom-sim` (a game that owns
+its simulation; see [custom clients](CUSTOM_CLIENT.md)). Games whose rules need
+enemies, projectiles, scoring, AI or per-frame physics want `custom-sim`.
+Every generated game carries an identity, an icon set and a ship gate: see the
+"Definition of done" in [the game quickstart](GAME_QUICKSTART.md).
 
 ```sh
 be2-tools new-game my-game ../my-game
@@ -70,10 +80,23 @@ illustrates that intentionally narrower viewer, not the generated gameplay path.
 ## Custom loops
 
 Own one `ClientInput` and one `GameShell` in your application. Each frame call
-`input.begin_frame(&mut shell, connected, focused)`, including while paused.
-Use `input.movement(&shell)` and `input.look_delta(&shell)` only for gameplay.
-The adapter gates these when capture/focus/pause prevents play. `focused` is a
+`input.begin_frame(&mut shell, capture_cursor, focused)`, including while paused.
+`capture_cursor` is whether the game wants the mouse captured while unpaused and
+focused: `true` while playing, `false` on title, menu and game-over screens so the
+cursor is released (an online session passes "connected").
+Use `input.movement(&shell)` and `input.look_delta(&shell)` only for gameplay
+(`mouse_look` and `stick_look(&shell, seconds)` are the two halves when you want your
+own stick sensitivity). The adapter gates these when capture/focus/pause prevents play.
+`focused` is a
 host-provided foreground signal; the shell additionally handles minimization.
+`begin_frame` also starts the engine's frame clock: read the frame length from
+`input.frame_seconds()`, the wall-clock interval between frame starts. macroquad's
+`get_frame_time()` is stamped after the GL flush and reads 33 ms then 1 ms when one
+frame stalls although frames were presented evenly, which a fixed-step accumulator
+turns into a doubled step and a repeated frame. `devkit::FixedStepper` turns frame
+lengths into whole 60 Hz ticks and `devkit::InputAccumulator` delivers exactly one
+input per tick (edges once, look immediately). A game with its own rules builds on
+these: [custom clients](CUSTOM_CLIENT.md#a-custom-simulation).
 Native OS focus queries remain in the executable. Do not place device backends in
 thread-local storage: Windows destroys worker threads before TLS cleanup.
 
@@ -133,5 +156,10 @@ INPUTS is an array of `GameInput` frames (one per 60 Hz tick; omitted fields def
 It drives the same local session and renderer, saves actual world/win/reset/menu
 images and a `run.json` trace, then exits. Playback is local-only and explicitly
 bypasses device/focus gating; interactive controls still require a live playtest.
+
+Local games save and load: F5 writes the `quick` slot, F9 loads it, `--save-dir DIR` moves the folder
+(default: `saves` next to the executable) and `--load SLOT_OR_FILE` resumes at start. Online clients refuse
+(the server owns the world; `be2-headless --autosave` saves it). The contract, failure modes and versioning
+are in [SAVE_STATE.md](SAVE_STATE.md); `be2-tools save-info FILE [GAME_JSON]` inspects a save.
 World replication progresses through bounded partial updates under the existing
 1100-byte ceiling. See HOSTING.md for entity, record and acknowledgement limits.

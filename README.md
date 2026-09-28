@@ -24,7 +24,9 @@ character skins alongside the original content. See the [sandbox guide](assets/g
 - Asset discovery: `python tools/assets.py search "desk lamp"`; see the [asset library contract](assets/README.md).
 - Native discovery: `be2-tools describe`, `be2-tools search multiplayer`, `be2-tools catalog`.
 - Rust prototypes: [compact quickstart](docs/AI_QUICKSTART.md), `cargo run --locked --no-default-features --example prototype`.
-- Custom presentation: [visible-client boundary](docs/CUSTOM_CLIENT.md), `cargo run --locked --example custom_client`.
+- A game: `be2-tools new-game NAME DIR` (rules fit `GameDocument`) or `be2-tools new-game NAME DIR ENGINE_PATH custom-sim` (enemies, projectiles, scoring, AI: your own simulation). [Pick the starter and follow the definition of done](docs/GAME_QUICKSTART.md): every game ships with its own icon and desktop shortcut, by script.
+- Custom presentation or your own simulation: [visible-client boundary and kit](docs/CUSTOM_CLIENT.md), `cargo run --locked --example custom_client`.
+- Save states (F5/F9, autosave, a server that resumes, saves for your own simulation): [save-state contract](docs/SAVE_STATE.md), `be2-tools save-info FILE`.
 - Behavioral tests: [scripted headless scenarios](docs/BEHAVIORAL_TESTING.md).
 - Find a capability without building or reading source: `python tools/be2.py context movement`.
 - Engine maintenance: [AGENTS.md](AGENTS.md), [scoped workflow](docs/CHANGE_WORKFLOW.md); load architecture only for the relevant subsystem.

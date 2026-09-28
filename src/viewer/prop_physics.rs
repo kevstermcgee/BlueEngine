@@ -30,6 +30,19 @@ pub struct PropBody {
     entity: usize,
     radius: f32,
 }
+/// The physics scene exactly as [`PropPhysics::new`] left it, before its first step. A restore starts from
+/// here, so contact caches, islands and sleep bookkeeping after a load never depend on what the scene did
+/// before it: one save file always plays out the same way.
+struct Pristine {
+    bodies: RigidBodySet,
+    colliders: ColliderSet,
+    islands: IslandManager,
+    broad: BroadPhaseMultiSap,
+    narrow: NarrowPhase,
+    joints: ImpulseJointSet,
+    multi: MultibodyJointSet,
+    ccd: CCDSolver,
+}
 /// A local physics scene. The owner must call `advance` only while gameplay is active.
 /// One body per player can be held; bidirectional ownership rejects contention.
 pub struct PropPhysics {
@@ -48,6 +61,7 @@ pub struct PropPhysics {
     player_by_held: HashMap<usize, u64>,
     debt: f32,
     network_dirty: bool,
+    pristine: Option<Pristine>,
 }
 fn vector(v: V) -> Vector<Real> {
     Vector::new(v.0, v.1, v.2)
@@ -143,6 +157,7 @@ impl PropPhysics {
             player_by_held: HashMap::new(),
             debt: 0.,
             network_dirty: false,
+            pristine: None,
         };
         let source = &room.compiled.scene;
         let mut used = HashSet::new();
@@ -258,6 +273,16 @@ impl PropPhysics {
                 .build(),
         );
         this.sync(room);
+        this.pristine = Some(Pristine {
+            bodies: this.bodies.clone(),
+            colliders: this.colliders.clone(),
+            islands: this.islands.clone(),
+            broad: this.broad.clone(),
+            narrow: this.narrow.clone(),
+            joints: this.joints.clone(),
+            multi: this.multi.clone(),
+            ccd: this.ccd.clone(),
+        });
         Ok(this)
     }
     pub fn held(&self) -> Option<&PropBody> {
@@ -609,6 +634,157 @@ impl PropPhysics {
             }
         }
         room.dynamic_world = World::new(instances);
+    }
+}
+
+/// Save states: a portable snapshot of every prop (pose, velocity, sleep state), who carries what, and the
+/// unconsumed physics time. The physics library's internal caches are not saved; a restore rebuilds them
+/// from the scene as first built, so the result depends only on the save. See `savestate::world`.
+impl PropPhysics {
+    pub(crate) fn capture(&self) -> crate::viewer::savestate::world::PhysicsSave {
+        use crate::viewer::savestate::world::{Hold, PhysicsSave, PropSave};
+        let props = self
+            .props
+            .iter()
+            .filter_map(|p| {
+                let body = self.bodies.get(p.handle)?;
+                let (t, q) = (body.translation(), body.position().rotation);
+                let (lin, ang) = (body.linvel(), body.angvel());
+                Some(PropSave {
+                    id: p.id.clone(),
+                    position: [t.x, t.y, t.z],
+                    rotation: [q.i, q.j, q.k, q.w],
+                    linvel: [lin.x, lin.y, lin.z],
+                    angvel: [ang.x, ang.y, ang.z],
+                    sleeping: body.is_sleeping(),
+                    sleep_timer: body.activation().time_since_can_sleep,
+                })
+            })
+            .collect();
+        let mut holds: Vec<Hold> = self
+            .held_by_player
+            .iter()
+            .map(|(&player, &i)| Hold {
+                player,
+                prop: self.props[i].id.clone(),
+            })
+            .collect();
+        holds.sort_by_key(|h| h.player);
+        PhysicsSave {
+            props,
+            holds,
+            debt: self.debt,
+        }
+    }
+
+    /// Check that a save describes exactly this physics scene. `players` are the ids that will exist after
+    /// the restore (holds must name one of them); `None` when players are not restored. Nothing is changed.
+    pub(crate) fn check_save(
+        &self,
+        save: &crate::viewer::savestate::world::PhysicsSave,
+        players: Option<&std::collections::BTreeSet<u64>>,
+    ) -> std::result::Result<(), String> {
+        if save.props.len() != self.props.len() {
+            return Err(format!(
+                "the save has {} props, this world has {}",
+                save.props.len(),
+                self.props.len()
+            ));
+        }
+        let ours: HashSet<&str> = self.props.iter().map(|p| p.id.as_str()).collect();
+        if let Some(stranger) = save.props.iter().find(|p| !ours.contains(p.id.as_str())) {
+            return Err(format!(
+                "the save describes prop '{}', which this world does not have",
+                stranger.id
+            ));
+        }
+        if let Some(players) = players {
+            if let Some(hold) = save.holds.iter().find(|h| !players.contains(&h.player)) {
+                return Err(format!(
+                    "a prop is carried by player {}, who is not in the save",
+                    hold.player
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    /// Apply a save that [`Self::check_save`] accepted. Holds are restored only when `restore_holds`.
+    pub(crate) fn restore(
+        &mut self,
+        save: &crate::viewer::savestate::world::PhysicsSave,
+        restore_holds: bool,
+    ) {
+        use rapier3d::na::{Isometry3, Quaternion, Translation3, UnitQuaternion};
+        let index: HashMap<String, usize> = self
+            .props
+            .iter()
+            .enumerate()
+            .map(|(i, p)| (p.id.clone(), i))
+            .collect();
+        let held: HashMap<&str, u64> = if restore_holds {
+            save.holds
+                .iter()
+                .map(|h| (h.prop.as_str(), h.player))
+                .collect()
+        } else {
+            HashMap::new()
+        };
+        if let Some(p) = &self.pristine {
+            self.bodies = p.bodies.clone();
+            self.colliders = p.colliders.clone();
+            self.islands = p.islands.clone();
+            self.broad = p.broad.clone();
+            self.narrow = p.narrow.clone();
+            self.joints = p.joints.clone();
+            self.multi = p.multi.clone();
+            self.ccd = p.ccd.clone();
+        }
+        self.held_by_player.clear();
+        self.player_by_held.clear();
+        for saved in &save.props {
+            let Some(&i) = index.get(saved.id.as_str()) else {
+                continue;
+            };
+            let Some(body) = self.bodies.get_mut(self.props[i].handle) else {
+                continue;
+            };
+            let [x, y, z] = saved.position;
+            // The quaternion was validated to be unit length; keeping its exact bits keeps restores exact.
+            let rotation = UnitQuaternion::new_unchecked(Quaternion::new(
+                saved.rotation[3],
+                saved.rotation[0],
+                saved.rotation[1],
+                saved.rotation[2],
+            ));
+            let pose = Isometry3::from_parts(Translation3::new(x, y, z), rotation);
+            body.set_position(pose, true);
+            body.set_linvel(
+                Vector::new(saved.linvel[0], saved.linvel[1], saved.linvel[2]),
+                true,
+            );
+            body.set_angvel(
+                Vector::new(saved.angvel[0], saved.angvel[1], saved.angvel[2]),
+                true,
+            );
+            let holder = held.get(saved.id.as_str()).copied();
+            body.set_gravity_scale(if holder.is_some() { 0. } else { 1. }, false);
+            if saved.sleeping {
+                body.sleep();
+            } else {
+                body.wake_up(true);
+                body.activation_mut().time_since_can_sleep = saved.sleep_timer;
+            }
+            if let Some(player) = holder {
+                self.held_by_player.insert(player, i);
+                self.player_by_held.insert(i, player);
+            }
+            self.props[i].transform = matrix(&pose);
+        }
+        self.bodies
+            .propagate_modified_body_positions_to_colliders(&mut self.colliders);
+        self.debt = save.debt.clamp(0., STEP * 16.);
+        self.network_dirty = true;
     }
 }
 

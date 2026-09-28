@@ -66,4 +66,14 @@ queries in the executable and pass a single callback to GameShell.
 
 Local applications that actually freeze their simulation use `GameShell::local_menu` instead of `menu`; it preserves the shared controls and displays an accurate local-pause caption.
 
+A game that owns its simulation (`new-game ... custom-sim`) is its own single authority: a pure, fixed-step,
+rendering-free library that the window only reads, so presentation still never duplicates gameplay authority;
+the rule above concerns presenting `GameSession` state and does not apply to it. Its window still follows this
+contract (`GameShell` menus, cached static geometry, fixed simulation independent of frame rate) and uses the
+frame clock from `ClientInput::frame_seconds` instead of `get_frame_time()`.
+
+A shipped game names and marks its window: `game_client::window_config_with_icon(title, icon_from_rgba(..))`
+with the title from `assets/identity.json`, the same text as its desktop shortcut. Plain `window_config` leaves
+miniquad's logo as the window icon, which is fine for a prototype and wrong for a game that ships.
+
 Shared standalone-game infrastructure: [gameplay kit](SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.

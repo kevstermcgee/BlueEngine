@@ -11,6 +11,7 @@ use super::{
     mesh,
     net::{DatagramTransport, SecureSocket, TransportProfile, UdpTransport},
     prop_view::Props,
+    savestate::{SaveError, SaveSlots, Source, QUICK_SLOT},
 };
 use crate::Result;
 use macroquad::prelude::*;
@@ -32,10 +33,14 @@ pub struct GameOptions {
     pub capture: Option<PathBuf>,
     /// Optional fixed-tick public-input playback for repeatable playable-path checks.
     pub playback: Option<PathBuf>,
+    /// Directory of save slots (F5 quick-saves into it, F9 loads). Default: `saves` next to the executable.
+    pub save_dir: Option<PathBuf>,
+    /// Resume a saved game at start: a slot name in the save directory (`quick`) or a save file path.
+    pub load: Option<String>,
 }
 impl GameOptions {
     /// Shared stock/generated CLI: --connect, --transport, --auth-key, --character,
-    /// --third-person, --capture and --playback. Content location belongs to the host.
+    /// --third-person, --capture, --playback, --save-dir and --load. Content location belongs to the host.
     pub fn from_args(args: &[String]) -> Result<Self> {
         let value = |flag: &str| -> Result<Option<&str>> {
             args.iter()
@@ -78,6 +83,8 @@ impl GameOptions {
             third_person: args.iter().any(|a| a == "--third-person"),
             capture: value("--capture")?.map(PathBuf::from),
             playback: value("--playback")?.map(PathBuf::from),
+            save_dir: value("--save-dir")?.map(PathBuf::from),
+            load: value("--load")?.map(str::to_owned),
         })
     }
 }
@@ -148,6 +155,20 @@ pub async fn run_game_with_options(
         &session,
         options.character.as_deref().unwrap_or("scientist"),
     )?;
+    let slots = options
+        .save_dir
+        .clone()
+        .map_or_else(SaveSlots::beside_exe, SaveSlots::new);
+    let mut toast = Toast::default();
+    if let Some(target) = &options.load {
+        if !session.can_save() {
+            return Err("--load needs a local game; an online game is loaded on the server".into());
+        }
+        let note = load_target(&mut session, &slots, target)
+            .map_err(|e| format!("--load {target}: {e}"))?;
+        view.reset_camera();
+        toast.show(note);
+    }
     let mut shell = GameShell::new();
     let mut input = ClientInput::new();
     let mut perspective = if options.third_person {
@@ -177,6 +198,18 @@ pub async fn run_game_with_options(
             focused(),
             options.keyboard,
         );
+        if playback.is_none() && options.capture.is_none() {
+            if input.pressed(KeyCode::F5) {
+                toast.show(quick_save(&session, &slots));
+            }
+            if input.pressed(KeyCode::F9) {
+                let note = quick_load(&mut session, &slots);
+                if session.can_save() {
+                    view.reset_camera();
+                }
+                toast.show(note);
+            }
+        }
         // Wall-clock interval between frame starts, not macroquad's get_frame_time(), which is
         // stamped after the GL flush and turns one stalled frame into a doubled step plus a repeat.
         let seconds = if playback.is_some() || options.capture.is_some() {
@@ -253,12 +286,14 @@ pub async fn run_game_with_options(
                 WHITE,
             );
         }
+        toast.draw();
         let controls = [
             "Move: WASD / arrows / left stick",
             "Look: mouse / right stick",
             "Jump: Space / A; crouch: Ctrl / B",
             "Interact / carry / replay: E / X",
             "Camera: Q / RS; fullscreen: F / F11",
+            "Save / load: F5 / F9 (local games)",
             "Menu: Esc / Start; confirm: Enter / A",
         ];
         let quit = if session.is_online() {
@@ -302,6 +337,67 @@ pub async fn run_game_with_options(
         next_frame().await;
     }
     Ok(())
+}
+
+/// A short message near the top of the screen: what the last save or load did.
+#[derive(Default)]
+struct Toast {
+    text: String,
+    until: f64,
+}
+impl Toast {
+    fn show(&mut self, text: String) {
+        self.text = text;
+        self.until = get_time() + 3.;
+    }
+    fn draw(&self) {
+        if get_time() < self.until && !self.text.is_empty() {
+            let size = 22.;
+            let width = super::game_text::measure_text(&self.text, None, size as u16, 1.).width;
+            let x = (screen_width() - width) * 0.5;
+            draw_rectangle(
+                x - 12.,
+                52.,
+                width + 24.,
+                34.,
+                Color::new(0.04, 0.08, 0.1, 0.85),
+            );
+            super::game_text::draw_text(&self.text, x, 76., size, WHITE);
+        }
+    }
+}
+
+fn quick_save(session: &GameSession, slots: &SaveSlots) -> String {
+    if !session.can_save() {
+        return "Saving is not available in an online game".into();
+    }
+    let label = format!("Quick save, tick {}", session.world().tick);
+    match session.save_to_slot(slots, QUICK_SLOT, &label) {
+        Ok(()) => "Game saved (F9 loads it)".into(),
+        Err(error) => format!("Save failed: {error}"),
+    }
+}
+
+fn quick_load(session: &mut GameSession, slots: &SaveSlots) -> String {
+    if !session.can_save() {
+        return "Loading is not available in an online game".into();
+    }
+    match session.load_from_slot(slots, QUICK_SLOT) {
+        Ok((_, Source::Primary)) => "Game loaded".into(),
+        Ok((_, Source::Backup(why))) => format!("Loaded the previous save ({why})"),
+        Err(SaveError::NotFound(_)) => "No quick save yet (F5 saves)".into(),
+        Err(error) => format!("Load failed: {error}"),
+    }
+}
+
+/// `--load`: a slot name in the save directory, or the path of a save file.
+fn load_target(session: &mut GameSession, slots: &SaveSlots, target: &str) -> Result<String> {
+    let loaded = slots.open(target)?;
+    let (header, source) = session.restore_loaded(&loaded)?;
+    Ok(match source {
+        Source::Primary => format!("Loaded {}", header.label),
+        Source::Backup(why) => format!("Loaded the previous save ({why})"),
+    })
 }
 
 struct GameView {
@@ -358,6 +454,10 @@ impl GameView {
             ids,
             material: mesh::material()?,
         })
+    }
+    /// Forget camera smoothing: after a load the player is somewhere else entirely.
+    fn reset_camera(&mut self) {
+        self.camera = CameraRig::default();
     }
     fn draw(&mut self, session: &GameSession, perspective: Perspective, seconds: f32) {
         let world = session.world();

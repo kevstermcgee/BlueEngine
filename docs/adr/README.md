@@ -23,3 +23,7 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0012: Shared gameplay kit](0012-shared-gameplay-kit.md)
 - [0013: Demand-loaded context and conservative validation scopes](0013-scoped-change-workflow.md)
 - [0014: Bounded acknowledged partial-world replication](0014-bounded-replication.md)
+
+- [0015: A custom-simulation road alongside GameDocument](0015-custom-simulation-road.md)
+- [0016: Native save states](0016-native-save-states.md)
+- [0017: Every game ships its own identity, verified by a gate](0017-game-identity-and-ship-gate.md)
