@@ -7,6 +7,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -19,21 +20,70 @@ WORK = ROOT / '.be2-work'
 SUFFIX = '.exe' if os.name == 'nt' else ''
 
 
-def invoke(args, *, env=None, log=None, capture=False, timeout=None):
-    if not log:
-        print('+ ' + ' '.join(map(str, args)), file=sys.stderr)
-    buffered = capture or log or os.name == 'nt'
+class CommandFailure(RuntimeError):
+    def __init__(self, packet, exit_code):
+        super().__init__(packet['category'])
+        self.packet = packet
+        self.exit_code = exit_code
+        self.reported = False
+
+
+def invoke(args, *, env=None, log=None, capture=False, timeout=None, harness=None):
+    args = list(map(str, args))
+    if log:
+        started = time.monotonic()
+        evidence = None
+        # Stream directly to disk: even a timeout/crash preserves complete output.
+        with Path(log).open('wb') as output:
+            try:
+                with subprocess.Popen(args, cwd=ROOT, env=env, stdout=output,
+                                      stderr=subprocess.STDOUT, start_new_session=os.name != 'nt',
+                                      **workflow.console_options()) as process:
+                    try:
+                        returncode = process.wait(timeout=timeout)
+                    except subprocess.TimeoutExpired:
+                        # Stop descendants too: Cargo/test children must not keep
+                        # running against the checkout after a timed-out command.
+                        if os.name == 'nt':
+                            subprocess.run(['taskkill', '/PID', str(process.pid), '/T', '/F'],
+                                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                           **workflow.console_options())
+                        else:
+                            try:
+                                os.killpg(process.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                        process.kill()
+                        process.wait()
+                        evidence = {'returncode': None, 'category': 'timeout',
+                                    'diagnostics': [f'Command exceeded {timeout}s; requested process-tree termination.']}
+                        exit_code = 124
+            except OSError as error:
+                evidence = {'returncode': None, 'category': 'missing_tool' if isinstance(error, FileNotFoundError) else 'launch_error',
+                            'diagnostics': [str(error)]}
+                exit_code = 127 if isinstance(error, FileNotFoundError) else 126
+        if evidence is None:
+            evidence = workflow.command_evidence(Path(log), returncode, harness)
+            exit_code = (returncode if returncode > 0 else 128 - returncode) if returncode else 3
+        evidence.update(elapsed_seconds=round(time.monotonic() - started, 3),
+                        log_bytes=Path(log).stat().st_size)
+        if 'category' in evidence:
+            evidence.update(command=args, reproduction=args, log=str(log))
+            raise CommandFailure(evidence, exit_code)
+        return evidence
+    print('+ ' + ' '.join(map(str, args)), file=sys.stderr)
+    buffered = capture or os.name == 'nt'
     result = subprocess.run(list(map(str, args)), cwd=ROOT, env=env,
                             stdout=subprocess.PIPE if buffered else None,
                             stderr=subprocess.STDOUT if buffered else None,
                             text=True, timeout=timeout, **workflow.console_options())
-    if log:
-        Path(log).write_text(result.stdout, encoding='utf-8')
     if result.returncode:
         if result.stdout:
-            print(result.stdout[-4000:] if log else result.stdout, file=sys.stderr)
-        raise RuntimeError(f'Command failed ({result.returncode}); log: {log or "console"}')
-    if buffered and not (capture or log) and result.stdout:
+            print(result.stdout, file=sys.stderr)
+        raise CommandFailure({'category': 'command_failure', 'command': args,
+                              'returncode': result.returncode, 'log': None, 'reproduction': args},
+                             result.returncode if result.returncode > 0 else 128 - result.returncode)
+    if buffered and not capture and result.stdout:
         print(result.stdout, end='')
     return result.stdout
 
@@ -79,18 +129,29 @@ def doctor():
         raise RuntimeError('Rust toolchain is missing; see tools/README.md')
 
 
-def check(plan):
+def check(plan, timeout=None):
     started = time.monotonic()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     directory = WORK / ('check-' + stamp)
     directory.mkdir(parents=True)
     report = {'ok': False, 'plan': plan, 'checks': []}
     try:
-        for i, cmd in enumerate(plan['commands']):
+        for i, original in enumerate(plan['commands']):
+            cmd = list(original)
+            if (cmd[0] == 'cargo' and cmd[1] in {'test', 'check', 'clippy', 'build', 'rustdoc'}
+                    and not any(arg.startswith('--message-format') for arg in cmd)):
+                cmd.insert(cmd.index('--') if '--' in cmd else len(cmd), '--message-format=json')
             log = directory / f'{i+1}.log'
             item = {'command': cmd, 'log': log.name, 'ok': False}
             report['checks'].append(item)
-            invoke(cmd, log=log)
+            try:
+                item.update(invoke(cmd, log=log, timeout=timeout, harness=plan.get('test_harness')))
+            except CommandFailure as error:
+                item.update(error.packet)
+                report['failure'] = error.packet
+                report['exit_code'] = error.exit_code
+                error.reported = True
+                raise
             item['ok'] = True
         report['ok'] = True
     finally:
@@ -98,9 +159,16 @@ def check(plan):
         report['commands_attempted'] = len(report['checks'])
         report['failed_commands'] = sum(not item['ok'] for item in report['checks'])
         (directory / 'report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
-        print(json.dumps({'report': str(directory / 'report.json'), 'ok': report['ok'],
-                          'scope': plan['scope'], 'seconds': report['elapsed_seconds'],
-                          'commands': report['commands_attempted']}))
+        summary = {'report': str(directory / 'report.json'), 'ok': report['ok'],
+                   'scope': plan['scope'], 'seconds': report['elapsed_seconds'],
+                   'commands': report['commands_attempted']}
+        if plan['scope'] == 'iteration':
+            summary.update(feature=plan['feature'], feature_mode=plan['feature_mode'],
+                           proves=plan['proves'] if report['ok'] else None, remaining=plan['remaining'])
+            summary['tests_executed'] = sum(item.get('tests_executed', 0) for item in report['checks']) if plan.get('test_harness') else None
+        if 'failure' in report:
+            summary.update(failure=report['failure'], exit_code=report['exit_code'])
+        print(json.dumps(summary))
 
 
 def capture(destination, map_file):
@@ -159,6 +227,12 @@ def main():
     c.add_argument('--changed', action='store_true', help='Select checks from the complete Git diff')
     c.add_argument('--base', default='HEAD', help='Compare current files against this commit (default HEAD)')
     c.add_argument('--plan', action='store_true', help='Print the plan without running checks')
+    c.add_argument('--iterate', metavar='FEATURE', help='Focused iteration only; never final validation')
+    c.add_argument('--typecheck', action='store_true', help='Iteration: engine library type-check only')
+    c.add_argument('--test', metavar='SUITE[::EXACT_TEST]', help='Iteration: one indexed suite or exact regression')
+    c.add_argument('--feature-mode', choices=['headless', 'default'], default=None,
+                   help='Iteration Cargo features (default: normal Cargo features; headless is explicit)')
+    c.add_argument('--timeout', type=float, help='Per-command timeout in seconds; logs survive timeouts')
     c = sub.add_parser('context', help='Bounded feature context without a native build or source reads')
     c.add_argument('query'); c.add_argument('--limit', type=int, default=3)
     c.add_argument('--compact', action='store_true', help='Compact JSON; same bounded packet')
@@ -171,6 +245,18 @@ def main():
     args = parser.parse_args()
     if args.command == 'doctor': doctor()
     elif args.command == 'check':
+        if args.timeout is not None and (not 0 < args.timeout < float('inf')):
+            parser.error('--timeout must be a finite positive number')
+        if args.iterate:
+            if args.changed or args.base != 'HEAD':
+                parser.error('--iterate cannot replace --changed or --base final checks')
+            plan = workflow.iteration_plan(ROOT, args.iterate, typecheck=args.typecheck,
+                                           test=args.test, feature_mode=args.feature_mode or 'default')
+            if args.plan: print(json.dumps(plan, indent=2))
+            else: check(plan, args.timeout)
+            return
+        if args.typecheck or args.test or args.feature_mode:
+            parser.error('--typecheck, --test and --feature-mode require --iterate')
         if not args.changed and args.base != 'HEAD':
             parser.error('--base requires --changed')
         revision, paths = workflow.changed_paths(ROOT, args.base) if args.changed else (None, None)
@@ -178,7 +264,7 @@ def main():
         if paths is not None:
             plan['impact'] = workflow.impact(ROOT, paths)
         if args.plan: print(json.dumps(plan, indent=2))
-        else: check(plan)
+        else: check(plan, args.timeout)
     elif args.command == 'context':
         started = time.monotonic()
         packet = workflow.context(ROOT, args.query, args.limit)
@@ -203,6 +289,10 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+    except CommandFailure as error:
+        if not error.reported:
+            print(json.dumps({'ok': False, 'failure': error.packet, 'exit_code': error.exit_code}), file=sys.stderr)
+        sys.exit(error.exit_code)
     except (RuntimeError, OSError, ValueError, subprocess.SubprocessError) as error:
         print(json.dumps({'ok': False, 'error': str(error)}), file=sys.stderr)
         sys.exit(1)

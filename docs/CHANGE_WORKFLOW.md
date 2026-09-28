@@ -41,7 +41,8 @@ Feature configurations are grouped to avoid repeated binary rebuilds. CI still r
 the full Linux/Windows matrix, independent of local scope selection.
 
 Reports contain the resolved baseline, paths, plan and per-command log/status.
-Failure console output is capped at a 4,000-character tail; complete logs are retained.
+Failure packets include the failed command, observed category, diagnostic/location,
+reproduction argv and full-log path. Complete output streams directly to disk.
 Checks are never cached or accepted from stale receipts. Manual visual/input checks
 remain required for relevant changes. A plan is not a validation result.
 
@@ -137,6 +138,7 @@ when the packet is uncertain. Full CI and relevant manual checks remain mandator
 
 ## Audit and measured examples (2026-09-27)
 
+Retrieval comparison recorded at `edadb577` (not a rolling benchmark).
 Baseline: `dab921cd3f0979142161f09af7e3e175c8421d0f`. Existing tools already supplied
 build-free FEATURES lookup, native symbol navigation, compiled prototype quickstart,
 scenario verification, generated external-game checks, change-scoped Python checks,
@@ -170,3 +172,79 @@ Use the local metrics with matched tasks to evaluate those outcomes. No Gauntlet
 integration was found in this checkout. Deferred: inferred Rust dependency analysis,
 protocol schema/version fingerprints, additional active traps and temporary lessons.
 They need stronger evidence or a separate cohesive design; this change adds none.
+
+## Engine iteration and diagnosis
+
+Start revision for this improvement: `edadb577eb37c58da748352bf29a8b0b052458cd`,
+clean checkout. Context, indexed evidence, source navigation and final gates already
+existed. The runner collapsed child failures to exit 1, wrote logs only after return,
+and could treat a zero-test command as success. This change extends that same runner.
+
+Choose one useful iteration command, not a chain of redundant checks:
+
+- Library type-check: `python tools/be2.py check --iterate multiplayer --feature-mode headless --typecheck`
+- One regression: `python tools/be2.py check --iterate multiplayer --feature-mode headless --test replication_budget::oversized_world_makes_wire_progress`
+- One suite: `python tools/be2.py check --iterate multiplayer --feature-mode headless --test replication_budget`
+- Indexed subsystem suites: `python tools/be2.py check --iterate multiplayer --feature-mode headless`
+- Tooling tests: `python tools/be2.py check --iterate change_workflow`
+
+Add `--plan` to inspect without executing. Cargo iteration preserves default features;
+`--feature-mode headless` explicitly opts into rendering-free checks. This avoids
+quietly excluding presentation code when checking a graphics feature. Type-checking covers the
+engine library, not binaries or runtime behavior. Suite targets come from existing
+feature evidence and `tests/*.rs` paths; Python modules come from recognized indexed
+unittest commands. Free-form prose is never executed. Unsupported mappings fail and
+point back to context; no dependency closure is treated as complete coverage.
+
+Success is labeled `scope: iteration`, with what passed and what remains unverified.
+Final verification is still `python tools/be2.py check --changed --plan` followed by
+`python tools/be2.py check --changed` (use `--base START_REV` for committed changes).
+`python tools/be2.py check` always retains all full gates. Iteration cannot be combined
+with changed-file selection. Linux/Windows CI and relevant manual checks remain.
+
+Cargo compiler messages use JSON; libtest/unittest output is parsed separately.
+Packets quote observed evidence, not an inferred root cause. Child exit codes survive
+(e.g. Cargo 101); signals are recorded as negative returncodes and mapped to shell
+128+signal exits. Runner-only exits: 3 for empty/unrecognized requested test evidence,
+124 for `--timeout SECONDS`, 127 for a missing executable, 126 for launch errors.
+These have no fabricated child status: timeout/launch returncodes are null; an empty
+selection retains the child's actual 0. All-ignored selections also fail. No timeout
+is imposed unless requested. On timeout the runner requests process-tree termination.
+Full logs survive failure and timeout; reports include per-command time, log size,
+executed tests and Cargo's reported fresh/built artifact counts. An artifact count
+is not compile time or proof of freshness beyond Cargo's own dependency tracking.
+The runner always invokes Cargo; it never accepts cached validation receipts.
+
+Profiles, target directories, isolated release packaging and optimized builds are
+unchanged. No profile/cache tuning or new development build option is claimed:
+iteration already uses Cargo's dev/test profiles. Cold-cache/profile comparisons,
+module-level libtest selection and arbitrary custom test harnesses are deferred.
+Unknown test output fails closed in iteration. Total agent tokens, task time and
+repair-loop savings are unavailable, not zero.
+
+Measured on Windows with the existing target cache, unchanged profiles and one Cargo
+build job. Logs/JSON records are local under `.be2-work/engine-iteration/`:
+
+| Equivalent task/command | Before runner | After runner |
+|---|---:|---:|
+| Exact replication regression, warm-cache median of 3 | 0.409 s | 0.402 s |
+| Same Cargo E0308 fixture, console bytes | 3616 | 1002 |
+| Same Cargo E0308 fixture, child/runner exit | 101 / 1 | 101 / 101 |
+
+The warm comparison used identical argv:
+`cargo test --locked --no-default-features --message-format=json --test replication_budget oversized_world_makes_wire_progress -- --exact`.
+Both had 135 fresh and 0 built artifacts; this is no demonstrated compile speedup.
+The index edit (embedded in Rust) rebuilt 4 artifacts and ran the regression in
+10.650 s, with 131 artifacts fresh. The starting cached pre-edit plain Cargo command
+ran in 3.876 s; those conditions differ and must not be compared as a speedup.
+No cold-cache build benchmark was done, so no profile/cache changes were made.
+
+The diagnostic fixture used the same temporary dependency-free Rust library with
+`pub fn value() -> u32 { "wrong type" }` and
+`cargo test --offline --lib --message-format=json` on both runners. Single observed
+runs took 0.279/0.180 s; initialization/cache order prevents a speed claim. Full logs
+were 3406/3400 bytes; the compact packet retains E0308 and source line/column.
+The deterministic runner exit-status regression fails against saved starting
+`be2.py`/`workflow.py` (`1 != 7`) and passes after the patch. Existing workflow tests
+now also exercise actual Cargo compile errors, assertion locations, passing and empty
+exact selections, missing tools, timeout log preservation and conservative plans.

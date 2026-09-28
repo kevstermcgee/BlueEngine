@@ -1,7 +1,9 @@
 """Selection tests use real Git changes, not only hand-written path lists."""
 import json
+import os
 import runpy
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -28,6 +30,7 @@ class ContextTests(unittest.TestCase):
                             ('API-PUBLIC-001', 'prototype_api')]:
             self.assertEqual(workflow.context(ROOT, code, 1)['matches'][0]['id'], owner)
         self.assertEqual(workflow.context(ROOT, 'zyxquantumunknown')['probably_unnecessary'], [])
+        self.assertEqual(workflow.context(ROOT, 'TEST-SELECTION-001')['matches'][0]['id'], 'change_workflow')
 
     def test_boundary_failure_teaches_diagnostic_lookup(self):
         with patch('subprocess.run', return_value=SimpleNamespace(stdout='macroquad v0.4\n')):
@@ -88,6 +91,24 @@ class ContextTests(unittest.TestCase):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_iteration_reuses_index_and_never_claims_final_validation(self):
+        plan = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
+                                       test='replication_budget::oversized_world_makes_wire_progress')
+        self.assertEqual(plan['scope'], 'iteration')
+        self.assertEqual(len(plan['commands']), 1)
+        self.assertEqual(plan['commands'][0][-3:], ['oversized_world_makes_wire_progress', '--', '--exact'])
+        self.assertIn('--no-default-features', plan['commands'][0])
+        self.assertIn('Final check', plan['remaining'])
+        self.assertIn('--lib', workflow.iteration_plan(ROOT, 'movement', typecheck=True)['commands'][0])
+        self.assertNotIn('--no-default-features', workflow.iteration_plan(ROOT, 'graphics', typecheck=True)['commands'][0])
+        self.assertNotIn('--no-default-features', workflow.iteration_plan(
+            ROOT, 'movement', typecheck=True, feature_mode='default')['commands'][0])
+        self.assertEqual(workflow.iteration_plan(ROOT, 'change_workflow')['test_harness'], 'python')
+        for kwargs in [{'test': 'unindexed'}, {'test': 'replication_budget::'},
+                       {'typecheck': True, 'test': 'replication_budget'}, {'feature_mode': 'typo'}]:
+            with self.assertRaises(ValueError):
+                workflow.iteration_plan(ROOT, 'multiplayer', **kwargs)
+
     def test_all_original_engine_gates_remain(self):
         commands = workflow.full_commands()
         self.assertIn(['cargo', 'fmt', '--check'], commands)
@@ -144,6 +165,103 @@ class SelectionTests(unittest.TestCase):
             for invalid in ['nonexistent', '--help']:
                 with self.assertRaises(subprocess.CalledProcessError):
                     workflow.changed_paths(root, invalid)
+
+
+class RunnerTests(unittest.TestCase):
+    def setUp(self):
+        directory = tempfile.TemporaryDirectory(prefix='be2-runner-')
+        self.addCleanup(directory.cleanup)
+        self.root = Path(directory.name)
+        (self.root / 'tools').mkdir()
+        for name in ['be2.py', 'workflow.py']:
+            shutil.copyfile(ROOT / 'tools' / name, self.root / 'tools' / name)
+
+    def run_check(self, command, harness=None, timeout=None, later=True):
+        plan = {'scope': 'iteration', 'feature': 'fixture', 'feature_mode': 'headless',
+                'proves': 'Fixture only', 'remaining': 'Full verification remains',
+                'test_harness': harness, 'commands': [command] +
+                ([[sys.executable, '-c', 'print("later-command")']] if later else [])}
+        # Drive the real CLI/exit path, replacing only the command plan. Temporary
+        # copies keep fixture logs out of the engine checkout and need no Cargo deps.
+        script = ('import sys,runpy; sys.path.insert(0,"tools"); import workflow; '
+                  'workflow.validation_plan=lambda *args: ' + repr(plan) + '; '
+                  'sys.argv=["be2.py","check"]' +
+                  ('+["--timeout",' + repr(str(timeout)) + ']' if timeout else '') + '; '
+                  'runpy.run_path("tools/be2.py",run_name="__main__")')
+        result = subprocess.run([sys.executable, '-c', script], cwd=self.root,
+                                capture_output=True, text=True,
+                                env={**os.environ, 'CARGO_TARGET_DIR': str(self.root / 'target')},
+                                **workflow.console_options())
+        summary = json.loads(result.stdout)
+        report = json.loads(Path(summary['report']).read_text())
+        return result, summary, report
+
+    def test_original_exit_status_and_complete_failure_log(self):
+        result, summary, report = self.run_check(
+            [sys.executable, '-c', 'import sys; print("evidence:"+"x"*12000); sys.exit(7)'])
+        self.assertEqual(result.returncode, 7)
+        self.assertFalse(summary['ok'])
+        self.assertEqual(len(report['checks']), 1)
+        self.assertEqual(summary['failure']['returncode'], 7)
+        self.assertEqual(summary['failure']['category'], 'command_failure')
+        self.assertGreater(Path(summary['failure']['log']).stat().st_size, 12000)
+        self.assertEqual(summary['failure']['command'], summary['failure']['reproduction'])
+        self.assertLess(len(result.stdout), 4000)
+
+    def test_timeout_and_missing_tool_are_distinct_and_keep_logs(self):
+        result, summary, _ = self.run_check(
+            [sys.executable, '-c', 'import time; print("before timeout",flush=True); time.sleep(30)'], timeout=2)
+        self.assertEqual(result.returncode, 124)
+        self.assertEqual(summary['failure']['category'], 'timeout')
+        self.assertIsNone(summary['failure']['returncode'])
+        self.assertIn('before timeout', Path(summary['failure']['log']).read_text())
+        result, summary, _ = self.run_check([str(self.root / 'missing-tool')])
+        self.assertEqual(result.returncode, 127)
+        self.assertEqual(summary['failure']['category'], 'missing_tool')
+        self.assertTrue(Path(summary['failure']['log']).is_file())
+
+    def test_empty_and_unrecognized_test_output_cannot_pass(self):
+        for output, category in [('test result: ok. 0 passed; 0 failed; 0 ignored;', 'empty_test_selection'),
+                                 ('unknown harness output', 'missing_test_evidence')]:
+            result, summary, _ = self.run_check([sys.executable, '-c', 'print(' + repr(output) + ')'], 'rust')
+            self.assertEqual(result.returncode, 3)
+            self.assertEqual(summary['failure']['returncode'], 0)
+            self.assertEqual(summary['failure']['category'], category)
+        result, summary, _ = self.run_check([sys.executable, '-c',
+            'print("Ran 1 test in 0.01s\\n\\nOK (skipped=1)")'], 'python')
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(summary['failure']['category'], 'empty_test_selection')
+
+    @unittest.skipUnless(shutil.which('cargo'), 'Cargo needed for real diagnostic integration')
+    def test_real_cargo_compiler_assertion_and_empty_selection(self):
+        (self.root / 'Cargo.toml').write_text('[package]\nname="runner-fixture"\nversion="0.1.0"\nedition="2021"\n')
+        (self.root / 'src').mkdir()
+        source = self.root / 'src/lib.rs'
+        source.write_text('pub fn value() -> u32 { "wrong type" }\n')
+        cmd = ['cargo', 'test', '--offline', '--lib', '--message-format=json']
+        result, summary, _ = self.run_check(cmd, 'rust')
+        self.assertEqual(result.returncode, 101)
+        self.assertEqual(summary['failure']['category'], 'compiler')
+        self.assertEqual(summary['failure']['diagnostics'][0]['code'], 'E0308')
+        self.assertEqual(summary['failure']['diagnostics'][0]['location']['line'], 1)
+        source.write_text('#[test] fn regression() { assert_eq!(1, 2); }\n')
+        result, summary, _ = self.run_check(cmd, 'rust')
+        self.assertEqual(result.returncode, 101)
+        self.assertEqual(summary['failure']['category'], 'test_failure')
+        self.assertIn('assertion', json.dumps(summary['failure']['diagnostics']))
+        self.assertEqual(summary['failure']['location']['line'], 1)
+        source.write_text('#[test] fn regression() { assert_eq!(2, 2); }\n')
+        # The runner must stop a misspelled test before the later command runs.
+        result, summary, report = self.run_check(cmd + ['missing_test', '--', '--exact'], 'rust')
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(len(report['checks']), 1)
+        result, summary, report = self.run_check(cmd + ['regression', '--', '--exact'], 'rust', later=False)
+        self.assertEqual(report['checks'][0]['tests_executed'], 1)
+        self.assertTrue(report['checks'][0]['ok'])
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(summary['ok'])
+        self.assertEqual(summary['scope'], 'iteration')
+        self.assertTrue(summary['remaining'])
 
 
 class ConsoleTests(unittest.TestCase):

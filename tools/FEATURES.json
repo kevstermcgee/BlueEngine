@@ -15,7 +15,7 @@
         "shared_gameplay scaffold integration test",
         "generated external project content and locked Cargo checks"
       ],
-      "note": "Build-free bounded context lookup from this index; conservative Git change plans with full fallback. Generated games have compact local instructions and a fail-fast content/project runner with persistent logs. No validation result caching; content-only checks do not certify Rust or manual behavior.",
+      "note": "Build-free bounded context and conservative final Git change plans. Explicit check --iterate reuses indexed suite/evidence paths or Python unittest mappings; --typecheck checks only the engine library. Focused success leaves full verification outstanding. Runner preserves command status and complete logs, distinguishes Cargo compiler diagnostics from plain test failures, rejects empty requested test selections, and records timing/artifact freshness. Generated games retain their separate project checks.",
       "depends_on": [
         "native_discovery"
       ],
@@ -26,6 +26,15 @@
         "verification",
         "AI",
         "annotations"
+      ],
+      "constraints": [
+        {
+          "id": "TEST-SELECTION-001",
+          "kind": "AI-WARNING",
+          "text": "Zero executed tests (including all ignored) cannot certify a requested iteration selection. Check indexed suite and exact test names; unknown harness output also fails closed.",
+          "source": "tools/workflow.py",
+          "verify": "python -m unittest tools.test_workflow.RunnerTests"
+        }
       ]
     },
     "map_geometry": {

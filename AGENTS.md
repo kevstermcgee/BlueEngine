@@ -6,6 +6,10 @@ paths, not the whole repository. Exact feature IDs or diagnostic IDs narrow look
 low confidence means inspect/narrow before editing, never invent an API.
 Use `be2-tools src find/outline/show` for deeper symbol navigation when needed.
 
+For an iteration check, use the packet's `iterate` plan; select an indexed suite,
+`--test SUITE::exact_test`, or `--typecheck` (library only). Choose one useful check,
+not all three. Iteration success is not final verification.
+
 After editing: `python tools/be2.py check --changed --plan` reports affected
 features, uncertainty and the verification commands. Then run
 `python tools/be2.py check --changed`. It includes staged/unstaged/untracked files;

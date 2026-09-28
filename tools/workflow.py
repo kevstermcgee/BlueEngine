@@ -81,6 +81,13 @@ def context(root, query, limit=3):
             if feature.get(field):
                 item[field] = feature[field]
         item['used_by'] = sorted(key for key, value in features.items() if name in value.get('depends_on', []))
+        for typecheck in (False, True):
+            try:
+                iteration_plan(root, name, typecheck=typecheck, _features=features)
+            except ValueError:
+                continue
+            item['iterate'] = f'python tools/be2.py check --iterate {name}' + (' --typecheck' if typecheck else '') + ' --plan'
+            break
         matches.append(item)
     omitted = []
     # A future large record must not silently turn context into an index dump.
@@ -130,6 +137,127 @@ def full_commands():
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'scripts.test_publish_games'],
     ]
+
+
+def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode='default', _features=None):
+    """Explicit iteration only. Derive targets from indexed evidence/files, never prose commands."""
+    features = index(root) if _features is None else _features
+    if feature_id not in features:
+        raise ValueError('Unknown feature ID; use context to choose an exact indexed feature.')
+    feature = features[feature_id]
+    flags = ['--no-default-features'] if feature_mode == 'headless' else []
+    if feature_mode not in {'headless', 'default'} or (typecheck and test):
+        raise ValueError('Choose headless/default and either typecheck or a test, not both.')
+    suites = sorted({item['suite'] for item in feature.get('evidence', [])} |
+                    {path[6:-3] for path in feature['files']
+                     if re.fullmatch(r'tests/[\w-]+\.rs', path)})
+    if any(not re.fullmatch(r'[\w-]+', suite) for suite in suites):
+        raise ValueError('Invalid indexed test suite name')
+    harness = None
+    if typecheck:
+        if not any(path.startswith('src/') for path in feature['files']):
+            raise ValueError('No engine source indexed here; use the feature checks from context.')
+        commands = [['cargo', 'check', '--locked', '--lib', *flags, '--message-format=json']]
+        proves = 'Engine library type-check only; no linking or behavior tests.'
+    elif suites:
+        selected, separator, name = test.partition('::') if test else ('', '', '')
+        if test and (selected not in suites or (separator and not name)):
+            raise ValueError('Select an indexed SUITE or SUITE::exact_test; suites: ' + ', '.join(suites))
+        selected_suites = [selected] if test else suites
+        command = ['cargo', 'test', '--locked', *flags, '--message-format=json']
+        for suite in selected_suites:
+            command += ['--test', suite]
+        if separator:
+            if not re.fullmatch(r'[\w:]+', name):
+                raise ValueError('Exact test name must contain only letters, numbers, underscores or colons')
+            command += [name, '--', '--exact']
+        commands = [command]
+        harness = 'rust'
+        proves = 'Only requested integration tests in the selected feature configuration.'
+    else:
+        # Reuse the small existing Python unittest mappings; do not shell-execute
+        # free-form checks, native command descriptions, or arbitrary index text.
+        commands = []
+        for check in feature['checks']:
+            match = re.fullmatch(r'python -m unittest ((?:[\w]+\.[\w.]+)(?: [\w]+\.[\w.]+)*)', check)
+            if match:
+                commands.append([sys.executable, '-m', 'unittest', *match[1].split()])
+        if not commands or test:
+            raise ValueError('No indexed integration suite for this selection; use --typecheck or context checks.')
+        harness = 'python'
+        feature_mode = 'not_applicable'
+        proves = 'Only indexed Python unittest modules; no engine compilation or runtime checks.'
+    return {'scope': 'iteration', 'feature': feature_id, 'feature_mode': feature_mode,
+            'proves': proves, 'remaining': 'Final check --changed (or check), Linux/Windows CI, and relevant manual checks.',
+            'test_harness': harness, 'commands': commands}
+
+
+def command_evidence(log, returncode, harness=None):
+    """Read Cargo JSON compiler records and ordinary test text separately. No root-cause inference."""
+    diagnostics, panics, tail, summaries = [], [], [], []
+    artifacts = {'fresh': 0, 'built': 0}
+    panic_lines = 0
+    python_tests = None
+    python_skips = 0
+    location = None
+    with log.open(encoding='utf-8', errors='replace') as stream:
+        for line in stream:
+            try:
+                record = json.loads(line) if line.startswith('{') else None
+            except ValueError:
+                record = None
+            if isinstance(record, dict) and record.get('reason') == 'compiler-artifact':
+                artifacts['fresh' if record.get('fresh') else 'built'] += 1
+                continue
+            if isinstance(record, dict) and record.get('reason') == 'compiler-message':
+                message = record.get('message', {})
+                if message.get('level') == 'error' and len(diagnostics) < 3:
+                    primary = next((span for span in message.get('spans', []) if span.get('is_primary')), None)
+                    diagnostics.append({'message': message.get('message', '')[:1000],
+                                        'code': (message.get('code') or {}).get('code'),
+                                        'location': ({'file': primary['file_name'], 'line': primary['line_start'],
+                                                      'column': primary['column_start']} if primary else None),
+                                        'notes': [child['message'][:500] for child in message.get('children', [])
+                                                  if len(child.get('message', '')) < 1000][-2:]})
+                continue
+            line = line.rstrip()
+            if not line:
+                continue
+            match = re.search(r'panicked at (.+):(\d+):(\d+):$', line)
+            if match and location is None:
+                location = {'file': match[1], 'line': int(match[2]), 'column': int(match[3])}
+            tail = (tail + [line[:500]])[-6:]
+            match = re.search(r'test result: \w+\. (\d+) passed; (\d+) failed;', line)
+            if match:
+                summaries.append(int(match[1]) + int(match[2]))
+            match = re.search(r'^Ran (\d+) tests? in ', line)
+            if match:
+                python_tests = int(match[1])
+            match = re.search(r'^OK \(skipped=(\d+)\)', line)
+            if match:
+                python_skips = int(match[1])
+            if (' panicked at ' in line or line.startswith(('FAIL:', 'ERROR:'))):
+                panic_lines = 7
+            if panic_lines and len(panics) < 18:
+                panics.append(line[:500])
+                panic_lines -= 1
+    result = {'returncode': returncode, 'log_bytes': log.stat().st_size,
+              'cargo_artifacts': artifacts}
+    if summaries or python_tests is not None:
+        result['tests_executed'] = sum(summaries) if summaries else python_tests - python_skips
+    if returncode:
+        result['category'] = 'compiler' if diagnostics else 'test_failure' if panics else 'command_failure'
+        result['diagnostics'] = diagnostics or panics or tail
+        if location:
+            result['location'] = location
+    elif harness:
+        # AI-WARNING TEST-SELECTION-001: A zero-exit harness with no executed tests is not regression evidence.
+        counts = summaries if harness == 'rust' else ([] if python_tests is None else [python_tests - python_skips])
+        if not counts or any(count == 0 for count in counts):
+            result.update(category='empty_test_selection' if counts else 'missing_test_evidence',
+                          code='TEST-SELECTION-001',
+                          diagnostics=['Requested tests did not prove a nonempty executed selection; inspect names and full log.'])
+    return result
 
 
 def validation_plan(paths=None, base=None):
