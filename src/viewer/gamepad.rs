@@ -4,6 +4,7 @@
 //! device owns the stock player's input until disconnected. Custom clients can
 //! select another connected ID. Buttons are positional (South = Xbox A / PS Cross).
 use super::controller::Movement;
+use super::devkit::{stick_look, MenuNav, MenuStep};
 pub use gilrs::{Axis, Button};
 /// Session-local device identifier; it is not a persistent hardware ID.
 pub type GamepadId = usize;
@@ -45,18 +46,40 @@ impl GamepadFrame {
         keyboard.sprint |= self.down(Button::LeftThumb);
         keyboard
     }
-    /// Look deltas in radians for Controller::look with sensitivity 1.0.
-    /// Positive stick Y looks up. Clamp long frames to avoid catch-up camera snaps.
+    /// Look delta `[right, down]` in radians for `Controller::look(dx, dy, 1.0, false)` or
+    /// `devkit::FpsCamera::turn`: stick right turns right, stick up looks up (the stick's Y is positive
+    /// up, the delta's second value is positive down). This is `devkit::stick_look`; long frames are
+    /// clamped to 0.1 s to avoid catch-up camera snaps.
     pub fn look_delta(&self, seconds: f32) -> [f32; 2] {
-        let dt = if seconds.is_finite() {
-            seconds.clamp(0., 0.1)
-        } else {
-            0.
-        };
+        stick_look(self.right_stick, seconds)
+    }
+    /// Menu confirm: South (A / Cross), on the frame it goes down.
+    pub fn menu_select(&self) -> bool {
+        self.pressed(Button::South)
+    }
+    /// Menu back: East (B / Circle), on the frame it goes down.
+    pub fn menu_back(&self) -> bool {
+        self.pressed(Button::East)
+    }
+    /// D-pad held state as `[up, down, left, right]`.
+    pub fn dpad(&self) -> [bool; 4] {
         [
-            self.right_stick[0] * 2.5 * dt,
-            -self.right_stick[1] * 2.5 * dt,
+            self.down(Button::DPadUp),
+            self.down(Button::DPadDown),
+            self.down(Button::DPadLeft),
+            self.down(Button::DPadRight),
         ]
+    }
+    /// The menu step for this frame: the D-pad, or whichever stick is pushed further, through `nav`
+    /// (keep one `MenuNav` per menu; it holds the repeat state). Y up on the stick moves the highlight up.
+    pub fn menu_step(&self, nav: &mut MenuNav, seconds: f32) -> MenuStep {
+        let magnitude = |s: [f32; 2]| s[0].abs().max(s[1].abs());
+        let stick = if magnitude(self.right_stick) > magnitude(self.left_stick) {
+            self.right_stick
+        } else {
+            self.left_stick
+        };
+        nav.update(seconds, stick, self.dpad())
     }
     pub(super) fn button(&mut self, button: Button, down: bool) {
         if down {
@@ -212,6 +235,42 @@ impl GamepadInput {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn stick_look_is_the_devkit_convention() {
+        let frame = GamepadFrame {
+            right_stick: [1., 0.5],
+            ..Default::default()
+        };
+        assert_eq!(
+            frame.look_delta(0.05),
+            crate::viewer::devkit::stick_look([1., 0.5], 0.05)
+        );
+        let mut cam = crate::viewer::devkit::FpsCamera::default();
+        cam.turn(frame.look_delta(0.1));
+        assert!(
+            cam.forward().0 > 0. && cam.forward().1 > 0.,
+            "stick right and up: right and up"
+        );
+    }
+    #[test]
+    fn menu_helpers_read_buttons_and_the_stronger_stick() {
+        let mut nav = MenuNav::default();
+        let frame = GamepadFrame {
+            left_stick: [0.1, 0.],
+            right_stick: [0., -0.9],
+            ..Default::default()
+        };
+        assert!(
+            frame.menu_step(&mut nav, 1. / 60.).down,
+            "the pushed stick steps, whichever it is"
+        );
+        let mut frame = GamepadFrame::default();
+        frame.button(Button::South, true);
+        frame.button(Button::DPadUp, true);
+        assert!(frame.menu_select() && !frame.menu_back());
+        nav.reset();
+        assert!(frame.menu_step(&mut nav, 1. / 60.).up, "the D-pad steps");
+    }
     #[test]
     fn focus_and_disconnect_neutralize_input_without_stale_edges() {
         let mut input = GamepadInput::default();

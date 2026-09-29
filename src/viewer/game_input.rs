@@ -3,7 +3,7 @@
 //! workers must shut down before Windows TLS teardown. No OS calls live here.
 use super::{
     controller::Movement,
-    devkit::FrameClock,
+    devkit::{FrameClock, MenuNav, MenuStep},
     game_client::{GameShell, ShellActions},
     game_ui::NavigationInput,
     gamepad::{Button, GamepadFrame, Gamepads},
@@ -31,6 +31,8 @@ pub struct ClientInput {
     focused: bool,
     keyboard: Option<KeyboardFrame>,
     clock: FrameClock,
+    menu_nav: MenuNav,
+    menu: MenuStep,
 }
 impl Default for ClientInput {
     fn default() -> Self {
@@ -51,6 +53,8 @@ impl ClientInput {
             focused: false,
             keyboard: None,
             clock: FrameClock::new(),
+            menu_nav: MenuNav::default(),
+            menu: MenuStep::default(),
         }
     }
     /// Length of the current frame in seconds: the wall-clock interval between `begin_frame` calls,
@@ -75,6 +79,26 @@ impl ClientInput {
                 .map(|(_, name)| format!("Controller: {name}"))
                 .unwrap_or_else(|| "Controller: disconnected".into());
         }
+        // Menu steps come from the D-pad and a flicked stick, with repeat; unfocused, nothing steps.
+        self.menu = if focused {
+            self.frame.menu_step(&mut self.menu_nav, self.clock.dt())
+        } else {
+            self.menu_nav.reset();
+            MenuStep::default()
+        };
+    }
+    /// The discrete menu step of this frame (D-pad or stick flick, with auto-repeat), for custom menus
+    /// and sliders (`left`/`right`). Valid after [`ClientInput::poll`] / `begin_frame`.
+    pub fn menu_step(&self) -> MenuStep {
+        self.menu
+    }
+    /// True on the frame the controller's confirm button (South: A / Cross) goes down.
+    pub fn menu_select(&self) -> bool {
+        self.focused && self.frame.menu_select()
+    }
+    /// True on the frame the controller's back button (East: B / Circle) goes down.
+    pub fn menu_back(&self) -> bool {
+        self.focused && self.frame.menu_back()
     }
     pub fn status(&self) -> &str {
         &self.status
@@ -84,8 +108,8 @@ impl ClientInput {
     }
     pub fn navigation(&self) -> NavigationInput {
         NavigationInput {
-            next: self.frame.pressed(Button::DPadDown) || self.frame.pressed(Button::DPadRight),
-            previous: self.frame.pressed(Button::DPadUp) || self.frame.pressed(Button::DPadLeft),
+            next: self.menu.down || self.menu.right,
+            previous: self.menu.up || self.menu.left,
             accept: self.frame.pressed(Button::South),
         }
     }
@@ -97,8 +121,8 @@ impl ClientInput {
         a.pause |=
             self.frame.pressed(Button::Start) || (paused && self.frame.pressed(Button::East));
         if paused {
-            a.next |= self.frame.pressed(Button::DPadDown);
-            a.previous |= self.frame.pressed(Button::DPadUp);
+            a.next |= self.frame.pressed(Button::DPadDown) || self.menu.down;
+            a.previous |= self.frame.pressed(Button::DPadUp) || self.menu.up;
             a.accept |= self.frame.pressed(Button::South);
         }
         a
@@ -209,6 +233,8 @@ mod tests {
             focused: true,
             keyboard: None,
             clock: FrameClock::new(),
+            menu_nav: MenuNav::default(),
+            menu: MenuStep::default(),
         }
     }
     #[test]
@@ -240,6 +266,21 @@ mod tests {
         input.clock.tick_after(std::time::Duration::from_secs(3));
         assert_eq!(input.frame_seconds(), 0.1, "a stall is clamped to 100 ms");
         assert_eq!(input.frame_clock().frames(), 2);
+    }
+    #[test]
+    fn a_flicked_stick_moves_the_shared_menus_like_the_dpad() {
+        let mut input = input();
+        input.menu = MenuStep {
+            down: true,
+            ..Default::default()
+        };
+        assert!(input.navigation().next && !input.navigation().previous);
+        assert!(input.shell_actions(true, |_| false).next);
+        input.menu = MenuStep {
+            left: true,
+            ..Default::default()
+        };
+        assert!(input.navigation().previous);
     }
     #[test]
     fn start_back_and_dpad_route_to_shared_menus() {

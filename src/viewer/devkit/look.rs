@@ -17,6 +17,12 @@
 //! * pitch is clamped to [`PITCH_LIMIT`], the same limit the controller and the arena body use, so a
 //!   camera built from this type never disagrees with the simulation at the extremes.
 //!
+//! A gamepad's right stick uses the same vocabulary through [`stick_look`]: stick right turns right,
+//! stick up looks up (stick Y is positive up, as `GamepadFrame::right_stick` reports it), scaled by
+//! [`STICK_RADIANS_PER_SECOND`] and the frame length. `GamepadFrame::look_delta` is that function, so
+//! mouse and stick add into one `[right, down]` delta. If a stick feels mirrored, the camera's forward
+//! vector is not `(sin(yaw), .., -cos(yaw))`: use [`FpsCamera::forward`] instead of your own.
+//!
 //! Getting pixels from the window is the one part that needs macroquad: use
 //! `vesper3d::viewer::game_input::mouse_pixels()`, which undoes macroquad's sign and unit quirks, and
 //! never read `mouse_delta_position()` directly.
@@ -29,6 +35,8 @@
 //! assert!(cam.forward().0 > 0.);      // the view now points towards +X
 //! cam.turn(mouse.look(0., -100.));    // the hand moved 100 px up
 //! assert!(cam.forward().1 > 0.);      // the view tilts up
+//! cam.turn_stick([1., 0.], 0.1);      // the right stick fully right for one 0.1 s frame
+//! assert!(cam.forward().0 > 0.);
 //! ```
 use crate::math::V;
 
@@ -38,6 +46,8 @@ pub const PITCH_LIMIT: f32 = 1.5;
 /// Default turn rate: radians per pixel of hand motion (about 0.14 degrees, a 1600-pixel sweep is
 /// roughly a half turn).
 pub const DEFAULT_RADIANS_PER_PIXEL: f32 = 0.0025;
+/// Turn rate of a right stick held fully over, in radians per second.
+pub const STICK_RADIANS_PER_SECOND: f32 = 2.5;
 /// Sensitivity is clamped to this range so a corrupt settings file cannot freeze or spin the view.
 pub const SENSITIVITY_RANGE: (f32, f32) = (0.0002, 0.02);
 
@@ -92,6 +102,22 @@ impl MouseLook {
     }
 }
 
+/// A look delta `[right, down]` (radians) for a right stick held at `stick` (`[x, y]`, Y positive up)
+/// for `seconds`. The frame length is clamped to 0.1 s so a hitch does not snap the camera; non-finite
+/// input is zero.
+pub fn stick_look(stick: [f32; 2], seconds: f32) -> [f32; 2] {
+    let dt = if seconds.is_finite() {
+        seconds.clamp(0., 0.1)
+    } else {
+        0.
+    };
+    let axis = |v: f32| if v.is_finite() { v } else { 0. };
+    [
+        axis(stick[0]) * STICK_RADIANS_PER_SECOND * dt,
+        -axis(stick[1]) * STICK_RADIANS_PER_SECOND * dt,
+    ]
+}
+
 fn finite_or_zero(v: f32) -> f32 {
     if v.is_finite() {
         v
@@ -130,6 +156,11 @@ impl FpsCamera {
     /// `turn(mouse.look(right_px, down_px))`.
     pub fn turn_pixels(&mut self, mouse: &MouseLook, right_px: f32, down_px: f32) {
         self.turn(mouse.look(right_px, down_px));
+    }
+    /// Turn by a right stick held at `stick` (`[x, y]`, Y positive up) for `seconds`; shorthand for
+    /// `turn(stick_look(stick, seconds))`.
+    pub fn turn_stick(&mut self, stick: [f32; 2], seconds: f32) {
+        self.turn(stick_look(stick, seconds));
     }
     /// Unit vector the camera looks along.
     pub fn forward(&self) -> V {
@@ -173,6 +204,35 @@ mod tests {
         );
         cam.turn(mouse.look(0., 300.));
         assert!(cam.forward().1 < 0., "a hand moving down looks down");
+    }
+
+    #[test]
+    fn the_stick_turns_the_way_the_hand_does() {
+        let mut cam = FpsCamera::default();
+        for _ in 0..5 {
+            cam.turn_stick([1., 0.], 0.1); // half a second of held stick, in frames
+        }
+        assert!(
+            cam.forward().0 > 0.5,
+            "stick right turns towards +X, like a mouse moving right"
+        );
+        assert!(cam.walk_right().2 > 0.);
+        let level = cam.pitch;
+        cam.turn_stick([0., 1.], 0.1);
+        assert!(
+            cam.pitch > level && cam.forward().1 > 0.,
+            "stick up looks up"
+        );
+        cam.turn_stick([0., -1.], 0.1);
+        cam.turn_stick([0., -1.], 0.1);
+        assert!(cam.pitch < level, "stick down looks down");
+        // Frame-rate independent, and a hitch cannot snap the view.
+        for hz in [30., 60., 144.] {
+            let d = stick_look([1., 0.], 1. / hz);
+            assert!((d[0] * hz - STICK_RADIANS_PER_SECOND).abs() < 1e-3);
+        }
+        assert_eq!(stick_look([1., 0.], 5.)[0], STICK_RADIANS_PER_SECOND * 0.1);
+        assert_eq!(stick_look([f32::NAN, f32::INFINITY], f32::NAN), [0., 0.]);
     }
 
     #[test]

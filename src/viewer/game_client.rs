@@ -11,6 +11,27 @@ use macroquad::{
 
 /// Window settings shared by the stock client and generated games. The window carries miniquad's
 /// default icon: a game that ships should give it its own with [`window_config_with_icon`].
+static EXIT_REQUESTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+/// Ask the game loop to finish: from a Quit button, a controller shortcut, a network "kicked" event.
+/// It only sets a flag; the loop ends at the point it checks [`exit_requested`], so `main` returns
+/// normally, destructors run and a networked game can say goodbye first. Prefer it to
+/// `std::process::exit`, which skips all of that.
+///
+/// ```ignore
+/// loop {
+///     if game_client::exit_requested() { break; }   // top of the frame
+///     /* ... input, update, draw; a Quit button calls game_client::request_exit() ... */
+///     next_frame().await;
+/// }
+/// net.send_disconnect();   // runs: the loop ended, main did not abort
+/// ```
+pub fn request_exit() {
+    EXIT_REQUESTED.store(true, std::sync::atomic::Ordering::SeqCst);
+}
+/// True once [`request_exit`] was called. Check it once per frame and `break` out of the loop.
+pub fn exit_requested() -> bool {
+    EXIT_REQUESTED.load(std::sync::atomic::Ordering::SeqCst)
+}
 pub fn window_config(title: &str) -> macroquad::conf::Conf {
     macroquad::conf::Conf {
         miniquad_conf: Conf {

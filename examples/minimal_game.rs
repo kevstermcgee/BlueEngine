@@ -1,13 +1,13 @@
 //! The smallest complete game on the kit: window, first-person camera, coloured meshes, a sound.
 //!
 //! Walk with WASD, look with the mouse (Esc frees the cursor, a click grabs it again), touch the glowing
-//! orbs to collect them. `cargo run --example minimal_game [-- --mute] [-- --shot out.png]` (`--shot`
+//! orbs to collect them, Q quits. `cargo run --example minimal_game [-- --mute] [-- --shot out.png]` (`--shot`
 //! saves the frame after 10 frames and exits, for an agent that cannot watch the window).
 //! Copy this file, then read docs/CUSTOM_CLIENT.md for the fixed-step loop, saves and effects.
 use macroquad::prelude::*;
 use vesper3d::viewer::devkit::synth::{self, Preset};
 use vesper3d::viewer::devkit::{Bounds, FpsCamera, MouseLook, EYE_HEIGHT};
-use vesper3d::viewer::game_client::window_config;
+use vesper3d::viewer::game_client::{exit_requested, request_exit, window_config};
 use vesper3d::viewer::game_input::mouse_pixels;
 use vesper3d::viewer::kit::{
     gizmo, hud, Batch, Look, Materials, Rendered, SoundBank, Template, Tint, View,
@@ -83,6 +83,12 @@ async fn main() {
     let ui = hud::ui_scale();
 
     loop {
+        if exit_requested() {
+            break; // the loop ends, main returns, destructors run
+        }
+        if is_key_pressed(KeyCode::Q) {
+            request_exit();
+        }
         let dt = get_frame_time().min(0.05);
         sounds.poll().await;
 

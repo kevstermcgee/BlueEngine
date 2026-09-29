@@ -19,6 +19,7 @@
 //! | [`Playback`], [`Timeline`], [`CapturePlan`] | scripted input and screenshot flags for an agent that cannot play |
 //! | [`PerfReport`] | frame-time percentiles for a `--perf` flag |
 //! | [`Rng`] | seeded random numbers, so a seed replays a run |
+//! | [`MenuNav`], [`MenuStep`] | stick flick / D-pad to discrete menu steps with hysteresis and auto-repeat (no device dependency) |
 //! | [`Bounds`], [`describe_length`], [`HUMAN_HEIGHT`] | metres-scale checks: `bounds.expect_longest("conch", 0.05..=0.30)` fails with the scale factor to apply, so a giant shell is caught without a window |
 //! | [`Juice`], [`Pulse`] | screen shake, hit-stop, FOV kick, flash, landing dip |
 //! | [`Settings`], [`Records`], [`load_or_default`], [`store_atomic`] | atomic, never-fatal settings and high-score files |
@@ -59,6 +60,7 @@ mod input;
 mod juice;
 mod lifecycle;
 mod look;
+mod menu;
 mod playback;
 mod rng;
 mod save;
@@ -74,7 +76,11 @@ pub use clock::{FixedStepper, FrameClock, PerfReport, PerfSummary, MAX_FRAME, TI
 pub use input::{clean_axis, Edges, InputAccumulator, Tick};
 pub use juice::{Juice, Pulse, MAX_HITSTOP};
 pub use lifecycle::{Lifecycle, Notice, Options, ScriptFrame};
-pub use look::{FpsCamera, MouseLook, DEFAULT_RADIANS_PER_PIXEL, PITCH_LIMIT, SENSITIVITY_RANGE};
+pub use look::{
+    stick_look, FpsCamera, MouseLook, DEFAULT_RADIANS_PER_PIXEL, PITCH_LIMIT, SENSITIVITY_RANGE,
+    STICK_RADIANS_PER_SECOND,
+};
+pub use menu::{MenuNav, MenuStep, FLICK, RELEASE, REPEAT_DELAY, REPEAT_INTERVAL};
 pub use playback::{
     flag_value, has_flag, parse_frame_list, parse_size, CapturePlan, Cue, Playback, Timeline,
 };

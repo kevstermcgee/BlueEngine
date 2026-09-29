@@ -935,14 +935,17 @@
         "src/viewer/devkit/scale.rs",
         "templates/game_dev.py",
         "examples/minimal_game.rs",
-        "docs/adr/0020-look-scale-and-dev-loop.md"
+        "docs/adr/0020-look-scale-and-dev-loop.md",
+        "src/viewer/devkit/menu.rs",
+        "docs/adr/0021-stick-look-menu-steps-and-exit.md"
       ],
       "checks": [
         "cargo test --locked --lib devkit",
         "python tools/check_headless.py",
         "generated custom-sim project: cargo test, real-window --capture/--script/--perf run, ship gate",
         "cargo test --locked --lib devkit::look",
-        "cargo test --locked --lib devkit::scale"
+        "cargo test --locked --lib devkit::scale",
+        "cargo test --locked --lib devkit::menu"
       ],
       "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files, Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
       "keywords": [
@@ -1003,7 +1006,17 @@
         "dev",
         "rebuild",
         "locked",
-        "access denied"
+        "access denied",
+        "stick",
+        "gamepad look",
+        "menu",
+        "menu navigation",
+        "flick",
+        "repeat",
+        "dpad",
+        "quit",
+        "exit",
+        "request_exit"
       ],
       "contract": {
         "owns": "Frame timing, fixed-step accumulation, per-tick input, replay/capture/perf plumbing, saves, screen feel, synthesised audio",
@@ -1046,7 +1059,11 @@
         "FpsCamera",
         "MouseLook",
         "Bounds",
-        "game_input::mouse_pixels"
+        "game_input::mouse_pixels",
+        "MenuNav",
+        "MenuStep",
+        "stick_look",
+        "request_exit"
       ],
       "read_first": [
         "docs/CUSTOM_CLIENT.md",

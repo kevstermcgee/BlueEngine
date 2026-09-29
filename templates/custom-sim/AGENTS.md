@@ -22,6 +22,9 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
   `MouseLook::look(px_right, px_down)` from `game_input::mouse_pixels()` into `FpsCamera` (or the same
   `[right, down]` delta into `Controller::look(dx, dy, 1.0, false)`). Never read `mouse_delta_position()`
   yourself (previous-minus-current: both signs flipped); never hand-write a yaw/pitch formula.
+- Gamepad: `input.look_delta_with(&shell, dt)` already adds mouse and right stick in that convention;
+  menus use `input.menu_step()` / `menu_select()` / `menu_back()` (flick + repeat built in). Quit with
+  `game_client::request_exit()` and break on `exit_requested()`; never `process::exit`.
 - Unit = metre. Check generated geometry without a window: `Bounds::of(points)?.expect_longest("shell",
   0.05..=0.30)` fails with the scale to apply; `kit::gizmo::human_scale`/`bbox` show it in a frame.
 - Rebuild with `scripts/blue dev` (closes a still-open copy first: a running .exe cannot be relinked on
