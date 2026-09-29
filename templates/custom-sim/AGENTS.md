@@ -8,21 +8,25 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
 ## Architecture (do not break)
 - `src/lib.rs` is the game: pure, seeded (`devkit::Rng`), fixed 60 Hz `Sim::step(&Input)`. No window,
   sound device or wall clock. It reaches the window only through `Event`s (`drain_events`).
-- `src/main.rs` is the window: `ClientInput` + `GameShell`, `InputAccumulator` -> one `Input` per tick,
-  `FixedStepper`, `kit` renderer/HUD/sound. Frame length is `input.frame_seconds()`, never macroquad's
-  `get_frame_time()` (bumpy under vsync). Capture/script/perf flags are already wired.
+- `src/main.rs` is the window: `ClientInput` + `GameShell` for devices, `devkit::Lifecycle` for the run
+  flags, one `Input` per fixed tick, quick save/load and capture/perf evidence, `kit` renderer/HUD/sound.
+  Frame length is `input.frame_seconds()` through `life.begin_frame`, never macroquad's `get_frame_time()`
+  (bumpy under vsync). Add a device or cue: extend `Held`, the vocabulary passed to `Lifecycle::start`
+  and the two arms of the "devices in" match; nothing else in the loop changes.
 - `Controller` has an implicit floor at y = 0 unless `set_floor(None)` (this starter uses none: the
   platform's collider is the only ground). Knockback is `apply_impulse`. Cannot see or hear the game?
   Use `--capture`, `--script`, `--perf` below, and numbers.
 
 ## Save states
-- F5 / F9 save and load the `quick` slot (`devkit::snapshot`): `impl Snapshot for Sim` in `src/lib.rs` lists
-  everything that decides the future. **Every new field of `Sim` goes into `SimState`**, or a save loses
-  it; `a_save_from_any_tick_resumes_exactly...` fails at the first tick that reads what was forgotten.
+- F5 / F9 save and load the `quick` slot (`devkit::snapshot`, wired by `devkit::Lifecycle` in `main.rs`):
+  `impl Snapshot for Sim` in `src/lib.rs` lists everything that decides the future. **Every new field of
+  `Sim` goes into `SimState`**, or a save loses it; `a_save_from_any_tick_resumes_as_the_game_promises...`
+  fails at the first tick that reads what was forgotten, and the error names the `hash_parts` piece.
   Changing `SimState` after release: bump `VERSION` and add a `Migration` so old saves still load.
-  A `Sim` that embeds a rigid-body world (`HeadlessWorld`) proves the physics save contract instead
-  (`assert_loads_replay_identically`, `assert_resumes_within`; docs/SAVE_STATE.md) and lists
-  `hash_parts` so a load that does not restore names the forgotten field.
+- `Sim::POLICY` is the save promise, in one place: `SavePolicy::Exact` (this starter) or
+  `SavePolicy::PhysicsContinuation` for a `Sim` that embeds a rigid-body world (`HeadlessWorld`), whose
+  resumed run is a pure function of the file but not bit-identical (docs/SAVE_STATE.md). The test proves
+  whichever is declared; never weaken the policy to make a test pass for a non-physics field.
 - Loads are all-or-nothing and saves are atomic with a backup; never write your own save file code.
 
 ## Checks

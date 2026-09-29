@@ -926,6 +926,8 @@
         "src/viewer/devkit/juice.rs",
         "src/viewer/devkit/rng.rs",
         "src/viewer/devkit/synth.rs",
+        "src/viewer/devkit/lifecycle.rs",
+        "docs/adr/0019-lifecycle-and-save-policy.md",
         "templates/custom-sim",
         "docs/CUSTOM_CLIENT.md",
         "docs/GAME_QUICKSTART.md"
@@ -1010,7 +1012,11 @@
         "Rng",
         "Juice",
         "Settings",
-        "Snapshot"
+        "Snapshot",
+        "Lifecycle",
+        "Options",
+        "Notice",
+        "ScriptFrame"
       ],
       "read_first": [
         "docs/CUSTOM_CLIENT.md",
@@ -1200,7 +1206,7 @@
         "cargo test --locked --test save_state --test save_session --test physics_saves",
         "generated custom-sim project: cargo test (resume exactly from any tick) and a real-window --script \"save@N,load@M\" capture"
       ],
-      "note": "Native save states for every tier. One framed, versioned file (SHA-256 over every byte, atomic write with a last-good .bak, named slots, autosave ring, payload migrations, content-fingerprint binding); engine worlds (HeadlessWorld::save_bytes/restore_bytes: players, rules, props, lifecycle; not rapier internals) with a checksum-verified, all-or-nothing restore; GameSession F5/F9 and --load/--save-dir in the stock client; DedicatedServer::with_autosave and be2-headless --load/--autosave; devkit::Snapshot for custom simulations with assert_resumes_exactly, and for physics-backed ones (ADR 0018: contact caches are unsaved history, isolated by experiment) assert_loads_replay_identically plus assert_resumes_within; Simulation::hash_parts makes a failed restore name the differing part; be2-tools save-info. What happens after a load depends only on the file. Online clients never save.",
+      "note": "Native save states for every tier. One framed, versioned file (SHA-256 over every byte, atomic write with a last-good .bak, named slots, autosave ring, payload migrations, content-fingerprint binding); engine worlds (HeadlessWorld::save_bytes/restore_bytes: players, rules, props, lifecycle; not rapier internals) with a checksum-verified, all-or-nothing restore; GameSession F5/F9 and --load/--save-dir in the stock client; DedicatedServer::with_autosave and be2-headless --load/--autosave; devkit::Snapshot for custom simulations with assert_resumes_exactly, and for physics-backed ones (ADR 0018: contact caches are unsaved history, isolated by experiment) assert_loads_replay_identically plus assert_resumes_within; the promise is declared once as Snapshot::POLICY (SavePolicy::Exact or PhysicsContinuation, ADR 0019), recorded in every save, shown by save-info and proved by assert_resumes_as_promised, which the starter's save test calls; Simulation::hash_parts makes a failed restore name the differing part; be2-tools save-info. What happens after a load depends only on the file. Online clients never save.",
       "keywords": [
         "save",
         "saves",
@@ -1261,6 +1267,9 @@
         "devkit::snapshot::assert_resumes_exactly",
         "devkit::snapshot::assert_loads_replay_identically",
         "devkit::snapshot::assert_resumes_within",
+        "devkit::snapshot::assert_resumes_as_promised",
+        "devkit::SavePolicy",
+        "devkit::Snapshot::POLICY",
         "devkit::Simulation::hash_parts",
         "DedicatedServer::with_autosave"
       ],

@@ -65,6 +65,35 @@ use serde_json::Value;
 
 pub use crate::viewer::savestate::Migration;
 
+/// What a save of a simulation promises about the run that resumes from it. A game declares it once as
+/// [`Snapshot::POLICY`]; every save records it, `be2-tools save-info` shows it, and
+/// [`assert_resumes_as_promised`] proves it, so the starter's save test demands exactly what the game
+/// promises.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum SavePolicy {
+    /// Everything that decides the future is in the state: a run resumed from a save is bit-identical
+    /// to the run that was never interrupted ([`assert_resumes_exactly`]). The default, and the bar for
+    /// rules, timers, scores and random streams.
+    Exact,
+    /// The simulation embeds a rigid-body world whose contact caches no portable save carries
+    /// (`docs/SAVE_STATE.md`, ADR 0018): what happens after a load is a pure function of the file and a
+    /// resumed run is a fair, not identical, continuation ([`assert_loads_replay_identically`]; a game
+    /// that promises a drift bound proves it with [`assert_resumes_within`]). Everything that is not
+    /// physics must still be captured whole.
+    PhysicsContinuation,
+}
+
+impl SavePolicy {
+    /// The name written into saves: `exact` or `physics-continuation`.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Exact => "exact",
+            Self::PhysicsContinuation => "physics-continuation",
+        }
+    }
+}
+
 /// A [`Simulation`] whose complete state can be written to a save file and put back.
 ///
 /// `capture` and `restore` are the only parts a game writes. Everything that decides the future of the
@@ -81,6 +110,9 @@ pub trait Snapshot: Simulation {
     /// One step per old version, each turning a payload of version `n` into version `n + 1`. A save older
     /// than the newest step this list can reach is refused, never guessed at.
     const MIGRATIONS: &'static [Migration] = &[];
+    /// What a save promises about the resumed run (see [`SavePolicy`]). `Exact` unless the simulation
+    /// embeds a rigid-body world; the starter's save test proves whichever is declared.
+    const POLICY: SavePolicy = SavePolicy::Exact;
     /// The plain-data description of the simulation.
     type State: Serialize + DeserializeOwned;
     /// Copy the whole state out. Floats must be finite (JSON cannot hold NaN or infinity); a state that
@@ -102,13 +134,16 @@ pub trait Snapshot: Simulation {
     }
 }
 
-/// The payload of a game save: the state, the [`Simulation::state_hash`] it had when it was saved, and its
-/// [`Simulation::hash_parts`] (absent when the game lists none; older saves have none).
+/// The payload of a game save: the state, the [`Simulation::state_hash`] it had when it was saved, its
+/// [`Simulation::hash_parts`] (absent when the game lists none; older saves have none) and the
+/// [`SavePolicy`] the game declared (older saves have none).
 #[derive(Serialize, Deserialize)]
 struct Envelope<T> {
     hash: String,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     parts: Vec<(String, String)>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    policy: Option<SavePolicy>,
     state: T,
 }
 
@@ -127,6 +162,7 @@ fn build<S: Snapshot>(sim: &S, label: &str) -> Result<(SaveHeader, Vec<u8>), Sav
     let envelope = Envelope {
         hash: content_string(sim.state_hash()),
         parts: named_parts(sim),
+        policy: Some(S::POLICY),
         state: sim.capture(),
     };
     Ok((header, savestate::payload_bytes(&envelope)?))
@@ -256,6 +292,9 @@ fn apply<S: Snapshot>(
         .remove("parts")
         .and_then(|v| serde_json::from_value(v).ok())
         .unwrap_or_default();
+    // The policy the save was written under is informational (save-info shows it); the game's own
+    // POLICY says what this build promises.
+    fields.remove("policy");
     let Some(state) = fields.remove("state") else {
         return Err(SaveError::Invalid("the save holds no state".into()));
     };
@@ -352,6 +391,21 @@ pub fn assert_resumes_exactly<S: Snapshot>(
                 split + offset + 1
             );
         }
+    }
+}
+
+/// The proof that matches the game's own [`Snapshot::POLICY`]: [`assert_resumes_exactly`] for
+/// [`SavePolicy::Exact`], [`assert_loads_replay_identically`] for [`SavePolicy::PhysicsContinuation`].
+/// The starter's save test calls this, so declaring the policy in one place is what changes what the
+/// test demands (and a physics game that also promises a drift bound adds [`assert_resumes_within`]).
+pub fn assert_resumes_as_promised<S: Snapshot>(
+    make: impl Fn() -> S,
+    inputs: &[S::Input],
+    every: usize,
+) {
+    match S::POLICY {
+        SavePolicy::Exact => assert_resumes_exactly(make, inputs, every),
+        SavePolicy::PhysicsContinuation => assert_loads_replay_identically(make, inputs, every),
     }
 }
 
@@ -820,6 +874,7 @@ mod tests {
     }
     impl Snapshot for Drifty {
         const KIND: &'static str = "drifty";
+        const POLICY: SavePolicy = SavePolicy::PhysicsContinuation;
         type State = (f32, u64);
         fn capture(&self) -> (f32, u64) {
             (self.x, self.steps)
@@ -877,6 +932,46 @@ mod tests {
         .downcast::<String>()
         .unwrap();
         assert!(message.contains("with a history"), "{message}");
+    }
+
+    #[test]
+    fn the_promised_proof_follows_the_declared_policy_and_saves_record_it() {
+        let pushes = inputs(120);
+        // Exact by default: the walker keeps everything and resumes bit for bit.
+        assert_resumes_as_promised(|| Walker::new(1), &pushes, 20);
+        // A physics continuation: the drifty simulation cannot resume exactly, and promises not to.
+        assert_resumes_as_promised(|| Drifty::new(false), &pushes, 20);
+        let message = *std::panic::catch_unwind(|| {
+            assert_resumes_as_promised(|| Drifty::new(true), &pushes, 20);
+        })
+        .expect_err("a restore that leaves hidden state behind breaks even the weaker promise")
+        .downcast::<String>()
+        .unwrap();
+        assert!(message.contains("with a history"), "{message}");
+        // Every save records the policy it was written under, and an older save without one still loads.
+        let payload = |bytes: &[u8]| -> Value {
+            serde_json::from_slice(decode(bytes).unwrap().payload).unwrap()
+        };
+        assert_eq!(
+            payload(&save(&Drifty::new(false), "d").unwrap())["policy"],
+            "physics-continuation"
+        );
+        assert_eq!(
+            payload(&save(&Walker::new(1), "w").unwrap())["policy"],
+            "exact"
+        );
+        assert_eq!(
+            SavePolicy::PhysicsContinuation.name(),
+            "physics-continuation"
+        );
+        let header = SaveHeader::new("walker", 1, "old").with_content(1);
+        let old = br#"{"hash":"0","state":{"x":1.0,"steps":3,"rng":5,"queue":[]}}"#;
+        let mut game = Walker::new(1);
+        let error = restore(&mut game, &savestate::encode(&header, old).unwrap()).unwrap_err();
+        assert!(
+            matches!(&error, SaveError::Invalid(m) if m.contains("did not reproduce")),
+            "a policy-less save is read as before (this one lies about its hash): {error}"
+        );
     }
 
     #[test]

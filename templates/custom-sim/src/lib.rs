@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 use vesper3d::math::V;
 use vesper3d::viewer::controller::{Collider, Controller, ControllerState, Movement};
-use vesper3d::viewer::devkit::{Rng, Simulation, Snapshot, StateHasher, TICK};
+use vesper3d::viewer::devkit::{Rng, SavePolicy, Simulation, Snapshot, StateHasher, TICK};
 
 /// Half the platform's side length, in metres.
 pub const PLATFORM_HALF: f32 = 6.;
@@ -183,6 +183,32 @@ impl Simulation for Sim {
         }
         h.finish()
     }
+    fn hash_parts(&self) -> Vec<(&'static str, u64)> {
+        let one = |f: &dyn Fn(&mut StateHasher)| {
+            let mut h = StateHasher::new();
+            f(&mut h);
+            h.finish()
+        };
+        vec![
+            ("run", one(&|h| {
+                h.u64(self.tick).u32(self.score).bool(self.over);
+            })),
+            ("player", one(&|h| {
+                let p = self.player.position;
+                h.f32(p.0).f32(p.1).f32(p.2).f32(self.player.yaw).f32(self.player.pitch);
+            })),
+            ("orbs", one(&|h| {
+                for orb in &self.orbs {
+                    h.f32(orb.0).f32(orb.2);
+                }
+            })),
+            ("bumpers", one(&|h| {
+                for b in &self.bumpers {
+                    h.f32(b.pos.0).f32(b.pos.2).f32(b.vel.0).f32(b.vel.2);
+                }
+            })),
+        ]
+    }
 }
 
 /// Everything that decides where the game goes next, as plain data for a save file. Presentation (particles,
@@ -201,14 +227,18 @@ pub struct SimState {
 }
 
 /// Save states. Add every new field of `Sim` to `SimState` (bump `VERSION` and add a `Migration` when a field
-/// changes shape); `tests/determinism.rs` fails at the first tick that reads something a save forgot. If the
-/// game embeds a rigid-body world (`HeadlessWorld`, or `vesper3d::rapier`), put its `save_state()` here and
-/// swap that test's `assert_resumes_exactly` for `assert_loads_replay_identically` plus
-/// `assert_resumes_within` (docs/SAVE_STATE.md, "Which contract a physics game can meet"): contact caches are
-/// history no save carries, so a resumed run is a pure function of the file but not bit-identical.
-/// Implement `Simulation::hash_parts` too, so a load that does not restore names the forgotten field.
+/// changes shape); `tests/determinism.rs` fails at the first tick that reads something a save forgot.
+///
+/// `POLICY` is what a save promises, proved by that test (`assert_resumes_as_promised`). `Exact` is the bar
+/// for rules, timers and random streams. If the game embeds a rigid-body world (`HeadlessWorld`, or
+/// `vesper3d::rapier`), put its `save_state()` here and declare `SavePolicy::PhysicsContinuation`: contact
+/// caches are history no save carries, so a resumed run is a pure function of the file but not bit-identical
+/// (docs/SAVE_STATE.md, "Which contract a physics game can meet"); bound the drift with
+/// `assert_resumes_within` if the game promises one. `hash_parts` names the pieces of the state hash so a
+/// load that does not restore names the forgotten field.
 impl Snapshot for Sim {
     const KIND: &'static str = "{{name}}";
+    const POLICY: SavePolicy = SavePolicy::Exact;
     type State = SimState;
     fn capture(&self) -> SimState {
         SimState {

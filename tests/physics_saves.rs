@@ -4,7 +4,7 @@
 use vesper3d::{
     prelude::*,
     viewer::{
-        devkit::{snapshot, Simulation, Snapshot},
+        devkit::{snapshot, SavePolicy, Simulation, Snapshot},
         savestate::world::WorldState,
     },
 };
@@ -67,6 +67,9 @@ impl Simulation for Kicked {
 
 impl Snapshot for Kicked {
     const KIND: &'static str = "kicked";
+    /// The policy a game with rigid bodies declares: a load is a pure function of the file, a resumed run
+    /// a fair continuation. `assert_resumes_as_promised` then demands exactly that.
+    const POLICY: SavePolicy = SavePolicy::PhysicsContinuation;
     type State = WorldState;
     fn capture(&self) -> WorldState {
         self.world.save_state().expect("a finite world")
@@ -113,7 +116,9 @@ fn twenty_rolling_colliding_apples_load_as_a_pure_function_of_the_file() {
         moving >= 10,
         "only {moving} apples still move at the end: the scene is too tame"
     );
-    snapshot::assert_loads_replay_identically(Kicked::rolling_apples, &[(); TICKS], EVERY);
+    // The declared policy picks the proof: for a physics continuation this is
+    // `assert_loads_replay_identically`.
+    snapshot::assert_resumes_as_promised(Kicked::rolling_apples, &[(); TICKS], EVERY);
 }
 
 #[test]

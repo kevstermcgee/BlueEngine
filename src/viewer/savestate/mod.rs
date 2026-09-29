@@ -686,13 +686,17 @@ pub fn describe(path: &Path) -> Result<Value, SaveError> {
                 Err(error) => serde_json::json!({ "unreadable": error.to_string() }),
             }
         }
-        // A game's own envelope is `{"hash": ..., "state": {...}}`; a bare object lists its own keys.
+        // A game's own envelope is `{"hash": ..., "policy": ..., "state": {...}}`; a bare object lists
+        // its own keys. The policy is what the game promised about resuming (`devkit::SavePolicy`).
         Ok(Value::Object(fields)) => {
             let state = fields
                 .get("state")
                 .and_then(Value::as_object)
                 .unwrap_or(fields);
-            serde_json::json!({ "fields": state.keys().collect::<Vec<_>>() })
+            serde_json::json!({
+                "fields": state.keys().collect::<Vec<_>>(),
+                "policy": fields.get("policy").cloned().unwrap_or(Value::Null),
+            })
         }
         Ok(_) => serde_json::json!({ "fields": [] }),
         Err(error) => serde_json::json!({ "unreadable": error.to_string() }),

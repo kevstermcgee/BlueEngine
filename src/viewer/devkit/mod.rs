@@ -20,7 +20,8 @@
 //! | [`Rng`] | seeded random numbers, so a seed replays a run |
 //! | [`Juice`], [`Pulse`] | screen shake, hit-stop, FOV kick, flash, landing dip |
 //! | [`Settings`], [`Records`], [`load_or_default`], [`store_atomic`] | atomic, never-fatal settings and high-score files |
-//! | [`Snapshot`], [`snapshot`] | save states of the simulation: F5 / F9, autosaves, migrations, all-or-nothing loads |
+//! | [`Snapshot`], [`snapshot`], [`SavePolicy`] | save states of the simulation: F5 / F9, autosaves, migrations, all-or-nothing loads, and the resume contract a game declares (exact, or a physics continuation) |
+//! | [`Lifecycle`] | the pieces above composed: flags in, one input per tick, quick save/load, capture and perf evidence out, so `main.rs` keeps only drawing and device mapping |
 //! | [`synth`] | procedural sound effects, a music loop, WAV writer and loudness/pitch measurement: audio with no recordings |
 //!
 //! The simulation stays authoritative and rendering-free; the window only reads it. One frame of a
@@ -54,6 +55,7 @@
 mod clock;
 mod input;
 mod juice;
+mod lifecycle;
 mod playback;
 mod rng;
 mod save;
@@ -67,10 +69,11 @@ pub use crate::viewer::savestate::{
 pub use clock::{FixedStepper, FrameClock, PerfReport, PerfSummary, MAX_FRAME, TICK, TICK_RATE};
 pub use input::{clean_axis, Edges, InputAccumulator, Tick};
 pub use juice::{Juice, Pulse, MAX_HITSTOP};
+pub use lifecycle::{Lifecycle, Notice, Options, ScriptFrame};
 pub use playback::{
     flag_value, has_flag, parse_frame_list, parse_size, CapturePlan, Cue, Playback, Timeline,
 };
 pub use rng::Rng;
 pub use save::{beside_exe, load_or_default, store_atomic, Records, Settings};
 pub use sim::{assert_deterministic, run_inputs, Simulation, StateHasher, Trace};
-pub use snapshot::{Migration, Snapshot};
+pub use snapshot::{assert_resumes_as_promised, Migration, SavePolicy, Snapshot};

@@ -74,18 +74,20 @@ Implement [`Snapshot`](../src/viewer/devkit/snapshot.rs) next to `Simulation`: s
 
 ```rust
 impl Snapshot for Sim {
-    const KIND: &'static str = "orb-run";  // never change once players have saves
-    type State = SimState;                 // a serde struct of everything that decides the future
+    const KIND: &'static str = "orb-run";          // never change once players have saves
+    const POLICY: SavePolicy = SavePolicy::Exact;  // what a save promises (below); Exact unless physics is embedded
+    type State = SimState;                         // a serde struct of everything that decides the future
     fn capture(&self) -> SimState { /* ... */ }
     fn restore(&mut self, state: SimState) -> Result<(), String> { /* validate, then apply */ }
 }
 ```
 
-Then `snapshot::save_to_slot`, `snapshot::load_from_slot` and `snapshot::autosave` do the rest, and one line of
-a test proves the state is complete:
+Then `snapshot::save_to_slot`, `snapshot::load_from_slot` and `snapshot::autosave` do the rest (the starter's
+`main.rs` reaches them through `devkit::Lifecycle`: F5, F9 and `--load` are wired), and one line of a test
+proves the state is complete, demanding whatever `POLICY` promises:
 
 ```rust
-snapshot::assert_resumes_exactly(|| Sim::new(7), &inputs, 25);
+snapshot::assert_resumes_as_promised(|| Sim::new(7), &inputs, 25); // Exact: assert_resumes_exactly
 ```
 
 It saves every 25 ticks of a scripted run, loads each save into a **brand new** `Sim`, replays the remaining
@@ -116,17 +118,22 @@ its first tick with every piece but the bodies, or with the bodies, islands and 
 exactly only with the library's complete state. That state is what [ADR 0016](adr/0016-native-save-states.md)
 rejected serialising, so it stays unsaved and the contract is stated honestly instead.
 
-What a physics game promises, and proves with one line each (`tests/physics_saves.rs` is the worked example:
-twenty rolling apples):
+What a physics game promises is declared in one place, `const POLICY: SavePolicy = SavePolicy::PhysicsContinuation`,
+written into every save (`be2-tools save-info FILE` shows it under `summary.policy`) and proved with one line each
+(`tests/physics_saves.rs` is the worked example: twenty rolling apples):
 
 ```rust
 // What happens after a load is a pure function of the file: the loaded state has the saved hash and saves
 // back to the same bytes, two loads replay identically, and a load into a game with a long history replays
-// like a load into a new one (a restore that leaves stale state behind fails here).
+// like a load into a new one (a restore that leaves stale state behind fails here). This is what
+// assert_resumes_as_promised demands under PhysicsContinuation.
 snapshot::assert_loads_replay_identically(|| Sim::new(7), &inputs, 25);
 // The resumed run stays within a measured distance of the uninterrupted one; the worst drift is returned.
 let worst = snapshot::assert_resumes_within(|| Sim::new(7), &inputs, 25, 0.5, |a, b| a.farthest_prop_from(b));
 ```
+
+The policy is a promise about physics only: scores, timers and random streams must still be captured whole,
+and a game must never switch to `PhysicsContinuation` to hide a forgotten field (`hash_parts` names it).
 
 Measured on the worked example (debug profile, 20 props kicked at 4 to 6 m/s, saves every second over three
 seconds): the resumed run diverges on the first tick after every mid-run split, by a fraction of a millimetre,

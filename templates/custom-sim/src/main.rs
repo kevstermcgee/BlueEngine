@@ -1,6 +1,6 @@
 //! {{title}}: the window, renderer, sound and input around the simulation in the library.
 //!
-//! Play it, or drive it without a human (an agent cannot watch a window):
+//! Play it, or drive it without a human (an agent cannot watch a window); `devkit::Lifecycle` handles these:
 //!   --capture DIR [--frames 30,90] [--exit-after N]   save screenshots (DIR must be new), then exit
 //!   --script "fwd:0-200,look:0.01@0-100,jump@60"      drive the human input path from a cue script
 //!   --seed N   --size WxH   --mute   --perf           reproducible run, window size, silence, frame times
@@ -10,12 +10,8 @@
 mod platform;
 
 use macroquad::prelude::*;
-use std::time::Instant;
 use vesper3d::viewer::{
-    devkit::{
-        flag_value, has_flag, parse_size, snapshot, synth, CapturePlan, FixedStepper, InputAccumulator, Juice,
-        PerfReport, SaveSlots, Source, Timeline, QUICK_SLOT, TICK,
-    },
+    devkit::{flag_value, has_flag, parse_size, synth, Juice, Lifecycle, Notice},
     game_client::{self, GameShell},
     game_input::ClientInput,
     identity::Identity,
@@ -58,6 +54,8 @@ struct Held {
     right: f32,
 }
 const JUMP: u32 = 1;
+/// The cue names a `--script` may use (`save` and `load` are always understood).
+const CUES: [&str; 6] = ["fwd", "back", "left", "right", "jump", "look"];
 
 /// Sounds by index: the engine's synthesised presets, rendered on a worker thread.
 const SOUNDS: [synth::Preset; 5] =
@@ -146,163 +144,95 @@ fn react(event: &Event, sounds: &mut SoundBank, fx: &mut Fx, juice: &mut Juice) 
     }
 }
 
-/// F5: write the run to the quick slot. Returns the banner to show.
-fn quick_save(sim: &Sim, slots: &SaveSlots) -> (&'static str, String, [f32; 3]) {
-    if sim.over {
-        return ("NOT SAVED", "the run is over".into(), [1., 0.6, 0.3]);
-    }
-    match snapshot::save_to_slot(sim, slots, QUICK_SLOT, &format!("Quick save, {} orbs", sim.score)) {
-        Ok(()) => ("GAME SAVED", "F9 loads it".into(), [0.4, 1., 0.6]),
-        Err(e) => ("SAVE FAILED", e.to_string(), [1., 0.4, 0.4]),
-    }
-}
-
-/// F9: resume the quick slot. A damaged save falls back to the previous good one, and the banner says so.
-fn quick_load(sim: &mut Sim, slots: &SaveSlots) -> (&'static str, String, [f32; 3]) {
-    match snapshot::load_from_slot(sim, slots, QUICK_SLOT) {
-        Ok((header, Source::Primary)) => ("GAME LOADED", header.label, [0.4, 0.9, 1.]),
-        Ok((header, Source::Backup(_))) => ("LOADED THE PREVIOUS SAVE", header.label, [1., 0.8, 0.4]),
-        Err(e) => ("LOAD FAILED", e.to_string(), [1., 0.4, 0.4]),
-    }
-}
-
-/// Held device state and the press edge for this frame from a `--script`.
-fn scripted(script: &Timeline, frame: u32) -> (Held, bool, [f32; 2]) {
-    let mut held = Held::default();
-    let mut look = [0.; 2];
-    for cue in script.active(frame) {
-        match cue.name.as_str() {
-            "fwd" => held.forward += 1.,
-            "back" => held.forward -= 1.,
-            "right" => held.right += 1.,
-            "left" => held.right -= 1.,
-            "look" => {
-                look[0] += cue.value(0);
-                look[1] += cue.value(1);
-            }
-            _ => {}
-        }
-    }
-    (held, script.starting(frame).any(|c| c.name == "jump"), look)
+/// Show the outcome of a quick save or load.
+fn announce(fx: &mut Fx, notice: &Notice) {
+    fx.banners.clear();
+    fx.banner(notice.title, notice.detail.clone(), notice.color);
 }
 
 #[macroquad::main(window)]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
     let identity = identity();
-    let plan = CapturePlan::from_args(&args).unwrap_or_else(|e| {
-        eprintln!("{e}");
-        std::process::exit(2)
-    });
-    if let Some(plan) = &plan {
-        if let Err(e) = plan.create_dir() {
-            eprintln!("{e}");
-            std::process::exit(2);
-        }
-    }
-    let script = flag_value(&args, "--script").map(|text| {
-        Timeline::parse(text, &["fwd", "back", "left", "right", "jump", "look", "save", "load"]).unwrap_or_else(|e| {
-            eprintln!("{e}");
-            std::process::exit(2)
-        })
-    });
-    let seed = flag_value(&args, "--seed").and_then(|s| s.parse().ok()).unwrap_or_else(|| {
-        std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(1, |d| d.as_nanos() as u64)
-    });
-    // Captures and scripted runs are fixed-step and silent, whatever the display does.
-    let unattended = plan.is_some() || script.is_some();
+    // The run flags, the fixed-step loop, quick save/load and evidence for a caller that cannot watch.
+    let mut life = Lifecycle::<Held>::start_or_exit(&args, &CUES);
+    let seed = life.seed();
+    let unattended = life.options.unattended();
 
     let materials = Materials::load().expect("the materials failed to compile");
     let look = Look::dusk();
     let scene = build_scene();
-    let mut sounds = SoundBank::start(has_flag(&args, "--mute") || unattended, 0.9, 0.6, render_audio).await;
+    let mut sounds = SoundBank::start(life.options.silent(), 0.9, 0.6, render_audio).await;
     let mut shell = GameShell::new();
     let mut input = ClientInput::new();
-    let (mut acc, mut stepper) = (InputAccumulator::<Held>::new(), FixedStepper::new());
     let (mut fx, mut juice) = (Fx::new(seed), Juice::default());
     let mut sim = Sim::new(seed);
-    let slots = flag_value(&args, "--save-dir").map_or_else(SaveSlots::beside_exe, SaveSlots::new);
-    if let Some(target) = flag_value(&args, "--load") {
-        match snapshot::load_target(&mut sim, &slots, target) {
-            Ok((header, _)) => println!("loaded: {}", header.label),
-            Err(e) => {
-                eprintln!("--load {target}: {e}");
-                std::process::exit(2);
-            }
-        }
-    }
-    let mut perf = PerfReport::new(30);
+    life.load_flag_or_exit(&mut sim);
     let vignette = hud::make_vignette();
     let (mut world, mut alpha, mut add) = (Batch::new(), Batch::new(), Batch::new());
-    let mut frame: u32 = 0;
-    let mut time = 0.;
 
     loop {
-        let began = Instant::now();
         // The cursor is captured while a run is in progress; the shell's menu releases it.
         input.begin_frame_with_keyboard(&mut shell, !sim.over, unattended || platform::focused(), platform::keyboard());
-        let dt = if unattended { TICK } else { input.frame_seconds() };
+        let dt = life.begin_frame(input.frame_seconds());
+        let time = life.time();
         sounds.poll().await;
         if sounds.ready() {
             sounds.start_music();
         }
-        time += dt;
 
-        // 1. Devices in: one frame of held state, press edges and look motion.
-        let (held, jump, look_delta) = match &script {
-            Some(script) => scripted(script, frame),
+        // 1. Devices in: one frame of held state, press edges and look motion (from the script when there is one).
+        let (held, jump, look_delta) = match life.script() {
+            Some(s) => (
+                Held { forward: s.axis("fwd", "back"), right: s.axis("right", "left") },
+                s.starts("jump"),
+                [s.value("look", 0), s.value("look", 1)],
+            ),
             None => {
                 let m = input.movement(&shell);
                 (Held { forward: m.forward, right: m.right }, m.jump, input.look_delta_with(&shell, dt))
             }
         };
-        acc.feed(held, if jump { JUMP } else { 0 }, look_delta);
-        let (save, load) = match &script {
-            Some(script) => (
-                script.starting(frame).any(|c| c.name == "save"),
-                script.starting(frame).any(|c| c.name == "load"),
-            ),
-            None => (input.pressed(KeyCode::F5), input.pressed(KeyCode::F9)),
-        };
+        life.feed(held, if jump { JUMP } else { 0 }, look_delta);
+        let (save, load) = life.save_load_requested(input.pressed(KeyCode::F5), input.pressed(KeyCode::F9));
         if save {
-            let (title, detail, color) = quick_save(&sim, &slots);
-            fx.banners.clear();
-            fx.banner(title, &detail, color);
+            let notice = if sim.over {
+                Notice::refused("the run is over")
+            } else {
+                life.quick_save(&sim, &format!("Quick save, {} orbs", sim.score))
+            };
+            announce(&mut fx, &notice);
         }
         if load {
-            let (title, detail, color) = quick_load(&mut sim, &slots);
-            fx.banners.clear();
-            fx.banner(title, &detail, color);
-            // The saved moment replaces everything in flight: inputs, leftover time, effects.
-            acc.clear();
-            stepper = FixedStepper::new();
-            juice = Juice::default();
+            let notice = life.quick_load(&mut sim);
+            announce(&mut fx, &notice);
+            if notice.ok {
+                // The saved moment replaces everything in flight (the lifecycle dropped pending input already).
+                juice = Juice::default();
+            }
         }
         if sim.over && (input.pressed(KeyCode::R) || input.pressed(KeyCode::Enter)) {
-            sim = Sim::new(seed.wrapping_add(u64::from(frame)));
+            sim = Sim::new(life.restart_seed());
             fx.clear();
-            acc.clear();
+            life.reset_input();
         }
 
         // 2. Simulation: whole fixed ticks, each with exactly one Input.
         let playing = !shell.paused;
-        let scale = juice.time_scale(None);
-        if playing {
-            for _ in 0..stepper.advance(dt * scale) {
-                let tick = acc.take_tick();
-                sim.step(&Input { forward: tick.held.forward, right: tick.held.right, look: tick.look, jump: tick.pressed(JUMP) });
-                for event in sim.drain_events() {
-                    react(&event, &mut sounds, &mut fx, &mut juice);
-                }
+        for _ in 0..life.ticks(dt, juice.time_scale(None), playing) {
+            let tick = life.take_tick();
+            sim.step(&Input { forward: tick.held.forward, right: tick.held.right, look: tick.look, jump: tick.pressed(JUMP) });
+            for event in sim.drain_events() {
+                react(&event, &mut sounds, &mut fx, &mut juice);
             }
+        }
+        if playing {
             juice.update(dt);
             fx.update(dt);
-        } else {
-            acc.clear();
         }
 
         // 3. Camera: the simulation's pose plus any look motion no tick has consumed yet.
-        let pending = acc.pending_look();
+        let pending = life.pending_look();
         let (shake, roll) = juice.camera_shake();
         let eye = vec3(sim.player.position.0, sim.player.position.1 + juice.dip, sim.player.position.2);
         let mut view = View::first_person(
@@ -362,29 +292,16 @@ async fn main() {
             break;
         }
 
-        // 5. Evidence for a caller that cannot watch: screenshots, then exit.
-        if let Some(plan) = &plan {
-            if plan.wants(frame) {
-                match kit::capture::save_frame(&plan.path_for(frame)) {
-                    Ok((w, h)) => println!(
-                        "{{\"frame\":{frame},\"width\":{w},\"height\":{h},\"path\":{:?}}}",
-                        plan.path_for(frame).display().to_string()
-                    ),
-                    Err(e) => eprintln!("capture failed: {e}"),
-                }
-            }
-            if plan.finished(frame + 1) {
-                break;
-            }
+        // 5. Evidence for a caller that cannot watch: screenshots and frame times, then exit.
+        if let Some(path) = life.capture_path() {
+            life.captured(&path, kit::capture::save_frame(&path).map_err(|e| e.to_string()));
         }
-        if has_flag(&args, "--perf") {
-            perf.frame(dt);
-            perf.work(began.elapsed().as_secs_f32());
+        if life.end_frame(dt) {
+            break;
         }
-        frame += 1;
         next_frame().await;
     }
-    if has_flag(&args, "--perf") {
-        println!("{}", perf.text(25.));
+    if let Some(report) = life.report() {
+        println!("{report}");
     }
 }

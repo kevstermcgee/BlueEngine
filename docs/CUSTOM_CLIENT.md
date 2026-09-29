@@ -51,31 +51,51 @@ is still exactly one authoritative loop (the presentation contract forbids a *se
 client, which presents `GameSession` state; it does not apply to a game that owns its only authority).
 
 `be2-tools new-game NAME DIR ENGINE_PATH custom-sim` generates the shape: `src/lib.rs` (rules:
-`Sim::step(&Input)`, `drain_events()`, a state hash), `src/main.rs` (the window), `tests/determinism.rs`,
-and the same identity, icon, packaging and ship gate as the stock starter. Copy its loop:
+`Sim::step(&Input)`, `drain_events()`, a state hash, a save policy), `src/main.rs` (the window),
+`tests/determinism.rs`, and the same identity, icon, packaging and ship gate as the stock starter. The
+window's lifecycle (run flags, whole ticks with one input each, F5/F9, `--load`, capture and perf evidence)
+is `devkit::Lifecycle`; `main.rs` keeps the drawing and the mapping from devices and cues to its held state:
 
 ```rust
-input.begin_frame_with_keyboard(&mut shell, capture_cursor, focused, platform::keyboard());
-let dt = input.frame_seconds();                       // wall-clock frame length, not get_frame_time()
-acc.feed(held, edges, look);                          // device state in (InputAccumulator)
-for _ in 0..stepper.advance(dt) {                     // whole 60 Hz ticks out (FixedStepper)
-    let tick = acc.take_tick();                       // exactly one Input per tick, edges delivered once
-    sim.step(&Input::from(tick));
-    for event in sim.drain_events() { react(&event); }  // sound, particles, shake: an exhaustive match
+let mut life = Lifecycle::<Held>::start_or_exit(&args, &CUES); // --seed/--script/--capture/--load/--perf/--mute
+life.load_flag_or_exit(&mut sim);                              // --load SLOT_OR_FILE, before the first frame
+loop {
+    input.begin_frame_with_keyboard(&mut shell, capture_cursor, focused, platform::keyboard());
+    let dt = life.begin_frame(input.frame_seconds());          // wall clock for a person; one tick unattended
+    let (held, edges, look) = match life.script() {            // cues (--script) or devices in
+        Some(s) => (Held { forward: s.axis("fwd", "back"), .. }, edges(s.starts("jump")), [s.value("look", 0), s.value("look", 1)]),
+        None => devices(&input, &shell, dt),
+    };
+    life.feed(held, edges, look);
+    let (save, load) = life.save_load_requested(input.pressed(KeyCode::F5), input.pressed(KeyCode::F9));
+    if save { show(life.quick_save(&sim, "Quick save")); }     // a Notice: title, detail, colour, ok
+    if load { show(life.quick_load(&mut sim)); }               // pending input and leftover time are dropped
+    for _ in 0..life.ticks(dt, juice.time_scale(None), !shell.paused) { // whole 60 Hz ticks
+        let tick = life.take_tick();                           // exactly one Input per tick, edges once
+        sim.step(&Input::from(tick));
+        for event in sim.drain_events() { react(&event); }     // sound, particles, shake: an exhaustive match
+    }
+    draw(&sim, life.pending_look());                           // camera = pose + look no tick consumed yet
+    if let Some(path) = life.capture_path() {                  // --capture: the caller writes the file
+        life.captured(&path, kit::capture::save_frame(&path).map_err(|e| e.to_string()));
+    }
+    if life.end_frame(dt) { break; }                           // the capture plan is finished
+    next_frame().await;
 }
-draw(&sim, stepper.alpha());                          // camera = simulation pose + acc.pending_look()
+if let Some(report) = life.report() { println!("{report}"); } // --perf
 ```
 
 The engine provides the parts every such game rewrites, each independent and optional:
 
 | Module | Piece | Job |
 |---|---|---|
-| `devkit` (headless) | `FrameClock`, `FixedStepper`, `InputAccumulator` | frame timing, fixed ticks, one input per tick |
+| `devkit` (headless) | `Lifecycle`, `Options`, `Notice` | the whole window lifecycle composed from the rows below: flags, ticks, F5/F9, `--load`, capture and perf evidence |
+| | `FrameClock`, `FixedStepper`, `InputAccumulator` | frame timing, fixed ticks, one input per tick |
 | | `Simulation`, `StateHasher`, `assert_deterministic`, `run_inputs` | the deterministic-state contract and its replay test |
 | | `Playback`, `Timeline`, `CapturePlan`, `PerfReport`, `flag_value` | `--playback`, `--script`, `--capture`, `--perf` flags for an agent that cannot play |
 | | `Rng`, `Juice`, `Pulse`, `Settings`, `Records`, `store_atomic` | seeded random numbers, screen feel, atomic never-fatal settings and high-score files |
 | | `Snapshot`, `snapshot::{save_to_slot, load_from_slot, autosave, assert_resumes_exactly}` | F5/F9 save states: atomic files, backups, migrations, all-or-nothing loads, and their proof ([SAVE_STATE.md](SAVE_STATE.md)) |
-| | `snapshot::{assert_loads_replay_identically, assert_resumes_within}`, `Simulation::hash_parts` | the save contract a physics-backed simulation can meet, and a load error that names the forgotten field |
+| | `SavePolicy`, `snapshot::assert_resumes_as_promised`, `snapshot::{assert_loads_replay_identically, assert_resumes_within}`, `Simulation::hash_parts` | the save promise a game declares in one place (`Exact`, or `PhysicsContinuation` for a rigid-body world), the proof that follows it, and a load error that names the forgotten field |
 | `simulation` | `HeadlessWorld` (via `SceneBuilder`, `without_spawn()` for a props-only world) | rigid-body props as the physics authority inside your own rules (below) |
 | | `synth` | oscillators, filters, envelopes, WAV, ready-made effect presets, a music-loop helper |
 | `kit` (`presentation`) | `View`, `Template`, `Batch`, `Tint` | camera; small meshes built once, batched into a few draw calls per frame |

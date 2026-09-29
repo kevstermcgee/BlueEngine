@@ -80,19 +80,19 @@ fn a_bumper_shoves_the_player_with_an_impulse_that_fades() {
 }
 
 #[test]
-fn a_save_from_any_tick_resumes_exactly_in_a_brand_new_game() {
-    // Also with a bumper's shove (and its cooldown) in flight when the saves are taken.
-    // A game whose `Sim` embeds a rigid-body world cannot pass this while bodies touch: use
-    // `snapshot::assert_loads_replay_identically` and `snapshot::assert_resumes_within` instead
-    // (docs/SAVE_STATE.md, "Which contract a physics game can meet").
+fn a_save_from_any_tick_resumes_as_the_game_promises_in_a_brand_new_game() {
+    // `Sim::POLICY` decides what this demands: `Exact` (this starter) means a resumed run is bit-identical
+    // to the uninterrupted one; a game that embeds a rigid-body world declares `PhysicsContinuation` and
+    // this then proves that a load is a pure function of the file (docs/SAVE_STATE.md, "Which contract a
+    // physics game can meet"). Also with a bumper's shove (and its cooldown) in flight when saves are taken.
     let shoved = || {
         let mut sim = Sim::new(9);
         let p = sim.player.position;
         sim.bumpers[0].pos = V(p.0 - 0.3, 0.4, p.2);
         sim
     };
-    snapshot::assert_resumes_exactly(|| Sim::new(7), &scripted(), 25);
-    snapshot::assert_resumes_exactly(shoved, &scripted(), 5);
+    snapshot::assert_resumes_as_promised(|| Sim::new(7), &scripted(), 25);
+    snapshot::assert_resumes_as_promised(shoved, &scripted(), 5);
 }
 
 #[test]
