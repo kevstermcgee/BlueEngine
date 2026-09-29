@@ -12,7 +12,14 @@
 //!   state is refused, or restoring it does not reproduce the saved [`Simulation::state_hash`], the
 //!   simulation is put back exactly as it was;
 //! * [`assert_resumes_exactly`] proves in one line of a test that a save taken at any tick and loaded into a
-//!   brand new simulation plays out identically to the run that was never interrupted.
+//!   brand new simulation plays out identically to the run that was never interrupted;
+//! * a simulation built on a rigid-body physics library cannot meet that bar while bodies touch (the
+//!   solver's contact caches are history no portable save carries; `docs/SAVE_STATE.md` has the measured
+//!   facts), so [`assert_loads_replay_identically`] proves the contract such a game does keep, that what
+//!   happens after a load is a pure function of the file, and [`assert_resumes_within`] bounds how far a
+//!   resumed run may drift from the uninterrupted one;
+//! * a load that does not reproduce the saved hash names the piece of state that differs when the game
+//!   lists its [`Simulation::hash_parts`].
 //!
 //! ```
 //! use serde::{Deserialize, Serialize};
@@ -95,11 +102,21 @@ pub trait Snapshot: Simulation {
     }
 }
 
-/// The payload of a game save: the state, and the [`Simulation::state_hash`] it had when it was saved.
+/// The payload of a game save: the state, the [`Simulation::state_hash`] it had when it was saved, and its
+/// [`Simulation::hash_parts`] (absent when the game lists none; older saves have none).
 #[derive(Serialize, Deserialize)]
 struct Envelope<T> {
     hash: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    parts: Vec<(String, String)>,
     state: T,
+}
+
+fn named_parts<S: Simulation>(sim: &S) -> Vec<(String, String)> {
+    sim.hash_parts()
+        .into_iter()
+        .map(|(name, hash)| (name.to_owned(), content_string(hash)))
+        .collect()
 }
 
 fn build<S: Snapshot>(sim: &S, label: &str) -> Result<(SaveHeader, Vec<u8>), SaveError> {
@@ -109,9 +126,45 @@ fn build<S: Snapshot>(sim: &S, label: &str) -> Result<(SaveHeader, Vec<u8>), Sav
     }
     let envelope = Envelope {
         hash: content_string(sim.state_hash()),
+        parts: named_parts(sim),
         state: sim.capture(),
     };
     Ok((header, savestate::payload_bytes(&envelope)?))
+}
+
+/// The error for a restored state whose hash is not the saved one, naming the parts that differ when both
+/// the save and the simulation list them.
+fn mismatch(saved: &[(String, String)], now: &[(String, String)]) -> String {
+    const WHAT: &str = "restoring the save did not reproduce the saved state";
+    const WHY: &str = "capture() must include everything state_hash() covers";
+    if saved.is_empty() || now.is_empty() {
+        return format!(
+            "{WHAT}; {WHY} (implement Simulation::hash_parts to have this error name the part)"
+        );
+    }
+    let mut differing: Vec<String> = now
+        .iter()
+        .filter(|(name, hash)| {
+            saved
+                .iter()
+                .find(|(n, _)| n == name)
+                .is_none_or(|(_, h)| h != hash)
+        })
+        .map(|(name, _)| format!("'{name}'"))
+        .collect();
+    differing.extend(
+        saved
+            .iter()
+            .filter(|(name, _)| !now.iter().any(|(n, _)| n == name))
+            .map(|(name, _)| format!("'{name}' (no longer hashed)")),
+    );
+    match differing.len() {
+        0 => format!(
+            "{WHAT}: every named part matches, so state_hash() covers something hash_parts() does not; {WHY}"
+        ),
+        1 => format!("{WHAT}: part {} differs; {WHY}", differing[0]),
+        _ => format!("{WHAT}: parts {} differ; {WHY}", differing.join(", ")),
+    }
 }
 
 /// Serialise the simulation as save-file bytes. `label` is the text a load menu shows.
@@ -199,6 +252,10 @@ fn apply<S: Snapshot>(
     let hash = fields
         .remove("hash")
         .and_then(|v| v.as_str().map(str::to_owned));
+    let saved_parts: Vec<(String, String)> = fields
+        .remove("parts")
+        .and_then(|v| serde_json::from_value(v).ok())
+        .unwrap_or_default();
     let Some(state) = fields.remove("state") else {
         return Err(SaveError::Invalid("the save holds no state".into()));
     };
@@ -207,14 +264,15 @@ fn apply<S: Snapshot>(
     let state: S::State =
         serde_json::from_value(state).map_err(|e| SaveError::Invalid(e.to_string()))?;
     let before = sim.capture();
-    let outcome = sim.restore(state).map_err(SaveError::Invalid).and_then(|()| match hash {
-        Some(saved) if current && content_string(sim.state_hash()) != saved => Err(SaveError::Invalid(
-            "restoring the save did not reproduce the saved state; capture() must include everything \
-             state_hash() covers"
-                .into(),
-        )),
-        _ => Ok(()),
-    });
+    let outcome = sim
+        .restore(state)
+        .map_err(SaveError::Invalid)
+        .and_then(|()| match hash {
+            Some(saved) if current && content_string(sim.state_hash()) != saved => Err(
+                SaveError::Invalid(mismatch(&saved_parts, &named_parts(sim))),
+            ),
+            _ => Ok(()),
+        });
     match outcome {
         Ok(()) => Ok(header),
         Err(error) => {
@@ -232,6 +290,10 @@ fn apply<S: Snapshot>(
 ///
 /// This is what proves that [`Snapshot::State`] really holds everything: a forgotten timer or random-number
 /// stream shows up as a divergence at the first tick that reads it.
+///
+/// A simulation that embeds a rigid-body physics world (the engine's `HeadlessWorld`, or rapier directly)
+/// cannot pass this while bodies touch: see [`assert_loads_replay_identically`] and
+/// [`assert_resumes_within`] for the contract such a game proves instead.
 ///
 /// ```
 /// # use serde::{Deserialize, Serialize};
@@ -276,13 +338,8 @@ pub fn assert_resumes_exactly<S: Snapshot>(
             hashes[split],
             "the state loaded from the save at tick {split} differs from the state that was saved"
         );
-        let payload = |sim: &S| {
-            build(sim, "x")
-                .map(|(_, p)| p)
-                .unwrap_or_else(|e| panic!("saving again: {e}"))
-        };
         assert_eq!(
-            payload(&resumed),
+            payload_of(&resumed),
             payload_at(&make, &inputs[..split]),
             "a simulation loaded at tick {split} does not save back to the same state"
         );
@@ -296,6 +353,162 @@ pub fn assert_resumes_exactly<S: Snapshot>(
             );
         }
     }
+}
+
+/// Test helper for a simulation that cannot promise what [`assert_resumes_exactly`] checks, because part of
+/// what decides its future is history no save carries: a rigid-body library's contact caches, warm-start
+/// impulses and contact-pair order (`docs/SAVE_STATE.md` has the measurements). It proves the contract such
+/// a game does keep: **what happens after a load is a pure function of the file**, never of what the game
+/// did before loading it. At every `every`-th tick of a run of `inputs` it saves, then checks that the loaded
+/// state has the saved hash and saves back to the same bytes, that two brand-new simulations loaded from the
+/// save replay the remaining inputs identically, and that a simulation with a long history of its own loads
+/// and replays exactly like a brand-new one (a `restore` that forgets to reset something the save does not
+/// carry fails here). Panics naming the tick at the first difference.
+///
+/// ```
+/// # use serde::{Deserialize, Serialize};
+/// # use vesper3d::viewer::devkit::{snapshot::assert_loads_replay_identically, Simulation, Snapshot, StateHasher};
+/// # #[derive(Default)] struct Sum(u64);
+/// # impl Simulation for Sum { type Input = u64; fn step(&mut self, i: &u64) { self.0 += i; }
+/// #   fn state_hash(&self) -> u64 { StateHasher::new().u64(self.0).finish() } }
+/// # impl Snapshot for Sum { const KIND: &'static str = "sum"; type State = u64;
+/// #   fn capture(&self) -> u64 { self.0 }
+/// #   fn restore(&mut self, s: u64) -> Result<(), String> { self.0 = s; Ok(()) } }
+/// assert_loads_replay_identically(Sum::default, &[1, 2, 3, 4], 1);
+/// ```
+pub fn assert_loads_replay_identically<S: Snapshot>(
+    make: impl Fn() -> S,
+    inputs: &[S::Input],
+    every: usize,
+) {
+    let every = every.max(1);
+    let mut reference = make();
+    let mut saves = Vec::new();
+    for (tick, input) in inputs.iter().enumerate() {
+        if tick % every == 0 {
+            saves.push((
+                tick,
+                reference.state_hash(),
+                save(&reference, "split").unwrap_or_else(|e| panic!("saving at tick {tick}: {e}")),
+            ));
+        }
+        reference.step(input);
+    }
+    saves.push((
+        inputs.len(),
+        reference.state_hash(),
+        save(&reference, "end").unwrap_or_else(|e| panic!("saving at the end: {e}")),
+    ));
+    // `reference` has lived through the whole run: as much history as a simulation gets.
+    let mut used = reference;
+    for (split, hash, bytes) in saves {
+        let load = |sim: &mut S| {
+            restore(sim, &bytes)
+                .unwrap_or_else(|e| panic!("loading the save from tick {split}: {e}"));
+        };
+        let (mut first, mut second) = (make(), make());
+        load(&mut first);
+        load(&mut second);
+        load(&mut used);
+        assert_eq!(
+            first.state_hash(),
+            hash,
+            "the state loaded from the save at tick {split} differs from the state that was saved"
+        );
+        assert_eq!(
+            payload_of(&first),
+            payload_at(&make, &inputs[..split]),
+            "a simulation loaded at tick {split} does not save back to the same state"
+        );
+        for (offset, input) in inputs[split..].iter().enumerate() {
+            first.step(input);
+            second.step(input);
+            used.step(input);
+            let tick = split + offset + 1;
+            assert_eq!(
+                first.state_hash(),
+                second.state_hash(),
+                "two new simulations loaded from the save at tick {split} diverged from each other at tick {tick}"
+            );
+            assert_eq!(
+                first.state_hash(),
+                used.state_hash(),
+                "loading the save from tick {split} into a simulation with a history replays differently \
+                 from loading it into a new one, at tick {tick}: restore() must reset everything the save \
+                 does not carry"
+            );
+        }
+    }
+}
+
+/// Test helper for the same kind of simulation as [`assert_loads_replay_identically`]: bounds how far a
+/// resumed run may drift from the run that was never interrupted. At every `every`-th tick of `inputs` it
+/// saves, loads the save into a brand-new simulation, checks that the loaded state has the saved hash, then
+/// replays the remaining inputs in lockstep with a fresh reference run and requires
+/// `distance(resumed, reference) <= tolerance` after every tick. `distance` is the game's own measure, say
+/// the farthest any body is from where the uninterrupted run has it, in metres. Returns the largest distance
+/// seen, to print or pin in a test; panics naming the tick and the distance at the first tick over the
+/// tolerance.
+pub fn assert_resumes_within<S: Snapshot>(
+    make: impl Fn() -> S,
+    inputs: &[S::Input],
+    every: usize,
+    tolerance: f32,
+    distance: impl Fn(&S, &S) -> f32,
+) -> f32 {
+    let every = every.max(1);
+    let mut reference = make();
+    let mut saves = Vec::new();
+    for (tick, input) in inputs.iter().enumerate() {
+        if tick % every == 0 {
+            saves.push((
+                tick,
+                reference.state_hash(),
+                save(&reference, "split").unwrap_or_else(|e| panic!("saving at tick {tick}: {e}")),
+            ));
+        }
+        reference.step(input);
+    }
+    saves.push((
+        inputs.len(),
+        reference.state_hash(),
+        save(&reference, "end").unwrap_or_else(|e| panic!("saving at the end: {e}")),
+    ));
+    let mut worst = 0f32;
+    for (split, hash, bytes) in saves {
+        let mut resumed = make();
+        restore(&mut resumed, &bytes)
+            .unwrap_or_else(|e| panic!("loading the save from tick {split}: {e}"));
+        assert_eq!(
+            resumed.state_hash(),
+            hash,
+            "the state loaded from the save at tick {split} differs from the state that was saved"
+        );
+        let mut reference = make();
+        for input in &inputs[..split] {
+            reference.step(input);
+        }
+        for (offset, input) in inputs[split..].iter().enumerate() {
+            resumed.step(input);
+            reference.step(input);
+            let d = distance(&resumed, &reference);
+            assert!(
+                d.is_finite() && d <= tolerance,
+                "the run resumed from the save at tick {split} is {d} from the uninterrupted run at tick {} \
+                 (tolerance {tolerance})",
+                split + offset + 1
+            );
+            worst = worst.max(d);
+        }
+    }
+    worst
+}
+
+/// The payload bytes a simulation saves right now.
+fn payload_of<S: Snapshot>(sim: &S) -> Vec<u8> {
+    build(sim, "x")
+        .map(|(_, p)| p)
+        .unwrap_or_else(|e| panic!("saving again: {e}"))
 }
 
 /// The payload a fresh simulation has after running `inputs` (the reference for "saves back the same").
@@ -431,28 +644,6 @@ mod tests {
     #[test]
     fn a_state_that_forgets_something_is_caught_by_the_proof() {
         // A simulation whose `capture` drops the random stream cannot resume: the helper must say where.
-        #[derive(Clone)]
-        struct Forgetful(Walker);
-        impl Simulation for Forgetful {
-            type Input = f32;
-            fn step(&mut self, i: &f32) {
-                self.0.step(i)
-            }
-            fn state_hash(&self) -> u64 {
-                self.0.state_hash()
-            }
-        }
-        impl Snapshot for Forgetful {
-            const KIND: &'static str = "forgetful";
-            type State = (f32, u64);
-            fn capture(&self) -> (f32, u64) {
-                (self.0.x, self.0.steps)
-            }
-            fn restore(&mut self, s: (f32, u64)) -> Result<(), String> {
-                (self.0.x, self.0.steps) = s;
-                Ok(())
-            }
-        }
         let result = std::panic::catch_unwind(|| {
             assert_resumes_exactly(|| Forgetful(Walker::new(1)), &inputs(30), 5);
         });
@@ -464,6 +655,228 @@ mod tests {
             message.contains("did not reproduce the saved state") || message.contains("diverged"),
             "{message}"
         );
+    }
+
+    /// A walker that names the pieces of its hash, so a forgotten piece is named back.
+    #[derive(Clone)]
+    struct Named(Walker);
+    impl Simulation for Named {
+        type Input = f32;
+        fn step(&mut self, i: &f32) {
+            self.0.step(i)
+        }
+        fn state_hash(&self) -> u64 {
+            self.0.state_hash()
+        }
+        fn hash_parts(&self) -> Vec<(&'static str, u64)> {
+            let one = |f: &dyn Fn(&mut StateHasher)| {
+                let mut h = StateHasher::new();
+                f(&mut h);
+                h.finish()
+            };
+            vec![
+                (
+                    "x",
+                    one(&|h| {
+                        h.f32(self.0.x);
+                    }),
+                ),
+                (
+                    "steps",
+                    one(&|h| {
+                        h.u64(self.0.steps);
+                    }),
+                ),
+                (
+                    "rng",
+                    one(&|h| {
+                        h.u64(self.0.rng.state());
+                    }),
+                ),
+                (
+                    "queue",
+                    one(&|h| {
+                        h.bytes(&self.0.queue);
+                    }),
+                ),
+            ]
+        }
+    }
+    /// ... and forgets its random stream when saving.
+    impl Snapshot for Named {
+        const KIND: &'static str = "named";
+        type State = (f32, u64, Vec<u8>);
+        fn capture(&self) -> Self::State {
+            (self.0.x, self.0.steps, self.0.queue.clone())
+        }
+        fn restore(&mut self, s: Self::State) -> Result<(), String> {
+            (self.0.x, self.0.steps, self.0.queue) = s;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn a_forgotten_piece_of_state_is_named_when_the_simulation_lists_its_hash_parts() {
+        let mut game = Named(Walker::new(1));
+        run(&mut game.0, 30);
+        let bytes = save(&game, "forgetful").unwrap();
+        let mut fresh = Named(Walker::new(1));
+        run(&mut fresh.0, 7); // a different random stream than the save was taken with
+        let before = fresh.state_hash();
+        let error = restore(&mut fresh, &bytes).unwrap_err().to_string();
+        assert!(
+            error.contains("part 'rng' differs")
+                && !error.contains("'steps'")
+                && !error.contains("'x'"),
+            "{error}"
+        );
+        assert_eq!(
+            fresh.state_hash(),
+            before,
+            "and the failed load changed nothing"
+        );
+        // The proof helper carries the name too.
+        let result = std::panic::catch_unwind(|| {
+            assert_resumes_exactly(|| Named(Walker::new(1)), &inputs(30), 5);
+        });
+        let message = *result.expect_err("must fail").downcast::<String>().unwrap();
+        assert!(message.contains("'rng'"), "{message}");
+        // A save with no parts, or a game that lists none, gets the plain message plus the hint.
+        let plain = *std::panic::catch_unwind(|| {
+            assert_resumes_exactly(|| Forgetful(Walker::new(1)), &inputs(30), 5);
+        })
+        .expect_err("must fail")
+        .downcast::<String>()
+        .unwrap();
+        assert!(
+            plain.contains("implement Simulation::hash_parts"),
+            "{plain}"
+        );
+        // A save that carries parts still loads into a build that lists none.
+        let mut old = Forgetful(Walker::new(1));
+        let header = decode(&bytes).unwrap().header;
+        assert_eq!(header.kind, "named");
+        assert!(matches!(
+            restore(&mut old, &bytes),
+            Err(SaveError::WrongKind { .. })
+        ));
+    }
+
+    /// The forgetful walker, shared by the tests that need a save which cannot restore.
+    #[derive(Clone)]
+    struct Forgetful(Walker);
+    impl Simulation for Forgetful {
+        type Input = f32;
+        fn step(&mut self, i: &f32) {
+            self.0.step(i)
+        }
+        fn state_hash(&self) -> u64 {
+            self.0.state_hash()
+        }
+    }
+    impl Snapshot for Forgetful {
+        const KIND: &'static str = "forgetful";
+        type State = (f32, u64);
+        fn capture(&self) -> (f32, u64) {
+            (self.0.x, self.0.steps)
+        }
+        fn restore(&mut self, s: (f32, u64)) -> Result<(), String> {
+            (self.0.x, self.0.steps) = s;
+            Ok(())
+        }
+    }
+
+    /// State that no save carries and no hash sees, yet which shapes the future a little and fades: the
+    /// shape of a physics library's contact caches. A resumed run therefore drifts by a bounded amount.
+    struct Drifty {
+        x: f32,
+        steps: u64,
+        momentum: f32,
+        /// Whether `restore` forgets to reset the momentum (a bug the helpers must catch).
+        sticky: bool,
+    }
+    impl Drifty {
+        fn new(sticky: bool) -> Self {
+            Self {
+                x: 0.,
+                steps: 0,
+                momentum: 0.,
+                sticky,
+            }
+        }
+    }
+    impl Simulation for Drifty {
+        type Input = f32;
+        fn step(&mut self, push: &f32) {
+            self.momentum = self.momentum * 0.9 + push * 0.01;
+            self.x += push * 0.1 + self.momentum;
+            self.steps += 1;
+        }
+        fn state_hash(&self) -> u64 {
+            let mut h = StateHasher::new();
+            h.f32(self.x).u64(self.steps);
+            h.finish()
+        }
+    }
+    impl Snapshot for Drifty {
+        const KIND: &'static str = "drifty";
+        type State = (f32, u64);
+        fn capture(&self) -> (f32, u64) {
+            (self.x, self.steps)
+        }
+        fn restore(&mut self, s: (f32, u64)) -> Result<(), String> {
+            (self.x, self.steps) = s;
+            if !self.sticky {
+                self.momentum = 0.;
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn a_simulation_with_hidden_fading_history_meets_the_weaker_contract_and_not_the_exact_one() {
+        let pushes = inputs(200);
+        assert_loads_replay_identically(|| Drifty::new(false), &pushes, 25);
+        let worst = assert_resumes_within(
+            || Drifty::new(false),
+            &pushes,
+            25,
+            1.5,
+            |a, b| (a.x - b.x).abs(),
+        );
+        assert!(worst > 0.05 && worst <= 1.5, "worst drift {worst}");
+        let message = *std::panic::catch_unwind(|| {
+            assert_resumes_exactly(|| Drifty::new(false), &pushes, 25);
+        })
+        .expect_err("hidden history cannot resume exactly")
+        .downcast::<String>()
+        .unwrap();
+        assert!(message.contains("diverged at tick"), "{message}");
+        let message = *std::panic::catch_unwind(|| {
+            assert_resumes_within(
+                || Drifty::new(false),
+                &pushes,
+                25,
+                0.01,
+                |a, b| (a.x - b.x).abs(),
+            );
+        })
+        .expect_err("a tolerance the drift exceeds must fail")
+        .downcast::<String>()
+        .unwrap();
+        assert!(
+            message.contains("from the uninterrupted run at tick")
+                && message.contains("tolerance 0.01"),
+            "{message}"
+        );
+        // A restore that leaves hidden state behind makes a load depend on the loader's history: caught.
+        let message = *std::panic::catch_unwind(|| {
+            assert_loads_replay_identically(|| Drifty::new(true), &pushes, 25);
+        })
+        .expect_err("sticky hidden state must be caught")
+        .downcast::<String>()
+        .unwrap();
+        assert!(message.contains("with a history"), "{message}");
     }
 
     #[test]

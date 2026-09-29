@@ -9,6 +9,7 @@ game, and a load that is all-or-nothing) so a game only says what its state is.
 |---|---|---|---|
 | a game document (`game.json`, the stock client) | F5 | F9, or `--load quick` | [`GameSession`](../src/viewer/game_session.rs) |
 | a game with its own `Sim` (`custom-sim` template) | F5 (already wired) | F9, `--load` | [`devkit::snapshot`](../src/viewer/devkit/snapshot.rs) |
+| a `Sim` that embeds a rigid-body world (`HeadlessWorld`) | the same | the same | [`devkit::snapshot`](../src/viewer/devkit/snapshot.rs), contract [below](#which-contract-a-physics-game-can-meet) |
 | a dedicated server | `--autosave SECONDS` (and at shutdown) | `--load auto` | [`DedicatedServer::with_autosave`](../src/viewer/server.rs) |
 | tooling or tests | `HeadlessWorld::save_bytes` | `restore_bytes` | [`savestate`](../src/viewer/savestate/mod.rs) |
 
@@ -92,6 +93,52 @@ inputs and panics, naming the tick, at the first state hash that differs from th
 you forgot to put in `SimState` shows up as a divergence where the game first reads it. `Rng` serialises as one
 number, so a random stream resumes in place. Tie saves to a level or tuning with `Snapshot::content()`.
 
+When a load does not reproduce the saved hash, the error names the piece that differs if the game lists its
+pieces (optional, and worth the four lines):
+
+```rust
+fn hash_parts(&self) -> Vec<(&'static str, u64)> {
+    vec![("world", self.world.checksum()), ("score", self.score.into()), ("rng", self.rng.state())]
+}
+// -> "restoring the save did not reproduce the saved state: part 'score' differs; capture() must ..."
+```
+
+### Which contract a physics game can meet
+
+`assert_resumes_exactly` holds for rules, timers, random streams and anything else the save carries whole. It
+cannot hold for a `Sim` that embeds a rigid-body world (`HeadlessWorld`, or `vesper3d::rapier` directly) while
+bodies touch, and this was isolated rather than assumed ([ADR 0018](adr/0018-physics-save-contract.md); the
+test `what_a_restore_forgets_isolated_piece_by_piece` in `src/viewer/prop_physics.rs`). A restore rebuilds the
+physics library's state from the pristine scene; handing the resumed world exact copies of pieces of the
+uninterrupted world's internals shows that for two touching boxes the contact cache (the narrow phase's
+manifolds and warm-start impulses) is the whole difference, while a four-box pile mid-settle still diverges on
+its first tick with every piece but the bodies, or with the bodies, islands and contact cache, and resumes
+exactly only with the library's complete state. That state is what [ADR 0016](adr/0016-native-save-states.md)
+rejected serialising, so it stays unsaved and the contract is stated honestly instead.
+
+What a physics game promises, and proves with one line each (`tests/physics_saves.rs` is the worked example:
+twenty rolling apples):
+
+```rust
+// What happens after a load is a pure function of the file: the loaded state has the saved hash and saves
+// back to the same bytes, two loads replay identically, and a load into a game with a long history replays
+// like a load into a new one (a restore that leaves stale state behind fails here).
+snapshot::assert_loads_replay_identically(|| Sim::new(7), &inputs, 25);
+// The resumed run stays within a measured distance of the uninterrupted one; the worst drift is returned.
+let worst = snapshot::assert_resumes_within(|| Sim::new(7), &inputs, 25, 0.5, |a, b| a.farthest_prop_from(b));
+```
+
+Measured on the worked example (debug profile, 20 props kicked at 4 to 6 m/s, saves every second over three
+seconds): the resumed run diverges on the first tick after every mid-run split, by a fraction of a millimetre,
+and the drift stays small only while bodies slide or rest. The moment a body makes a different discrete
+decision it is far away: cereal boxes that tip over in one run and slide on in the other end up 0.99 m apart
+within a second; catalog apples, whose hull rolls like a die, end up 5 to 6 m apart within three seconds
+whether they roll in separate lanes or collide. A resume of a physics scene is a fair continuation, not a
+near one, and the bound a game promises is its own to measure. Props that are asleep or in free fall at the
+split resume exactly, as the engine's own world test proves; everything that is not physics (scores, timers,
+the `Rng`) must stay exact, so keep `assert_resumes_exactly` for a `Sim` without a physics world and use the
+two helpers above for one with it.
+
 ## Versioning
 
 Two independent numbers, so a change never strands a player's save:
@@ -126,5 +173,6 @@ reproducing a reported problem.
   game's job: `SaveSlots::list` returns each slot's label, game, tick and time, and reports damaged slots
   instead of offering them.
 - Restoring *contact caches* (see the contract): resuming a pile mid-settle is a healthy continuation, not the
-  identical one.
+  identical one. [ADR 0018](adr/0018-physics-save-contract.md) has the measurements and the contract a
+  physics-backed game proves instead.
 - Rewinding an online game: the server's save is a whole-world snapshot, and clients reconnect to it.

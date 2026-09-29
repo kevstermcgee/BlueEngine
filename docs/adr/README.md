@@ -27,3 +27,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0015: A custom-simulation road alongside GameDocument](0015-custom-simulation-road.md)
 - [0016: Native save states](0016-native-save-states.md)
 - [0017: Every game ships its own identity, verified by a gate](0017-game-identity-and-ship-gate.md)
+- [0018: The save contract a physics-backed simulation can keep](0018-physics-save-contract.md)

@@ -17,6 +17,65 @@
 //! assert!(world.player(42).is_none());
 //! # Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
 //! ```
+//!
+//! A game that keeps its rules in Rust (`docs/CUSTOM_CLIENT.md`) can embed the world as its physics
+//! authority: build it with `SceneBuilder`, step it once per tick, hash it with `checksum`, and put
+//! `save_state` in the game's own save. Such a save meets the physics contract of `docs/SAVE_STATE.md`
+//! (`assert_loads_replay_identically`, `assert_resumes_within`), not the bit-exact one.
+//!
+//! ```
+//! use vesper3d::prelude::*;
+//! use vesper3d::viewer::{devkit::{snapshot, Simulation, Snapshot, StateHasher}, savestate::world::WorldState};
+//!
+//! struct Sim { world: HeadlessWorld, hits: u32 }
+//! impl Sim {
+//!     fn new() -> Self {
+//!         let world = SceneBuilder::new("Range")
+//!             .without_spawn() // props only: no player body in this world
+//!             .structural_box("floor", V(0., -0.1, 0.), V(8., 0.1, 8.), V::ONE)
+//!             .prop("apple", "apple", V(0., 1., 0.))
+//!             .world()
+//!             .expect("a valid scene");
+//!         Self { world, hits: 0 }
+//!     }
+//! }
+//! impl Simulation for Sim {
+//!     type Input = bool; // "hit the apple this tick"
+//!     fn step(&mut self, hit: &bool) {
+//!         if *hit && self.world.impulse("apple", V(0., 2., 0.)) {
+//!             self.hits += 1;
+//!         }
+//!         self.world.step();
+//!     }
+//!     fn state_hash(&self) -> u64 {
+//!         StateHasher::new().u64(self.world.checksum()).u32(self.hits).finish()
+//!     }
+//!     fn hash_parts(&self) -> Vec<(&'static str, u64)> {
+//!         vec![("world", self.world.checksum()), ("hits", self.hits.into())]
+//!     }
+//! }
+//! #[derive(serde::Serialize, serde::Deserialize)]
+//! struct State { world: WorldState, hits: u32 }
+//! impl Snapshot for Sim {
+//!     const KIND: &'static str = "range";
+//!     type State = State;
+//!     fn capture(&self) -> State {
+//!         State { world: self.world.save_state().expect("a finite world"), hits: self.hits }
+//!     }
+//!     fn restore(&mut self, s: State) -> std::result::Result<(), String> {
+//!         self.world.restore_state(&s.world).map_err(|e| e.to_string())?;
+//!         self.hits = s.hits;
+//!         Ok(())
+//!     }
+//! }
+//!
+//! let mut sim = Sim::new();
+//! sim.step(&true);
+//! let bytes = snapshot::save(&sim, "one hit").unwrap();
+//! let mut fresh = Sim::new();
+//! snapshot::restore(&mut fresh, &bytes).unwrap();
+//! assert_eq!((fresh.hits, fresh.state_hash()), (1, sim.state_hash()));
+//! ```
 use super::{
     authoring::MapDocument,
     controller::{Collider, Controller, Movement},

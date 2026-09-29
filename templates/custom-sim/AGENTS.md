@@ -20,6 +20,9 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
   everything that decides the future. **Every new field of `Sim` goes into `SimState`**, or a save loses
   it; `a_save_from_any_tick_resumes_exactly...` fails at the first tick that reads what was forgotten.
   Changing `SimState` after release: bump `VERSION` and add a `Migration` so old saves still load.
+  A `Sim` that embeds a rigid-body world (`HeadlessWorld`) proves the physics save contract instead
+  (`assert_loads_replay_identically`, `assert_resumes_within`; docs/SAVE_STATE.md) and lists
+  `hash_parts` so a load that does not restore names the forgotten field.
 - Loads are all-or-nothing and saves are atomic with a backup; never write your own save file code.
 
 ## Checks

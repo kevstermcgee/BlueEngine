@@ -1190,15 +1190,17 @@
         "src/bin/be2-headless.rs",
         "tests/save_state.rs",
         "tests/save_session.rs",
+        "tests/physics_saves.rs",
         "templates/custom-sim/src/lib.rs",
-        "docs/SAVE_STATE.md"
+        "docs/SAVE_STATE.md",
+        "docs/adr/0018-physics-save-contract.md"
       ],
       "checks": [
         "cargo test --locked --lib savestate devkit::snapshot",
-        "cargo test --locked --test save_state --test save_session",
+        "cargo test --locked --test save_state --test save_session --test physics_saves",
         "generated custom-sim project: cargo test (resume exactly from any tick) and a real-window --script \"save@N,load@M\" capture"
       ],
-      "note": "Native save states for every tier. One framed, versioned file (SHA-256 over every byte, atomic write with a last-good .bak, named slots, autosave ring, payload migrations, content-fingerprint binding); engine worlds (HeadlessWorld::save_bytes/restore_bytes: players, rules, props, lifecycle; not rapier internals) with a checksum-verified, all-or-nothing restore; GameSession F5/F9 and --load/--save-dir in the stock client; DedicatedServer::with_autosave and be2-headless --load/--autosave; devkit::Snapshot for custom simulations with assert_resumes_exactly; be2-tools save-info. What happens after a load depends only on the file. Online clients never save.",
+      "note": "Native save states for every tier. One framed, versioned file (SHA-256 over every byte, atomic write with a last-good .bak, named slots, autosave ring, payload migrations, content-fingerprint binding); engine worlds (HeadlessWorld::save_bytes/restore_bytes: players, rules, props, lifecycle; not rapier internals) with a checksum-verified, all-or-nothing restore; GameSession F5/F9 and --load/--save-dir in the stock client; DedicatedServer::with_autosave and be2-headless --load/--autosave; devkit::Snapshot for custom simulations with assert_resumes_exactly, and for physics-backed ones (ADR 0018: contact caches are unsaved history, isolated by experiment) assert_loads_replay_identically plus assert_resumes_within; Simulation::hash_parts makes a failed restore name the differing part; be2-tools save-info. What happens after a load depends only on the file. Online clients never save.",
       "keywords": [
         "save",
         "saves",
@@ -1227,7 +1229,7 @@
       "contract": {
         "owns": "The save file format, atomic writes, slots and backups, verification, migrations, world capture/restore, and the all-or-nothing load",
         "inputs": "A running HeadlessWorld or Snapshot simulation; save-file bytes",
-        "outputs": "Framed save bytes, typed SaveError, a restored simulation identical to the saved one where physics is at rest",
+        "outputs": "Framed save bytes, typed SaveError naming the differing hash part, a restored simulation identical to the saved one (and to the uninterrupted run where physics is at rest or falling)",
         "may_depend_on": [
           "simulation_contract",
           "game_documents",
@@ -1257,6 +1259,9 @@
         "GameSession::load_from_slot",
         "devkit::Snapshot",
         "devkit::snapshot::assert_resumes_exactly",
+        "devkit::snapshot::assert_loads_replay_identically",
+        "devkit::snapshot::assert_resumes_within",
+        "devkit::Simulation::hash_parts",
         "DedicatedServer::with_autosave"
       ],
       "read_first": [

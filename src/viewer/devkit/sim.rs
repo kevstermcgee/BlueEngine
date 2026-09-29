@@ -17,6 +17,13 @@ pub trait Simulation {
     /// A hash of everything that must replay identically: feed positions, timers, scores and RNG
     /// state to a [`StateHasher`]. Never include wall-clock or presentation state.
     fn state_hash(&self) -> u64;
+    /// The same state as named pieces (`("rng", hash)`, `("props", hash)`, ...), so that a save which does
+    /// not restore to the saved [`Self::state_hash`] can say *which* piece differs instead of leaving the
+    /// author to bisect the hash by hand. Optional: the default lists nothing. The pieces are hashed
+    /// independently and need not combine into `state_hash`; they only have to cover what it covers.
+    fn hash_parts(&self) -> Vec<(&'static str, u64)> {
+        Vec::new()
+    }
 }
 
 /// FNV-1a 64-bit hash with typed writers, for implementing [`Simulation::state_hash`].

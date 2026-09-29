@@ -75,12 +75,24 @@ The engine provides the parts every such game rewrites, each independent and opt
 | | `Playback`, `Timeline`, `CapturePlan`, `PerfReport`, `flag_value` | `--playback`, `--script`, `--capture`, `--perf` flags for an agent that cannot play |
 | | `Rng`, `Juice`, `Pulse`, `Settings`, `Records`, `store_atomic` | seeded random numbers, screen feel, atomic never-fatal settings and high-score files |
 | | `Snapshot`, `snapshot::{save_to_slot, load_from_slot, autosave, assert_resumes_exactly}` | F5/F9 save states: atomic files, backups, migrations, all-or-nothing loads, and their proof ([SAVE_STATE.md](SAVE_STATE.md)) |
+| | `snapshot::{assert_loads_replay_identically, assert_resumes_within}`, `Simulation::hash_parts` | the save contract a physics-backed simulation can meet, and a load error that names the forgotten field |
+| `simulation` | `HeadlessWorld` (via `SceneBuilder`, `without_spawn()` for a props-only world) | rigid-body props as the physics authority inside your own rules (below) |
 | | `synth` | oscillators, filters, envelopes, WAV, ready-made effect presets, a music-loop helper |
 | `kit` (`presentation`) | `View`, `Template`, `Batch`, `Tint` | camera; small meshes built once, batched into a few draw calls per frame |
 | | `Look`, `Materials` | lit + fogged + glowing world material, alpha and additive effects, sky |
 | | `Fx`, `hud`, `SoundBank`, `capture::save_frame` | particles and rings, scaled outlined text and panels, off-thread sound, screenshots |
 | `controller` | `set_floor(None)`, `set_gravity`, `apply_impulse`, `Collider::overlaps_body` | voids and pits, other gravity, knockback and dashes, the body-overlap test |
 | `mesh` | `Lighting`, `bake_with` | bake a static world with your own light (`Lighting::house()` is the stock look) |
+
+**Rigid-body props in your own rules.** A custom `Sim` may embed the engine's `HeadlessWorld` as its physics
+authority: build it with `SceneBuilder` (`without_spawn()` when the player is not a physical body in it, or
+`spawn` and `join` when it is), keep it in `Sim`, step it once per tick from `Sim::step`, read props by ID
+(`prop_position`, `prop_linear_velocity`, `prop_mass`, `throw`, `set_prop_floor(None)` for a pit), hash it
+with `checksum()`, and put `save_state()` in your `Snapshot::State` (`restore_state` puts it back,
+all-or-nothing). It is graphics-free, fixed-step and deterministic, so it belongs in the library, not the
+window. The `HeadlessWorld` docs show exactly that `Sim` as a compiled example, and `tests/physics_saves.rs`
+is one with twenty rolling props under the save-contract helpers. Its saves meet the physics contract in
+[SAVE_STATE.md](SAVE_STATE.md#which-contract-a-physics-game-can-meet), not the exact one.
 
 Traps met while building a real game on this (see the generated `AGENTS.md`): `Controller` floors at
 y = 0 unless `set_floor(None)`; the third argument of `begin_frame` decides cursor capture (pass `false`

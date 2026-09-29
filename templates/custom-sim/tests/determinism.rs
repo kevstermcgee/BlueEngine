@@ -82,6 +82,9 @@ fn a_bumper_shoves_the_player_with_an_impulse_that_fades() {
 #[test]
 fn a_save_from_any_tick_resumes_exactly_in_a_brand_new_game() {
     // Also with a bumper's shove (and its cooldown) in flight when the saves are taken.
+    // A game whose `Sim` embeds a rigid-body world cannot pass this while bodies touch: use
+    // `snapshot::assert_loads_replay_identically` and `snapshot::assert_resumes_within` instead
+    // (docs/SAVE_STATE.md, "Which contract a physics game can meet").
     let shoved = || {
         let mut sim = Sim::new(9);
         let p = sim.player.position;

@@ -201,7 +201,12 @@ pub struct SimState {
 }
 
 /// Save states. Add every new field of `Sim` to `SimState` (bump `VERSION` and add a `Migration` when a field
-/// changes shape); `tests/determinism.rs` fails at the first tick that reads something a save forgot.
+/// changes shape); `tests/determinism.rs` fails at the first tick that reads something a save forgot. If the
+/// game embeds a rigid-body world (`HeadlessWorld`, or `vesper3d::rapier`), put its `save_state()` here and
+/// swap that test's `assert_resumes_exactly` for `assert_loads_replay_identically` plus
+/// `assert_resumes_within` (docs/SAVE_STATE.md, "Which contract a physics game can meet"): contact caches are
+/// history no save carries, so a resumed run is a pure function of the file but not bit-identical.
+/// Implement `Simulation::hash_parts` too, so a load that does not restore names the forgotten field.
 impl Snapshot for Sim {
     const KIND: &'static str = "{{name}}";
     type State = SimState;

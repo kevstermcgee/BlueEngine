@@ -1167,6 +1167,197 @@ mod tests {
             .any(|c| c.contains(original + V(0., 0.35, 0.))));
     }
 
+    /// Exact copies of the physics library's state at one moment, to hand pieces of it to another world.
+    struct Parts {
+        bodies: RigidBodySet,
+        colliders: ColliderSet,
+        islands: IslandManager,
+        broad: BroadPhaseMultiSap,
+        narrow: NarrowPhase,
+        joints: ImpulseJointSet,
+        multi: MultibodyJointSet,
+        ccd: CCDSolver,
+    }
+    impl Parts {
+        fn of(p: &PropPhysics) -> Self {
+            Self {
+                bodies: p.bodies.clone(),
+                colliders: p.colliders.clone(),
+                islands: p.islands.clone(),
+                broad: p.broad.clone(),
+                narrow: p.narrow.clone(),
+                joints: p.joints.clone(),
+                multi: p.multi.clone(),
+                ccd: p.ccd.clone(),
+            }
+        }
+        fn give(&self, to: &mut PropPhysics, pieces: &[&str]) {
+            for piece in pieces {
+                match *piece {
+                    "bodies" => to.bodies = self.bodies.clone(),
+                    "colliders" => to.colliders = self.colliders.clone(),
+                    "islands" => to.islands = self.islands.clone(),
+                    "broad" => to.broad = self.broad.clone(),
+                    "narrow" => to.narrow = self.narrow.clone(),
+                    "joints" => to.joints = self.joints.clone(),
+                    "multi" => to.multi = self.multi.clone(),
+                    "ccd" => to.ccd = self.ccd.clone(),
+                    other => panic!("unknown piece {other}"),
+                }
+            }
+        }
+    }
+    fn drift(
+        a: &crate::viewer::savestate::world::PhysicsSave,
+        b: &crate::viewer::savestate::world::PhysicsSave,
+    ) -> f32 {
+        a.props
+            .iter()
+            .zip(&b.props)
+            .map(|(x, y)| (V::from(x.position) - V::from(y.position)).length())
+            .fold(0., f32::max)
+    }
+    /// Three physics games measured that a run resumed from a save drifts from the uninterrupted one from
+    /// the first tick, while two loads of one save replay identically (docs/SAVE_STATE.md admits contact
+    /// caches are not saved). This isolates the cause: the resumed world (rebuilt from the pristine scene,
+    /// as `restore` does) is handed exact copies of chosen pieces of the uninterrupted world's rapier state
+    /// at the split, and the first tick at which it still diverges is reported per piece. Run with
+    /// `--nocapture` to read the table.
+    #[test]
+    fn what_a_restore_forgets_isolated_piece_by_piece() {
+        const WINDOW: usize = 120;
+        let scenarios: [(&str, Vec<V>, Option<V>, usize); 2] = [
+            (
+                "pile",
+                vec![
+                    V(0., 0.5, 0.),
+                    V(0.05, 1.0, 0.02),
+                    V(-0.04, 1.5, -0.03),
+                    V(0.02, 2.0, 0.04),
+                ],
+                None,
+                40,
+            ),
+            (
+                "kick",
+                vec![V(0., 0., 0.), V(0.2, 0.6, 0.1)],
+                Some(V(3., 1., 2.)),
+                5,
+            ),
+        ];
+        // Pieces that reference each other travel together: the broad phase indexes the colliders' proxy
+        // data, and bodies carry their active-set ids into the island manager.
+        let variants: [(&str, &[&str]); 12] = [
+            ("pristine, as restore does today", &[]),
+            ("+ narrow phase (contact caches)", &["narrow"]),
+            ("+ islands (active-set order, sleep)", &["islands"]),
+            ("+ ccd solver", &["ccd"]),
+            ("+ narrow + islands + ccd", &["narrow", "islands", "ccd"]),
+            (
+                "+ colliders + broad phase (proxies)",
+                &["colliders", "broad"],
+            ),
+            (
+                "+ colliders + broad + narrow",
+                &["colliders", "broad", "narrow"],
+            ),
+            (
+                "+ all but bodies",
+                &["colliders", "broad", "narrow", "islands", "ccd"],
+            ),
+            (
+                "+ bodies + islands (body flags/ids)",
+                &["bodies", "islands"],
+            ),
+            (
+                "+ bodies + islands + narrow",
+                &["bodies", "islands", "narrow"],
+            ),
+            (
+                "+ bodies + islands + colliders + broad",
+                &["bodies", "islands", "colliders", "broad"],
+            ),
+            (
+                "everything (control)",
+                &[
+                    "bodies",
+                    "colliders",
+                    "islands",
+                    "broad",
+                    "narrow",
+                    "joints",
+                    "multi",
+                    "ccd",
+                ],
+            ),
+        ];
+        let mut exact = std::collections::BTreeMap::new();
+        for (name, positions, kick, warmup) in &scenarios {
+            let mut room = fixture(positions);
+            let mut reference = PropPhysics::new(&mut room).unwrap();
+            if let Some(kick) = kick {
+                reference.apply_impulse(1, *kick);
+            }
+            for _ in 0..*warmup {
+                reference.advance(1. / 60., &Controller::default(), &mut room);
+            }
+            let save = reference.capture();
+            assert!(
+                save.props.iter().any(|p| !p.sleeping),
+                "{name}: the split must catch props in motion"
+            );
+            let parts = Parts::of(&reference);
+            let mut trace = Vec::with_capacity(WINDOW);
+            for _ in 0..WINDOW {
+                reference.advance(1. / 60., &Controller::default(), &mut room);
+                trace.push(reference.capture());
+            }
+            for (label, pieces) in &variants {
+                let mut room = fixture(positions);
+                let mut resumed = PropPhysics::new(&mut room).unwrap();
+                resumed.restore(&save, false);
+                assert_eq!(
+                    resumed.capture(),
+                    save,
+                    "{name}: the restore itself is exact"
+                );
+                parts.give(&mut resumed, pieces);
+                let (mut first, mut worst) = (None, 0f32);
+                for (tick, expected) in trace.iter().enumerate() {
+                    resumed.advance(1. / 60., &Controller::default(), &mut room);
+                    let got = resumed.capture();
+                    if first.is_none() && got != *expected {
+                        first = Some(tick + 1);
+                    }
+                    worst = worst.max(drift(&got, expected));
+                }
+                println!(
+                    "{name:4}  {label:44}  first divergence: {:>5}  max drift over {WINDOW} ticks: {worst:.6} m",
+                    first.map_or("never".to_owned(), |t| t.to_string())
+                );
+                exact.insert((*name, *label), first.is_none());
+            }
+        }
+        // The findings this pins (ADR 0018): a restore from the pristine scene diverges on its first tick
+        // whenever props touch; for two bodies the contact cache alone is the whole difference; a settling
+        // pile also depends on body-internal state and broad-phase proxy order, so only rapier's complete
+        // state resumes it exactly, and that is what ADR 0016 rejected serialising.
+        let is_exact = |scenario: &str, variant: &str| exact[&(scenario, variant)];
+        for scenario in ["pile", "kick"] {
+            assert!(
+                is_exact(scenario, "everything (control)"),
+                "{scenario}: the control"
+            );
+            assert!(
+                !is_exact(scenario, "pristine, as restore does today"),
+                "{scenario}: today"
+            );
+        }
+        assert!(is_exact("kick", "+ narrow phase (contact caches)"));
+        assert!(!is_exact("pile", "+ all but bodies"));
+        assert!(!is_exact("pile", "+ bodies + islands + narrow"));
+    }
+
     #[test]
     fn house_props_extract_and_all_shipped_maps_load_physics() {
         let mut room = super::super::maps::build(super::super::maps::MapId::House).unwrap();

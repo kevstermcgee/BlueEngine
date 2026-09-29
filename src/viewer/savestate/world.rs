@@ -15,7 +15,9 @@
 //!   A restore rebuilds the physics scene as it was first built and places every prop from the save, so a
 //!   prop pile that was still settling can differ from an uninterrupted run by solver noise. Props that
 //!   are asleep or in free fall resume exactly. Either way what happens after a load is a pure function of
-//!   the save file: it never depends on what the world did before it loaded.
+//!   the save file: it never depends on what the world did before it loaded. Which piece of the physics
+//!   library's state is responsible was isolated, not assumed (ADR 0018, `prop_physics.rs` test
+//!   `what_a_restore_forgets_isolated_piece_by_piece`).
 //!
 //! See `docs/SAVE_STATE.md` for the contract, the failure modes and the versioning policy.
 use super::SaveError;
