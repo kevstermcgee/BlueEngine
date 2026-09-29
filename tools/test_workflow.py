@@ -78,9 +78,12 @@ class ContextTests(unittest.TestCase):
         self.assertFalse(hit['engine_source_read'])
         self.assertLess(len(json.dumps(hit)), 3000)
         self.assertEqual(workflow.context(ROOT, 'zyxquantumunknown')['matches'], [])
-        for query, limit in [('', 3), ('x' * 101, 3), ('a', 0), ('a', 6)]:
-            with self.assertRaises(ValueError):
+        for query, limit, argument in [('', 3, 'query'), ('x' * 101, 3, 'query'), ('a', 0, 'limit'), ('a', 6, 'limit')]:
+            with self.assertRaises(ValueError) as refused:
                 workflow.context(ROOT, query, limit)
+            self.assertIn(argument, str(refused.exception), 'the error names the argument at fault')
+        with self.assertRaisesRegex(ValueError, '101'):
+            workflow.context(ROOT, 'x' * 101, 3)
 
     def test_lookup_needs_only_feature_index(self):
         with tempfile.TemporaryDirectory() as directory:

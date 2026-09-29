@@ -90,8 +90,11 @@ def impact(root, paths):
 
 
 def context(root, query, limit=3):
-    if not query.strip() or len(query) > 100 or not 1 <= limit <= 5:
-        raise ValueError('Use a 1..100 character query and a limit of 1..5')
+    if not query.strip() or len(query) > 100:
+        raise ValueError(f'The query must be 1..100 characters (this one is {len(query)}): shorten it to the '
+                         f'few words that name the feature, not the whole task')
+    if not 1 <= limit <= 5:
+        raise ValueError(f'--limit must be 1..5 (got {limit})')
     features = index(root)
     terms = set(re.findall(r'[a-z0-9]+', query.lower())) - {
         'add', 'fix', 'change', 'the', 'a', 'an', 'to', 'for', 'in', 'of', 'and'}
