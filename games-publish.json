@@ -4,7 +4,10 @@
   "target_repository": "kevstermcgee/BlueEngineGames",
   "preserve": [
     "games/bluedm",
-    "games/riftwake"
+    "games/riftwake",
+    "games/skyhook-sprint",
+    "games/magnet-mine",
+    "games/wrecking-orbit"
   ],
   "collections": {
     "games": [
