@@ -68,5 +68,23 @@ windows-sys = { optional = true, version = "=0.61.2", features = ["Win32_UI_Wind
 lto = "thin"
 codegen-units = 1
 
+# Opt-in iteration profiles (CI and `cargo build --release` are unaffected).
+# `--profile fast`: optimized enough to run, but parallel codegen and no LTO, so an edit
+# relinks in seconds instead of a serial single-unit LTO build.
+[profile.fast]
+inherits = "release"
+lto = false
+codegen-units = 16
+incremental = true
+
+# `--profile itest`: debug build whose dependencies (physics, math) are optimized, so
+# physics-heavy tests run at usable speed; line tables only keeps test binaries small.
+[profile.itest]
+inherits = "dev"
+debug = "line-tables-only"
+[profile.itest.package."*"]
+opt-level = 3
+debug = false
+
 [dev-dependencies]
 rcgen = "0.14"

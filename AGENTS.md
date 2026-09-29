@@ -45,3 +45,7 @@ These are prompts to reconsider scope, not limits on necessary work or reading.
 DONE WHEN requested behavior works, focused behavioral evidence and affected checks
 pass, and public docs reflect changed public contracts. STOP. Do not refactor nearby
 code, add speculative abstractions or expand scope. Tasks may override this default.
+
+Build speed: iterate with `cargo build --profile fast` and `cargo test --profile itest`, not `--release`/dev.
+Measured data lives in docs/perf (`python tools/perf.py report`); after a change meant to speed things up,
+run `python tools/perf.py record --note "what changed"` so the next session can see whether it worked.
