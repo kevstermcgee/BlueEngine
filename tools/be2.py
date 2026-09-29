@@ -237,6 +237,8 @@ def main():
     c.add_argument('--test', metavar='SUITE[::EXACT_TEST]', help='Iteration: one indexed suite or exact regression')
     c.add_argument('--feature-mode', choices=['headless', 'default'], default=None,
                    help='Iteration Cargo features (default: normal Cargo features; headless is explicit)')
+    c.add_argument('--profile', choices=workflow.TEST_PROFILES, default='itest', dest='test_profile',
+                   help='Cargo profile for tests (default itest: optimized dependencies, much faster; dev: plain)')
     c.add_argument('--timeout', type=float, help='Per-command timeout in seconds; logs survive timeouts')
     c = sub.add_parser('context', help='Bounded feature context without a native build or source reads')
     c.add_argument('query'); c.add_argument('--limit', type=int, default=3)
@@ -256,7 +258,8 @@ def main():
             if args.changed or args.base != 'HEAD':
                 parser.error('--iterate cannot replace --changed or --base final checks')
             plan = workflow.iteration_plan(ROOT, args.iterate, typecheck=args.typecheck,
-                                           test=args.test, feature_mode=args.feature_mode or 'default')
+                                           test=args.test, feature_mode=args.feature_mode or 'default',
+                                           test_profile=args.test_profile)
             if args.plan: print(json.dumps(plan, indent=2))
             else: check(plan, args.timeout)
             return
@@ -265,7 +268,7 @@ def main():
         if not args.changed and args.base != 'HEAD':
             parser.error('--base requires --changed')
         revision, paths = workflow.changed_paths(ROOT, args.base) if args.changed else (None, None)
-        plan = workflow.validation_plan(paths, revision)
+        plan = workflow.validation_plan(paths, revision, args.test_profile)
         if paths is not None:
             plan['impact'] = workflow.impact(ROOT, paths)
         if args.plan: print(json.dumps(plan, indent=2))

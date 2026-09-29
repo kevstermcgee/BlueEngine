@@ -160,14 +160,26 @@ def changed_paths(root, base='HEAD'):
     return revision, sorted(set(filter(None, (tracked + untracked).split('\0'))))
 
 
-def full_commands():
+# Cargo profile for `cargo test` in local checks. `itest` (Cargo.toml) is dev with optimized
+# dependencies: same assertions, about 8x faster on the physics suites. CI runs cargo directly and is
+# unaffected. `dev` restores the plain profile.
+TEST_PROFILES = ('itest', 'dev')
+
+
+def profile_flags(test_profile):
+    if test_profile not in TEST_PROFILES:
+        raise ValueError('Test profile must be one of: ' + ', '.join(TEST_PROFILES))
+    return [] if test_profile == 'dev' else ['--profile', test_profile]
+
+
+def full_commands(test_profile='itest'):
     # Group feature modes to avoid repeatedly rebuilding the same binary with a
     # different feature set. Keep every pre-existing engine gate.
     commands = [['cargo', 'fmt', '--check']]
     for features in ([], ['--no-default-features']):
         commands.extend([
             ['cargo', 'rustdoc', '--locked', '--lib', *features, '--', '-D', 'warnings'],
-            ['cargo', 'test', '--locked', *features],
+            ['cargo', 'test', '--locked', *profile_flags(test_profile), *features],
             ['cargo', 'clippy', '--all-targets', '--locked', *features, '--', '-D', 'warnings'],
         ])
     return commands + [
@@ -179,7 +191,8 @@ def full_commands():
     ]
 
 
-def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode='default', _features=None):
+def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode='default', _features=None,
+                   test_profile='itest'):
     """Explicit iteration only. Derive targets from indexed evidence/files, never prose commands."""
     features = index(root) if _features is None else _features
     if feature_id not in features:
@@ -204,7 +217,7 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
         if test and (selected not in suites or (separator and not name)):
             raise ValueError('Select an indexed SUITE or SUITE::exact_test; suites: ' + ', '.join(suites))
         selected_suites = [selected] if test else suites
-        command = ['cargo', 'test', '--locked', *flags, '--message-format=json']
+        command = ['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, '--message-format=json']
         for suite in selected_suites:
             command += ['--test', suite]
         if separator:
@@ -300,8 +313,8 @@ def command_evidence(log, returncode, harness=None):
     return result
 
 
-def validation_plan(paths=None, base=None):
-    full = full_commands()
+def validation_plan(paths=None, base=None, test_profile='itest'):
+    full = full_commands(test_profile)
     if paths is None:
         return {'scope': 'full', 'reason': 'Full engine validation requested.', 'commands': full}
     # The declared feature graph is partial, not proof of independence.

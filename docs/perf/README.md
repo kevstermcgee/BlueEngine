@@ -31,6 +31,9 @@ lines as a single serial LTO unit; debug rapier/parry make physics tests 10-25x 
 the 27 test binaries links the full engine. Cold builds spend about 60 s in rapier, parry,
 nalgebra, rustls, quinn and ring.
 
+Full `python tools/be2.py check` (all gates, both feature modes): 1,068 s of commands on `dev`, 376 s on
+`itest`, which is now its default (`--profile dev` opts out; CI runs cargo directly and is unchanged).
+
 ## Server load (loopback, development transport, house map, `--profile fast`)
 
 `python tools/perf.py record --suite server` (about 2 minutes) runs `examples/server_load.rs` against

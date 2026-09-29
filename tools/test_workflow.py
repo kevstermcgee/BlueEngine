@@ -141,13 +141,24 @@ class SelectionTests(unittest.TestCase):
         commands = workflow.full_commands()
         self.assertIn(['cargo', 'fmt', '--check'], commands)
         for features in ([], ['--no-default-features']):
-            self.assertIn(['cargo', 'test', '--locked', *features], commands)
+            self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', *features], commands)
+            self.assertIn(['cargo', 'test', '--locked', *features], workflow.full_commands('dev'))
             self.assertIn(['cargo', 'clippy', '--all-targets', '--locked', *features,
                            '--', '-D', 'warnings'], commands)
             self.assertIn(['cargo', 'rustdoc', '--locked', '--lib', *features,
                            '--', '-D', 'warnings'], commands)
         for script in ['tools/check_headless.py', 'tools/check_authoring.py']:
             self.assertIn([sys.executable, script], commands)
+
+    def test_iteration_tests_use_the_fast_profile_unless_dev_is_asked_for(self):
+        command = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
+                                          test='replication_budget')['commands'][0]
+        self.assertEqual(command[:5], ['cargo', 'test', '--locked', '--profile', 'itest'])
+        command = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
+                                          test='replication_budget', test_profile='dev')['commands'][0]
+        self.assertNotIn('--profile', command)
+        with self.assertRaises(ValueError):
+            workflow.full_commands('release')
 
     def test_scopes_union_and_fail_closed(self):
         plan = workflow.validation_plan(['tools/author.py', 'tools/assets.py'])
