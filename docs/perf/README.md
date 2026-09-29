@@ -58,8 +58,12 @@ players. Not covered: real network loss/latency, the production QUIC/TLS transpo
 Reading `.github/workflows/releases.yml` and `package_native_releases.ps1` in that repo: there is no Rust
 cache; the engine is built `--release` from scratch; then each of 6 native games is built `--release`
 with its own `target/`, so the physics/math/rendering dependencies compile 7 times; and every game is
-rebuilt on every run even when only one changed. Step-level times are not public; fetch them with an
-authenticated `gh run view` before tuning.
+rebuilt on every run even when only one changed. Baseline step times (run 36606293975): engine build 243 s, native games 865 s.
+
+Result of the fix on branch `faster-windows-release` of BlueEngineGames (shared target dir + cache):
+1,151 s -> 799 s cold cache (native games 508 s) -> 436 s warm cache (engine 159 s, native games 238 s).
+The remaining cost is compiling the engine crate itself once per profile group; skipping unchanged
+games would be the next step.
 
 ## Open ideas, in expected order of value
 
