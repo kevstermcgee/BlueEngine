@@ -12,21 +12,31 @@ pub struct SceneBuilder {
     name: String,
     edits: Vec<Edit>,
     default_spawn: Option<MapSpawn>,
+    spawnless: bool,
 }
 
 impl SceneBuilder {
-    /// Start an empty map. Set [`Self::spawn`] and include geometry before building.
+    /// Start an empty map. Set [`Self::spawn`] (or [`Self::without_spawn`]) and include geometry before building.
     pub fn new(name: impl Into<String>) -> Self {
         Self {
             name: name.into(),
             edits: Vec::new(),
             default_spawn: None,
+            spawnless: false,
         }
     }
 
     /// Set the required standalone player spawn using feet coordinates and yaw radians.
     pub fn spawn(mut self, feet: V, yaw: f32) -> Self {
         self.default_spawn = Some(MapSpawn { feet, yaw });
+        self
+    }
+
+    /// Build a props-only world with no player spawn: a physics authority a game steps from its own rules
+    /// (a ball on a course, a target range). `HeadlessWorld::join` then returns false, and the document cannot
+    /// be used for standalone play or `change_map`, which need a spawn.
+    pub fn without_spawn(mut self) -> Self {
+        self.spawnless = true;
         self
     }
 
@@ -80,16 +90,16 @@ impl SceneBuilder {
     /// Validate the complete transaction, including spawn clearance, and compile it.
     /// Returns the ordinary MapDocument used by both `be2 --map` and the headless host.
     pub fn build(self) -> Result<MapDocument> {
-        let default_spawn = self
-            .default_spawn
-            .ok_or("SceneBuilder requires spawn(feet, yaw)")?;
+        if self.default_spawn.is_none() && !self.spawnless {
+            return Err("SceneBuilder requires spawn(feet, yaw) or without_spawn()".into());
+        }
         MapDocument {
             schema_version: 1,
             name: self.name,
             scene: Scene::default(),
             colliders: BTreeMap::new(),
             entities: Vec::new(),
-            default_spawn: Some(default_spawn),
+            default_spawn: self.default_spawn,
             spatial: None,
             checks: None,
         }

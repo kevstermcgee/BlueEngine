@@ -24,6 +24,8 @@ pub struct PropBody {
     pub id: String,
     pub label: String,
     pub origin: V,
+    /// Half extents of the prop's authored semantic bounds, in metres (the body origin is their centre).
+    pub half_extents: V,
     pub local_world: World,
     pub transform: Mat,
     handle: RigidBodyHandle,
@@ -59,9 +61,19 @@ pub struct PropPhysics {
     static_colliders: Vec<PlayerCollider>,
     held_by_player: HashMap<u64, usize>,
     player_by_held: HashMap<usize, u64>,
+    /// Semantic ID to index into `props`; indices are stable for the life of the scene.
+    index: HashMap<String, usize>,
+    /// The implicit ground plane's collider and the height of its top face, if there is one.
+    floor: Option<(ColliderHandle, f32)>,
     debt: f32,
     network_dirty: bool,
     pristine: Option<Pristine>,
+}
+fn floor_collider(top: f32) -> Collider {
+    ColliderBuilder::cuboid(1000., 0.1, 1000.)
+        .translation(vector(V(0., top - 0.1, 0.)))
+        .friction(0.7)
+        .build()
 }
 fn vector(v: V) -> Vector<Real> {
     Vector::new(v.0, v.1, v.2)
@@ -155,6 +167,8 @@ impl PropPhysics {
             static_colliders: vec![],
             held_by_player: HashMap::new(),
             player_by_held: HashMap::new(),
+            index: HashMap::new(),
+            floor: None,
             debt: 0.,
             network_dirty: false,
             pristine: None,
@@ -232,10 +246,12 @@ impl PropPhysics {
                 }
             }
             used.extend(scene.nodes.iter().map(|n| n.id.clone()));
+            this.index.insert(e.id.clone(), this.props.len());
             this.props.push(PropBody {
                 id: e.id.clone(),
                 label: e.label.clone(),
                 origin,
+                half_extents: h,
                 local_world,
                 transform: Mat::trs(origin, V::ZERO, V::ONE),
                 handle,
@@ -265,13 +281,8 @@ impl PropPhysics {
                     .insert(ColliderBuilder::new(shape).friction(0.7).build());
             }
         }
-        // The movement world treats y=0 as ground, including open garden areas.
-        this.colliders.insert(
-            ColliderBuilder::cuboid(1000., 0.1, 1000.)
-                .translation(vector(V(0., -0.1, 0.)))
-                .friction(0.7)
-                .build(),
-        );
+        // The movement world treats y=0 as ground, including open garden areas; see `set_floor`.
+        this.floor = Some((this.colliders.insert(floor_collider(0.)), 0.));
         this.sync(room);
         this.pristine = Some(Pristine {
             bodies: this.bodies.clone(),
@@ -389,6 +400,99 @@ impl PropPhysics {
             let v = *b.linvel();
             b.set_linvel(v.cap_magnitude(4.), true);
         }
+    }
+
+    /// Release the prop `player_id` carries with an exact velocity (m/s) and spin (rad/s), uncapped: a throw.
+    /// [`Self::drop_for_player`] keeps at most 4 m/s of carry momentum, which is a drop, not a throw. Returns
+    /// false and changes nothing when the player carries nothing or a value is not finite.
+    pub fn throw_for_player(&mut self, player_id: u64, velocity: V, angvel: V) -> bool {
+        if !velocity.finite() || !angvel.finite() {
+            return false;
+        }
+        let Some(i) = self.held_by_player.remove(&player_id) else {
+            return false;
+        };
+        self.player_by_held.remove(&i);
+        let b = &mut self.bodies[self.props[i].handle];
+        b.set_gravity_scale(1., true);
+        b.set_linvel(vector(velocity), true);
+        b.set_angvel(vector(angvel), true);
+        b.wake_up(true);
+        self.network_dirty = true;
+        true
+    }
+
+    /// Move or remove the implicit ground plane under props: `Some(y)` puts its top face at height `y`
+    /// (the default is `Some(0.)`, matching the movement world), `None` removes it so props fall forever
+    /// (pits, voids and multi-storey maps; [`Controller::set_floor`] is the player-side counterpart).
+    /// The change also applies to every later restore, so a save keeps playing out on the same ground.
+    /// Resting bodies are woken. Non-finite heights are ignored.
+    pub fn set_floor(&mut self, floor: Option<f32>) {
+        if floor.is_some_and(|y| !y.is_finite()) {
+            return;
+        }
+        if let Some((handle, _)) = self.floor.take() {
+            self.colliders
+                .remove(handle, &mut self.islands, &mut self.bodies, true);
+            if let Some(p) = &mut self.pristine {
+                p.colliders
+                    .remove(handle, &mut p.islands, &mut p.bodies, false);
+            }
+        }
+        if let Some(y) = floor {
+            let handle = self.colliders.insert(floor_collider(y));
+            if let Some(p) = &mut self.pristine {
+                // Both sets have seen exactly the same inserts and removes, so they allocate the same handle.
+                let twin = p.colliders.insert(floor_collider(y));
+                debug_assert_eq!(twin, handle);
+            }
+            self.floor = Some((handle, y));
+        }
+        for p in &self.props {
+            if let Some(b) = self.bodies.get_mut(p.handle) {
+                b.wake_up(true);
+            }
+        }
+        self.network_dirty = true;
+    }
+
+    /// Height of the implicit ground plane's top face, or `None` when props can fall forever.
+    pub fn floor(&self) -> Option<f32> {
+        self.floor.map(|(_, y)| y)
+    }
+
+    /// Index of the prop with semantic ID `id`, stable for the life of the scene; `None` for static or
+    /// unknown IDs. Every index-based accessor here answers the same as the ID-based ones on `HeadlessWorld`.
+    pub fn prop_index(&self, id: &str) -> Option<usize> {
+        self.index.get(id).copied()
+    }
+
+    /// Semantic ID of prop `i`.
+    pub fn prop_id(&self, i: usize) -> Option<&str> {
+        self.props.get(i).map(|p| p.id.as_str())
+    }
+
+    fn body(&self, i: usize) -> Option<&RigidBody> {
+        self.props.get(i).and_then(|p| self.bodies.get(p.handle))
+    }
+
+    /// Mass in kilograms: density 160 kg/m³ over the prop's solid convex parts (a cereal box is 2.77 kg).
+    pub fn prop_mass(&self, i: usize) -> Option<f32> {
+        self.body(i).map(|b| b.mass())
+    }
+
+    /// Half extents of the prop's authored semantic bounds, in metres.
+    pub fn prop_half_extents(&self, i: usize) -> Option<V> {
+        self.props.get(i).map(|p| p.half_extents)
+    }
+
+    /// World-space centre of mass. [`Self::prop_position`] is the body origin (the centre of the authored
+    /// bounds), which for an asymmetric prop such as the apple orbits the centre of mass as it rolls.
+    pub fn prop_center_of_mass(&self, i: usize) -> Option<V> {
+        self.body(i).map(|b| {
+            let c = b.center_of_mass();
+            V(c.x, c.y, c.z)
+        })
     }
 
     /// Authoritatively synchronize a held prop for a player (used by network client reconciliation).
@@ -534,7 +638,7 @@ impl PropPhysics {
 
     /// Set a prop's translation directly by semantic ID (e.g. from network replication).
     pub fn set_prop_position(&mut self, id: &str, pos: V) -> bool {
-        if let Some(p) = self.props.iter_mut().find(|p| p.id == id) {
+        if let Some(p) = self.index.get(id).map(|&i| &mut self.props[i]) {
             if let Some(body) = self.bodies.get_mut(p.handle) {
                 let mut iso = *body.position();
                 iso.translation.vector = vector(pos);
@@ -571,7 +675,7 @@ impl PropPhysics {
         angvel: V,
         sleeping: bool,
     ) -> bool {
-        if let Some(p) = self.props.iter_mut().find(|p| p.id == id) {
+        if let Some(p) = self.index.get(id).map(|&i| &mut self.props[i]) {
             if let Some(body) = self.bodies.get_mut(p.handle) {
                 let q = rapier3d::na::UnitQuaternion::new_normalize(rapier3d::na::Quaternion::new(
                     rot[3], rot[0], rot[1], rot[2],

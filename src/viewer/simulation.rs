@@ -345,17 +345,89 @@ impl HeadlessWorld {
         let Some(physics) = self.prop_physics.as_mut() else {
             return false;
         };
-        let Some(index) = physics.props.iter().position(|p| p.id == id) else {
+        let Some(index) = physics.prop_index(id) else {
             return false;
         };
         physics.apply_impulse(index, impulse);
         true
     }
-    /// Copy a dynamic prop's current center by semantic ID; static/unknown IDs return None.
+    /// Copy a dynamic prop's body origin (the centre of its authored bounds) by semantic ID; static/unknown
+    /// IDs return None. See [`Self::prop_center_of_mass`] for the physical centre.
     pub fn prop_position(&self, id: &str) -> Option<crate::math::V> {
         let physics = self.prop_physics.as_ref()?;
-        let index = physics.props.iter().position(|p| p.id == id)?;
-        physics.prop_position(index)
+        physics.prop_position(physics.prop_index(id)?)
+    }
+    /// Stable index of a dynamic prop for the index-based [`PropPhysics`](super::prop_physics::PropPhysics)
+    /// API; `None` for static or unknown IDs. Every ID accessor here answers the same as its index twin.
+    pub fn prop_index(&self, id: &str) -> Option<usize> {
+        self.prop_physics.as_ref()?.prop_index(id)
+    }
+    /// Mass in kilograms of a dynamic prop (density 160 kg/m³ over its solid convex parts).
+    pub fn prop_mass(&self, id: &str) -> Option<f32> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.prop_mass(physics.prop_index(id)?)
+    }
+    /// Half extents of a dynamic prop's authored bounds, in metres.
+    pub fn prop_half_extents(&self, id: &str) -> Option<crate::math::V> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.prop_half_extents(physics.prop_index(id)?)
+    }
+    /// World-space centre of mass of a dynamic prop.
+    pub fn prop_center_of_mass(&self, id: &str) -> Option<crate::math::V> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.prop_center_of_mass(physics.prop_index(id)?)
+    }
+    /// Unit quaternion `[x, y, z, w]` of a dynamic prop.
+    pub fn prop_rotation(&self, id: &str) -> Option<[f32; 4]> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.prop_rotation(physics.prop_index(id)?)
+    }
+    /// Linear velocity in m/s of a dynamic prop.
+    pub fn prop_linear_velocity(&self, id: &str) -> Option<crate::math::V> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.prop_linear_velocity(physics.prop_index(id)?)
+    }
+    /// Angular velocity in rad/s of a dynamic prop.
+    pub fn prop_angular_velocity(&self, id: &str) -> Option<crate::math::V> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.prop_angular_velocity(physics.prop_index(id)?)
+    }
+    /// Whether a dynamic prop is asleep; `None` for static or unknown IDs.
+    pub fn is_prop_sleeping(&self, id: &str) -> Option<bool> {
+        let physics = self.prop_physics.as_ref()?;
+        let index = physics.prop_index(id)?;
+        Some(physics.is_prop_sleeping(index))
+    }
+    /// The player carrying a dynamic prop, if any.
+    pub fn prop_holder(&self, id: &str) -> Option<u64> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.holder_of(physics.prop_index(id)?)
+    }
+    /// Semantic ID of the prop a player carries, if any.
+    pub fn held_prop(&self, player: u64) -> Option<&str> {
+        let physics = self.prop_physics.as_ref()?;
+        physics.prop_id(physics.held_for_player(player)?)
+    }
+    /// Release the prop a player carries with an exact velocity (m/s) and spin (rad/s): a throw, uncapped,
+    /// unlike the 4 m/s carry momentum a plain drop keeps. False, changing nothing, when the player carries
+    /// nothing or a value is not finite.
+    pub fn throw(&mut self, player: u64, velocity: crate::math::V, angvel: crate::math::V) -> bool {
+        self.prop_physics
+            .as_mut()
+            .is_some_and(|physics| physics.throw_for_player(player, velocity, angvel))
+    }
+    /// Move (`Some(top_height)`) or remove (`None`) the implicit ground plane under props, the counterpart of
+    /// [`Controller::set_floor`] for pits and voids. The default is `Some(0.)`. Later restores keep the change.
+    pub fn set_prop_floor(&mut self, floor: Option<f32>) {
+        if let Some(physics) = self.prop_physics.as_mut() {
+            physics.set_floor(floor);
+        }
+    }
+    /// The closest dynamic prop a ray hits within `max_distance`, as `(id, distance)`.
+    pub fn hit_prop(&self, ray: crate::math::Ray, max_distance: f32) -> Option<(&str, f32)> {
+        let physics = self.prop_physics.as_ref()?;
+        let (index, distance) = physics.hit_prop(ray, max_distance)?;
+        Some((physics.prop_id(index)?, distance))
     }
     /// Queue one interaction edge for the next fixed tick; repeated intents coalesce.
     pub fn request_interaction(&mut self, id: u64) -> bool {
@@ -561,7 +633,11 @@ impl HeadlessWorld {
                 "the save's object list differs from this world's (different map content)".into(),
             ));
         }
-        if options.players && self.game.is_none() && self.room.default_spawn.is_none() {
+        if options.players
+            && !state.players.is_empty()
+            && self.game.is_none()
+            && self.room.default_spawn.is_none()
+        {
             return Err(invalid(
                 "this world has no spawn point to place restored players".into(),
             ));

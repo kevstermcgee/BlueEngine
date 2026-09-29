@@ -423,7 +423,32 @@
         "--studio --capture-physics DIR --feta",
         "live E pickup/drop, pause/resume and both movement key layouts"
       ],
-      "note": "Runtime catalog-prop extraction; 120 Hz Rapier compound bodies with per-player authoritative ownership. Large furniture/wall art remain fixed. All eligible bodies are allocated up front; lifecycle sleeping is not lazy allocation.",
+      "note": "Runtime catalog-prop extraction; 120 Hz Rapier compound bodies with per-player authoritative ownership. Large furniture/wall art remain fixed. All eligible bodies are allocated up front (no runtime spawn/despawn, no contact events, no joints; a game needing them owns its own rapier world via vesper3d::rapier); lifecycle sleeping is not lazy allocation. Index-based accessors (prop_index bridges from IDs): mass, half extents, centre of mass, throw_for_player (uncapped release), set_floor (movable/removable implicit ground, kept across restores).",
+      "keywords": [
+        "prop",
+        "props",
+        "rigid",
+        "body",
+        "bodies",
+        "spawn",
+        "despawn",
+        "contact",
+        "contacts",
+        "joint",
+        "joints",
+        "mass",
+        "throw",
+        "floor"
+      ],
+      "public_api": [
+        "PropPhysics::prop_index",
+        "PropPhysics::prop_mass",
+        "PropPhysics::prop_half_extents",
+        "PropPhysics::prop_center_of_mass",
+        "PropPhysics::throw_for_player",
+        "PropPhysics::set_floor",
+        "PropPhysics::floor"
+      ],
       "depends_on": [
         "simulation_contract"
       ]
@@ -474,17 +499,56 @@
         "src/viewer/builder.rs",
         "examples/prototype.rs",
         "docs/AI_QUICKSTART.md",
-        "tests/prototype.rs"
+        "tests/prototype.rs",
+        "tests/prop_api.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test prototype",
+        "cargo test --locked --no-default-features --test prototype --test prop_api",
         "cargo run --locked --no-default-features --example prototype"
       ],
-      "note": "SceneBuilder requires an explicit spawn and batches ordinary map edits; box_body includes a semantic ID while structural_box creates visual collision without a reachability target. World impulse/prop_position use IDs, not borrowed body indices. HeadlessWorld supports transactional map/game replacement with player respawn; network hosts must coordinate content changes. No generic scripting or arbitrary dynamic mesh builder.",
+      "note": "SceneBuilder requires an explicit spawn (or without_spawn for a props-only world) and batches ordinary map edits; box_body includes a semantic ID while structural_box creates visual collision without a reachability target. World prop accessors use IDs (position/origin, centre of mass, mass, half extents, rotation, velocities, sleep, holder, hit_prop) with prop_index bridging to the index-based PropPhysics API; throw releases a carried prop at an exact velocity; set_prop_floor moves or removes the implicit y = 0 ground under props. vesper3d::rapier re-exports the pinned physics crate. HeadlessWorld supports transactional map/game replacement with player respawn; network hosts must coordinate content changes. No generic scripting or arbitrary dynamic mesh builder.",
+      "keywords": [
+        "prop",
+        "props",
+        "mass",
+        "throw",
+        "floor",
+        "pit",
+        "void",
+        "spawn",
+        "rapier",
+        "velocity",
+        "index"
+      ],
+      "public_api": [
+        "SceneBuilder::without_spawn",
+        "HeadlessWorld::prop_index",
+        "HeadlessWorld::prop_mass",
+        "HeadlessWorld::prop_half_extents",
+        "HeadlessWorld::prop_center_of_mass",
+        "HeadlessWorld::prop_rotation",
+        "HeadlessWorld::prop_linear_velocity",
+        "HeadlessWorld::prop_angular_velocity",
+        "HeadlessWorld::is_prop_sleeping",
+        "HeadlessWorld::prop_holder",
+        "HeadlessWorld::held_prop",
+        "HeadlessWorld::hit_prop",
+        "HeadlessWorld::throw",
+        "HeadlessWorld::set_prop_floor",
+        "vesper3d::rapier"
+      ],
       "evidence": [
         {
           "suite": "prototype",
           "test": "builder_roundtrip_runs_physics_and_movement"
+        },
+        {
+          "suite": "prop_api",
+          "test": "every_id_accessor_agrees_with_its_index_twin"
+        },
+        {
+          "suite": "prop_api",
+          "test": "props_fall_through_a_removed_floor_and_rest_on_a_moved_one_even_after_a_restore"
         },
         {
           "suite": "prototype",

@@ -3,7 +3,12 @@
 Boxes: center/half extents. `structural_box` omits semantic reachability. Props: bottom origin; catalog physics rules.
 `build()->Result<MapDocument>`; `world()->Result<HeadlessWorld>`.
 `input(id:u64,Movement,yaw:f32,pitch:f32)->bool`; `step()` = 1/60s.
-`impulse(id:&str,V)->bool`; `prop_position(id:&str)->Option<V>`.
+`impulse(id:&str,V)->bool`; `prop_position(id:&str)->Option<V>` (body origin; `prop_center_of_mass` is the physical centre).
+By ID too: `prop_mass` (kg), `prop_half_extents`, `prop_rotation`, `prop_linear_velocity`, `prop_angular_velocity`, `is_prop_sleeping`,
+`prop_holder`, `held_prop(player)`, `hit_prop(Ray,max)`, `prop_index(id)` (its stable index for the `prop_physics` API).
+`throw(player,velocity,angvel)->bool` releases a carried prop at an exact velocity (a plain drop keeps at most 4 m/s).
+`set_prop_floor(None)` removes the implicit y = 0 ground under props (pits, voids; `Some(y)` moves it), as `Controller::set_floor` does for players.
+`SceneBuilder::without_spawn()` builds a props-only world (no player can join). `vesper3d::rapier` is the engine's `rapier3d`, re-exported.
 IDs are owned; unknown IDs fail. Jump is an edge; movement persists.
 Run: `cargo run --no-default-features --example prototype`.
 For a nonstandard window or renderer, continue with [CUSTOM_CLIENT.md](CUSTOM_CLIENT.md).
