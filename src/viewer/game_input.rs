@@ -10,6 +10,20 @@ use super::{
 };
 use macroquad::prelude::*;
 
+/// Hand motion since the last frame in screen pixels, `[right, down]`, the way an operating system
+/// reports it. Feed it to `devkit::MouseLook::look`. This is the only place that knows macroquad's
+/// `mouse_delta_position()` is previous-minus-current in half-screens; do not read that function
+/// anywhere else (see `devkit::look` for the whole convention).
+pub fn mouse_pixels() -> [f32; 2] {
+    let d = mouse_delta_position();
+    pixels_from_macroquad_delta([d.x, d.y], [screen_width(), screen_height()])
+}
+/// The pure half of [`mouse_pixels`]: macroquad's delta (`last - current`, `-1..1` across the window)
+/// and the window size in pixels in, `[right, down]` pixels out.
+pub fn pixels_from_macroquad_delta(delta: [f32; 2], window: [f32; 2]) -> [f32; 2] {
+    [-delta[0] * window[0] * 0.5, -delta[1] * window[1] * 0.5]
+}
+
 pub struct ClientInput {
     backend: Option<Gamepads>,
     frame: GamepadFrame,
@@ -196,6 +210,16 @@ mod tests {
             keyboard: None,
             clock: FrameClock::new(),
         }
+    }
+    #[test]
+    fn macroquad_delta_becomes_right_down_pixels() {
+        // Moving the hand 10 px right on a 1000x500 window: macroquad reports last - current, so the
+        // x delta is negative (10 px = 0.02 of the half-width-normalised range).
+        let px = pixels_from_macroquad_delta([-0.02, 0.], [1000., 500.]);
+        assert!((px[0] - 10.).abs() < 1e-4 && px[1] == 0.);
+        // Moving the hand 10 px up: y decreases on screen, so last - current is positive.
+        let px = pixels_from_macroquad_delta([0., 0.04], [1000., 500.]);
+        assert!((px[1] + 10.).abs() < 1e-4, "up is negative down-pixels");
     }
     #[test]
     fn controller_confirmation_does_not_leak_from_gameplay_into_menu() {

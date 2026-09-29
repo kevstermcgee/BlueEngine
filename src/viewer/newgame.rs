@@ -228,6 +228,10 @@ fn write_shipping_files(project: &Project, mut identity: Identity) -> Result<()>
         include_str!("../../templates/game_ship.py"),
     )?;
     project.write(
+        "scripts/dev.py",
+        include_str!("../../templates/game_dev.py"),
+    )?;
+    project.write(
         "src/platform.rs",
         include_str!("../../templates/native_focus.rs"),
     )?;
@@ -261,8 +265,12 @@ case "$cmd" in
   build-all)
     cargo build --release
     ;;
+  dev)
+    shift
+    python scripts/dev.py "$@"
+    ;;
   play)
-    cargo run --release
+    python scripts/dev.py --release
     ;;
   package)
     shift
@@ -277,7 +285,7 @@ case "$cmd" in
     python scripts/ship.py ship "$@"
     ;;
   *)
-    echo "Usage: scripts/blue {check|build-all|play|package|shortcut|ship}"
+    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship}"
     ;;
 esac
 "#;
@@ -297,8 +305,12 @@ switch ($cmd) {
         cargo build --release
         exit $LASTEXITCODE
     }
+    "dev" {
+        python scripts/dev.py @CheckArgs
+        exit $LASTEXITCODE
+    }
     "play" {
-        cargo run --release
+        python scripts/dev.py --release
         exit $LASTEXITCODE
     }
     "package" {
@@ -314,7 +326,7 @@ switch ($cmd) {
         exit $LASTEXITCODE
     }
     default {
-        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|play|package|shortcut|ship}"
+        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|dev|play|package|shortcut|ship}"
     }
 }
 "#;

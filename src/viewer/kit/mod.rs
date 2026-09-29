@@ -11,6 +11,7 @@
 //! | [`Template`], [`Batch`], [`Tint`] | build small meshes once, pack hundreds per frame into a few draw calls |
 //! | [`Look`], [`Materials`] | lit + fogged + glowing world material, alpha and additive effect materials, a sky |
 //! | [`Fx`] | particles, rings, fireballs, beams, popups, banners |
+//! | [`gizmo`] | wireframe bounding boxes, axes and a person-sized silhouette for judging scale by eye (numbers: `devkit::Bounds`) |
 //! | [`hud`] | scaled outlined text, panels, bars, vignette, crosshair, popups and banners |
 //! | [`SoundBank`] | effects with variants and music stems, rendered off-thread |
 //! | [`capture::save_frame`] | screenshot evidence with the real pixel size |
@@ -21,6 +22,7 @@ pub mod audio;
 pub mod batch;
 pub mod capture;
 pub mod fx;
+pub mod gizmo;
 pub mod hud;
 pub mod look;
 pub mod view;

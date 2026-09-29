@@ -209,7 +209,9 @@ impl GameClient {
             let mdx = m_delta.x;
             let mdy = m_delta.y;
             self.controller.yaw -= mdx * 2.5;
-            self.controller.pitch = (self.controller.pitch - mdy * 2.5).clamp(-1.5, 1.5);
+            // macroquad's delta is previous-minus-current: +x is left and +y is up, so both axes are
+            // subtracted/added the way ClientInput::mouse_look does (see devkit::look). Mouse up looks up.
+            self.controller.pitch = (self.controller.pitch + mdy * 2.5).clamp(-1.5, 1.5);
 
             let movement = Movement {
                 forward: fwd,

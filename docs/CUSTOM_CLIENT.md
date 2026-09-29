@@ -4,6 +4,7 @@ Two different needs, decided by who owns the rules:
 
 | You need | You own | Start from |
 |---|---|---|
+| a first window, camera, meshes and sound in one file, to copy | presentation and a toy loop | `examples/minimal_game.rs` (`cargo run --example minimal_game`) |
 | your own window, renderer, HUD or input over **the engine's** simulation and `GameDocument` rules | presentation | `examples/custom_client.rs` (below) |
 | **your own rules**: enemies, projectiles, scoring, AI, per-frame physics | the simulation *and* the window loop | `be2-tools new-game NAME DIR ENGINE_PATH custom-sim` ([A custom simulation](#a-custom-simulation)) |
 

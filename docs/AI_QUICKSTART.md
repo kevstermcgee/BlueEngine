@@ -49,3 +49,10 @@ fn main() -> Result<()> {
 ```
 
 Shared standalone-game infrastructure: [gameplay kit](SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.
+
+## Making a first-person game with your own window
+Copy `examples/minimal_game.rs` (`cargo run --example minimal_game -- --shot out.png`, ~100 lines: window, camera, meshes, sound, HUD). Then `be2-tools new-game NAME DIR ENGINE_PATH custom-sim` for the full loop, saves and shipping ([CUSTOM_CLIENT.md](CUSTOM_CLIENT.md)).
+- **Mouse look: one convention, never hand-written.** `MouseLook::default().look(px_right, px_down)` -> `FpsCamera::turn` (or `Controller::look(dx, dy, 1.0, false)`); pixels come from `game_input::mouse_pixels()`. Hand right turns right, hand up looks up, `MouseLook::new(sens, invert_y)`. Do not read macroquad's `mouse_delta_position()` (previous minus current: both signs flipped). Pitch limit `devkit::PITCH_LIMIT`.
+- **Scale: 1 unit = 1 m.** `Bounds::of(points)?.expect_longest("shell", 0.05..=0.30)?` fails with the factor to apply; `Bounds::describe` prints "0.11 x 0.05 x 0.07 m (about 0.7 x a phone)". By eye: `kit::gizmo::{human_scale, bbox, template_bbox, axes}`.
+- **Sound:** `SoundBank::start(muted, sfx, music, || Rendered{..})` with `devkit::synth::render(Preset::Coin, variant, seed)`; no audio files.
+- **Iterate:** `scripts/blue dev [-- game args]` closes a still-open copy of the game first (a running .exe cannot be relinked on Windows: os error 5) and builds in the fast profile; `--release` only to ship.

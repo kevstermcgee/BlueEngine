@@ -14,10 +14,12 @@
 //! | [`FrameClock`] | wall-clock frame length (macroquad's `get_frame_time()` is bumpy under vsync) |
 //! | [`FixedStepper`] | frame lengths in, whole 60 Hz ticks out, bounded catch-up, render `alpha` |
 //! | [`InputAccumulator`] | device frames in, exactly one input per tick out (edges once, look immediate) |
+//! | [`FpsCamera`], [`MouseLook`] | the one mouse-look convention (hand right = turn right, hand up = look up, `invert_y`, pitch limit), tested against `Controller::look` |
 //! | [`Simulation`], [`StateHasher`], [`assert_deterministic`] | the deterministic-state contract and its test |
 //! | [`Playback`], [`Timeline`], [`CapturePlan`] | scripted input and screenshot flags for an agent that cannot play |
 //! | [`PerfReport`] | frame-time percentiles for a `--perf` flag |
 //! | [`Rng`] | seeded random numbers, so a seed replays a run |
+//! | [`Bounds`], [`describe_length`], [`HUMAN_HEIGHT`] | metres-scale checks: `bounds.expect_longest("conch", 0.05..=0.30)` fails with the scale factor to apply, so a giant shell is caught without a window |
 //! | [`Juice`], [`Pulse`] | screen shake, hit-stop, FOV kick, flash, landing dip |
 //! | [`Settings`], [`Records`], [`load_or_default`], [`store_atomic`] | atomic, never-fatal settings and high-score files |
 //! | [`Snapshot`], [`snapshot`], [`SavePolicy`] | save states of the simulation: F5 / F9, autosaves, migrations, all-or-nothing loads, and the resume contract a game declares (exact, or a physics continuation) |
@@ -56,9 +58,11 @@ mod clock;
 mod input;
 mod juice;
 mod lifecycle;
+mod look;
 mod playback;
 mod rng;
 mod save;
+mod scale;
 mod sim;
 pub mod snapshot;
 pub mod synth;
@@ -70,10 +74,14 @@ pub use clock::{FixedStepper, FrameClock, PerfReport, PerfSummary, MAX_FRAME, TI
 pub use input::{clean_axis, Edges, InputAccumulator, Tick};
 pub use juice::{Juice, Pulse, MAX_HITSTOP};
 pub use lifecycle::{Lifecycle, Notice, Options, ScriptFrame};
+pub use look::{FpsCamera, MouseLook, DEFAULT_RADIANS_PER_PIXEL, PITCH_LIMIT, SENSITIVITY_RANGE};
 pub use playback::{
     flag_value, has_flag, parse_frame_list, parse_size, CapturePlan, Cue, Playback, Timeline,
 };
 pub use rng::Rng;
 pub use save::{beside_exe, load_or_default, store_atomic, Records, Settings};
+pub use scale::{
+    describe_length, Bounds, DOOR, EYE_HEIGHT, HUMAN_HEIGHT, ONE_HAND_LONGEST, TABLE_HEIGHT,
+};
 pub use sim::{assert_deterministic, run_inputs, Simulation, StateHasher, Trace};
 pub use snapshot::{assert_resumes_as_promised, Migration, SavePolicy, Snapshot};

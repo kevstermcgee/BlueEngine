@@ -17,6 +17,16 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
   platform's collider is the only ground). Knockback is `apply_impulse`. Cannot see or hear the game?
   Use `--capture`, `--script`, `--perf` below, and numbers.
 
+## Look, scale, iteration
+- Mouse look has one convention (`devkit::look`): hand right turns right, hand up looks up. Feed
+  `MouseLook::look(px_right, px_down)` from `game_input::mouse_pixels()` into `FpsCamera` (or the same
+  `[right, down]` delta into `Controller::look(dx, dy, 1.0, false)`). Never read `mouse_delta_position()`
+  yourself (previous-minus-current: both signs flipped); never hand-write a yaw/pitch formula.
+- Unit = metre. Check generated geometry without a window: `Bounds::of(points)?.expect_longest("shell",
+  0.05..=0.30)` fails with the scale to apply; `kit::gizmo::human_scale`/`bbox` show it in a frame.
+- Rebuild with `scripts/blue dev` (closes a still-open copy first: a running .exe cannot be relinked on
+  Windows) and use `scripts/blue dev -- --capture out --frames 30`; a release build is for `ship`.
+
 ## Save states
 - F5 / F9 save and load the `quick` slot (`devkit::snapshot`, wired by `devkit::Lifecycle` in `main.rs`):
   `impl Snapshot for Sim` in `src/lib.rs` lists everything that decides the future. **Every new field of

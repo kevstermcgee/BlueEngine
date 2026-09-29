@@ -91,6 +91,12 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     let unix = std::fs::read_to_string(dir.join("scripts/blue")).unwrap();
     assert!(unix.contains("python scripts/check.py \"$@\""));
     assert!(!unix.contains("cargo check"));
+    assert!(unix.contains("python scripts/dev.py"));
+    assert!(windows.contains("python scripts/dev.py"));
+    assert_eq!(
+        std::fs::read_to_string(dir.join("scripts/dev.py")).unwrap(),
+        include_str!("../templates/game_dev.py")
+    );
     assert!(scaffold_new_game("shared-starter", &dir, None).is_err());
     std::fs::remove_dir_all(dir).unwrap();
 }
