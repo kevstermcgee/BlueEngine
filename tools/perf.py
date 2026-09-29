@@ -4,9 +4,13 @@
 Rows are appended to docs/perf/metrics.jsonl (one JSON object per line, never rewritten) so a
 later session can compare like with like: same metric, profile, kind and host, across commits.
 
-  python tools/perf.py record [--suite build|test|sim|all] [--profile fast|release|itest|dev] [--note TEXT]
+  python tools/perf.py record [--suite build|test|sim|server|all] [--profile fast|release|itest|dev] [--note TEXT]
   python tools/perf.py report [--metric NAME]     latest value per series vs the previous one
   python tools/perf.py env                        the host/toolchain block a row would carry
+
+`--suite server` starts be2-headless on loopback and joins 1, 2, 4 and 8 synthetic clients (plus a 9th
+to confirm refusal: the server is capped at 8) using examples/server_load.rs, recording server CPU,
+memory, tick time and per-client bandwidth. `all` does not include it (about 3 minutes).
 
 Measurements build in a private target directory (BLUE_PERF_TARGET, default
 ~/.cache/blueengine-perf) so they never disturb your own target/. Incremental rows edit
@@ -149,6 +153,72 @@ def sim_rows(profile):
              'value': float(m.group(1)), 'unit': 'us'}]
 
 
+LOAD_LEVELS = (1, 2, 4, 8, 9)
+LOAD_SECONDS = 15
+
+
+def cpu_seconds(pid):
+    """utime+stime of a process in seconds, from /proc."""
+    fields = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()
+    return (int(fields[11]) + int(fields[12])) / os.sysconf('SC_CLK_TCK')
+
+
+def rss_peak_mb(pid):
+    match = re.search(r'VmHWM:\s+(\d+) kB', Path(f'/proc/{pid}/status').read_text())
+    return round(int(match.group(1)) / 1024, 1) if match else None
+
+
+def server_rows(profile):
+    tdir = target_dir(f'build-{profile}')
+    env = {**os.environ, 'CARGO_TARGET_DIR': str(tdir)}
+    exe = tdir / ('release' if profile == 'release' else profile) / 'be2-headless'
+    build = run(['cargo', 'build', '--locked', *profile_args(profile), '--no-default-features',
+                 '--bin', 'be2-headless', '--example', 'server_load'], env=env)
+    if build.returncode:
+        sys.exit(build.stderr[-2000:])
+    load = exe.parent / 'examples' / 'server_load'
+    rows = []
+    for index, clients in enumerate(LOAD_LEVELS):
+        port = 41000 + index
+        log = target_dir('server-logs') / f'server-{clients}.log'
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with log.open('w') as out:
+            server = subprocess.Popen([str(exe), '--server', f'127.0.0.1:{port}', '--transport', 'development'],
+                                      cwd=ROOT, stdout=out, stderr=subprocess.STDOUT)
+            try:
+                time.sleep(1.0)
+                before, wall = cpu_seconds(server.pid), time.monotonic()
+                res = run([str(load), f'127.0.0.1:{port}', '--clients', str(clients),
+                           '--seconds', str(LOAD_SECONDS)])
+                busy = cpu_seconds(server.pid) - before
+                window = time.monotonic() - wall
+                rss = rss_peak_mb(server.pid)
+            finally:
+                server.terminate()
+                server.wait(timeout=10)
+        if res.returncode:
+            sys.exit(f'server_load failed at {clients} clients: {res.stderr[-1000:]}')
+        report = json.loads(res.stdout.strip().splitlines()[-1])
+        status = re.findall(r'mean_us=(\d+) max_us=(\d+)', log.read_text())
+        kind = f'clients_{clients}'
+        common = {'kind': kind, 'profile': profile}
+        rows += [
+            {'metric': 'server_cpu_pct_of_core', 'value': round(100 * busy / window, 2), 'unit': '%', **common},
+            {'metric': 'server_rss_peak', 'value': rss, 'unit': 'MB', **common},
+            {'metric': 'server_clients_joined', 'value': report['clients_joined'], 'unit': 'n',
+             'refused': report['clients_refused'], 'refusal_reason': report['refusal_reason'], **common},
+        ]
+        if status:
+            rows += [{'metric': 'server_tick_mean', 'value': int(status[-1][0]), 'unit': 'us', **common},
+                     {'metric': 'server_tick_max', 'value': int(status[-1][1]), 'unit': 'us', **common}]
+        for key, unit in (('bytes_per_client_per_s', 'B/s'), ('max_packet_bytes', 'B'),
+                          ('update_gap_ms_mean', 'ms'), ('update_gap_ms_max', 'ms'),
+                          ('update_gaps_over_100ms', 'n'), ('resyncs', 'n'),
+                          ('generator_late_frames', 'n')):
+            rows.append({'metric': 'load_' + key, 'value': report[key], 'unit': unit, **common})
+    return rows
+
+
 def load():
     if not METRICS.exists():
         return []
@@ -173,7 +243,7 @@ def main(argv):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest='cmd', required=True)
     r = sub.add_parser('record')
-    r.add_argument('--suite', choices=['build', 'test', 'sim', 'all'], default='all')
+    r.add_argument('--suite', choices=['build', 'test', 'sim', 'server', 'all'], default='all')
     r.add_argument('--profile', choices=['fast', 'release', 'itest', 'dev'], default=None)
     r.add_argument('--note', default='')
     rp = sub.add_parser('report')
@@ -192,6 +262,8 @@ def main(argv):
             rows += test_rows(args.profile if args.profile in ('itest', 'dev') else 'itest')
         if args.suite in ('sim', 'all'):
             rows += sim_rows(args.profile if args.profile in ('fast', 'release') else 'fast')
+        if args.suite == 'server':
+            rows += server_rows(args.profile if args.profile in ('fast', 'release') else 'fast')
         append(rows, args.note)
     return 0
 

@@ -31,6 +31,24 @@ lines as a single serial LTO unit; debug rapier/parry make physics tests 10-25x 
 the 27 test binaries links the full engine. Cold builds spend about 60 s in rapier, parry,
 nalgebra, rustls, quinn and ring.
 
+## Server load (loopback, development transport, house map, `--profile fast`)
+
+`python tools/perf.py record --suite server` (about 2 minutes) runs `examples/server_load.rs` against
+a real `be2-headless` process. Synthetic clients only walk and jump; no combat, no moving props.
+
+| Clients | Server CPU (% of one core) | Tick mean / max | Per-client bandwidth | Largest packet |
+|---|---|---|---|---|
+| 1 | 2.2 | 290 / 405 us | 7.6 KB/s | 396 B |
+| 2 | 2.5 | 328 / 610 us | 11.1 KB/s | 587 B |
+| 4 | 3.1 | 424 / 841 us | 18.4 KB/s | 972 B |
+| 8 | 4.7 | 700 / 1569 us | 20.4 KB/s | 1100 B |
+
+Server RSS stays about 6 MB. World updates arrive every 50 ms (20 Hz) with a worst gap of 67 ms and no
+resyncs. A 9th client is refused ("Server is full (8 players)"): the cap is hard-coded at
+`src/viewer/server.rs:230`, so 16 or 32 players needs an engine change, not just a faster machine.
+Headroom is large on this CPU, but the largest packet already uses 1100 of the 1400-byte limit at 8 idle
+players. Not covered: real network loss/latency, the production QUIC/TLS transport, props in motion, combat.
+
 ## Open ideas, in expected order of value
 
 1. Done on this machine: mold and sccache via `~/.cargo/config.toml` (not the repo, so Windows CI is
