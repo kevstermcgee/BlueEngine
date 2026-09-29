@@ -52,6 +52,15 @@ resyncs. A 9th client is refused ("Server is full (8 players)"): the cap is hard
 Headroom is large on this CPU, but the largest packet already uses 1100 of the 1400-byte limit at 8 idle
 players. Not covered: real network loss/latency, the production QUIC/TLS transport, props in motion, combat.
 
+## Publishing (BlueEngineGames, GitHub Actions, windows-latest)
+
+"Build Windows releases" took 15-26 minutes on each of the last five runs (19m, 26m, 15m, 16m, 20m).
+Reading `.github/workflows/releases.yml` and `package_native_releases.ps1` in that repo: there is no Rust
+cache; the engine is built `--release` from scratch; then each of 6 native games is built `--release`
+with its own `target/`, so the physics/math/rendering dependencies compile 7 times; and every game is
+rebuilt on every run even when only one changed. Step-level times are not public; fetch them with an
+authenticated `gh run view` before tuning.
+
 ## Open ideas, in expected order of value
 
 1. Done on this machine: mold and sccache via `~/.cargo/config.toml` (not the repo, so Windows CI is
