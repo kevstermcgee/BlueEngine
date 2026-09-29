@@ -22,7 +22,9 @@ Fields: `metric` (`build_headless`, `test_build`, `test_run_total`, `test_suite:
 |---|---|---|
 | headless build after a code edit | 63 s (`--release`) | 15 s (`fast`) |
 | `physics_saves` + `save_state` suites | 306 s (`dev`) | 12 s (`itest`; one-time 118 s compile) |
-| full `cargo test --no-default-features` | 402 s (`dev`) | not yet measured on `itest` |
+| full `cargo test --no-default-features` | 402 s (`dev`) | 51 s (`itest`, mold + sccache) |
+| cold headless build | 82 s (`fast`) | 38 s (`fast`, warm sccache) |
+| cold test build | 118 s (`itest`) | 48 s (`itest`, warm sccache) |
 
 Findings behind the numbers: the whole engine is one crate, so `--release` recompiles about 52k
 lines as a single serial LTO unit; debug rapier/parry make physics tests 10-25x slower; each of
@@ -31,8 +33,9 @@ nalgebra, rustls, quinn and ring.
 
 ## Open ideas, in expected order of value
 
-1. Install mold and sccache; put `-fuse-ld=mold` and `RUSTC_WRAPPER=sccache` in `~/.cargo/config.toml`,
-   not the repo (Windows CI must stay unchanged). Record before and after.
+1. Done on this machine: mold and sccache via `~/.cargo/config.toml` (not the repo, so Windows CI is
+   unchanged). Edit-and-rebuild stayed 15 s: it is dominated by compiling the engine crate itself.
+   Optional: cargo-nextest for test scheduling.
 2. Tiered `be2.py check` (`cargo check`, then focused tests, then full).
 3. Split the engine crate so an edit rebuilds less (simulation, net, presentation).
 4. Fewer test binaries or a shared test crate to cut links.
