@@ -96,6 +96,24 @@ remainder instead (`{"counter":"phase","modulo":2,"equals":0}` is "phase is even
 
 The bare `{"counter":"switches","equals":3}` form is unchanged. A lost bomb timer is one rule:
 `{"on_timer":"fuse","condition":{"counter":"countdown","at_most":0},"actions":[{"action":"fail"}]}`.
+### Adding an interactable
+
+An interactable is five records that must agree: in `map.json` a material, a node, a collider and an
+entity, and in `game.json` an `interactables` entry. Do not write them by hand. This creates all five, validates
+the game as a whole, and only then writes anything:
+
+```sh
+be2-tools add-interactable game.json vent --at=3,1.5,-2 --label="Air vent" --disabled
+be2-tools add-interactable game.json vent --at=3,1.5,-2 --label="Air vent" --disabled --write
+```
+
+The first call is a dry run: it prints the records it would create and touches nothing. `--write` replaces
+both files atomically and restores the map if the game cannot be written. Options use the `--name=value` form
+(so negative coordinates work): `--at=X,Y,Z` (required, metres), `--size=HX,HY,HZ` (half extents, default
+0.3 each), `--color=R,G,B` (linear 0..1), `--label=TEXT`, `--disabled`, `--hidden`. It warns when no rule
+reacts to the new target yet (and prints a `rule_template` to adapt) and when the box overlaps another
+interactable. The rule itself is yours to write: it is the one part the tool cannot guess.
+
 Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
 `on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.
 Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete and fail end the match.

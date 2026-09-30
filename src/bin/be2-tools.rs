@@ -117,7 +117,7 @@ fn run() -> Result<()> {
             );
         }
         "help" => {
-            println!("BlueEngine native toolkit (new output paths only)");
+            println!("BlueEngine native toolkit (new output paths only, except add-interactable --write)");
             for (name, signature) in vesper3d::viewer::capabilities::COMMANDS {
                 println!("{name} {signature}");
             }
@@ -430,6 +430,50 @@ fn run() -> Result<()> {
             if !rep.ok {
                 std::process::exit(1);
             }
+        }
+        "add-interactable" => {
+            use vesper3d::viewer::game_edit::{add_interactable, InteractableSpec};
+            // GAME.json ID --at=X,Y,Z [--size=HX,HY,HZ] [--color=R,G,B] [--label=TEXT] [--disabled]
+            // [--hidden] [--write]. Without --write this only validates and reports. Flags use the
+            // `--name=value` form so a negative coordinate is never mistaken for another option.
+            let mut spec = InteractableSpec::new(arg(2)?, V(f32::NAN, 0., 0.));
+            let mut at = None;
+            let mut write = false;
+            for flag in &a[3..] {
+                let (name, value) = flag.split_once('=').unwrap_or((flag, ""));
+                let need = |what: &str| -> Result<&str> {
+                    if value.is_empty() {
+                        Err(format!("{name} needs a value: write {name}={what}").into())
+                    } else {
+                        Ok(value)
+                    }
+                };
+                match name {
+                    "--at" => at = Some(vector(need("X,Y,Z")?)?),
+                    "--size" => spec.half_extents = vector(need("HX,HY,HZ")?)?,
+                    "--color" => spec.color = vector(need("R,G,B")?)?,
+                    "--label" => spec.label = Some(need("TEXT")?.to_string()),
+                    "--disabled" => spec.enabled = false,
+                    "--hidden" => spec.visible = false,
+                    "--write" => write = true,
+                    other => {
+                        return Err(format!("Unknown option {other}; see be2-tools help").into())
+                    }
+                }
+            }
+            spec.center = at.ok_or("--at=X,Y,Z is required (metres)")?;
+            let report = add_interactable(Path::new(arg(1)?), &spec, write)?;
+            println!(
+                "{}",
+                json!({
+                    "ok": true, "written": report.written,
+                    "game": report.game, "map": report.map,
+                    "records": report.records, "warnings": report.warnings,
+                    "rule_template": report.rule_template,
+                    "note": if report.written { "game.json and the map were updated" }
+                            else { "dry run: nothing was written; repeat with --write to apply" },
+                })
+            );
         }
         "new-game" => {
             use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};

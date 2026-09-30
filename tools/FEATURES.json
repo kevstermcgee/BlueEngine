@@ -598,8 +598,10 @@
         "src/viewer/game.rs",
         "src/viewer/profile.rs",
         "src/viewer/game_example.rs",
+        "src/viewer/game_edit.rs",
         "tests/game_documents.rs",
         "tests/game_conditions.rs",
+        "tests/game_edit.rs",
         "tools/game.schema.json",
         "docs/GAME_QUICKSTART.md"
       ],
@@ -607,7 +609,7 @@
         "game_documents integration tests",
         "graphical --capture-game smoke"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors.",
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors. add-interactable creates a target's map and game records together (dry run unless --write).",
       "depends_on": [
         "simulation_contract"
       ],
@@ -619,7 +621,8 @@
         "counter",
         "fail",
         "condition",
-        "modulo"
+        "modulo",
+        "add-interactable"
       ],
       "read_first": [
         "src/viewer/game.rs",

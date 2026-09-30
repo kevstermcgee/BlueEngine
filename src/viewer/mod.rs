@@ -4,6 +4,7 @@ pub mod devkit;
 pub mod game;
 #[cfg(feature = "presentation")]
 pub mod game_client;
+pub mod game_edit;
 pub mod game_example;
 #[cfg(feature = "gamepad")]
 pub mod gamepad;

@@ -12,10 +12,13 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::Read,
-    path::{Component, Path},
+    path::{Component, Path, PathBuf},
 };
 
 pub const MAX_COUNTER: i32 = 1_000_000;
+/// Byte limits for a game document and its map when loaded from disk.
+pub const MAX_GAME_BYTES: u64 = 64_000;
+pub const MAX_MAP_BYTES: u64 = 8_000_000;
 pub const INTERACT_REACH: f32 = 2.5;
 pub const MAX_GAME_COUNTERS: usize = 32;
 pub const MAX_GAME_FLAGS: usize = 64;
@@ -369,14 +372,14 @@ fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
 }
 
 impl GameDocument {
-    pub fn load(path: &Path) -> Result<LoadedGame> {
-        let document: Self = serde_json::from_slice(&read_bounded(path, 64_000)?)?;
+    /// The confined map path a game document at `path` refers to.
+    pub fn map_path(&self, path: &Path) -> Result<PathBuf> {
         let root = path
             .canonicalize()?
             .parent()
             .ok_or("Game needs a parent directory")?
             .to_path_buf();
-        let relative = Path::new(&document.map);
+        let relative = Path::new(&self.map);
         if relative.as_os_str().is_empty()
             || !relative
                 .components()
@@ -388,7 +391,13 @@ impl GameDocument {
         if !map_path.starts_with(&root) {
             return Err("Map escapes game directory".into());
         }
-        let map: MapDocument = serde_json::from_slice(&read_bounded(&map_path, 8_000_000)?)?;
+        Ok(map_path)
+    }
+
+    pub fn load(path: &Path) -> Result<LoadedGame> {
+        let document: Self = serde_json::from_slice(&read_bounded(path, MAX_GAME_BYTES)?)?;
+        let map_path = document.map_path(path)?;
+        let map: MapDocument = serde_json::from_slice(&read_bounded(&map_path, MAX_MAP_BYTES)?)?;
         document.validate(&map)?;
         Ok(LoadedGame { document, map })
     }
