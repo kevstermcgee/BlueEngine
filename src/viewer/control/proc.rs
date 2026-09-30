@@ -134,7 +134,13 @@ mod tests {
             .spawn()
             .unwrap();
         let pid = child.id();
-        let found = find_by_program("sleep");
+        // Give /proc a moment under a loaded machine (this failed once, unreproducibly, in a full parallel run).
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(2);
+        let mut found = find_by_program("sleep");
+        while !found.iter().any(|p| p.pid == pid) && std::time::Instant::now() < deadline {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            found = find_by_program("sleep");
+        }
         assert!(
             found
                 .iter()

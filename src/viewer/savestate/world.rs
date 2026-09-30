@@ -348,8 +348,8 @@ mod tests {
             ("body height", |s| s.players[0].controller.body_height = 0.),
             ("intent", |s| s.players[0].input.forward = 5.),
             ("duplicate player", |s| s.players[1].id = 1),
-            ("nine players", |s| {
-                s.players = (1..=9).map(player).collect()
+            ("more players than a server can admit", |s| {
+                s.players = (1..=MAX_PLAYERS as u64 + 1).map(player).collect()
             }),
             ("prop nan", |s| {
                 s.physics.as_mut().unwrap().props[0].position[1] = f32::NAN

@@ -157,7 +157,7 @@ struct Run {
     failures: Vec<String>,
 }
 
-fn play(dir: &PathBuf, ticks: u64, inputs: Vec<Value>, assertions: Vec<Value>) -> Run {
+fn play(dir: &std::path::Path, ticks: u64, inputs: Vec<Value>, assertions: Vec<Value>) -> Run {
     let scenario: Scenario = serde_json::from_value(json!({
         "name": "failure paths",
         "game_path": dir.join("game.json").to_string_lossy(),

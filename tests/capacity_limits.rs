@@ -1,4 +1,9 @@
 //! A server configured for more than the default eight players must be able to save and resume its world.
+const _: () = assert!(
+    vesper3d::viewer::savestate::world::MAX_PLAYERS
+        >= vesper3d::viewer::simulation::MAX_PLAYERS_LIMIT,
+    "a server must be able to save every player it can admit"
+);
 use vesper3d::viewer::simulation::{HeadlessWorld, MAX_PLAYERS_LIMIT};
 
 fn crowded(players: usize) -> HeadlessWorld {
@@ -54,10 +59,6 @@ fn discovery_reports_limits_read_from_the_code_and_docs_do_not_contradict_them()
         savestate::world::MAX_PLAYERS
     );
     assert_eq!(stock["datagram_bytes"], net::MAX_PACKET_BYTES);
-    assert!(
-        savestate::world::MAX_PLAYERS >= simulation::MAX_PLAYERS_LIMIT,
-        "a server must be able to save every player it can admit"
-    );
     assert!(support["custom_sim_netplay"]["graceful_shutdown"]
         .as_str()
         .unwrap()
@@ -80,7 +81,7 @@ fn a_server_that_could_not_replicate_a_full_house_refuses_to_start_that_way() {
     let mut scene = SceneBuilder::new("Crowded props").spawn(V(0., 0., 4.6), 0.0);
     for i in 0..50 {
         scene = scene.box_body(
-            &format!("crate{i}"),
+            format!("crate{i}"),
             V(i as f32 * 0.6 - 15., 0.3, -2.),
             V(0.25, 0.25, 0.25),
             V::ONE,
