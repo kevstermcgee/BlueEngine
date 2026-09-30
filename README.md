@@ -46,7 +46,7 @@ cargo run --locked --no-default-features --bin be2-tools -- export-lab lab.json
 cargo run --locked --bin be2 -- --map lab.json
 ```
 
-Use the same map/game on both peers. Protocol 7 rejects different initial content.
+Use the same map/game on both peers. Protocol 8 rejects different initial content.
 Output files must be new. `export-house` and assets/maps/starters retain reference maps.
 WASD/arrows move, mouse looks, Space jumps, Ctrl/C crouches, E carries/drops,
 left click uses the demo tool, scroll selects tools, Q changes perspective, Esc pauses.

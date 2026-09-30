@@ -46,7 +46,7 @@ target/release/be2 --connect 127.0.0.1:4000 --transport development --map assets
 ```
 
 Use `--game FILE` instead of `--map FILE` for a GameDocument. Do not pass both.
-Protocol 7 rejects clients whose initial map/game fingerprint differs from the server.
+Protocol 8 rejects clients whose initial map/game fingerprint differs from the server.
 
 These development commands preserve compatibility and need no certificate. Do not
 expose this profile as a production Internet service.
@@ -112,13 +112,15 @@ The smoke example does not accept an authentication key. Authenticated behavior 
 covered by `cargo test --locked --test secure_net`; the production transport handshake
 is covered by `cargo test --locked --test transport_profiles`.
 
-Protocol 7 keeps JSON and the 1100-byte ceiling. `DatagramTransport::payload_limit`
-may lower that budget per peer; QUIC reports its negotiated datagram limit. Larger
-worlds arrive as partial snapshots/deltas across multiple updates. Rebuild both
-peers: protocol 6 acknowledgements and unscoped resync requests are incompatible.
+Protocol 8 sends world updates (full snapshots and deltas) in a compact binary form (`net::worldwire`: 19 to 28
+bytes per walking player where JSON took about 172, so about 45 to 50 players fit one packet instead of 6); every other packet is
+still JSON, and the 1100-byte ceiling stays. `DatagramTransport::payload_limit` may lower that budget per peer; QUIC
+reports its negotiated datagram limit. Larger worlds arrive as partial snapshots/deltas across multiple updates, nearest
+records first (ADR 0028). Rebuild both peers: protocol 7 (JSON world updates), 6 (acknowledgements) and older are
+incompatible and are refused at the handshake.
 
-The supported bound is 1,024 relevant players/props combined per peer (still eight
-players per server), with prop IDs at most 128 UTF-8 bytes. Every individual state
+The supported bound is 1,024 relevant players/props combined per peer (eight
+players per server unless `--max-players` raises it), with prop IDs at most 128 UTF-8 bytes. Every individual state
 record, removal, and full GameState record must fit the active budget with its
 protocol envelope. Non-finite transforms, duplicate IDs, excessive counts, and
 unsupported records fail with an actionable error. Checked server runners return

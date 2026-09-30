@@ -95,6 +95,12 @@ six player records, so past 8 players freshness is decided by how the budget is 
 2.8 / 21.2 (128 players: 52.3 -> 4.5 nearest; 256 players: 100.6 -> 9.0). `ReplicationCounters::mean_wait()` reports the same
 thing from a live sender.
 
+**With the compact binary world updates (ADR 0029, protocol 8)** the same benchmark reads, mean (nearest 8 / farthest 8):
+32 players 0.0, 64 players 0.1 (0.0 / 0.3), 128 players 0.8 (0.0 / 1.0), 256 players 2.3 (0.1 / 2.5), because a packet now
+carries about 45 to 50 players instead of 6. Broadcast CPU is about unchanged (128 players: 13.5 ms on one thread, 5.1 ms
+on four), so each broadcast delivers about 4.6 times as much state for the same cost.
+
+
 `be2-headless --server ... --profile` prints a span table with each status line (name, count, total ms, mean us, max us,
 biggest first). A 56-client server on 4 network threads reported: per-broadcast preparation 3.3 ms (183 us per peer),
 receive 0.5 ms per tick, the whole world step 0.4 ms, Rapier 78 us per sub-step. Span cost: 3.3 ns off, 58 ns on.

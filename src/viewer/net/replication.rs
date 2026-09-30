@@ -6,7 +6,7 @@
 //! opportunity; queued bytes are not evidence of delivery. A rotating dirty-key
 //! cursor reserves progress for cold entities before prioritizing the owner.
 use super::{
-    DatagramTransport, DeltaSnapshot, Packet, PlayerNetState, PropNetState, SendOutcome,
+    worldwire, DatagramTransport, DeltaSnapshot, Packet, PlayerNetState, PropNetState, SendOutcome,
     WorldSnapshot, MAX_PACKET_BYTES,
 };
 use std::{collections::BTreeMap, net::SocketAddr};
@@ -365,6 +365,9 @@ impl ReplicationSender {
         let mut size = update_size(&delta, self.baseline.is_none())?;
         let mut sent: Vec<Key> = Vec::new();
         let fast_sizing = !self.exact_sizing && self.baseline.is_some();
+        let base_total = base.players.len() + base.props.len();
+        // Net entities this packet adds (a new record) or removes, so the count is never recomputed per record.
+        let mut entities: isize = 0;
         for key in order {
             let record = &dirty[&key];
             if matches!(record, Record::RemovePlayer(_) | Record::RemoveProp(_)) {
@@ -389,46 +392,43 @@ impl ReplicationSender {
                 delta.removed_players.len(),
                 delta.removed_props.len(),
             );
-            if fast_sizing {
-                let list_len = match record {
-                    Record::Player(_) => lengths.0,
-                    Record::Prop(_) => lengths.1,
-                    Record::RemovePlayer(_) => lengths.2,
-                    Record::RemoveProp(_) => lengths.3,
-                };
-                // Exact for every record except the owner's, whose acknowledgement field can change the digits of
-                // the envelope; that one is always measured.
-                let owns = matches!(record, Record::Player(p) if p.id == owner);
-                if !owns && size + record_len(record)? + usize::from(list_len > 0) > limit {
-                    continue;
-                }
+            // A record the receiver does not have yet adds an entity; a removal takes one away.
+            let adds: isize = match record {
+                Record::Player(p) => isize::from(!old_players.contains_key(&p.id)),
+                Record::Prop(p) => isize::from(!old_props.contains_key(&p.id)),
+                Record::RemovePlayer(_) | Record::RemoveProp(_) => -1,
+            };
+            if (base_total as isize + entities + adds).max(0) as usize > MAX_REPLICATED_ENTITIES {
+                continue;
+            }
+            let list_len = match record {
+                Record::Player(_) => lengths.0,
+                Record::Prop(_) => lengths.1,
+                Record::RemovePlayer(_) => lengths.2,
+                Record::RemoveProp(_) => lengths.3,
+            };
+            // Adding a record costs exactly its encoded length, except for the owner's record (its acknowledgement
+            // field can change the length of the envelope, so it is always measured) and past 127 records in a list
+            // (the count can grow a byte). Those, initial snapshots and `with_exact_sizing` are measured by encoding
+            // the whole delta; everything else is arithmetic, which a differential test holds to the same packets.
+            let owns = matches!(record, Record::Player(p) if p.id == owner);
+            let predicted =
+                (fast_sizing && !owns && list_len < 127).then(|| size + record_len(record, tick));
+            if predicted.is_some_and(|p| p > limit) {
+                continue;
             }
             let old_ack = delta.ack_client_tick;
             record.add(&mut delta);
-            if matches!(record, Record::Player(p) if p.id == owner) {
+            if owns {
                 delta.ack_client_tick = desired.ack_client_tick;
             }
-            let count = base.players.len()
-                + base.props.len()
-                + delta
-                    .changed_players
-                    .iter()
-                    .filter(|p| !old_players.contains_key(&p.id))
-                    .count()
-                + delta
-                    .changed_props
-                    .iter()
-                    .filter(|p| !old_props.contains_key(&p.id))
-                    .count()
-                - delta.removed_players.len()
-                - delta.removed_props.len();
-            let measured = if count <= MAX_REPLICATED_ENTITIES {
-                Some(update_size(&delta, self.baseline.is_none())?)
-            } else {
-                None
+            let now = match predicted {
+                Some(p) => p,
+                None => update_size(&delta, self.baseline.is_none())?,
             };
-            if let Some(now) = measured.filter(|&now| now <= limit) {
+            if now <= limit {
                 size = now;
+                entities += adds;
                 sent.push(key.clone());
                 if fair.as_ref() == Some(&key) {
                     self.cursor = Some(key);
@@ -466,54 +466,31 @@ impl ReplicationSender {
         Ok(())
     }
 }
-// Match Packet's externally tagged JSON without cloning it or allocating encoded bytes.
-#[derive(serde::Serialize)]
-enum UpdateRef<'a> {
-    Snapshot(&'a WorldSnapshot),
-    Delta(&'a DeltaSnapshot),
-}
-#[derive(Default)]
-struct ByteCount(usize);
-impl std::io::Write for ByteCount {
-    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
-        self.0 += bytes.len();
-        Ok(bytes.len())
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        Ok(())
-    }
-}
-/// Serialized length of one record as it appears inside a delta's list.
-fn record_len(record: &Record) -> crate::Result<usize> {
-    let mut count = ByteCount::default();
+/// Encoded length of one record as it appears inside a delta's list, for a packet whose tick is `packet_tick`
+/// (records carry their own tick as a small offset from it).
+fn record_len(record: &Record, packet_tick: u64) -> usize {
     match record {
-        Record::Player(p) => serde_json::to_writer(&mut count, p)?,
-        Record::Prop(p) => serde_json::to_writer(&mut count, p)?,
-        Record::RemovePlayer(id) => serde_json::to_writer(&mut count, id)?,
-        Record::RemoveProp(id) => serde_json::to_writer(&mut count, id)?,
+        Record::Player(p) => worldwire::player_len(p, packet_tick),
+        Record::Prop(p) => worldwire::prop_len(p),
+        Record::RemovePlayer(id) => worldwire::varint_len(*id),
+        Record::RemoveProp(id) => worldwire::text_len(id),
     }
-    Ok(count.0)
 }
 fn update_size(delta: &DeltaSnapshot, initial: bool) -> crate::Result<usize> {
-    let mut count = ByteCount::default();
-    if initial {
-        serde_json::to_writer(
-            &mut count,
-            &UpdateRef::Snapshot(&delta.apply_to(&WorldSnapshot::default())),
-        )?;
+    Ok(if initial {
+        worldwire::snapshot_len(&delta.apply_to(&WorldSnapshot::default()))
     } else {
-        serde_json::to_writer(&mut count, &UpdateRef::Delta(delta))?;
-    }
-    Ok(count.0)
+        worldwire::delta_len(delta)
+    })
 }
 fn encode_update(delta: &DeltaSnapshot, initial: bool) -> crate::Result<(Packet, Vec<u8>)> {
-    let packet = if initial {
-        Packet::Snapshot(delta.apply_to(&WorldSnapshot::default()))
+    Ok(if initial {
+        let snapshot = delta.apply_to(&WorldSnapshot::default());
+        let bytes = worldwire::encode_snapshot(&snapshot);
+        (Packet::Snapshot(snapshot), bytes)
     } else {
-        Packet::Delta(delta.clone())
-    };
-    let bytes = serde_json::to_vec(&packet)?;
-    Ok((packet, bytes))
+        (Packet::Delta(delta.clone()), worldwire::encode_delta(delta))
+    })
 }
 /// Reject unsupported individual records before starting a partial world. Reserve
 /// worst-case sequence/ack digits so a supported record stays supported over time.
@@ -570,15 +547,14 @@ pub fn validate_world(world: &WorldSnapshot, limit: usize) -> crate::Result<()> 
             )
             .into());
         }
-        // One record inserted into an empty JSON array adds exactly its encoded
-        // length. Count the shared worst-case envelope once, without cloning the record.
-        let mut count = ByteCount::default();
-        match record {
-            Record::Player(p) => serde_json::to_writer(&mut count, p)?,
-            Record::Prop(p) => serde_json::to_writer(&mut count, p)?,
+        // One record added to an empty list adds exactly its encoded length. Count the shared worst-case
+        // envelope once; a record's own tick is an offset from the packet's, so take the longest possible offset.
+        let record_bytes = match record {
+            Record::Player(p) => worldwire::player_len(p, p.tick.wrapping_add(1 << 63)),
+            Record::Prop(p) => worldwire::prop_len(p),
             _ => unreachable!(),
-        }
-        let bytes = envelope_bytes + count.0;
+        };
+        let bytes = envelope_bytes + record_bytes;
         if bytes > limit {
             return Err(format!("Replication record {key:?} requires {bytes} bytes including envelope; active transport allows {limit}. Shorten IDs or use a transport with sufficient payload").into());
         }

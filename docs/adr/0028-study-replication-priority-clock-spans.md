@@ -54,5 +54,7 @@ Not adopted: timelines, plots, a capture protocol, Tracy itself.
   multiplayer fault tests (see the study's section 7).
 * Where a tick goes is one flag away, and is assertable in tests.
 * Replication record order within a packet changed (priority order); clients apply deltas by id, so nothing depends on it.
-* Still open, in order of value (study sections 2, 5, 7): a compact encoding for player records (about six times as many per
-  packet, a protocol change), reusing identical materials in `add_box`, and a seeded fault-sequence harness.
+* The compact encoding for player records this listed as the next lever was done in ADR 0029; with it the nearest players
+  and most others are fresh within one broadcast.
+* Still open, in order of value (study sections 5, 7): reusing identical materials in `add_box`, and a seeded
+  fault-sequence harness.

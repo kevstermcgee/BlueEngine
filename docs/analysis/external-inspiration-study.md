@@ -24,7 +24,7 @@ for BlueEngine, which is a legitimate result.
 | Project | Recommendation |
 |---|---|
 | raylib | ALREADY SOLVED (11 of 12 capabilities resolve); KEEP IN MIND one gap |
-| Lightyear | **IMPLEMENT** (done: priority accumulation, freshness metric); EXPERIMENT: compact record encoding |
+| Lightyear | **IMPLEMENT** (done: priority accumulation, freshness metric, then the compact binary encoding) |
 | Flecs | KEEP IN MIND (the measured cost is not in BlueEngine's bookkeeping) |
 | Quinn | **IMPLEMENT** (done: injectable clock); NOT USEFUL: a full sans-IO rewrite |
 | Godot | EXPERIMENT (material dedupe, skip default fields) |
@@ -139,9 +139,12 @@ Pinned revisions:
 9. **AI benefit.** `mean_wait()` makes "is replication keeping up?" a number an agent can read.
 10. **Runtime benefit.** Nearby state is 6 to 12 times fresher at 32+ players; nothing changes for crowds that fit one
     packet (a test asserts every record is delivered every broadcast for 4 players).
-11. **Recommendation: IMPLEMENT (done).** **EXPERIMENT** next: a compact binary encoding for player records
-    (`net::codec` exists). Derived from field sizes, not measured: about 28 bytes instead of about 180 would carry six
-    times as many records per packet. It changes the wire protocol, so it is a separate decision.
+11. **Recommendation: IMPLEMENT (done).** The follow-up this section flagged, a compact binary encoding for world updates,
+    was then implemented (ADR 0029, protocol 8): a walking player is 19 to 28 bytes against about 172 as JSON, a packet carries
+    about 45 to 50 players instead of 6, and mean staleness falls to 0.1 broadcasts at 64 players and 2.3 at 256 (from
+    28.3 and 115.7 before any change). Priority and encoding depend on each other: with the encoding but without the
+    priority ordering the nearest 8 of a 140-player crowd were 26.7 broadcasts stale. CPU per broadcast did not fall
+    (each packet carries about five times as many records), so the gain is delivered state, not server time.
 
 ## 3. Flecs: cached queries, change tracking and avoiding rediscovery
 

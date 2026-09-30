@@ -1144,9 +1144,9 @@ impl HeadlessWorld {
         };
 
         let snap = self.snapshot(0);
-        let encoded_bytes = serde_json::to_vec(&snap).map(|b| b.len()).unwrap_or(0);
+        let encoded_bytes = super::net::worldwire::snapshot_len(&snap);
         let delta = snap.compute_delta(&super::net::WorldSnapshot::default());
-        let delta_bytes = serde_json::to_vec(&delta).map(|b| b.len()).unwrap_or(0);
+        let delta_bytes = super::net::worldwire::delta_len(&delta);
 
         super::metrics::PerformanceSnapshot {
             tick: self.tick,
