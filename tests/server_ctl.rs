@@ -2,7 +2,7 @@
 //! and a control socket that survives bad input.
 #![cfg(unix)]
 use std::{
-    io::{Read, Write},
+    io::{BufRead, Read, Write},
     os::unix::{fs::PermissionsExt, net::UnixStream},
     path::{Path, PathBuf},
     process::{Command, Output, Stdio},
@@ -240,11 +240,18 @@ fn an_unregistered_server_is_found_and_stopped() {
     let env = Env::new();
     let mut child = Command::new(env!("CARGO_BIN_EXE_be2-headless"))
         .args(["--server", "127.0.0.1:0"])
-        .stdout(Stdio::null())
+        .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .unwrap();
     let pid = child.id();
+    // Signal handlers are installed just before this line: a SIGTERM earlier would kill the process outright.
+    let mut lines = std::io::BufReader::new(child.stdout.take().unwrap()).lines();
+    while let Some(line) = lines.next() {
+        if line.unwrap().contains("listening") {
+            break;
+        }
+    }
     let name = format!("pid:{pid}");
     wait_until("be2-ctl to see it", Duration::from_secs(5), || {
         env.entry(&name).is_some()
