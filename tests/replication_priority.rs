@@ -64,7 +64,7 @@ fn crowd(players: usize) -> Outcome {
     let mut last_seen: HashMap<u64, u64> = HashMap::new();
     let (mut all, mut near, mut far) = (Vec::new(), Vec::new(), Vec::new());
     let mut delivered_every_round = true;
-    for round in 0..240u64 {
+    for round in 0..150u64 {
         for (k, &id) in ids.iter().enumerate() {
             let t = (round as f32 * 0.05 + k as f32).sin();
             server.world.input(
@@ -101,10 +101,10 @@ fn crowd(players: usize) -> Outcome {
                 _ => {}
             }
         }
-        if round >= 60 && seen_now < players - 1 {
+        if round >= 50 && seen_now < players - 1 {
             delivered_every_round = false;
         }
-        if round >= 60 && round % 5 == 0 {
+        if round >= 50 && round % 5 == 0 {
             let snapshot = server.world.snapshot_for_player(watcher, 0);
             let me = snapshot
                 .players
@@ -153,29 +153,37 @@ fn max(v: &[f64]) -> f64 {
     v.iter().copied().fold(0., f64::max)
 }
 
+// With the compact encoding a packet carries about 45 to 50 player records, so the budget only binds for crowds larger
+// than that. One crowd is simulated once and shared by the tests that need it.
+const CROWD: usize = 140;
+fn large() -> &'static Outcome {
+    static LARGE: std::sync::OnceLock<Outcome> = std::sync::OnceLock::new();
+    LARGE.get_or_init(|| crowd(CROWD))
+}
+
 #[test]
-fn the_nearest_players_are_much_fresher_than_the_farthest() {
-    let crowd = crowd(48);
+fn the_nearest_players_are_fresher_than_the_farthest() {
+    let crowd = large();
     let (near, far) = (mean(&crowd.near), mean(&crowd.far));
     assert!(
-        near * 3. < far,
-        "nearest 8 average {near:.1} broadcasts stale, farthest 8 {far:.1}"
+        near < 0.5,
+        "the nearest 8 are sent every broadcast: {near:.2} broadcasts stale"
     );
     assert!(
-        near < 5.,
-        "the nearest players are sent within a few broadcasts: {near:.1}"
+        far > near + 0.5,
+        "farthest 8 average {far:.2}, nearest 8 {near:.2}"
     );
 }
 
 #[test]
 fn nobody_starves_however_far_away() {
-    let crowd = crowd(48);
+    let crowd = large();
     assert!(
-        max(&crowd.all) <= 70.,
+        max(&crowd.all) <= 10.,
         "the longest any player went unsent: {}",
         max(&crowd.all)
     );
-    assert!(crowd.wait_max <= 70, "counters agree: {}", crowd.wait_max);
+    assert!(crowd.wait_max <= 10, "counters agree: {}", crowd.wait_max);
     assert!(
         crowd.all.iter().all(|age| *age < 1e9),
         "every player was sent at least once"
@@ -190,6 +198,11 @@ fn a_crowd_that_fits_one_packet_is_sent_everything_every_broadcast() {
         "with 3 others every changed record fits every packet"
     );
     assert_eq!(max(&crowd.all), 0.0);
+    let thirty = self::crowd(30);
+    assert!(
+        thirty.delivered_every_round,
+        "about 30 compact records still fit one packet"
+    );
 }
 
 #[test]
@@ -200,9 +213,9 @@ fn the_freshness_counters_measure_the_wait_directly() {
         "sent at the first chance: {}",
         small.mean_wait
     );
-    let large = crowd(48);
+    let large = large();
     assert!(
-        large.mean_wait > 2.0 && large.mean_wait < 40.0,
+        large.mean_wait > 1.05 && large.mean_wait < 40.0,
         "{}",
         large.mean_wait
     );

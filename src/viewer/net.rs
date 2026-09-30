@@ -28,6 +28,7 @@ pub mod reliable_command;
 pub mod replication;
 pub mod session;
 pub mod transport;
+pub mod worldwire;
 
 pub use action_counters::*;
 pub use any::{client_transport, server_transport, AnyTransport};
@@ -40,7 +41,9 @@ pub use replication::*;
 pub use session::*;
 pub use transport::*;
 
-pub const PROTOCOL_VERSION: u32 = 7;
+/// Protocol 8 sends world updates (`Snapshot`, `Delta`) in the compact binary form of [`worldwire`]; every other packet
+/// is still JSON. A protocol 7 peer is refused at the handshake.
+pub const PROTOCOL_VERSION: u32 = 8;
 /// Cross-transport payload ceiling. It fits one QUIC datagram without fragmentation
 /// and is therefore also enforced by the development UDP codec.
 pub const MAX_PACKET_BYTES: usize = 1100;
@@ -103,7 +106,7 @@ impl PropNetState {
     }
 }
 
-/// A receiver's represented authoritative world. In protocol 7 this is built
+/// A receiver's represented authoritative world. Since protocol 7 this is built
 /// incrementally: records may originate from different simulation ticks. `tick`
 /// identifies the applied update to acknowledge, not a guarantee of an atomic
 /// whole-world view. A Snapshot packet replaces the mirror; later deltas extend it.
@@ -188,12 +191,19 @@ impl DeltaSnapshot {
     /// Apply delta changes onto an existing base snapshot to reconstruct the full state.
     pub fn apply_to(&self, base: &WorldSnapshot) -> WorldSnapshot {
         let mut players = base.players.clone();
-        players.retain(|p| !self.removed_players.contains(&p.id));
+        if !self.removed_players.is_empty() {
+            players.retain(|p| !self.removed_players.contains(&p.id));
+        }
+        // Where each existing player sits, so a large delta replaces in place without scanning the list per record.
+        let mut at: std::collections::HashMap<u64, usize> =
+            players.iter().enumerate().map(|(i, p)| (p.id, i)).collect();
         for changed in &self.changed_players {
-            if let Some(existing) = players.iter_mut().find(|p| p.id == changed.id) {
-                *existing = changed.clone();
-            } else {
-                players.push(changed.clone());
+            match at.get(&changed.id) {
+                Some(&i) => players[i] = changed.clone(),
+                None => {
+                    at.insert(changed.id, players.len());
+                    players.push(changed.clone());
+                }
             }
         }
 
@@ -332,8 +342,13 @@ pub enum Packet {
 }
 
 impl Packet {
+    /// World updates are binary ([`worldwire`]); everything else is JSON.
     pub fn encode(&self) -> crate::Result<Vec<u8>> {
-        let bytes = serde_json::to_vec(self)?;
+        let bytes = match self {
+            Packet::Snapshot(s) => worldwire::encode_snapshot(s),
+            Packet::Delta(d) => worldwire::encode_delta(d),
+            other => serde_json::to_vec(other)?,
+        };
         if bytes.len() > MAX_PACKET_BYTES {
             return Err("Packet exceeds MTU limit".into());
         }
@@ -343,6 +358,9 @@ impl Packet {
     pub fn decode(bytes: &[u8]) -> crate::Result<Self> {
         if bytes.len() > MAX_PACKET_BYTES {
             return Err("Packet exceeds MTU limit".into());
+        }
+        if bytes.first() == Some(&worldwire::MARK) {
+            return Ok(worldwire::decode(bytes)?);
         }
         let pkt: Self = serde_json::from_slice(bytes)?;
         Ok(pkt)

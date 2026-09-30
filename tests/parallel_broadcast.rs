@@ -145,8 +145,10 @@ fn crowd(
             let decoded = packets
                 .iter()
                 .map(|bytes| {
-                    Packet::decode(bytes).expect("every datagram is a protocol packet");
-                    let mut v: Value = serde_json::from_slice(bytes).unwrap();
+                    // World updates are binary, everything else JSON; compare them all in one readable form.
+                    let packet =
+                        Packet::decode(bytes).expect("every datagram is a protocol packet");
+                    let mut v: Value = serde_json::to_value(&packet).unwrap();
                     without_tokens(&mut v);
                     v
                 })

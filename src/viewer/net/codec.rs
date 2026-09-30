@@ -63,6 +63,20 @@ impl Writer {
     pub fn f32(&mut self, v: f32) {
         self.0.extend_from_slice(&v.to_le_bytes());
     }
+    /// An unsigned integer in 1 to 10 bytes: seven bits per byte, low bits first, the high bit set on every byte
+    /// but the last. Small values are small (0..=127 is one byte). There is exactly one encoding of each value,
+    /// which [`Reader::varint`] enforces.
+    pub fn varint(&mut self, mut v: u64) {
+        while v >= 0x80 {
+            self.0.push((v as u8 & 0x7F) | 0x80);
+            v >>= 7;
+        }
+        self.0.push(v as u8);
+    }
+    /// A signed integer as a [`Self::varint`] of its zigzag form, so small negative values stay small too.
+    pub fn signed(&mut self, v: i64) {
+        self.varint(((v << 1) ^ (v >> 63)) as u64);
+    }
     pub fn bool(&mut self, v: bool) {
         self.u8(v as u8);
     }
@@ -144,6 +158,41 @@ impl<'a> Reader<'a> {
         } else {
             Err(WireError("number out of range"))
         }
+    }
+    /// An unsigned integer written by [`Writer::varint`]. Refused: more than 10 bytes, a value above `u64::MAX`,
+    /// and any non-minimal encoding (a trailing zero group), so a value has exactly one wire form.
+    pub fn varint(&mut self) -> WireResult<u64> {
+        let mut value = 0u64;
+        for index in 0..10u32 {
+            let byte = self.u8()?;
+            let bits = u64::from(byte & 0x7F);
+            if index == 9 && bits > 1 {
+                return Err(WireError("varint overflows 64 bits"));
+            }
+            value |= bits << (7 * index);
+            if byte & 0x80 == 0 {
+                if index > 0 && bits == 0 {
+                    return Err(WireError("non-minimal varint"));
+                }
+                return Ok(value);
+            }
+        }
+        Err(WireError("varint too long"))
+    }
+    /// A [`Self::varint`] that must be at most `max` (counts and lengths, so a hostile value cannot ask for more
+    /// than the datagram could hold).
+    pub fn varint_max(&mut self, max: u64) -> WireResult<u64> {
+        let v = self.varint()?;
+        if v <= max {
+            Ok(v)
+        } else {
+            Err(WireError("number out of range"))
+        }
+    }
+    /// A signed integer written by [`Writer::signed`].
+    pub fn signed(&mut self) -> WireResult<i64> {
+        let z = self.varint()?;
+        Ok(((z >> 1) as i64) ^ -((z & 1) as i64))
     }
     pub fn bool(&mut self) -> WireResult<bool> {
         match self.u8()? {
@@ -258,8 +307,96 @@ mod tests {
                 r.bool(),
                 r.token(),
                 r.text(16),
+                r.varint(),
+                r.signed(),
+                r.varint_max(8),
             );
             let _ = r.rest();
         }
+    }
+
+    #[test]
+    fn varints_round_trip_at_every_width_boundary_and_stay_small() {
+        let values = [
+            0u64,
+            1,
+            127,
+            128,
+            16_383,
+            16_384,
+            2_097_151,
+            2_097_152,
+            u32::MAX as u64,
+            u64::MAX - 1,
+            u64::MAX,
+        ];
+        for v in values {
+            let mut w = Writer::new();
+            w.varint(v);
+            let bytes = w.finish();
+            let expected = (64 - v.leading_zeros().min(63)).div_ceil(7).max(1) as usize;
+            assert_eq!(bytes.len(), expected, "{v} takes {expected} bytes");
+            let mut r = Reader::new(&bytes);
+            assert_eq!(r.varint().unwrap(), v);
+            r.done().unwrap();
+        }
+    }
+
+    #[test]
+    fn signed_values_round_trip_and_small_magnitudes_are_one_byte() {
+        for v in [
+            0i64,
+            1,
+            -1,
+            63,
+            -64,
+            64,
+            -65,
+            i64::MAX,
+            i64::MIN,
+            1_000_000,
+            -1_000_000,
+        ] {
+            let mut w = Writer::new();
+            w.signed(v);
+            let bytes = w.finish();
+            assert_eq!(Reader::new(&bytes).signed().unwrap(), v);
+            if (-64..64).contains(&v) {
+                assert_eq!(bytes.len(), 1, "{v}");
+            }
+        }
+    }
+
+    #[test]
+    fn non_canonical_truncated_and_overflowing_varints_are_refused() {
+        assert!(
+            Reader::new(&[0x80, 0x00]).varint().is_err(),
+            "zero written in two bytes"
+        );
+        assert!(
+            Reader::new(&[0xFF, 0x80, 0x00]).varint().is_err(),
+            "trailing zero group"
+        );
+        assert!(Reader::new(&[0x80]).varint().is_err(), "ends mid-number");
+        assert!(
+            Reader::new(&[0xFF; 10]).varint().is_err(),
+            "more than ten bytes of continuation"
+        );
+        let mut too_big = vec![0xFF; 9];
+        too_big.push(0x02);
+        assert!(
+            Reader::new(&too_big).varint().is_err(),
+            "a tenth byte above 1 overflows u64"
+        );
+        let mut max = vec![0xFF; 9];
+        max.push(0x01);
+        assert_eq!(Reader::new(&max).varint().unwrap(), u64::MAX);
+        let mut w = Writer::new();
+        w.varint(9);
+        assert!(
+            Reader::new(w.as_slice()).varint_max(8).is_err(),
+            "over the caller's cap"
+        );
+        assert_eq!(Reader::new(w.as_slice()).varint_max(9).unwrap(), 9);
     }
 }

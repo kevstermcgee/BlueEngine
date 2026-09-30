@@ -55,7 +55,21 @@ fn server() -> DedicatedServer<Wire> {
 }
 #[test]
 fn oversized_world_makes_wire_progress() {
-    let mut server = server();
+    // Eight players fit one packet in the compact encoding, so make a crowd that does not.
+    let mut server =
+        DedicatedServer::with_transport(Wire::default(), HeadlessWorld::new().unwrap())
+            .unwrap()
+            .with_max_players(64);
+    for id in 1..=64u64 {
+        server.handle_hello(
+            format!("127.0.0.1:{}", 5000 + id).parse().unwrap(),
+            PROTOCOL_VERSION,
+            id,
+            server.world.content_hash,
+        );
+    }
+    server.world.tick = 3;
+    server.transport.sent.borrow_mut().clear();
     assert!(Packet::Snapshot(server.world.snapshot_for_player(1, 0))
         .encode()
         .is_err());
@@ -280,10 +294,10 @@ fn unsupported_record_count_id_and_payload_are_actionable() {
         .unwrap_err()
         .to_string()
         .contains("entity count"));
-    assert!(validate_world(&world(1), 100)
+    assert!(validate_world(&world(1), 40)
         .unwrap_err()
         .to_string()
-        .contains("active transport allows 100"));
+        .contains("active transport allows 40"));
 }
 #[test]
 fn maximum_world_and_wholesale_relevance_replacement_remain_bounded() {
@@ -487,7 +501,7 @@ fn invalid_numbers_and_unsupported_removals_fail_explicitly() {
         );
     }
     desired.props.clear();
-    wire.limit.set(500);
+    wire.limit.set(100); // below the 80-byte id plus the envelope
     assert!(sender
         .send(&wire, peer, &desired, 1)
         .unwrap_err()
@@ -560,9 +574,10 @@ fn lost_ack_followed_by_mtu_reduction_recovers_via_explicit_resync() {
     let mut desired = world(12);
     let mut receiver = None;
     sender.send(&wire, peer, &desired, 1).unwrap();
-    let packet = Packet::decode(&wire.sent.borrow_mut().pop().unwrap()).unwrap();
+    let first = wire.sent.borrow_mut().pop().unwrap();
+    let packet = Packet::decode(&first).unwrap();
     receive_update(&mut receiver, packet).unwrap(); // ACK deliberately lost
-    wire.limit.set(550);
+    wire.limit.set(first.len() - 1); // an MTU reduction below the packet in flight: it must be rebuilt
     desired.tick = 6;
     sender.send(&wire, peer, &desired, 1).unwrap();
     // The initial packet is independently applicable, even after rebudgeting.
@@ -572,15 +587,20 @@ fn lost_ack_followed_by_mtu_reduction_recovers_via_explicit_resync() {
         &wire.sent.borrow_mut().pop().unwrap(),
     );
     desired.tick = 9;
+    // Change everything, so the delta in flight is large enough for a budget cut below it to be meaningful.
+    for player in &mut desired.players {
+        player.position.0 += 1.0;
+        player.tick = 9;
+    }
+    for prop in &mut desired.props {
+        prop.position.0 += 1.0;
+    }
     wire.limit.set(1100);
     sender.send(&wire, peer, &desired, 1).unwrap();
-    receive_update(
-        &mut receiver,
-        Packet::decode(&wire.sent.borrow_mut().pop().unwrap()).unwrap(),
-    )
-    .unwrap(); // second lost ACK, this time a delta
+    let delta = wire.sent.borrow_mut().pop().unwrap();
+    receive_update(&mut receiver, Packet::decode(&delta).unwrap()).unwrap(); // second lost ACK, this time a delta
     desired.tick = 12;
-    wire.limit.set(550);
+    wire.limit.set(delta.len() - 1);
     sender.send(&wire, peer, &desired, 1).unwrap();
     assert!(receive_update(
         &mut receiver,

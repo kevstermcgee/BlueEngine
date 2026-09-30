@@ -180,13 +180,15 @@
         "tests/virtual_time.rs",
         "tests/spans.rs",
         "examples/net_freshness_bench.rs",
-        "docs/analysis/external-inspiration-study.md"
+        "docs/analysis/external-inspiration-study.md",
+        "src/viewer/net/worldwire.rs",
+        "tests/world_wire.rs"
       ],
       "checks": [
         "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift",
         "cargo test --locked --no-default-features --test replication_budget --test replication_sockets"
       ],
-      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 7 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials. GameState includes restart round and authoritative mover tick positions; sequenced commands from old rounds are discarded. Bounded partial-world replication retains one acknowledged baseline and one retryable packet per peer, respects active payload limits, rotates fair/priority records and peers, and exposes queue/delivery counters. Supports 1024 relevant records with individually budgeted records; protocol 7 binds replication/resync to sessions. See HOSTING.md for limits and RTT tradeoffs. Server capacity is configurable (with_max_players, --max-players); replication sizes candidates by arithmetic and prepares peers on several threads (with_network_threads, --network-threads) with identical bytes at any thread count (ADR 0027). Replication prioritises nearby records and measures freshness (mean_wait); the server takes time from a Clock so timeouts/reconnect are testable without sleeping; viewer::spans + be2-headless --profile report where a tick goes (ADR 0028).",
+      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 8 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials. GameState includes restart round and authoritative mover tick positions; sequenced commands from old rounds are discarded. Bounded partial-world replication retains one acknowledged baseline and one retryable packet per peer, respects active payload limits, rotates fair/priority records and peers, and exposes queue/delivery counters. Supports 1024 relevant records with individually budgeted records; replication and resync are bound to sessions (since protocol 7). See HOSTING.md for limits and RTT tradeoffs. Server capacity is configurable (with_max_players, --max-players); replication sizes candidates by arithmetic and prepares peers on several threads (with_network_threads, --network-threads) with identical bytes at any thread count (ADR 0027). Replication prioritises nearby records and measures freshness (mean_wait); the server takes time from a Clock so timeouts/reconnect are testable without sleeping; viewer::spans + be2-headless --profile report where a tick goes (ADR 0028). World updates (Snapshot/Delta) are a compact exact binary form, protocol 8, about 5x smaller per player record (ADR 0029).",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -245,7 +247,11 @@
         "clock",
         "virtual time",
         "profile",
-        "spans"
+        "spans",
+        "worldwire",
+        "binary",
+        "varint",
+        "protocol 8"
       ],
       "read_first": [
         "src/viewer/net/replication.rs",
@@ -936,7 +942,7 @@
         "default and headless full check",
         "generated external Cargo game test/build, release world/win/reset/menu captures"
       ],
-      "note": "Standard new-game and stock --game consume playable::run_game_with_options: local HeadlessWorld authority without sockets, or server-owned state with shared prediction/interpolation. Authored objectives, timers, movers, dynamic props and win/restart run through the same simulation. Protocol 7 replicates round identity and mover positions. Graphics-free GameSession supports scripted clients and tests. MapPlayer/run_map is a static viewer only. Any joined player can restart after completion; existing packet-size limits remain.",
+      "note": "Standard new-game and stock --game consume playable::run_game_with_options: local HeadlessWorld authority without sockets, or server-owned state with shared prediction/interpolation. Authored objectives, timers, movers, dynamic props and win/restart run through the same simulation. Replication carries round identity and mover positions (since protocol 7). Graphics-free GameSession supports scripted clients and tests. MapPlayer/run_map is a static viewer only. Any joined player can restart after completion; existing packet-size limits remain.",
       "evidence": [
         {
           "suite": "game_runtime",
