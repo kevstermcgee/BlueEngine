@@ -10,7 +10,10 @@
     "games/wrecking-orbit",
     "games/pulse-nova",
     "games/spooky-kart",
-    "games/physics-lab"
+    "games/physics-lab",
+    "games/clockwork-pinball",
+    "games/wobble-tower",
+    "games/tumble-maze"
   ],
   "collections": {
     "games": [
