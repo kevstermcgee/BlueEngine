@@ -135,7 +135,8 @@ so "can be won" ignores a physical obstacle or a timing window, while "never" fi
 condition reads are left out of the state, and counters compared only by `modulo` or only by thresholds while they
 move one way are folded into equivalent values, so a repeating timer does not make the search unbounded. If
 `--max-states=N` (default 100000) is reached the report says `truncated` and the "never" findings become
-notes rather than warnings. Run it before writing scenarios: the shortest win is the first scenario to write.
+notes rather than warnings. Run it before writing scenarios: the shortest win is the first scenario to write, and `--scenario=OUT.json` writes it for you
+(see [behavioral testing](BEHAVIORAL_TESTING.md)).
 
 Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
 `on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.

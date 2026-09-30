@@ -432,20 +432,55 @@ fn run() -> Result<()> {
             }
         }
         "game-explore" => {
-            use vesper3d::viewer::game_explore::{explore, DEFAULT_MAX_STATES};
-            // GAME.json [--max-states=N]: can the game be won or lost, and what in it is dead?
-            let limit = match a.get(2).map(|f| f.split_once('=')) {
-                None => DEFAULT_MAX_STATES,
-                Some(Some(("--max-states", n))) => n
-                    .parse()
-                    .ok()
-                    .filter(|n| (1..=5_000_000).contains(n))
-                    .ok_or("--max-states must be a whole number from 1 to 5000000")?,
-                Some(_) => return Err("Unknown option; use --max-states=N".into()),
+            use vesper3d::viewer::{
+                game_explore::{explore, DEFAULT_MAX_STATES},
+                game_scenario::{game_path_relative_to, win_scenario},
             };
-            let loaded = vesper3d::viewer::game::GameDocument::load(Path::new(arg(1)?))?;
+            // GAME.json [--max-states=N] [--scenario=OUT.json]: can the game be won or lost, and what in
+            // it is dead? --scenario also writes a verified scenario that plays the shortest win.
+            let (mut limit, mut scenario_out) = (DEFAULT_MAX_STATES, None);
+            for flag in &a[2..] {
+                match flag.split_once('=') {
+                    Some(("--max-states", n)) => {
+                        limit = n
+                            .parse()
+                            .ok()
+                            .filter(|n| (1..=5_000_000).contains(n))
+                            .ok_or("--max-states must be a whole number from 1 to 5000000")?
+                    }
+                    Some(("--scenario", path)) if !path.is_empty() => scenario_out = Some(path),
+                    _ => {
+                        return Err(
+                            "Unknown option; use --max-states=N or --scenario=OUT.json".into()
+                        )
+                    }
+                }
+            }
+            let game_file = Path::new(arg(1)?);
+            let loaded = vesper3d::viewer::game::GameDocument::load(game_file)?;
             let report = explore(&loaded, limit)?;
-            println!("{}", json!({"ok": !report.has_errors(), "report": report}));
+            let mut scenario_note = serde_json::Value::Null;
+            if let Some(out) = scenario_out {
+                scenario_note = if report.winnable == Some(true) {
+                    let stored = game_path_relative_to(Path::new(out), game_file)?;
+                    let check = game_file.canonicalize()?.to_string_lossy().into_owned();
+                    match win_scenario(&loaded, &report, &stored, &check) {
+                        Ok(made) => {
+                            save(out, &made.scenario)?;
+                            json!({"written": out, "verified": true, "ticks": made.scenario.ticks, "stood": made.strategy})
+                        }
+                        Err(error) => {
+                            json!({"written": null, "verified": false, "error": error.to_string()})
+                        }
+                    }
+                } else {
+                    json!({"written": null, "verified": false, "error": "the game has no known win to play"})
+                };
+            }
+            println!(
+                "{}",
+                json!({"ok": !report.has_errors(), "report": report, "scenario": scenario_note})
+            );
             if report.has_errors() {
                 std::process::exit(1);
             }
@@ -725,6 +760,7 @@ fn run() -> Result<()> {
                     "ticks": report.trace.total_ticks,
                     "final_checksum": format!("0x{:016x}", last_chk),
                     "assertions": report.assertions,
+                    "players": report.players,
                 })
             );
             if !report.ok {

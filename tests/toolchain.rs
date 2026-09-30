@@ -150,6 +150,7 @@ fn test_deterministic_simulation_and_replay_verification() {
                 jump: false,
                 crouch: false,
                 interact: false,
+                ..Default::default()
             },
             TimedInput {
                 tick: 30,
@@ -162,6 +163,7 @@ fn test_deterministic_simulation_and_replay_verification() {
                 jump: false,
                 crouch: false,
                 interact: false,
+                ..Default::default()
             },
         ],
         assertions: vec![],

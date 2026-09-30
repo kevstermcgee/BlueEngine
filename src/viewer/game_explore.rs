@@ -47,6 +47,9 @@ pub struct Report {
     pub shortest_loss: Option<Vec<String>>,
     pub findings: Vec<Finding>,
     pub assumptions: Vec<&'static str>,
+    /// The shortest win as events, for tooling that turns it into a scenario.
+    #[serde(skip)]
+    pub win_events: Vec<ModelEvent>,
 }
 
 impl Report {
@@ -330,6 +333,17 @@ pub fn explore_with(loaded: &LoadedGame, max_states: usize, fold_counters: bool)
             .map(|(name, n)| if n > 1 { format!("{name} x{n}") } else { name })
             .collect()
     };
+    let win_events = first_win
+        .map(|mut at| {
+            let mut events = Vec::new();
+            while let Some((from, event)) = nodes[at].parent {
+                events.push(event);
+                at = from;
+            }
+            events.reverse();
+            events
+        })
+        .unwrap_or_default();
     let shortest_win = first_win.map(describe);
     let shortest_loss = first_loss.map(describe);
     let winnable = match (&shortest_win, truncated) {
@@ -563,6 +577,7 @@ pub fn explore_with(loaded: &LoadedGame, max_states: usize, fold_counters: bool)
         can_lose: first_loss.is_some(),
         shortest_loss,
         findings,
+        win_events,
         assumptions: vec![
             "time is abstracted: any running timer can run out at any moment, in any order",
             "movement is abstracted: the player can press any enabled target and enter or leave any enabled zone",

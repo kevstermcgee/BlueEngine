@@ -727,22 +727,38 @@
       "files": [
         "src/viewer/scenario.rs",
         "docs/BEHAVIORAL_TESTING.md",
-        "assets/games/three-switches/scenario.json"
+        "assets/games/three-switches/scenario.json",
+        "src/viewer/game_scenario.rs",
+        "tests/scenario_intents.rs",
+        "tests/game_scenario.rs"
       ],
       "checks": [
         "headless simulation scenarios and replay trace verification"
       ],
-      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics.",
+      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025).",
       "evidence": [
         {
           "suite": "toolchain",
           "test": "test_deterministic_simulation_and_replay_verification"
+        },
+        {
+          "suite": "scenario_intents",
+          "test": "inputs_without_intents_match_the_original_loop_exactly"
+        },
+        {
+          "suite": "game_scenario",
+          "test": "a_press_that_is_only_right_in_one_phase_of_a_timer_waits_for_that_phase"
         }
       ],
       "depends_on": [
         "game_documents"
       ],
-      "canonical_example": "assets/games/three-switches/scenario.json"
+      "canonical_example": "assets/games/three-switches/scenario.json",
+      "keywords": [
+        "walk_to",
+        "face",
+        "generated scenario"
+      ]
     },
     "verification_framework": {
       "files": [
