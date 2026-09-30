@@ -70,6 +70,9 @@ pub struct ReplicationSender {
     pending: Option<Pending>,
     cursor: Option<Key>,
     issued: u64,
+    /// Measure every candidate by serializing the whole delta (the original method). Output is identical
+    /// either way; this exists so tests and benchmarks can compare the two.
+    exact_sizing: bool,
     pub counters: ReplicationCounters,
 }
 impl ReplicationSender {
@@ -92,6 +95,22 @@ impl ReplicationSender {
                 .baseline
                 .as_ref()
                 .map_or(0, |b| serde_json::to_vec(b).map_or(0, |v| v.len()))
+    }
+    /// Size every candidate record by serializing the whole delta, as the first implementation did.
+    pub fn with_exact_sizing(mut self) -> Self {
+        self.exact_sizing = true;
+        self
+    }
+    pub fn set_exact_sizing(&mut self, exact: bool) {
+        self.exact_sizing = exact;
+    }
+    /// The tick a client must acknowledge to complete the packet currently in flight, if any.
+    pub fn pending_target(&self) -> Option<u64> {
+        self.pending.as_ref().map(|p| match &p.packet {
+            Packet::Snapshot(s) => s.tick,
+            Packet::Delta(d) => d.target_tick,
+            _ => unreachable!(),
+        })
     }
     pub fn acknowledge(&mut self, tick: u64) -> bool {
         let Some(p) = &self.pending else {
@@ -143,14 +162,17 @@ impl ReplicationSender {
         }
         self.resynchronize();
     }
-    pub fn send<T: DatagramTransport>(
+    /// Build (or keep) the packet for `desired` within `limit` bytes without touching any transport. This is
+    /// the expensive half of [`Self::send`] and depends only on this sender and the snapshot, so a server can
+    /// run it for many peers on many threads; hand the result to [`Self::transmit`] on the thread that owns
+    /// the transport.
+    pub fn stage(
         &mut self,
-        transport: &T,
-        peer: SocketAddr,
+        limit: usize,
         desired: &WorldSnapshot,
         owner: u64,
     ) -> crate::Result<()> {
-        let limit = transport.payload_limit(peer).min(MAX_PACKET_BYTES);
+        let limit = limit.min(MAX_PACKET_BYTES);
         validate_world(desired, limit)?;
         // A path MTU reduction invalidates the pending packet, not the acknowledged baseline.
         if self.pending.as_ref().is_some_and(|p| p.bytes.len() > limit) {
@@ -159,7 +181,17 @@ impl ReplicationSender {
         if self.pending.is_none() {
             self.prepare(desired, owner, limit)?;
         }
-        let pending = self.pending.as_mut().unwrap();
+        Ok(())
+    }
+    /// Submit the packet prepared by [`Self::stage`] (or still in flight from an earlier one).
+    pub fn transmit<T: DatagramTransport>(
+        &mut self,
+        transport: &T,
+        peer: SocketAddr,
+    ) -> crate::Result<()> {
+        let Some(pending) = self.pending.as_mut() else {
+            return Ok(());
+        };
         if pending.attempts > 0 {
             self.counters.retries += 1;
         }
@@ -177,6 +209,16 @@ impl ReplicationSender {
             }
         }
         Ok(())
+    }
+    pub fn send<T: DatagramTransport>(
+        &mut self,
+        transport: &T,
+        peer: SocketAddr,
+        desired: &WorldSnapshot,
+        owner: u64,
+    ) -> crate::Result<()> {
+        self.stage(transport.payload_limit(peer), desired, owner)?;
+        self.transmit(transport, peer)
     }
     fn prepare(&mut self, desired: &WorldSnapshot, owner: u64, limit: usize) -> crate::Result<()> {
         let empty = WorldSnapshot::default();
@@ -258,6 +300,11 @@ impl ReplicationSender {
             removed_players: vec![],
             removed_props: vec![],
         };
+        // Every list of a delta is always written, so adding a record costs exactly its own length plus a
+        // comma when the list already has one. That lets a candidate that cannot possibly fit be skipped
+        // without re-serializing the whole delta for it; anything near the limit is still measured exactly.
+        let mut size = update_size(&delta, self.baseline.is_none())?;
+        let fast_sizing = !self.exact_sizing && self.baseline.is_some();
         for key in order {
             let record = &dirty[&key];
             if matches!(record, Record::RemovePlayer(_) | Record::RemoveProp(_)) {
@@ -282,6 +329,20 @@ impl ReplicationSender {
                 delta.removed_players.len(),
                 delta.removed_props.len(),
             );
+            if fast_sizing {
+                let list_len = match record {
+                    Record::Player(_) => lengths.0,
+                    Record::Prop(_) => lengths.1,
+                    Record::RemovePlayer(_) => lengths.2,
+                    Record::RemoveProp(_) => lengths.3,
+                };
+                // Exact for every record except the owner's, whose acknowledgement field can change the digits of
+                // the envelope; that one is always measured.
+                let owns = matches!(record, Record::Player(p) if p.id == owner);
+                if !owns && size + record_len(record)? + usize::from(list_len > 0) > limit {
+                    continue;
+                }
+            }
             let old_ack = delta.ack_client_tick;
             record.add(&mut delta);
             if matches!(record, Record::Player(p) if p.id == owner) {
@@ -301,9 +362,13 @@ impl ReplicationSender {
                     .count()
                 - delta.removed_players.len()
                 - delta.removed_props.len();
-            if count <= MAX_REPLICATED_ENTITIES
-                && update_size(&delta, self.baseline.is_none())? <= limit
-            {
+            let measured = if count <= MAX_REPLICATED_ENTITIES {
+                Some(update_size(&delta, self.baseline.is_none())?)
+            } else {
+                None
+            };
+            if let Some(now) = measured.filter(|&now| now <= limit) {
+                size = now;
                 if fair.as_ref() == Some(&key) {
                     self.cursor = Some(key);
                 }
@@ -349,6 +414,17 @@ impl std::io::Write for ByteCount {
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
+}
+/// Serialized length of one record as it appears inside a delta's list.
+fn record_len(record: &Record) -> crate::Result<usize> {
+    let mut count = ByteCount::default();
+    match record {
+        Record::Player(p) => serde_json::to_writer(&mut count, p)?,
+        Record::Prop(p) => serde_json::to_writer(&mut count, p)?,
+        Record::RemovePlayer(id) => serde_json::to_writer(&mut count, id)?,
+        Record::RemoveProp(id) => serde_json::to_writer(&mut count, id)?,
+    }
+    Ok(count.0)
 }
 fn update_size(delta: &DeltaSnapshot, initial: bool) -> crate::Result<usize> {
     let mut count = ByteCount::default();

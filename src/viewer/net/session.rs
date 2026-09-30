@@ -34,6 +34,10 @@ pub struct HandshakeLimiter {
 }
 
 impl HandshakeLimiter {
+    /// Change the allowed handshakes per second (a server that expects a crowd to arrive at once).
+    pub fn set_limit(&mut self, max_per_second: usize) {
+        self.max_per_second = max_per_second;
+    }
     pub fn new(max_per_second: usize) -> Self {
         Self {
             window_start: Instant::now(),
@@ -84,6 +88,10 @@ pub struct SessionRegistry<T> {
 }
 
 impl<T> SessionRegistry<T> {
+    /// Change how many sessions the registry will hold.
+    pub fn set_max_sessions(&mut self, max_sessions: usize) {
+        self.max_sessions = max_sessions;
+    }
     pub fn new(max_sessions: usize, timeout: Duration) -> Self {
         Self {
             sessions: HashMap::new(),

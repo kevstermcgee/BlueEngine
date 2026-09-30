@@ -65,6 +65,10 @@ struct Autosave {
     last_tick: u64,
 }
 
+/// Below this many peers a broadcast is never split across threads: measured on 4 cores, splitting saves
+/// under 0.3 ms there (and more total CPU) but saves milliseconds from about 64 (see `docs/perf/README.md`).
+pub const PARALLEL_MIN_PEERS: usize = 32;
+
 /// Authoritative dedicated server running [`HeadlessWorld`] over any datagram transport.
 pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
     pub transport: T,
@@ -79,6 +83,8 @@ pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
     pub client_timeout: Duration,
     pub local_addr: SocketAddr,
     pub auth_key: Option<String>,
+    max_players: usize,
+    network_threads: usize,
     pub pending_challenges: HashMap<SocketAddr, (ConnectionNonce, [u8; 16], Instant)>,
     pub handshake_limiter: HandshakeLimiter,
     pub session_registry: SessionRegistry<u64>,
@@ -117,6 +123,8 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             client_timeout: Duration::from_secs(5),
             local_addr,
             auth_key: None,
+            max_players: crate::viewer::simulation::DEFAULT_MAX_PLAYERS,
+            network_threads: 1,
             pending_challenges: HashMap::new(),
             handshake_limiter: HandshakeLimiter::new(64),
             session_registry: SessionRegistry::new(16, Duration::from_secs(5)),
@@ -166,6 +174,40 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                 false
             }
         }
+    }
+
+    /// How many players this server admits (default 8, at most 1024). This raises every limit that would
+    /// otherwise refuse the ninth: the world's join cap, the session registry, and the handshake rate (a
+    /// crowd arriving together needs more than 64 a second).
+    pub fn with_max_players(mut self, max: usize) -> Self {
+        self.max_players = max.clamp(1, crate::viewer::simulation::MAX_PLAYERS_LIMIT);
+        self.world.set_max_players(self.max_players);
+        self.session_registry.set_max_sessions(self.max_players * 2);
+        self.handshake_limiter
+            .set_limit(64.max(self.max_players * 2));
+        self
+    }
+    pub fn max_players(&self) -> usize {
+        self.max_players
+    }
+
+    /// Threads used to prepare each peer's world update (default 1: everything on the calling thread).
+    /// `0` means one per available core. Preparing an update reads the shared world and touches only that
+    /// peer's own replication state, so peers are independent: the bytes every peer receives, and the order
+    /// they are sent in, are identical at any thread count. Sending stays on the calling thread, because
+    /// transports are not required to be `Sync`. Fewer than [`PARALLEL_MIN_PEERS`] peers are never split:
+    /// spawning threads would cost more than the work.
+    pub fn with_network_threads(mut self, threads: usize) -> Self {
+        self.network_threads = if threads == 0 {
+            std::thread::available_parallelism().map_or(1, |n| n.get())
+        } else {
+            threads
+        }
+        .clamp(1, 64);
+        self
+    }
+    pub fn network_threads(&self) -> usize {
+        self.network_threads
     }
 
     /// Configure a shared secret key for mandatory client authentication.
@@ -227,10 +269,10 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             );
             return;
         }
-        if !self.clients.contains_key(&src) && self.sessions.len() >= 8 {
+        if !self.clients.contains_key(&src) && self.sessions.len() >= self.max_players {
             let _ = self.transport.send_packet(
                 &Packet::Rejected {
-                    reason: "Server is full (8 players)".into(),
+                    reason: format!("Server is full ({} players)", self.max_players),
                 },
                 src,
             );
@@ -762,6 +804,10 @@ impl<T: DatagramTransport> DedicatedServer<T> {
 
     /// At most one world packet and one independent game-state record per peer.
     /// Queue saturation is normal backpressure. Other errors remain actionable.
+    ///
+    /// Three stages: bookkeeping and payload limits (sequential), preparing each peer's update (parallel, see
+    /// [`Self::with_network_threads`]), then sending in the fairness-rotated order (sequential). The first
+    /// error, in send order, is returned after the peers before it have been sent, as it always was.
     pub fn try_broadcast_snapshots(&mut self) -> crate::Result<()> {
         use crate::viewer::net::{SendOutcome, MAX_PACKET_BYTES};
         let mut peers: Vec<_> = self.sessions.keys().copied().collect();
@@ -770,8 +816,11 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         peers.rotate_left(self.replication_round % count);
         let game_first = (self.replication_round / count).is_multiple_of(2);
         self.replication_round = self.replication_round.wrapping_add(1);
-        for id in peers {
-            let session = self.sessions.get_mut(&id).unwrap();
+
+        // Stage 1: keyframe requests and each peer's payload budget.
+        let mut limits = Vec::with_capacity(peers.len());
+        for id in &peers {
+            let session = self.sessions.get_mut(id).unwrap();
             if session.keyframe_requested {
                 session
                     .replication
@@ -779,8 +828,51 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                 session.keyframe_requested = false;
                 session.last_acked_tick = session.replication.baseline().map_or(0, |s| s.tick);
             }
-            // World gets first access to a congested queue. Alternate ordering
-            // by broadcast to avoid starving the independent game-state lane.
+            limits.push(self.transport.payload_limit(session.addr));
+        }
+
+        // Stage 2: prepare every peer's update. Pure per peer: reads the world, writes only its own session.
+        let staged = {
+            let world = &self.world;
+            let mut by_id: std::collections::HashMap<u64, &mut ClientSession> =
+                self.sessions.iter_mut().map(|(id, s)| (*id, s)).collect();
+            let mut work: Vec<(u64, usize, &mut ClientSession)> = peers
+                .iter()
+                .zip(&limits)
+                .map(|(id, limit)| (*id, *limit, by_id.remove(id).unwrap()))
+                .collect();
+            let stage = |(id, limit, session): &mut (u64, usize, &mut ClientSession)| {
+                let snap = world.snapshot_for_player(*id, session.last_client_tick);
+                session.replication.stage(*limit, &snap, *id)
+            };
+            let threads = if work.len() < PARALLEL_MIN_PEERS {
+                1
+            } else {
+                self.network_threads.min(work.len())
+            };
+            if threads <= 1 {
+                work.iter_mut().map(stage).collect::<Vec<_>>()
+            } else {
+                let per_thread = work.len().div_ceil(threads);
+                std::thread::scope(|scope| {
+                    let handles: Vec<_> = work
+                        .chunks_mut(per_thread)
+                        .map(|part| {
+                            scope.spawn(move || part.iter_mut().map(stage).collect::<Vec<_>>())
+                        })
+                        .collect();
+                    handles
+                        .into_iter()
+                        .flat_map(|h| h.join().expect("a replication worker panicked"))
+                        .collect::<Vec<_>>()
+                })
+            }
+        };
+
+        // Stage 3: send, in the rotated order. World gets first access to a congested queue; the order
+        // alternates by broadcast to avoid starving the independent game-state lane.
+        for (id, staged) in peers.into_iter().zip(staged) {
+            let session = self.sessions.get_mut(&id).unwrap();
             let game = self.world.game.as_ref().map(|g| Packet::GameState {
                 session: Some(session.session_token),
                 tick: self.world.tick,
@@ -815,10 +907,10 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             if game_first {
                 send_game(session)?;
             }
-            let snap = self.world.snapshot_for_player(id, session.last_client_tick);
+            staged?;
             session
                 .replication
-                .send(&self.transport, session.addr, &snap, id)?;
+                .transmit(&self.transport, session.addr)?;
             if !game_first {
                 send_game(session)?;
             }

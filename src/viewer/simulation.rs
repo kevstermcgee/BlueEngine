@@ -90,6 +90,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 /// Duration in seconds of one shared simulation tick (60 Hz).
 pub const TICK_SECONDS: f32 = 1. / 60.;
+/// Players a world accepts unless [`HeadlessWorld::set_max_players`] says otherwise.
+pub const DEFAULT_MAX_PLAYERS: usize = 8;
+/// The most a world, and so a server, can be configured for.
+pub const MAX_PLAYERS_LIMIT: usize = 1024;
 const MAX_STEPS: usize = 8;
 
 /// Client frame accumulator with at most eight catch-up ticks per advance.
@@ -163,6 +167,7 @@ pub struct HeadlessWorld {
     prop_lifecycle: Vec<Option<usize>>,
     lifecycle_ids: Vec<String>,
     players: BTreeMap<u64, Player>,
+    max_players: usize,
     /// Number of completed calls to [`Self::step`], initially zero.
     pub tick: u64,
     /// Execution time in microseconds spent in physics on the last tick.
@@ -226,14 +231,22 @@ impl HeadlessWorld {
             prop_lifecycle,
             prop_physics,
             players: BTreeMap::new(),
+            max_players: DEFAULT_MAX_PLAYERS,
             tick: 0,
             last_physics_time_us: 0.0,
         }
     }
-    /// Join at the shared default spawn; reject duplicate IDs or a full eight-player world.
+    /// Raise or lower how many players may join (default 8). Players already in stay in.
+    pub fn set_max_players(&mut self, max: usize) {
+        self.max_players = max.clamp(1, MAX_PLAYERS_LIMIT);
+    }
+    pub fn max_players(&self) -> usize {
+        self.max_players
+    }
+    /// Join at the shared default spawn; reject duplicate IDs or a full world (see [`Self::set_max_players`]).
     /// Players do not collide with each other. IDs are supplied by the caller.
     pub fn join(&mut self, id: u64) -> bool {
-        if self.players.len() >= 8 || self.players.contains_key(&id) {
+        if self.players.len() >= self.max_players || self.players.contains_key(&id) {
             return false;
         }
         let controller = if let Some(game) = &self.game {
