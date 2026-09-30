@@ -7,6 +7,8 @@ services:
       dockerfile: Dockerfile
     container_name: blueengine-server
     restart: unless-stopped
+    # `docker stop` sends SIGTERM: the server saves and exits cleanly. Give it time to finish (the default is 10 s).
+    stop_grace_period: 15s
     ports:
       - "7777:7777/udp"
     environment:

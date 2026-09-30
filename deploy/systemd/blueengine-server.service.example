@@ -10,6 +10,9 @@ ExecStart=%h/.local/bin/be2-headless --server 0.0.0.0:4000 --transport productio
 EnvironmentFile=%h/.config/blueengine/server.env
 Restart=on-failure
 RestartSec=5
+# `systemctl stop` sends SIGTERM: the server finishes its tick, writes its final autosave and exits 0. A server that has not
+# finished within this time is killed; send the signal twice (or `kill -INT` after `kill -TERM`) to make it exit at once.
+TimeoutStopSec=15
 NoNewPrivileges=true
 PrivateTmp=true
 UMask=0077

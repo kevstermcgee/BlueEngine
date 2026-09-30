@@ -10,6 +10,22 @@ deltas and keyframe recovery. The same server path accepts two explicit profiles
 Both use UDP at the network layer; the default port is `4000/udp`. There is no silent
 fallback from production to development.
 
+## Stopping a server
+
+`be2-headless --server` stops cleanly on **SIGINT, SIGTERM and SIGHUP** (Ctrl-C, Ctrl-Break and console close on Windows): it
+finishes the current tick, writes its final autosave when `--autosave` is on, and exits with status 0. That is what
+`kill`, `systemctl stop` and `docker stop` send, so a routine stop no longer loses the world since the last autosave.
+
+```bash
+kill -TERM "$(pidof be2-headless)"      # graceful: finishes the tick, saves, exits 0
+kill -TERM "$PID"; kill -INT "$PID"     # a second request exits at once (status 130), without the save
+```
+
+A **second** shutdown request forces an immediate exit, so a server that will not stop (a stuck save, a wedged tick) can be
+ended by signalling twice instead of `kill -9`. On Windows, closing the console or logging off gives the process only a few
+seconds; the handler waits up to 4.5 s for the final save. Before this change these signals killed the process at once
+(status 143) and no final save was written. The custom-simulation `netplay` kit's own server loop is unchanged.
+
 ## Serving more than eight players
 
 The server admits 8 players by default. `--max-players N` (up to 1024) raises every limit that would refuse the
