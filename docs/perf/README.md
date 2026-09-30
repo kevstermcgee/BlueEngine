@@ -86,6 +86,26 @@ What this shows and does not:
   what each peer is considered for is the next step and would make it linear.
 * Not measured: real socket and QUIC/TLS cost (the QUIC endpoint still runs on one async thread), props in motion,
   and receive-side cost.
+## Freshness and where a tick goes
+
+`cargo run --profile fast --example net_freshness_bench` measures, for one watching client, how many broadcasts (50 ms)
+ago each other player was last sent, for the 8 nearest and the 8 farthest, as the crowd grows. A packet carries about
+six player records, so past 8 players freshness is decided by how the budget is spent. Before distance-weighted priority
+(ADR 0028), nearest / farthest at 32 players were 11.7 / 13.5 broadcasts, at 64 players 24.1 / 29.3; after, 1.8 / 14.5 and
+2.8 / 21.2 (128 players: 52.3 -> 4.5 nearest; 256 players: 100.6 -> 9.0). `ReplicationCounters::mean_wait()` reports the same
+thing from a live sender.
+
+`be2-headless --server ... --profile` prints a span table with each status line (name, count, total ms, mean us, max us,
+biggest first). A 56-client server on 4 network threads reported: per-broadcast preparation 3.3 ms (183 us per peer),
+receive 0.5 ms per tick, the whole world step 0.4 ms, Rapier 78 us per sub-step. Span cost: 3.3 ns off, 58 ns on.
+
+Idle physics (512 sleeping props, tick 515 to 537 us): Rapier's step is 449 us (87%); BlueEngine's per-prop sync and
+lifecycle loops together are under 9 us. Skipping Rapier's step while no body is active measured -85% (526 -> 78 us); not
+adopted, see `docs/analysis/external-inspiration-study.md` sections 3 and 6.
+
+Test suite, warm build, 4 cores: `cargo test` 71.7 s (52% of the CPU used), `cargo nextest run` 48.2 s (plus `cargo test
+--doc` 3.8 s), 28% faster overall; nextest is optional.
+
 ## Publishing (BlueEngineGames, GitHub Actions, windows-latest)
 
 "Build Windows releases" took 15-26 minutes on each of the last five runs (19m, 26m, 15m, 16m, 20m).

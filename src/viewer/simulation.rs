@@ -548,6 +548,8 @@ impl HeadlessWorld {
     /// Advance every player one tick and increment the world tick, even when empty.
     /// Consume pending jump edges once; retain all other movement intent.
     pub fn step(&mut self) {
+        let _step = super::spans::span("world.step");
+        let rules = super::spans::span("world.rules");
         if let Some(game) = &mut self.game {
             let motions = game.step_movers(&mut self.room);
             game.step_timers();
@@ -557,6 +559,8 @@ impl HeadlessWorld {
                 }
             }
         }
+        drop(rules);
+        let players_span = super::spans::span("world.players");
         for (&id, player) in &mut self.players {
             player
                 .controller
@@ -579,7 +583,9 @@ impl HeadlessWorld {
             }
         }
 
+        drop(players_span);
         let t_phys = std::time::Instant::now();
+        let physics_span = super::spans::span("world.physics");
         if let Some(ref mut physics) = self.prop_physics {
             let mut player_controllers = std::collections::HashMap::new();
             for (&id, p) in &self.players {
@@ -623,6 +629,7 @@ impl HeadlessWorld {
                     .collect();
             }
             // Synchronize prop positions & velocities into lifecycle registry
+            let _lifecycle = super::spans::span("world.lifecycle");
             for i in 0..physics.props.len() {
                 if let (Some(pos), Some(index)) = (physics.prop_position(i), self.prop_lifecycle[i])
                 {
@@ -643,6 +650,7 @@ impl HeadlessWorld {
                 }
             }
         }
+        drop(physics_span);
         if let Some(game) = &mut self.game {
             game.apply_mover_colliders(&mut self.room);
         }

@@ -28,7 +28,9 @@ pub fn format_token(token: SessionToken) -> String {
 
 /// Rate limiter for incoming connection handshakes to mitigate denial of service.
 pub struct HandshakeLimiter {
-    window_start: Instant,
+    /// When the current one-second window began; set by the first handshake, so the limiter does not depend on
+    /// when it was built (a test's manual clock starts at a different instant than the real one).
+    window_start: Option<Instant>,
     count: usize,
     max_per_second: usize,
 }
@@ -40,7 +42,7 @@ impl HandshakeLimiter {
     }
     pub fn new(max_per_second: usize) -> Self {
         Self {
-            window_start: Instant::now(),
+            window_start: None,
             count: 0,
             max_per_second,
         }
@@ -48,8 +50,9 @@ impl HandshakeLimiter {
 
     /// Check if a new handshake attempt is permitted under the current rate limit.
     pub fn allow(&mut self, now: Instant) -> bool {
-        if now.duration_since(self.window_start) >= Duration::from_secs(1) {
-            self.window_start = now;
+        let start = *self.window_start.get_or_insert(now);
+        if now.duration_since(start) >= Duration::from_secs(1) {
+            self.window_start = Some(now);
             self.count = 0;
         }
         if self.count < self.max_per_second {

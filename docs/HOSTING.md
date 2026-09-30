@@ -24,7 +24,9 @@ target/release/be2-headless --server 0.0.0.0:4000 --max-players 128 --network-th
 
 Measured on 4 cores, a snapshot broadcast to 128 players took 29.8 ms in the original code (more than one 16.7 ms
 tick), 12.8 ms after the replication fix, and 4.2 ms with 4 threads (`docs/perf/README.md`). Custom code builds the
-same with `DedicatedServer::with_max_players(n).with_network_threads(t)`. The QUIC/TLS transport still handles all
+same with `DedicatedServer::with_max_players(n).with_network_threads(t)`. Add `--profile` to see where each status
+window's time went (per-peer preparation, receiving, the world step; biggest first), and see `docs/perf/README.md` for
+how to read it. The QUIC/TLS transport still handles all
 connections on one async thread, which is not yet measured at this scale.
 
 ## Start a server and client

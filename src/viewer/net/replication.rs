@@ -24,7 +24,44 @@ pub struct ReplicationCounters {
     pub acknowledged: u64,
     pub ignored_acks: u64,
     pub resyncs: u64,
+    /// Records placed in a packet, and how many broadcasts each had waited since it last changed and was sent.
+    /// `wait_sum / records_sent` is the mean freshness cost of the packet budget; `wait_max` the worst case.
+    pub records_sent: u64,
+    pub wait_sum: u64,
+    pub wait_max: u64,
 }
+impl ReplicationCounters {
+    /// Mean number of broadcasts a changed record waited before it was sent (1 = sent at the first chance).
+    pub fn mean_wait(&self) -> f64 {
+        self.wait_sum as f64 / self.records_sent.max(1) as f64
+    }
+}
+/// A changed record that has not been sent yet.
+#[derive(Clone, Copy, Debug, Default)]
+struct Wait {
+    priority: f32,
+    broadcasts: u64,
+}
+
+/// Distance at which a record's priority per broadcast has fallen to half, and the floor that keeps even the
+/// farthest record from starving (it still gains this much every broadcast it waits).
+const NEAR_METERS: f32 = 10.;
+const MIN_WEIGHT: f32 = 0.1;
+
+/// Priority a changed record gains per broadcast: 1 when next to the observer, falling off with distance.
+fn weight(record: &Record, observer: Option<crate::math::V>) -> f32 {
+    let position = match record {
+        Record::Player(p) => p.position,
+        Record::Prop(p) => p.position,
+        Record::RemovePlayer(_) | Record::RemoveProp(_) => return 1.,
+    };
+    let Some(observer) = observer else {
+        return 1.;
+    };
+    let d = (position - observer).length() / NEAR_METERS;
+    (1. / (1. + d * d)).max(MIN_WEIGHT)
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 enum Key {
     Player(u64),
@@ -70,6 +107,8 @@ pub struct ReplicationSender {
     pending: Option<Pending>,
     cursor: Option<Key>,
     issued: u64,
+    /// Changed records not yet sent: how much priority each has accumulated and how many broadcasts it has waited.
+    waiting: BTreeMap<Key, Wait>,
     /// Measure every candidate by serializing the whole delta (the original method). Output is identical
     /// either way; this exists so tests and benchmarks can compare the two.
     exact_sizing: bool,
@@ -142,6 +181,7 @@ impl ReplicationSender {
         self.baseline = None;
         self.pending = None;
         self.cursor = None;
+        self.waiting.clear();
         self.counters.resyncs += 1;
     }
     /// Coalesce duplicate requests only when an independently applicable newer
@@ -252,6 +292,19 @@ impl ReplicationSender {
                 dirty.insert(r.key(), r);
             }
         }
+        // Every changed record gains priority for each broadcast it waits, more the nearer it is to the observer.
+        // A record that stops being changed (or is removed) forgets its debt.
+        let observer = desired
+            .players
+            .iter()
+            .find(|p| p.id == owner)
+            .map(|p| p.position);
+        self.waiting.retain(|key, _| dirty.contains_key(key));
+        for (key, record) in &dirty {
+            let wait = self.waiting.entry(key.clone()).or_default();
+            wait.priority += weight(record, observer);
+            wait.broadcasts += 1;
+        }
         let mut keys: Vec<_> = dirty.keys().cloned().collect();
         if let Some(cursor) = &self.cursor {
             let offset = keys.partition_point(|k| k <= cursor);
@@ -282,6 +335,12 @@ impl ReplicationSender {
                 order.push(key.clone());
             }
         }
+        // Everything else goes highest accumulated priority first; ties keep the fair rotated order.
+        keys.sort_by(|a, b| {
+            self.waiting[b]
+                .priority
+                .total_cmp(&self.waiting[a].priority)
+        });
         order.extend(keys);
         let mut scheduled = std::collections::BTreeSet::new();
         order.retain(|key| scheduled.insert(key.clone()));
@@ -304,6 +363,7 @@ impl ReplicationSender {
         // comma when the list already has one. That lets a candidate that cannot possibly fit be skipped
         // without re-serializing the whole delta for it; anything near the limit is still measured exactly.
         let mut size = update_size(&delta, self.baseline.is_none())?;
+        let mut sent: Vec<Key> = Vec::new();
         let fast_sizing = !self.exact_sizing && self.baseline.is_some();
         for key in order {
             let record = &dirty[&key];
@@ -369,6 +429,7 @@ impl ReplicationSender {
             };
             if let Some(now) = measured.filter(|&now| now <= limit) {
                 size = now;
+                sent.push(key.clone());
                 if fair.as_ref() == Some(&key) {
                     self.cursor = Some(key);
                 }
@@ -378,6 +439,13 @@ impl ReplicationSender {
                 delta.removed_players.truncate(lengths.2);
                 delta.removed_props.truncate(lengths.3);
                 delta.ack_client_tick = old_ack;
+            }
+        }
+        for key in sent {
+            if let Some(wait) = self.waiting.remove(&key) {
+                self.counters.records_sent += 1;
+                self.counters.wait_sum += wait.broadcasts;
+                self.counters.wait_max = self.counters.wait_max.max(wait.broadcasts);
             }
         }
         let (packet, bytes) = encode_update(&delta, self.baseline.is_none())?;

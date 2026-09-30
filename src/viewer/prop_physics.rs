@@ -579,6 +579,7 @@ impl PropPhysics {
             for pid in to_drop {
                 self.drop_for_player(pid);
             }
+            let _rapier = super::spans::span("physics.rapier");
             self.pipeline.step(
                 &Vector::new(0., -9.81, 0.),
                 &IntegrationParameters {
@@ -597,7 +598,9 @@ impl PropPhysics {
                 &(),
                 &(),
             );
+            drop(_rapier);
         }
+        let _sync = super::spans::span("physics.sync");
         self.sync(room);
     }
 

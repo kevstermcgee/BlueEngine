@@ -154,10 +154,11 @@ fn main() -> vesper3d::Result<()> {
                     .parse()?;
                 tuning.network_threads = Some(n);
             }
+            "--profile" => vesper3d::viewer::spans::enable(true),
             "--realtime" => realtime = true,
             "--help" => {
                 println!(
-                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE] [--load SLOT_OR_FILE] [--save-dir DIR] [--autosave SECONDS] [--max-players N] [--network-threads N]\n\
+                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE] [--load SLOT_OR_FILE] [--save-dir DIR] [--autosave SECONDS] [--max-players N] [--network-threads N] [--profile]\n\
                      Modes:\n\
                        --server [ADDR]   Run authoritative dedicated multiplayer server (default 0.0.0.0:4000)\n\
                        --transport development  Raw UDP for local development (default)\n\
@@ -168,6 +169,7 @@ fn main() -> vesper3d::Result<()> {
                        --autosave S      Server: write a rotating autosave every S seconds and at shutdown\n\
                        --max-players N   Server: admit up to N players (default 8, at most 1024)\n\
                        --network-threads N  Server: prepare peer updates on N threads (0 = one per core; default 1)\n\
+                       --profile         Print where each status window's time went (spans, biggest first)\n\
                        (no --server)     Run local benchmark simulation"
                 );
                 return Ok(());

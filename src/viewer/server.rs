@@ -85,6 +85,7 @@ pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
     pub auth_key: Option<String>,
     max_players: usize,
     network_threads: usize,
+    clock: crate::viewer::net::Clock,
     pub pending_challenges: HashMap<SocketAddr, (ConnectionNonce, [u8; 16], Instant)>,
     pub handshake_limiter: HandshakeLimiter,
     pub session_registry: SessionRegistry<u64>,
@@ -125,6 +126,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             auth_key: None,
             max_players: crate::viewer::simulation::DEFAULT_MAX_PLAYERS,
             network_threads: 1,
+            clock: crate::viewer::net::Clock::real(),
             pending_challenges: HashMap::new(),
             handshake_limiter: HandshakeLimiter::new(64),
             session_registry: SessionRegistry::new(16, Duration::from_secs(5)),
@@ -210,6 +212,17 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         self.network_threads
     }
 
+    /// Take "now" for timeouts, the handshake rate limit and the reconnect reservation from `clock` instead of the
+    /// operating system. A test passes [`Clock::manual`](crate::viewer::net::Clock::manual), keeps a clone and calls
+    /// `advance` to move time instead of sleeping; real-time pacing in [`Self::run_realtime`] is unaffected.
+    pub fn with_clock(mut self, clock: crate::viewer::net::Clock) -> Self {
+        self.clock = clock;
+        self
+    }
+    pub fn clock(&self) -> &crate::viewer::net::Clock {
+        &self.clock
+    }
+
     /// Configure a shared secret key for mandatory client authentication.
     pub fn with_auth(mut self, auth_key: &str) -> Self {
         self.auth_key = Some(auth_key.to_string());
@@ -249,7 +262,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         req_id: u64,
         content_hash: u64,
     ) {
-        let now = Instant::now();
+        let now = self.clock.now();
         if !self.handshake_limiter.allow(now) {
             eprintln!("[Server] Handshake rate limit exceeded for {src}");
             return;
@@ -337,7 +350,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         if !joined {
             let _ = self.transport.send_packet(
                 &Packet::Rejected {
-                    reason: "World is full (8 players)".into(),
+                    reason: format!("World is full ({} players)", self.max_players),
                 },
                 src,
             );
@@ -406,7 +419,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         proof: [u8; 32],
         content_hash: u64,
     ) {
-        let now = Instant::now();
+        let now = self.clock.now();
         let Some((expected_nonce, salt, challenge_time)) = self.pending_challenges.remove(&src)
         else {
             let _ = self.transport.send_packet(
@@ -553,6 +566,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
 
     /// Poll and process all pending incoming network packets non-blockingly.
     pub fn poll_network(&mut self) -> crate::Result<usize> {
+        let _poll = crate::viewer::spans::span("server.poll");
         let mut count = 0;
         for (packet, src) in self.transport.receive_packets()?.into_iter().take(256) {
             count += 1;
@@ -588,7 +602,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                             if frame.client_tick <= session.last_client_tick {
                                 continue;
                             }
-                            session.last_seen = Instant::now();
+                            session.last_seen = self.clock.now();
                             self.session_registry
                                 .touch(&session.session_token, session.last_seen);
                             session.last_client_tick = frame.client_tick;
@@ -664,7 +678,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                             if frame.client_tick <= session.last_client_tick {
                                 continue;
                             }
-                            session.last_seen = Instant::now();
+                            session.last_seen = self.clock.now();
                             self.session_registry
                                 .touch(&session.session_token, session.last_seen);
                             session.last_client_tick = frame.client_tick;
@@ -754,7 +768,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                         }
                         self.clients.remove(&src);
                         self.recent_disconnects
-                            .insert(player_id, (src, Instant::now()));
+                            .insert(player_id, (src, self.clock.now()));
                         println!("[Server] Client #{player_id} disconnected gracefully");
                     } else {
                         eprintln!(
@@ -775,7 +789,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
     /// Check for timed-out client sessions and remove them from the world.
     pub fn check_timeouts(&mut self) -> Vec<u64> {
         self.session_registry.set_timeout(self.client_timeout);
-        let timed_out = self.session_registry.evict_timeouts(Instant::now());
+        let timed_out = self.session_registry.evict_timeouts(self.clock.now());
         let mut ids = Vec::new();
         for entry in timed_out {
             let id = entry.data;
@@ -783,7 +797,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             self.world.leave(id);
             self.sessions.remove(&id);
             self.clients.remove(&addr);
-            self.recent_disconnects.insert(id, (addr, Instant::now()));
+            self.recent_disconnects.insert(id, (addr, self.clock.now()));
             println!("[Server] Client #{id} timed out (disconnected)");
             ids.push(id);
         }
@@ -832,6 +846,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         }
 
         // Stage 2: prepare every peer's update. Pure per peer: reads the world, writes only its own session.
+        let stage_span = crate::viewer::spans::span("server.broadcast.stage");
         let staged = {
             let world = &self.world;
             let mut by_id: std::collections::HashMap<u64, &mut ClientSession> =
@@ -842,6 +857,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                 .map(|(id, limit)| (*id, *limit, by_id.remove(id).unwrap()))
                 .collect();
             let stage = |(id, limit, session): &mut (u64, usize, &mut ClientSession)| {
+                let _peer = crate::viewer::spans::span("replication.stage");
                 let snap = world.snapshot_for_player(*id, session.last_client_tick);
                 session.replication.stage(*limit, &snap, *id)
             };
@@ -869,6 +885,8 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             }
         };
 
+        drop(stage_span);
+        let _transmit = crate::viewer::spans::span("server.broadcast.transmit");
         // Stage 3: send, in the rotated order. World gets first access to a congested queue; the order
         // alternates by broadcast to avoid starving the independent game-state lane.
         for (id, staged) in peers.into_iter().zip(staged) {
@@ -920,6 +938,7 @@ impl<T: DatagramTransport> DedicatedServer<T> {
 
     /// Step authoritative simulation one tick, neutralize stale inputs, and broadcast snapshots every 3 ticks (20 Hz).
     pub fn step(&mut self) {
+        let _step = crate::viewer::spans::span("server.step");
         // Cooldown ticks and stale input neutralization
         for (&id, session) in &mut self.sessions {
             session.pistol_cooldown =
@@ -1021,6 +1040,11 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                     .map(|s| s.replication.counters.retries)
                     .sum();
                 println!("[Server] Replication local_accepted_bytes={accepted} backpressured={blocked} retries={retries}");
+                if crate::viewer::spans::enabled() {
+                    // Where the last status window went, biggest first (see `viewer::spans`).
+                    print!("[Profile]\n{}", crate::viewer::spans::summary().text());
+                    crate::viewer::spans::reset();
+                }
                 runner.metrics.reset();
                 last_status = Instant::now();
             }

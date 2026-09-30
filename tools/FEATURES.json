@@ -173,13 +173,20 @@
         "docs/adr/0014-bounded-replication.md",
         "tests/parallel_broadcast.rs",
         "tests/replication_sizing.rs",
-        "examples/net_broadcast_bench.rs"
+        "examples/net_broadcast_bench.rs",
+        "src/viewer/net/clock.rs",
+        "src/viewer/spans.rs",
+        "tests/replication_priority.rs",
+        "tests/virtual_time.rs",
+        "tests/spans.rs",
+        "examples/net_freshness_bench.rs",
+        "docs/analysis/external-inspiration-study.md"
       ],
       "checks": [
         "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift",
         "cargo test --locked --no-default-features --test replication_budget --test replication_sockets"
       ],
-      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 7 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials. GameState includes restart round and authoritative mover tick positions; sequenced commands from old rounds are discarded. Bounded partial-world replication retains one acknowledged baseline and one retryable packet per peer, respects active payload limits, rotates fair/priority records and peers, and exposes queue/delivery counters. Supports 1024 relevant records with individually budgeted records; protocol 7 binds replication/resync to sessions. See HOSTING.md for limits and RTT tradeoffs. Server capacity is configurable (with_max_players, --max-players); replication sizes candidates by arithmetic and prepares peers on several threads (with_network_threads, --network-threads) with identical bytes at any thread count (ADR 0027).",
+      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 7 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials. GameState includes restart round and authoritative mover tick positions; sequenced commands from old rounds are discarded. Bounded partial-world replication retains one acknowledged baseline and one retryable packet per peer, respects active payload limits, rotates fair/priority records and peers, and exposes queue/delivery counters. Supports 1024 relevant records with individually budgeted records; protocol 7 binds replication/resync to sessions. See HOSTING.md for limits and RTT tradeoffs. Server capacity is configurable (with_max_players, --max-players); replication sizes candidates by arithmetic and prepares peers on several threads (with_network_threads, --network-threads) with identical bytes at any thread count (ADR 0027). Replication prioritises nearby records and measures freshness (mean_wait); the server takes time from a Clock so timeouts/reconnect are testable without sleeping; viewer::spans + be2-headless --profile report where a tick goes (ADR 0028).",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -232,7 +239,13 @@
         "NET-BUDGET-002",
         "max-players",
         "network-threads",
-        "parallel broadcast"
+        "parallel broadcast",
+        "freshness",
+        "priority",
+        "clock",
+        "virtual time",
+        "profile",
+        "spans"
       ],
       "read_first": [
         "src/viewer/net/replication.rs",
