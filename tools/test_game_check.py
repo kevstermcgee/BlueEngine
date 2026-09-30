@@ -121,12 +121,12 @@ class FindToolsTests(unittest.TestCase):
 
     def test_a_binary_in_the_engine_target_dir_is_found(self):
         built = self.build('fast')
-        self.assertEqual(game_check.find_tools(self.game), built)
+        self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), Path(built).resolve())
 
     def test_release_is_preferred_over_debug(self):
         self.build('debug')
         release = self.build('release')
-        self.assertEqual(game_check.find_tools(self.game), release)
+        self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), Path(release).resolve())
 
     def test_the_environment_variable_still_wins(self):
         self.build('release')
