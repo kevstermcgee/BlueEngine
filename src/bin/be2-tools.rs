@@ -95,7 +95,7 @@ fn run() -> Result<()> {
                 "actions":["increment","set_counter","set_enabled","set_visible","set_mover","start_timer","stop_timer","complete","fail"],
                 "conditions":"null is unconditional; a leaf is {counter, [modulo], equals|not_equals|less_than|greater_than|at_most|at_least} (several comparisons must all hold); or {all:[...]}, {any:[...]}, {not:{...}}, nested at most 4 deep, 16 parts","outcomes":"complete wins, fail loses; both end the match until restart",
                 "limits":{"game_bytes":64000,"spawns":8,"counters":32,"interactables":64,"trigger_zones":64,"movers":64,"timers":64,"rules":64,"actions_per_rule":4,"counter_magnitude":1000000},
-                "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match",
+                "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match and never resets (a retryable rule needs once:false and a counter condition)",
                 "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds; trigger zones declare spatial AABB bounds; movers translate colliders smoothly",
                 "set_enabled":"interaction and trigger zone eligibility only; never changes visibility or collision",
                 "set_visible":"interactable presentation only; never changes eligibility or collision",

@@ -199,6 +199,24 @@ pub fn explore_with(loaded: &LoadedGame, max_states: usize, fold_counters: bool)
             }
         }
     }
+    // The rules that react to each target (a rule with no trigger at all reacts to every target).
+    let bound_rules: Vec<Vec<usize>> = document
+        .interactables
+        .iter()
+        .map(|target| {
+            document
+                .rules
+                .iter()
+                .enumerate()
+                .filter(|(_, r)| match r.on_interact.as_deref() {
+                    Some(t) => t == target.entity,
+                    None => r.on_enter.is_none() && r.on_exit.is_none() && r.on_timer.is_none(),
+                })
+                .map(|(i, _)| i)
+                .collect()
+        })
+        .collect();
+    let mut exhausted: BTreeMap<usize, (usize, ModelEvent)> = BTreeMap::new();
     // What each counter contributes to a state. A counter nobody reads is dropped entirely, which
     // stops a decorative countdown from making the search unbounded; unbounded counters that are
     // only compared by modulo or by threshold fold into a small finite set of equivalent values.
@@ -281,6 +299,21 @@ pub fn explore_with(loaded: &LoadedGame, max_states: usize, fold_counters: bool)
             fired.extend(runtime.take_fired_rules());
             let next = runtime.state().clone();
             let k = key(&next, occ);
+            // A target switched back on when every rule on it is a `once` rule that has already fired
+            // can never do anything again: the classic "reset that cannot re-arm".
+            let mut switched_on = next.enabled & !state.enabled;
+            while switched_on != 0 {
+                let target = switched_on.trailing_zeros() as usize;
+                switched_on &= switched_on - 1;
+                let rules = bound_rules.get(target).map(Vec::as_slice).unwrap_or(&[]);
+                if !rules.is_empty()
+                    && rules
+                        .iter()
+                        .all(|&r| document.rules[r].once && next.fired & (1 << r) != 0)
+                {
+                    exhausted.entry(target).or_insert((n, event));
+                }
+            }
             let to = match seen.get(&k) {
                 Some(&to) => to,
                 None if nodes.len() >= max_states => {
@@ -527,6 +560,27 @@ pub fn explore_with(loaded: &LoadedGame, max_states: usize, fold_counters: bool)
                 idle.len() - 5
             ),
             vec![],
+        );
+    }
+    for (&target, &(at, event)) in &exhausted {
+        let name = &document.interactables[target].entity;
+        let rules: Vec<&str> = bound_rules[target]
+            .iter()
+            .map(|&r| document.rules[r].id.as_str())
+            .collect();
+        let mut path = describe(at);
+        path.push(format!(
+            "{} (switches '{name}' back on)",
+            runtime.model_event_name(event)
+        ));
+        add(
+            Level::Warning,
+            "once-exhausted",
+            format!(
+                "'{name}' is switched back on after every rule on it ({}) already fired, and a `once` rule never fires twice, so pressing it will do nothing. Make the rule repeatable (once: false) and guard it with a counter condition.",
+                rules.join(", ")
+            ),
+            path,
         );
     }
     // Stuck states: reachable, not finished, and unable to reach a win.

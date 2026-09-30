@@ -127,7 +127,7 @@ It prints the shortest way to win and to lose (`timer fuse runs out x3` means th
 findings by level. **Errors** make the command exit 1: the game can never be won. **Warnings** are dead parts: a
 rule that never fires, a target nothing enables or that no rule reacts to, a timer nobody listens to or never
 starts, a counter that rules change but no condition reads (so it only decorates the HUD), a `fail` that can never
-happen, and stuck states (reachable, not lost, and no longer winnable, with the way in). **Info** notes a game that
+happen, a target switched back on after its `once` rules are spent (`once-exhausted`), and stuck states (reachable, not lost, and no longer winnable, with the way in). **Info** notes a game that
 cannot be lost, and targets that can be pressed in a state where nothing happens (often armed a step too early).
 
 Time and movement are abstracted: any running timer may run out at any moment and any enabled target may be pressed,
@@ -140,7 +140,15 @@ notes rather than warnings. Run it before writing scenarios: the shortest win is
 
 Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
 `on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.
-Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete and fail end the match.
+Rules run in document order; later rules see earlier changes. Complete and fail end the match.
+
+**`once` is per match and never resets.** A `once` rule that has fired can never fire again for the rest of the match,
+even if the target it acts on is switched back on. That is what you want for a one-way step (press the switch, open the
+door) and wrong for anything that can be retried. For a "wrong input resets the puzzle" design, make the rules that
+must run again repeatable (`once: false`) and guard each one with a counter condition so it only fires at the right
+step (`{"counter":"seq_step","equals":2}`); put the reset rules *before* the step rules, because a later rule sees an
+earlier rule's changes and would otherwise fire in the same press. `game-explore` warns (`once-exhausted`) when a
+target is switched back on after every rule on it has used up its `once`.
 Enabled controls interaction and trigger zone eligibility. Visibility is separately
 replicated for interactable geometry and never changes collision or eligibility; use
 both actions when an object should disappear and stop responding. Kinematic `movers` smoothly translate box colliders

@@ -628,3 +628,100 @@ fn folding_never_changes_an_answer_on_random_games() {
         "folding never reduced anything: the test is not exercising it"
     );
 }
+
+#[test]
+fn a_reset_that_re_enables_a_used_up_once_rule_is_flagged_and_a_repeatable_rule_is_not() {
+    // button-a counts a strike and switches itself off (once); button-b "resets" by switching it back on.
+    let build = |once: bool| {
+        let mut strike = rule(
+            "strike",
+            on("button-a"),
+            Value::Null,
+            json!([
+                {"action": "increment", "counter": "n", "amount": 1},
+                {"action": "set_enabled", "entity": "button-a", "enabled": false}
+            ]),
+        );
+        strike["once"] = json!(once);
+        game(
+            json!({"n": 0}),
+            json!([]),
+            json!([]),
+            json!([
+                strike,
+                rule(
+                    "reset",
+                    on("button-b"),
+                    Value::Null,
+                    json!([{"action": "set_enabled", "entity": "button-a", "enabled": true}])
+                ),
+                rule(
+                    "win",
+                    on("exit"),
+                    json!({"counter": "n", "at_least": 2}),
+                    win()
+                ),
+            ]),
+        )
+    };
+    let flagged = explore(&build(true), 1000).unwrap();
+    let f = flagged
+        .findings
+        .iter()
+        .find(|f| f.kind == "once-exhausted")
+        .expect("the once trap is found");
+    assert_eq!(f.level, Level::Warning);
+    assert!(
+        f.message.contains("'button-a'")
+            && f.message.contains("strike")
+            && f.message.contains("once: false"),
+        "{}",
+        f.message
+    );
+    assert_eq!(
+        f.path,
+        [
+            "press button-a",
+            "press button-b (switches 'button-a' back on)"
+        ]
+    );
+    // With the trap the game really cannot be won: two strikes are needed but the second never registers.
+    assert_eq!(flagged.winnable, Some(false));
+
+    let repeatable = explore(&build(false), 1000).unwrap();
+    assert!(
+        !has(&repeatable, "once-exhausted"),
+        "{:?}",
+        repeatable.findings
+    );
+    assert_eq!(repeatable.winnable, Some(true));
+}
+
+#[test]
+fn enabling_a_target_for_the_first_time_is_not_a_once_trap() {
+    // a's once rule enables b; b's once rule has not fired yet, so nothing is exhausted.
+    let mut enable_b = rule(
+        "a",
+        on("button-a"),
+        Value::Null,
+        json!([{"action": "set_enabled", "entity": "button-b", "enabled": true}]),
+    );
+    enable_b["once"] = json!(true);
+    let mut finish = rule("b", on("button-b"), Value::Null, win());
+    finish["once"] = json!(true);
+    let mut g = game(
+        json!({"n": 0}),
+        json!([]),
+        json!([]),
+        json!([enable_b, finish]),
+    );
+    g.document
+        .interactables
+        .iter_mut()
+        .find(|i| i.entity == "button-b")
+        .unwrap()
+        .enabled = false;
+    let r = explore(&g, 1000).unwrap();
+    assert!(!has(&r, "once-exhausted"), "{:?}", r.findings);
+    assert_eq!(r.winnable, Some(true));
+}

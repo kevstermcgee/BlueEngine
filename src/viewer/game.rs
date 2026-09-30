@@ -371,6 +371,69 @@ fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+/// A game box (an interactable or a mover) is described by three records in the map that must all be named
+/// after it and agree: a scene node, a collider and an entity. Say exactly what is missing or differs.
+fn check_game_box(map: &MapDocument, id: &str, kind: &str) -> Result<()> {
+    let entity = map.entities.iter().find(|e| e.id == id);
+    let node = map.scene.nodes.iter().find(|n| n.id == id);
+    let collider = map.colliders.get(id);
+    let (Some(entity), Some(node), Some(collider)) = (entity, node, collider) else {
+        let state = |present: bool| if present { "found" } else { "MISSING" };
+        let fix = if kind == "Interactable" {
+            format!("`be2-tools add-interactable GAME.json {id} --at=X,Y,Z` creates all of them and the game.json entry together")
+        } else {
+            "add the box with a non-structural add_box patch, which creates all three".to_string()
+        };
+        return Err(format!(
+            "{kind} '{id}' needs three matching records in the map, each named '{id}': scene node ({}), collider ({}), entity ({}). {fix}.",
+            state(node.is_some()),
+            state(collider.is_some()),
+            state(entity.is_some())
+        )
+        .into());
+    };
+    let (Track::Fixed(center), Track::Fixed(half), Track::Fixed(rotation)) =
+        (&node.pos, &node.scale, &node.rot)
+    else {
+        return Err(format!(
+            "{kind} '{id}' has an animated position, scale or rotation; game boxes must be fixed."
+        )
+        .into());
+    };
+    if !matches!(node.shape, Shape::Box) {
+        return Err(format!(
+            "{kind} '{id}' is not a box node; game boxes must be axis-aligned boxes."
+        )
+        .into());
+    }
+    if *rotation != V::ZERO {
+        return Err(format!("{kind} '{id}' is rotated; game boxes must be axis-aligned.").into());
+    }
+    if node.material.starts_with("prop-") || node.material.starts_with("decor-") {
+        return Err(format!(
+            "{kind} '{id}' uses the prop/decor material '{}'; game boxes must be plain boxes.",
+            node.material
+        )
+        .into());
+    }
+    let (lo, hi) = (*center - *half, *center + *half);
+    if collider.min != lo || collider.max != hi {
+        return Err(format!(
+            "{kind} '{id}': the collider {:?}..{:?} does not match the node box {lo:?}..{hi:?}.",
+            collider.min, collider.max
+        )
+        .into());
+    }
+    if entity.bounds.min != collider.min || entity.bounds.max != collider.max {
+        return Err(format!(
+            "{kind} '{id}': the entity bounds {:?}..{:?} do not match the collider {:?}..{:?}.",
+            entity.bounds.min, entity.bounds.max, collider.min, collider.max
+        )
+        .into());
+    }
+    Ok(())
+}
+
 impl GameDocument {
     /// The confined map path a game document at `path` refers to.
     pub fn map_path(&self, path: &Path) -> Result<PathBuf> {
@@ -450,37 +513,7 @@ impl GameDocument {
             }
         }
         for target in &self.interactables {
-            let entity = map
-                .entities
-                .iter()
-                .find(|e| e.id == target.entity)
-                .ok_or("Unknown interaction entity")?;
-            let node = map
-                .scene
-                .nodes
-                .iter()
-                .find(|n| n.id == target.entity)
-                .ok_or("Interactables require matching static box node IDs")?;
-            let collider = map
-                .colliders
-                .get(&target.entity)
-                .ok_or("Interactables require matching collider IDs")?;
-            let (Track::Fixed(center), Track::Fixed(half), Track::Fixed(rotation)) =
-                (&node.pos, &node.scale, &node.rot)
-            else {
-                return Err("Interactables require fixed box transforms".into());
-            };
-            if !matches!(node.shape, Shape::Box)
-                || *rotation != V::ZERO
-                || node.material.starts_with("prop-")
-                || node.material.starts_with("decor-")
-                || collider.min != *center - *half
-                || collider.max != *center + *half
-                || entity.bounds.min != collider.min
-                || entity.bounds.max != collider.max
-            {
-                return Err("Interactables must be static axis-aligned boxes with matching geometry/collision/entity bounds".into());
-            }
+            check_game_box(map, &target.entity, "Interactable")?;
         }
         let finite_vec = |v: V| {
             [v.0, v.1, v.2]
@@ -499,37 +532,7 @@ impl GameDocument {
             }
         }
         for mover in &self.movers {
-            let entity = map
-                .entities
-                .iter()
-                .find(|e| e.id == mover.entity)
-                .ok_or("Unknown mover entity")?;
-            let node = map
-                .scene
-                .nodes
-                .iter()
-                .find(|n| n.id == mover.entity)
-                .ok_or("Movers require matching static box node IDs")?;
-            let collider = map
-                .colliders
-                .get(&mover.entity)
-                .ok_or("Movers require matching collider IDs")?;
-            let (Track::Fixed(center), Track::Fixed(half), Track::Fixed(rotation)) =
-                (&node.pos, &node.scale, &node.rot)
-            else {
-                return Err("Movers require fixed box transforms".into());
-            };
-            if !matches!(node.shape, Shape::Box)
-                || *rotation != V::ZERO
-                || node.material.starts_with("prop-")
-                || node.material.starts_with("decor-")
-                || collider.min != *center - *half
-                || collider.max != *center + *half
-                || entity.bounds.min != collider.min
-                || entity.bounds.max != collider.max
-            {
-                return Err("Movers must be static axis-aligned boxes with matching geometry/collision/entity bounds".into());
-            }
+            check_game_box(map, &mover.entity, "Mover")?;
             if mover.duration_ticks == 0 || mover.duration_ticks > 3600 {
                 return Err(format!("Invalid mover duration_ticks: {}", mover.id).into());
             }

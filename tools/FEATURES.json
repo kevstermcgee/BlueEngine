@@ -604,6 +604,7 @@
         "tests/game_conditions.rs",
         "tests/game_edit.rs",
         "tests/game_explore.rs",
+        "tests/game_box_errors.rs",
         "tools/game.schema.json",
         "docs/GAME_QUICKSTART.md"
       ],
@@ -611,7 +612,7 @@
         "game_documents integration tests",
         "graphical --capture-game smoke"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024).",
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries.",
       "depends_on": [
         "simulation_contract"
       ],
