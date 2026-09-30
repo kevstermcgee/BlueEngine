@@ -176,9 +176,11 @@ impl ClientInput {
                 .map_or_else(|| is_key_down(key), |k| k.down.contains(&key))
     }
 
-    /// Standard WASD/arrows, sprint, jump and crouch merged with analog input.
+    /// Standard WASD/arrows, sprint, jump and crouch merged with analog input. Read whenever the game should be taking
+    /// input (window focused, menu closed): it does not need a captured mouse, so a game with no mouse look
+    /// (`capture_cursor = false`) still moves. See [`GameShell::accepting_input`].
     pub fn movement(&self, shell: &GameShell) -> Movement {
-        if !self.focused || !shell.playing() {
+        if !self.focused || !shell.accepting_input() {
             return Movement::default();
         }
         let held = |a, b| f32::from(self.down(a) || self.down(b));
@@ -213,9 +215,9 @@ impl ClientInput {
         [-mouse.x * 2.5, -mouse.y * 2.5]
     }
     /// Right-stick look for a frame of `seconds` (radians; 2.5 rad/s at full deflection after the
-    /// engine's dead zone); zero unless playing.
+    /// engine's dead zone); zero unless the game is accepting input. A stick needs no mouse capture.
     pub fn stick_look(&self, shell: &GameShell, seconds: f32) -> [f32; 2] {
-        if !self.focused || !shell.playing() {
+        if !self.focused || !shell.accepting_input() {
             return [0.; 2];
         }
         self.frame.look_delta(seconds)
@@ -236,6 +238,62 @@ mod tests {
             menu_nav: MenuNav::default(),
             menu: MenuStep::default(),
         }
+    }
+    /// A keyboard that holds `down` (and reports `pressed` as this frame's edges), as the normal per-frame poll would.
+    fn with_keys(down: &[KeyCode], pressed: &[KeyCode]) -> ClientInput {
+        let mut input = input();
+        input.keyboard = Some(KeyboardFrame {
+            down: down.iter().copied().collect(),
+            pressed: pressed.iter().copied().collect(),
+            ..Default::default()
+        });
+        input
+    }
+    #[test]
+    fn a_game_that_never_captures_the_mouse_still_receives_keys_and_sticks() {
+        // `capture_cursor = false`: playing() is false for ever, accepting_input() is the right gate.
+        let shell = GameShell::in_state(false, false, false);
+        assert!(!shell.playing() && shell.accepting_input());
+        let mut input = with_keys(&[KeyCode::W, KeyCode::D], &[KeyCode::Space]);
+        let m = input.movement(&shell);
+        assert!(m.forward > 0. && m.right > 0. && m.jump, "{m:?}");
+        input.frame.right_stick = [1., 0.];
+        assert!(input.stick_look(&shell, 1. / 60.)[0] > 0.);
+        assert!(input.look_delta_with(&shell, 1. / 60.)[0] > 0.);
+        // The mouse half does need capture, so an uncaptured cursor must not turn the camera.
+        assert_eq!(input.mouse_look(&shell), [0., 0.]);
+        // A controller alone works too.
+        let mut pad = input_with_left_stick();
+        assert!(pad.movement(&shell).forward > 0.);
+        pad.focused = false;
+        assert_eq!(pad.movement(&shell).forward, 0.);
+    }
+    fn input_with_left_stick() -> ClientInput {
+        let mut input = with_keys(&[], &[]);
+        input.frame.left_stick = [0., 1.];
+        input
+    }
+    #[test]
+    fn input_is_withheld_while_paused_unfocused_or_right_after_a_shell_key() {
+        let keys = [KeyCode::W];
+        for (label, shell) in [
+            ("menu open", GameShell::in_state(true, true, false)),
+            (
+                "shell key just handled",
+                GameShell::in_state(true, false, true),
+            ),
+        ] {
+            let mut input = with_keys(&keys, &[]);
+            input.frame.right_stick = [1., 0.];
+            assert_eq!(input.movement(&shell).forward, 0., "{label}");
+            assert_eq!(input.stick_look(&shell, 1. / 60.), [0., 0.], "{label}");
+        }
+        let shell = GameShell::in_state(true, false, false);
+        let mut unfocused = with_keys(&keys, &[]);
+        unfocused.focused = false;
+        assert_eq!(unfocused.movement(&shell).forward, 0.);
+        // A first-person game (mouse captured) moves as before.
+        assert!(shell.playing() && with_keys(&keys, &[]).movement(&shell).forward > 0.);
     }
     #[test]
     fn macroquad_delta_becomes_right_down_pixels() {

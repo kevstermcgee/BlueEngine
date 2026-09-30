@@ -193,7 +193,7 @@ fn attempt(
     let ticks = tick + 2;
     let scenario = Scenario {
         name: format!(
-            "generated: the shortest win ({})",
+            "generated, one winning route only (loss, retry, restart and wrong order are not covered): the shortest win ({})",
             report.shortest_win.as_deref().unwrap_or(&[]).join(", ")
         ),
         game_path: Some(game_path.to_string()),

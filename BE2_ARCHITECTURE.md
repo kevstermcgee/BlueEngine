@@ -9,7 +9,7 @@ remain `be2` and the compatibility library is `vesper3d`. Historical background:
 `viewer/simulation.rs` owns HeadlessWorld and the rendering-free 60 Hz movement path.
 Controller/Movement are shared by both hosts. PlayerStepper retains jump edges,
 interpolates display poses and caps frame catch-up at eight ticks. HeadlessWorld
-holds up to eight players; input persists until replaced and jump is consumed once.
+holds eight players by default (`set_max_players`, up to 1024); input persists until replaced and jump is consumed once.
 DedicatedServer adds sequencing and six-tick (100 ms) stale-input neutralization.
 `new` and `try_with_room` report physics initialization errors. Legacy `with_room`
 retains its historical best-effort physics behavior for compatibility.
@@ -111,7 +111,8 @@ through the authoritative server.
 ## Measurement and remaining limits
 
 `be2-tools bench`, `inspect-performance`, `validate-budget` and `replay-test` provide
-current diagnostics. `be2-tools bench` and `tests/benchmarks.rs` enforce the same
+current diagnostics of the engine's built-in fixture (their reports say so; they do not measure a chosen game).
+`be2-tools net-test` is a prediction/reconciliation smoke test that exits nonzero unless its listed invariants hold. `be2-tools bench` and `tests/benchmarks.rs` enforce the same
 checked-in absolute budgets for simulation steps, snapshots, deltas and room lookup;
 budget failures return nonzero. These are service ceilings suitable for heterogeneous
 CI, not hardware-normalized baselines or allocation guards. Replay-test compares two

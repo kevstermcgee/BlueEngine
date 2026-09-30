@@ -35,7 +35,8 @@ forward, right, sprint, jump edge), `input.look_delta_with(&shell, dt)`, `input.
 right }`), `input.menu_select()`, `input.menu_back()`, `input.gamepad()` → `GamepadFrame { left_stick, right_stick,
 triggers: [left, right], down(Button), pressed(Button) }`. `gilrs` buttons are positional: `Button::South` = A,
 `West` = X, `LeftTrigger`/`RightTrigger` are the bumpers, `LeftTrigger2`/`RightTrigger2` the analog triggers.
-`shell.paused`, `shell.playing()`, `shell.local_menu(title, &controls)` (returns true to quit).
+`shell.paused`, `shell.playing()` (mouse captured: first person), `shell.accepting_input()` (menu closed: any game),
+`shell.local_menu(title, &controls)` (returns true to quit).
 
 ## Yaw and space (`devkit::path`)
 
@@ -94,7 +95,9 @@ is slow; capture a few frames, not a whole match.
 - **`shell.playing()` needs a captured mouse.** A game with no mouse look (`capture_cursor = false`) gets `false`
   forever, and gating input on it drops every key while the menus, which read keys directly, still work. Use
   `shell.accepting_input()` (or `!shell.paused`). Scripted and autopilot runs bypass this gate, so tests and
-  captures will not reveal it: run the real window once and press a key (Spooky Kart shipped with this bug).
+  captures will not reveal it: run the real window once and press a key (Spooky Kart shipped with this bug). The engine's own
+  `ClientInput::movement`/`stick_look` use `accepting_input()` (unit-tested with the mouse uncaptured); only `mouse_look` needs capture.
+  A scripted-input pass is not evidence that real keys reach your game.
 - `Lifecycle::feed` takes edge *bit flags* (`u32`), not a bool; `held` and `starts` are different cue queries.
 - A game's `scripts/blue` needs `python3` or `python`; `scripts/check.py` finds a built `be2-tools` in the engine
   checkout by itself (build it with `cargo build --profile fast --no-default-features --bin be2-tools`).

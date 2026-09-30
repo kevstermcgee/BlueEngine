@@ -197,6 +197,26 @@ impl<T: DatagramTransport> DedicatedServer<T> {
         self.max_players
     }
 
+    /// Refuse a configuration that could only fail later: replication sends at most
+    /// [`MAX_REPLICATED_ENTITIES`](crate::viewer::net::replication::MAX_REPLICATED_ENTITIES) players and props
+    /// per peer. Any of the world's lifecycle objects can become a networked prop, so `max_players` plus that count
+    /// beyond the limit would latch a replication error (and stop the server) the moment it filled up with
+    /// everything awake. Call after [`Self::with_max_players`].
+    pub fn check_capacity(&self) -> crate::Result<()> {
+        use crate::viewer::net::replication::MAX_REPLICATED_ENTITIES as LIMIT;
+        let objects = self.world.lifecycle.objects.len();
+        if self.max_players + objects > LIMIT {
+            return Err(format!(
+                "--max-players {} plus this world's {objects} objects that can become networked props exceeds the {LIMIT} \
+                 players and props replication sends to one peer; use --max-players {} or fewer, or remove objects",
+                self.max_players,
+                LIMIT.saturating_sub(objects).max(1)
+            )
+            .into());
+        }
+        Ok(())
+    }
+
     /// Threads used to prepare each peer's world update (default 1: everything on the calling thread).
     /// `0` means one per available core. Preparing an update reads the shared world and touches only that
     /// peer's own replication state, so peers are independent: the bytes every peer receives, and the order

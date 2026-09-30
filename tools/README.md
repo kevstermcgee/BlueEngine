@@ -130,11 +130,12 @@ Map schema v1 is for portable, static, matte primitive maps. It accepts unparent
 - `sim SCENARIO.json [TRACE.json]` runs an authoritative headless simulation scenario and writes an execution trace.
 - `replay-trace TRACE.json [GAME.json]` replays a simulation trace tick-by-tick and verifies deterministic state checksums; game scenarios retain their resolved game path, and the optional argument overrides it.
 - `replay-test` runs an automated 120-tick determinism and state checkpoint verification test.
-- `net-test` runs deterministic multiplayer client-side prediction and server reconciliation under artificial network latency and packet loss.
+- `net-test [--ticks=N] [--latency-ms=N] [--loss-rate=R]` is a built-in prediction/reconciliation smoke test: one scripted client walking forward in the engine's test lab through the in-process `NetworkSimulator` (latency and deterministic every-Nth-packet loss, no sockets). It prints `completed`, `verified` and a `checks` list (packet conservation, loss near the configured rate, delivery and acknowledgement progress, the server applying inputs, bounded prediction divergence), and exits nonzero if any check fails, so `ok` means those invariants held, not merely that the run finished. Its `not_tested` list names what it does not cover (real sockets, QUIC/TLS, your game, replication, load). For real transports see `tests/multiplayer_transport.rs`, `tests/replication_sockets.rs` and `net-proxy`.
 - `net-proxy LISTEN UPSTREAM [PRESET]` runs a live UDP network impairment proxy with Gilbert-Elliott burst loss, Gaussian latency/jitter (Box-Muller), packet duplication, and standard bad network presets (`bad-wifi`, `mobile-3g`, `satellite`, `congested-bursty`).
 - `bench` measures simulation steps, snapshot creation, delta compression, and room graph lookups; it returns nonzero when a checked-in regression budget is exceeded.
 - `inspect-performance` measures memory, allocation, and tick budgets.
 - `validate-budget` validates engine performance budgets and reports any violations.
+  These three time the engine's **built-in fixture** (`HeadlessWorld::new()`, two players), never a map or game you selected; each report has a `measured` object saying so. A pass is an engine regression guard, not evidence that a particular game meets a budget. Measure a game with its own scenario or server (`be2-headless --profile`).
 - `new-game NAME DIRECTORY [ENGINE_PATH]` scaffolds a complete game project with starter map and rule definitions.
 - `ui-check` audits UI layout geometry and text fit across aspect ratios.
 - `mcp` runs the Model Context Protocol (MCP) JSON-RPC stdio server exposing engine tools directly to AI agents.

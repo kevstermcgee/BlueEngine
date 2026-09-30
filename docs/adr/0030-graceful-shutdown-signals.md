@@ -24,7 +24,7 @@ after the save.
 * **Windows close/shutdown events wait** up to 4.5 s for `finished()`, because the system ends the process when the handler
   returns.
 * `unsafe` is confined to this module (`#![allow(unsafe_code)]`, like the existing OS calls in `input.rs`), with a `SAFETY`
-  note on each block. The Windows half was type-checked for `x86_64-pc-windows-gnu` and is exercised by CI; the behavioural tests
+  note on each block. The Windows half is compiled (type-checked for `x86_64-pc-windows-gnu`, built by the Windows CI job) but **no test delivers a real console control event, so its runtime behaviour (save, then exit 0; the 4.5 s wait) is unverified**; the behavioural tests
   are Unix-only.
 
 Not adopted: the `ctrlc` crate (forbidden in the headless graph); a notice packet to connected clients on shutdown (they time

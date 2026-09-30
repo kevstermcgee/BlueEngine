@@ -64,7 +64,8 @@ tests in `src/viewer/savestate/` and `src/viewer/devkit/snapshot.rs`).
 | payload | UTF-8 JSON of the state |
 | last 32 | SHA-256 of every preceding byte |
 
-Limits: header 64 KiB, payload 64 MiB, at most 8 players, 4096 props, 65 536 lifecycle objects. A length that
+Limits: header 64 KiB, payload 64 MiB, at most 1024 players (the most a server can admit with `--max-players`; it was 8, which made a
+larger server's autosave fail), 4096 props, 65 536 lifecycle objects. `be2-tools describe` prints them under `runtime_support`. A length that
 lies is refused before anything is allocated.
 
 ## A game with its own simulation
