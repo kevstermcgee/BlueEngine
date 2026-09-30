@@ -351,7 +351,7 @@ fn scaffold_custom_sim(project: &Project) -> Result<Identity> {
     let files: [(&str, &str); 7] = [
         (
             "Cargo.toml",
-            include_str!("../../templates/custom-sim/Cargo.toml"),
+            include_str!("../../templates/custom-sim/Cargo.toml.tmpl"),
         ),
         (
             "AGENTS.md",

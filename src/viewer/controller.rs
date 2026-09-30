@@ -280,6 +280,27 @@ impl Controller {
         self.vertical_velocity = vert_vel;
         self.grounded = grounded;
     }
+    /// A kinematic box moved from `from` to `to` this tick (a game mover; a pure translation): a grounded body
+    /// standing on top of it rides along, so lifts, elevators and moving platforms carry whoever is on them, in
+    /// every direction including down. Nothing else is needed for a box that slides into a body or rises into
+    /// it, because ordinary collision already pushes the body out; what collision cannot do is keep a body on
+    /// top of a box that moves away from under it, which is why the body used to sink through a rising lift.
+    ///
+    /// Call it once per mover per tick, after the mover has moved and before the controller updates.
+    pub fn ride(&mut self, from: &Collider, to: &Collider) {
+        let delta = to.min - from.min;
+        if delta == V::ZERO {
+            return;
+        }
+        let standing = self.grounded
+            && (self.feet - from.max.1).abs() <= 0.05
+            && from.overlaps_xz(self.position, self.profile.radius);
+        if standing {
+            self.position = self.position + delta;
+            self.feet += delta.1;
+            self.vertical_velocity = 0.;
+        }
+    }
     pub fn direction(&self) -> V {
         V(
             self.yaw.sin() * self.pitch.cos(),

@@ -32,3 +32,7 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0020: One mouse-look convention, checkable scale, and a dev loop that survives a running game](0020-look-scale-and-dev-loop.md)
 - [0021: Stick look in the shared convention, discrete menu steps, and a graceful exit](0021-stick-look-menu-steps-and-exit.md)
 - [0022: A multiplayer kit for custom simulations, and the fixes Spooky Kart called for](0022-custom-sim-multiplayer-kit.md)
+- [0023: A lost outcome and richer rule conditions](0023-fail-outcome-and-rich-conditions.md)
+- [0024: Explore a GameDocument's rule states instead of trusting validation](0024-game-explore.md)
+- [0025: Scenarios that say what they mean, and a generated first scenario](0025-scenario-intents-and-generated-scenarios.md)
+- [0026: Movers carry the players standing on them](0026-movers-carry-players.md)

@@ -18,51 +18,68 @@ pub struct PlayerConfig {
     pub spawn: Option<[f32; 3]>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct TimedInput {
     pub tick: u64,
     pub player: u64,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero")]
     pub forward: f32,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero")]
     pub right: f32,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero")]
     pub yaw: f32,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_zero")]
     pub pitch: f32,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub sprint: bool,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub jump: bool,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub crouch: bool,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub interact: bool,
+    /// Walk to this point (x, z, metres) at full speed and stop there. Later inputs for the same player
+    /// wait until it arrives and settles, so a scenario reads as intent ("walk here, then press") instead of
+    /// tick arithmetic. Unless `face` is given the player keeps the heading it has.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub walk_to: Option<[f32; 2]>,
+    /// Look at the centre of this entity (yaw and pitch are set from where the player's eyes are now).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub face: Option<String>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Assertion {
     pub tick: u64,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub player: Option<u64>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub position_near: Option<[f32; 3]>,
     #[serde(default = "default_tolerance")]
     pub tolerance: f32,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counter: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub counter_equals: Option<i32>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub completed_equals: Option<bool>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub failed_equals: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub enabled_equals: Option<bool>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub visible_equals: Option<bool>,
+}
+
+fn is_zero(v: &f32) -> bool {
+    *v == 0.0
+}
+fn is_false(v: &bool) -> bool {
+    !*v
 }
 
 fn default_tolerance() -> f32 {
@@ -147,6 +164,175 @@ pub struct ScenarioRunReport {
     pub ok: bool,
     pub trace: SimulationTrace,
     pub assertions: Vec<AssertionOutcome>,
+    /// Where each player ended up (eye position), so a scenario's walk can be checked without guessing.
+    pub players: Vec<FinalPlayer>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct FinalPlayer {
+    pub id: u64,
+    pub position: [f32; 3],
+    pub yaw: f32,
+}
+
+/// How close to a `walk_to` point counts as arrived, and how long the player then takes to stop.
+const ARRIVE_M: f32 = 0.12;
+const SETTLE_TICKS: u32 = 8;
+/// A walk that has not arrived after this many ticks is reported instead of hanging the scenario.
+const WALK_TIMEOUT_TICKS: u32 = 1800;
+
+/// Applies a scenario's timed inputs, including the `walk_to` and `face` intents. The assertion runner and
+/// the replay verifier both use it, so they cannot disagree about what an input does.
+pub struct InputDriver {
+    pending: Vec<TimedInput>,
+    walking: std::collections::BTreeMap<u64, (V2, u32)>,
+    settling: std::collections::BTreeMap<u64, u32>,
+    problems: Vec<String>,
+}
+type V2 = [f32; 2];
+
+impl InputDriver {
+    pub fn new(inputs: &[TimedInput]) -> Self {
+        let mut pending = inputs.to_vec();
+        pending.sort_by_key(|i| i.tick); // stable: same-tick inputs keep their order
+        Self {
+            pending,
+            walking: Default::default(),
+            settling: Default::default(),
+            problems: Vec::new(),
+        }
+    }
+    /// Queue another input while a run is in progress (used to record a scenario as it is played).
+    pub fn push(&mut self, input: TimedInput) {
+        self.pending.push(input);
+        self.pending.sort_by_key(|i| i.tick);
+    }
+    /// True when this player is walking or still settling, so its next input would be held.
+    pub fn busy(&self, player: u64) -> bool {
+        self.held(player) || self.pending.iter().any(|i| i.player == player)
+    }
+    /// Things that went wrong that an assertion cannot see (a walk that never arrived, an unknown entity).
+    pub fn problems(&self) -> &[String] {
+        &self.problems
+    }
+    /// True when nothing is left to apply and nobody is walking or settling.
+    pub fn finished(&self) -> bool {
+        self.pending.is_empty() && self.walking.is_empty() && self.settling.is_empty()
+    }
+    fn held(&self, player: u64) -> bool {
+        self.walking.contains_key(&player) || self.settling.contains_key(&player)
+    }
+    /// Apply what is due at `tick`, then steer walkers. Call once per tick, before `world.step()`.
+    pub fn before_step(&mut self, world: &mut HeadlessWorld, tick: u64) {
+        let mut i = 0;
+        while i < self.pending.len() {
+            if self.pending[i].tick <= tick && !self.held(self.pending[i].player) {
+                let input = self.pending.remove(i);
+                self.apply(world, &input);
+            } else {
+                i += 1;
+            }
+        }
+        let walkers: Vec<u64> = self.walking.keys().copied().collect();
+        for id in walkers {
+            self.steer(world, id);
+        }
+        self.settling.retain(|_, left| {
+            *left = left.saturating_sub(1);
+            *left > 0
+        });
+    }
+    fn apply(&mut self, world: &mut HeadlessWorld, input: &TimedInput) {
+        let (mut yaw, mut pitch) = (input.yaw, input.pitch);
+        if let Some(name) = &input.face {
+            match Self::heading_to(world, input.player, name) {
+                Some(heading) => (yaw, pitch) = heading,
+                None => self.problems.push(format!(
+                    "tick {}: player {} cannot face '{name}' (unknown entity or player)",
+                    input.tick, input.player
+                )),
+            }
+        } else if input.walk_to.is_some() {
+            if let Some(player) = world.player(input.player) {
+                (yaw, pitch) = (player.yaw, player.pitch);
+            }
+        }
+        let movement = Movement {
+            forward: if input.walk_to.is_some() {
+                0.
+            } else {
+                input.forward
+            },
+            right: if input.walk_to.is_some() {
+                0.
+            } else {
+                input.right
+            },
+            sprint: input.sprint,
+            jump: input.jump,
+            crouch: input.crouch,
+        };
+        world.input(input.player, movement, yaw, pitch);
+        if let Some(target) = input.walk_to {
+            self.walking.insert(input.player, (target, 0));
+        }
+        if input.interact {
+            world.request_interaction(input.player);
+        }
+    }
+    /// Yaw and pitch that put the centre of entity `name` in the middle of the player's view.
+    fn heading_to(world: &HeadlessWorld, player: u64, name: &str) -> Option<(f32, f32)> {
+        let eye = world.player(player)?.position;
+        let bounds = &world.room.entities.iter().find(|e| e.id == name)?.bounds;
+        let d = (bounds.min + bounds.max) * 0.5 - eye;
+        let level = d.0.hypot(d.2);
+        Some((d.0.atan2(-d.2), d.1.atan2(level)))
+    }
+    fn steer(&mut self, world: &mut HeadlessWorld, id: u64) {
+        let Some((target, ticks)) = self.walking.get(&id).copied() else {
+            return;
+        };
+        let Some(player) = world.player(id) else {
+            self.walking.remove(&id);
+            return;
+        };
+        let (position, yaw, pitch) = (player.position, player.yaw, player.pitch);
+        let (dx, dz) = (target[0] - position.0, target[1] - position.2);
+        let distance = dx.hypot(dz);
+        let stop = Movement {
+            forward: 0.,
+            right: 0.,
+            sprint: false,
+            jump: false,
+            crouch: false,
+        };
+        if distance <= ARRIVE_M {
+            world.input(id, stop, yaw, pitch);
+            self.walking.remove(&id);
+            self.settling.insert(id, SETTLE_TICKS);
+        } else if ticks >= WALK_TIMEOUT_TICKS {
+            world.input(id, stop, yaw, pitch);
+            self.walking.remove(&id);
+            self.problems.push(format!(
+                "player {id} did not reach ({:.2}, {:.2}) within {WALK_TIMEOUT_TICKS} ticks; it is at ({:.2}, {:.2})",
+                target[0], target[1], position.0, position.2
+            ));
+        } else {
+            // World direction to the target, expressed as forward/right for the current heading, and
+            // eased in over the last half metre so the player stops close to the point.
+            let (ux, uz) = (dx / distance, dz / distance);
+            let forward = ux * yaw.sin() - uz * yaw.cos();
+            let right = ux * yaw.cos() + uz * yaw.sin();
+            let ease = (distance / 0.5).clamp(0.2, 1.);
+            let movement = Movement {
+                forward: forward * ease,
+                right: right * ease,
+                ..stop
+            };
+            world.input(id, movement, yaw, pitch);
+            self.walking.insert(id, (target, ticks + 1));
+        }
+    }
 }
 
 /// Load a scenario and resolve its game path relative to the scenario file.
@@ -181,9 +367,7 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
 
     let initial_checksum = world.checksum();
     let mut checkpoints = Vec::new();
-    let mut input_idx = 0;
-    let mut inputs_sorted = scenario.inputs.clone();
-    inputs_sorted.sort_by_key(|i| i.tick);
+    let mut driver = InputDriver::new(&scenario.inputs);
     let mut assertion_outcomes = scenario
         .assertions
         .iter()
@@ -196,21 +380,7 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
         .collect::<Vec<_>>();
 
     for tick in 1..=scenario.ticks {
-        while input_idx < inputs_sorted.len() && inputs_sorted[input_idx].tick <= tick {
-            let inp = &inputs_sorted[input_idx];
-            let mv = Movement {
-                forward: inp.forward,
-                right: inp.right,
-                sprint: inp.sprint,
-                jump: inp.jump,
-                crouch: inp.crouch,
-            };
-            world.input(inp.player, mv, inp.yaw, inp.pitch);
-            if inp.interact {
-                world.request_interaction(inp.player);
-            }
-            input_idx += 1;
-        }
+        driver.before_step(&mut world, tick);
 
         world.step();
 
@@ -265,6 +435,17 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
                             game.state().completed
                         )),
                         None => failures.push("completed assertion requires a game".into()),
+                        _ => {}
+                    }
+                }
+
+                if let Some(expected) = assert.failed_equals {
+                    match &world.game {
+                        Some(game) if game.state().failed != expected => failures.push(format!(
+                            "failed is {}, expected {expected}",
+                            game.state().failed
+                        )),
+                        None => failures.push("failed assertion requires a game".into()),
                         _ => {}
                     }
                 }
@@ -337,10 +518,30 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
         players: scenario.players.clone(),
     };
 
+    for problem in driver.problems() {
+        assertion_outcomes.push(AssertionOutcome {
+            tick: scenario.ticks,
+            ok: false,
+            detail: problem.clone(),
+        });
+    }
+    let players = scenario
+        .players
+        .iter()
+        .filter_map(|p| {
+            let c = world.player(p.id)?;
+            Some(FinalPlayer {
+                id: p.id,
+                position: [c.position.0, c.position.1, c.position.2],
+                yaw: c.yaw,
+            })
+        })
+        .collect();
     Ok(ScenarioRunReport {
         ok: assertion_outcomes.iter().all(|outcome| outcome.ok),
         trace,
         assertions: assertion_outcomes,
+        players,
     })
 }
 
@@ -384,27 +585,11 @@ pub fn verify_replay_trace(
         }
     }
 
-    let mut input_idx = 0;
-    let mut inputs_sorted = trace.inputs.clone();
-    inputs_sorted.sort_by_key(|i| i.tick);
+    let mut driver = InputDriver::new(&trace.inputs);
     let mut verified = 0;
 
     for tick in 1..=trace.total_ticks {
-        while input_idx < inputs_sorted.len() && inputs_sorted[input_idx].tick <= tick {
-            let inp = &inputs_sorted[input_idx];
-            let mv = Movement {
-                forward: inp.forward,
-                right: inp.right,
-                sprint: inp.sprint,
-                jump: inp.jump,
-                crouch: inp.crouch,
-            };
-            replay_world.input(inp.player, mv, inp.yaw, inp.pitch);
-            if inp.interact {
-                replay_world.request_interaction(inp.player);
-            }
-            input_idx += 1;
-        }
+        driver.before_step(&mut replay_world, tick);
 
         replay_world.step();
 

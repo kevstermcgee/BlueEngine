@@ -92,10 +92,10 @@ fn run() -> Result<()> {
             json!({
                 "ok":true,"schema_version":1,"schema_command":"game-schema", "example":"game-example NEW_DIRECTORY",
                 "event":"authoritative nearest-visible interaction within 2.5 metres (E intent), spatial trigger zones (on_enter/on_exit), or timers (on_timer)",
-                "actions":["increment","set_counter","set_enabled","set_visible","set_mover","start_timer","stop_timer","complete"],
-                "conditions":"counter equals integer; null means unconditional",
+                "actions":["increment","set_counter","set_enabled","set_visible","set_mover","start_timer","stop_timer","complete","fail"],
+                "conditions":"null is unconditional; a leaf is {counter, [modulo], equals|not_equals|less_than|greater_than|at_most|at_least} (several comparisons must all hold); or {all:[...]}, {any:[...]}, {not:{...}}, nested at most 4 deep, 16 parts","outcomes":"complete wins, fail loses; both end the match until restart",
                 "limits":{"game_bytes":64000,"spawns":8,"counters":32,"interactables":64,"trigger_zones":64,"movers":64,"timers":64,"rules":64,"actions_per_rule":4,"counter_magnitude":1000000},
-                "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match",
+                "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match and never resets (a retryable rule needs once:false and a counter condition)",
                 "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds; trigger zones declare spatial AABB bounds; movers translate colliders smoothly",
                 "set_enabled":"interaction and trigger zone eligibility only; never changes visibility or collision",
                 "set_visible":"interactable presentation only; never changes eligibility or collision",
@@ -117,7 +117,7 @@ fn run() -> Result<()> {
             );
         }
         "help" => {
-            println!("BlueEngine native toolkit (new output paths only)");
+            println!("BlueEngine native toolkit (new output paths only, except add-interactable --write)");
             for (name, signature) in vesper3d::viewer::capabilities::COMMANDS {
                 println!("{name} {signature}");
             }
@@ -431,6 +431,104 @@ fn run() -> Result<()> {
                 std::process::exit(1);
             }
         }
+        "game-explore" => {
+            use vesper3d::viewer::{
+                game_explore::{explore, DEFAULT_MAX_STATES},
+                game_scenario::{game_path_relative_to, win_scenario},
+            };
+            // GAME.json [--max-states=N] [--scenario=OUT.json]: can the game be won or lost, and what in
+            // it is dead? --scenario also writes a verified scenario that plays the shortest win.
+            let (mut limit, mut scenario_out) = (DEFAULT_MAX_STATES, None);
+            for flag in &a[2..] {
+                match flag.split_once('=') {
+                    Some(("--max-states", n)) => {
+                        limit = n
+                            .parse()
+                            .ok()
+                            .filter(|n| (1..=5_000_000).contains(n))
+                            .ok_or("--max-states must be a whole number from 1 to 5000000")?
+                    }
+                    Some(("--scenario", path)) if !path.is_empty() => scenario_out = Some(path),
+                    _ => {
+                        return Err(
+                            "Unknown option; use --max-states=N or --scenario=OUT.json".into()
+                        )
+                    }
+                }
+            }
+            let game_file = Path::new(arg(1)?);
+            let loaded = vesper3d::viewer::game::GameDocument::load(game_file)?;
+            let report = explore(&loaded, limit)?;
+            let mut scenario_note = serde_json::Value::Null;
+            if let Some(out) = scenario_out {
+                scenario_note = if report.winnable == Some(true) {
+                    let stored = game_path_relative_to(Path::new(out), game_file)?;
+                    let check = game_file.canonicalize()?.to_string_lossy().into_owned();
+                    match win_scenario(&loaded, &report, &stored, &check) {
+                        Ok(made) => {
+                            save(out, &made.scenario)?;
+                            json!({"written": out, "verified": true, "ticks": made.scenario.ticks, "stood": made.strategy})
+                        }
+                        Err(error) => {
+                            json!({"written": null, "verified": false, "error": error.to_string()})
+                        }
+                    }
+                } else {
+                    json!({"written": null, "verified": false, "error": "the game has no known win to play"})
+                };
+            }
+            println!(
+                "{}",
+                json!({"ok": !report.has_errors(), "report": report, "scenario": scenario_note})
+            );
+            if report.has_errors() {
+                std::process::exit(1);
+            }
+        }
+        "add-interactable" => {
+            use vesper3d::viewer::game_edit::{add_interactable, InteractableSpec};
+            // GAME.json ID --at=X,Y,Z [--size=HX,HY,HZ] [--color=R,G,B] [--label=TEXT] [--disabled]
+            // [--hidden] [--write]. Without --write this only validates and reports. Flags use the
+            // `--name=value` form so a negative coordinate is never mistaken for another option.
+            let mut spec = InteractableSpec::new(arg(2)?, V(f32::NAN, 0., 0.));
+            let mut at = None;
+            let mut write = false;
+            for flag in &a[3..] {
+                let (name, value) = flag.split_once('=').unwrap_or((flag, ""));
+                let need = |what: &str| -> Result<&str> {
+                    if value.is_empty() {
+                        Err(format!("{name} needs a value: write {name}={what}").into())
+                    } else {
+                        Ok(value)
+                    }
+                };
+                match name {
+                    "--at" => at = Some(vector(need("X,Y,Z")?)?),
+                    "--size" => spec.half_extents = vector(need("HX,HY,HZ")?)?,
+                    "--color" => spec.color = vector(need("R,G,B")?)?,
+                    "--label" => spec.label = Some(need("TEXT")?.to_string()),
+                    "--disabled" => spec.enabled = false,
+                    "--hidden" => spec.visible = false,
+                    "--write" => write = true,
+                    other => {
+                        return Err(format!("Unknown option {other}; see be2-tools help").into())
+                    }
+                }
+            }
+            spec.center = at.ok_or("--at=X,Y,Z is required (metres)")?;
+            let report = add_interactable(Path::new(arg(1)?), &spec, write)?;
+            println!(
+                "{}",
+                json!({
+                    "ok": true, "written": report.written,
+                    "game": report.game, "map": report.map,
+                    "records": report.records, "warnings": report.warnings,
+                    "rule_template": report.rule_template,
+                    "note": if report.written { "game.json and the map were updated" }
+                            else { "dry run: nothing was written; repeat with --write to apply" },
+                })
+            );
+        }
         "new-game" => {
             use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
             let name = arg(1)?;
@@ -662,6 +760,7 @@ fn run() -> Result<()> {
                     "ticks": report.trace.total_ticks,
                     "final_checksum": format!("0x{:016x}", last_chk),
                     "assertions": report.assertions,
+                    "players": report.players,
                 })
             );
             if !report.ok {

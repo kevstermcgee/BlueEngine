@@ -12,10 +12,13 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::{BTreeMap, BTreeSet},
     io::Read,
-    path::{Component, Path},
+    path::{Component, Path, PathBuf},
 };
 
 pub const MAX_COUNTER: i32 = 1_000_000;
+/// Byte limits for a game document and its map when loaded from disk.
+pub const MAX_GAME_BYTES: u64 = 64_000;
+pub const MAX_MAP_BYTES: u64 = 8_000_000;
 pub const INTERACT_REACH: f32 = 2.5;
 pub const MAX_GAME_COUNTERS: usize = 32;
 pub const MAX_GAME_FLAGS: usize = 64;
@@ -51,11 +54,195 @@ pub struct Interactable {
     pub visible: bool,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// A rule guard over counters. Exactly one form is used per node:
+/// a leaf (`counter` plus one or more comparisons, all of which must hold), or a compound
+/// (`all`, `any`, `not`). `{"counter": "x", "equals": 1}` is the original form and still works.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Condition {
-    pub counter: String,
-    pub equals: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub counter: Option<String>,
+    /// Compare `counter mod modulo` (always 0..modulo) instead of the raw value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modulo: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub equals: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_equals: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub less_than: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub greater_than: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_most: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_least: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub all: Option<Vec<Condition>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub any: Option<Vec<Condition>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not: Option<Box<Condition>>,
+}
+
+/// Bounds that keep a condition cheap to evaluate every tick and small in the document.
+pub const MAX_CONDITION_DEPTH: usize = 4;
+pub const MAX_CONDITION_NODES: usize = 16;
+
+impl Condition {
+    /// The original single-comparison guard.
+    pub fn counter_equals(counter: &str, value: i32) -> Self {
+        Self {
+            counter: Some(counter.into()),
+            equals: Some(value),
+            ..Self::default()
+        }
+    }
+
+    fn comparisons(&self) -> [(Cmp, Option<i32>); 6] {
+        [
+            (Cmp::Eq, self.equals),
+            (Cmp::Ne, self.not_equals),
+            (Cmp::Lt, self.less_than),
+            (Cmp::Gt, self.greater_than),
+            (Cmp::Le, self.at_most),
+            (Cmp::Ge, self.at_least),
+        ]
+    }
+
+    /// Check shape, references and limits; `nodes` counts every node visited so far.
+    fn validate(
+        &self,
+        counters: &BTreeMap<String, i32>,
+        depth: usize,
+        nodes: &mut usize,
+    ) -> std::result::Result<(), String> {
+        *nodes += 1;
+        if depth > MAX_CONDITION_DEPTH || *nodes > MAX_CONDITION_NODES {
+            return Err(format!(
+                "condition nests deeper than {MAX_CONDITION_DEPTH} or has more than {MAX_CONDITION_NODES} parts"
+            ));
+        }
+        let in_range = |v: i32| (-MAX_COUNTER..=MAX_COUNTER).contains(&v);
+        let leaf_fields = self.counter.is_some()
+            || self.modulo.is_some()
+            || self.comparisons().iter().any(|(_, v)| v.is_some());
+        let forms = leaf_fields as usize
+            + self.all.is_some() as usize
+            + self.any.is_some() as usize
+            + self.not.is_some() as usize;
+        if forms != 1 {
+            return Err(
+                "a condition uses exactly one form: counter with comparisons, all, any or not"
+                    .into(),
+            );
+        }
+        if leaf_fields {
+            let counter = self
+                .counter
+                .as_ref()
+                .ok_or("comparisons and modulo need a counter")?;
+            if !counters.contains_key(counter) {
+                return Err(format!("condition references unknown counter {counter}"));
+            }
+            let tests = self.comparisons();
+            if tests.iter().all(|(_, v)| v.is_none()) {
+                return Err(format!("condition on {counter} has no comparison"));
+            }
+            if tests.iter().any(|(_, v)| v.is_some_and(|v| !in_range(v)))
+                || self.modulo.is_some_and(|m| !(1..=MAX_COUNTER).contains(&m))
+            {
+                return Err(format!("condition on {counter} has a value out of range"));
+            }
+        }
+        for group in [&self.all, &self.any].into_iter().flatten() {
+            if group.is_empty() || group.len() > MAX_CONDITION_NODES {
+                return Err("all/any need at least one condition".into());
+            }
+            for child in group {
+                child.validate(counters, depth + 1, nodes)?;
+            }
+        }
+        if let Some(child) = &self.not {
+            child.validate(counters, depth + 1, nodes)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Cmp {
+    Eq,
+    Ne,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+}
+
+/// A validated condition with counter names resolved to indices.
+#[derive(Clone, Debug)]
+enum CompiledCondition {
+    Leaf {
+        counter: usize,
+        modulo: Option<i32>,
+        tests: Vec<(Cmp, i32)>,
+    },
+    All(Vec<CompiledCondition>),
+    Any(Vec<CompiledCondition>),
+    Not(Box<CompiledCondition>),
+}
+
+impl CompiledCondition {
+    /// The document must already have passed [`GameDocument::validate`].
+    fn compile(c: &Condition, counter_index: &BTreeMap<&str, usize>) -> Self {
+        if let Some(name) = &c.counter {
+            return Self::Leaf {
+                counter: counter_index[name.as_str()],
+                modulo: c.modulo,
+                tests: c
+                    .comparisons()
+                    .into_iter()
+                    .filter_map(|(cmp, v)| v.map(|v| (cmp, v)))
+                    .collect(),
+            };
+        }
+        let list = |v: &[Condition]| v.iter().map(|c| Self::compile(c, counter_index)).collect();
+        if let Some(all) = &c.all {
+            Self::All(list(all))
+        } else if let Some(any) = &c.any {
+            Self::Any(list(any))
+        } else {
+            Self::Not(Box::new(Self::compile(
+                c.not.as_deref().expect("validated condition form"),
+                counter_index,
+            )))
+        }
+    }
+
+    fn holds(&self, counters: &[i32]) -> bool {
+        match self {
+            Self::Leaf {
+                counter,
+                modulo,
+                tests,
+            } => {
+                let raw = counters[*counter];
+                let value = modulo.map_or(raw, |m| raw.rem_euclid(m));
+                tests.iter().all(|&(cmp, rhs)| match cmp {
+                    Cmp::Eq => value == rhs,
+                    Cmp::Ne => value != rhs,
+                    Cmp::Lt => value < rhs,
+                    Cmp::Gt => value > rhs,
+                    Cmp::Le => value <= rhs,
+                    Cmp::Ge => value >= rhs,
+                })
+            }
+            Self::All(list) => list.iter().all(|c| c.holds(counters)),
+            Self::Any(list) => list.iter().any(|c| c.holds(counters)),
+            Self::Not(c) => !c.holds(counters),
+        }
+    }
 }
 
 fn default_mover_duration() -> u32 {
@@ -88,14 +275,36 @@ pub struct TimerDefinition {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum GameAction {
-    Increment { counter: String, amount: i32 },
-    SetCounter { counter: String, value: i32 },
-    SetEnabled { entity: String, enabled: bool },
-    SetVisible { entity: String, visible: bool },
-    SetMover { mover: String, open: bool },
-    StartTimer { timer: String },
-    StopTimer { timer: String },
+    Increment {
+        counter: String,
+        amount: i32,
+    },
+    SetCounter {
+        counter: String,
+        value: i32,
+    },
+    SetEnabled {
+        entity: String,
+        enabled: bool,
+    },
+    SetVisible {
+        entity: String,
+        visible: bool,
+    },
+    SetMover {
+        mover: String,
+        open: bool,
+    },
+    StartTimer {
+        timer: String,
+    },
+    StopTimer {
+        timer: String,
+    },
+    /// End the match as won.
     Complete,
+    /// End the match as lost. Like `complete`, later events are ignored until the game restarts.
+    Fail,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -162,15 +371,78 @@ fn read_bounded(path: &Path, limit: u64) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+/// A game box (an interactable or a mover) is described by three records in the map that must all be named
+/// after it and agree: a scene node, a collider and an entity. Say exactly what is missing or differs.
+fn check_game_box(map: &MapDocument, id: &str, kind: &str) -> Result<()> {
+    let entity = map.entities.iter().find(|e| e.id == id);
+    let node = map.scene.nodes.iter().find(|n| n.id == id);
+    let collider = map.colliders.get(id);
+    let (Some(entity), Some(node), Some(collider)) = (entity, node, collider) else {
+        let state = |present: bool| if present { "found" } else { "MISSING" };
+        let fix = if kind == "Interactable" {
+            format!("`be2-tools add-interactable GAME.json {id} --at=X,Y,Z` creates all of them and the game.json entry together")
+        } else {
+            "add the box with a non-structural add_box patch, which creates all three".to_string()
+        };
+        return Err(format!(
+            "{kind} '{id}' needs three matching records in the map, each named '{id}': scene node ({}), collider ({}), entity ({}). {fix}.",
+            state(node.is_some()),
+            state(collider.is_some()),
+            state(entity.is_some())
+        )
+        .into());
+    };
+    let (Track::Fixed(center), Track::Fixed(half), Track::Fixed(rotation)) =
+        (&node.pos, &node.scale, &node.rot)
+    else {
+        return Err(format!(
+            "{kind} '{id}' has an animated position, scale or rotation; game boxes must be fixed."
+        )
+        .into());
+    };
+    if !matches!(node.shape, Shape::Box) {
+        return Err(format!(
+            "{kind} '{id}' is not a box node; game boxes must be axis-aligned boxes."
+        )
+        .into());
+    }
+    if *rotation != V::ZERO {
+        return Err(format!("{kind} '{id}' is rotated; game boxes must be axis-aligned.").into());
+    }
+    if node.material.starts_with("prop-") || node.material.starts_with("decor-") {
+        return Err(format!(
+            "{kind} '{id}' uses the prop/decor material '{}'; game boxes must be plain boxes.",
+            node.material
+        )
+        .into());
+    }
+    let (lo, hi) = (*center - *half, *center + *half);
+    if collider.min != lo || collider.max != hi {
+        return Err(format!(
+            "{kind} '{id}': the collider {:?}..{:?} does not match the node box {lo:?}..{hi:?}.",
+            collider.min, collider.max
+        )
+        .into());
+    }
+    if entity.bounds.min != collider.min || entity.bounds.max != collider.max {
+        return Err(format!(
+            "{kind} '{id}': the entity bounds {:?}..{:?} do not match the collider {:?}..{:?}.",
+            entity.bounds.min, entity.bounds.max, collider.min, collider.max
+        )
+        .into());
+    }
+    Ok(())
+}
+
 impl GameDocument {
-    pub fn load(path: &Path) -> Result<LoadedGame> {
-        let document: Self = serde_json::from_slice(&read_bounded(path, 64_000)?)?;
+    /// The confined map path a game document at `path` refers to.
+    pub fn map_path(&self, path: &Path) -> Result<PathBuf> {
         let root = path
             .canonicalize()?
             .parent()
             .ok_or("Game needs a parent directory")?
             .to_path_buf();
-        let relative = Path::new(&document.map);
+        let relative = Path::new(&self.map);
         if relative.as_os_str().is_empty()
             || !relative
                 .components()
@@ -182,7 +454,13 @@ impl GameDocument {
         if !map_path.starts_with(&root) {
             return Err("Map escapes game directory".into());
         }
-        let map: MapDocument = serde_json::from_slice(&read_bounded(&map_path, 8_000_000)?)?;
+        Ok(map_path)
+    }
+
+    pub fn load(path: &Path) -> Result<LoadedGame> {
+        let document: Self = serde_json::from_slice(&read_bounded(path, MAX_GAME_BYTES)?)?;
+        let map_path = document.map_path(path)?;
+        let map: MapDocument = serde_json::from_slice(&read_bounded(&map_path, MAX_MAP_BYTES)?)?;
         document.validate(&map)?;
         Ok(LoadedGame { document, map })
     }
@@ -235,37 +513,7 @@ impl GameDocument {
             }
         }
         for target in &self.interactables {
-            let entity = map
-                .entities
-                .iter()
-                .find(|e| e.id == target.entity)
-                .ok_or("Unknown interaction entity")?;
-            let node = map
-                .scene
-                .nodes
-                .iter()
-                .find(|n| n.id == target.entity)
-                .ok_or("Interactables require matching static box node IDs")?;
-            let collider = map
-                .colliders
-                .get(&target.entity)
-                .ok_or("Interactables require matching collider IDs")?;
-            let (Track::Fixed(center), Track::Fixed(half), Track::Fixed(rotation)) =
-                (&node.pos, &node.scale, &node.rot)
-            else {
-                return Err("Interactables require fixed box transforms".into());
-            };
-            if !matches!(node.shape, Shape::Box)
-                || *rotation != V::ZERO
-                || node.material.starts_with("prop-")
-                || node.material.starts_with("decor-")
-                || collider.min != *center - *half
-                || collider.max != *center + *half
-                || entity.bounds.min != collider.min
-                || entity.bounds.max != collider.max
-            {
-                return Err("Interactables must be static axis-aligned boxes with matching geometry/collision/entity bounds".into());
-            }
+            check_game_box(map, &target.entity, "Interactable")?;
         }
         let finite_vec = |v: V| {
             [v.0, v.1, v.2]
@@ -284,37 +532,7 @@ impl GameDocument {
             }
         }
         for mover in &self.movers {
-            let entity = map
-                .entities
-                .iter()
-                .find(|e| e.id == mover.entity)
-                .ok_or("Unknown mover entity")?;
-            let node = map
-                .scene
-                .nodes
-                .iter()
-                .find(|n| n.id == mover.entity)
-                .ok_or("Movers require matching static box node IDs")?;
-            let collider = map
-                .colliders
-                .get(&mover.entity)
-                .ok_or("Movers require matching collider IDs")?;
-            let (Track::Fixed(center), Track::Fixed(half), Track::Fixed(rotation)) =
-                (&node.pos, &node.scale, &node.rot)
-            else {
-                return Err("Movers require fixed box transforms".into());
-            };
-            if !matches!(node.shape, Shape::Box)
-                || *rotation != V::ZERO
-                || node.material.starts_with("prop-")
-                || node.material.starts_with("decor-")
-                || collider.min != *center - *half
-                || collider.max != *center + *half
-                || entity.bounds.min != collider.min
-                || entity.bounds.max != collider.max
-            {
-                return Err("Movers must be static axis-aligned boxes with matching geometry/collision/entity bounds".into());
-            }
+            check_game_box(map, &mover.entity, "Mover")?;
             if mover.duration_ticks == 0 || mover.duration_ticks > 3600 {
                 return Err(format!("Invalid mover duration_ticks: {}", mover.id).into());
             }
@@ -345,12 +563,13 @@ impl GameDocument {
                 || rule.on_enter.as_ref().is_some_and(|s| !zone_exists(s))
                 || rule.on_exit.as_ref().is_some_and(|s| !zone_exists(s))
                 || rule.on_timer.as_ref().is_some_and(|s| !timer_exists(s))
-                || rule.condition.as_ref().is_some_and(|c| {
-                    !self.counters.contains_key(&c.counter)
-                        || !(-MAX_COUNTER..=MAX_COUNTER).contains(&c.equals)
-                })
             {
                 return Err(format!("Invalid rule references/limits: {}", rule.id).into());
+            }
+            if let Some(condition) = &rule.condition {
+                condition
+                    .validate(&self.counters, 0, &mut 0)
+                    .map_err(|e| format!("Invalid condition in {}: {e}", rule.id))?;
             }
             for action in &rule.actions {
                 let valid = match action {
@@ -370,7 +589,7 @@ impl GameDocument {
                     GameAction::StartTimer { timer } | GameAction::StopTimer { timer } => {
                         timer_exists(timer)
                     }
-                    GameAction::Complete => true,
+                    GameAction::Complete | GameAction::Fail => true,
                 };
                 if !valid {
                     return Err(format!("Invalid action reference/value in {}", rule.id).into());
@@ -404,12 +623,39 @@ pub struct GameState {
     pub active_timers: u64,
     pub fired: u64,
     pub completed: bool,
+    /// The match ended in a loss. Omitted from JSON while false, so saves, packets and hashes of
+    /// games that never fail are unchanged.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub failed: bool,
+}
+
+impl GameState {
+    /// Won or lost: the match accepts no further events until it restarts.
+    pub fn finished(&self) -> bool {
+        self.completed || self.failed
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct GameEvent {
     pub player_id: u64,
     pub entity: String,
+}
+
+/// A mover's box before and after one tick of motion. It is a pure translation.
+#[derive(Clone, Debug)]
+pub struct MoverMotion {
+    pub from: super::controller::Collider,
+    pub to: super::controller::Collider,
+}
+
+/// One thing that can happen to a game, at the granularity the rules can tell apart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ModelEvent {
+    Interact(usize),
+    TimerExpires(usize),
+    EnterZone(usize),
+    ExitZone(usize),
 }
 
 enum Effect {
@@ -422,11 +668,12 @@ enum Effect {
     StartTimer(usize),
     StopTimer(usize),
     Complete,
+    Fail,
 }
 struct CompiledRule {
     index: usize,
     once: bool,
-    condition: Option<(usize, i32)>,
+    condition: Option<CompiledCondition>,
     effects: Vec<Effect>,
 }
 
@@ -472,8 +719,9 @@ fn apply_effects(state: &mut GameState, effects: &[Effect]) {
                 state.active_timers &= !(1 << i);
             }
             Effect::Complete => state.completed = true,
+            Effect::Fail => state.failed = true,
         }
-        if state.completed {
+        if state.finished() {
             break;
         }
     }
@@ -535,6 +783,8 @@ pub struct GameRuntime {
     zone_rules_exit: Vec<Vec<CompiledRule>>,
     timer_rules: Vec<Vec<CompiledRule>>,
     player_zones: BTreeMap<u64, u64>,
+    /// When set, the document index of every rule that fires is appended (model checking only).
+    fired_log: Option<Vec<usize>>,
 }
 impl GameRuntime {
     pub fn compile(document: GameDocument, map: &MapDocument) -> Result<Self> {
@@ -602,6 +852,7 @@ impl GameRuntime {
                         Effect::StopTimer(timer_index[timer.as_str()])
                     }
                     GameAction::Complete => Effect::Complete,
+                    GameAction::Fail => Effect::Fail,
                 })
                 .collect()
         };
@@ -629,7 +880,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -651,7 +902,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -673,7 +924,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -695,7 +946,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -796,6 +1047,7 @@ impl GameRuntime {
             zone_rules_exit,
             timer_rules,
             player_zones: BTreeMap::new(),
+            fired_log: None,
         })
     }
     pub(crate) fn set_round(&mut self, round: u64) {
@@ -803,6 +1055,74 @@ impl GameRuntime {
     }
     pub fn state(&self) -> &GameState {
         &self.state
+    }
+    /// Start recording which rules fire (see [`Self::model_apply`]).
+    pub fn record_fired_rules(&mut self) {
+        self.fired_log = Some(Vec::new());
+    }
+    /// The events that can happen next, as a model checker sees them. Time and movement are
+    /// abstracted away: any enabled target can be pressed, any running timer can run out, and the
+    /// player can enter or leave any enabled zone, in any order. `occupied` is the bit set of zones
+    /// the player is currently inside.
+    pub fn model_events(&self, occupied: u64) -> Vec<ModelEvent> {
+        if self.state.finished() {
+            return Vec::new();
+        }
+        let mut events = Vec::new();
+        events.extend(
+            (0..self.targets.len())
+                .filter(|&i| self.state.enabled & (1 << i) != 0)
+                .map(ModelEvent::Interact),
+        );
+        events.extend(
+            (0..self.timers.len())
+                .filter(|&i| self.state.active_timers & (1 << i) != 0)
+                .map(ModelEvent::TimerExpires),
+        );
+        for i in 0..self.trigger_zones.len() {
+            let enabled = self.state.enabled_zones & (1 << i) != 0;
+            match (occupied & (1 << i) != 0, enabled) {
+                (false, true) => events.push(ModelEvent::EnterZone(i)),
+                (true, true) => events.push(ModelEvent::ExitZone(i)),
+                _ => {}
+            }
+        }
+        events
+    }
+    /// Apply one event from [`Self::model_events`] to the current state, updating `occupied`.
+    pub fn model_apply(&mut self, event: ModelEvent, occupied: &mut u64) {
+        match event {
+            ModelEvent::Interact(i) => self.fire_target_rules(i),
+            ModelEvent::TimerExpires(i) => self.expire_timer(i),
+            ModelEvent::EnterZone(i) => {
+                *occupied |= 1 << i;
+                self.fire_zone_rules(i, true);
+            }
+            ModelEvent::ExitZone(i) => {
+                *occupied &= !(1 << i);
+                self.fire_zone_rules(i, false);
+            }
+        }
+    }
+    /// Replace the rule state (the model checker jumps between states of one runtime).
+    pub fn model_load(&mut self, state: &GameState) {
+        self.state = state.clone();
+    }
+    /// Take the document indices of the rules that fired since the last call.
+    pub fn take_fired_rules(&mut self) -> Vec<usize> {
+        self.fired_log
+            .as_mut()
+            .map(std::mem::take)
+            .unwrap_or_default()
+    }
+    /// A human name for an event, for reports.
+    pub fn model_event_name(&self, event: ModelEvent) -> String {
+        match event {
+            ModelEvent::Interact(i) => format!("press {}", self.document.interactables[i].entity),
+            ModelEvent::TimerExpires(i) => format!("timer {} runs out", self.document.timers[i].id),
+            ModelEvent::EnterZone(i) => format!("enter {}", self.document.trigger_zones[i].id),
+            ModelEvent::ExitZone(i) => format!("leave {}", self.document.trigger_zones[i].id),
+        }
     }
     pub fn document(&self) -> &GameDocument {
         &self.document
@@ -844,7 +1164,7 @@ impl GameRuntime {
         self.timers.get(index).map(|t| t.remaining_ticks)
     }
     pub fn step_timers(&mut self) {
-        if self.state.completed {
+        if self.state.finished() {
             return;
         }
         let mut expired_timers = Vec::new();
@@ -864,15 +1184,19 @@ impl GameRuntime {
             }
         }
         for i in expired_timers {
-            self.timers[i].remaining_ticks = self.timers[i].duration_ticks;
-            if !self.timers[i].repeats {
-                self.state.active_timers &= !(1 << i);
-            }
-            self.fire_timer_rules(i);
-            if self.state.completed {
+            self.expire_timer(i);
+            if self.state.finished() {
                 break;
             }
         }
+    }
+    /// A timer runs out: it restarts (or stops, if it does not repeat) and its rules fire.
+    fn expire_timer(&mut self, index: usize) {
+        self.timers[index].remaining_ticks = self.timers[index].duration_ticks;
+        if !self.timers[index].repeats {
+            self.state.active_timers &= !(1 << index);
+        }
+        self.fire_timer_rules(index);
     }
     fn fire_timer_rules(&mut self, timer_index: usize) {
         for rule in &self.timer_rules[timer_index] {
@@ -881,30 +1205,43 @@ impl GameRuntime {
             }
             if rule
                 .condition
-                .is_some_and(|(i, v)| self.state.counters[i] != v)
+                .as_ref()
+                .is_some_and(|c| !c.holds(&self.state.counters))
             {
                 continue;
             }
             apply_effects(&mut self.state, &rule.effects);
+            if let Some(log) = &mut self.fired_log {
+                log.push(rule.index);
+            }
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }
     }
-    pub fn step_movers(&mut self, room: &mut Room) {
+    /// Advance every mover one tick and return the ones that moved, so the caller can carry or push the
+    /// players they touch (see `Controller::ride`). Callers that own no players may ignore the result.
+    pub fn step_movers(&mut self, room: &mut Room) -> Vec<MoverMotion> {
+        let mut moved = Vec::new();
         for (i, mover) in self.movers.iter_mut().enumerate() {
             let target_open = self.state.mover_targets & (1 << i) != 0;
+            let from = mover.current_bounds();
             if target_open && mover.current_ticks < mover.duration_ticks {
                 mover.current_ticks += 1;
             } else if !target_open && mover.current_ticks > 0 {
                 mover.current_ticks -= 1;
             }
+            let to = mover.current_bounds();
+            if from.min != to.min {
+                moved.push(MoverMotion { from, to });
+            }
         }
         self.state.mover_ticks = self.movers.iter().map(|m| m.current_ticks).collect();
         self.apply_mover_colliders(room);
+        moved
     }
     pub fn apply_mover_colliders(&mut self, room: &mut Room) {
         for mover in &mut self.movers {
@@ -1066,39 +1403,46 @@ impl GameRuntime {
         controller: &Controller,
         player_id: u64,
     ) -> Option<GameEvent> {
-        if self.state.completed {
+        if self.state.finished() {
             return None;
         }
         let target = self.target(room, controller)?;
         if !self.enabled(target) {
             return None;
         }
+        self.fire_target_rules(target);
+        Some(GameEvent {
+            player_id,
+            entity: self.document.interactables[target].entity.clone(),
+        })
+    }
+    fn fire_target_rules(&mut self, target: usize) {
         for rule in &self.rules[target] {
             if rule.once && self.state.fired & (1 << rule.index) != 0 {
                 continue;
             }
             if rule
                 .condition
-                .is_some_and(|(i, v)| self.state.counters[i] != v)
+                .as_ref()
+                .is_some_and(|c| !c.holds(&self.state.counters))
             {
                 continue;
             }
             apply_effects(&mut self.state, &rule.effects);
+            if let Some(log) = &mut self.fired_log {
+                log.push(rule.index);
+            }
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }
-        Some(GameEvent {
-            player_id,
-            entity: self.document.interactables[target].entity.clone(),
-        })
     }
     /// Step player presence across trigger zones and dispatch on_enter / on_exit rules.
     pub fn step_triggers(&mut self, controller: &Controller, player_id: u64) {
-        if self.state.completed || self.trigger_zones.is_empty() {
+        if self.state.finished() || self.trigger_zones.is_empty() {
             return;
         }
         let prev_mask = self.player_zones.get(&player_id).copied().unwrap_or(0);
@@ -1125,7 +1469,7 @@ impl GameRuntime {
             } else if was_in && !is_in && enabled {
                 self.fire_zone_rules(i, false);
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }
@@ -1144,15 +1488,19 @@ impl GameRuntime {
             }
             if rule
                 .condition
-                .is_some_and(|(i, v)| self.state.counters[i] != v)
+                .as_ref()
+                .is_some_and(|c| !c.holds(&self.state.counters))
             {
                 continue;
             }
             apply_effects(&mut self.state, &rule.effects);
+            if let Some(log) = &mut self.fired_log {
+                log.push(rule.index);
+            }
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }

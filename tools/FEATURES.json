@@ -598,7 +598,14 @@
         "src/viewer/game.rs",
         "src/viewer/profile.rs",
         "src/viewer/game_example.rs",
+        "src/viewer/game_edit.rs",
+        "src/viewer/game_explore.rs",
         "tests/game_documents.rs",
+        "tests/game_conditions.rs",
+        "tests/game_edit.rs",
+        "tests/game_explore.rs",
+        "tests/game_box_errors.rs",
+        "tests/mover_riding.rs",
         "tools/game.schema.json",
         "docs/GAME_QUICKSTART.md"
       ],
@@ -606,7 +613,7 @@
         "game_documents integration tests",
         "graphical --capture-game smoke"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors.",
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries. Movers carry a grounded player standing on them (Controller::ride, ADR 0026).",
       "depends_on": [
         "simulation_contract"
       ],
@@ -615,7 +622,14 @@
         "door",
         "objective",
         "interaction",
-        "counter"
+        "counter",
+        "fail",
+        "condition",
+        "modulo",
+        "add-interactable",
+        "game-explore",
+        "winnable",
+        "reachability"
       ],
       "read_first": [
         "src/viewer/game.rs",
@@ -715,22 +729,38 @@
       "files": [
         "src/viewer/scenario.rs",
         "docs/BEHAVIORAL_TESTING.md",
-        "assets/games/three-switches/scenario.json"
+        "assets/games/three-switches/scenario.json",
+        "src/viewer/game_scenario.rs",
+        "tests/scenario_intents.rs",
+        "tests/game_scenario.rs"
       ],
       "checks": [
         "headless simulation scenarios and replay trace verification"
       ],
-      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics.",
+      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025).",
       "evidence": [
         {
           "suite": "toolchain",
           "test": "test_deterministic_simulation_and_replay_verification"
+        },
+        {
+          "suite": "scenario_intents",
+          "test": "inputs_without_intents_match_the_original_loop_exactly"
+        },
+        {
+          "suite": "game_scenario",
+          "test": "a_press_that_is_only_right_in_one_phase_of_a_timer_waits_for_that_phase"
         }
       ],
       "depends_on": [
         "game_documents"
       ],
-      "canonical_example": "assets/games/three-switches/scenario.json"
+      "canonical_example": "assets/games/three-switches/scenario.json",
+      "keywords": [
+        "walk_to",
+        "face",
+        "generated scenario"
+      ]
     },
     "verification_framework": {
       "files": [

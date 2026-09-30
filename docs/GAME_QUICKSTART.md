@@ -82,14 +82,82 @@ A rule example:
 ```
 
 Actions: `increment(counter,amount)`, `set_counter(counter,value)`,
-`set_enabled(entity,enabled)`, `set_visible(entity,visible)`, `set_mover(mover,open)`, `start_timer(timer)`, `stop_timer(timer)`, `complete`. Optional condition: `{"counter":"switches","equals":3}`.
+`set_enabled(entity,enabled)`, `set_visible(entity,visible)`, `set_mover(mover,open)`, `start_timer(timer)`, `stop_timer(timer)`, `complete` (win), `fail` (lose). Both end the match: later events and timers are
+ignored until the game restarts (E / X again).
+
+Optional `condition` (null is unconditional). A leaf names a counter and one or more comparisons, which must
+all hold: `equals`, `not_equals`, `less_than`, `greater_than`, `at_most`, `at_least`. Add `modulo` to compare the
+remainder instead (`{"counter":"phase","modulo":2,"equals":0}` is "phase is even"). Combine leaves with `all`,
+`any` and `not`, nested at most 4 deep and 16 parts in all:
+
+```json
+{"all":[{"counter":"countdown","at_least":1},{"not":{"counter":"stage","equals":3}}]}
+```
+
+The bare `{"counter":"switches","equals":3}` form is unchanged. A lost bomb timer is one rule:
+`{"on_timer":"fuse","condition":{"counter":"countdown","at_most":0},"actions":[{"action":"fail"}]}`.
+### Adding an interactable
+
+An interactable is five records that must agree: in `map.json` a material, a node, a collider and an
+entity, and in `game.json` an `interactables` entry. Do not write them by hand. This creates all five, validates
+the game as a whole, and only then writes anything:
+
+```sh
+be2-tools add-interactable game.json vent --at=3,1.5,-2 --label="Air vent" --disabled
+be2-tools add-interactable game.json vent --at=3,1.5,-2 --label="Air vent" --disabled --write
+```
+
+The first call is a dry run: it prints the records it would create and touches nothing. `--write` replaces
+both files atomically and restores the map if the game cannot be written. Options use the `--name=value` form
+(so negative coordinates work): `--at=X,Y,Z` (required, metres), `--size=HX,HY,HZ` (half extents, default
+0.3 each), `--color=R,G,B` (linear 0..1), `--label=TEXT`, `--disabled`, `--hidden`. It warns when no rule
+reacts to the new target yet (and prints a `rule_template` to adapt) and when the box overlaps another
+interactable. The rule itself is yours to write: it is the one part the tool cannot guess.
+
+### Does the game actually work?
+
+`game-validate` says a document is well formed; it cannot say the game is playable. `game-explore` searches every
+state the rules can reach, using the engine's own rule runtime, and reports what it finds:
+
+```sh
+be2-tools game-explore game.json
+```
+
+It prints the shortest way to win and to lose (`timer fuse runs out x3` means three expiries in a row), and
+findings by level. **Errors** make the command exit 1: the game can never be won. **Warnings** are dead parts: a
+rule that never fires, a target nothing enables or that no rule reacts to, a timer nobody listens to or never
+starts, a counter that rules change but no condition reads (so it only decorates the HUD), a `fail` that can never
+happen, a target switched back on after its `once` rules are spent (`once-exhausted`), and stuck states (reachable, not lost, and no longer winnable, with the way in). **Info** notes a game that
+cannot be lost, and targets that can be pressed in a state where nothing happens (often armed a step too early).
+
+Time and movement are abstracted: any running timer may run out at any moment and any enabled target may be pressed,
+so "can be won" ignores a physical obstacle or a timing window, while "never" findings are exact. Counters no
+condition reads are left out of the state, and counters compared only by `modulo` or only by thresholds while they
+move one way are folded into equivalent values, so a repeating timer does not make the search unbounded. If
+`--max-states=N` (default 100000) is reached the report says `truncated` and the "never" findings become
+notes rather than warnings. Run it before writing scenarios: the shortest win is the first scenario to write, and `--scenario=OUT.json` writes it for you
+(see [behavioral testing](BEHAVIORAL_TESTING.md)).
+
 Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
 `on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.
-Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete ends interactions.
+Rules run in document order; later rules see earlier changes. Complete and fail end the match.
+
+**`once` is per match and never resets.** A `once` rule that has fired can never fire again for the rest of the match,
+even if the target it acts on is switched back on. That is what you want for a one-way step (press the switch, open the
+door) and wrong for anything that can be retried. For a "wrong input resets the puzzle" design, make the rules that
+must run again repeatable (`once: false`) and guard each one with a counter condition so it only fires at the right
+step (`{"counter":"seq_step","equals":2}`); put the reset rules *before* the step rules, because a later rule sees an
+earlier rule's changes and would otherwise fire in the same press. `game-explore` warns (`once-exhausted`) when a
+target is switched back on after every rule on it has used up its `once`.
 Enabled controls interaction and trigger zone eligibility. Visibility is separately
 replicated for interactable geometry and never changes collision or eligibility; use
 both actions when an object should disappear and stop responding. Kinematic `movers` smoothly translate box colliders
-between closed and open states over `duration_ticks`, dynamically blocking or opening pathways for players.
+between closed and open states over `duration_ticks`, dynamically blocking or opening pathways for players. A player
+standing on top of a mover is carried with it in any direction, so a mover can be a lift or a moving platform, not only a
+door; a mover that slides or rises into a player pushes them out through ordinary collision. The headless world and the
+local client apply this; a custom client that steps `GameRuntime::step_movers` itself gets the moves back and should call
+`Controller::ride` on its own controller for each one (the stock client does), or its prediction will drop the rider and
+be corrected by the server.
 `timers` provide deterministic fixed-tick countdowns (`duration_ticks`, `auto_start`, `repeats`) to dispatch delayed actions.
 Targets require line of sight within 2.5 metres. Limits: 32 counters, 64 targets/zones, 64 movers, 64 timers, 64 rules,
 4 actions/rule, 8 spawns; counters clamp to +/-1,000,000. No arbitrary scripts or irregular geometry mutation.
