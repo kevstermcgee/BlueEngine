@@ -18,6 +18,7 @@ use std::collections::VecDeque;
 
 pub mod action_counters;
 pub mod any;
+pub mod clock;
 pub mod codec;
 pub mod lag_compensation;
 pub mod loopback;
@@ -30,6 +31,7 @@ pub mod transport;
 
 pub use action_counters::*;
 pub use any::{client_transport, server_transport, AnyTransport};
+pub use clock::Clock;
 pub use lag_compensation::*;
 pub use proxy::*;
 pub use quic::*;

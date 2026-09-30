@@ -32,6 +32,7 @@ pub mod camera;
 pub mod simulation;
 
 pub mod props;
+pub mod spans;
 
 mod house;
 pub mod maps;
