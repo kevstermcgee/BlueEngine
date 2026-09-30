@@ -86,6 +86,8 @@ pub struct DedicatedServer<T: DatagramTransport = UdpTransport> {
     max_players: usize,
     network_threads: usize,
     clock: crate::viewer::net::Clock,
+    #[cfg(unix)]
+    status_sink: Option<crate::viewer::control::server::StatusSink>,
     pub pending_challenges: HashMap<SocketAddr, (ConnectionNonce, [u8; 16], Instant)>,
     pub handshake_limiter: HandshakeLimiter,
     pub session_registry: SessionRegistry<u64>,
@@ -127,6 +129,8 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             max_players: crate::viewer::simulation::DEFAULT_MAX_PLAYERS,
             network_threads: 1,
             clock: crate::viewer::net::Clock::real(),
+            #[cfg(unix)]
+            status_sink: None,
             pending_challenges: HashMap::new(),
             handshake_limiter: HandshakeLimiter::new(64),
             session_registry: SessionRegistry::new(16, Duration::from_secs(5)),
@@ -221,6 +225,42 @@ impl<T: DatagramTransport> DedicatedServer<T> {
     }
     pub fn clock(&self) -> &crate::viewer::net::Clock {
         &self.clock
+    }
+
+    /// Publish this server's numbers (tick, clients, tick times, autosave, replication freshness) twice a second to
+    /// `sink`, for `be2-ctl status`. Nothing is published, and nothing costs anything, without it.
+    #[cfg(unix)]
+    pub fn with_status_sink(mut self, sink: crate::viewer::control::server::StatusSink) -> Self {
+        self.status_sink = Some(sink);
+        self
+    }
+
+    #[cfg(unix)]
+    fn publish_status(&self, tick_mean_us: u64, tick_max_us: u64) {
+        let Some(sink) = &self.status_sink else {
+            return;
+        };
+        let (sent, waited) = self.sessions.values().fold((0u64, 0u64), |(s, w), x| {
+            (
+                s + x.replication.counters.records_sent,
+                w + x.replication.counters.wait_sum,
+            )
+        });
+        sink.update(|status| {
+            status.tick = self.world.tick;
+            status.clients = self.sessions.len();
+            status.max_players = self.max_players;
+            status.network_threads = self.network_threads;
+            status.tick_mean_us = tick_mean_us;
+            status.tick_max_us = tick_max_us;
+            status.autosave_written = self.autosave_stats.written;
+            status.autosave_failed = self.autosave_stats.failed;
+            status.replication_mean_wait = if sent == 0 {
+                0.0
+            } else {
+                waited as f64 / sent as f64
+            };
+        });
     }
 
     /// Configure a shared secret key for mandatory client authentication.
@@ -999,6 +1039,13 @@ impl<T: DatagramTransport> DedicatedServer<T> {
             self.step();
             if let Some(error) = &self.replication_error {
                 return Err(error.clone().into());
+            }
+            #[cfg(unix)]
+            if self.world.tick.is_multiple_of(30) {
+                self.publish_status(
+                    runner.metrics.mean_us() as u64,
+                    runner.metrics.max_us as u64,
+                );
             }
 
             if let Some(max) = max_ticks {

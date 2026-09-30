@@ -40,3 +40,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0028: Three changes from the external study: replication priority, an injectable clock, span summaries](0028-study-replication-priority-clock-spans.md)
 - [0029: World updates in a compact binary form (protocol 8)](0029-compact-world-updates.md)
 - [0030: Graceful shutdown on signals, without a new dependency](0030-graceful-shutdown-signals.md)
+- [0031: `be2-ctl`, a small manager for servers on one machine](0031-be2-ctl-server-manager.md)

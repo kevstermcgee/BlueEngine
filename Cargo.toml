@@ -32,6 +32,10 @@ name = "be2-headless"
 path = "src/bin/be2-headless.rs"
 
 [[bin]]
+name = "be2-ctl"
+path = "src/bin/be2-ctl.rs"
+
+[[bin]]
 name = "be2-tools"
 path = "src/bin/be2-tools.rs"
 

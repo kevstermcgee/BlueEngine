@@ -26,6 +26,26 @@ ended by signalling twice instead of `kill -9`. On Windows, closing the console 
 seconds; the handler waits up to 4.5 s for the final save. Before this change these signals killed the process at once
 (status 143) and no final save was written. The custom-simulation `netplay` kit's own server loop is unchanged.
 
+## Managing servers with `be2-ctl`
+
+`be2-ctl` lists, inspects, starts, stops and restarts servers on one Linux machine. Give a server a name and it registers
+itself (a record and a private control socket under `~/.local/state/blueengine`, or `$BLUEENGINE_STATE_DIR`):
+
+```bash
+be2-ctl start arena --save -- --server 0.0.0.0:4000 --game games/arena.json --autosave 60
+be2-ctl list
+be2-ctl status arena
+be2-ctl restart arena
+be2-ctl stop arena
+```
+
+`stop` asks the server to shut down (final save included), then sends SIGTERM. A server that is wedged stays up until you add
+`--force`, which sends a second SIGTERM and finally SIGKILL: `be2-ctl stop arena --timeout 5 --force`. Servers started without
+`--name` (by hand, systemd, Docker) are listed as `pid:N` and can be stopped, but `start` and `restart` only manage servers
+`be2-ctl` launched or has a saved definition for (`be2-ctl define NAME -- ARGS`), so it never fights a supervisor. `be2-ctl logs NAME`
+shows a launched server's log and `be2-ctl prune` removes records of servers that are gone. `--json` on `list` and `status` is for scripts.
+See ADR 0031. `be2-ctl` and `--name` are Unix only.
+
 ## Serving more than eight players
 
 The server admits 8 players by default. `--max-players N` (up to 1024) raises every limit that would refuse the
