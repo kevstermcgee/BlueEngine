@@ -66,7 +66,20 @@ each point can be checked; the last section says what was done about it.
 
 ## What was done about it
 
-See `docs/adr/0022-custom-sim-multiplayer-kit.md` for the decisions. In short, items 2, 3, 4, 5, 6 and 7 are
-addressed in the engine (codec, loopback network and track modules extracted from the game, rendering traps
-fixed, an API cheat sheet, a capture helper and tooling fixes), and item 1 is addressed by a generic netplay kit
-that Spooky Kart now runs on.
+Decisions are in `docs/adr/0022-custom-sim-multiplayer-kit.md`. Mapping the friction list above:
+
+1. **Netcode for custom simulations:** `viewer::netplay` (server, client, `NetGame`, `ClientView`, telemetry), tested
+   on a toy game and by Spooky Kart itself, which now runs on it with about 1,900 lines of its own network code deleted.
+2. **Binary codec:** `net::codec::{Writer, Reader}`, fuzz-tested.
+3. **Silent rendering traps:** oversize templates are split, `Template::quad_facing`, a loud panic instead of index wrap.
+4. **Finding APIs:** `docs/CUSTOM_SIM_CHEATSHEET.md`, feature-index entries so `be2.py context` finds netplay, paths and
+   the traps, and a pointer in `AGENTS.md`.
+5. **Seeing the game headless:** `tools/xcapture.py` and `docs/HEADLESS_CAPTURE.md`.
+6. **Papercuts:** `scripts/blue` uses `python3` or `python`; `scripts/check.py` finds `be2-tools` itself; the first-build
+   rule (`cargo build`, not `--locked`) is in the cheat sheet.
+7. **Things every game rebuilds:** `devkit::path::ClosedPath`, `net::loopback::LoopNet`, `net::any` transports.
+8. **Hard-coded caps:** the kit's server takes its seat limit from the game (`NetGame::MAX_SEATS`); the older
+   `DedicatedServer` cap of 8 is unchanged (it serves the stock client).
+
+Still open: predicting collisions on the client (a game concern, noted in the ADR), per-client interest management,
+snapshot splitting, and a generic vehicle model.

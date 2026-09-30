@@ -187,7 +187,8 @@ def full_commands(test_profile='itest'):
         [sys.executable, 'tools/check_authoring.py'],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'scripts.test_publish_games',
-         'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools'],
+         'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
+         'tools.test_xcapture'],
     ]
 
 

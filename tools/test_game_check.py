@@ -89,6 +89,56 @@ class GameCheckTests(unittest.TestCase):
         self.assertTrue(self.report()['native_sha256'])
 
 
+class FindToolsTests(unittest.TestCase):
+    """A game finds a built be2-tools in the engine checkout it depends on, without BE2_TOOLS."""
+
+    def setUp(self):
+        temp = tempfile.TemporaryDirectory()
+        self.addCleanup(temp.cleanup)
+        base = Path(temp.name)
+        self.game, self.engine = base / 'game', base / 'BlueEngine'
+        self.game.mkdir()
+        self.engine.mkdir()
+        (self.game / 'Cargo.toml').write_text(
+            '[dependencies]\nvesper3d = { package = "be2", path = "../BlueEngine", default-features = false }\n')
+        clean = {k: v for k, v in os.environ.items() if k not in ('BE2_TOOLS', 'CARGO_TARGET_DIR')}
+        patcher = patch.dict(os.environ, clean, clear=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+        which = patch.object(game_check.shutil, 'which', return_value=None)
+        which.start()
+        self.addCleanup(which.stop)
+
+    def build(self, profile):
+        suffix = '.exe' if os.name == 'nt' else ''
+        path = self.engine / 'target' / profile / ('be2-tools' + suffix)
+        path.parent.mkdir(parents=True)
+        path.write_bytes(b'tool')
+        return str(path)
+
+    def test_nothing_built_means_none_so_the_caller_can_explain(self):
+        self.assertIsNone(game_check.find_tools(self.game))
+
+    def test_a_binary_in_the_engine_target_dir_is_found(self):
+        built = self.build('fast')
+        self.assertEqual(game_check.find_tools(self.game), built)
+
+    def test_release_is_preferred_over_debug(self):
+        self.build('debug')
+        release = self.build('release')
+        self.assertEqual(game_check.find_tools(self.game), release)
+
+    def test_the_environment_variable_still_wins(self):
+        self.build('release')
+        with patch.dict(os.environ, {'BE2_TOOLS': '/somewhere/be2-tools'}):
+            self.assertEqual(game_check.find_tools(self.game), '/somewhere/be2-tools')
+
+    def test_a_game_without_an_engine_path_finds_nothing(self):
+        (self.game / 'Cargo.toml').write_text('[dependencies]\nserde = "1"\n')
+        self.build('release')
+        self.assertIsNone(game_check.find_tools(self.game))
+
+
 @unittest.skipUnless(os.environ.get('BE2_TOOLS'), 'Real native integration runs through check_authoring.py')
 class GeneratedGameIntegrationTests(unittest.TestCase):
     def test_generated_content_passes_and_invalid_map_fails(self):

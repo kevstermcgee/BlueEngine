@@ -89,9 +89,13 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     assert!(windows.contains("exit $LASTEXITCODE"));
     assert!(windows.contains("python scripts/check.py @CheckArgs"));
     let unix = std::fs::read_to_string(dir.join("scripts/blue")).unwrap();
-    assert!(unix.contains("python scripts/check.py \"$@\""));
+    assert!(
+        unix.contains("command -v python3 || command -v python"),
+        "python3 is preferred, python is the fallback"
+    );
+    assert!(unix.contains("\"$PY\" scripts/check.py \"$@\""));
     assert!(!unix.contains("cargo check"));
-    assert!(unix.contains("python scripts/dev.py"));
+    assert!(unix.contains("\"$PY\" scripts/dev.py"));
     assert!(windows.contains("python scripts/dev.py"));
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/dev.py")).unwrap(),

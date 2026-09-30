@@ -232,10 +232,33 @@ def run(root, native, content_only=False, scenarios=(), skip_ship=False):
     return report['ok']
 
 
+def find_tools(root):
+    """A built be2-tools: BE2_TOOLS, then PATH, then the engine checkout this game depends on (its target
+    directory, release/fast/debug). Returns None when there is none, so the caller can say how to build one."""
+    found = os.environ.get('BE2_TOOLS') or shutil.which('be2-tools')
+    if found:
+        return found
+    manifest = (Path(root) / 'Cargo.toml')
+    if not manifest.is_file():
+        return None
+    match = re.search(r'^vesper3d\s*=\s*\{[^}]*?path\s*=\s*"([^"]+)"', manifest.read_text(encoding='utf-8'), re.M)
+    if not match:
+        return None
+    engine = (Path(root) / match.group(1)).resolve()
+    suffix = '.exe' if os.name == 'nt' else ''
+    targets = [Path(os.environ['CARGO_TARGET_DIR'])] if os.environ.get('CARGO_TARGET_DIR') else []
+    for base in targets + [engine / 'target']:
+        for profile in ('release', 'fast', 'debug', 'be2-headless/release'):
+            candidate = base / profile / ('be2-tools' + suffix)
+            if candidate.is_file():
+                return str(candidate)
+    return None
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--tools', default=os.environ.get('BE2_TOOLS') or shutil.which('be2-tools'),
-                        help='Matching be2-tools binary (or BE2_TOOLS / PATH)')
+    parser.add_argument('--tools', default=find_tools(Path(__file__).resolve().parents[1]),
+                        help='Matching be2-tools binary (default: BE2_TOOLS, PATH, then the engine checkout target dir)')
     parser.add_argument('--content-only', action='store_true',
                         help='Iteration check only; does not certify Rust changes')
     parser.add_argument('--scenario', action='append', default=[], help='Additional behavioral scenario')
@@ -243,8 +266,9 @@ def main():
                         help='Full check without the ship gate (shortcut, package and icon verification)')
     args = parser.parse_args()
     if not args.tools:
-        parser.error('Set BE2_TOOLS to a matching native binary; build it once with '
-                     'python tools/be2.py build tools in the engine checkout.')
+        parser.error('No be2-tools found. Build one in the engine checkout, then rerun (it is found there '
+                     'automatically): cargo build --profile fast --no-default-features --bin be2-tools '
+                     '(or python tools/be2.py build tools). Or set BE2_TOOLS to its path.')
     return 0 if run(Path(__file__).resolve().parents[1], args.tools,
                     args.content_only, args.scenario, args.skip_ship) else 1
 

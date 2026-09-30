@@ -255,34 +255,39 @@ fn write_scripts(project: &Project) -> Result<()> {
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+PY="$(command -v python3 || command -v python || true)"
+if [ -z "$PY" ]; then
+  echo "scripts/blue needs Python 3 (python3 or python on PATH)" >&2
+  exit 1
+fi
 
 cmd="${1:-help}"
 case "$cmd" in
   check)
     shift
-    python scripts/check.py "$@"
+    "$PY" scripts/check.py "$@"
     ;;
   build-all)
     cargo build --release
     ;;
   dev)
     shift
-    python scripts/dev.py "$@"
+    "$PY" scripts/dev.py "$@"
     ;;
   play)
-    python scripts/dev.py --release
+    "$PY" scripts/dev.py --release
     ;;
   package)
     shift
-    python scripts/ship.py package "$@"
+    "$PY" scripts/ship.py package "$@"
     ;;
   shortcut)
     shift
-    python scripts/ship.py shortcut "$@"
+    "$PY" scripts/ship.py shortcut "$@"
     ;;
   ship)
     shift
-    python scripts/ship.py ship "$@"
+    "$PY" scripts/ship.py ship "$@"
     ;;
   *)
     echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship}"
@@ -310,7 +315,7 @@ switch ($cmd) {
         exit $LASTEXITCODE
     }
     "play" {
-        python scripts/dev.py --release
+        "$PY" scripts/dev.py --release
         exit $LASTEXITCODE
     }
     "package" {

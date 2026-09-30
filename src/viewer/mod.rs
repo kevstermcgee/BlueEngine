@@ -16,6 +16,7 @@ pub mod interaction;
 pub mod kit;
 #[cfg(feature = "presentation")]
 pub mod mesh;
+pub mod netplay;
 pub mod presentation;
 pub mod profile;
 pub mod room;

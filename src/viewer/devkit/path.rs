@@ -12,14 +12,15 @@
 //!
 //! ```
 //! use vesper3d::viewer::devkit::path::{arc_delta_on, ClosedPath};
-//! // A square-ish loop, 100 m on a side, driven anticlockwise seen from above (+Y).
+//! // A rounded loop through the corners of a 100 m square.
 //! let path = ClosedPath::from_control_points(&[(0., 0.), (100., 0.), (100., 100.), (0., 100.)], 12);
 //! assert!((path.length() - 400.).abs() < 40., "about 400 m around: {}", path.length());
 //! let start = path.point_at(0.);
 //! assert!((start.0 - 0.).abs() < 1. && (start.2 - 0.).abs() < 1.);
-//! let here = path.nearest_global(vesper3d::math::V(50., 0., 3.));
-//! assert!(here.lateral.abs() < 5., "three metres off the centreline");
-//! assert!((arc_delta_on(path.length(), 390., 10.) - 20.).abs() < 1e-3, "wraps through the start");
+//! let beside = path.offset_point(120., 3.);            // three metres to the right of the centreline
+//! let here = path.nearest_global(beside);
+//! assert!((here.lateral - 3.).abs() < 0.2 && (here.s - 120.).abs() < 1., "found again: {here:?}");
+//! assert!((arc_delta_on(400., 390., 10.) - 20.).abs() < 1e-3, "10 m past the start of a 400 m loop is 20 m ahead of 390");
 //! ```
 use crate::math::V;
 use std::f32::consts::{PI, TAU};

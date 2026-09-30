@@ -31,3 +31,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0019: One lifecycle for custom-simulation windows, and a save policy declared per game](0019-lifecycle-and-save-policy.md)
 - [0020: One mouse-look convention, checkable scale, and a dev loop that survives a running game](0020-look-scale-and-dev-loop.md)
 - [0021: Stick look in the shared convention, discrete menu steps, and a graceful exit](0021-stick-look-menu-steps-and-exit.md)
+- [0022: A multiplayer kit for custom simulations, and the fixes Spooky Kart called for](0022-custom-sim-multiplayer-kit.md)

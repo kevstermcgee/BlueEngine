@@ -1351,6 +1351,169 @@
           "verify": "cargo test --locked --lib savestate"
         }
       ]
+    },
+    "netplay": {
+      "files": [
+        "src/viewer/netplay/mod.rs",
+        "src/viewer/netplay/wire.rs",
+        "src/viewer/netplay/server.rs",
+        "src/viewer/netplay/client.rs",
+        "src/viewer/netplay/toy.rs",
+        "src/viewer/net/codec.rs",
+        "src/viewer/net/loopback.rs",
+        "src/viewer/net/any.rs",
+        "tests/netplay.rs",
+        "docs/NETPLAY.md",
+        "docs/adr/0022-custom-sim-multiplayer-kit.md"
+      ],
+      "checks": [
+        "cargo test --locked --profile itest --test netplay",
+        "cargo test --locked --lib net::codec net::loopback",
+        "python tools/check_headless.py"
+      ],
+      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. Extracted from Spooky Kart; toy.rs is the smallest complete game.",
+      "keywords": [
+        "netplay",
+        "multiplayer",
+        "online",
+        "lobby",
+        "server",
+        "client",
+        "prediction",
+        "reconciliation",
+        "interpolation",
+        "snapshot",
+        "input",
+        "bundle",
+        "loss",
+        "latency",
+        "codec",
+        "binary",
+        "wire",
+        "datagram",
+        "loopback",
+        "udp",
+        "quic",
+        "telemetry",
+        "matches",
+        "custom",
+        "simulation",
+        "kart",
+        "racing"
+      ],
+      "depends_on": [
+        "multiplayer",
+        "custom_simulation"
+      ],
+      "read_first": [
+        "docs/NETPLAY.md",
+        "src/viewer/netplay/toy.rs",
+        "src/viewer/netplay/mod.rs"
+      ],
+      "canonical_example": "src/viewer/netplay/toy.rs",
+      "public_api": [
+        "NetGame",
+        "ClientView",
+        "NetServer",
+        "NetClient",
+        "ServerConfig",
+        "ClientConfig",
+        "Seat",
+        "codec::Writer",
+        "codec::Reader",
+        "loopback::LoopNet",
+        "AnyTransport",
+        "server_transport",
+        "client_transport"
+      ],
+      "evidence": [
+        {
+          "suite": "netplay",
+          "test": "players_join_choose_ready_up_play_and_finish"
+        },
+        {
+          "suite": "netplay",
+          "test": "lobby_choices_survive_heavy_packet_loss"
+        },
+        {
+          "suite": "netplay",
+          "test": "a_laggy_lossy_network_still_produces_a_finished_match"
+        }
+      ],
+      "contract": {
+        "owns": "Lobby, sessions, input streaming, snapshot pacing, event delivery, bot handoff and match statistics for a game",
+        "inputs": "A NetGame implementation and a DatagramTransport",
+        "outputs": "An authoritative match and clients that predict and interpolate",
+        "may_depend_on": [
+          "multiplayer",
+          "simulation_contract"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio devices",
+          "a window"
+        ],
+        "performance": "One snapshot per client every SNAPSHOT_EVERY ticks, each within 1,200 bytes",
+        "consumers": [
+          "custom-sim games with online play"
+        ]
+      }
+    },
+    "closed_path": {
+      "files": [
+        "src/viewer/devkit/path.rs",
+        "docs/CUSTOM_SIM_CHEATSHEET.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit::path"
+      ],
+      "note": "ClosedPath: a smooth closed loop on the ground plane (race track, patrol route, rail) with length, point/tangent at a distance, progress and lateral offset of any position, arc distance with wrap-around; plus yaw helpers (forward, right, yaw_of, wrap_angle) in the engine's convention (yaw 0 faces -Z).",
+      "keywords": [
+        "path",
+        "track",
+        "loop",
+        "spline",
+        "catmull",
+        "lap",
+        "progress",
+        "arc length",
+        "lateral",
+        "racing",
+        "patrol",
+        "waypoint",
+        "yaw",
+        "heading",
+        "bot steering",
+        "wrong way"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
+    },
+    "rendering_traps": {
+      "files": [
+        "src/viewer/kit/batch.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib kit::batch"
+      ],
+      "note": "Template::quad_facing winds a quad to face a normal whatever the corner order; Template::split and Batch::add split a template over the per-mesh vertex limit (9,000) instead of dropping it; a Template past 65,535 vertices panics instead of wrapping its u16 indices. A world that renders as an empty void was one of these.",
+      "keywords": [
+        "quad",
+        "winding",
+        "culled",
+        "invisible",
+        "vertex limit",
+        "9000",
+        "mesh limit",
+        "template",
+        "split",
+        "empty world",
+        "void"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
     }
   }
 }
