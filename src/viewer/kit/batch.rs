@@ -68,7 +68,10 @@ impl Template {
     }
 
     fn push(&mut self, p: Vec3, n: Vec3, c: Rgb, e: f32) -> u16 {
-        let i = self.verts.len() as u16;
+        // Indices are u16: past 65 535 vertices they would wrap and corrupt the mesh, so refuse loudly.
+        let i = u16::try_from(self.verts.len()).expect(
+            "a Template holds at most 65 535 vertices: build big scenes from several templates",
+        );
         let a = self.alpha;
         self.verts.push(Vert { p, n, c, e, a });
         i
@@ -126,6 +129,17 @@ impl Template {
         let cc = self.push(q[2], n, c, e);
         let d = self.push(q[3], n, c, e);
         self.idx.extend_from_slice(&[a, b, cc, a, cc, d]);
+    }
+
+    /// A flat quad that faces the way `normal` says, whatever order the corners are given in. Use this
+    /// for ground, walls and roads; [`Template::quad`] silently culls a quad wound the wrong way.
+    pub fn quad_facing(&mut self, q: [Vec3; 4], normal: Vec3, c: Rgb, e: f32) {
+        let geometric = (q[1] - q[0]).cross(q[2] - q[0]);
+        if geometric.dot(normal) >= 0. {
+            self.quad(q, normal, c, e);
+        } else {
+            self.quad([q[3], q[2], q[1], q[0]], normal, c, e);
+        }
     }
 
     /// Axis-aligned box: `half` is the half-extent on each axis.
@@ -409,7 +423,48 @@ impl Template {
         }
     }
 
-    /// Bake into a static set of macroquad meshes, splitting to stay inside draw-call limits.
+    /// Split into templates that each fit one mesh ([`MAX_MESH_VERTICES`], [`MAX_MESH_INDICES`]), keeping
+    /// every triangle. A template that already fits comes back as the only element.
+    pub fn split(&self) -> Vec<Template> {
+        if self.verts.len() <= MAX_MESH_VERTICES && self.idx.len() <= MAX_MESH_INDICES {
+            return vec![self.clone()];
+        }
+        let mut parts = Vec::new();
+        let mut part = Template {
+            alpha: self.alpha,
+            ..Template::default()
+        };
+        let mut remap: std::collections::HashMap<u16, u16> = std::collections::HashMap::new();
+        for tri in self.idx.chunks_exact(3) {
+            let new_verts = tri.iter().filter(|i| !remap.contains_key(i)).count();
+            if part.verts.len() + new_verts > MAX_MESH_VERTICES
+                || part.idx.len() + 3 > MAX_MESH_INDICES
+            {
+                parts.push(std::mem::replace(
+                    &mut part,
+                    Template {
+                        alpha: self.alpha,
+                        ..Template::default()
+                    },
+                ));
+                remap.clear();
+            }
+            for &i in tri {
+                let mapped = *remap.entry(i).or_insert_with(|| {
+                    part.verts.push(self.verts[i as usize]);
+                    (part.verts.len() - 1) as u16
+                });
+                part.idx.push(mapped);
+            }
+        }
+        if !part.idx.is_empty() {
+            parts.push(part);
+        }
+        parts
+    }
+
+    /// Bake into a static set of macroquad meshes, splitting to stay inside draw-call limits (a template
+    /// bigger than one mesh is split, never dropped).
     pub fn to_meshes(&self) -> Vec<Mesh> {
         let mut batch = Batch::new();
         batch.add(self, Mat4::IDENTITY, Tint::NONE);
@@ -517,11 +572,16 @@ impl Batch {
         }
     }
 
-    /// Place a template in world space with transform `m`. A template too large for one mesh is
-    /// skipped rather than overflowing the draw call.
+    /// Place a template in world space with transform `m`. A template too large for one mesh is split
+    /// into several rather than overflowing the draw call (it used to be dropped without a word).
     pub fn add(&mut self, t: &Template, m: Mat4, tint: Tint) {
-        if t.verts.is_empty() || t.verts.len() > MAX_MESH_VERTICES || t.idx.len() > MAX_MESH_INDICES
-        {
+        if t.verts.is_empty() {
+            return;
+        }
+        if t.verts.len() > MAX_MESH_VERTICES || t.idx.len() > MAX_MESH_INDICES {
+            for part in t.split() {
+                self.add(&part, m, tint);
+            }
             return;
         }
         self.room_for(t.verts.len(), t.idx.len());
@@ -648,6 +708,108 @@ mod tests {
     }
 
     #[test]
+    fn quad_facing_faces_the_given_normal_whichever_way_the_corners_are_ordered() {
+        let square = [
+            vec3(0., 0., 0.),
+            vec3(0., 0., 1.),
+            vec3(1., 0., 1.),
+            vec3(1., 0., 0.),
+        ];
+        let mut reversed = square;
+        reversed.reverse();
+        for corners in [square, reversed] {
+            for normal in [Vec3::Y, -Vec3::Y] {
+                let mut t = Template::new();
+                t.quad_facing(corners, normal, [1.; 3], 0.);
+                for tri in t.idx.chunks(3) {
+                    let (a, b, c) = (
+                        t.verts[tri[0] as usize],
+                        t.verts[tri[1] as usize],
+                        t.verts[tri[2] as usize],
+                    );
+                    assert!((b.p - a.p).cross(c.p - a.p).normalize().dot(normal) > 0.99);
+                }
+            }
+        }
+    }
+
+    fn big_template(quads: usize) -> Template {
+        let mut t = Template::new();
+        for i in 0..quads {
+            let x = i as f32;
+            t.quad_facing(
+                [
+                    vec3(x, 0., 0.),
+                    vec3(x + 1., 0., 0.),
+                    vec3(x + 1., 0., 1.),
+                    vec3(x, 0., 1.),
+                ],
+                Vec3::Y,
+                [x / quads as f32, 0.5, 0.5],
+                0.,
+            );
+        }
+        t
+    }
+
+    #[test]
+    fn a_template_over_the_mesh_limit_is_split_not_dropped() {
+        // 4 vertices a quad: 6 000 quads is 24 000 vertices, well over the 9 000 limit.
+        let t = big_template(6_000);
+        assert!(t.verts.len() > MAX_MESH_VERTICES);
+        let parts = t.split();
+        assert!(parts.len() >= 3, "{} parts", parts.len());
+        assert_eq!(
+            parts.iter().map(|p| p.idx.len()).sum::<usize>(),
+            t.idx.len(),
+            "no triangle lost"
+        );
+        assert!(parts
+            .iter()
+            .all(|p| p.verts.len() <= MAX_MESH_VERTICES && p.idx.len() <= MAX_MESH_INDICES));
+        for p in &parts {
+            assert!(
+                p.idx.iter().all(|i| (*i as usize) < p.verts.len()),
+                "indices stay inside their part"
+            );
+        }
+        let meshes = t.to_meshes();
+        assert_eq!(
+            meshes.iter().map(|m| m.indices.len()).sum::<usize>(),
+            t.idx.len()
+        );
+        assert!(meshes.iter().all(|m| m.vertices.len() <= MAX_MESH_VERTICES));
+    }
+
+    #[test]
+    fn a_template_that_fits_is_left_whole() {
+        let t = big_template(100);
+        let parts = t.split();
+        assert_eq!(parts.len(), 1);
+        assert_eq!(parts[0].verts.len(), t.verts.len());
+    }
+
+    #[test]
+    #[should_panic(expected = "65 535 vertices")]
+    fn a_template_refuses_to_wrap_its_indices() {
+        let mut t = Template::new();
+        for i in 0..20_000 {
+            let x = i as f32;
+            t.quad(
+                [
+                    vec3(x, 0., 0.),
+                    vec3(x, 0., 1.),
+                    vec3(x + 1., 0., 1.),
+                    vec3(x + 1., 0., 0.),
+                ],
+                Vec3::Y,
+                [1.; 3],
+                0.,
+            );
+        }
+    }
+
+    #[test]
     fn box_top_colours_only_the_lid_and_glows_only_there() {
         let mut t = Template::new();
         t.box_top(Vec3::ZERO, Vec3::ONE, [0.1; 3], [1., 0.5, 0.], 1.);
@@ -753,7 +915,7 @@ mod tests {
     }
 
     #[test]
-    fn an_oversized_template_is_skipped_not_overflowed() {
+    fn an_oversized_template_is_split_across_meshes_not_dropped_or_overflowed() {
         let mut t = Template::new();
         for i in 0..(MAX_MESH_VERTICES / 4 + 1) {
             t.quad(
@@ -770,7 +932,12 @@ mod tests {
         }
         let mut b = Batch::new();
         b.add(&t, Mat4::IDENTITY, Tint::NONE);
-        assert_eq!(b.vertex_count(), 0);
+        assert_eq!(b.vertex_count(), t.verts.len(), "every vertex is drawn");
+        let drawn: Vec<_> = b.meshes.iter().filter(|m| !m.vertices.is_empty()).collect();
+        assert!(drawn.len() >= 2, "split over several meshes");
+        assert!(drawn
+            .iter()
+            .all(|m| m.vertices.len() <= MAX_MESH_VERTICES && m.indices.len() <= MAX_MESH_INDICES));
     }
 
     #[test]
