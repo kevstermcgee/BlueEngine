@@ -246,8 +246,9 @@ fn an_unregistered_server_is_found_and_stopped() {
         .unwrap();
     let pid = child.id();
     // Signal handlers are installed just before this line: a SIGTERM earlier would kill the process outright.
+    // Keep the reader alive: a closed pipe would make the server's later output fail.
     let mut lines = std::io::BufReader::new(child.stdout.take().unwrap()).lines();
-    while let Some(line) = lines.next() {
+    for line in lines.by_ref() {
         if line.unwrap().contains("listening") {
             break;
         }
