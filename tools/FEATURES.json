@@ -612,10 +612,13 @@
         "src/viewer/capabilities.rs",
         "src/bin/be2-tools.rs",
         "tools/FEATURES.json",
-        "tests/capabilities.rs"
+        "tests/capabilities.rs",
+        "tests/capacity_limits.rs",
+        "tests/net_test_command.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test capabilities"
+        "cargo test --locked --no-default-features --test capabilities",
+        "cargo test --locked --no-default-features --test capacity_limits --test net_test_command"
       ],
       "note": "describe and bounded search use the CLI command registry and embedded feature index. export-lab creates a validated authoring starter. Evidence names and files must resolve; their tests run in the ordinary CI suite.",
       "evidence": [
@@ -769,10 +772,12 @@
         "assets/games/three-switches/scenario.json",
         "src/viewer/game_scenario.rs",
         "tests/scenario_intents.rs",
-        "tests/game_scenario.rs"
+        "tests/game_scenario.rs",
+        "tests/game_failure_paths.rs"
       ],
       "checks": [
-        "headless simulation scenarios and replay trace verification"
+        "headless simulation scenarios and replay trace verification",
+        "cargo test --locked --no-default-features --test game_failure_paths"
       ],
       "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025).",
       "evidence": [
@@ -1332,7 +1337,8 @@
         "tests/physics_saves.rs",
         "templates/custom-sim/src/lib.rs",
         "docs/SAVE_STATE.md",
-        "docs/adr/0018-physics-save-contract.md"
+        "docs/adr/0018-physics-save-contract.md",
+        "tests/capacity_limits.rs"
       ],
       "checks": [
         "cargo test --locked --lib savestate devkit::snapshot",

@@ -39,6 +39,11 @@ pub struct TimedInput {
     pub crouch: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub interact: bool,
+    /// Restart the match, as a player pressing the action button does once it is won or lost (the stock client's
+    /// shared `game_action` policy). Everything resets and the players respawn. It is reported as a problem if
+    /// the match is still running, so a scenario cannot pass by restarting at the wrong moment.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub restart: bool,
     /// Walk to this point (x, z, metres) at full speed and stop there. Later inputs for the same player
     /// wait until it arrives and settles, so a scenario reads as intent ("walk here, then press") instead of
     /// tick arithmetic. Unless `face` is given the player keeps the heading it has.
@@ -278,6 +283,19 @@ impl InputDriver {
         }
         if input.interact {
             world.request_interaction(input.player);
+        }
+        if input.restart {
+            if world.game.as_ref().is_some_and(|g| g.state().finished()) {
+                if let Err(error) = world.restart_game() {
+                    self.problems
+                        .push(format!("tick {}: restart failed: {error}", input.tick));
+                }
+            } else {
+                self.problems.push(format!(
+                    "tick {}: restart requested but the match is not finished",
+                    input.tick
+                ));
+            }
         }
     }
     /// Yaw and pitch that put the centre of entity `name` in the middle of the player's view.

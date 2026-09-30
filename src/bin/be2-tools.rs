@@ -655,7 +655,7 @@ fn run() -> Result<()> {
                     match win_scenario(&loaded, &report, &stored, &check) {
                         Ok(made) => {
                             save(out, &made.scenario)?;
-                            json!({"written": out, "verified": true, "ticks": made.scenario.ticks, "stood": made.strategy})
+                            json!({"written": out, "verified": true, "ticks": made.scenario.ticks, "stood": made.strategy, "covers": "one winning route played once; it does not test losing, restarting, retrying, wrong-order presses or timer variation"})
                         }
                         Err(error) => {
                             json!({"written": null, "verified": false, "error": error.to_string()})
