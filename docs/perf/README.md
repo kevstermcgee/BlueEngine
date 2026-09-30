@@ -78,6 +78,13 @@ games would be the next step.
 | 4 | 1.6% | 149 / 566 us | 3.8 MB | 18.2 / 2.2 KB/s | 17 ms | 229 (1.11 m) |
 | 8 | 1.9% | 173 / 507 us | 3.7 MB | 18.1 / 2.2 KB/s | 17 ms | 1,328 (0.88 m) |
 
+After porting the game onto the engine's `viewer::netplay` kit the same test gave server CPU 1.4 / 1.7 / 2.0%,
+tick mean 127 / 162 / 191 us, 18.4-18.5 KB/s down and 2.2 KB/s up per client, and 22 / 487 / 1,358 prediction
+corrections (largest error 0.27 / 0.86 / 0.87 m): the kit costs nothing measurable. (An earlier run of the ported game
+recorded zero corrections; that was the view reset discarding its counters, fixed in the client. Only the
+`kart_client_corrections`, `kart_client_snaps` and `kart_client_max_error` rows of that one run are wrong, and the
+run after the fix supersedes them.)
+
 No hard prediction snaps at any level; corrections rise with players because clients do not predict kart-to-kart
 bumps. What this game taught us about the engine, with evidence, is in `~/SpookyKart/docs/ENGINE_LESSONS.md`.
 
