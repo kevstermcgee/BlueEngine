@@ -536,8 +536,13 @@ impl HeadlessWorld {
     /// Consume pending jump edges once; retain all other movement intent.
     pub fn step(&mut self) {
         if let Some(game) = &mut self.game {
-            game.step_movers(&mut self.room);
+            let motions = game.step_movers(&mut self.room);
             game.step_timers();
+            for player in self.players.values_mut() {
+                for motion in &motions {
+                    player.controller.ride(&motion.from, &motion.to);
+                }
+            }
         }
         for (&id, player) in &mut self.players {
             player

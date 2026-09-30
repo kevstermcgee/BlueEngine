@@ -697,7 +697,9 @@ async fn main() {
                         } if session == net_session_token => {
                             if let Some(game) = &mut game {
                                 game.accept_snapshot(tick, state);
-                                game.step_movers(&mut room);
+                                for motion in game.step_movers(&mut room) {
+                                    controller.ride(&motion.from, &motion.to);
+                                }
                             }
                         }
                         packet @ (Packet::Snapshot(_) | Packet::Delta(_)) => {
@@ -998,7 +1000,9 @@ async fn main() {
             if net_transport.is_none() {
                 if let Some(game) = &mut game {
                     if simulation_steps > 0 {
-                        game.step_movers(&mut room);
+                        for motion in game.step_movers(&mut room) {
+                            controller.ride(&motion.from, &motion.to);
+                        }
                         game.step_timers();
                     }
                     pending_game_interaction |= interact && skip_look == 0;

@@ -152,7 +152,12 @@ target is switched back on after every rule on it has used up its `once`.
 Enabled controls interaction and trigger zone eligibility. Visibility is separately
 replicated for interactable geometry and never changes collision or eligibility; use
 both actions when an object should disappear and stop responding. Kinematic `movers` smoothly translate box colliders
-between closed and open states over `duration_ticks`, dynamically blocking or opening pathways for players.
+between closed and open states over `duration_ticks`, dynamically blocking or opening pathways for players. A player
+standing on top of a mover is carried with it in any direction, so a mover can be a lift or a moving platform, not only a
+door; a mover that slides or rises into a player pushes them out through ordinary collision. The headless world and the
+local client apply this; a custom client that steps `GameRuntime::step_movers` itself gets the moves back and should call
+`Controller::ride` on its own controller for each one (the stock client does), or its prediction will drop the rider and
+be corrected by the server.
 `timers` provide deterministic fixed-tick countdowns (`duration_ticks`, `auto_start`, `repeats`) to dispatch delayed actions.
 Targets require line of sight within 2.5 metres. Limits: 32 counters, 64 targets/zones, 64 movers, 64 timers, 64 rules,
 4 actions/rule, 8 spawns; counters clamp to +/-1,000,000. No arbitrary scripts or irregular geometry mutation.

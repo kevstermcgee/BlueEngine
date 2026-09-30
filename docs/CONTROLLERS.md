@@ -70,11 +70,13 @@ game with voids or knockback needs are settings, not forks:
 | Another gravity (the jump keeps its `jump_height`) | `set_gravity(m_per_s2)` | 12 |
 | A shove, dash, jump pad or explosion | `apply_impulse(V)` then optionally `set_push_drag(per_second)` | horizontal push decays at 3 per second, walls stop it |
 | The exact body-overlap question | `Collider::overlaps_body`, `Controller::blocked_at` | |
+| A platform, lift or elevator that carries what stands on it | `Controller::ride(from, to)` once per moved box per tick | game `movers` already do this for every player |
 
 `apply_impulse` adds the horizontal part to a *push* that rides on top of walking (so it is not erased by
 the input smoothing) and the vertical part to the vertical velocity, leaving the ground when upward.
 `set_physics_state(position, vertical_velocity, grounded)` is the supported way to apply an external
-*vertical* change (a moving platform, a teleport, reconciliation); `restore_network_state` overwrites the
+*vertical* change (a teleport, reconciliation); a moving platform is `Controller::ride`, which carries a grounded body
+standing on the box; `restore_network_state` overwrites the
 complete state, including the push. Floor, gravity and push drag are configuration, not state: they are not
 serialized, so an online game configures every peer the same way. Impulses are local to the simulation that
 applies them; an online game applies them where the authority runs. `be2-tools lint MAP.json` still treats

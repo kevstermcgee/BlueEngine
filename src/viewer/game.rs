@@ -642,6 +642,13 @@ pub struct GameEvent {
     pub entity: String,
 }
 
+/// A mover's box before and after one tick of motion. It is a pure translation.
+#[derive(Clone, Debug)]
+pub struct MoverMotion {
+    pub from: super::controller::Collider,
+    pub to: super::controller::Collider,
+}
+
 /// One thing that can happen to a game, at the granularity the rules can tell apart.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ModelEvent {
@@ -1215,17 +1222,26 @@ impl GameRuntime {
             }
         }
     }
-    pub fn step_movers(&mut self, room: &mut Room) {
+    /// Advance every mover one tick and return the ones that moved, so the caller can carry or push the
+    /// players they touch (see `Controller::ride`). Callers that own no players may ignore the result.
+    pub fn step_movers(&mut self, room: &mut Room) -> Vec<MoverMotion> {
+        let mut moved = Vec::new();
         for (i, mover) in self.movers.iter_mut().enumerate() {
             let target_open = self.state.mover_targets & (1 << i) != 0;
+            let from = mover.current_bounds();
             if target_open && mover.current_ticks < mover.duration_ticks {
                 mover.current_ticks += 1;
             } else if !target_open && mover.current_ticks > 0 {
                 mover.current_ticks -= 1;
             }
+            let to = mover.current_bounds();
+            if from.min != to.min {
+                moved.push(MoverMotion { from, to });
+            }
         }
         self.state.mover_ticks = self.movers.iter().map(|m| m.current_ticks).collect();
         self.apply_mover_colliders(room);
+        moved
     }
     pub fn apply_mover_colliders(&mut self, room: &mut Room) {
         for mover in &mut self.movers {
