@@ -17,7 +17,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("audit", "MAP.json"),
     ("inspect-performance", ""),
     ("validate-budget", ""),
-    ("net-test", ""),
+    ("net-test", "[--ticks=N] [--latency-ms=N] [--loss-rate=R]"),
     ("bench", ""),
     ("replay-test", ""),
     ("apply", "MAP.json PATCH.json OUT.json"),

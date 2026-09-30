@@ -46,6 +46,257 @@ fn rect4(text: &str) -> Result<[f32; 4]> {
     }
     Ok([parts[0], parts[1], parts[2], parts[3]])
 }
+/// What a performance command measured. These commands time the engine's own built-in fixture; none of them loads a
+/// map or game, so a pass is a regression guard for the engine, not evidence about any particular game.
+fn builtin_fixture(workload: &str) -> serde_json::Value {
+    json!({
+        "kind": "built-in engine fixture",
+        "user_selected_content": false,
+        "workload": workload,
+        "says_nothing_about": [
+            "any game, map or custom simulation you authored",
+            "a game's own entity counts, physics load or rules",
+            "network or rendering cost",
+            "other hardware",
+        ],
+    })
+}
+
+/// One named invariant of a diagnostic and whether it held.
+#[derive(serde::Serialize)]
+struct Check {
+    name: &'static str,
+    passed: bool,
+    detail: String,
+}
+
+fn check(name: &'static str, passed: bool, detail: String) -> Check {
+    Check {
+        name,
+        passed,
+        detail,
+    }
+}
+
+/// `be2-tools net-test [--ticks=N] [--latency-ms=N] [--loss-rate=R]`: the built-in prediction/reconciliation smoke test.
+///
+/// It drives one scripted client (walk forward) against the in-process `HeadlessWorld` through `NetworkSimulator`, and
+/// verifies invariants of *that workload*. `ok` is true only when every check held; completing the run is reported
+/// separately as `completed`. It says nothing about real sockets, QUIC/TLS, other games or production readiness.
+fn net_test(args: &[String]) -> Result<()> {
+    let mut ticks = 120u64;
+    let mut latency_ms = 50u64;
+    let mut loss_rate = 0.05f32;
+    for argument in args {
+        let (flag, value) = argument
+            .split_once('=')
+            .ok_or_else(|| format!("net-test options look like --ticks=120, not {argument}"))?;
+        match flag {
+            "--ticks" => {
+                ticks = value
+                    .parse()
+                    .ok()
+                    .filter(|t| (30..=100_000).contains(t))
+                    .ok_or("--ticks needs a whole number from 30 to 100000")?
+            }
+            "--latency-ms" => {
+                latency_ms = value
+                    .parse()
+                    .ok()
+                    .filter(|l| *l <= 2000)
+                    .ok_or("--latency-ms needs a whole number from 0 to 2000")?
+            }
+            "--loss-rate" => {
+                loss_rate = value
+                    .parse()
+                    .ok()
+                    .filter(|r: &f32| (0.0..=1.0).contains(r))
+                    .ok_or("--loss-rate needs a number from 0 to 1")?
+            }
+            other => return Err(format!("unknown net-test option {other}").into()),
+        }
+    }
+    let mut world = HeadlessWorld::new()?;
+    world.join(1);
+    let start_position = world
+        .snapshot(0)
+        .players
+        .iter()
+        .find(|p| p.id == 1)
+        .map(|p| p.position)
+        .ok_or("the test world has no player 1")?;
+    let mut sim = NetworkSimulator::<InputFrame>::new(latency_ms, loss_rate);
+    let mut pred = PredictionBuffer::new(64);
+    let mut controller = Controller::default();
+    let (mut sent, mut dropped, mut delivered) = (0u64, 0u64, 0u64);
+    let mut reconciled_corrections = 0;
+    let mut reconcile_checks = 0u64;
+    let mut max_divergence = 0f32;
+    let mut last_ack_tick = 0;
+    let threshold = 0.02;
+
+    for tick in 1..=ticks {
+        let input = InputFrame {
+            client_tick: tick,
+            movement: Movement {
+                forward: 1.0,
+                ..Default::default()
+            },
+            yaw: 0.0,
+            pitch: 0.0,
+            fire_wrench: false,
+            fire_pistol: false,
+            interact: false,
+            ack_server_tick: 0,
+            session_token: None,
+        };
+        controller.update(
+            input.movement,
+            vesper3d::viewer::simulation::TICK_SECONDS,
+            &world.room.colliders,
+        );
+        pred.push(input.clone(), controller.clone());
+        sent += 1;
+        if !sim.send(tick, input) {
+            dropped += 1;
+        }
+        // The server receives the packets whose simulated delay has elapsed.
+        for packet in sim.receive(tick) {
+            delivered += 1;
+            last_ack_tick = last_ack_tick.max(packet.client_tick);
+            world.input(1, packet.movement, packet.yaw, packet.pitch);
+        }
+        world.step();
+        if tick % 3 == 0 && last_ack_tick > 0 {
+            let snap = world.snapshot(last_ack_tick);
+            if let Some(p) = snap.players.iter().find(|p| p.id == 1) {
+                let corrected = pred.reconcile(
+                    snap.ack_client_tick,
+                    p,
+                    &mut controller,
+                    &world.room.colliders,
+                    threshold,
+                );
+                reconcile_checks += 1;
+                max_divergence = max_divergence.max(pred.last_correction_error);
+                if corrected {
+                    reconciled_corrections += 1;
+                }
+            }
+        }
+    }
+
+    let in_flight = sim.queue.len() as u64;
+    let end_position = world
+        .snapshot(0)
+        .players
+        .iter()
+        .find(|p| p.id == 1)
+        .map(|p| p.position)
+        .ok_or("the test world lost player 1")?;
+    let moved = (end_position - start_position).length();
+    let delay_ticks =
+        (latency_ms as f64 / 1000.0 / vesper3d::viewer::simulation::TICK_SECONDS as f64).round()
+            as u64;
+    // The simulator drops every Nth packet, so the longest run of missing packets is one, except at total loss.
+    let loss_gap = if loss_rate > 0.0 {
+        (1.0 / loss_rate).round() as u64
+    } else {
+        0
+    };
+    let ack_slack = delay_ticks + loss_gap + 2;
+    let observed_loss = dropped as f64 / sent.max(1) as f64;
+
+    let checks = vec![
+        check(
+            "packets_conserved",
+            sent == dropped + delivered + in_flight,
+            format!("sent {sent} = dropped {dropped} + delivered {delivered} + in flight {in_flight}"),
+        ),
+        check(
+            "loss_matches_configuration",
+            (observed_loss - loss_rate as f64).abs() <= 0.05,
+            format!("observed loss {observed_loss:.3}, configured {loss_rate:.3}, allowed difference 0.05"),
+        ),
+        check(
+            "delivery_progress",
+            delivered > 0 && delivered + dropped + delay_ticks + 1 >= sent,
+            format!("{delivered} inputs reached the server; at most {} were expected to be still in flight or lost", dropped + delay_ticks + 1),
+        ),
+        check(
+            "acknowledgement_progress",
+            last_ack_tick + ack_slack >= ticks,
+            format!("the server acknowledged client tick {last_ack_tick} of {ticks}; it must be within {ack_slack} ticks of the end (latency {delay_ticks} + loss gap {loss_gap} + 2)"),
+        ),
+        check(
+            "server_applied_inputs",
+            moved > 0.5,
+            format!("the authoritative player moved {moved:.2} m from its spawn (more than 0.5 m required)"),
+        ),
+        check(
+            "reconciliation_ran",
+            reconcile_checks > 0,
+            format!("{reconcile_checks} predictions were compared with authoritative state"),
+        ),
+        check(
+            "prediction_divergence_bounded",
+            max_divergence <= 0.5,
+            format!("largest predicted-versus-authoritative difference at an acknowledged tick was {max_divergence:.3} m (at most 0.5 m)"),
+        ),
+    ];
+    let verified = checks.iter().all(|c| c.passed);
+    let report = json!({
+        "ok": verified,
+        "completed": true,
+        "verified": verified,
+        "scope": "Built-in prediction and reconciliation smoke test: one scripted client walking forward in the engine's stock test lab.",
+        "workload": {
+            "world": "HeadlessWorld::new() (built-in test lab), one player, constant forward input",
+            "transport": "in-process NetworkSimulator (deterministic, drops every Nth packet); no sockets",
+            "ticks": ticks,
+            "latency_ms": latency_ms,
+            "loss_rate": loss_rate,
+        },
+        "checks": checks,
+        "measurements": {
+            "packets_sent": sent,
+            "packets_dropped": dropped,
+            "packets_delivered": delivered,
+            "packets_in_flight": in_flight,
+            "last_acknowledged_client_tick": last_ack_tick,
+            "reconciliations_compared": reconcile_checks,
+            "reconciled_corrections": reconciled_corrections,
+            "max_prediction_divergence_m": max_divergence,
+            "server_distance_moved_m": moved,
+            "final_position": [controller.position.0, controller.position.1, controller.position.2],
+        },
+        "not_tested": [
+            "real UDP sockets, QUIC or TLS (see tests/multiplayer_transport.rs and tests/replication_sockets.rs)",
+            "any game other than the built-in test lab, and any custom simulation",
+            "replication, packet size limits, interest management, or multi-client load",
+            "jitter, reordering or duplication (the simulator only delays and drops)",
+            "production readiness or performance",
+        ],
+        // Fields the command printed before it verified anything; kept at the top level for existing callers.
+        "simulated_ticks": ticks,
+        "simulated_latency_ms": latency_ms,
+        "simulated_packet_loss_rate": loss_rate,
+        "dropped_packets": dropped,
+        "reconciled_corrections": reconciled_corrections,
+        "final_position": [controller.position.0, controller.position.1, controller.position.2],
+    });
+    println!("{}", serde_json::to_string_pretty(&report)?);
+    if !verified {
+        let failed: Vec<_> = checks
+            .iter()
+            .filter(|c| !c.passed)
+            .map(|c| c.name)
+            .collect();
+        return Err(format!("net-test verification failed: {}", failed.join(", ")).into());
+    }
+    Ok(())
+}
+
 fn main() {
     if let Err(e) = run() {
         eprintln!(
@@ -144,6 +395,9 @@ fn run() -> Result<()> {
                 "ok": true,
                 "snapshot": perf,
                 "explanation": perf.explain(),
+                "measured": builtin_fixture(
+                    "60 steps of HeadlessWorld::new() (the built-in test lab) with two players and no input",
+                ),
             });
             println!("{}", serde_json::to_string_pretty(&report)?);
         }
@@ -164,85 +418,16 @@ fn run() -> Result<()> {
                 "passed": validation.passed,
                 "violations": validation.violations,
                 "metrics": perf,
+                "measured": builtin_fixture(
+                    "60 steps of HeadlessWorld::new() (the built-in test lab) with two players and no input",
+                ),
             });
             println!("{}", serde_json::to_string_pretty(&report)?);
             if !validation.passed {
                 return Err("Performance budget exceeded".into());
             }
         }
-        "net-test" => {
-            let mut world = HeadlessWorld::new()?;
-            world.join(1);
-            let mut sim = NetworkSimulator::<InputFrame>::new(50, 0.05); // 50ms latency, 5% packet loss
-            let mut pred = PredictionBuffer::new(64);
-            let mut controller = Controller::default();
-            let mut dropped_packets = 0;
-            let mut reconciled_corrections = 0;
-            let mut last_ack_tick = 0;
-
-            for tick in 1..=120 {
-                let input = InputFrame {
-                    client_tick: tick,
-                    movement: Movement {
-                        forward: 1.0,
-                        ..Default::default()
-                    },
-                    yaw: 0.0,
-                    pitch: 0.0,
-                    fire_wrench: false,
-                    fire_pistol: false,
-                    interact: false,
-                    ack_server_tick: 0,
-                    session_token: None,
-                };
-                controller.update(
-                    input.movement,
-                    vesper3d::viewer::simulation::TICK_SECONDS,
-                    &world.room.colliders,
-                );
-                pred.push(input.clone(), controller.clone());
-
-                if !sim.send(tick, input) {
-                    dropped_packets += 1;
-                }
-
-                // Server receives scheduled packets for this tick
-                let delivered = sim.receive(tick);
-                for pkt in delivered {
-                    last_ack_tick = pkt.client_tick;
-                    world.input(1, pkt.movement, pkt.yaw, pkt.pitch);
-                }
-
-                // Continuous server simulation tick (60 Hz server ticking)
-                world.step();
-
-                if tick % 3 == 0 && last_ack_tick > 0 {
-                    let snap = world.snapshot(last_ack_tick);
-                    if let Some(p) = snap.players.iter().find(|p| p.id == 1) {
-                        if pred.reconcile(
-                            snap.ack_client_tick,
-                            p,
-                            &mut controller,
-                            &world.room.colliders,
-                            0.02,
-                        ) {
-                            reconciled_corrections += 1;
-                        }
-                    }
-                }
-            }
-
-            let report = json!({
-                "ok": true,
-                "simulated_ticks": 120,
-                "simulated_latency_ms": sim.latency_ms,
-                "simulated_packet_loss_rate": sim.packet_loss_rate,
-                "dropped_packets": dropped_packets,
-                "reconciled_corrections": reconciled_corrections,
-                "final_position": [controller.position.0, controller.position.1, controller.position.2],
-            });
-            println!("{}", serde_json::to_string_pretty(&report)?);
-        }
+        "net-test" => net_test(&a[1..])?,
         "replay-test" => {
             // Run a match recording inputs and checkpoints, then verify identical replay reproduction
             let mut world = HeadlessWorld::new()?;
@@ -367,6 +552,9 @@ fn run() -> Result<()> {
                 "benchmarks": measurements,
                 "budget": budget,
                 "violations": violations,
+                "measured": builtin_fixture(
+                    "1000 steps, 1000 snapshots, 1000 deltas and 10000 room lookups on HeadlessWorld::new() with two players",
+                ),
             });
             println!("{}", serde_json::to_string_pretty(&results)?);
             if !passed {

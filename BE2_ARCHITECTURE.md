@@ -111,7 +111,8 @@ through the authoritative server.
 ## Measurement and remaining limits
 
 `be2-tools bench`, `inspect-performance`, `validate-budget` and `replay-test` provide
-current diagnostics. `be2-tools bench` and `tests/benchmarks.rs` enforce the same
+current diagnostics of the engine's built-in fixture (their reports say so; they do not measure a chosen game).
+`be2-tools net-test` is a prediction/reconciliation smoke test that exits nonzero unless its listed invariants hold. `be2-tools bench` and `tests/benchmarks.rs` enforce the same
 checked-in absolute budgets for simulation steps, snapshots, deltas and room lookup;
 budget failures return nonzero. These are service ceilings suitable for heterogeneous
 CI, not hardware-normalized baselines or allocation guards. Replay-test compares two
