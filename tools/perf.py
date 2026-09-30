@@ -4,13 +4,16 @@
 Rows are appended to docs/perf/metrics.jsonl (one JSON object per line, never rewritten) so a
 later session can compare like with like: same metric, profile, kind and host, across commits.
 
-  python tools/perf.py record [--suite build|test|sim|server|all] [--profile fast|release|itest|dev] [--note TEXT]
+  python tools/perf.py record [--suite build|test|sim|server|kart|all] [--profile fast|release|itest|dev] [--note TEXT]
   python tools/perf.py report [--metric NAME]     latest value per series vs the previous one
   python tools/perf.py env                        the host/toolchain block a row would carry
 
 `--suite server` starts be2-headless on loopback and joins 1, 2, 4 and 8 synthetic clients (plus a 9th
 to confirm refusal: the server is capped at 8) using examples/server_load.rs, recording server CPU,
 memory, tick time and per-client bandwidth. `all` does not include it (about 3 minutes).
+
+`--suite kart` runs Spooky Kart's own load test (~/SpookyKart, or $BLUE_KART_DIR): its real server over real
+UDP with 1, 4 and 8 bot clients, one full race each (about 7 minutes in all). `all` does not include it.
 
 Measurements build in a private target directory (BLUE_PERF_TARGET, default
 ~/.cache/blueengine-perf) so they never disturb your own target/. Incremental rows edit
@@ -219,6 +222,27 @@ def server_rows(profile):
     return rows
 
 
+def kart_rows(profile):
+    kart = Path(os.environ.get('BLUE_KART_DIR', Path.home() / 'SpookyKart'))
+    script = kart / 'tools' / 'load_test.py'
+    if not script.exists():
+        sys.exit(f'{script} not found: set BLUE_KART_DIR to the Spooky Kart checkout')
+    cmd = [sys.executable, str(script), '--clients', '1', '4', '8']
+    if profile == 'release':
+        cmd.append('--release')
+    done = run(cmd)
+    if done.returncode:
+        sys.exit(done.stderr[-2000:] or done.stdout[-2000:])
+    commit = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], cwd=kart, text=True, capture_output=True).stdout.strip()
+    rows = []
+    for line in done.stdout.splitlines():
+        if line.startswith('{'):
+            row = json.loads(line)
+            row['game_commit'] = commit
+            rows.append(row)
+    return rows
+
+
 def load():
     if not METRICS.exists():
         return []
@@ -243,7 +267,7 @@ def main(argv):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest='cmd', required=True)
     r = sub.add_parser('record')
-    r.add_argument('--suite', choices=['build', 'test', 'sim', 'server', 'all'], default='all')
+    r.add_argument('--suite', choices=['build', 'test', 'sim', 'server', 'kart', 'all'], default='all')
     r.add_argument('--profile', choices=['fast', 'release', 'itest', 'dev'], default=None)
     r.add_argument('--note', default='')
     rp = sub.add_parser('report')
@@ -262,6 +286,8 @@ def main(argv):
             rows += test_rows(args.profile if args.profile in ('itest', 'dev') else 'itest')
         if args.suite in ('sim', 'all'):
             rows += sim_rows(args.profile if args.profile in ('fast', 'release') else 'fast')
+        if args.suite == 'kart':
+            rows += kart_rows(args.profile if args.profile in ('release', 'dev') else 'dev')
         if args.suite == 'server':
             rows += server_rows(args.profile if args.profile in ('fast', 'release') else 'fast')
         append(rows, args.note)

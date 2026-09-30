@@ -8,7 +8,8 @@
     "games/skyhook-sprint",
     "games/magnet-mine",
     "games/wrecking-orbit",
-    "games/pulse-nova"
+    "games/pulse-nova",
+    "games/spooky-kart"
   ],
   "collections": {
     "games": [

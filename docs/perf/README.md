@@ -65,6 +65,22 @@ Result of the fix on branch `faster-windows-release` of BlueEngineGames (shared 
 The remaining cost is compiling the engine crate itself once per profile group; skipping unchanged
 games would be the next step.
 
+## Spooky Kart (a game built on the engine, `~/SpookyKart`)
+
+`python tools/perf.py record --suite kart` runs the game's own load test (`tools/load_test.py` in that repo, or
+`$BLUE_KART_DIR`): its real server over real UDP loopback with 1, 4 and 8 bot clients, one full two-lap race each
+(about 7 minutes). Metrics are `kart_*`; per-character results are `kart_character_mean_place` and
+`kart_character_win_rate` (rows carry a `character` field). Baseline, dev build, N97:
+
+| Clients | Server CPU | Server tick mean / max | RAM | Per client down / up | RTT | Prediction corrections (max error) |
+|---|---|---|---|---|---|---|
+| 1 | 1.4% of a core | 132 / 517 us | 3.7 MB | 18.0 / 2.2 KB/s | 17 ms | 2 (0.20 m) |
+| 4 | 1.6% | 149 / 566 us | 3.8 MB | 18.2 / 2.2 KB/s | 17 ms | 229 (1.11 m) |
+| 8 | 1.9% | 173 / 507 us | 3.7 MB | 18.1 / 2.2 KB/s | 17 ms | 1,328 (0.88 m) |
+
+No hard prediction snaps at any level; corrections rise with players because clients do not predict kart-to-kart
+bumps. What this game taught us about the engine, with evidence, is in `~/SpookyKart/docs/ENGINE_LESSONS.md`.
+
 ## Open ideas, in expected order of value
 
 1. Done on this machine: mold and sccache via `~/.cargo/config.toml` (not the repo, so Windows CI is
