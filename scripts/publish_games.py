@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -186,34 +187,175 @@ def git_revision(root: Path) -> str:
     return result.stdout.strip() if result.returncode == 0 else "working-tree"
 
 
-def publish(root: Path, output: Path, revision: str) -> dict:
+SHA256 = re.compile(r"[0-9a-f]{64}")
+
+# Replacement point for one file; tests substitute it to simulate a failure part-way through an export.
+_replace = os.replace
+
+
+def sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def contained(output: Path, relative: str, what: str) -> Path:
+    """`output / relative`, refusing any path whose existing parents are symlinks or that leaves `output`."""
+    rel = safe_relative(relative, what)
+    if not rel.parts or rel.parts[0] not in CATEGORIES:
+        raise PublishError(f"{what} is outside the managed collections: {relative!r}")
+    current = output
+    for part in rel.parts[:-1]:
+        current = current / part
+        if current.is_symlink():
+            raise PublishError(f"{what} goes through a symlinked directory: {current}")
+    target = output / rel
+    try:
+        target.parent.resolve().relative_to(output.resolve())
+    except ValueError as error:
+        raise PublishError(f"{what} escapes the output directory: {relative!r}") from error
+    return target
+
+
+def read_ownership(output: Path) -> dict[str, str]:
+    """Paths a previous export wrote, from the catalog it left. No catalog means nothing is owned.
+
+    A catalog that exists but cannot be trusted stops the export: guessing would widen what may be deleted.
+    """
+    path = output / CATALOG_NAME
+    if not path.exists() and not path.is_symlink():
+        return {}
+    where = f"{CATALOG_NAME} in the output repository"
+    if path.is_symlink() or not path.is_file():
+        raise PublishError(f"{where} is not a regular file; fix or remove it to start a fresh ownership record")
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
+        raise PublishError(
+            f"{where} is unreadable ({error}); nothing was changed. Restore it from Git, or delete it to "
+            "export without deleting anything stale"
+        ) from error
+    files = data.get("files") if isinstance(data, dict) else None
+    if not isinstance(files, list):
+        raise PublishError(f"{where} has no 'files' list; nothing was changed. Restore it from Git or delete it")
+    owned: dict[str, str] = {}
+    for index, item in enumerate(files):
+        value = item.get("path") if isinstance(item, dict) else None
+        digest = item.get("sha256") if isinstance(item, dict) else None
+        if not isinstance(value, str) or not isinstance(digest, str) or not SHA256.fullmatch(digest):
+            raise PublishError(f"{where}: files[{index}] needs a path and a 64-character sha256; nothing was changed")
+        try:
+            contained(output, value, f"{CATALOG_NAME} files[{index}].path")
+        except PublishError as error:
+            raise PublishError(f"{error} (the catalog is malformed; nothing was changed)") from error
+        if value in owned:
+            raise PublishError(f"{where}: duplicate path {value!r}; nothing was changed")
+        owned[value] = digest
+    return owned
+
+
+def plan_export(output: Path, staging: Path, catalog: dict, owned: dict[str, str], preserved: list[Path]) -> dict:
+    """Decide every change without making any. Conflicts are collected so one run reports them all."""
+    write: list[tuple[str, Path]] = []
+    unchanged = 0
+    conflicts: list[str] = []
+    new_paths = {item["path"]: item["sha256"] for item in catalog["files"]}
+    for path, digest in new_paths.items():
+        target = contained(output, path, path)
+        if target.is_symlink():
+            conflicts.append(f"{path}: the destination is a symlink")
+        elif not target.exists():
+            write.append((path, target))
+        elif not target.is_file():
+            conflicts.append(f"{path}: the destination exists and is not a file")
+        else:
+            current = sha256_file(target)
+            if current == digest:
+                unchanged += 1
+            elif path not in owned:
+                conflicts.append(f"{path}: exists in the output but no earlier export wrote it (unowned file)")
+            elif current != owned[path]:
+                conflicts.append(f"{path}: edited in the output since the last export (hash differs from the record)")
+            else:
+                write.append((path, target))
+    remove: list[tuple[str, Path]] = []
+    for path, digest in owned.items():
+        if path in new_paths:
+            continue
+        target = contained(output, path, path)
+        if any(part in Path(path).parents or part == Path(path) for part in preserved):
+            continue  # a path the manifest says is independently maintained is never removed
+        if target.is_symlink():
+            conflicts.append(f"{path}: a stale exported file was replaced by a symlink")
+        elif target.is_file():
+            if sha256_file(target) == digest:
+                remove.append((path, target))
+            else:
+                conflicts.append(f"{path}: stale, but edited in the output since the last export; not deleting it")
+    if conflicts:
+        raise PublishError(
+            "refusing to export; nothing was changed. Resolve these in the output repository "
+            "(revert the edit, move the file, or delete it), then run the export again:\n  "
+            + "\n  ".join(sorted(conflicts))
+        )
+    return {"write": write, "remove": remove, "unchanged": unchanged}
+
+
+def publish(root: Path, output: Path, revision: str, *, dry_run: bool = False) -> dict:
+    """Export into `output`, touching only files this exporter owns.
+
+    Ownership is the previous catalog's path and hash list. Unowned files, unknown games and preserved paths are never
+    deleted; an unowned or edited file where an export wants to write is a reported conflict, not overwritten.
+
+    Guarantees: everything is planned and validated, and every new file is written to a staging directory inside the
+    output, before the first change. Each file is then swapped in with an atomic rename, so no file is ever half
+    written. The set of files is NOT one atomic transaction: a failure part-way leaves some files new and the rest
+    old, with the catalog (written last) still describing the previous export; running the export again converges.
+    """
     manifest = load_manifest(root)
     output.mkdir(parents=True, exist_ok=True)
+    preserved = [safe_relative(value, "preserve") for value in manifest.get("preserve", [])]
+    owned = read_ownership(output)
     with tempfile.TemporaryDirectory(prefix="games-publish-", dir=output.parent) as temp:
         staging = Path(temp)
         catalog = export_tree(root, staging, manifest, revision)
         emitted = {item["path"] for item in catalog["files"]}
-        for value in manifest.get("preserve", []):
-            preserved = safe_relative(value, "preserve")
-            source = output / preserved
-            if not source.exists():
-                continue
-            prefix = preserved.as_posix().rstrip("/") + "/"
-            if preserved.as_posix() in emitted or any(path.startswith(prefix) for path in emitted):
-                raise PublishError(f"preserved path overlaps published content: {preserved.as_posix()}")
-            for candidate, nested in files_under(source):
-                target = staging / preserved / nested
+        for preserved_path in preserved:
+            prefix = preserved_path.as_posix().rstrip("/") + "/"
+            if preserved_path.as_posix() in emitted or any(path.startswith(prefix) for path in emitted):
+                raise PublishError(f"preserved path overlaps published content: {preserved_path.as_posix()}")
+        changes = plan_export(output, staging, catalog, owned, preserved)
+        catalog_target = output / CATALOG_NAME
+        if catalog_target.is_symlink():
+            raise PublishError(f"{CATALOG_NAME} in the output is a symlink")
+        summary = {
+            "created": sum(1 for _, target in changes["write"] if not target.exists()),
+            "updated": sum(1 for _, target in changes["write"] if target.exists()),
+            "removed": len(changes["remove"]),
+            "unchanged": changes["unchanged"],
+        }
+        if dry_run:
+            return {**catalog, "summary": summary, "dry_run": True}
+        holding = Path(tempfile.mkdtemp(prefix=".games-publish-", dir=output))
+        try:
+            ready: list[tuple[Path, Path]] = []
+            for index, (path, target) in enumerate(changes["write"]):
+                held = holding / str(index)
+                shutil.copy2(staging / path, held, follow_symlinks=False)
+                ready.append((held, target))
+            shutil.copy2(staging / CATALOG_NAME, holding / "catalog")
+            # Nothing in the output has changed yet. From here each step is one atomic rename or unlink.
+            for held, target in ready:
                 target.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(candidate, target, follow_symlinks=False)
-        for category in CATEGORIES:
-            target = output / category
-            if target.exists():
-                if target.is_symlink() or not target.is_dir():
-                    raise PublishError(f"managed output is not a directory: {target}")
-                shutil.rmtree(target)
-            shutil.move(str(staging / category), str(target))
-        shutil.copy2(staging / CATALOG_NAME, output / CATALOG_NAME)
-    return catalog
+                _replace(held, target)
+            for _, target in changes["remove"]:
+                target.unlink()
+                parent = target.parent
+                while parent != output and parent.parent != output and not any(parent.iterdir()):
+                    parent.rmdir()  # only directories this export emptied, never a collection root
+                    parent = parent.parent
+            _replace(holding / "catalog", catalog_target)
+        finally:
+            shutil.rmtree(holding, ignore_errors=True)
+    return {**catalog, "summary": summary}
 
 
 def check(root: Path, revision: str) -> dict:
@@ -226,6 +368,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("check", "export"))
     parser.add_argument("--output", type=Path, help="Games repository checkout (export only)")
+    parser.add_argument("--dry-run", action="store_true", help="plan the export and report conflicts without changing anything")
     parser.add_argument("--revision", help="source Git revision recorded in the catalog")
     args = parser.parse_args()
 
@@ -233,13 +376,13 @@ def main() -> int:
     revision = args.revision or git_revision(root)
     try:
         if args.command == "check":
-            if args.output:
-                raise PublishError("--output is only valid with export")
+            if args.output or args.dry_run:
+                raise PublishError("--output and --dry-run are only valid with export")
             catalog = check(root, revision)
         else:
             if not args.output:
                 raise PublishError("export requires --output")
-            catalog = publish(root, args.output.resolve(), revision)
+            catalog = publish(root, args.output.resolve(), revision, dry_run=args.dry_run)
     except PublishError as error:
         print(f"publish-games: {error}", file=sys.stderr)
         return 2
@@ -247,7 +390,12 @@ def main() -> int:
     total = sum(catalog["collections"].values())
     print(
         json.dumps(
-            {"ok": True, "files": total, "collections": catalog["collections"]},
+            {
+                "ok": True,
+                "files": total,
+                "collections": catalog["collections"],
+                **({"changes": catalog["summary"], "dry_run": bool(catalog.get("dry_run"))} if "summary" in catalog else {}),
+            },
             sort_keys=True,
         )
     )

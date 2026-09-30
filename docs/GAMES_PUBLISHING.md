@@ -11,12 +11,32 @@ file or directory into one of four stable collections: `games/`, `prototypes/`,
 share; do not point it at build directories, logs, secrets, or unreviewed scratch
 output.
 
-Manifest version 2 also supports a `preserve` array for independently maintained
-paths such as `games/riftwake`. A preserved path must live below one of the four
-collection roots, cannot overlap another preserved path, and cannot collide with a
-copied manifest destination. During export, an existing preserved tree is carried
-forward byte-for-byte while other stale files are removed. The catalog records the
-preserved path names separately; it does not claim their files came from BlueEngine.
+## What an export may touch
+
+An export only deletes or overwrites files it can prove an earlier export wrote. The proof is the `.games-catalog.json` the
+previous export left in `BlueEngineGames`: every copied file's path and SHA-256.
+
+- Files and games that are not in that catalog (an independently added game, a hand-written README) are never deleted,
+  with no `preserve` entry needed. A missing catalog means nothing is owned, so the first export deletes nothing.
+- A file the catalog lists but the manifest no longer publishes is removed only if its bytes still match the recorded
+  hash; directories it leaves empty go too, collection roots never.
+- If an export wants to write a path that exists but was not written by an export, or that was edited since (its hash
+  differs from the record), the export stops with a list of every such conflict and changes nothing. Revert the edit, move the
+  file, or delete it, then export again. A file whose bytes already equal the new content is not a conflict.
+- A catalog that cannot be read or has a malformed entry (bad JSON, missing hash, path outside the collections, duplicate
+  path) stops the export with a diagnostic rather than guessing what may be deleted.
+- Every path is checked before anything is written: manifest destinations and catalog paths must stay inside the four
+  collections, and no parent directory on the way may be a symlink.
+
+**Transaction guarantees, stated exactly.** The whole export is planned and every new file is staged inside the output before the
+first change. Each file is then swapped in with an atomic rename, so no file is ever half written, and the catalog is
+written last. The set of files is *not* one atomic transaction: if the process dies part-way, some files are new and the
+rest old, the catalog still describes the previous export, and running the export again finishes the job. Use
+`export --dry-run` to see the planned creations, updates, removals and conflicts without changing anything.
+
+The optional `preserve` array (for example `games/riftwake`) is kept for compatibility. It is no longer needed to protect
+unlisted content; it additionally stops a stale owned file under that path from ever being removed, and a preserved path
+may not overlap published content. The catalog lists the preserved path names separately.
 
 Validate the complete export without changing any files:
 
@@ -39,7 +59,7 @@ the `GAMES_REPO_DEPLOY_KEY` Actions secret. The key can write only to
 
 The generated `.games-catalog.json` records the exact BlueEngine commit and SHA-256
 digest of every copied file. The publisher rejects missing sources, path traversal,
-symlinks, and destination collisions before replacing any managed collection.
+symlinks, and destination collisions before it changes the output.
 
 ## Playable releases
 
