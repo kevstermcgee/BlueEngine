@@ -32,6 +32,13 @@ pub struct PropBody {
     entity: usize,
     radius: f32,
 }
+#[derive(Default)]
+struct DerivedProp {
+    pose: Option<Isometry<Real>>,
+    held: bool,
+    parts: Vec<Instance>,
+    collision: Vec<PlayerCollider>,
+}
 /// The physics scene exactly as [`PropPhysics::new`] left it, before its first step. A restore starts from
 /// here, so contact caches, islands and sleep bookkeeping after a load never depend on what the scene did
 /// before it: one save file always plays out the same way.
@@ -68,6 +75,7 @@ pub struct PropPhysics {
     debt: f32,
     network_dirty: bool,
     pristine: Option<Pristine>,
+    derived: Vec<DerivedProp>,
 }
 fn floor_collider(top: f32) -> Collider {
     ColliderBuilder::cuboid(1000., 0.1, 1000.)
@@ -172,6 +180,7 @@ impl PropPhysics {
             debt: 0.,
             network_dirty: false,
             pristine: None,
+            derived: vec![],
         };
         let source = &room.compiled.scene;
         let mut used = HashSet::new();
@@ -700,41 +709,66 @@ impl PropPhysics {
     }
 
     pub fn sync(&mut self, room: &mut Room) {
-        let any_active = self
-            .props
-            .iter()
-            .any(|p| self.bodies.get(p.handle).is_some_and(|b| !b.is_sleeping()));
-        if !any_active && !self.network_dirty && !room.dynamic_world.instances.is_empty() {
-            return;
-        }
-        self.network_dirty = false;
-        room.colliders.clone_from(&self.static_colliders);
-        let held_indices: HashSet<usize> = self.player_by_held.keys().copied().collect();
-        let mut instances = vec![];
+        // Body pose and ownership, rather than awake status, determine query changes.
+        // This includes the final sleeping pose and sleeping network corrections.
+        self.bodies
+            .propagate_modified_body_positions_to_colliders(&mut self.colliders);
+        self.derived
+            .resize_with(self.props.len(), DerivedProp::default);
+        let mut changed = self.network_dirty;
         for (i, p) in self.props.iter_mut().enumerate() {
-            p.transform = matrix(self.bodies[p.handle].position());
-            let parts: Vec<_> = p
-                .local_world
-                .instances
-                .iter()
-                .map(|v| moved(v, p.transform, p.origin))
-                .collect();
+            let body = &self.bodies[p.handle];
+            let held = self.player_by_held.contains_key(&i);
+            let derived = &mut self.derived[i];
+            if !self.network_dirty
+                && derived.pose.as_ref() == Some(body.position())
+                && derived.held == held
+            {
+                continue;
+            }
+            changed = true;
+            derived.pose = Some(*body.position());
+            derived.held = held;
+            p.transform = matrix(body.position());
+            derived.parts.clear();
+            derived.parts.extend(
+                p.local_world
+                    .instances
+                    .iter()
+                    .map(|v| moved(v, p.transform, p.origin)),
+            );
             let mut lo = V::ONE * f32::INFINITY;
             let mut hi = V::ONE * f32::NEG_INFINITY;
-            for part in &parts {
+            for part in &derived.parts {
                 lo = lo.min(part.bounds.lo);
                 hi = hi.max(part.bounds.hi);
             }
             room.entities[p.entity].bounds = PlayerCollider { min: lo, max: hi };
-            if !held_indices.contains(&i) {
-                for handle in self.bodies[p.handle].colliders() {
-                    let a = self.colliders[*handle].compute_aabb();
-                    room.colliders.push(PlayerCollider {
-                        min: V(a.mins.x, a.mins.y, a.mins.z),
-                        max: V(a.maxs.x, a.maxs.y, a.maxs.z),
-                    });
-                }
-                instances.extend(parts);
+            derived.collision.clear();
+            for handle in body.colliders() {
+                let a = self.colliders[*handle].compute_aabb();
+                derived.collision.push(PlayerCollider {
+                    min: V(a.mins.x, a.mins.y, a.mins.z),
+                    max: V(a.maxs.x, a.maxs.y, a.maxs.z),
+                });
+            }
+        }
+        self.network_dirty = false;
+        if !changed {
+            return;
+        }
+        room.colliders.clone_from(&self.static_colliders);
+        let mut instances = Vec::with_capacity(
+            self.derived
+                .iter()
+                .filter(|p| !p.held)
+                .map(|p| p.parts.len())
+                .sum(),
+        );
+        for derived in &self.derived {
+            if !derived.held {
+                room.colliders.extend_from_slice(&derived.collision);
+                instances.extend(derived.parts.iter().cloned());
             }
         }
         room.dynamic_world = World::new(instances);

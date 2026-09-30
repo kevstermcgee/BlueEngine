@@ -167,24 +167,32 @@ impl LifecycleRegistry {
 
     /// Update position and advance generation if changed.
     pub fn update_position(&mut self, id: &str, position: V) {
-        if let Some(idx) = self.objects.iter().position(|o| o.id == id) {
-            if (self.objects[idx].position - position).length() > 0.001 {
-                self.objects[idx].position = position;
-                self.objects[idx].generation = self.current_generation.advance();
+        if let Some(index) = self.objects.iter().position(|o| o.id == id) {
+            self.update_position_at(index, position);
+        }
+    }
+
+    pub(crate) fn update_position_at(&mut self, index: usize, position: V) {
+        if let Some(object) = self.objects.get_mut(index) {
+            if (object.position - position).length() > 0.001 {
+                object.position = position;
+                object.generation = self.current_generation.advance();
             }
         }
     }
 
     /// Advance rest settling for an object; demotes back toward static/interactive if settled.
     pub fn update_prop_rest(&mut self, id: &str, dt: f32, speed: f32) -> bool {
-        if let Some(idx) = self.objects.iter().position(|o| o.id == id) {
-            let mut gen = self.current_generation;
-            let demoted = self.objects[idx].update_rest(dt, speed, &mut gen);
-            self.current_generation = gen;
-            demoted
-        } else {
-            false
-        }
+        self.objects
+            .iter()
+            .position(|o| o.id == id)
+            .is_some_and(|index| self.update_prop_rest_at(index, dt, speed))
+    }
+
+    pub(crate) fn update_prop_rest_at(&mut self, index: usize, dt: f32, speed: f32) -> bool {
+        self.objects
+            .get_mut(index)
+            .is_some_and(|object| object.update_rest(dt, speed, &mut self.current_generation))
     }
 
     /// Count objects in each lifecycle tier.

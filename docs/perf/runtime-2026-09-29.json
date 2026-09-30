@@ -1,0 +1,1873 @@
+{
+  "starting_commit": "bba11ce23548fb89164fe6e3e06c4af1cd68c290",
+  "after": [
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "settled",
+      "n": 600,
+      "p50": 36.94,
+      "p95": 37.88,
+      "p99": 44.96
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "one",
+      "n": 600,
+      "p50": 53.91,
+      "p95": 56.82,
+      "p99": 75.91
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "many",
+      "n": 600,
+      "p50": 354.64,
+      "p95": 440.56,
+      "p99": 467.93
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 36.39,
+      "p95": 37.55,
+      "p99": 45.63
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 2,
+      "props": 32,
+      "n": 600,
+      "p50": 2.82,
+      "p95": 2.87,
+      "p99": 2.96
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 87.46,
+      "p95": 93.06,
+      "p99": 110.38
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 0,
+      "n": 19168,
+      "p50": 700.0,
+      "p95": 1500.0,
+      "p99": 1550.0
+    },
+    {
+      "retained_serialized_bytes": 7758,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 87.24,
+      "p95": 90.8,
+      "p99": 108.89
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 50,
+      "n": 19168,
+      "p50": 750.0,
+      "p95": 1550.0,
+      "p99": 1600.0
+    },
+    {
+      "retained_serialized_bytes": 8778,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 81.22,
+      "p95": 89.59,
+      "p99": 99.38
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 100,
+      "n": 19168,
+      "p50": 1500.0,
+      "p95": 3050.0,
+      "p99": 3200.0
+    },
+    {
+      "retained_serialized_bytes": 8775,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 13.77,
+      "p95": 88.74,
+      "p99": 91.9
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 200,
+      "n": 19168,
+      "p50": 3050.0,
+      "p95": 6150.0,
+      "p99": 6400.0
+    },
+    {
+      "retained_serialized_bytes": 8776,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "settled",
+      "n": 600,
+      "p50": 114.34,
+      "p95": 118.33,
+      "p99": 138.61
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "one",
+      "n": 600,
+      "p50": 163.94,
+      "p95": 169.88,
+      "p99": 195.57
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "many",
+      "n": 600,
+      "p50": 1415.31,
+      "p95": 1574.22,
+      "p99": 1723.1
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 113.48,
+      "p95": 118.25,
+      "p99": 144.58
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 2,
+      "props": 128,
+      "n": 600,
+      "p50": 12.38,
+      "p95": 12.47,
+      "p99": 13.02
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 383.65,
+      "p95": 406.26,
+      "p99": 442.11
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 0,
+      "n": 76672,
+      "p50": 3100.0,
+      "p95": 6050.0,
+      "p99": 6300.0
+    },
+    {
+      "retained_serialized_bytes": 29788,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 379.98,
+      "p95": 404.65,
+      "p99": 434.26
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 50,
+      "n": 76672,
+      "p50": 3150.0,
+      "p95": 6100.0,
+      "p99": 6350.0
+    },
+    {
+      "retained_serialized_bytes": 30815,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 346.04,
+      "p95": 393.04,
+      "p99": 419.78
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 100,
+      "n": 76672,
+      "p50": 6350.0,
+      "p95": 12150.0,
+      "p99": 12700.0
+    },
+    {
+      "retained_serialized_bytes": 30805,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 59.62,
+      "p95": 387.1,
+      "p99": 402.22
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 200,
+      "n": 76672,
+      "p50": 12700.0,
+      "p95": 24350.0,
+      "p99": 25400.0
+    },
+    {
+      "retained_serialized_bytes": 30809,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "settled",
+      "n": 600,
+      "p50": 502.3,
+      "p95": 553.88,
+      "p99": 640.44
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "one",
+      "n": 600,
+      "p50": 866.42,
+      "p95": 972.32,
+      "p99": 1058.59
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "many",
+      "n": 600,
+      "p50": 6820.18,
+      "p95": 6989.61,
+      "p99": 7225.5
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 504.27,
+      "p95": 570.22,
+      "p99": 641.53
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 2,
+      "props": 512,
+      "n": 600,
+      "p50": 54.04,
+      "p95": 57.01,
+      "p99": 71.0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 1661.02,
+      "p95": 1761.91,
+      "p99": 1837.78
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 0,
+      "n": 306688,
+      "p50": 12750.0,
+      "p95": 24300.0,
+      "p99": 25300.0
+    },
+    {
+      "retained_serialized_bytes": 117572,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 1659.64,
+      "p95": 1757.77,
+      "p99": 1835.16
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 50,
+      "n": 306688,
+      "p50": 12800.0,
+      "p95": 24350.0,
+      "p99": 25350.0
+    },
+    {
+      "retained_serialized_bytes": 118594,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 1444.71,
+      "p95": 1705.7,
+      "p99": 1791.28
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 100,
+      "n": 261956,
+      "p50": 21750.0,
+      "p95": 45500.0,
+      "p99": 49800.0
+    },
+    {
+      "retained_serialized_bytes": 118580,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 264.08,
+      "p95": 1645.38,
+      "p99": 1723.24
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 200,
+      "n": 134850,
+      "p50": 22200.0,
+      "p95": 48050.0,
+      "p99": 54500.0
+    },
+    {
+      "retained_serialized_bytes": 69854,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "settled",
+      "n": 600,
+      "p50": 47.53,
+      "p95": 48.77,
+      "p99": 55.73
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "one",
+      "n": 600,
+      "p50": 64.33,
+      "p95": 66.03,
+      "p99": 76.55
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "many",
+      "n": 600,
+      "p50": 365.71,
+      "p95": 381.53,
+      "p99": 417.6
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 47.65,
+      "p95": 48.07,
+      "p99": 55.84
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 8,
+      "props": 32,
+      "n": 600,
+      "p50": 2.87,
+      "p95": 2.91,
+      "p99": 2.97
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 100.21,
+      "p95": 104.07,
+      "p99": 123.55
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 0,
+      "n": 19168,
+      "p50": 850.0,
+      "p95": 1750.0,
+      "p99": 1850.0
+    },
+    {
+      "retained_serialized_bytes": 8778,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 99.58,
+      "p95": 103.78,
+      "p99": 118.35
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 50,
+      "n": 19168,
+      "p50": 900.0,
+      "p95": 1800.0,
+      "p99": 1900.0
+    },
+    {
+      "retained_serialized_bytes": 9850,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 90.39,
+      "p95": 102.04,
+      "p99": 110.24
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 100,
+      "n": 19168,
+      "p50": 1800.0,
+      "p95": 3600.0,
+      "p99": 3800.0
+    },
+    {
+      "retained_serialized_bytes": 9850,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 15.6,
+      "p95": 101.66,
+      "p99": 104.48
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 200,
+      "n": 19168,
+      "p50": 3700.0,
+      "p95": 7250.0,
+      "p99": 7600.0
+    },
+    {
+      "retained_serialized_bytes": 9802,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "settled",
+      "n": 600,
+      "p50": 154.26,
+      "p95": 159.45,
+      "p99": 189.05
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "one",
+      "n": 600,
+      "p50": 202.47,
+      "p95": 210.55,
+      "p99": 245.42
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "many",
+      "n": 600,
+      "p50": 1450.62,
+      "p95": 1543.19,
+      "p99": 1660.13
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 152.95,
+      "p95": 157.86,
+      "p99": 183.44
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 8,
+      "props": 128,
+      "n": 600,
+      "p50": 12.71,
+      "p95": 16.14,
+      "p99": 17.26
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 399.14,
+      "p95": 419.2,
+      "p99": 450.92
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 0,
+      "n": 76672,
+      "p50": 3250.0,
+      "p95": 6350.0,
+      "p99": 6600.0
+    },
+    {
+      "retained_serialized_bytes": 30808,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 399.12,
+      "p95": 419.72,
+      "p99": 457.88
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 50,
+      "n": 76672,
+      "p50": 3300.0,
+      "p95": 6400.0,
+      "p99": 6650.0
+    },
+    {
+      "retained_serialized_bytes": 31830,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 340.0,
+      "p95": 410.14,
+      "p99": 441.14
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 100,
+      "n": 76672,
+      "p50": 6650.0,
+      "p95": 12750.0,
+      "p99": 13300.0
+    },
+    {
+      "retained_serialized_bytes": 31827,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 62.53,
+      "p95": 403.46,
+      "p99": 423.01
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 200,
+      "n": 76672,
+      "p50": 13350.0,
+      "p95": 25500.0,
+      "p99": 26600.0
+    },
+    {
+      "retained_serialized_bytes": 31823,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "settled",
+      "n": 600,
+      "p50": 657.81,
+      "p95": 719.76,
+      "p99": 815.93
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "one",
+      "n": 600,
+      "p50": 1021.69,
+      "p95": 1130.5,
+      "p99": 1243.94
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "many",
+      "n": 600,
+      "p50": 7018.1,
+      "p95": 7183.03,
+      "p99": 7341.9
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 658.01,
+      "p95": 712.42,
+      "p99": 809.15
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 8,
+      "props": 512,
+      "n": 600,
+      "p50": 51.51,
+      "p95": 53.0,
+      "p99": 64.86
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 1664.43,
+      "p95": 1758.47,
+      "p99": 1873.43
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 0,
+      "n": 306688,
+      "p50": 12900.0,
+      "p95": 24600.0,
+      "p99": 25600.0
+    },
+    {
+      "retained_serialized_bytes": 118592,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 1670.67,
+      "p95": 1759.29,
+      "p99": 1847.62
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 50,
+      "n": 306688,
+      "p50": 12950.0,
+      "p95": 24650.0,
+      "p99": 25650.0
+    },
+    {
+      "retained_serialized_bytes": 119608,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 1408.27,
+      "p95": 1705.85,
+      "p99": 1791.43
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 100,
+      "n": 259382,
+      "p50": 21700.0,
+      "p95": 45650.0,
+      "p99": 50250.0
+    },
+    {
+      "retained_serialized_bytes": 119593,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 268.69,
+      "p95": 1717.88,
+      "p99": 2035.38
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 200,
+      "n": 131256,
+      "p50": 21600.0,
+      "p95": 47000.0,
+      "p99": 53350.0
+    },
+    {
+      "retained_serialized_bytes": 69510,
+      "retries": 900
+    }
+  ],
+  "environment": {
+    "cpu": "Intel N97",
+    "cores": 4,
+    "ram_mib": 15779,
+    "os": "Linux-6.12.57+deb13-amd64-x86_64-with-glibc2.41",
+    "rustc": "1.98.1 (48a229cea 2026-09-01)",
+    "profile": "fast: opt-level=3, no LTO, 16 codegen units, incremental",
+    "features": "--no-default-features; rapier enhanced-determinism",
+    "linker": "mold",
+    "sccache": true,
+    "pinned_cpu": false
+  },
+  "before": [
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "settled",
+      "n": 600,
+      "p50": 40.31,
+      "p95": 41.46,
+      "p99": 50.6
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "one",
+      "n": 600,
+      "p50": 83.71,
+      "p95": 86.24,
+      "p99": 100.87
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "many",
+      "n": 600,
+      "p50": 358.9,
+      "p95": 374.1,
+      "p99": 416.5
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 32,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 40.15,
+      "p95": 41.34,
+      "p99": 50.25
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 2,
+      "props": 32,
+      "n": 600,
+      "p50": 3.75,
+      "p95": 3.86,
+      "p99": 4.37
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 145.4,
+      "p95": 149.84,
+      "p99": 162.96
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 0,
+      "n": 19168,
+      "p50": 700.0,
+      "p95": 1500.0,
+      "p99": 1550.0
+    },
+    {
+      "retained_serialized_bytes": 7758,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 145.71,
+      "p95": 150.89,
+      "p99": 171.85
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 50,
+      "n": 19168,
+      "p50": 750.0,
+      "p95": 1550.0,
+      "p99": 1600.0
+    },
+    {
+      "retained_serialized_bytes": 8778,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 135.69,
+      "p95": 148.61,
+      "p99": 154.44
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 100,
+      "n": 19168,
+      "p50": 1500.0,
+      "p95": 3050.0,
+      "p99": 3200.0
+    },
+    {
+      "retained_serialized_bytes": 8775,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 32,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 31.67,
+      "p95": 147.28,
+      "p99": 152.13
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 32,
+      "rtt": 200,
+      "n": 19168,
+      "p50": 3050.0,
+      "p95": 6150.0,
+      "p99": 6400.0
+    },
+    {
+      "retained_serialized_bytes": 8776,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "settled",
+      "n": 600,
+      "p50": 190.96,
+      "p95": 216.02,
+      "p99": 236.75
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "one",
+      "n": 600,
+      "p50": 362.6,
+      "p95": 432.75,
+      "p99": 472.6
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "many",
+      "n": 600,
+      "p50": 1492.8,
+      "p95": 1815.49,
+      "p99": 2033.69
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 128,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 184.23,
+      "p95": 190.5,
+      "p99": 203.87
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 2,
+      "props": 128,
+      "n": 600,
+      "p50": 42.19,
+      "p95": 43.93,
+      "p99": 54.02
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 606.53,
+      "p95": 637.61,
+      "p99": 697.53
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 0,
+      "n": 76672,
+      "p50": 3100.0,
+      "p95": 6050.0,
+      "p99": 6300.0
+    },
+    {
+      "retained_serialized_bytes": 29788,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 608.09,
+      "p95": 638.28,
+      "p99": 695.23
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 50,
+      "n": 76672,
+      "p50": 3150.0,
+      "p95": 6100.0,
+      "p99": 6350.0
+    },
+    {
+      "retained_serialized_bytes": 30815,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 539.96,
+      "p95": 645.4,
+      "p99": 761.87
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 100,
+      "n": 76672,
+      "p50": 6350.0,
+      "p95": 12150.0,
+      "p99": 12700.0
+    },
+    {
+      "retained_serialized_bytes": 30805,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 128,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 125.93,
+      "p95": 613.97,
+      "p99": 654.45
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 128,
+      "rtt": 200,
+      "n": 76672,
+      "p50": 12700.0,
+      "p95": 24350.0,
+      "p99": 25400.0
+    },
+    {
+      "retained_serialized_bytes": 30809,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "settled",
+      "n": 600,
+      "p50": 1698.0,
+      "p95": 1826.21,
+      "p99": 1905.39
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "one",
+      "n": 600,
+      "p50": 2643.57,
+      "p95": 3232.53,
+      "p99": 3694.31
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "many",
+      "n": 600,
+      "p50": 8023.35,
+      "p95": 8240.61,
+      "p99": 8853.47
+    },
+    {
+      "metric": "step_us",
+      "players": 2,
+      "props": 512,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 1697.42,
+      "p95": 1855.38,
+      "p99": 1947.84
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 2,
+      "props": 512,
+      "n": 600,
+      "p50": 613.81,
+      "p95": 659.5,
+      "p99": 720.5
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 2538.47,
+      "p95": 2684.91,
+      "p99": 3075.74
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 0,
+      "n": 306688,
+      "p50": 12750.0,
+      "p95": 24300.0,
+      "p99": 25300.0
+    },
+    {
+      "retained_serialized_bytes": 117572,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 2563.33,
+      "p95": 2698.37,
+      "p99": 2791.07
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 50,
+      "n": 306688,
+      "p50": 12800.0,
+      "p95": 24350.0,
+      "p99": 25350.0
+    },
+    {
+      "retained_serialized_bytes": 118594,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 2265.43,
+      "p95": 2635.08,
+      "p99": 2729.9
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 100,
+      "n": 261956,
+      "p50": 21750.0,
+      "p95": 45500.0,
+      "p99": 49800.0
+    },
+    {
+      "retained_serialized_bytes": 118580,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 2,
+      "props": 512,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 524.51,
+      "p95": 2560.29,
+      "p99": 2645.83
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 2,
+      "props": 512,
+      "rtt": 200,
+      "n": 134850,
+      "p50": 22200.0,
+      "p95": 48050.0,
+      "p99": 54500.0
+    },
+    {
+      "retained_serialized_bytes": 69854,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "settled",
+      "n": 600,
+      "p50": 51.04,
+      "p95": 52.49,
+      "p99": 58.78
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "one",
+      "n": 600,
+      "p50": 95.29,
+      "p95": 98.75,
+      "p99": 114.62
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "many",
+      "n": 600,
+      "p50": 370.3,
+      "p95": 383.21,
+      "p99": 415.61
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 32,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 51.04,
+      "p95": 52.68,
+      "p99": 63.84
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 8,
+      "props": 32,
+      "n": 600,
+      "p50": 3.89,
+      "p95": 4.54,
+      "p99": 5.24
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 165.71,
+      "p95": 171.17,
+      "p99": 195.92
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 0,
+      "n": 19168,
+      "p50": 850.0,
+      "p95": 1750.0,
+      "p99": 1850.0
+    },
+    {
+      "retained_serialized_bytes": 8778,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 165.31,
+      "p95": 169.49,
+      "p99": 184.84
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 50,
+      "n": 19168,
+      "p50": 900.0,
+      "p95": 1800.0,
+      "p99": 1900.0
+    },
+    {
+      "retained_serialized_bytes": 9850,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 152.16,
+      "p95": 169.38,
+      "p99": 180.59
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 100,
+      "n": 19168,
+      "p50": 1800.0,
+      "p95": 3600.0,
+      "p99": 3800.0
+    },
+    {
+      "retained_serialized_bytes": 9850,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 32,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 36.35,
+      "p95": 167.28,
+      "p99": 170.82
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 32,
+      "rtt": 200,
+      "n": 19168,
+      "p50": 3700.0,
+      "p95": 7250.0,
+      "p99": 7600.0
+    },
+    {
+      "retained_serialized_bytes": 9802,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "settled",
+      "n": 600,
+      "p50": 220.12,
+      "p95": 225.56,
+      "p99": 260.18
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "one",
+      "n": 600,
+      "p50": 379.13,
+      "p95": 394.86,
+      "p99": 441.36
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "many",
+      "n": 600,
+      "p50": 1516.23,
+      "p95": 1623.81,
+      "p99": 1728.57
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 128,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 218.35,
+      "p95": 224.11,
+      "p99": 252.37
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 8,
+      "props": 128,
+      "n": 600,
+      "p50": 41.8,
+      "p95": 43.48,
+      "p99": 51.9
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 635.23,
+      "p95": 669.48,
+      "p99": 719.62
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 0,
+      "n": 76672,
+      "p50": 3250.0,
+      "p95": 6350.0,
+      "p99": 6600.0
+    },
+    {
+      "retained_serialized_bytes": 30808,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 631.51,
+      "p95": 661.2,
+      "p99": 706.57
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 50,
+      "n": 76672,
+      "p50": 3300.0,
+      "p95": 6400.0,
+      "p99": 6650.0
+    },
+    {
+      "retained_serialized_bytes": 31830,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 556.91,
+      "p95": 654.04,
+      "p99": 681.66
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 100,
+      "n": 76672,
+      "p50": 6650.0,
+      "p95": 12750.0,
+      "p99": 13300.0
+    },
+    {
+      "retained_serialized_bytes": 31827,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 128,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 132.69,
+      "p95": 646.42,
+      "p99": 665.75
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 128,
+      "rtt": 200,
+      "n": 76672,
+      "p50": 13350.0,
+      "p95": 25500.0,
+      "p99": 26600.0
+    },
+    {
+      "retained_serialized_bytes": 31823,
+      "retries": 900
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "settled",
+      "n": 600,
+      "p50": 1875.74,
+      "p95": 2005.92,
+      "p99": 2086.44
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "one",
+      "n": 600,
+      "p50": 2801.8,
+      "p95": 2940.62,
+      "p99": 2992.8
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "many",
+      "n": 600,
+      "p50": 8230.7,
+      "p95": 8396.96,
+      "p99": 8684.28
+    },
+    {
+      "metric": "step_us",
+      "players": 8,
+      "props": 512,
+      "mode": "resettled",
+      "n": 600,
+      "p50": 1875.73,
+      "p95": 2073.86,
+      "p99": 2477.91
+    },
+    {
+      "metric": "snapshot_us",
+      "players": 8,
+      "props": 512,
+      "n": 600,
+      "p50": 618.33,
+      "p95": 646.88,
+      "p99": 699.01
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 0,
+      "n": 1200,
+      "p50": 2589.36,
+      "p95": 2725.39,
+      "p99": 2830.78
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 0,
+      "n": 306688,
+      "p50": 12900.0,
+      "p95": 24600.0,
+      "p99": 25600.0
+    },
+    {
+      "retained_serialized_bytes": 118592,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 50,
+      "n": 1200,
+      "p50": 2618.77,
+      "p95": 2794.67,
+      "p99": 3353.41
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 50,
+      "n": 306688,
+      "p50": 12950.0,
+      "p95": 24650.0,
+      "p99": 25650.0
+    },
+    {
+      "retained_serialized_bytes": 119608,
+      "retries": 0
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 100,
+      "n": 1200,
+      "p50": 2255.98,
+      "p95": 2664.99,
+      "p99": 2822.65
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 100,
+      "n": 259382,
+      "p50": 21700.0,
+      "p95": 45650.0,
+      "p99": 50250.0
+    },
+    {
+      "retained_serialized_bytes": 119593,
+      "retries": 600
+    },
+    {
+      "metric": "send_us",
+      "players": 8,
+      "props": 512,
+      "rtt": 200,
+      "n": 1200,
+      "p50": 541.92,
+      "p95": 2610.94,
+      "p99": 2804.25
+    },
+    {
+      "metric": "entity_age_ms",
+      "players": 8,
+      "props": 512,
+      "rtt": 200,
+      "n": 131256,
+      "p50": 21600.0,
+      "p95": 47000.0,
+      "p99": 53350.0
+    },
+    {
+      "retained_serialized_bytes": 69510,
+      "retries": 900
+    }
+  ],
+  "allocator_before": "allocator_calls=186117755 requested_bytes=43035459210 max_rss_kib=30596",
+  "allocator_after": "allocator_calls=51344391 requested_bytes=6875774660 max_rss_kib=30168",
+  "timing_method": "one serial before and after run; allocation probe in separate executions; no hard performance gates added",
+  "limitations": [
+    "send timings cover one peer representing two or eight players, not aggregate server tick time",
+    "RTT is simulated at 1 ms resolution, sends at 20 Hz, no real WAN measurements",
+    "age only includes props already received; large high-RTT worlds have incomplete initial coverage after 30 seconds",
+    "whole-process allocator counts include fixture construction, receiver decode/apply, samples and output; cumulative requested bytes are not retained memory",
+    "peak RSS includes sample buffers; no per-path allocation attribution",
+    "timings are single-host samples with CPU frequency scaling; no confidence intervals",
+    "loss/backpressure/reordering/relevance/reconnect behavior covered by deterministic and socket suites, not latency measurements under every impairment combination"
+  ],
+  "validation": {
+    "passed": true,
+    "commands": [
+      [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--lib",
+        "--message-format=json",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--message-format=json"
+      ],
+      [
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--locked",
+        "--message-format=json",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--lib",
+        "--no-default-features",
+        "--message-format=json",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      [
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--locked",
+        "--no-default-features",
+        "--message-format=json",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/check_headless.py"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/check_authoring.py"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_workflow",
+        "tools.test_assets",
+        "scripts.test_publish_games",
+        "tools.test_game_check",
+        "tools.test_game_ship",
+        "tools.test_media_tools",
+        "tools.test_xcapture"
+      ]
+    ],
+    "reported_test_executions": 1375,
+    "log_report": ".be2-work/check-20260930T061348949383Z/report.json",
+    "publish_games_check": {
+      "passed": true,
+      "files": 254
+    },
+    "not_run": [
+      "Windows CI",
+      "manual graphical play",
+      "real WAN RTT load",
+      "aggregate multi-peer server timing for these prop-count fixtures"
+    ],
+    "environment_recovery": "/tmp tmpfs filled; doctest linker bus errors and publication copy failure resolved by TMPDIR=.be2-work/validation-tmp; no test/budget changes"
+  }
+}

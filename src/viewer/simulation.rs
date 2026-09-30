@@ -160,6 +160,8 @@ pub struct HeadlessWorld {
     pub lifecycle: super::lifecycle::LifecycleRegistry,
     /// Authoritative prop physics simulation.
     pub prop_physics: Option<super::prop_physics::PropPhysics>,
+    prop_lifecycle: Vec<Option<usize>>,
+    lifecycle_ids: Vec<String>,
     players: BTreeMap<u64, Player>,
     /// Number of completed calls to [`Self::step`], initially zero.
     pub tick: u64,
@@ -204,6 +206,14 @@ impl HeadlessWorld {
             let center = (e.bounds.min + e.bounds.max) * 0.5;
             lifecycle.register(e.id.clone(), e.label.clone(), center);
         }
+        let lifecycle_ids = lifecycle.objects.iter().map(|o| o.id.clone()).collect();
+        let prop_lifecycle = prop_physics.as_ref().map_or_else(Vec::new, |physics| {
+            physics
+                .props
+                .iter()
+                .map(|p| lifecycle.objects.iter().position(|o| o.id == p.id))
+                .collect()
+        });
         let room_graph = super::spatial::RoomGraph::for_room(&room);
         Self {
             game: None,
@@ -212,6 +222,8 @@ impl HeadlessWorld {
             room,
             room_graph,
             lifecycle,
+            lifecycle_ids,
+            prop_lifecycle,
             prop_physics,
             players: BTreeMap::new(),
             tick: 0,
@@ -557,10 +569,46 @@ impl HeadlessWorld {
             }
             physics.step_simulation_with_players(TICK_SECONDS, &player_controllers, &mut self.room);
 
+            // Public registries can be reordered/replaced. Validate identities linearly,
+            // then resolve once after mutation; never search for each prop each tick.
+            if self.lifecycle_ids.len() != self.lifecycle.objects.len()
+                || self
+                    .lifecycle_ids
+                    .iter()
+                    .zip(&self.lifecycle.objects)
+                    .any(|(id, o)| id != &o.id)
+                || self.prop_lifecycle.len() != physics.props.len()
+                || physics
+                    .props
+                    .iter()
+                    .zip(&self.prop_lifecycle)
+                    .any(|(p, index)| {
+                        index.is_some_and(|i| {
+                            self.lifecycle.objects.get(i).is_none_or(|o| o.id != p.id)
+                        })
+                    })
+            {
+                let mut indices = std::collections::HashMap::new();
+                for (i, object) in self.lifecycle.objects.iter().enumerate() {
+                    indices.entry(object.id.as_str()).or_insert(i);
+                }
+                self.prop_lifecycle = physics
+                    .props
+                    .iter()
+                    .map(|p| indices.get(p.id.as_str()).copied())
+                    .collect();
+                self.lifecycle_ids = self
+                    .lifecycle
+                    .objects
+                    .iter()
+                    .map(|o| o.id.clone())
+                    .collect();
+            }
             // Synchronize prop positions & velocities into lifecycle registry
-            for (i, p) in physics.props.iter().enumerate() {
-                if let Some(pos) = physics.prop_position(i) {
-                    self.lifecycle.update_position(&p.id, pos);
+            for i in 0..physics.props.len() {
+                if let (Some(pos), Some(index)) = (physics.prop_position(i), self.prop_lifecycle[i])
+                {
+                    self.lifecycle.update_position_at(index, pos);
                     let is_held = physics.is_prop_held(i);
                     let speed = physics
                         .prop_linear_velocity(i)
@@ -569,9 +617,10 @@ impl HeadlessWorld {
 
                     if is_held || speed > 0.05 {
                         self.lifecycle
-                            .promote_by_id(&p.id, super::lifecycle::LifecycleState::DynamicEntity);
+                            .promote(index, super::lifecycle::LifecycleState::DynamicEntity);
                     } else {
-                        self.lifecycle.update_prop_rest(&p.id, TICK_SECONDS, speed);
+                        self.lifecycle
+                            .update_prop_rest_at(index, TICK_SECONDS, speed);
                     }
                 }
             }
@@ -921,7 +970,7 @@ impl HeadlessWorld {
                 let idx = self
                     .prop_physics
                     .as_ref()
-                    .and_then(|phys| phys.props.iter().position(|p| p.id == o.id));
+                    .and_then(|phys| phys.prop_index(&o.id));
                 let (rot, linvel, angvel, sleeping, held_by) =
                     if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
                         (
@@ -1009,7 +1058,7 @@ impl HeadlessWorld {
                 let idx = self
                     .prop_physics
                     .as_ref()
-                    .and_then(|phys| phys.props.iter().position(|p| p.id == o.id));
+                    .and_then(|phys| phys.prop_index(&o.id));
                 let (rot, linvel, angvel, sleeping, held_by) =
                     if let (Some(ref phys), Some(i)) = (&self.prop_physics, idx) {
                         (

@@ -31,27 +31,27 @@ enum Key {
     Prop(String),
 }
 #[derive(Clone, Debug)]
-enum Record {
-    Player(PlayerNetState),
-    Prop(PropNetState),
+enum Record<'a> {
+    Player(&'a PlayerNetState),
+    Prop(&'a PropNetState),
     RemovePlayer(u64),
-    RemoveProp(String),
+    RemoveProp(&'a str),
 }
-impl Record {
+impl Record<'_> {
     fn key(&self) -> Key {
         match self {
             Self::Player(p) => Key::Player(p.id),
             Self::Prop(p) => Key::Prop(p.id.clone()),
             Self::RemovePlayer(id) => Key::Player(*id),
-            Self::RemoveProp(id) => Key::Prop(id.clone()),
+            Self::RemoveProp(id) => Key::Prop((*id).to_owned()),
         }
     }
     fn add(&self, delta: &mut DeltaSnapshot) {
         match self {
-            Self::Player(p) => delta.changed_players.push(p.clone()),
-            Self::Prop(p) => delta.changed_props.push(p.clone()),
+            Self::Player(p) => delta.changed_players.push((*p).clone()),
+            Self::Prop(p) => delta.changed_props.push((*p).clone()),
             Self::RemovePlayer(id) => delta.removed_players.push(*id),
-            Self::RemoveProp(id) => delta.removed_props.push(id.clone()),
+            Self::RemoveProp(id) => delta.removed_props.push((*id).to_owned()),
         }
     }
 }
@@ -188,13 +188,13 @@ impl ReplicationSender {
         let mut dirty = BTreeMap::new();
         for p in &desired.players {
             if old_players.get(&p.id).copied() != Some(p) {
-                let r = Record::Player(p.clone());
+                let r = Record::Player(p);
                 dirty.insert(r.key(), r);
             }
         }
         for p in &desired.props {
             if old_props.get(&p.id).copied() != Some(p) {
-                let r = Record::Prop(p.clone());
+                let r = Record::Prop(p);
                 dirty.insert(r.key(), r);
             }
         }
@@ -206,7 +206,7 @@ impl ReplicationSender {
         }
         for p in &base.props {
             if !props.contains_key(&p.id) {
-                let r = Record::RemoveProp(p.id.clone());
+                let r = Record::RemoveProp(&p.id);
                 dirty.insert(r.key(), r);
             }
         }
@@ -272,36 +272,47 @@ impl ReplicationSender {
                     removed_props: vec![],
                 };
                 record.add(&mut alone);
-                if encode_update(&alone, false)?.1.len() > limit {
+                if update_size(&alone, false)? > limit {
                     return Err(format!("Removal record {key:?} exceeds active transport limit {limit}; reconnect with a sufficient payload budget").into());
                 }
             }
-            let mut candidate = delta.clone();
-            record.add(&mut candidate);
+            let lengths = (
+                delta.changed_players.len(),
+                delta.changed_props.len(),
+                delta.removed_players.len(),
+                delta.removed_props.len(),
+            );
+            let old_ack = delta.ack_client_tick;
+            record.add(&mut delta);
             if matches!(record, Record::Player(p) if p.id == owner) {
-                candidate.ack_client_tick = desired.ack_client_tick;
+                delta.ack_client_tick = desired.ack_client_tick;
             }
             let count = base.players.len()
                 + base.props.len()
-                + candidate
+                + delta
                     .changed_players
                     .iter()
                     .filter(|p| !old_players.contains_key(&p.id))
                     .count()
-                + candidate
+                + delta
                     .changed_props
                     .iter()
                     .filter(|p| !old_props.contains_key(&p.id))
                     .count()
-                - candidate.removed_players.len()
-                - candidate.removed_props.len();
+                - delta.removed_players.len()
+                - delta.removed_props.len();
             if count <= MAX_REPLICATED_ENTITIES
-                && encode_update(&candidate, self.baseline.is_none())?.1.len() <= limit
+                && update_size(&delta, self.baseline.is_none())? <= limit
             {
                 if fair.as_ref() == Some(&key) {
                     self.cursor = Some(key);
                 }
-                delta = candidate;
+            } else {
+                delta.changed_players.truncate(lengths.0);
+                delta.changed_props.truncate(lengths.1);
+                delta.removed_players.truncate(lengths.2);
+                delta.removed_props.truncate(lengths.3);
+                delta.ack_client_tick = old_ack;
             }
         }
         let (packet, bytes) = encode_update(&delta, self.baseline.is_none())?;
@@ -322,6 +333,35 @@ impl ReplicationSender {
         Ok(())
     }
 }
+// Match Packet's externally tagged JSON without cloning it or allocating encoded bytes.
+#[derive(serde::Serialize)]
+enum UpdateRef<'a> {
+    Snapshot(&'a WorldSnapshot),
+    Delta(&'a DeltaSnapshot),
+}
+#[derive(Default)]
+struct ByteCount(usize);
+impl std::io::Write for ByteCount {
+    fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
+        self.0 += bytes.len();
+        Ok(bytes.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+fn update_size(delta: &DeltaSnapshot, initial: bool) -> crate::Result<usize> {
+    let mut count = ByteCount::default();
+    if initial {
+        serde_json::to_writer(
+            &mut count,
+            &UpdateRef::Snapshot(&delta.apply_to(&WorldSnapshot::default())),
+        )?;
+    } else {
+        serde_json::to_writer(&mut count, &UpdateRef::Delta(delta))?;
+    }
+    Ok(count.0)
+}
 fn encode_update(delta: &DeltaSnapshot, initial: bool) -> crate::Result<(Packet, Vec<u8>)> {
     let packet = if initial {
         Packet::Snapshot(delta.apply_to(&WorldSnapshot::default()))
@@ -337,13 +377,25 @@ pub fn validate_world(world: &WorldSnapshot, limit: usize) -> crate::Result<()> 
     if world.players.len() + world.props.len() > MAX_REPLICATED_ENTITIES {
         return Err(format!("Replication supports at most {MAX_REPLICATED_ENTITIES} relevant entities per peer; reduce relevance or entity count").into());
     }
+    let envelope_bytes = update_size(
+        &DeltaSnapshot {
+            session: Some([u64::MAX; 2]),
+            base_tick: u64::MAX,
+            target_tick: u64::MAX,
+            ack_client_tick: u64::MAX,
+            changed_players: vec![],
+            changed_props: vec![],
+            removed_players: vec![],
+            removed_props: vec![],
+        },
+        false,
+    )?;
     let mut seen = std::collections::BTreeSet::new();
     for record in world
         .players
         .iter()
-        .cloned()
         .map(Record::Player)
-        .chain(world.props.iter().cloned().map(Record::Prop))
+        .chain(world.props.iter().map(Record::Prop))
     {
         let key = record.key();
         let finite_v = |v: crate::math::V| v.0.is_finite() && v.1.is_finite() && v.2.is_finite();
@@ -374,18 +426,15 @@ pub fn validate_world(world: &WorldSnapshot, limit: usize) -> crate::Result<()> 
             )
             .into());
         }
-        let mut delta = DeltaSnapshot {
-            session: Some([u64::MAX; 2]),
-            base_tick: u64::MAX,
-            target_tick: u64::MAX,
-            ack_client_tick: u64::MAX,
-            changed_players: vec![],
-            changed_props: vec![],
-            removed_players: vec![],
-            removed_props: vec![],
-        };
-        record.add(&mut delta);
-        let bytes = encode_update(&delta, false)?.1.len();
+        // One record inserted into an empty JSON array adds exactly its encoded
+        // length. Count the shared worst-case envelope once, without cloning the record.
+        let mut count = ByteCount::default();
+        match record {
+            Record::Player(p) => serde_json::to_writer(&mut count, p)?,
+            Record::Prop(p) => serde_json::to_writer(&mut count, p)?,
+            _ => unreachable!(),
+        }
+        let bytes = envelope_bytes + count.0;
         if bytes > limit {
             return Err(format!("Replication record {key:?} requires {bytes} bytes including envelope; active transport allows {limit}. Shorten IDs or use a transport with sufficient payload").into());
         }
@@ -425,3 +474,51 @@ pub fn receive_update(
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MissingBaseline;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn counted_json_matches_actual_packets_with_escaped_ids_and_envelopes() {
+        let prop = PropNetState {
+            id: "quote\" slash\\ newline\n café".into(),
+            position: crate::math::V(-0.123, 1e20, 0.),
+            rotation: [0., 0., 0., 1.],
+            linear_velocity: crate::math::V::ZERO,
+            angular_velocity: crate::math::V::ZERO,
+            sleeping: false,
+            held_by: Some(u64::MAX),
+            generation: crate::viewer::lifecycle::Generation(u64::MAX),
+        };
+        let mut delta = DeltaSnapshot {
+            session: Some([u64::MAX; 2]),
+            base_tick: u64::MAX,
+            target_tick: u64::MAX,
+            ack_client_tick: u64::MAX,
+            changed_players: vec![],
+            changed_props: vec![prop.clone()],
+            removed_players: vec![1, u64::MAX],
+            removed_props: vec!["quote\" slash\\ newline\n café".into()],
+        };
+        for session in [None, Some([u64::MAX; 2])] {
+            delta.session = session;
+            for initial in [false, true] {
+                assert_eq!(
+                    update_size(&delta, initial).unwrap(),
+                    encode_update(&delta, initial).unwrap().1.len()
+                );
+            }
+        }
+        delta.session = Some([u64::MAX; 2]);
+        delta.removed_players.clear();
+        delta.removed_props.clear();
+        let exact = encode_update(&delta, false).unwrap().1.len();
+        let world = WorldSnapshot {
+            props: vec![prop],
+            ..WorldSnapshot::default()
+        };
+        assert!(validate_world(&world, exact).is_ok());
+        assert!(validate_world(&world, exact - 1).is_err());
+    }
+}

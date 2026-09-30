@@ -115,6 +115,22 @@ fn normalized(mut world: WorldSnapshot) -> WorldSnapshot {
     world.props.sort_by(|a, b| a.id.cmp(&b.id));
     world
 }
+
+#[test]
+fn retry_still_validates_new_authoritative_state() {
+    let mut sender = ReplicationSender::for_session([1, 2]);
+    let wire = Wire::default();
+    let peer = "127.0.0.1:5".parse().unwrap();
+    let mut desired = world(32);
+    sender.send(&wire, peer, &desired, 1).unwrap();
+    let original = wire.sent.borrow()[0].clone();
+    desired.props[0].position.0 = f32::NAN;
+    assert!(sender.send(&wire, peer, &desired, 1).is_err());
+    assert_eq!(wire.sent.borrow().len(), 1);
+    desired.props[0].position.0 = 123.;
+    sender.send(&wire, peer, &desired, 1).unwrap();
+    assert_eq!(wire.sent.borrow()[1], original, "retry remains immutable");
+}
 fn deliver(sender: &mut ReplicationSender, base: &mut Option<WorldSnapshot>, bytes: &[u8]) {
     match receive_update(base, Packet::decode(bytes).unwrap()) {
         Ok(_) => {
