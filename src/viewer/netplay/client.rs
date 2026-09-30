@@ -51,6 +51,18 @@ pub struct PredictionStats {
     pub max_error: f32,
 }
 
+impl PredictionStats {
+    /// Two spans of statistics as one: counts add, errors keep the larger.
+    pub fn merged(&self, other: &PredictionStats) -> PredictionStats {
+        PredictionStats {
+            corrections: self.corrections + other.corrections,
+            snaps: self.snaps + other.snaps,
+            last_error: other.last_error,
+            max_error: self.max_error.max(other.max_error),
+        }
+    }
+}
+
 /// What the network looked like from this side.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct NetStats {
@@ -75,6 +87,8 @@ pub struct NetClient<G: NetGame, T: DatagramTransport> {
     sync_attempts: u32,
     last_sync: f64,
     view: G::View,
+    /// Prediction statistics of matches already over: a view is reset between matches, the record is not.
+    carried: PredictionStats,
     pending: VecDeque<(u32, G::Input)>,
     next_seq: u32,
     participant: Option<usize>,
@@ -106,6 +120,7 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
             sync_attempts: 0,
             last_sync: f64::NEG_INFINITY,
             view: G::View::new(),
+            carried: PredictionStats::default(),
             pending: VecDeque::new(),
             next_seq: 1,
             participant: None,
@@ -156,7 +171,7 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
     }
     pub fn stats(&self) -> NetStats {
         NetStats {
-            prediction: self.view.prediction(),
+            prediction: self.carried.merged(&self.view.prediction()),
             ..self.stats.clone()
         }
     }
@@ -363,6 +378,7 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
         self.state = ClientState::Lobby;
         self.participant = None;
         self.pending.clear();
+        self.carried = self.carried.merged(&self.view.prediction());
         self.view.reset();
     }
 

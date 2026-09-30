@@ -219,6 +219,31 @@ fn a_laggy_lossy_network_still_produces_a_finished_match() {
 }
 
 #[test]
+fn prediction_statistics_survive_the_return_to_the_lobby() {
+    // Loss and jitter make the server repeat inputs, so the predicted runner is corrected now and then.
+    let mut w = world(6, 4, 15., &[0, 1], config());
+    play_a_match(&mut w);
+    let before: Vec<_> = w.clients.iter().map(|c| c.stats().prediction).collect();
+    assert!(
+        before.iter().any(|p| p.corrections > 0),
+        "the scenario really did force corrections: {before:?}"
+    );
+    assert!(
+        w.run_until(600, |w| w.server.stage() == Stage::Lobby
+            && w.all_in_lobby()),
+        "back in the lobby"
+    );
+    for (c, was) in w.clients.iter().zip(&before) {
+        let now = c.stats().prediction;
+        assert!(
+            now.corrections >= was.corrections,
+            "the record was kept: {was:?} then {now:?}"
+        );
+        assert!(now.max_error >= was.max_error);
+    }
+}
+
+#[test]
 fn a_full_server_a_wrong_key_and_a_wrong_version_are_turned_away() {
     let cfg = ServerConfig {
         join_key: Some("hunter2".into()),
