@@ -13,7 +13,17 @@
     "games/physics-lab",
     "games/clockwork-pinball",
     "games/wobble-tower",
-    "games/tumble-maze"
+    "games/tumble-maze",
+    "games/laser-vault",
+    "games/floor-is-lava",
+    "games/echo-chambers",
+    "games/relic-relay",
+    "games/prism-matrix",
+    "games/phantom-maze",
+    "games/bomb-defusal",
+    "games/turret-trench",
+    "games/weight-balance",
+    "games/target-gallery"
   ],
   "collections": {
     "games": [
