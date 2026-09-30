@@ -288,13 +288,13 @@ impl HeadlessWorld {
         next.game.as_mut().unwrap().set_round(round);
         self.replace_content(next)
     }
-    /// Shared action policy: interact/carry during play; restart a completed game.
+    /// Shared action policy: interact/carry during play; restart a finished (won or lost) game.
     /// Any registered player may restart. Unknown players cannot change the world.
     pub fn game_action(&mut self, id: u64) -> crate::Result<bool> {
         if !self.players.contains_key(&id) {
             return Ok(false);
         }
-        if self.game.as_ref().is_some_and(|g| g.state().completed) {
+        if self.game.as_ref().is_some_and(|g| g.state().finished()) {
             self.restart_game()?;
             return Ok(true);
         }
@@ -946,6 +946,10 @@ impl HeadlessWorld {
             mix_u64(game.state().active_timers);
             mix_u64(game.state().fired);
             mix_u64(u64::from(game.state().completed));
+            // Only mixed once a game has failed, so hashes of games that never fail stay as they were.
+            if game.state().failed {
+                mix_u64(0xFA11);
+            }
         }
         hash
     }

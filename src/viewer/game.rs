@@ -51,11 +51,195 @@ pub struct Interactable {
     pub visible: bool,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+/// A rule guard over counters. Exactly one form is used per node:
+/// a leaf (`counter` plus one or more comparisons, all of which must hold), or a compound
+/// (`all`, `any`, `not`). `{"counter": "x", "equals": 1}` is the original form and still works.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Condition {
-    pub counter: String,
-    pub equals: i32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub counter: Option<String>,
+    /// Compare `counter mod modulo` (always 0..modulo) instead of the raw value.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modulo: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub equals: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not_equals: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub less_than: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub greater_than: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_most: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub at_least: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub all: Option<Vec<Condition>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub any: Option<Vec<Condition>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub not: Option<Box<Condition>>,
+}
+
+/// Bounds that keep a condition cheap to evaluate every tick and small in the document.
+pub const MAX_CONDITION_DEPTH: usize = 4;
+pub const MAX_CONDITION_NODES: usize = 16;
+
+impl Condition {
+    /// The original single-comparison guard.
+    pub fn counter_equals(counter: &str, value: i32) -> Self {
+        Self {
+            counter: Some(counter.into()),
+            equals: Some(value),
+            ..Self::default()
+        }
+    }
+
+    fn comparisons(&self) -> [(Cmp, Option<i32>); 6] {
+        [
+            (Cmp::Eq, self.equals),
+            (Cmp::Ne, self.not_equals),
+            (Cmp::Lt, self.less_than),
+            (Cmp::Gt, self.greater_than),
+            (Cmp::Le, self.at_most),
+            (Cmp::Ge, self.at_least),
+        ]
+    }
+
+    /// Check shape, references and limits; `nodes` counts every node visited so far.
+    fn validate(
+        &self,
+        counters: &BTreeMap<String, i32>,
+        depth: usize,
+        nodes: &mut usize,
+    ) -> std::result::Result<(), String> {
+        *nodes += 1;
+        if depth > MAX_CONDITION_DEPTH || *nodes > MAX_CONDITION_NODES {
+            return Err(format!(
+                "condition nests deeper than {MAX_CONDITION_DEPTH} or has more than {MAX_CONDITION_NODES} parts"
+            ));
+        }
+        let in_range = |v: i32| (-MAX_COUNTER..=MAX_COUNTER).contains(&v);
+        let leaf_fields = self.counter.is_some()
+            || self.modulo.is_some()
+            || self.comparisons().iter().any(|(_, v)| v.is_some());
+        let forms = leaf_fields as usize
+            + self.all.is_some() as usize
+            + self.any.is_some() as usize
+            + self.not.is_some() as usize;
+        if forms != 1 {
+            return Err(
+                "a condition uses exactly one form: counter with comparisons, all, any or not"
+                    .into(),
+            );
+        }
+        if leaf_fields {
+            let counter = self
+                .counter
+                .as_ref()
+                .ok_or("comparisons and modulo need a counter")?;
+            if !counters.contains_key(counter) {
+                return Err(format!("condition references unknown counter {counter}"));
+            }
+            let tests = self.comparisons();
+            if tests.iter().all(|(_, v)| v.is_none()) {
+                return Err(format!("condition on {counter} has no comparison"));
+            }
+            if tests.iter().any(|(_, v)| v.is_some_and(|v| !in_range(v)))
+                || self.modulo.is_some_and(|m| !(1..=MAX_COUNTER).contains(&m))
+            {
+                return Err(format!("condition on {counter} has a value out of range"));
+            }
+        }
+        for group in [&self.all, &self.any].into_iter().flatten() {
+            if group.is_empty() || group.len() > MAX_CONDITION_NODES {
+                return Err("all/any need at least one condition".into());
+            }
+            for child in group {
+                child.validate(counters, depth + 1, nodes)?;
+            }
+        }
+        if let Some(child) = &self.not {
+            child.validate(counters, depth + 1, nodes)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+enum Cmp {
+    Eq,
+    Ne,
+    Lt,
+    Gt,
+    Le,
+    Ge,
+}
+
+/// A validated condition with counter names resolved to indices.
+#[derive(Clone, Debug)]
+enum CompiledCondition {
+    Leaf {
+        counter: usize,
+        modulo: Option<i32>,
+        tests: Vec<(Cmp, i32)>,
+    },
+    All(Vec<CompiledCondition>),
+    Any(Vec<CompiledCondition>),
+    Not(Box<CompiledCondition>),
+}
+
+impl CompiledCondition {
+    /// The document must already have passed [`GameDocument::validate`].
+    fn compile(c: &Condition, counter_index: &BTreeMap<&str, usize>) -> Self {
+        if let Some(name) = &c.counter {
+            return Self::Leaf {
+                counter: counter_index[name.as_str()],
+                modulo: c.modulo,
+                tests: c
+                    .comparisons()
+                    .into_iter()
+                    .filter_map(|(cmp, v)| v.map(|v| (cmp, v)))
+                    .collect(),
+            };
+        }
+        let list = |v: &[Condition]| v.iter().map(|c| Self::compile(c, counter_index)).collect();
+        if let Some(all) = &c.all {
+            Self::All(list(all))
+        } else if let Some(any) = &c.any {
+            Self::Any(list(any))
+        } else {
+            Self::Not(Box::new(Self::compile(
+                c.not.as_deref().expect("validated condition form"),
+                counter_index,
+            )))
+        }
+    }
+
+    fn holds(&self, counters: &[i32]) -> bool {
+        match self {
+            Self::Leaf {
+                counter,
+                modulo,
+                tests,
+            } => {
+                let raw = counters[*counter];
+                let value = modulo.map_or(raw, |m| raw.rem_euclid(m));
+                tests.iter().all(|&(cmp, rhs)| match cmp {
+                    Cmp::Eq => value == rhs,
+                    Cmp::Ne => value != rhs,
+                    Cmp::Lt => value < rhs,
+                    Cmp::Gt => value > rhs,
+                    Cmp::Le => value <= rhs,
+                    Cmp::Ge => value >= rhs,
+                })
+            }
+            Self::All(list) => list.iter().all(|c| c.holds(counters)),
+            Self::Any(list) => list.iter().any(|c| c.holds(counters)),
+            Self::Not(c) => !c.holds(counters),
+        }
+    }
 }
 
 fn default_mover_duration() -> u32 {
@@ -88,14 +272,36 @@ pub struct TimerDefinition {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
 pub enum GameAction {
-    Increment { counter: String, amount: i32 },
-    SetCounter { counter: String, value: i32 },
-    SetEnabled { entity: String, enabled: bool },
-    SetVisible { entity: String, visible: bool },
-    SetMover { mover: String, open: bool },
-    StartTimer { timer: String },
-    StopTimer { timer: String },
+    Increment {
+        counter: String,
+        amount: i32,
+    },
+    SetCounter {
+        counter: String,
+        value: i32,
+    },
+    SetEnabled {
+        entity: String,
+        enabled: bool,
+    },
+    SetVisible {
+        entity: String,
+        visible: bool,
+    },
+    SetMover {
+        mover: String,
+        open: bool,
+    },
+    StartTimer {
+        timer: String,
+    },
+    StopTimer {
+        timer: String,
+    },
+    /// End the match as won.
     Complete,
+    /// End the match as lost. Like `complete`, later events are ignored until the game restarts.
+    Fail,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -345,12 +551,13 @@ impl GameDocument {
                 || rule.on_enter.as_ref().is_some_and(|s| !zone_exists(s))
                 || rule.on_exit.as_ref().is_some_and(|s| !zone_exists(s))
                 || rule.on_timer.as_ref().is_some_and(|s| !timer_exists(s))
-                || rule.condition.as_ref().is_some_and(|c| {
-                    !self.counters.contains_key(&c.counter)
-                        || !(-MAX_COUNTER..=MAX_COUNTER).contains(&c.equals)
-                })
             {
                 return Err(format!("Invalid rule references/limits: {}", rule.id).into());
+            }
+            if let Some(condition) = &rule.condition {
+                condition
+                    .validate(&self.counters, 0, &mut 0)
+                    .map_err(|e| format!("Invalid condition in {}: {e}", rule.id))?;
             }
             for action in &rule.actions {
                 let valid = match action {
@@ -370,7 +577,7 @@ impl GameDocument {
                     GameAction::StartTimer { timer } | GameAction::StopTimer { timer } => {
                         timer_exists(timer)
                     }
-                    GameAction::Complete => true,
+                    GameAction::Complete | GameAction::Fail => true,
                 };
                 if !valid {
                     return Err(format!("Invalid action reference/value in {}", rule.id).into());
@@ -404,6 +611,17 @@ pub struct GameState {
     pub active_timers: u64,
     pub fired: u64,
     pub completed: bool,
+    /// The match ended in a loss. Omitted from JSON while false, so saves, packets and hashes of
+    /// games that never fail are unchanged.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub failed: bool,
+}
+
+impl GameState {
+    /// Won or lost: the match accepts no further events until it restarts.
+    pub fn finished(&self) -> bool {
+        self.completed || self.failed
+    }
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -422,11 +640,12 @@ enum Effect {
     StartTimer(usize),
     StopTimer(usize),
     Complete,
+    Fail,
 }
 struct CompiledRule {
     index: usize,
     once: bool,
-    condition: Option<(usize, i32)>,
+    condition: Option<CompiledCondition>,
     effects: Vec<Effect>,
 }
 
@@ -472,8 +691,9 @@ fn apply_effects(state: &mut GameState, effects: &[Effect]) {
                 state.active_timers &= !(1 << i);
             }
             Effect::Complete => state.completed = true,
+            Effect::Fail => state.failed = true,
         }
-        if state.completed {
+        if state.finished() {
             break;
         }
     }
@@ -602,6 +822,7 @@ impl GameRuntime {
                         Effect::StopTimer(timer_index[timer.as_str()])
                     }
                     GameAction::Complete => Effect::Complete,
+                    GameAction::Fail => Effect::Fail,
                 })
                 .collect()
         };
@@ -629,7 +850,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -651,7 +872,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -673,7 +894,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -695,7 +916,7 @@ impl GameRuntime {
                         condition: rule
                             .condition
                             .as_ref()
-                            .map(|c| (counter_index[c.counter.as_str()], c.equals)),
+                            .map(|c| CompiledCondition::compile(c, &counter_index)),
                         effects: compile_effects(&rule.actions),
                     })
                     .collect()
@@ -844,7 +1065,7 @@ impl GameRuntime {
         self.timers.get(index).map(|t| t.remaining_ticks)
     }
     pub fn step_timers(&mut self) {
-        if self.state.completed {
+        if self.state.finished() {
             return;
         }
         let mut expired_timers = Vec::new();
@@ -869,7 +1090,7 @@ impl GameRuntime {
                 self.state.active_timers &= !(1 << i);
             }
             self.fire_timer_rules(i);
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }
@@ -881,7 +1102,8 @@ impl GameRuntime {
             }
             if rule
                 .condition
-                .is_some_and(|(i, v)| self.state.counters[i] != v)
+                .as_ref()
+                .is_some_and(|c| !c.holds(&self.state.counters))
             {
                 continue;
             }
@@ -889,7 +1111,7 @@ impl GameRuntime {
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }
@@ -1066,7 +1288,7 @@ impl GameRuntime {
         controller: &Controller,
         player_id: u64,
     ) -> Option<GameEvent> {
-        if self.state.completed {
+        if self.state.finished() {
             return None;
         }
         let target = self.target(room, controller)?;
@@ -1079,7 +1301,8 @@ impl GameRuntime {
             }
             if rule
                 .condition
-                .is_some_and(|(i, v)| self.state.counters[i] != v)
+                .as_ref()
+                .is_some_and(|c| !c.holds(&self.state.counters))
             {
                 continue;
             }
@@ -1087,7 +1310,7 @@ impl GameRuntime {
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }
@@ -1098,7 +1321,7 @@ impl GameRuntime {
     }
     /// Step player presence across trigger zones and dispatch on_enter / on_exit rules.
     pub fn step_triggers(&mut self, controller: &Controller, player_id: u64) {
-        if self.state.completed || self.trigger_zones.is_empty() {
+        if self.state.finished() || self.trigger_zones.is_empty() {
             return;
         }
         let prev_mask = self.player_zones.get(&player_id).copied().unwrap_or(0);
@@ -1125,7 +1348,7 @@ impl GameRuntime {
             } else if was_in && !is_in && enabled {
                 self.fire_zone_rules(i, false);
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }
@@ -1144,7 +1367,8 @@ impl GameRuntime {
             }
             if rule
                 .condition
-                .is_some_and(|(i, v)| self.state.counters[i] != v)
+                .as_ref()
+                .is_some_and(|c| !c.holds(&self.state.counters))
             {
                 continue;
             }
@@ -1152,7 +1376,7 @@ impl GameRuntime {
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
-            if self.state.completed {
+            if self.state.finished() {
                 break;
             }
         }

@@ -680,6 +680,7 @@ pub fn describe(path: &Path) -> Result<Value, SaveError> {
                         "props_moving": state.physics.as_ref().map_or(0, |p| p.props.iter().filter(|q| !q.sleeping).count()),
                         "round": game.map(|g| g.round),
                         "completed": game.map(|g| g.completed),
+                        "failed": game.map(|g| g.failed),
                         "valid": state.validate().is_ok(),
                     })
                 }

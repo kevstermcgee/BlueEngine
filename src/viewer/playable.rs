@@ -254,6 +254,8 @@ pub async fn run_game_with_options(
             "Connecting...".to_owned()
         } else if game.state().completed {
             "Objective complete! E / X to play again".to_owned()
+        } else if game.state().failed {
+            "Objective failed! E / X to try again".to_owned()
         } else {
             game.document()
                 .counters
@@ -276,7 +278,7 @@ pub async fn run_game_with_options(
             && game
                 .target(&session.world().room, session.controller())
                 .is_some()
-            && !game.state().completed
+            && !game.state().finished()
         {
             super::game_text::draw_text(
                 "E / X: interact",

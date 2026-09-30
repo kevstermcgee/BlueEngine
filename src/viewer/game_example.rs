@@ -63,10 +63,7 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
         on_enter: None,
         on_exit: None,
         on_timer: None,
-        condition: Some(Condition {
-            counter: "switches".into(),
-            equals: 3,
-        }),
+        condition: Some(Condition::counter_equals("switches", 3)),
         once: true,
         actions: vec![GameAction::SetEnabled {
             entity: "exit".into(),

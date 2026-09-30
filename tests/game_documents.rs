@@ -127,10 +127,9 @@ fn validation_rejects_unknown_fields_references_duplicates_and_bad_spawns() {
     d.rules[0].on_interact = Some("missing".into());
     check(&d);
     let mut d = valid.clone();
-    d.rules[0].condition = Some(vesper3d::viewer::game::Condition {
-        counter: "missing".into(),
-        equals: 1,
-    });
+    d.rules[0].condition = Some(vesper3d::viewer::game::Condition::counter_equals(
+        "missing", 1,
+    ));
     check(&d);
     let mut d = valid.clone();
     d.player_profile.eye_height = d.player_profile.height;
@@ -326,6 +325,7 @@ fn game_state_mirror_rejects_reordered_or_invalid_snapshots_and_fits_budget() {
         active_timers: u64::MAX,
         fired: u64::MAX,
         completed: true,
+        failed: true,
     };
     let encoded = Packet::GameState {
         session: Some([u64::MAX; 2]),

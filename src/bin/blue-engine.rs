@@ -1308,7 +1308,7 @@ async fn main() {
             let aimed = game
                 .target(&room, &controller)
                 .filter(|index| game.visible(*index))
-                .filter(|_| !game.state().completed);
+                .filter(|_| !game.state().finished());
             for (i, zone) in game.trigger_zones().iter().enumerate() {
                 let center = mesh::vec((zone.min + zone.max) * 0.5);
                 let size = mesh::vec(zone.max - zone.min);
@@ -1405,6 +1405,8 @@ async fn main() {
                 text(&game.document().name, 30., 42., 22., INK);
                 let status = if game.state().completed {
                     "Objective complete!".to_string()
+                } else if game.state().failed {
+                    "Objective failed!".to_string()
                 } else {
                     game.document()
                         .counters
@@ -1418,7 +1420,7 @@ async fn main() {
                 if let Some(index) = game
                     .target(&room, &controller)
                     .filter(|index| game.visible(*index))
-                    .filter(|_| !game.state().completed)
+                    .filter(|_| !game.state().finished())
                 {
                     let target = &game.document().interactables[index].entity;
                     let status = if game.enabled(index) {
@@ -1528,7 +1530,7 @@ async fn main() {
                 if let Some(target) = game
                     .target(&room, &controller)
                     .filter(|index| game.visible(*index))
-                    .filter(|_| !game.state().completed)
+                    .filter(|_| !game.state().finished())
                 {
                     if game.enabled(target) {
                         (Color::new(0.25, 0.95, 0.55, 0.95), 3.5)

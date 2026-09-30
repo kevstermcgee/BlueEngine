@@ -82,10 +82,23 @@ A rule example:
 ```
 
 Actions: `increment(counter,amount)`, `set_counter(counter,value)`,
-`set_enabled(entity,enabled)`, `set_visible(entity,visible)`, `set_mover(mover,open)`, `start_timer(timer)`, `stop_timer(timer)`, `complete`. Optional condition: `{"counter":"switches","equals":3}`.
+`set_enabled(entity,enabled)`, `set_visible(entity,visible)`, `set_mover(mover,open)`, `start_timer(timer)`, `stop_timer(timer)`, `complete` (win), `fail` (lose). Both end the match: later events and timers are
+ignored until the game restarts (E / X again).
+
+Optional `condition` (null is unconditional). A leaf names a counter and one or more comparisons, which must
+all hold: `equals`, `not_equals`, `less_than`, `greater_than`, `at_most`, `at_least`. Add `modulo` to compare the
+remainder instead (`{"counter":"phase","modulo":2,"equals":0}` is "phase is even"). Combine leaves with `all`,
+`any` and `not`, nested at most 4 deep and 16 parts in all:
+
+```json
+{"all":[{"counter":"countdown","at_least":1},{"not":{"counter":"stage","equals":3}}]}
+```
+
+The bare `{"counter":"switches","equals":3}` form is unchanged. A lost bomb timer is one rule:
+`{"on_timer":"fuse","condition":{"counter":"countdown","at_most":0},"actions":[{"action":"fail"}]}`.
 Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
 `on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.
-Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete ends interactions.
+Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete and fail end the match.
 Enabled controls interaction and trigger zone eligibility. Visibility is separately
 replicated for interactable geometry and never changes collision or eligibility; use
 both actions when an object should disappear and stop responding. Kinematic `movers` smoothly translate box colliders

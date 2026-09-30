@@ -92,8 +92,8 @@ fn run() -> Result<()> {
             json!({
                 "ok":true,"schema_version":1,"schema_command":"game-schema", "example":"game-example NEW_DIRECTORY",
                 "event":"authoritative nearest-visible interaction within 2.5 metres (E intent), spatial trigger zones (on_enter/on_exit), or timers (on_timer)",
-                "actions":["increment","set_counter","set_enabled","set_visible","set_mover","start_timer","stop_timer","complete"],
-                "conditions":"counter equals integer; null means unconditional",
+                "actions":["increment","set_counter","set_enabled","set_visible","set_mover","start_timer","stop_timer","complete","fail"],
+                "conditions":"null is unconditional; a leaf is {counter, [modulo], equals|not_equals|less_than|greater_than|at_most|at_least} (several comparisons must all hold); or {all:[...]}, {any:[...]}, {not:{...}}, nested at most 4 deep, 16 parts","outcomes":"complete wins, fail loses; both end the match until restart",
                 "limits":{"game_bytes":64000,"spawns":8,"counters":32,"interactables":64,"trigger_zones":64,"movers":64,"timers":64,"rules":64,"actions_per_rule":4,"counter_magnitude":1000000},
                 "order":"player IDs ascending at fixed tick; rules in document order; later conditions see earlier actions; once is per match",
                 "geometry":"static axis-aligned box with matching node/collider/entity ID and bounds; trigger zones declare spatial AABB bounds; movers translate colliders smoothly",

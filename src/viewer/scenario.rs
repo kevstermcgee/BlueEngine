@@ -58,6 +58,8 @@ pub struct Assertion {
     #[serde(default)]
     pub completed_equals: Option<bool>,
     #[serde(default)]
+    pub failed_equals: Option<bool>,
+    #[serde(default)]
     pub target: Option<String>,
     #[serde(default)]
     pub enabled_equals: Option<bool>,
@@ -265,6 +267,17 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
                             game.state().completed
                         )),
                         None => failures.push("completed assertion requires a game".into()),
+                        _ => {}
+                    }
+                }
+
+                if let Some(expected) = assert.failed_equals {
+                    match &world.game {
+                        Some(game) if game.state().failed != expected => failures.push(format!(
+                            "failed is {}, expected {expected}",
+                            game.state().failed
+                        )),
+                        None => failures.push("failed assertion requires a game".into()),
                         _ => {}
                     }
                 }

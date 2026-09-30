@@ -599,6 +599,7 @@
         "src/viewer/profile.rs",
         "src/viewer/game_example.rs",
         "tests/game_documents.rs",
+        "tests/game_conditions.rs",
         "tools/game.schema.json",
         "docs/GAME_QUICKSTART.md"
       ],
@@ -606,7 +607,7 @@
         "game_documents integration tests",
         "graphical --capture-game smoke"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state. Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors.",
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors.",
       "depends_on": [
         "simulation_contract"
       ],
@@ -615,7 +616,10 @@
         "door",
         "objective",
         "interaction",
-        "counter"
+        "counter",
+        "fail",
+        "condition",
+        "modulo"
       ],
       "read_first": [
         "src/viewer/game.rs",
