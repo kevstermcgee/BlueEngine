@@ -21,6 +21,60 @@ use macroquad::prelude::*;
 
 use super::batch::Rgb;
 
+/// A finite-radius, unshadowed local light. Colors are linear RGB; intensity is a multiplier.
+/// The bounded kit supports four lights per pass. Invalid values are refused at construction.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PointLight {
+    position: Vec3,
+    radius: f32,
+    color: Vec3,
+    intensity: f32,
+}
+impl PointLight {
+    pub fn new(
+        position: Vec3,
+        radius: f32,
+        color: Rgb,
+        intensity: f32,
+    ) -> Result<Self, &'static str> {
+        let color = Vec3::from(color);
+        if !position.is_finite()
+            || !radius.is_finite()
+            || radius <= 0.
+            || !color.is_finite()
+            || color.min_element() < 0.
+            || !intensity.is_finite()
+            || intensity < 0.
+        {
+            return Err(
+                "point light needs finite values, positive radius and nonnegative color/intensity",
+            );
+        }
+        Ok(Self {
+            position,
+            radius,
+            color,
+            intensity,
+        })
+    }
+    /// Diffuse contribution before surface color/tone mapping; mirrors the shader's radial falloff.
+    pub fn diffuse_at(&self, point: Vec3, normal: Vec3) -> Vec3 {
+        if !point.is_finite() || !normal.is_finite() {
+            return Vec3::ZERO;
+        }
+        let delta = self.position - point;
+        let d = delta.length();
+        let diffuse = normal
+            .normalize_or_zero()
+            .dot(delta / d.max(0.0001))
+            .max(0.);
+        let falloff = (1. - d / self.radius).clamp(0., 1.);
+        self.color * (self.intensity * diffuse * falloff * falloff)
+    }
+}
+/// Maximum local lights in one kit render pass.
+pub const MAX_POINT_LIGHTS: usize = 4;
+
 /// Everything about the scene's light that the materials read. Plain numbers, so a game can animate
 /// them (fade the fog at a boss, pulse the glow on the beat).
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -134,13 +188,30 @@ uniform vec3 AmbientSky;
 uniform vec3 AmbientGround;
 uniform vec3 KeyDir;
 uniform vec3 KeyColor;
+uniform vec4 Point0;
+uniform vec4 Point1;
+uniform vec4 Point2;
+uniform vec4 Point3;
+uniform vec4 Color0;
+uniform vec4 Color1;
+uniform vec4 Color2;
+uniform vec4 Color3;
 uniform vec4 Rim;      // rgb colour, w strength
+vec3 localLight(vec4 source, vec4 color, vec3 n) {
+    vec3 delta = source.xyz - vpos;
+    float d = length(delta);
+    float falloff = clamp(1.0 - d / max(source.w, 0.0001), 0.0, 1.0);
+    float diffuse = max(dot(n, delta / max(d, 0.0001)), 0.0);
+    return color.rgb * color.w * diffuse * falloff * falloff;
+}
 void main() {
     vec3 n = normalize(vnormal);
     vec3 v = normalize(Eye - vpos);
     float diff = max(dot(n, normalize(KeyDir)), 0.0);
     vec3 amb = mix(AmbientGround, AmbientSky, 0.5 + 0.5 * n.y);
-    vec3 lit = vcolor.rgb * (amb + KeyColor * diff);
+    vec3 local = localLight(Point0, Color0, n) + localLight(Point1, Color1, n)
+        + localLight(Point2, Color2, n) + localLight(Point3, Color3, n);
+    vec3 lit = vcolor.rgb * (amb + KeyColor * diff + local);
     float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
     lit += Rim.rgb * rim * Rim.w;
     lit += vcolor.rgb * vemis * (0.85 + 0.85 * Env.x);
@@ -192,7 +263,7 @@ void main() { gl_FragColor = vcolor; }
 
 /// Uniform names and types of the world and effect materials; kept in one list so the GLSL above and
 /// the Rust that fills it cannot drift apart (a test compares them).
-const WORLD_UNIFORMS: [(&str, UniformType); 8] = [
+const WORLD_UNIFORMS: [(&str, UniformType); 16] = [
     ("Eye", UniformType::Float3),
     ("Env", UniformType::Float4),
     ("FogColor", UniformType::Float3),
@@ -201,6 +272,14 @@ const WORLD_UNIFORMS: [(&str, UniformType); 8] = [
     ("KeyDir", UniformType::Float3),
     ("KeyColor", UniformType::Float3),
     ("Rim", UniformType::Float4),
+    ("Point0", UniformType::Float4),
+    ("Point1", UniformType::Float4),
+    ("Point2", UniformType::Float4),
+    ("Point3", UniformType::Float4),
+    ("Color0", UniformType::Float4),
+    ("Color1", UniformType::Float4),
+    ("Color2", UniformType::Float4),
+    ("Color3", UniformType::Float4),
 ];
 
 /// Uniforms the effect shader actually declares (a material must not declare more than its shader has).
@@ -303,6 +382,31 @@ impl Materials {
         })
     }
 
+    /// Set at most four local lights after `set_scene`, separately for each camera pass.
+    /// Unused slots are cleared. An oversized list is rejected without changing uniforms.
+    /// `set_scene` resets all local lights, preserving the appearance of existing kit clients.
+    pub fn set_point_lights(&self, lights: &[PointLight]) -> Result<(), &'static str> {
+        if lights.len() > MAX_POINT_LIGHTS {
+            return Err("kit supports at most four point lights per pass");
+        }
+        for (i, (source, color)) in [
+            ("Point0", "Color0"),
+            ("Point1", "Color1"),
+            ("Point2", "Color2"),
+            ("Point3", "Color3"),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let (position, radiance) = lights.get(i).map_or((Vec4::ZERO, Vec4::ZERO), |l| {
+                (l.position.extend(l.radius), l.color.extend(l.intensity))
+            });
+            self.world.set_uniform(source, position);
+            self.world.set_uniform(color, radiance);
+        }
+        Ok(())
+    }
+
     /// Per-frame scene constants for the world and effect materials: the camera `eye`, `time` in
     /// seconds, a `pulse` (0-1) that brightens glowing surfaces (a beat, a charge-up) and the [`Look`].
     pub fn set_scene(&self, look: &Look, eye: Vec3, time: f32, pulse: f32) {
@@ -311,6 +415,8 @@ impl Materials {
             m.set_uniform("Env", vec4(pulse, time, look.fog_density, look.exposure));
             m.set_uniform("FogColor", Vec3::from(look.fog_color));
         }
+        self.set_point_lights(&[])
+            .expect("empty light list is valid");
         let m = &self.world;
         m.set_uniform("AmbientSky", Vec3::from(look.ambient_sky));
         m.set_uniform("AmbientGround", Vec3::from(look.ambient_ground));
@@ -331,6 +437,18 @@ impl Materials {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn point_light_falloff_is_local_and_faces_the_source() {
+        let light = PointLight::new(Vec3::Y * 2., 4., [1., 0.5, 0.], 2.).unwrap();
+        assert!((light.diffuse_at(Vec3::ZERO, Vec3::Y) - vec3(0.5, 0.25, 0.)).length() < 1e-6);
+        assert_eq!(light.diffuse_at(Vec3::ZERO, -Vec3::Y), Vec3::ZERO);
+        assert_eq!(light.diffuse_at(Vec3::Y * 6., -Vec3::Y), Vec3::ZERO);
+        assert_eq!(light.diffuse_at(Vec3::Y * 2., Vec3::Y), Vec3::ZERO);
+        assert_eq!(light.diffuse_at(Vec3::ZERO, Vec3::ZERO), Vec3::ZERO);
+        assert!(PointLight::new(Vec3::ZERO, 0., [1.; 3], 1.).is_err());
+        assert!(PointLight::new(Vec3::ZERO, 2., [-1., 1., 1.], 1.).is_err());
+        assert!(PointLight::new(Vec3::ZERO, 2., [1.; 3], f32::NAN).is_err());
+    }
 
     #[test]
     fn every_declared_uniform_is_used_by_the_world_shader_and_vice_versa() {

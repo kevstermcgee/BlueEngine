@@ -1096,13 +1096,14 @@
         "src/viewer/kit/capture.rs",
         "docs/CUSTOM_CLIENT.md",
         "src/viewer/kit/gizmo.rs",
-        "examples/minimal_game.rs"
+        "examples/minimal_game.rs",
+        "src/viewer/kit/mirror.rs"
       ],
       "checks": [
         "cargo test --locked --lib kit",
         "real-window capture of the custom-sim starter (world, effects, HUD) inspected by eye"
       ],
-      "note": "Opt-in renderer parts for a game that draws its own world, each independent and without genre logic: View (camera, screen projection), Template/Batch/Tint (small meshes packed per frame into few draw calls), Look/Materials (lit + fog + glow world material, alpha and additive effects, sky; presets daylight/dusk/night), Fx (particles, rings, fireballs, beams, popups, banners), hud (scaled outlined text, panels, bars, vignette, crosshair), SoundBank (off-thread rendered effects and music stems, backend woken during loading), capture::save_frame (reports the real pixel size).",
+      "note": "Opt-in renderer parts for a game that draws its own world, each independent and without genre logic: View (camera, screen projection), Template/Batch/Tint (small meshes packed per frame into few draw calls), Look/Materials (lit + fog + glow world material, alpha and additive effects, sky; presets daylight/dusk/night), Fx (particles, rings, fireballs, beams, popups, banners), hud (scaled outlined text, panels, bars, vignette, crosshair), SoundBank (off-thread rendered effects and music stems, backend woken during loading), capture::save_frame (reports the real pixel size). PlanarMirror owns a depth-backed target, off-axis aperture projection, near-plane clipping and reflection UVs. PointLight adds four bounded unshadowed local lights per pass, cleared by set_scene for compatibility.",
       "keywords": [
         "kit",
         "renderer",
@@ -1143,7 +1144,10 @@
         "human",
         "minimal",
         "example",
-        "window"
+        "window",
+        "mirror",
+        "reflection",
+        "point lights"
       ],
       "contract": {
         "owns": "Dynamic batched geometry, materials, effect state, HUD drawing helpers and sound playback for custom renderers",
@@ -1172,7 +1176,10 @@
         "Materials",
         "Fx",
         "SoundBank",
-        "gizmo"
+        "gizmo",
+        "PointLight",
+        "MirrorPlane",
+        "PlanarMirror"
       ],
       "read_first": [
         "src/viewer/kit/mod.rs",

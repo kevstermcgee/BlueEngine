@@ -9,7 +9,8 @@
     "games/magnet-mine",
     "games/wrecking-orbit",
     "games/pulse-nova",
-    "games/spooky-kart"
+    "games/spooky-kart",
+    "games/physics-lab"
   ],
   "collections": {
     "games": [
@@ -58,8 +59,13 @@
       "slug": "three-switches",
       "name": "Three Switches",
       "entry": "games/three-switches/game.json",
-      "files": ["games/three-switches"],
-      "arguments": ["--game", "content/games/three-switches/game.json"]
+      "files": [
+        "games/three-switches"
+      ],
+      "arguments": [
+        "--game",
+        "content/games/three-switches/game.json"
+      ]
     },
     {
       "slug": "first-light",
@@ -69,7 +75,10 @@
         "demos/examples/first-light.json",
         "demos/examples/first-light.wav"
       ],
-      "arguments": ["--map", "content/demos/examples/first-light.json"]
+      "arguments": [
+        "--map",
+        "content/demos/examples/first-light.json"
+      ]
     }
   ]
 }

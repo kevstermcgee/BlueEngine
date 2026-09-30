@@ -10,6 +10,8 @@
 //! | [`View`] | camera description: eye, yaw/pitch/roll, FOV, screen projection |
 //! | [`Template`], [`Batch`], [`Tint`] | build small meshes once, pack hundreds per frame into a few draw calls |
 //! | [`Look`], [`Materials`] | lit + fogged + glowing world material, alpha and additive effect materials, a sky |
+//! | [`PlanarMirror`], [`MirrorPlane`] | depth-backed off-axis planar reflections |
+//! | [`PointLight`] | up to four finite-radius local lights per pass |
 //! | [`Fx`] | particles, rings, fireballs, beams, popups, banners |
 //! | [`gizmo`] | wireframe bounding boxes, axes and a person-sized silhouette for judging scale by eye (numbers: `devkit::Bounds`) |
 //! | [`hud`] | scaled outlined text, panels, bars, vignette, crosshair, popups and banners |
@@ -25,10 +27,12 @@ pub mod fx;
 pub mod gizmo;
 pub mod hud;
 pub mod look;
+pub mod mirror;
 pub mod view;
 
 pub use audio::{Rendered, SoundBank};
 pub use batch::{Batch, Rgb, Template, Tint, Vert, MAX_MESH_INDICES, MAX_MESH_VERTICES};
 pub use fx::{Banner, Fx, Particle, ParticleKind, Popup};
-pub use look::{Look, Materials};
+pub use look::{Look, Materials, PointLight, MAX_POINT_LIGHTS};
+pub use mirror::{MirrorCamera, MirrorPlane, PlanarMirror};
 pub use view::View;

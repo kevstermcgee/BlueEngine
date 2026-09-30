@@ -59,6 +59,17 @@ pitch)` (`.fov`, `.roll`, `.project(p, w, h)`), `Fx::new(seed)` (`sparks`, `dust
 `banner`, `confetti_fountain`, `update(dt)`, `draw(..)`), `hud::{text_outlined, text_centered, text_right, panel, bar,
 wrap, col, ui_scale, overlay, draw_popups, draw_banners}`, `Juice { shake, kick, stop, flash, camera_shake() }`.
 
+Local illumination: `PointLight::new(position, radius, rgb, intensity)?`; call
+`materials.set_point_lights(&lights)?` after each `set_scene`. Maximum four unshadowed lights;
+`set_scene` clears them so existing games keep their appearance.
+
+Mirrors: `MirrorPlane::new(center, right, up, size)?` (`right × up` faces the viewer),
+`PlanarMirror::new(plane, (768,384))?` after GL initialization. Each frame, if
+`mirror.camera(eye, far)` returns a camera: set it, clear, render the world excluding mirrors,
+using `camera.eye` for lighting; restore the main camera and render the world, then
+`mirror.draw_surface()`. Target depth, parallax, clipping behind the plane and UV orientation
+are engine-owned. No recursion/rough reflection; one extra world render per visible mirror.
+
 ## Sound (`devkit::synth`, `kit::SoundBank`)
 
 Presets: Click, Select, Back, Blip, Coin, Pickup, PowerUp, Jump, Land, Hit, Thump, Explosion, Zap, Shoot, Whoosh, Error,

@@ -128,3 +128,29 @@ blank frames; `python tools/audio_report.py FILE.wav` reports clipping, clicks, 
 (numbers are the honest ceiling: nobody can listen).
 
 See [the shared gameplay kit](SHARED_GAMEPLAY.md) for the playable starter, public creative APIs, feature gates and runtime boundaries.
+
+## Local lights and planar mirrors
+
+`kit::PointLight::new(position, radius, rgb, intensity)` validates finite positive radius and
+nonnegative RGB/intensity. Call `Materials::set_point_lights(&lights)` **after** `set_scene`,
+for each camera pass. At most four unshadowed lights use Lambert diffuse with squared
+finite-radius falloff. Unused slots are cleared; oversized lists fail without changing uniforms.
+`set_scene` clears all lights so existing clients keep the same look. This is additive diffuse
+lighting, not PBR or shadow mapping.
+
+`MirrorPlane::new(center, right, up, size)` validates a rectangular aperture with perpendicular
+axes; `right × up` points to the viewer side. `PlanarMirror::new(plane, (width,height))` requires
+GL initialization and owns its target, depth buffer, camera adapter and upright UVs. Resolution
+is bounded at 2048 per axis. `mirror.camera(eye, far)` returns None behind/within 2 cm of the plane
+or when the far range is too short. Otherwise set that camera, clear, render all desired world
+geometry **excluding mirror surfaces**, and set lighting with `camera.eye`. Restore the main
+camera, render the main scene, then call `mirror.draw_surface()` only if the reflection ran.
+The plane-aligned near clip excludes geometry behind the mirror; the off-axis frustum follows
+the aperture and gives sideways-motion parallax. Render targets have fixed world orientation,
+so sky rendering needs its own direction handling. There is no recursive, rough, refractive or
+shadowed reflection. Each visible mirror costs one additional world render.
+
+The separate Physics Lab game exercises these APIs with
+fire flicker, burning sample lights, a moving blue light and a vertical walk-up mirror. Its
+thermal/fluid model remains game-owned, approximate and documented, rather than an engine
+continuum-fluid solver.
