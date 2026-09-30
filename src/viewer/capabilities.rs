@@ -59,6 +59,47 @@ pub fn features() -> Result<Value> {
     ))?)
 }
 
+/// Which runtime path gets which networking, saving and shutdown behaviour, with every number read from the constant that
+/// enforces it (nothing here is typed in by hand), so it cannot drift from the code.
+pub fn runtime_support() -> Value {
+    use super::{game, net, netplay, savestate, simulation};
+    json!({
+        "stock_server": {
+            "what": "be2-headless --server: the authoritative DedicatedServer for GameDocument games and maps (used by the stock client)",
+            "players": {
+                "default": simulation::DEFAULT_MAX_PLAYERS,
+                "configurable_up_to": simulation::MAX_PLAYERS_LIMIT,
+                "how": "--max-players N (also raises the session and handshake limits)",
+            },
+            "datagram_bytes": net::MAX_PACKET_BYTES,
+            "world_updates": format!("compact binary since protocol {}; every other packet is JSON", net::PROTOCOL_VERSION),
+            "replication": {
+                "partial_world_updates": true,
+                "records_per_peer": net::replication::MAX_REPLICATED_ENTITIES,
+                "note": "a world larger than one packet arrives over several acknowledged updates, nearest records first",
+            },
+            "interest_management": "room-graph relevance per player (HeadlessWorld::snapshot_for_player)",
+            "prediction": "stock client (PredictionBuffer + reconciliation)",
+            "graceful_shutdown": "SIGINT, SIGTERM and SIGHUP (console events on Windows): finish the tick, final autosave, exit 0; a second signal exits at once",
+            "saving": {
+                "autosave": "--autosave SECONDS (and once at shutdown); resume with --load auto",
+                "players_in_a_save": savestate::world::MAX_PLAYERS,
+                "payload_bytes": savestate::MAX_PAYLOAD_BYTES,
+            },
+            "game_document": {"file_bytes": game::MAX_GAME_BYTES, "counters": game::MAX_GAME_COUNTERS, "flags": game::MAX_GAME_FLAGS},
+        },
+        "custom_sim_netplay": {
+            "what": "viewer::netplay (NetGame + ClientView) for games that own their simulation; it has its own server loop and is not the stock server",
+            "datagram_bytes": netplay::wire::MAX_DATAGRAM,
+            "players": "NetGame::MAX_SEATS, chosen by each game",
+            "replication": "one snapshot format for everyone: no partial updates and no interest management",
+            "prediction": "your ClientView",
+            "graceful_shutdown": "not provided by the kit; the game's own server binary must stop its loop",
+            "saving": format!("devkit::Snapshot into the same save file ({} byte payload limit); the dedicated server's --autosave does not apply", savestate::MAX_PAYLOAD_BYTES),
+        },
+    })
+}
+
 /// Bounded orientation response. Detailed feature records are returned by [`search`].
 pub fn describe() -> Result<Value> {
     let data = features()?;
@@ -74,8 +115,14 @@ pub fn describe() -> Result<Value> {
         "default_map": "Blue Test Lab",
         "commands": COMMANDS.iter().map(|(name, args)| json!({"name":name,"arguments":args})).collect::<Vec<_>>(),
         "features": names,
-        "limits": {"packet_bytes": super::net::MAX_PACKET_BYTES, "players": 8, "map_bytes": 8_000_000, "patch_operations": 1000, "search_results": 10},
-        "start": ["be2-tools export-lab NEW.json", "be2-tools catalog", "be2-tools search multiplayer", "docs/AI_QUICKSTART.md"],
+        "limits": {
+            "packet_bytes": super::net::MAX_PACKET_BYTES,
+            "players": super::simulation::DEFAULT_MAX_PLAYERS,
+            "players_note": "the default a server admits; see runtime_support for what can be configured and what each path supports",
+            "map_bytes": super::game::MAX_MAP_BYTES, "patch_operations": 1000, "search_results": 10
+        },
+        "runtime_support": runtime_support(),
+        "start": ["be2-tools export-lab NEW.json", "be2-tools catalog", "be2-tools search multiplayer", "docs/AI_QUICKSTART.md", "python tools/be2.py context FEATURE --compact (engine checkout; no build)"],
         "unsupported": ["arbitrary gameplay scripts", "runtime mesh import"],
         "metadata": "Curated feature index; executable commands/arities come from the native CLI registry."
     }))

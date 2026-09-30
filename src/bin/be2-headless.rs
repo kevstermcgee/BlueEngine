@@ -78,6 +78,7 @@ fn run_server<T: DatagramTransport>(
     let mut server = DedicatedServer::with_transport(transport, world)?;
     if let Some(max) = tuning.max_players {
         server = server.with_max_players(max);
+        server.check_capacity()?;
         println!("[Server] Admitting up to {} players", server.max_players());
     }
     if let Some(threads) = tuning.network_threads {

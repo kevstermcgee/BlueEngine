@@ -32,8 +32,9 @@ use serde::{Deserialize, Serialize};
 pub const KIND: &str = "world";
 /// Payload schema version this build writes and reads natively.
 pub const VERSION: u32 = 1;
-/// Players a world can hold.
-pub const MAX_PLAYERS: usize = 8;
+/// Players a world save may describe: exactly what a server can be configured to admit, so a server that
+/// accepts N players can always save and resume them (it was 8, which made autosave fail above the default).
+pub const MAX_PLAYERS: usize = crate::viewer::simulation::MAX_PLAYERS_LIMIT;
 /// Dynamic props a save may describe.
 pub const MAX_PROPS: usize = 4096;
 /// Lifecycle objects a save may describe.

@@ -10,6 +10,28 @@ deltas and keyframe recovery. The same server path accepts two explicit profiles
 Both use UDP at the network layer; the default port is `4000/udp`. There is no silent
 fallback from production to development.
 
+## Which runtime gets what
+
+This guide is about the **stock server**, `be2-headless --server`. A game that owns its simulation and uses
+[`viewer::netplay`](NETPLAY.md) runs its own server loop and gets less. `be2-tools describe` prints the same facts with the
+numbers read from the code (`runtime_support`).
+
+| | Stock server (`be2-headless --server`) | Custom simulation on `netplay` |
+|---|---|---|
+| Players | 8 by default, up to 1024 with `--max-players` | `NetGame::MAX_SEATS`, each game's own |
+| Datagram | 1100 bytes | 1200 bytes |
+| World updates | compact binary, acknowledged partial updates, nearest records first | one snapshot format for everyone, must fit one datagram |
+| Interest management | room-graph relevance per player | none |
+| Prediction | stock client | your `ClientView` |
+| Graceful shutdown | SIGINT/SIGTERM/SIGHUP: finish the tick, final save, exit 0 | not provided by the kit |
+| Saving | `--autosave`, `--load`; saves hold up to 1024 players, so autosave works at any `--max-players` | `devkit::Snapshot` (same file format) |
+
+`be2-headless` refuses to start when `--max-players` plus the world's objects that can become networked props exceeds replication's
+1024 records per peer (the error says what to lower), because such a server would stop with a replication error once full. The built-in test lab
+has a handful of objects, so its largest server is `--max-players 1021` or so, not 1024.
+
+A `GameDocument` has its own small limits (file size, counters, flags; `be2-tools game-describe`), separate from all of the above.
+
 ## Stopping a server
 
 `be2-headless --server` stops cleanly on **SIGINT, SIGTERM and SIGHUP** (Ctrl-C, Ctrl-Break and console close on Windows): it

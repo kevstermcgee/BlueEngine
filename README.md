@@ -22,7 +22,8 @@ character skins alongside the original content. See the [sandbox guide](assets/g
 
 - Content authors: `python tools/author.py describe`, then [tools/AUTHORING.md](tools/AUTHORING.md).
 - Asset discovery: `python tools/assets.py search "desk lamp"`; see the [asset library contract](assets/README.md).
-- Native discovery: `be2-tools describe`, `be2-tools search multiplayer`, `be2-tools catalog`.
+- Native discovery: `be2-tools describe`, `be2-tools search multiplayer`, `be2-tools catalog`. Inside an engine checkout, before
+  any build, use `python tools/be2.py context "FEATURE" --compact` (query up to 100 characters), then `python tools/be2.py check --changed`.
 - Rust prototypes: [compact quickstart](docs/AI_QUICKSTART.md), `cargo run --locked --no-default-features --example prototype`.
 - A game: `be2-tools new-game NAME DIR` (rules fit `GameDocument`) or `be2-tools new-game NAME DIR ENGINE_PATH custom-sim` (enemies, projectiles, scoring, AI: your own simulation). [Pick the starter and follow the definition of done](docs/GAME_QUICKSTART.md): every game ships with its own icon and desktop shortcut, by script.
 - Custom presentation or your own simulation: [visible-client boundary and kit](docs/CUSTOM_CLIENT.md), `cargo run --locked --example custom_client`.
@@ -60,7 +61,11 @@ Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement 
 
 - Shared 60 Hz player simulation; graphics/audio-free headless build; Rapier props.
 - Transport-agnostic authoritative server, client prediction, interpolation, spatial interest,
-  acknowledged deltas/keyframe recovery and authoritative prop ownership/combat.
+  acknowledged deltas/keyframe recovery and authoritative prop ownership/combat. That is the **stock server**
+  (`be2-headless --server`): 8 players by default, up to 1024 with `--max-players`, graceful shutdown, autosave and resume.
+  Games with their own simulation use [`viewer::netplay`](docs/NETPLAY.md) instead, which has its own server loop, one
+  snapshot format for everyone and no partial replication or interest management. `be2-tools describe` prints the
+  exact limits per path (`runtime_support`), read from the code.
 - Validated MapDocument authoring, stable semantic IDs, transactional edits,
   a structured and extensible asset catalog, bounded discovery and route/capture tools.
 - SceneBuilder/prelude for static boxes and catalog props; ID-based impulse/position APIs.
@@ -68,14 +73,16 @@ Scientist/Feta remain demo profiles. GameDocument v1 adds configurable movement 
   firearms, deterministic fire/reload/spread, smooth ADS and authoritative TDM rules.
   [`BlueDM`](https://github.com/kevstermcgee/BlueEngineGames/tree/main/games/bluedm) is the standalone online reference game.
 
-Networking uses one JSON packet path with an 1100-byte cross-transport ceiling.
+Networking uses one packet path with an 1100-byte cross-transport ceiling: world updates are compact binary (protocol 8), every
+other message is JSON.
 `--transport development` (the compatibility default) is raw, unencrypted UDP for
 local work and impairment testing. `--transport production` uses QUIC datagrams over
 TLS 1.3 and pins the server certificate selected by `BLUE_TLS_CERT_FILE` (or the
 bundled default); the server loads its PKCS#8 key from `BLUE_TLS_KEY_FILE`. Supplying `--auth-key` on both peers additionally enables
 client HMAC challenge-response, session tokens and replay protection. Neither profile
-hides traffic metadata or provides session migration. Large snapshots can exceed the
-packet limit; bounded encoding is not snapshot chunking. Map fingerprints detect
+hides traffic metadata or provides session migration. A world too big for one packet is sent as
+several acknowledged partial updates, nearest records first; a single record that cannot fit is an error, not
+silently dropped. Map fingerprints detect
 accidental mismatch, not hostile forgery. See the
 [hosting guide](docs/HOSTING.md) for the runnable server's exact security boundary.
 

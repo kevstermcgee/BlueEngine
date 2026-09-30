@@ -4,6 +4,9 @@
 supply the rules and the layouts of what crosses the wire; the kit supplies everything else. It was extracted from
 Spooky Kart, whose own copy of this code was about 2,000 lines, none of it about karts.
 
+This is not the stock server (`be2-headless`): it has its own server loop, so `--max-players`, partial replication,
+interest management and signal handling described in [HOSTING.md](HOSTING.md) do not apply. `be2-tools describe` lists both paths' limits.
+
 ## What the kit does
 
 **Server** (`NetServer<G, T>`): a lobby (players connect, choose, ready up), a countdown, a match, results, and
