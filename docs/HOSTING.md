@@ -45,7 +45,8 @@ kill -TERM "$PID"; kill -INT "$PID"     # a second request exits at once (status
 
 A **second** shutdown request forces an immediate exit, so a server that will not stop (a stuck save, a wedged tick) can be
 ended by signalling twice instead of `kill -9`. On Windows, closing the console or logging off gives the process only a few
-seconds; the handler waits up to 4.5 s for the final save. Before this change these signals killed the process at once
+seconds; the handler waits up to 4.5 s for the final save. That Windows path is compiled by CI but no test delivers a real console event to a
+running server, so treat it as implemented, not verified; the Unix signals are covered by `tests/graceful_shutdown.rs`. Before this change these signals killed the process at once
 (status 143) and no final save was written. The custom-simulation `netplay` kit's own server loop is unchanged.
 
 ## Managing servers with `be2-ctl`

@@ -380,5 +380,8 @@ fn restarting_a_match_that_is_still_running_fails_the_scenario() {
         vec![json!({"tick": 10, "player": 1, "restart": true})],
         vec![],
     );
-    assert!(!run.ok, "a restart at the wrong moment must not pass quietly");
+    assert!(
+        !run.ok,
+        "a restart at the wrong moment must not pass quietly"
+    );
 }

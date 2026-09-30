@@ -80,7 +80,7 @@ pub fn runtime_support() -> Value {
             },
             "interest_management": "room-graph relevance per player (HeadlessWorld::snapshot_for_player)",
             "prediction": "stock client (PredictionBuffer + reconciliation)",
-            "graceful_shutdown": "SIGINT, SIGTERM and SIGHUP (console events on Windows): finish the tick, final autosave, exit 0; a second signal exits at once",
+            "graceful_shutdown": "SIGINT, SIGTERM and SIGHUP: finish the tick, final autosave, exit 0; a second signal exits at once (tested on Unix; the Windows console-event path is compiled but has no runtime test)",
             "saving": {
                 "autosave": "--autosave SECONDS (and once at shutdown); resume with --load auto",
                 "players_in_a_save": savestate::world::MAX_PLAYERS,

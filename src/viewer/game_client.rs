@@ -218,6 +218,22 @@ impl GameShell {
             self.suppress = true;
         }
     }
+    /// A shell in a chosen state without a window: the real constructor registers a macroquad input subscriber.
+    #[cfg(test)]
+    pub(crate) fn in_state(captured: bool, paused: bool, suppress: bool) -> Self {
+        Self {
+            paused,
+            fullscreen: false,
+            diagnostics: false,
+            subscriber: 0,
+            focus: Focus { active: true },
+            captured,
+            controls: false,
+            selection: 0,
+            suppress,
+            actions: ShellActions::default(),
+        }
+    }
     /// True only while the mouse is **captured**, the menu is closed and no shell key was just handled.
     ///
     /// A game with no mouse look never asks for capture (`capture_cursor = false`), so for it this is always
