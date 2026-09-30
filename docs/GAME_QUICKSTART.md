@@ -114,6 +114,29 @@ both files atomically and restores the map if the game cannot be written. Option
 reacts to the new target yet (and prints a `rule_template` to adapt) and when the box overlaps another
 interactable. The rule itself is yours to write: it is the one part the tool cannot guess.
 
+### Does the game actually work?
+
+`game-validate` says a document is well formed; it cannot say the game is playable. `game-explore` searches every
+state the rules can reach, using the engine's own rule runtime, and reports what it finds:
+
+```sh
+be2-tools game-explore game.json
+```
+
+It prints the shortest way to win and to lose (`timer fuse runs out x3` means three expiries in a row), and
+findings by level. **Errors** make the command exit 1: the game can never be won. **Warnings** are dead parts: a
+rule that never fires, a target nothing enables or that no rule reacts to, a timer nobody listens to or never
+starts, a counter that rules change but no condition reads (so it only decorates the HUD), a `fail` that can never
+happen, and stuck states (reachable, not lost, and no longer winnable, with the way in). **Info** notes a game that
+cannot be lost, and targets that can be pressed in a state where nothing happens (often armed a step too early).
+
+Time and movement are abstracted: any running timer may run out at any moment and any enabled target may be pressed,
+so "can be won" ignores a physical obstacle or a timing window, while "never" findings are exact. Counters no
+condition reads are left out of the state, and counters compared only by `modulo` or only by thresholds while they
+move one way are folded into equivalent values, so a repeating timer does not make the search unbounded. If
+`--max-states=N` (default 100000) is reached the report says `truncated` and the "never" findings become
+notes rather than warnings. Run it before writing scenarios: the shortest win is the first scenario to write.
+
 Triggers: `on_interact` (aim + press E), `on_enter` (stepping into a `trigger_zones` AABB volume),
 `on_exit` (stepping out of a trigger zone), or `on_timer` (expiration of a countdown timer). Omitted/null on_interact matches any declared enabled target.
 Rules run in document order; later rules see earlier changes. Once applies globally per match. Complete and fail end the match.

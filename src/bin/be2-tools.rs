@@ -431,6 +431,25 @@ fn run() -> Result<()> {
                 std::process::exit(1);
             }
         }
+        "game-explore" => {
+            use vesper3d::viewer::game_explore::{explore, DEFAULT_MAX_STATES};
+            // GAME.json [--max-states=N]: can the game be won or lost, and what in it is dead?
+            let limit = match a.get(2).map(|f| f.split_once('=')) {
+                None => DEFAULT_MAX_STATES,
+                Some(Some(("--max-states", n))) => n
+                    .parse()
+                    .ok()
+                    .filter(|n| (1..=5_000_000).contains(n))
+                    .ok_or("--max-states must be a whole number from 1 to 5000000")?,
+                Some(_) => return Err("Unknown option; use --max-states=N".into()),
+            };
+            let loaded = vesper3d::viewer::game::GameDocument::load(Path::new(arg(1)?))?;
+            let report = explore(&loaded, limit)?;
+            println!("{}", json!({"ok": !report.has_errors(), "report": report}));
+            if report.has_errors() {
+                std::process::exit(1);
+            }
+        }
         "add-interactable" => {
             use vesper3d::viewer::game_edit::{add_interactable, InteractableSpec};
             // GAME.json ID --at=X,Y,Z [--size=HX,HY,HZ] [--color=R,G,B] [--label=TEXT] [--disabled]

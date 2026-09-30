@@ -639,6 +639,15 @@ pub struct GameEvent {
     pub entity: String,
 }
 
+/// One thing that can happen to a game, at the granularity the rules can tell apart.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ModelEvent {
+    Interact(usize),
+    TimerExpires(usize),
+    EnterZone(usize),
+    ExitZone(usize),
+}
+
 enum Effect {
     Increment(usize, i32),
     Set(usize, i32),
@@ -764,6 +773,8 @@ pub struct GameRuntime {
     zone_rules_exit: Vec<Vec<CompiledRule>>,
     timer_rules: Vec<Vec<CompiledRule>>,
     player_zones: BTreeMap<u64, u64>,
+    /// When set, the document index of every rule that fires is appended (model checking only).
+    fired_log: Option<Vec<usize>>,
 }
 impl GameRuntime {
     pub fn compile(document: GameDocument, map: &MapDocument) -> Result<Self> {
@@ -1026,6 +1037,7 @@ impl GameRuntime {
             zone_rules_exit,
             timer_rules,
             player_zones: BTreeMap::new(),
+            fired_log: None,
         })
     }
     pub(crate) fn set_round(&mut self, round: u64) {
@@ -1033,6 +1045,74 @@ impl GameRuntime {
     }
     pub fn state(&self) -> &GameState {
         &self.state
+    }
+    /// Start recording which rules fire (see [`Self::model_apply`]).
+    pub fn record_fired_rules(&mut self) {
+        self.fired_log = Some(Vec::new());
+    }
+    /// The events that can happen next, as a model checker sees them. Time and movement are
+    /// abstracted away: any enabled target can be pressed, any running timer can run out, and the
+    /// player can enter or leave any enabled zone, in any order. `occupied` is the bit set of zones
+    /// the player is currently inside.
+    pub fn model_events(&self, occupied: u64) -> Vec<ModelEvent> {
+        if self.state.finished() {
+            return Vec::new();
+        }
+        let mut events = Vec::new();
+        events.extend(
+            (0..self.targets.len())
+                .filter(|&i| self.state.enabled & (1 << i) != 0)
+                .map(ModelEvent::Interact),
+        );
+        events.extend(
+            (0..self.timers.len())
+                .filter(|&i| self.state.active_timers & (1 << i) != 0)
+                .map(ModelEvent::TimerExpires),
+        );
+        for i in 0..self.trigger_zones.len() {
+            let enabled = self.state.enabled_zones & (1 << i) != 0;
+            match (occupied & (1 << i) != 0, enabled) {
+                (false, true) => events.push(ModelEvent::EnterZone(i)),
+                (true, true) => events.push(ModelEvent::ExitZone(i)),
+                _ => {}
+            }
+        }
+        events
+    }
+    /// Apply one event from [`Self::model_events`] to the current state, updating `occupied`.
+    pub fn model_apply(&mut self, event: ModelEvent, occupied: &mut u64) {
+        match event {
+            ModelEvent::Interact(i) => self.fire_target_rules(i),
+            ModelEvent::TimerExpires(i) => self.expire_timer(i),
+            ModelEvent::EnterZone(i) => {
+                *occupied |= 1 << i;
+                self.fire_zone_rules(i, true);
+            }
+            ModelEvent::ExitZone(i) => {
+                *occupied &= !(1 << i);
+                self.fire_zone_rules(i, false);
+            }
+        }
+    }
+    /// Replace the rule state (the model checker jumps between states of one runtime).
+    pub fn model_load(&mut self, state: &GameState) {
+        self.state = state.clone();
+    }
+    /// Take the document indices of the rules that fired since the last call.
+    pub fn take_fired_rules(&mut self) -> Vec<usize> {
+        self.fired_log
+            .as_mut()
+            .map(std::mem::take)
+            .unwrap_or_default()
+    }
+    /// A human name for an event, for reports.
+    pub fn model_event_name(&self, event: ModelEvent) -> String {
+        match event {
+            ModelEvent::Interact(i) => format!("press {}", self.document.interactables[i].entity),
+            ModelEvent::TimerExpires(i) => format!("timer {} runs out", self.document.timers[i].id),
+            ModelEvent::EnterZone(i) => format!("enter {}", self.document.trigger_zones[i].id),
+            ModelEvent::ExitZone(i) => format!("leave {}", self.document.trigger_zones[i].id),
+        }
     }
     pub fn document(&self) -> &GameDocument {
         &self.document
@@ -1094,15 +1174,19 @@ impl GameRuntime {
             }
         }
         for i in expired_timers {
-            self.timers[i].remaining_ticks = self.timers[i].duration_ticks;
-            if !self.timers[i].repeats {
-                self.state.active_timers &= !(1 << i);
-            }
-            self.fire_timer_rules(i);
+            self.expire_timer(i);
             if self.state.finished() {
                 break;
             }
         }
+    }
+    /// A timer runs out: it restarts (or stops, if it does not repeat) and its rules fire.
+    fn expire_timer(&mut self, index: usize) {
+        self.timers[index].remaining_ticks = self.timers[index].duration_ticks;
+        if !self.timers[index].repeats {
+            self.state.active_timers &= !(1 << index);
+        }
+        self.fire_timer_rules(index);
     }
     fn fire_timer_rules(&mut self, timer_index: usize) {
         for rule in &self.timer_rules[timer_index] {
@@ -1117,6 +1201,9 @@ impl GameRuntime {
                 continue;
             }
             apply_effects(&mut self.state, &rule.effects);
+            if let Some(log) = &mut self.fired_log {
+                log.push(rule.index);
+            }
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
@@ -1304,6 +1391,13 @@ impl GameRuntime {
         if !self.enabled(target) {
             return None;
         }
+        self.fire_target_rules(target);
+        Some(GameEvent {
+            player_id,
+            entity: self.document.interactables[target].entity.clone(),
+        })
+    }
+    fn fire_target_rules(&mut self, target: usize) {
         for rule in &self.rules[target] {
             if rule.once && self.state.fired & (1 << rule.index) != 0 {
                 continue;
@@ -1316,6 +1410,9 @@ impl GameRuntime {
                 continue;
             }
             apply_effects(&mut self.state, &rule.effects);
+            if let Some(log) = &mut self.fired_log {
+                log.push(rule.index);
+            }
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }
@@ -1323,10 +1420,6 @@ impl GameRuntime {
                 break;
             }
         }
-        Some(GameEvent {
-            player_id,
-            entity: self.document.interactables[target].entity.clone(),
-        })
     }
     /// Step player presence across trigger zones and dispatch on_enter / on_exit rules.
     pub fn step_triggers(&mut self, controller: &Controller, player_id: u64) {
@@ -1382,6 +1475,9 @@ impl GameRuntime {
                 continue;
             }
             apply_effects(&mut self.state, &rule.effects);
+            if let Some(log) = &mut self.fired_log {
+                log.push(rule.index);
+            }
             if rule.once {
                 self.state.fired |= 1 << rule.index;
             }

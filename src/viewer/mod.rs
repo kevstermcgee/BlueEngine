@@ -6,6 +6,7 @@ pub mod game;
 pub mod game_client;
 pub mod game_edit;
 pub mod game_example;
+pub mod game_explore;
 #[cfg(feature = "gamepad")]
 pub mod gamepad;
 pub mod icon;
