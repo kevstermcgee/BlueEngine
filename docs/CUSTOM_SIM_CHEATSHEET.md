@@ -80,6 +80,10 @@ is slow; capture a few frames, not a whole match.
 
 - `cargo test --locked` fails on the very first command of a new game: run `cargo build` once (it settles Cargo.lock).
 - The `quad` winding and the 9,000-vertex limit no longer fail silently, but use `quad_facing` anyway.
+- **`shell.playing()` needs a captured mouse.** A game with no mouse look (`capture_cursor = false`) gets `false`
+  forever, and gating input on it drops every key while the menus, which read keys directly, still work. Use
+  `shell.accepting_input()` (or `!shell.paused`). Scripted and autopilot runs bypass this gate, so tests and
+  captures will not reveal it: run the real window once and press a key (Spooky Kart shipped with this bug).
 - `Lifecycle::feed` takes edge *bit flags* (`u32`), not a bool; `held` and `starts` are different cue queries.
 - A game's `scripts/blue` needs `python3` or `python`; `scripts/check.py` finds a built `be2-tools` in the engine
   checkout by itself (build it with `cargo build --profile fast --no-default-features --bin be2-tools`).

@@ -32,7 +32,8 @@ and evidence: `docs/AI_DEV_FEEDBACK.md`.
 4. **Developer papercuts:** the generated `scripts/blue` uses `python3` or `python`; the generated `scripts/check.py`
    finds a built `be2-tools` in the engine checkout it depends on; `tools/xcapture.py` runs a game on a virtual
    display and prints its screenshots; `docs/CUSTOM_SIM_CHEATSHEET.md` puts the game-facing API on one page;
-   `docs/NETPLAY.md` and `docs/HEADLESS_CAPTURE.md` explain the model and the recipe; the feature index has entries
+   `GameShell::accepting_input()` and a corrected `playing()` doc close a trap that shipped Spooky Kart with dead keys in the
+   race; `docs/NETPLAY.md` and `docs/HEADLESS_CAPTURE.md` explain the model and the recipe; the feature index has entries
    for netplay, closed paths and the rendering traps so `be2.py context` finds them.
 
 ## Consequences

@@ -55,7 +55,10 @@ each point can be checked; the last section says what was done about it.
 7. **Things I had to build that other games will want:** a closed track/spline with arc-length, nearest-point and
    lateral offset (`src/track.rs`); an in-memory network with delay, jitter and loss for tests
    (`transport::LoopNet`); a path-following bot.
-8. **Session and player caps are hard-coded** (`DedicatedServer` allows 8 sessions at `server.rs:230`).
+8. **`GameShell::playing()` is false without a captured mouse.** Spooky Kart gated its race input on it and shipped with
+   every key dead in the race while the menus worked; scripted and autopilot runs bypass the gate, so nothing in
+   the tests or captures could show it, and it was found by playing. See item 8 of "What was done".
+9. **Session and player caps are hard-coded** (`DedicatedServer` allows 8 sessions at `server.rs:230`).
 
 ## What I would tell the next agent
 
@@ -78,7 +81,9 @@ Decisions are in `docs/adr/0022-custom-sim-multiplayer-kit.md`. Mapping the fric
 6. **Papercuts:** `scripts/blue` uses `python3` or `python`; `scripts/check.py` finds `be2-tools` itself; the first-build
    rule (`cargo build`, not `--locked`) is in the cheat sheet.
 7. **Things every game rebuilds:** `devkit::path::ClosedPath`, `net::loopback::LoopNet`, `net::any` transports.
-8. **Hard-coded caps:** the kit's server takes its seat limit from the game (`NetGame::MAX_SEATS`); the older
+8. **The `playing()` trap:** its documentation now says it needs a captured mouse, `GameShell::accepting_input()` is the
+   right gate for a game without mouse look, and the cheat sheet warns that scripted runs cannot catch it.
+9. **Hard-coded caps:** the kit's server takes its seat limit from the game (`NetGame::MAX_SEATS`); the older
    `DedicatedServer` cap of 8 is unchanged (it serves the stock client).
 
 Still open: predicting collisions on the client (a game concern, noted in the ADR), per-client interest management,

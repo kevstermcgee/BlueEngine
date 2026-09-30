@@ -218,8 +218,19 @@ impl GameShell {
             self.suppress = true;
         }
     }
+    /// True only while the mouse is **captured**, the menu is closed and no shell key was just handled.
+    ///
+    /// A game with no mouse look never asks for capture (`capture_cursor = false`), so for it this is always
+    /// false: gating input on it silently drops every key and button (menus that read keys directly still work).
+    /// Such games want [`GameShell::accepting_input`].
     pub fn playing(&self) -> bool {
         self.captured && !self.paused && !self.suppress
+    }
+    /// Whether the game should read its devices this frame regardless of mouse capture: the pause menu is closed
+    /// and no shell key was just handled. The right gate for a game with no mouse look (a kart racer, a menu-driven
+    /// puzzle); a first-person game uses [`GameShell::playing`], which also needs the mouse captured.
+    pub fn accepting_input(&self) -> bool {
+        !self.paused && !self.suppress
     }
     /// Draw a small, keyboard/mouse accessible overlay. Returns true on Quit.
     pub fn menu(&mut self, title: &str, controls: &[&str]) -> bool {
