@@ -52,6 +52,40 @@ resyncs. A 9th client is refused ("Server is full (8 players)"): the cap is hard
 Headroom is large on this CPU, but the largest packet already uses 1100 of the 1400-byte limit at 8 idle
 players. Not covered: real network loss/latency, the production QUIC/TLS transport, props in motion, combat.
 
+## Broadcast cost at scale (`examples/net_broadcast_bench.rs`)
+
+`cargo run --profile fast --example net_broadcast_bench -- 512` admits N synthetic clients to a real
+`DedicatedServer` on a transport that only counts (no sockets), moves them, and times one snapshot broadcast (what
+the server thread spends preparing and handing off every peer's update, 20 times a second). Every client
+acknowledges each packet, as a live connection does; an earlier version of the benchmark did not, so each peer just
+re-sent one packet and the numbers looked far better than reality. Intel N97, 4 cores, `fast` profile; microseconds
+per broadcast:
+
+| Players | Original | Arithmetic sizing | + 2 threads | + 4 threads | Budget: one 60 Hz tick is 16,667 us |
+|---|---|---|---|---|---|
+| 16 | 492 | 277 | - | - | |
+| 32 | 1,878 | 886 | 651 | 598 | |
+| 64 | 7,421 | 3,240 | 1,879 | 1,787 | original already 45% of a tick |
+| 128 | 29,825 | 12,755 | 6,681 | 4,161 | original: **1.8 ticks** |
+| 256 | 120,587 | 51,392 | 26,731 | 16,302 | original: 7 ticks |
+| 512 | 489,066 | 211,633 | 109,150 | 67,236 | |
+
+What this shows and does not:
+
+* The original code could not hold 60 Hz past about 100 players: a broadcast ran inside the tick, and its cost per
+  peer grows with the number of other players, so the total is quadratic. Nothing in the earlier 8-client
+  measurements (4.7% of a core) could reveal that.
+* About half of the saving is not threads: replication measured every candidate record by serializing the whole
+  delta, including after the packet was full. Sizing by arithmetic (exact: a delta always writes all four lists)
+  is 2.3x faster at 256 players on one thread with byte-identical output. Threads add about 3x on 4 cores on top.
+* Below about 32 peers threads do not pay (they cost more total CPU than they save); `PARALLEL_MIN_PEERS` keeps
+  small servers single-threaded. A real-UDP run of 40 clients against `be2-headless --max-players 48` showed the
+  same packet counts and no resyncs at 1 and 4 threads, with 4 threads using more CPU at that size.
+* The cost is still quadratic. The remaining per-peer work (validating the snapshot, ordering the changed records,
+  measuring each candidate) all grows with the number of relevant players; spatial interest management that limits
+  what each peer is considered for is the next step and would make it linear.
+* Not measured: real socket and QUIC/TLS cost (the QUIC endpoint still runs on one async thread), props in motion,
+  and receive-side cost.
 ## Publishing (BlueEngineGames, GitHub Actions, windows-latest)
 
 "Build Windows releases" took 15-26 minutes on each of the last five runs (19m, 26m, 15m, 16m, 20m).

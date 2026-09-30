@@ -10,15 +10,34 @@ use vesper3d::viewer::{
     simulation::HeadlessWorld,
 };
 
+/// Server capacity options from the command line.
+#[derive(Clone, Copy, Default)]
+struct Tuning {
+    max_players: Option<usize>,
+    network_threads: Option<usize>,
+}
+
 fn run_server<T: DatagramTransport>(
     transport: T,
     world: HeadlessWorld,
     auth_key: Option<&str>,
     ticks: Option<u64>,
     autosave: Option<(SaveSlots, f32)>,
+    tuning: Tuning,
 ) -> vesper3d::Result<()> {
     let stop_signal = Arc::new(AtomicBool::new(false));
     let mut server = DedicatedServer::with_transport(transport, world)?;
+    if let Some(max) = tuning.max_players {
+        server = server.with_max_players(max);
+        println!("[Server] Admitting up to {} players", server.max_players());
+    }
+    if let Some(threads) = tuning.network_threads {
+        server = server.with_network_threads(threads);
+        println!(
+            "[Server] Preparing peer updates on {} thread(s)",
+            server.network_threads()
+        );
+    }
     if let Some(key) = auth_key {
         server = server.with_auth(key);
     }
@@ -44,6 +63,7 @@ fn main() -> vesper3d::Result<()> {
     let mut save_dir = None;
     let mut load = None;
     let mut autosave = None;
+    let mut tuning = Tuning::default();
     let mut index = 0;
     while index < args.len() {
         match args[index].as_str() {
@@ -115,10 +135,29 @@ fn main() -> vesper3d::Result<()> {
                 }
                 autosave = Some(seconds);
             }
+            "--max-players" => {
+                index += 1;
+                let n: usize = args
+                    .get(index)
+                    .ok_or("--max-players needs a number")?
+                    .parse()?;
+                if !(1..=1024).contains(&n) {
+                    return Err("--max-players must be between 1 and 1024".into());
+                }
+                tuning.max_players = Some(n);
+            }
+            "--network-threads" => {
+                index += 1;
+                let n: usize = args
+                    .get(index)
+                    .ok_or("--network-threads needs a number (0 = one per core)")?
+                    .parse()?;
+                tuning.network_threads = Some(n);
+            }
             "--realtime" => realtime = true,
             "--help" => {
                 println!(
-                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE] [--load SLOT_OR_FILE] [--save-dir DIR] [--autosave SECONDS]\n\
+                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE] [--load SLOT_OR_FILE] [--save-dir DIR] [--autosave SECONDS] [--max-players N] [--network-threads N]\n\
                      Modes:\n\
                        --server [ADDR]   Run authoritative dedicated multiplayer server (default 0.0.0.0:4000)\n\
                        --transport development  Raw UDP for local development (default)\n\
@@ -127,6 +166,8 @@ fn main() -> vesper3d::Result<()> {
                        --load X          Resume the world from a save (a slot in --save-dir, or a file); players are new\n\
                        --save-dir DIR    Folder of save slots (default: `saves` next to the executable)\n\
                        --autosave S      Server: write a rotating autosave every S seconds and at shutdown\n\
+                       --max-players N   Server: admit up to N players (default 8, at most 1024)\n\
+                       --network-threads N  Server: prepare peer updates on N threads (0 = one per core; default 1)\n\
                        (no --server)     Run local benchmark simulation"
                 );
                 return Ok(());
@@ -176,6 +217,9 @@ fn main() -> vesper3d::Result<()> {
     if autosave.is_some() && server_addr.is_none() {
         return Err("--autosave only applies with --server".into());
     }
+    if (tuning.max_players.is_some() || tuning.network_threads.is_some()) && server_addr.is_none() {
+        return Err("--max-players and --network-threads only apply with --server".into());
+    }
     if let Some(addr) = server_addr {
         println!("[Server] Selected {transport_profile} transport");
         match transport_profile {
@@ -187,6 +231,7 @@ fn main() -> vesper3d::Result<()> {
                     auth_key.as_deref(),
                     ticks,
                     autosave.map(|s| (slots, s)),
+                    tuning,
                 )?;
             }
             TransportProfile::Production => {
@@ -198,6 +243,7 @@ fn main() -> vesper3d::Result<()> {
                     auth_key.as_deref(),
                     ticks,
                     autosave.map(|s| (slots, s)),
+                    tuning,
                 )?;
             }
         }

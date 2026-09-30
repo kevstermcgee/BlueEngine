@@ -10,6 +10,23 @@ deltas and keyframe recovery. The same server path accepts two explicit profiles
 Both use UDP at the network layer; the default port is `4000/udp`. There is no silent
 fallback from production to development.
 
+## Serving more than eight players
+
+The server admits 8 players by default. `--max-players N` (up to 1024) raises every limit that would refuse the
+ninth: the world's join cap, the session registry and the handshake rate. Each peer's world update is prepared from
+the shared world and that peer's own state, so `--network-threads N` (`0` = one per core) prepares them on several
+threads; the bytes every peer receives and the send order are identical at any thread count, and servers with fewer
+than 32 peers stay on one thread because splitting would not pay.
+
+```bash
+target/release/be2-headless --server 0.0.0.0:4000 --max-players 128 --network-threads 0 --map assets/maps/starters/house.json
+```
+
+Measured on 4 cores, a snapshot broadcast to 128 players took 29.8 ms in the original code (more than one 16.7 ms
+tick), 12.8 ms after the replication fix, and 4.2 ms with 4 threads (`docs/perf/README.md`). Custom code builds the
+same with `DedicatedServer::with_max_players(n).with_network_threads(t)`. The QUIC/TLS transport still handles all
+connections on one async thread, which is not yet measured at this scale.
+
 ## Start a server and client
 
 Build the rendering-free server and the graphical client:
