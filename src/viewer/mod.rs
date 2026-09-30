@@ -1,4 +1,6 @@
 //! Real-time adapter. The original scene, geometry and offline renderer remain shared.
+#[cfg(unix)]
+pub mod control;
 pub mod controller;
 pub mod devkit;
 pub mod game;

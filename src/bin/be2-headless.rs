@@ -10,11 +10,56 @@ use vesper3d::viewer::{
     simulation::HeadlessWorld,
 };
 
-/// Server capacity options from the command line.
-#[derive(Clone, Copy, Default)]
+/// Server options from the command line that are not about what to serve.
+#[derive(Clone, Default)]
 struct Tuning {
     max_players: Option<usize>,
     network_threads: Option<usize>,
+    /// Register under this name so `be2-ctl` can list, inspect and stop the server (Unix only).
+    name: Option<String>,
+}
+
+/// Write the record, open the control socket and fill in the parts of the status that never change.
+#[cfg(unix)]
+fn register<T: DatagramTransport>(
+    name: &str,
+    server: &DedicatedServer<T>,
+    transport: &str,
+    stop: &Arc<AtomicBool>,
+) -> vesper3d::Result<vesper3d::viewer::control::server::Control> {
+    use vesper3d::viewer::{
+        control::{self, ServerRecord},
+        net::PROTOCOL_VERSION,
+    };
+    let launcher = std::env::var(control::LAUNCHER_ENV).unwrap_or_else(|_| "external".into());
+    let record = ServerRecord {
+        name: name.to_owned(),
+        pid: 0,
+        start_ticks: None,
+        started_unix: std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_secs()),
+        addr: server.local_addr.to_string(),
+        args: std::env::args().skip(1).collect(),
+        log: (launcher == control::LAUNCHED_BY_CTL)
+            .then(|| control::log_path(name).display().to_string()),
+        launcher,
+        socket: String::new(),
+        version: env!("CARGO_PKG_VERSION").to_owned(),
+        protocol: PROTOCOL_VERSION,
+    };
+    let control = control::server::Control::start(record, Arc::clone(stop))?;
+    control.sink().update(|status| {
+        status.addr = server.local_addr.to_string();
+        status.transport = transport.to_owned();
+        status.map = server.world.room.name.clone();
+        status.max_players = server.max_players();
+        status.network_threads = server.network_threads();
+        status.version = env!("CARGO_PKG_VERSION").to_owned();
+        status.protocol = PROTOCOL_VERSION;
+    });
+    println!("[Server] Registered as '{name}' for be2-ctl");
+    Ok(control)
 }
 
 fn run_server<T: DatagramTransport>(
@@ -24,6 +69,7 @@ fn run_server<T: DatagramTransport>(
     ticks: Option<u64>,
     autosave: Option<(SaveSlots, f32)>,
     tuning: Tuning,
+    transport_label: &str,
 ) -> vesper3d::Result<()> {
     let stop_signal = Arc::new(AtomicBool::new(false));
     // SIGINT/SIGTERM/SIGHUP (Ctrl-C, Ctrl-Break and console close on Windows) stop the loop, which then saves and returns.
@@ -51,9 +97,26 @@ fn run_server<T: DatagramTransport>(
         );
         server = server.with_autosave(slots, seconds, 3);
     }
+    #[cfg(unix)]
+    let control = match &tuning.name {
+        Some(name) => {
+            let control = register(name, &server, transport_label, &stop_signal)?;
+            server = server.with_status_sink(control.sink());
+            Some(control)
+        }
+        None => None,
+    };
+    #[cfg(not(unix))]
+    if tuning.name.is_some() {
+        let _ = transport_label;
+        return Err("--name (be2-ctl management) needs a Unix system".into());
+    }
     let result = server.run_realtime(stop_signal, ticks);
     // The final save is done: a Windows close or shutdown event may now let the process end.
     vesper3d::viewer::shutdown::finished();
+    // Remove the record and the control socket only now, so `be2-ctl` sees the server until it has really finished.
+    #[cfg(unix)]
+    drop(control);
     result
 }
 
@@ -160,11 +223,20 @@ fn main() -> vesper3d::Result<()> {
                     .parse()?;
                 tuning.network_threads = Some(n);
             }
+            "--name" => {
+                index += 1;
+                let name = args.get(index).ok_or("--name needs a name")?;
+                #[cfg(unix)]
+                if !vesper3d::viewer::control::valid_name(name) {
+                    return Err("--name must be 1 to 32 characters of a-z, 0-9, - or _ (not starting with -)".into());
+                }
+                tuning.name = Some(name.clone());
+            }
             "--profile" => vesper3d::viewer::spans::enable(true),
             "--realtime" => realtime = true,
             "--help" => {
                 println!(
-                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE] [--load SLOT_OR_FILE] [--save-dir DIR] [--autosave SECONDS] [--max-players N] [--network-threads N] [--profile]\n\
+                    "be2-headless [--server [ADDR]] [--listen ADDR] [--transport development|production] [--auth-key KEY] [--ticks N] [--realtime] [--map FILE | --game FILE] [--load SLOT_OR_FILE] [--save-dir DIR] [--autosave SECONDS] [--max-players N] [--network-threads N] [--name NAME] [--profile]\n\
                      Modes:\n\
                        --server [ADDR]   Run authoritative dedicated multiplayer server (default 0.0.0.0:4000)\n\
                        --transport development  Raw UDP for local development (default)\n\
@@ -175,6 +247,7 @@ fn main() -> vesper3d::Result<()> {
                        --autosave S      Server: write a rotating autosave every S seconds and at shutdown\n\
                        --max-players N   Server: admit up to N players (default 8, at most 1024)\n\
                        --network-threads N  Server: prepare peer updates on N threads (0 = one per core; default 1)\n\
+                       --name NAME       Server: register for `be2-ctl` (list, status, stop) under this name (Unix)\n\
                        --profile         Print where each status window's time went (spans, biggest first)\n\
                        (no --server)     Run local benchmark simulation"
                 );
@@ -225,8 +298,10 @@ fn main() -> vesper3d::Result<()> {
     if autosave.is_some() && server_addr.is_none() {
         return Err("--autosave only applies with --server".into());
     }
-    if (tuning.max_players.is_some() || tuning.network_threads.is_some()) && server_addr.is_none() {
-        return Err("--max-players and --network-threads only apply with --server".into());
+    if (tuning.max_players.is_some() || tuning.network_threads.is_some() || tuning.name.is_some())
+        && server_addr.is_none()
+    {
+        return Err("--max-players, --network-threads and --name only apply with --server".into());
     }
     if let Some(addr) = server_addr {
         println!("[Server] Selected {transport_profile} transport");
@@ -240,6 +315,7 @@ fn main() -> vesper3d::Result<()> {
                     ticks,
                     autosave.map(|s| (slots, s)),
                     tuning,
+                    &transport_profile.to_string(),
                 )?;
             }
             TransportProfile::Production => {
@@ -252,6 +328,7 @@ fn main() -> vesper3d::Result<()> {
                     ticks,
                     autosave.map(|s| (slots, s)),
                     tuning,
+                    &transport_profile.to_string(),
                 )?;
             }
         }
