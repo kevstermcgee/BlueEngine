@@ -26,6 +26,9 @@ fn run_server<T: DatagramTransport>(
     tuning: Tuning,
 ) -> vesper3d::Result<()> {
     let stop_signal = Arc::new(AtomicBool::new(false));
+    // SIGINT/SIGTERM/SIGHUP (Ctrl-C, Ctrl-Break and console close on Windows) stop the loop, which then saves and returns.
+    vesper3d::viewer::shutdown::install(Arc::clone(&stop_signal))
+        .map_err(|e| format!("could not install shutdown handlers: {e}"))?;
     let mut server = DedicatedServer::with_transport(transport, world)?;
     if let Some(max) = tuning.max_players {
         server = server.with_max_players(max);
@@ -48,7 +51,10 @@ fn run_server<T: DatagramTransport>(
         );
         server = server.with_autosave(slots, seconds, 3);
     }
-    server.run_realtime(stop_signal, ticks)
+    let result = server.run_realtime(stop_signal, ticks);
+    // The final save is done: a Windows close or shutdown event may now let the process end.
+    vesper3d::viewer::shutdown::finished();
+    result
 }
 
 fn main() -> vesper3d::Result<()> {

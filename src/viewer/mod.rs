@@ -29,6 +29,7 @@ pub mod wrench;
 
 pub mod camera;
 
+pub mod shutdown;
 pub mod simulation;
 
 pub mod props;
