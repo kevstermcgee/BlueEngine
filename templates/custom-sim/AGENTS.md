@@ -16,6 +16,12 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
 - `Controller` has an implicit floor at y = 0 unless `set_floor(None)` (this starter uses none: the
   platform's collider is the only ground). Knockback is `apply_impulse`. Cannot see or hear the game?
   Use `--capture`, `--script`, `--perf` below, and numbers.
+- **Music is optional, not required.** `main.rs`'s `HAS_MUSIC` turns the generated ambient background
+  track (`synth::ambient_spec_for`, keyed to `assets/identity.json`'s title/tagline) on or off; the
+  Settings screen adapts either way. Turn it off if music would fight a gameplay mechanic this game
+  depends on (precise or diegetic audio, rhythm timing, a soundtrack the game is itself about) or just
+  does not suit the feel — do not force it in because the starter ships with it on. Sound effects
+  (`SOUNDS`/`render`) are unaffected by this flag either way.
 
 ## Look, scale, iteration
 - Mouse look has one convention (`devkit::look`): hand right turns right, hand up looks up. Feed

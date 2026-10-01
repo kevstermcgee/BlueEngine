@@ -40,13 +40,20 @@ player to save it.
   `downloads_dir` (the plain default Downloads location per platform), `unique_path` (never overwrites:
   `Name.wav`, `Name (2).wav`, ...), `sanitize_filename`.
 - **`GameShell::local_menu_with_audio`**: a new, non-breaking method alongside the existing `local_menu`
-  (unchanged). It adds a fourth pause-menu entry, Settings, with Music/Sound toggle buttons and a "Save
-  music (.wav)" button (a drawn download-arrow icon, not a font glyph, so no font needs to contain it).
-  The shell owns no audio state itself — it takes a small `AudioMenu{music_on,sfx_on}` and returns a
+  (unchanged). It adds a fourth pause-menu entry, Settings, with a Sound toggle always and, when
+  `AudioMenu::has_music` is true, a Music toggle and a "Save music (.wav)" button (a drawn download-arrow
+  icon, not a font glyph, so no font needs to contain it) — `has_music: false` removes both rather than
+  leaving a control for a track that does not exist. The shell owns no audio state itself — it takes a
+  small `AudioMenu{music_on,sfx_on,has_music}` and returns a
   `MenuOutcome{quit,toggle_music,toggle_sfx,download_music}` — so it stays independent of `devkit::save`
   and `kit::audio`, and a game decides what each outcome means.
-- **The custom-sim template** wires all of it end to end: `Settings::load` at startup feeds
-  `SoundBank::start`'s volumes; the render closure computes
+- **Music is optional, by design, not an afterthought**: the custom-sim template's `HAS_MUSIC` constant
+  (default on) decides whether `render_audio` generates a track at all, feeding `AudioMenu::has_music`
+  directly. The template's `AGENTS.md` tells whoever builds a specific game to turn it off when generated
+  ambient music would fight a gameplay mechanic that depends on precise or diegetic audio, or simply does
+  not suit the game — the same way it already says to replace the starter rules, not keep them.
+- **The custom-sim template** wires the rest end to end: `Settings::load` at startup feeds
+  `SoundBank::start`'s volumes; when music is on, the render closure computes
   `ambient_loop(&ambient_spec_for(&identity.title, &identity.tagline))` once on the worker thread (so the
   game's own `assets/identity.json` decides its track) and fills an `Arc<OnceLock<Vec<u8>>>` the "Save
   music" button reads from, so

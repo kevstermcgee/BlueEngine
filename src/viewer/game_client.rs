@@ -140,6 +140,11 @@ impl ShellActions {
 pub struct AudioMenu {
     pub music_on: bool,
     pub sfx_on: bool,
+    /// Whether this game has any music at all. Not every game needs one: generated ambient music can
+    /// interfere with a gameplay mechanic (precise audio cues, rhythm timing, a game's own diegetic
+    /// sound design) or simply not fit. When `false`, the Settings screen shows only the sound toggle;
+    /// it does not offer a music toggle or "Save music" button for a track that does not exist.
+    pub has_music: bool,
 }
 /// What the player did with [`GameShell::local_menu_with_audio`] this frame. At most the fields that
 /// actually changed are set; a game applies each one it cares about and persists what it changes.
@@ -346,30 +351,37 @@ impl GameShell {
         } else if self.settings_screen {
             let row = |i: f32| y + (108. + i * 54.) * scale;
             let (bw, bh) = (pw - 48. * scale, 42. * scale);
-            let music_label = if audio.music_on {
-                "Music: On"
-            } else {
-                "Music: Off"
-            };
-            if self.button(music_label, x + 24. * scale, row(0.), bw, bh, false) {
-                outcome.toggle_music = true;
-                self.suppress = true;
+            let mut next = 0.;
+            if audio.has_music {
+                let music_label = if audio.music_on {
+                    "Music: On"
+                } else {
+                    "Music: Off"
+                };
+                if self.button(music_label, x + 24. * scale, row(next), bw, bh, false) {
+                    outcome.toggle_music = true;
+                    self.suppress = true;
+                }
+                next += 1.;
             }
             let sfx_label = if audio.sfx_on {
                 "Sound: On"
             } else {
                 "Sound: Off"
             };
-            if self.button(sfx_label, x + 24. * scale, row(1.), bw, bh, false) {
+            if self.button(sfx_label, x + 24. * scale, row(next), bw, bh, false) {
                 outcome.toggle_sfx = true;
                 self.suppress = true;
             }
-            let (dx, dy) = (x + 24. * scale, row(2.));
-            if self.button("Save music (.wav)", dx, dy, bw, bh, false) {
-                outcome.download_music = true;
-                self.suppress = true;
+            next += 1.;
+            if audio.has_music {
+                let (dx, dy) = (x + 24. * scale, row(next));
+                if self.button("Save music (.wav)", dx, dy, bw, bh, false) {
+                    outcome.download_music = true;
+                    self.suppress = true;
+                }
+                draw_download_arrow(dx + bw - 30. * scale, dy + bh * 0.5, 8. * scale);
             }
-            draw_download_arrow(dx + bw - 30. * scale, dy + bh * 0.5, 8. * scale);
             if self.button(
                 "Back",
                 x + 24. * scale,

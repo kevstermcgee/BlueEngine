@@ -67,21 +67,35 @@ const SOUNDS: [synth::Preset; 5] =
 fn sound(preset: synth::Preset) -> usize {
     SOUNDS.iter().position(|p| *p == preset).unwrap_or(0)
 }
+/// Not every game needs music: generated ambient music can fight a gameplay mechanic that depends on
+/// precise or diegetic audio (rhythm timing, sound-based detection, a soundtrack the game itself is
+/// about), or just not suit the game's feel. Set this to `false` to ship with sound effects only; the
+/// Settings screen adapts on its own (it drops the music toggle and "Save music" button, not just hides
+/// them silently as broken). Default on because most games benefit from it, not because every game must
+/// have it.
+const HAS_MUSIC: bool = true;
+
 /// Renders on the worker thread; `music_wav` is filled once so the Settings-screen "Save music" button
 /// can hand the player the exact bytes the stem below plays, without regenerating or hitching.
 /// `ambient_spec_for` keys the track to this game's own title and tagline (see assets/identity.json),
 /// so a fresh game does not sound identical to every other game made from this template; replace the
-/// spec with your own if your theme calls for something that heuristic cannot read from those words.
+/// spec with your own if your theme calls for something that heuristic cannot read from those words, or
+/// turn [`HAS_MUSIC`] off if this game should not have music at all.
 fn render_audio(music_wav: Arc<OnceLock<Vec<u8>>>, title: &str, tagline: &str) -> Rendered {
-    let spec = synth::ambient_spec_for(title, tagline);
-    let ambient = synth::wav_bytes(&synth::ambient_loop(&spec), synth::RATE);
-    let _ = music_wav.set(ambient.clone());
+    let stems = if HAS_MUSIC {
+        let spec = synth::ambient_spec_for(title, tagline);
+        let ambient = synth::wav_bytes(&synth::ambient_loop(&spec), synth::RATE);
+        let _ = music_wav.set(ambient.clone());
+        vec![ambient]
+    } else {
+        Vec::new()
+    };
     Rendered {
         sfx: SOUNDS
             .iter()
             .map(|p| (0..p.variants()).map(|v| synth::wav_bytes(&synth::render(*p, v, 7), synth::RATE)).collect())
             .collect(),
-        stems: vec![ambient],
+        stems,
     }
 }
 
@@ -348,7 +362,11 @@ async fn main() {
         hud::text_outlined(&sim.score.to_string(), 34. * ui, 70. * ui, 36. * ui, WHITE);
         hud::crosshair(ui, 0., Color::new(1., 1., 1., 0.85));
         let controls: Vec<&str> = identity.controls.split(", ").collect();
-        let audio_menu = AudioMenu { music_on: settings.music_on, sfx_on: settings.sfx_on };
+        let audio_menu = AudioMenu {
+            music_on: settings.music_on,
+            sfx_on: settings.sfx_on,
+            has_music: HAS_MUSIC,
+        };
         let outcome = shell.local_menu_with_audio(&identity.title, &controls, audio_menu);
         if outcome.toggle_music {
             settings.toggle_music();

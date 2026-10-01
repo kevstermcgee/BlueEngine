@@ -41,6 +41,17 @@ whose theme those words cannot capture is free to build its own `AmbientSpec` by
 instead (set `minor`, `root_midi`, `brightness`, `chords` directly) — `ambient_spec_for` is a reasonable
 default, not the only way to use `ambient_loop`.
 
+## Not every game needs music
+
+A generated soundtrack is a default, not a requirement. The custom-sim template's `HAS_MUSIC` constant
+(top of `main.rs`) turns the ambient background track on or off; `render_audio` skips generating one
+entirely when it is off (no wasted worker-thread time), and the Settings screen adapts on its own — see
+below. Turn it off when music would work against the game: a mechanic that depends on precise or
+diegetic audio (rhythm timing, sound-based detection, a soundtrack the game is itself about), or a game
+whose feel ambient pads simply do not suit. The agent building a specific game is better placed to judge
+that fit than a blanket default; do not treat "every game ships with music" as a rule to force through
+when it visibly does not work. Sound effects are a separate concern and are unaffected either way.
+
 ## Settings that survive a relaunch
 
 `devkit::save::Settings` (`music`, `sfx` volumes 0-1, `music_on`, `sfx_on`, `sensitivity`,
@@ -52,8 +63,10 @@ turning music back on restores what it was. The custom-sim template loads it at 
 `settings.sfx_level()`/`settings.music_level()` straight into `SoundBank::start`.
 
 Every game made from the custom-sim template gets a Settings screen for free: `GameShell`'s pause menu
-gained a fourth entry, Settings, with Music/Sound toggle buttons and a "Save music (.wav)" button (a
-drawn download arrow, not a font glyph, so it never depends on a font having that character). Toggling
+gained a fourth entry, Settings, with a Sound toggle always, and (when `AudioMenu::has_music` is true) a
+Music toggle and a "Save music (.wav)" button (a drawn download arrow, not a font glyph, so it never
+depends on a font having that character). A game with `HAS_MUSIC = false` gets the Sound toggle only —
+the screen never offers a control for a track that does not exist. Toggling
 flips `Settings` and re-applies the volume to the running `SoundBank` immediately, then persists.
 Downloading writes the exact bytes already generated for the music stem (captured once via an
 `Arc<OnceLock<Vec<u8>>>` filled on the audio worker thread, never regenerated synchronously, so clicking
