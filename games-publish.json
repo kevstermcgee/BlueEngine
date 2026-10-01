@@ -23,7 +23,8 @@
     "games/bomb-defusal",
     "games/turret-trench",
     "games/weight-balance",
-    "games/target-gallery"
+    "games/target-gallery",
+    "games/dead-air"
   ],
   "collections": {
     "games": [
