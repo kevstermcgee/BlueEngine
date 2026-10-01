@@ -26,6 +26,7 @@ Only these independent Python changes have reviewed narrower scopes:
 | tools/author.py, tools/test_author.py | Fresh headless native tool build and all authoring integration tests |
 | tools/assets.py, tools/test_assets.py | All asset tests and catalog validation |
 | scripts/publish_games.py, scripts/test_publish_games.py | All publication tests and publication check |
+| tools/upgrade.py, tools/test_upgrade.py, tools/upgrade_migrations.json | All game-upgrade planner/verifier tests |
 
 Combined edits union their checks. Any other path uses the full engine suite,
 including Rust, content, Cargo files, documentation, the feature index and the
@@ -36,8 +37,8 @@ Ignored scratch/build files are not change inputs; do not put shipped inputs the
 
 `check` without flags retains every existing gate: formatting, rustdoc, tests and
 Clippy in both feature configurations, the headless dependency boundary and native
-authoring integration. It also runs workflow, asset, publishing, game-ship, game-check
-and media-tools Python tests.
+authoring integration. It also runs workflow, asset, publishing, game-ship, game-check,
+upgrade and media-tools Python tests.
 Feature configurations are grouped to avoid repeated binary rebuilds. CI still runs
 the full Linux/Windows matrix, independent of local scope selection.
 

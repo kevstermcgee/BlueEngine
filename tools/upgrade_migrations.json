@@ -1,0 +1,56 @@
+{
+  "format": 1,
+  "note": "Genuine, verified historical engine changes that an external game may need to act on when its engine dependency moves across them. This is not a log of every engine commit: entries are added only when a real game-facing effect was confirmed against this repository's history (see 'reference'). Selection in tools/upgrade.py combines since_commit (is it between the game's last verified revision and the upgrade target?) with 'detect' evidence read from the game's own source; a revision match alone is a hint, not a verdict.",
+  "migrations": [
+    {
+      "id": "MIG-0020-MOUSELOOK",
+      "since_commit": "d6683813cf9d",
+      "title": "One mouse-look convention (devkit::look); hand-rolled look from mouse_delta_position() is inverted",
+      "runtime": ["custom_sim", "custom_sim_netplay"],
+      "category": "required_repair",
+      "required": true,
+      "summary": "Before this commit, macroquad's mouse_delta_position() (previous-minus-current, both axes flipped) was easy to read directly for camera look, which inverts turning and pitch. The engine's own multiplayer-game template shipped with exactly this bug and was fixed in the same commit. A custom-sim game that reads mouse_delta_position() itself for look has the same defect regardless of its engine dependency version; bumping the dependency does not fix it automatically.",
+      "detect": {
+        "kind": "grep",
+        "pattern": "mouse_delta_position\\s*\\(",
+        "include": ["src/**/*.rs"],
+        "exclude_paths": ["src/platform.rs"]
+      },
+      "repair": "Replace the direct read with devkit::look::MouseLook (pixels from game_input::mouse_pixels()), or feed the same [right, down] delta into Controller::look(dx, dy, 1.0, false). Do not hand-write a yaw/pitch formula. See docs/CUSTOM_SIM_CHEATSHEET.md and docs/adr/0020-look-scale-and-dev-loop.md.",
+      "verification": "No automated per-game camera regression exists in the engine. Verify manually: capture before/after frames while looking up and right and confirm the camera turns the same way the input moved (docs/HEADLESS_CAPTURE.md, --capture/--script).",
+      "limitations": "Detection is a source grep for the function name; a game could reference it for an unrelated reason, which would be a false positive requiring manual review. A game that never reads this function directly (uses only Controller::look through the shared input kit) is correctly reported not_applicable even if its baseline predates since_commit.",
+      "reference": "docs/adr/0020-look-scale-and-dev-loop.md"
+    },
+    {
+      "id": "MIG-0022-RENDER-TRAPS",
+      "since_commit": "0b20edbfc63b",
+      "title": "Oversized/degenerate Template rendering traps closed (Template::split, Template::quad_facing)",
+      "runtime": ["stock", "custom_sim", "custom_sim_netplay"],
+      "category": "received_automatically",
+      "required": false,
+      "summary": "A Template batch past 65,535 vertices now splits instead of silently dropping its mesh, and quad winding is corrected to always face its normal. Both are internal to Batch::add/to_meshes; no game-facing API changed.",
+      "detect": null,
+      "repair": "None: applied automatically by taking the dependency update. No game-side change is needed or possible.",
+      "verification": "Covered by the engine's own test suite (not re-run per game). Informational only; included so a plan does not look silent about a real rendering fix landing in scope.",
+      "limitations": "No per-game evidence is checked. This record only reports presence/absence by revision range, never a confirmed effect on a specific game's geometry.",
+      "reference": "docs/adr/0022-custom-sim-multiplayer-kit.md"
+    },
+    {
+      "id": "MIG-0022-NETPLAY-ADOPTION",
+      "since_commit": "0b20edbfc63b",
+      "title": "viewer::netplay kit available for custom simulations",
+      "runtime": ["custom_sim"],
+      "category": "optional_adoption",
+      "required": false,
+      "summary": "Games with hand-rolled client/server networking written before this commit may delete that code and adopt the shared NetGame/ClientView kit on net::codec, net::loopback and net::any. Spooky Kart's own port deleted about 1,900 lines doing this; its net tests still passed afterward.",
+      "detect": {
+        "kind": "files_exist",
+        "any": ["src/wire.rs", "src/server.rs", "src/client.rs", "src/transport.rs"]
+      },
+      "repair": "See docs/NETPLAY.md and the netplay::toy example for the target shape: rules become a NetGame, the replica/prediction become a ClientView. Keep the game's own networking tests passing before and after the port; this is an opt-in rewrite, not required for the dependency bump to work.",
+      "verification": "The game's own networking tests (if any) must still pass after adoption. Engine-side guarantee: tests/netplay.rs, on an in-memory network with loss, jitter and delay.",
+      "limitations": "File-presence detection only; a game may have files with these names for reasons unrelated to hand-rolled networking (false positive), or may hide its networking code under different file names (false negative). Treat as a hint requiring a quick read of the named files, not a verdict.",
+      "reference": "docs/adr/0022-custom-sim-multiplayer-kit.md"
+    }
+  ]
+}

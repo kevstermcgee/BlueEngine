@@ -43,6 +43,8 @@ The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headles
 | `python tools/be2.py build all` | All three isolated builds |
 | `python tools/be2.py capture NEW_DIR --map MAP.json` | Twelve house camera captures and rendered menu; checks completion |
 | `python tools/be2.py package NEW.zip` | Builds a source + binary package with SHA256 manifest and Git provenance |
+| `python tools/be2.py upgrade plan GAME_DIR --to REF` | Read-only baseline/target/migration plan for moving an external game to an engine revision |
+| `python tools/be2.py upgrade verify GAME_DIR` | Re-runs the game's own `scripts/check.py` fresh and reports truthful evidence; see `docs/UPGRADE.md` |
 | `python tools/be2.py map ...` | Builds and invokes `be2-tools` with the arguments below |
 
 `package` includes current Git-tracked working files plus newly built binaries. Add intended new source files to Git first. It records dirty status; it does not imply tests ran or commit your edits. Run `check` before packaging. It never updates the user's desktop shortcut or installed binaries automatically.

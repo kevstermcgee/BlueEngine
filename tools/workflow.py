@@ -188,7 +188,7 @@ def full_commands(test_profile='itest'):
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
-         'tools.test_xcapture'],
+         'tools.test_xcapture', 'tools.test_upgrade'],
     ]
 
 
@@ -329,6 +329,8 @@ def validation_plan(paths=None, base=None, test_profile='itest'):
         'publishing': ({'scripts/publish_games.py', 'scripts/test_publish_games.py'},
                        [[sys.executable, '-m', 'unittest', 'scripts.test_publish_games'],
                         [sys.executable, 'scripts/publish_games.py', 'check']]),
+        'upgrade': ({'tools/upgrade.py', 'tools/test_upgrade.py', 'tools/upgrade_migrations.json'},
+                   [[sys.executable, '-m', 'unittest', 'tools.test_upgrade']]),
     }
     covered = set().union(*(files for files, _ in scopes.values()))
     unknown = sorted(set(paths) - covered)

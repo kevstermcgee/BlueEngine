@@ -41,3 +41,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0029: World updates in a compact binary form (protocol 8)](0029-compact-world-updates.md)
 - [0030: Graceful shutdown on signals, without a new dependency](0030-graceful-shutdown-signals.md)
 - [0031: `be2-ctl`, a small manager for servers on one machine](0031-be2-ctl-server-manager.md)
+- [0032: A version-aware upgrade workflow for external games](0032-game-upgrade-workflow.md)

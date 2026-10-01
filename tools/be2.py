@@ -14,6 +14,7 @@ import tempfile
 import time
 import zipfile
 
+import upgrade
 import workflow
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -249,6 +250,26 @@ def main():
     p = sub.add_parser('package'); p.add_argument('destination')
     t = sub.add_parser('map'); t.add_argument('arguments', nargs=argparse.REMAINDER)
     sub.add_parser('features')
+    u = sub.add_parser('upgrade', help='Plan and verify moving an external game to a chosen engine revision')
+    uc = u.add_subparsers(dest='upgrade_command', required=True)
+    up = uc.add_parser('plan', help='Read-only: baseline/target identity, runtime, applicable migrations')
+    up.add_argument('game', help='Path to the external game directory (never modified)')
+    up.add_argument('--to', required=True, metavar='REF', help='Target engine revision (branch, tag or commit)')
+    up.add_argument('--engine-checkout', help='Resolve --to here instead of the game-resolved engine dependency')
+    up.add_argument('--fix', action='append', default=[], metavar='ID:DESCRIPTION',
+                    help='Requested problem to track through the upgrade; repeatable')
+    up.add_argument('--adopt', action='append', default=[], metavar='MIGRATION_ID',
+                    help='Explicitly select an optional_adoption migration; repeatable')
+    up.add_argument('--out', help='Write the full JSON packet here (never written without this flag)')
+    up.add_argument('--json', action='store_true', help='Print the full JSON packet instead of the human summary')
+    uv = uc.add_parser('verify', help='Reruns the game\'s own scripts/check.py fresh; never trusts a stale report')
+    uv.add_argument('game', help='Path to the external game directory')
+    uv.add_argument('--skip-ship', action='store_true')
+    uv.add_argument('--content-only', action='store_true')
+    uv.add_argument('--scenario', action='append', default=[], help='Additional behavioral scenario; repeatable')
+    uv.add_argument('--timeout', type=float, default=600)
+    uv.add_argument('--out', help='Write the full JSON result here (never written without this flag)')
+    uv.add_argument('--json', action='store_true', help='Print the full JSON result instead of the human summary')
     args = parser.parse_args()
     if args.command == 'doctor': doctor()
     elif args.command == 'check':
@@ -292,6 +313,21 @@ def main():
     elif args.command == 'package': package(args.destination)
     elif args.command == 'map': tool(args.arguments)
     elif args.command == 'features': print((ROOT / 'tools/FEATURES.json').read_text(encoding='utf-8'))
+    elif args.command == 'upgrade':
+        if args.upgrade_command == 'plan':
+            packet = upgrade.plan(args.game, ROOT, args.to, engine_checkout=args.engine_checkout,
+                                  fixes=args.fix, adopt=args.adopt)
+            if args.out:
+                Path(args.out).write_text(json.dumps(packet, indent=2) + '\n', encoding='utf-8')
+            print(json.dumps(packet, indent=2) if args.json else packet['human_summary'])
+        elif args.upgrade_command == 'verify':
+            result = upgrade.verify(args.game, ROOT, skip_ship=args.skip_ship, content_only=args.content_only,
+                                    scenarios=args.scenario, timeout=args.timeout)
+            if args.out:
+                Path(args.out).write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8')
+            print(json.dumps(result, indent=2) if args.json else result.get('human_summary', json.dumps(result)))
+            if not result['ok']:
+                sys.exit(1)
 
 
 if __name__ == '__main__':

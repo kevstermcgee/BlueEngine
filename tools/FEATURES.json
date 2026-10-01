@@ -865,6 +865,29 @@
         "prototype_api"
       ]
     },
+    "game_upgrade": {
+      "files": [
+        "tools/upgrade.py",
+        "tools/test_upgrade.py",
+        "tools/upgrade_migrations.json",
+        "docs/UPGRADE.md",
+        "docs/adr/0032-game-upgrade-workflow.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_upgrade"
+      ],
+      "note": "Read-only planning (python tools/be2.py upgrade plan) and fresh re-verification (upgrade verify) for moving an external game to a chosen engine revision: baseline/target/dependency/tool-binary identity, stock/custom_sim/custom_sim_netplay/unknown runtime classification, and migrations selected from tools/upgrade_migrations.json by revision range plus source evidence, never revision range alone. Verification reuses the game's own scripts/check.py; a prior report.json is never treated as current evidence. Never edits the game, switches a checkout, builds, or touches the network.",
+      "depends_on": [
+        "game_scaffolding"
+      ],
+      "keywords": [
+        "upgrade",
+        "migration",
+        "engine revision",
+        "dependency pin",
+        "provenance"
+      ]
+    },
     "game_presentation": {
       "files": [
         "src/viewer/game_client.rs",

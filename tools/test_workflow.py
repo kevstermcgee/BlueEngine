@@ -212,7 +212,7 @@ class RunnerTests(unittest.TestCase):
         self.addCleanup(directory.cleanup)
         self.root = Path(directory.name)
         (self.root / 'tools').mkdir()
-        for name in ['be2.py', 'workflow.py']:
+        for name in ['be2.py', 'workflow.py', 'upgrade.py']:
             shutil.copyfile(ROOT / 'tools' / name, self.root / 'tools' / name)
 
     def run_check(self, command, harness=None, timeout=None, later=True):
