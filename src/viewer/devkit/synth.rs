@@ -2130,6 +2130,82 @@ impl AmbientSpec {
     }
 }
 
+/// A deterministic 64-bit number from `text` (FNV-1a), for seeding a generator from a game's name so
+/// two games get different, reproducible results without either storing or hand-picking a seed. The
+/// same text always gives the same number, on any platform. Not for anything security-sensitive.
+pub fn seed_from(text: &str) -> u64 {
+    let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+    for b in text.as_bytes() {
+        h ^= u64::from(*b);
+        h = h.wrapping_mul(0x0000_0100_0000_01b3);
+    }
+    h
+}
+
+/// Dark/moody words: present, they nudge [`ambient_spec_for`] towards minor, a lower register and a
+/// darker timbre. A short, curated, intentionally small list, not a sentiment model.
+const DARK_WORDS: [&str; 14] = [
+    "haunted",
+    "spooky",
+    "dark",
+    "night",
+    "ghost",
+    "shadow",
+    "grim",
+    "horror",
+    "creepy",
+    "void",
+    "doom",
+    "nightmare",
+    "crypt",
+    "eerie",
+];
+/// Light/cheerful words: present, they nudge [`ambient_spec_for`] towards major, a higher register and
+/// a brighter timbre.
+const BRIGHT_WORDS: [&str; 14] = [
+    "sun", "bright", "happy", "garden", "candy", "sunny", "cheerful", "festival", "carnival",
+    "rainbow", "spring", "sparkle", "sweet", "meadow",
+];
+
+/// -1 (dark words outweigh bright ones) to 1 (the reverse), 0 for neither or a tie: how many words from
+/// each small list in [`DARK_WORDS`]/[`BRIGHT_WORDS`] appear in `text` (lower-cased, substring match).
+/// A light touch for an obviously-themed title or tagline ("haunted", "sunny meadow"), not a
+/// text-understanding model; most titles will read as neutral, which is fine, not a bug.
+fn mood_bias(text: &str) -> f32 {
+    let lower = text.to_lowercase();
+    let count = |words: &[&str]| words.iter().filter(|w| lower.contains(*w)).count() as f32;
+    (count(&BRIGHT_WORDS) - count(&DARK_WORDS)).clamp(-2., 2.) / 2.
+}
+
+/// An [`AmbientSpec`] that fits the game: unique to `title` (key, mode, chord count and timbre all vary
+/// with it, not just the seed, so two games with different titles read as different pieces of music,
+/// not the same one with different notes), and nudged towards a mood `mood_bias` reads from `title`
+/// and `tagline` together (an obviously spooky or cheerful title leans the generated mode, register and
+/// brightness that way). Deterministic: the same title and tagline always give the same spec. A game
+/// whose theme the words do not capture is free to build its own `AmbientSpec` by hand instead; this is
+/// a reasonable default, not the only way to use [`ambient_loop`]. Example:
+/// `ambient_loop(&ambient_spec_for("Spooky Kart", "Eight haunted karts, one hollow to win."))`.
+pub fn ambient_spec_for(title: &str, tagline: &str) -> AmbientSpec {
+    let mut rng = Rng::new(seed_from(title));
+    let mood = mood_bias(&format!("{title} {tagline}"));
+    let root_center = 51. + 8. * mood;
+    // Any detected mood word decides the mode outright (a title that reads as spooky should not have a
+    // 1-in-20 chance of coming out major); only a genuinely neutral title leaves it to the seed.
+    let minor = if mood.abs() >= 0.5 {
+        mood < 0.
+    } else {
+        rng.f32() < 0.5
+    };
+    AmbientSpec {
+        minutes: 2.,
+        root_midi: (root_center + rng.range(-3., 3.)).clamp(36., 72.) as u8,
+        minor,
+        chords: 3 + rng.below(4),
+        brightness: (rng.range(0.25, 0.55) + 0.25 * mood).clamp(0., 1.),
+        seed: rng.next_u64(),
+    }
+}
+
 /// A warm, slow pad voice: a tone and its lower octave, each as two slightly detuned triangles,
 /// through a lowpass that breathes with a slow LFO. `env(t)` shapes the whole voice (a long attack and
 /// a long release, so successive chords crossfade rather than cut).
@@ -3662,6 +3738,84 @@ mod tests {
         assert!(
             spectral_centroid(&ambient_loop(&dark)) < spectral_centroid(&ambient_loop(&bright)),
             "brightness should raise the spectral centroid"
+        );
+    }
+
+    #[test]
+    fn mood_bias_reads_dark_and_bright_words_and_is_neutral_otherwise() {
+        assert_eq!(mood_bias("Spooky Kart"), mood_bias("haunted"));
+        assert!(mood_bias("Eight haunted karts, one hollow to win.") < 0.);
+        assert!(mood_bias("Sunny Meadow Festival") > 0.);
+        assert_eq!(mood_bias("Block Puzzle Adventure"), 0.);
+        assert_eq!(mood_bias(""), 0.);
+        assert_eq!(
+            mood_bias("HAUNTED"),
+            mood_bias("haunted"),
+            "case-insensitive"
+        );
+    }
+
+    #[test]
+    fn ambient_spec_for_is_deterministic_and_varies_with_the_title() {
+        let a = ambient_spec_for("Spooky Kart", "Eight haunted karts, one hollow to win.");
+        let b = ambient_spec_for("Spooky Kart", "Eight haunted karts, one hollow to win.");
+        assert_eq!(a, b, "same title and tagline, same spec");
+        let different_title =
+            ambient_spec_for("Garden Golf", "Eight haunted karts, one hollow to win.");
+        assert_ne!(
+            a.seed, different_title.seed,
+            "a different title changes the seed"
+        );
+        let different_tagline = ambient_spec_for("Spooky Kart", "A sunny afternoon on the green.");
+        assert_ne!(
+            (a.minor, a.root_midi),
+            (different_tagline.minor, different_tagline.root_midi),
+            "a different tagline's mood should move mode/register"
+        );
+    }
+
+    #[test]
+    fn a_clearly_themed_title_always_lands_on_the_matching_mode_for_every_seed() {
+        // The real case that motivated this: a game whose own title and tagline are unambiguously
+        // spooky must not have a one-in-twenty chance of coming out in a major key.
+        for i in 0..20 {
+            let title = format!("Spooky Kart {i}");
+            let dark = ambient_spec_for(&title, "Eight haunted karts, one hollow to win.");
+            assert!(dark.minor, "{title} reads as spooky and must be minor");
+            let bright = ambient_spec_for(&title, "A sunny, cheerful festival in a bright garden.");
+            assert!(!bright.minor, "{title} reads as cheerful and must be major");
+        }
+    }
+
+    #[test]
+    fn ambient_spec_for_leans_the_generated_mood_towards_dark_or_bright_words() {
+        // Many different titles sharing one dark or bright tagline, so any single title's own random
+        // jitter averages out and only the shared mood word's effect on the population remains.
+        let dark_tagline = "A haunted, spooky night in a dark crypt.";
+        let bright_tagline = "A sunny, cheerful festival in a bright garden.";
+        let (mut dark_minor, mut bright_minor) = (0u32, 0u32);
+        let (mut dark_root_sum, mut bright_root_sum) = (0u32, 0u32);
+        const N: u32 = 40;
+        for i in 0..N {
+            let title = format!("Game {i}");
+            let dark = ambient_spec_for(&title, dark_tagline);
+            let bright = ambient_spec_for(&title, bright_tagline);
+            dark_minor += u32::from(dark.minor);
+            bright_minor += u32::from(bright.minor);
+            dark_root_sum += u32::from(dark.root_midi);
+            bright_root_sum += u32::from(bright.root_midi);
+        }
+        assert_eq!(
+            dark_minor, N,
+            "an unambiguously dark theme should always land on minor"
+        );
+        assert_eq!(
+            bright_minor, 0,
+            "an unambiguously bright theme should always land on major"
+        );
+        assert!(
+            dark_root_sum < bright_root_sum,
+            "dark-tagline games should average a lower register: {dark_root_sum} vs {bright_root_sum}"
         );
     }
 

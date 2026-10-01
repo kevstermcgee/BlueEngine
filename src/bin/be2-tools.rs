@@ -765,26 +765,54 @@ fn run() -> Result<()> {
         }
         "ambient-music" => {
             use vesper3d::viewer::devkit::synth::{
-                ambient_loop, peak, rms, wav_bytes, AmbientSpec, RATE,
+                ambient_loop, ambient_spec_for, peak, rms, wav_bytes, AmbientSpec, RATE,
             };
-            // OUT.wav [MINUTES] [SEED] [--major]: a seamless, beat-free ambient loop (devkit::synth::
-            // ambient_loop), written as 16-bit PCM WAV. The output path must be new, like every other
-            // generated-file command here; pick a new name to regenerate with different parameters.
+            // OUT.wav [MINUTES] [SEED] [--major] [--title=TEXT] [--tagline=TEXT]: a seamless,
+            // beat-free ambient loop (devkit::synth::ambient_loop), written as 16-bit PCM WAV. The
+            // output path must be new, like every other generated-file command here; pick a new name
+            // to regenerate with different parameters. --title keys key/mode/timbre to that text (and
+            // --tagline, if given) via ambient_spec_for, so two games get different, fitting music
+            // instead of hand-picked numbers; SEED and --major are ignored when --title is given.
             let out = arg(1)?;
-            let mut spec = AmbientSpec::default();
-            let mut minor_set = false;
+            let mut title: Option<&str> = None;
+            let mut tagline = "";
+            let mut minutes: Option<f32> = None;
+            let mut seed: Option<u64> = None;
+            let mut major = false;
             for extra in &a[2..] {
-                if extra == "--major" {
-                    spec.minor = false;
-                } else if !minor_set {
-                    spec.minutes = extra
-                        .parse()
-                        .map_err(|_| format!("MINUTES must be a number, got '{extra}'"))?;
-                    minor_set = true;
+                if let Some(value) = extra.strip_prefix("--title=") {
+                    title = Some(value);
+                } else if let Some(value) = extra.strip_prefix("--tagline=") {
+                    tagline = value;
+                } else if extra == "--major" {
+                    major = true;
+                } else if minutes.is_none() {
+                    minutes = Some(
+                        extra
+                            .parse()
+                            .map_err(|_| format!("MINUTES must be a number, got '{extra}'"))?,
+                    );
                 } else {
-                    spec.seed = extra
-                        .parse()
-                        .map_err(|_| format!("SEED must be a whole number, got '{extra}'"))?;
+                    seed = Some(
+                        extra
+                            .parse()
+                            .map_err(|_| format!("SEED must be a whole number, got '{extra}'"))?,
+                    );
+                }
+            }
+            let mut spec = match title {
+                Some(title) => ambient_spec_for(title, tagline),
+                None => AmbientSpec::default(),
+            };
+            if let Some(minutes) = minutes {
+                spec.minutes = minutes;
+            }
+            if title.is_none() {
+                if let Some(seed) = seed {
+                    spec.seed = seed;
+                }
+                if major {
+                    spec.minor = false;
                 }
             }
             let samples = ambient_loop(&spec);
@@ -792,7 +820,8 @@ fn run() -> Result<()> {
             println!(
                 "{}",
                 json!({"ok": true, "out": out, "seconds": spec.loop_seconds(),
-                       "minor": spec.minor, "seed": spec.seed,
+                       "minor": spec.minor, "root_midi": spec.root_midi,
+                       "brightness": spec.brightness, "seed": spec.seed,
                        "peak": peak(&samples), "rms": rms(&samples)})
             );
         }

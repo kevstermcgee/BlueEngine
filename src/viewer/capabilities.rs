@@ -43,7 +43,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("src", "ACTION [QUERY]"),
     ("new-game", "NAME DIRECTORY [ENGINE_PATH] [TEMPLATE]"),
     ("icon", "TITLE DIRECTORY [VARIANT] [--replace]"),
-    ("ambient-music", "OUT.wav [MINUTES] [SEED] [--major]"),
+    ("ambient-music", "OUT.wav [MINUTES] [SEED] [--major] [--title=TEXT] [--tagline=TEXT]"),
     ("game-explore", "GAME.json [--max-states=N] [--scenario=OUT.json]"),
     ("add-interactable", "GAME.json ID --at=X,Y,Z [--size=HX,HY,HZ] [--color=R,G,B] [--label=TEXT] [--disabled] [--hidden] [--write]"),
     ("save-info", "FILE [GAME_JSON]"),

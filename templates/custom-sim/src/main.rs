@@ -69,8 +69,12 @@ fn sound(preset: synth::Preset) -> usize {
 }
 /// Renders on the worker thread; `music_wav` is filled once so the Settings-screen "Save music" button
 /// can hand the player the exact bytes the stem below plays, without regenerating or hitching.
-fn render_audio(music_wav: Arc<OnceLock<Vec<u8>>>) -> Rendered {
-    let ambient = synth::wav_bytes(&synth::ambient_loop(&synth::AmbientSpec::default()), synth::RATE);
+/// `ambient_spec_for` keys the track to this game's own title and tagline (see assets/identity.json),
+/// so a fresh game does not sound identical to every other game made from this template; replace the
+/// spec with your own if your theme calls for something that heuristic cannot read from those words.
+fn render_audio(music_wav: Arc<OnceLock<Vec<u8>>>, title: &str, tagline: &str) -> Rendered {
+    let spec = synth::ambient_spec_for(title, tagline);
+    let ambient = synth::wav_bytes(&synth::ambient_loop(&spec), synth::RATE);
     let _ = music_wav.set(ambient.clone());
     Rendered {
         sfx: SOUNDS
@@ -214,7 +218,8 @@ async fn main() {
     let music_wav: Arc<OnceLock<Vec<u8>>> = Arc::new(OnceLock::new());
     let mut sounds = SoundBank::start(life.options.silent(), settings.sfx_level(), settings.music_level(), {
         let music_wav = music_wav.clone();
-        move || render_audio(music_wav)
+        let (title, tagline) = (identity.title.clone(), identity.tagline.clone());
+        move || render_audio(music_wav, &title, &tagline)
     })
     .await;
     let mut shell = GameShell::new();

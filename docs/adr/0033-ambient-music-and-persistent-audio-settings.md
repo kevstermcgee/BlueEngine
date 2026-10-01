@@ -26,6 +26,13 @@ player to save it.
   not by ear. `be2-tools ambient-music OUT.wav [MINUTES] [SEED] [--major]` generates one straight to a
   file using the existing generic `write_new` (destination must be new, matching every other generated-
   file command).
+- **`devkit::synth::ambient_spec_for(title, tagline)`**: every game should not sound the same. It seeds
+  key/mode/chord-count/timbre from the title (so a different title is a different track) and additionally
+  reads a small, deliberately tiny `mood_bias` from a curated dark/light word list across the title and
+  tagline together (e.g. "haunted"/"spooky" vs "sunny"/"garden"). Any detected word decides the mode
+  outright — a clearly spooky title is always minor, never a 1-in-20 chance of major — while a neutral
+  title still gets a varied, seeded mode. `be2-tools ambient-music --title=TEXT [--tagline=TEXT]` exposes
+  the same thing from the command line (SEED/`--major` are ignored in that mode, since the text decides).
 - **`devkit::save::Settings`** gained `music_on`/`sfx_on` booleans (default true) alongside the existing
   `music`/`sfx` volumes; `music_level()`/`sfx_level()` return 0 when off without touching the remembered
   volume, so toggling back on restores it. Backward compatible: struct-level `#[serde(default)]` with a
@@ -39,8 +46,10 @@ player to save it.
   `MenuOutcome{quit,toggle_music,toggle_sfx,download_music}` — so it stays independent of `devkit::save`
   and `kit::audio`, and a game decides what each outcome means.
 - **The custom-sim template** wires all of it end to end: `Settings::load` at startup feeds
-  `SoundBank::start`'s volumes; the render closure computes `ambient_loop(&AmbientSpec::default())` once
-  on the worker thread and fills an `Arc<OnceLock<Vec<u8>>>` the "Save music" button reads from, so
+  `SoundBank::start`'s volumes; the render closure computes
+  `ambient_loop(&ambient_spec_for(&identity.title, &identity.tagline))` once on the worker thread (so the
+  game's own `assets/identity.json` decides its track) and fills an `Arc<OnceLock<Vec<u8>>>` the "Save
+  music" button reads from, so
   downloading can never hitch (no synchronous regeneration — `music_loop`-class renders cost real time,
   as the engine's own perf test already measures). `sounds.update_music(dt, &[1.])` is now called every
   frame, which also fixes a latent bug: every template called `start_music()` but never `update_music`,

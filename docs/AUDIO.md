@@ -19,13 +19,27 @@ Generate a track straight to a file, no Rust required:
 
 ```sh
 be2-tools ambient-music OUT.wav [MINUTES] [SEED] [--major]
+be2-tools ambient-music OUT.wav [MINUTES] --title="Spooky Kart" --tagline="Eight haunted karts, one hollow to win."
 ```
 
-`MINUTES` defaults to 2 (clamped 0.5-10); `SEED` changes the chord progression and chime placement;
-`--major` switches from the default natural minor. Prints `{"ok":true,"out":...,"seconds":...,
-"peak":...,"rms":...}`. The custom-sim template calls `ambient_loop`/`wav_bytes` directly for its
-default background track (`AmbientSpec::default()`, a fixed seed) — replace the spec, or hand it a
-different one per level/mood, the same way a game replaces the stock SFX presets.
+`MINUTES` defaults to 2 (clamped 0.5-10). Without `--title`, `SEED` changes the chord progression and
+chime placement and `--major` switches from the default natural minor. Prints
+`{"ok":true,"out":...,"seconds":...,"minor":...,"root_midi":...,"brightness":...,"seed":...,
+"peak":...,"rms":...}`.
+
+**Every game should not sound the same.** `devkit::synth::ambient_spec_for(title, tagline)` derives key,
+mode, chord count and timbre from a game's own title (the seed; a different title is a different track)
+and a small, deliberately tiny mood heuristic (`mood_bias`) read from the words in `title` and `tagline`
+together: a handful of curated dark/moody words ("haunted", "spooky", "crypt", ...) and light/cheerful
+words ("sunny", "garden", "festival", ...). **Any** detected mood word decides the mode outright (a
+title that reads as spooky is always minor, never a 1-in-20 chance of coming out major); a genuinely
+neutral title still gets a varied, seeded mode so two unthemed games do not sound alike either. This is
+a light touch for an obviously-themed title, not a text-understanding model — the custom-sim template
+calls it with the game's own `assets/identity.json` title and tagline, so a fresh game is not identical
+to every other game made from the template, and a spooky one leans the way you would expect. A game
+whose theme those words cannot capture is free to build its own `AmbientSpec` by hand in `render_audio`
+instead (set `minor`, `root_midi`, `brightness`, `chords` directly) — `ambient_spec_for` is a reasonable
+default, not the only way to use `ambient_loop`.
 
 ## Settings that survive a relaunch
 
