@@ -125,7 +125,8 @@ scene's static meshes with `draw_mesh` *before* `gl_use_material(&materials.worl
 renders nothing, with no error — use `Materials::draw_static(&meshes)` instead, which cannot be called
 in the wrong order (Dead Air's own headless captures were the only thing that caught this); facing
 something (an NPC toward the player, a spawn toward a doorway) is `devkit::path::yaw_of(direction)`, not
-a hand-derived `atan2`.
+a hand-derived `atan2`; facing a spawn at a specific landmark is `yaw_facing(spawn, landmark)` — two real
+games have picked the wrong one of `0.`/`PI` for a spawn yaw by guessing instead.
 
 Verify without watching: `--capture DIR --frames 30,120` (a new directory; the loop also prints the
 real pixel size of every capture), `--script "fwd:0-200,jump@60"` (the human input path), `--seed N`,

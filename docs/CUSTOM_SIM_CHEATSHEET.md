@@ -112,7 +112,9 @@ is slow; capture a few frames, not a whole match.
   renders nothing, with no error. Use `materials.draw_static(&meshes)` (built for exactly this; Dead Air's own
   headless captures were the only thing that caught the manual version getting it backwards).
 - Facing something (an NPC toward the player, a spawn toward a doorway) is `devkit::path::yaw_of(direction)`; do
-  not hand-derive `atan2` for it, even though the formula is short enough to look safe to re-derive.
+  not hand-derive `atan2` for it, even though the formula is short enough to look safe to re-derive. For a spawn
+  that should face a specific landmark, `yaw_facing(spawn, landmark)` is one call with no sign to get backwards —
+  two real games have shipped a spawn yaw of `0.` or `PI` chosen by guessing, and guessed wrong both times.
 - A game's `scripts/blue` needs `python3` or `python`; `scripts/check.py` finds a built `be2-tools` in the engine
   checkout by itself (build it with `cargo build --profile fast --no-default-features --bin be2-tools`).
 - Build and test fast: `cargo build --profile fast`, `cargo test --profile itest` (see `docs/perf`).

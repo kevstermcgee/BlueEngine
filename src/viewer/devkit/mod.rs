@@ -25,7 +25,7 @@
 //! | [`Settings`], [`Records`], [`load_or_default`], [`store_atomic`] | atomic, never-fatal settings and high-score files |
 //! | [`Snapshot`], [`snapshot`], [`SavePolicy`] | save states of the simulation: F5 / F9, autosaves, migrations, all-or-nothing loads, and the resume contract a game declares (exact, or a physics continuation) |
 //! | [`Lifecycle`] | the pieces above composed: flags in, one input per tick, quick save/load, capture and perf evidence out, so `main.rs` keeps only drawing and device mapping |
-//! | [`path::ClosedPath`] | a smooth closed loop (track, patrol route): length, point and tangent at a distance, progress and lateral offset of any position, arc distance with wrap-around, plus the yaw helpers `forward`, `right`, `yaw_of`, `wrap_angle` |
+//! | [`path::ClosedPath`] | a smooth closed loop (track, patrol route): length, point and tangent at a distance, progress and lateral offset of any position, arc distance with wrap-around, plus the yaw helpers `forward`, `right`, `yaw_of`, `yaw_facing`, `wrap_angle` |
 //! | [`wall_along_x`], [`wall_along_z`] | straight walls with doorway gaps cut out, for a hand-built indoor level (a `MapDocument` is not the only way to make rooms) |
 //! | [`WaypointGraph`] | a small walkable graph (doorway thresholds, room centres) with breadth-first shortest-path and nearest-node lookup, for an NPC or monster moving through such a level — unlike `ClosedPath`'s single loop, this one can branch |
 //! | [`synth`] | procedural sound effects, a music loop, WAV writer and loudness/pitch measurement: audio with no recordings |

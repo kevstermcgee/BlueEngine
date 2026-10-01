@@ -40,6 +40,14 @@ pub fn yaw_of(direction: V) -> f32 {
     direction.0.atan2(-direction.2)
 }
 
+/// The yaw that faces `to` from `from` (ground plane only; `y` is ignored). For a spawn point:
+/// `yaw_facing(spawn, landmark)` faces the landmark, with no sign to get backwards — two different games have
+/// shipped a spawn yaw hand-picked as `0.` or `PI` by guessing which one "faces into the building," and guessed
+/// wrong both times.
+pub fn yaw_facing(from: V, to: V) -> f32 {
+    yaw_of(V(to.0 - from.0, 0., to.2 - from.2))
+}
+
 /// Wrap an angle to -PI..PI.
 pub fn wrap_angle(a: f32) -> f32 {
     let mut a = a % TAU;
@@ -338,5 +346,25 @@ mod tests {
             assert!((wrap_angle(yaw + TAU) - yaw).abs() < 1e-4);
         }
         assert_eq!(forward(0.), V(0., 0., -1.));
+    }
+
+    #[test]
+    fn yaw_facing_points_a_spawn_at_a_landmark_regardless_of_direction() {
+        // A landmark due -Z of the spawn: facing it is yaw 0, not PI (the mistake two real games made).
+        assert!((yaw_facing(V(0., 0., 4.), V(0., 0., -10.)) - 0.).abs() < 1e-4);
+        // Due +Z: yaw PI (or -PI; wrap_angle before comparing).
+        assert!((wrap_angle(yaw_facing(V(0., 0., -4.), V(0., 0., 10.)) - PI)).abs() < 1e-4);
+        // Due +X and due -X.
+        assert!(
+            (yaw_facing(V(-4., 0., 0.), V(10., 0., 0.)) - std::f32::consts::FRAC_PI_2).abs() < 1e-4
+        );
+        assert!(
+            (yaw_facing(V(4., 0., 0.), V(-10., 0., 0.)) + std::f32::consts::FRAC_PI_2).abs() < 1e-4
+        );
+        // Height is ignored.
+        assert_eq!(
+            yaw_facing(V(0., 0., 0.), V(0., 50., -10.)),
+            yaw_facing(V(0., 0., 0.), V(0., -50., -10.))
+        );
     }
 }
