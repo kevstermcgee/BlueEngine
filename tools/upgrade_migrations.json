@@ -51,6 +51,25 @@
       "verification": "The game's own networking tests (if any) must still pass after adoption. Engine-side guarantee: tests/netplay.rs, on an in-memory network with loss, jitter and delay.",
       "limitations": "File-presence detection only; a game may have files with these names for reasons unrelated to hand-rolled networking (false positive), or may hide its networking code under different file names (false negative). Treat as a hint requiring a quick read of the named files, not a verdict.",
       "reference": "docs/adr/0022-custom-sim-multiplayer-kit.md"
+    },
+    {
+      "id": "MIG-0033-AUDIO-SETTINGS",
+      "since_commit": "1ad2b1afb8a1",
+      "title": "Persistent audio settings and a generated ambient-music stem are available for custom simulations",
+      "runtime": ["custom_sim", "custom_sim_netplay"],
+      "category": "optional_adoption",
+      "required": false,
+      "summary": "Before this commit, every custom-sim game constructed SoundBank with hard-coded volumes, played no music (start_music() was always called with zero stems), and had no way for a player to turn music or sound effects off that survived a relaunch. devkit::save::Settings now has music_on/sfx_on toggles plus music_level()/sfx_level() helpers, devkit::synth::AmbientSpec/ambient_loop generates a seamless background track, and GameShell::local_menu_with_audio adds a non-breaking Settings screen (toggles plus a 'Save music' download button). A game can adopt as little as the Settings persistence or as much as the full menu screen.",
+      "detect": {
+        "kind": "grep",
+        "pattern": "SoundBank::start\\s*\\(",
+        "include": ["src/**/*.rs"],
+        "exclude_paths": []
+      },
+      "repair": "See docs/AUDIO.md. Minimum: load devkit::Settings at startup (beside_exe(\"settings.json\")) and pass settings.sfx_level()/settings.music_level() into SoundBank::start instead of hard-coded volumes. Full adoption: also add a music stem from ambient_loop, call sounds.update_music every frame, and switch the pause menu to GameShell::local_menu_with_audio (local_menu keeps working unchanged if you do not).",
+      "verification": "No automated per-game audio-settings regression exists in the engine; verify manually that toggling music/sound in the Settings screen takes effect immediately and that the choice survives quitting and relaunching the game (the settings.json file beside the executable).",
+      "limitations": "Detection only confirms the game already uses SoundBank (true for essentially every custom-sim game); it cannot tell whether a game already hand-rolled its own equivalent of Settings persistence before this feature existed, which would be a false positive for 'nothing done yet'. Treat as a hint to check, not a verdict.",
+      "reference": "docs/adr/0033-ambient-music-and-persistent-audio-settings.md"
     }
   ]
 }
