@@ -382,6 +382,19 @@ impl Materials {
         })
     }
 
+    /// Bind the `world` material and draw every mesh: the common case for a scene's static geometry
+    /// (built once with [`Template`](super::Template)/[`Batch`](super::Batch), unlike per-frame dynamic
+    /// content, which goes through a `Batch` and `Batch::draw`). Equivalent to
+    /// `gl_use_material(&materials.world)` followed by `draw_mesh` on each, except that it cannot be
+    /// called with those two steps in the wrong order — which compiles, runs and renders nothing, with
+    /// no error (a real bug caught only by inspecting a headless capture while building a game on this).
+    pub fn draw_static(&self, meshes: &[Mesh]) {
+        gl_use_material(&self.world);
+        for mesh in meshes {
+            draw_mesh(mesh);
+        }
+    }
+
     /// Set at most four local lights after `set_scene`, separately for each camera pass.
     /// Unused slots are cleared. An oversized list is rejected without changing uniforms.
     /// `set_scene` resets all local lights, preserving the appearance of existing kit clients.

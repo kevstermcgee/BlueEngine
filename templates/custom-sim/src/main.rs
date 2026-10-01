@@ -338,10 +338,7 @@ async fn main() {
             world.add(&scene.bumper, Mat4::from_translation(vec3(bumper.pos.0, bumper.pos.1, bumper.pos.2)), Tint::NONE);
         }
         fx.draw(&mut add, &mut alpha, view.eye, view.right(), view.up());
-        gl_use_material(&materials.world);
-        for mesh in &scene.platform {
-            draw_mesh(mesh);
-        }
+        materials.draw_static(&scene.platform);
         world.draw();
         gl_use_material(&materials.fx_alpha);
         alpha.draw();

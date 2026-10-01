@@ -26,6 +26,8 @@
 //! | [`Snapshot`], [`snapshot`], [`SavePolicy`] | save states of the simulation: F5 / F9, autosaves, migrations, all-or-nothing loads, and the resume contract a game declares (exact, or a physics continuation) |
 //! | [`Lifecycle`] | the pieces above composed: flags in, one input per tick, quick save/load, capture and perf evidence out, so `main.rs` keeps only drawing and device mapping |
 //! | [`path::ClosedPath`] | a smooth closed loop (track, patrol route): length, point and tangent at a distance, progress and lateral offset of any position, arc distance with wrap-around, plus the yaw helpers `forward`, `right`, `yaw_of`, `wrap_angle` |
+//! | [`wall_along_x`], [`wall_along_z`] | straight walls with doorway gaps cut out, for a hand-built indoor level (a `MapDocument` is not the only way to make rooms) |
+//! | [`WaypointGraph`] | a small walkable graph (doorway thresholds, room centres) with breadth-first shortest-path and nearest-node lookup, for an NPC or monster moving through such a level — unlike `ClosedPath`'s single loop, this one can branch |
 //! | [`synth`] | procedural sound effects, a music loop, WAV writer and loudness/pitch measurement: audio with no recordings |
 //!
 //! The simulation stays authoritative and rendering-free; the window only reads it. One frame of a
@@ -59,6 +61,7 @@
 mod clock;
 mod input;
 mod juice;
+mod level;
 mod lifecycle;
 mod look;
 mod menu;
@@ -70,6 +73,7 @@ mod scale;
 mod sim;
 pub mod snapshot;
 pub mod synth;
+mod waypoints;
 
 pub use crate::viewer::savestate::{
     SaveError, SaveHeader, SaveSlots, Source, AUTO_SLOT, QUICK_SLOT,
@@ -77,6 +81,7 @@ pub use crate::viewer::savestate::{
 pub use clock::{FixedStepper, FrameClock, PerfReport, PerfSummary, MAX_FRAME, TICK, TICK_RATE};
 pub use input::{clean_axis, Edges, InputAccumulator, Tick};
 pub use juice::{Juice, Pulse, MAX_HITSTOP};
+pub use level::{solid_ranges, wall_along_x, wall_along_z};
 pub use lifecycle::{Lifecycle, Notice, Options, ScriptFrame};
 pub use look::{
     stick_look, FpsCamera, MouseLook, DEFAULT_RADIANS_PER_PIXEL, PITCH_LIMIT, SENSITIVITY_RANGE,
@@ -96,3 +101,4 @@ pub use scale::{
 };
 pub use sim::{assert_deterministic, run_inputs, Simulation, StateHasher, Trace};
 pub use snapshot::{assert_resumes_as_promised, Migration, SavePolicy, Snapshot};
+pub use waypoints::{Waypoint, WaypointGraph};

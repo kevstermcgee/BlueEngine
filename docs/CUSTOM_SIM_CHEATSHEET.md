@@ -36,7 +36,9 @@ right }`), `input.menu_select()`, `input.menu_back()`, `input.gamepad()` → `Ga
 triggers: [left, right], down(Button), pressed(Button) }`. `gilrs` buttons are positional: `Button::South` = A,
 `West` = X, `LeftTrigger`/`RightTrigger` are the bumpers, `LeftTrigger2`/`RightTrigger2` the analog triggers.
 `shell.paused`, `shell.playing()` (mouse captured: first person), `shell.accepting_input()` (menu closed: any game),
-`shell.local_menu(title, &controls)` (returns true to quit).
+`shell.local_menu(title, &controls)` (returns true to quit), or `shell.local_menu_with_audio(title, &controls,
+AudioMenu { music_on, sfx_on, has_music })` for the same menu with a Settings screen (music/sound toggles, a
+"Save music" download) built in; returns `MenuOutcome { quit, toggle_music, toggle_sfx, download_music }`.
 
 ## Yaw and space (`devkit::path`)
 
@@ -44,6 +46,10 @@ Yaw 0 faces -Z, positive yaw turns towards +X: `forward(yaw) = (sin, -cos)`, `ri
 `wrap_angle(a)`. `ClosedPath::from_control_points(&[(x,z)], subdivisions)`: a smooth loop with `length()`, `point_at(s)`,
 `tangent_at(s)`, `offset_point(s, lateral)`, `nearest(pos, hint, window)` / `nearest_global(pos)` → `PathPoint { index, s,
 lateral, center, tangent }`, `arc_delta(from, to)`. `math::V(x, y, z)` has `dot`, `cross`, `length`, `norm`, `lerp`.
+An indoor level built in code instead of an authored map: `devkit::{wall_along_x, wall_along_z}(fixed, a, b, height,
+thickness, gaps)` cut doorways out of a straight wall (`gaps` is a list of `(start, end)` ranges to leave open);
+`devkit::WaypointGraph::new(vec![Waypoint { pos, edges }, ..])` then gives an NPC `.nearest(pos)` and `.path(from, to)`
+(breadth-first) through the rooms those walls make — a different shape from `ClosedPath`'s single loop.
 
 ## Drawing (`kit`, needs the `presentation` feature)
 
@@ -54,7 +60,10 @@ Build once: `let mut t = Template::new();` then `t.box_(center, half, rgb, glow)
 `rgb` is `[f32; 3]`, `glow` 0..1 (self-illumination). A template over 9,000 vertices is split for you now; over 65,535
 it panics: use several. Per frame: `let mut batch = Batch::new(); batch.clear(); batch.add(&template, Mat4, Tint::NONE)`
 (`Tint::alpha(a)`, `Tint::flash(x)`), then `gl_use_material(&materials.world); batch.draw();` (`materials.fx_alpha` and
-`fx_add` for translucent and additive batches). `Materials::load()`, `Look::night()` (fields: `ambient_sky`, `fog_color`,
+`fx_add` for translucent and additive batches). For a scene's unchanging static meshes (built once with `to_meshes()`,
+not a per-frame `Batch`), `materials.draw_static(&meshes)` binds `world` and draws them; it exists because the manual
+two-step version is easy to get backwards, which compiles and renders nothing with no error. `Materials::load()`,
+`Look::night()` (fields: `ambient_sky`, `fog_color`,
 `fog_density`, `key_color`, `rim_color`), `materials.set_scene(&look, eye, time, pulse)`, `View::first_person(eye, yaw,
 pitch)` (`.fov`, `.roll`, `.project(p, w, h)`), `Fx::new(seed)` (`sparks`, `dust`, `ring`, `fireball`, `beam`, `popup`,
 `banner`, `confetti_fountain`, `update(dt)`, `draw(..)`), `hud::{text_outlined, text_centered, text_right, panel, bar,
@@ -99,6 +108,11 @@ is slow; capture a few frames, not a whole match.
   `ClientInput::movement`/`stick_look` use `accepting_input()` (unit-tested with the mouse uncaptured); only `mouse_look` needs capture.
   A scripted-input pass is not evidence that real keys reach your game.
 - `Lifecycle::feed` takes edge *bit flags* (`u32`), not a bool; `held` and `starts` are different cue queries.
+- Drawing a scene's static meshes with `draw_mesh` before `gl_use_material(&materials.world)` compiles, runs and
+  renders nothing, with no error. Use `materials.draw_static(&meshes)` (built for exactly this; Dead Air's own
+  headless captures were the only thing that caught the manual version getting it backwards).
+- Facing something (an NPC toward the player, a spawn toward a doorway) is `devkit::path::yaw_of(direction)`; do
+  not hand-derive `atan2` for it, even though the formula is short enough to look safe to re-derive.
 - A game's `scripts/blue` needs `python3` or `python`; `scripts/check.py` finds a built `be2-tools` in the engine
   checkout by itself (build it with `cargo build --profile fast --no-default-features --bin be2-tools`).
 - Build and test fast: `cargo build --profile fast`, `cargo test --profile itest` (see `docs/perf`).

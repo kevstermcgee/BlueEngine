@@ -97,8 +97,9 @@ The engine provides the parts every such game rewrites, each independent and opt
 | | `Rng`, `Juice`, `Pulse`, `Settings`, `Records`, `store_atomic` | seeded random numbers, screen feel, atomic never-fatal settings and high-score files |
 | | `Snapshot`, `snapshot::{save_to_slot, load_from_slot, autosave, assert_resumes_exactly}` | F5/F9 save states: atomic files, backups, migrations, all-or-nothing loads, and their proof ([SAVE_STATE.md](SAVE_STATE.md)) |
 | | `SavePolicy`, `snapshot::assert_resumes_as_promised`, `snapshot::{assert_loads_replay_identically, assert_resumes_within}`, `Simulation::hash_parts` | the save promise a game declares in one place (`Exact`, or `PhysicsContinuation` for a rigid-body world), the proof that follows it, and a load error that names the forgotten field |
+| | `wall_along_x`, `wall_along_z`, `WaypointGraph` | straight walls with doorway gaps, and a small branching graph with shortest-path/nearest-node lookup, for a hand-built indoor level and the NPCs that move through it |
 | `simulation` | `HeadlessWorld` (via `SceneBuilder`, `without_spawn()` for a props-only world) | rigid-body props as the physics authority inside your own rules (below) |
-| | `synth` | oscillators, filters, envelopes, WAV, ready-made effect presets, a music-loop helper |
+| | `synth` | oscillators, filters, envelopes, WAV, ready-made effect presets, a music-loop and ambient-loop helper |
 | `kit` (`presentation`) | `View`, `Template`, `Batch`, `Tint` | camera; small meshes built once, batched into a few draw calls per frame |
 | | `Look`, `Materials` | lit + fogged + glowing world material, alpha and additive effects, sky |
 | | `Fx`, `hud`, `SoundBank`, `capture::save_frame` | particles and rings, scaled outlined text and panels, off-thread sound, screenshots |
@@ -119,7 +120,12 @@ Traps met while building a real game on this (see the generated `AGENTS.md`): `C
 y = 0 unless `set_floor(None)`; the third argument of `begin_frame` decides cursor capture (pass `false`
 on menu and game-over screens); `ClientInput::look_delta` adds mouse and stick (`mouse_look` and
 `stick_look` are separate when you want your own stick sensitivity); an `eprintln!` inside the frame
-loop can make the next frame slow and cascade, so collect diagnostics and print at exit.
+loop can make the next frame slow and cascade, so collect diagnostics and print at exit; drawing a
+scene's static meshes with `draw_mesh` *before* `gl_use_material(&materials.world)` compiles, runs and
+renders nothing, with no error — use `Materials::draw_static(&meshes)` instead, which cannot be called
+in the wrong order (Dead Air's own headless captures were the only thing that caught this); facing
+something (an NPC toward the player, a spawn toward a doorway) is `devkit::path::yaw_of(direction)`, not
+a hand-derived `atan2`.
 
 Verify without watching: `--capture DIR --frames 30,120` (a new directory; the loop also prints the
 real pixel size of every capture), `--script "fwd:0-200,jump@60"` (the human input path), `--seed N`,

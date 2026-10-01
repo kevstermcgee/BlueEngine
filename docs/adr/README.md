@@ -43,3 +43,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0031: `be2-ctl`, a small manager for servers on one machine](0031-be2-ctl-server-manager.md)
 - [0032: A version-aware upgrade workflow for external games](0032-game-upgrade-workflow.md)
 - [0033: Generated ambient music, and audio settings that survive a relaunch](0033-ambient-music-and-persistent-audio-settings.md)
+- [0034: Level geometry and waypoint pathing promoted from Dead Air](0034-level-geometry-and-waypoint-pathing-from-dead-air.md)

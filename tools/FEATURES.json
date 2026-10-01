@@ -1032,7 +1032,10 @@
         "examples/minimal_game.rs",
         "docs/adr/0020-look-scale-and-dev-loop.md",
         "src/viewer/devkit/menu.rs",
-        "docs/adr/0021-stick-look-menu-steps-and-exit.md"
+        "docs/adr/0021-stick-look-menu-steps-and-exit.md",
+        "src/viewer/devkit/level.rs",
+        "src/viewer/devkit/waypoints.rs",
+        "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md"
       ],
       "checks": [
         "cargo test --locked --lib devkit",
@@ -1042,7 +1045,7 @@
         "cargo test --locked --lib devkit::scale",
         "cargo test --locked --lib devkit::menu"
       ],
-      "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files (music/sfx volume and on/off toggles, downloads_dir, unique_path, sanitize_filename), Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio, including AmbientSpec/ambient_loop for seamless background music; `be2-tools ambient-music` generates one from the command line, see docs/AUDIO.md). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
+      "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files (music/sfx volume and on/off toggles, downloads_dir, unique_path, sanitize_filename), Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio, including AmbientSpec/ambient_loop for seamless background music; `be2-tools ambient-music` generates one from the command line, see docs/AUDIO.md), wall_along_x/wall_along_z (straight walls with doorway gaps) and WaypointGraph (small branching graph, breadth-first path/nearest-node lookup) for a hand-built indoor level and the NPCs that move through it (ADR 0034). kit::Materials::draw_static(&meshes) binds the world material and draws a scene's static geometry in one call, so the two-step version cannot be called in the wrong order (silently renders nothing otherwise). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
       "keywords": [
         "custom",
         "simulation",
