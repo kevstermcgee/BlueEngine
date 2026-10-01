@@ -360,35 +360,98 @@ struct KeyboardFrame {
     down: std::collections::HashSet<KeyCode>,
     pressed: std::collections::HashSet<KeyCode>,
 }
+/// Every key the native reader reports. A key absent from this table reads as
+/// silently never pressed on Windows (the macroquad fallback is bypassed once a
+/// native reader is installed), so the table covers the full set a game might
+/// bind — polling ~90 virtual keys per frame costs nothing.
+const KEY_TABLE: &[(KeyCode, i32)] = &[
+    (KeyCode::A, 0x41),
+    (KeyCode::B, 0x42),
+    (KeyCode::C, 0x43),
+    (KeyCode::D, 0x44),
+    (KeyCode::E, 0x45),
+    (KeyCode::F, 0x46),
+    (KeyCode::G, 0x47),
+    (KeyCode::H, 0x48),
+    (KeyCode::I, 0x49),
+    (KeyCode::J, 0x4A),
+    (KeyCode::K, 0x4B),
+    (KeyCode::L, 0x4C),
+    (KeyCode::M, 0x4D),
+    (KeyCode::N, 0x4E),
+    (KeyCode::O, 0x4F),
+    (KeyCode::P, 0x50),
+    (KeyCode::Q, 0x51),
+    (KeyCode::R, 0x52),
+    (KeyCode::S, 0x53),
+    (KeyCode::T, 0x54),
+    (KeyCode::U, 0x55),
+    (KeyCode::V, 0x56),
+    (KeyCode::W, 0x57),
+    (KeyCode::X, 0x58),
+    (KeyCode::Y, 0x59),
+    (KeyCode::Z, 0x5A),
+    (KeyCode::Key0, 0x30),
+    (KeyCode::Key1, 0x31),
+    (KeyCode::Key2, 0x32),
+    (KeyCode::Key3, 0x33),
+    (KeyCode::Key4, 0x34),
+    (KeyCode::Key5, 0x35),
+    (KeyCode::Key6, 0x36),
+    (KeyCode::Key7, 0x37),
+    (KeyCode::Key8, 0x38),
+    (KeyCode::Key9, 0x39),
+    (KeyCode::Up, 0x26),
+    (KeyCode::Down, 0x28),
+    (KeyCode::Left, 0x25),
+    (KeyCode::Right, 0x27),
+    (KeyCode::LeftShift, 0xA0),
+    (KeyCode::RightShift, 0xA1),
+    (KeyCode::LeftControl, 0xA2),
+    (KeyCode::RightControl, 0xA3),
+    (KeyCode::LeftAlt, 0xA4),
+    (KeyCode::RightAlt, 0xA5),
+    (KeyCode::Space, 0x20),
+    (KeyCode::Enter, 0x0D),
+    (KeyCode::Escape, 0x1B),
+    (KeyCode::Tab, 0x09),
+    (KeyCode::Backspace, 0x08),
+    (KeyCode::Delete, 0x2E),
+    (KeyCode::Insert, 0x2D),
+    (KeyCode::Home, 0x24),
+    (KeyCode::End, 0x23),
+    (KeyCode::PageUp, 0x21),
+    (KeyCode::PageDown, 0x22),
+    (KeyCode::CapsLock, 0x14),
+    (KeyCode::Minus, 0xBD),
+    (KeyCode::Equal, 0xBB),
+    (KeyCode::LeftBracket, 0xDB),
+    (KeyCode::RightBracket, 0xDD),
+    (KeyCode::Backslash, 0xDC),
+    (KeyCode::Semicolon, 0xBA),
+    (KeyCode::Apostrophe, 0xDE),
+    (KeyCode::Comma, 0xBC),
+    (KeyCode::Period, 0xBE),
+    (KeyCode::Slash, 0xBF),
+    (KeyCode::GraveAccent, 0xC0),
+    (KeyCode::F1, 0x70),
+    (KeyCode::F2, 0x71),
+    (KeyCode::F3, 0x72),
+    (KeyCode::F4, 0x73),
+    (KeyCode::F5, 0x74),
+    (KeyCode::F6, 0x75),
+    (KeyCode::F7, 0x76),
+    (KeyCode::F8, 0x77),
+    (KeyCode::F9, 0x78),
+    (KeyCode::F10, 0x79),
+    (KeyCode::F11, 0x7A),
+    (KeyCode::F12, 0x7B),
+];
 impl KeyboardFrame {
     fn poll(&mut self, focused: bool, read: impl Fn(i32) -> i16) {
         self.down.clear();
         self.pressed.clear();
-        for (key, vk) in [
-            (KeyCode::W, 0x57),
-            (KeyCode::A, 0x41),
-            (KeyCode::S, 0x53),
-            (KeyCode::D, 0x44),
-            (KeyCode::Up, 0x26),
-            (KeyCode::Down, 0x28),
-            (KeyCode::Left, 0x25),
-            (KeyCode::Right, 0x27),
-            (KeyCode::LeftShift, 0xA0),
-            (KeyCode::RightShift, 0xA1),
-            (KeyCode::LeftControl, 0xA2),
-            (KeyCode::C, 0x43),
-            (KeyCode::Space, 0x20),
-            (KeyCode::Enter, 0x0D),
-            (KeyCode::Escape, 0x1B),
-            (KeyCode::F, 0x46),
-            (KeyCode::F11, 0x7A),
-            (KeyCode::F3, 0x72),
-            (KeyCode::F5, 0x74),
-            (KeyCode::F9, 0x78),
-            (KeyCode::Q, 0x51),
-            (KeyCode::E, 0x45),
-            (KeyCode::LeftAlt, 0xA4),
-        ] {
+        for &(key, vk) in KEY_TABLE {
             let value = read(vk) as u16;
             let held = value & 0x8000 != 0;
             let edge = !self.previous.contains(&key) && (held || value & 1 != 0);
@@ -426,5 +489,58 @@ mod keyboard_tests {
             keys.pressed.contains(&KeyCode::E),
             "a complete tap between frames survives"
         );
+    }
+    #[test]
+    fn native_table_covers_every_letter_and_digit() {
+        // Games bind restart to R, tools to digits and letters; a key missing
+        // here is silently never pressed on Windows (the bug behind "R doesn't
+        // restart"), so the full alphanumeric set must stay covered.
+        let keys: std::collections::HashSet<KeyCode> =
+            KEY_TABLE.iter().map(|&(key, _)| key).collect();
+        for key in [
+            KeyCode::A,
+            KeyCode::B,
+            KeyCode::C,
+            KeyCode::D,
+            KeyCode::E,
+            KeyCode::F,
+            KeyCode::G,
+            KeyCode::H,
+            KeyCode::I,
+            KeyCode::J,
+            KeyCode::K,
+            KeyCode::L,
+            KeyCode::M,
+            KeyCode::N,
+            KeyCode::O,
+            KeyCode::P,
+            KeyCode::Q,
+            KeyCode::R,
+            KeyCode::S,
+            KeyCode::T,
+            KeyCode::U,
+            KeyCode::V,
+            KeyCode::W,
+            KeyCode::X,
+            KeyCode::Y,
+            KeyCode::Z,
+            KeyCode::Key0,
+            KeyCode::Key1,
+            KeyCode::Key2,
+            KeyCode::Key3,
+            KeyCode::Key4,
+            KeyCode::Key5,
+            KeyCode::Key6,
+            KeyCode::Key7,
+            KeyCode::Key8,
+            KeyCode::Key9,
+            KeyCode::Tab,
+        ] {
+            assert!(keys.contains(&key), "KEY_TABLE is missing {key:?}");
+        }
+        let vks: Vec<i32> = KEY_TABLE.iter().map(|&(_, vk)| vk).collect();
+        let unique: std::collections::HashSet<i32> = vks.iter().copied().collect();
+        assert_eq!(vks.len(), unique.len(), "duplicate virtual-key code");
+        assert_eq!(keys.len(), vks.len(), "duplicate KeyCode entry");
     }
 }
