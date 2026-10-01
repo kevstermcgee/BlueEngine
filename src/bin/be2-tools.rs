@@ -763,6 +763,39 @@ fn run() -> Result<()> {
                        "signature": format!("{:016x}", signature(&spec)), "files": files})
             );
         }
+        "ambient-music" => {
+            use vesper3d::viewer::devkit::synth::{
+                ambient_loop, peak, rms, wav_bytes, AmbientSpec, RATE,
+            };
+            // OUT.wav [MINUTES] [SEED] [--major]: a seamless, beat-free ambient loop (devkit::synth::
+            // ambient_loop), written as 16-bit PCM WAV. The output path must be new, like every other
+            // generated-file command here; pick a new name to regenerate with different parameters.
+            let out = arg(1)?;
+            let mut spec = AmbientSpec::default();
+            let mut minor_set = false;
+            for extra in &a[2..] {
+                if extra == "--major" {
+                    spec.minor = false;
+                } else if !minor_set {
+                    spec.minutes = extra
+                        .parse()
+                        .map_err(|_| format!("MINUTES must be a number, got '{extra}'"))?;
+                    minor_set = true;
+                } else {
+                    spec.seed = extra
+                        .parse()
+                        .map_err(|_| format!("SEED must be a whole number, got '{extra}'"))?;
+                }
+            }
+            let samples = ambient_loop(&spec);
+            write_new(Path::new(out), &wav_bytes(&samples, RATE))?;
+            println!(
+                "{}",
+                json!({"ok": true, "out": out, "seconds": spec.loop_seconds(),
+                       "minor": spec.minor, "seed": spec.seed,
+                       "peak": peak(&samples), "rms": rms(&samples)})
+            );
+        }
         "save-info" => {
             use vesper3d::viewer::{game::GameDocument, savestate};
             // FILE [GAME_JSON]: read-only. With a game document, also say whether an engine world save

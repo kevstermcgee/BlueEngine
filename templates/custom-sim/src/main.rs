@@ -10,9 +10,13 @@
 mod platform;
 
 use macroquad::prelude::*;
+use std::sync::{Arc, OnceLock};
 use vesper3d::viewer::{
-    devkit::{flag_value, has_flag, parse_size, synth, Juice, Lifecycle, Notice},
-    game_client::{self, GameShell},
+    devkit::{
+        beside_exe, downloads_dir, flag_value, has_flag, parse_size, sanitize_filename, synth,
+        unique_path, Juice, Lifecycle, Notice, Settings,
+    },
+    game_client::{self, AudioMenu, GameShell},
     game_input::ClientInput,
     identity::Identity,
     kit::{self, hud, Batch, Fx, Look, Materials, Rendered, SoundBank, Template, Tint, View},
@@ -63,13 +67,17 @@ const SOUNDS: [synth::Preset; 5] =
 fn sound(preset: synth::Preset) -> usize {
     SOUNDS.iter().position(|p| *p == preset).unwrap_or(0)
 }
-fn render_audio() -> Rendered {
+/// Renders on the worker thread; `music_wav` is filled once so the Settings-screen "Save music" button
+/// can hand the player the exact bytes the stem below plays, without regenerating or hitching.
+fn render_audio(music_wav: Arc<OnceLock<Vec<u8>>>) -> Rendered {
+    let ambient = synth::wav_bytes(&synth::ambient_loop(&synth::AmbientSpec::default()), synth::RATE);
+    let _ = music_wav.set(ambient.clone());
     Rendered {
         sfx: SOUNDS
             .iter()
             .map(|p| (0..p.variants()).map(|v| synth::wav_bytes(&synth::render(*p, v, 7), synth::RATE)).collect())
             .collect(),
-        stems: Vec::new(),
+        stems: vec![ambient],
     }
 }
 
@@ -150,6 +158,42 @@ fn announce(fx: &mut Fx, notice: &Notice) {
     fx.banner(notice.title, notice.detail.clone(), notice.color);
 }
 
+/// Write the currently playing ambient track to the player's Downloads folder as a `.wav`, named after
+/// the game, never overwriting an earlier save of it.
+fn save_music(music_wav: &OnceLock<Vec<u8>>, title: &str) -> Notice {
+    let Some(bytes) = music_wav.get() else {
+        return Notice {
+            title: "NOT READY",
+            detail: "the music is still rendering; try again in a moment".into(),
+            color: [1., 0.7, 0.3],
+            ok: false,
+        };
+    };
+    let Some(dir) = downloads_dir() else {
+        return Notice {
+            title: "SAVE FAILED",
+            detail: "could not find your Downloads folder".into(),
+            color: [1., 0.5, 0.3],
+            ok: false,
+        };
+    };
+    let path = unique_path(&dir, &format!("{} - Ambient Music", sanitize_filename(title)), "wav");
+    match std::fs::create_dir_all(&dir).and_then(|()| std::fs::write(&path, bytes)) {
+        Ok(()) => Notice {
+            title: "MUSIC SAVED",
+            detail: path.display().to_string(),
+            color: [0.4, 0.9, 0.6],
+            ok: true,
+        },
+        Err(error) => Notice {
+            title: "SAVE FAILED",
+            detail: error.to_string(),
+            color: [1., 0.5, 0.3],
+            ok: false,
+        },
+    }
+}
+
 #[macroquad::main(window)]
 async fn main() {
     let args: Vec<String> = std::env::args().collect();
@@ -162,7 +206,17 @@ async fn main() {
     let materials = Materials::load().expect("the materials failed to compile");
     let look = Look::dusk();
     let scene = build_scene();
-    let mut sounds = SoundBank::start(life.options.silent(), 0.9, 0.6, render_audio).await;
+    // Audio settings survive a relaunch next to the exe (devkit::save, ADR 0017's packaging rule
+    // already preserves this file). `music_wav` is filled on the worker thread, once, with exactly the
+    // bytes the music stem below plays, so the Settings screen can save them without regenerating.
+    let settings_path = beside_exe("settings.json");
+    let mut settings = Settings::load(&settings_path);
+    let music_wav: Arc<OnceLock<Vec<u8>>> = Arc::new(OnceLock::new());
+    let mut sounds = SoundBank::start(life.options.silent(), settings.sfx_level(), settings.music_level(), {
+        let music_wav = music_wav.clone();
+        move || render_audio(music_wav)
+    })
+    .await;
     let mut shell = GameShell::new();
     let mut input = ClientInput::new();
     let (mut fx, mut juice) = (Fx::new(seed), Juice::default());
@@ -180,6 +234,7 @@ async fn main() {
         if sounds.ready() {
             sounds.start_music();
         }
+        sounds.update_music(dt, &[1.]);
 
         // 1. Devices in: one frame of held state, press edges and look motion (from the script when there is one).
         let (held, jump, look_delta) = match life.script() {
@@ -288,7 +343,22 @@ async fn main() {
         hud::text_outlined(&sim.score.to_string(), 34. * ui, 70. * ui, 36. * ui, WHITE);
         hud::crosshair(ui, 0., Color::new(1., 1., 1., 0.85));
         let controls: Vec<&str> = identity.controls.split(", ").collect();
-        if shell.local_menu(&identity.title, &controls) {
+        let audio_menu = AudioMenu { music_on: settings.music_on, sfx_on: settings.sfx_on };
+        let outcome = shell.local_menu_with_audio(&identity.title, &controls, audio_menu);
+        if outcome.toggle_music {
+            settings.toggle_music();
+            sounds.music_volume = settings.music_level();
+            settings.store(&settings_path);
+        }
+        if outcome.toggle_sfx {
+            settings.toggle_sfx();
+            sounds.sfx_volume = settings.sfx_level();
+            settings.store(&settings_path);
+        }
+        if outcome.download_music {
+            announce(&mut fx, &save_music(&music_wav, &identity.title));
+        }
+        if outcome.quit {
             break;
         }
 

@@ -87,7 +87,10 @@ pub use playback::{
     flag_value, has_flag, parse_frame_list, parse_size, CapturePlan, Cue, Playback, Timeline,
 };
 pub use rng::Rng;
-pub use save::{beside_exe, load_or_default, store_atomic, Records, Settings};
+pub use save::{
+    beside_exe, downloads_dir, load_or_default, sanitize_filename, store_atomic, unique_path,
+    Records, Settings,
+};
 pub use scale::{
     describe_length, Bounds, DOOR, EYE_HEIGHT, HUMAN_HEIGHT, ONE_HAND_LONGEST, TABLE_HEIGHT,
 };

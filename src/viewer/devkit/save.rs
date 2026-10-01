@@ -54,16 +54,62 @@ pub fn beside_exe(file: &str) -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(file))
 }
 
+/// The player's Downloads folder (`%USERPROFILE%\Downloads` on Windows, `$HOME/Downloads` elsewhere),
+/// or `None` when the home/profile environment variable is unset. A custom XDG `user-dirs.dirs` target
+/// on Linux is not consulted; this is the plain default location on every platform.
+pub fn downloads_dir() -> Option<PathBuf> {
+    let var = if cfg!(windows) { "USERPROFILE" } else { "HOME" };
+    downloads_from(std::env::var_os(var))
+}
+
+fn downloads_from(home: Option<std::ffi::OsString>) -> Option<PathBuf> {
+    home.map(|home| PathBuf::from(home).join("Downloads"))
+}
+
+/// `s` with every character that is not a letter, digit, space, hyphen or underscore removed, trimmed,
+/// and `"download"` substituted for an empty result: a title is safe to use in a filename on every
+/// platform (Windows additionally forbids `:` `/` `\` `*` `?` `"` `<` `>` `|`, all excluded here too).
+pub fn sanitize_filename(s: &str) -> String {
+    let cleaned: String = s
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == ' ' || *c == '-' || *c == '_')
+        .collect();
+    let trimmed = cleaned.trim();
+    if trimmed.is_empty() {
+        "download".to_owned()
+    } else {
+        trimmed.to_owned()
+    }
+}
+
+/// `dir/stem.ext`, or `dir/stem (2).ext`, `dir/stem (3).ext`, ... for the first name that does not
+/// already exist, so a repeated save never overwrites an earlier one (the same convention a browser's
+/// downloads use). Does not create `dir` or the file; `n` is capped at 1000 to guarantee termination.
+pub fn unique_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
+    let first = dir.join(format!("{stem}.{ext}"));
+    if !first.exists() {
+        return first;
+    }
+    (2..1000)
+        .map(|n| dir.join(format!("{stem} ({n}).{ext}")))
+        .find(|path| !path.exists())
+        .unwrap_or(first)
+}
+
 /// The settings almost every action game exposes. Extend it by wrapping it in your own save struct.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
     /// Mouse look multiplier, 0.2-4.
     pub sensitivity: f32,
-    /// Music volume, 0-1.
+    /// Music volume, 0-1, used when `music_on`.
     pub music: f32,
-    /// Sound-effect volume, 0-1.
+    /// Sound-effect volume, 0-1, used when `sfx_on`.
     pub sfx: f32,
+    /// Whether music plays at all; toggling this remembers `music` rather than zeroing it.
+    pub music_on: bool,
+    /// Whether sound effects play at all; toggling this remembers `sfx` rather than zeroing it.
+    pub sfx_on: bool,
     /// Start in fullscreen.
     pub fullscreen: bool,
 }
@@ -74,6 +120,8 @@ impl Default for Settings {
             sensitivity: 1.,
             music: 0.6,
             sfx: 0.9,
+            music_on: true,
+            sfx_on: true,
             fullscreen: false,
         }
     }
@@ -94,6 +142,33 @@ impl Settings {
         self.music = fix(self.music, 0., 1., d.music);
         self.sfx = fix(self.sfx, 0., 1., d.sfx);
         self
+    }
+    /// The volume to actually play music at: `music` when `music_on`, else 0. Hand this straight to
+    /// `SoundBank::start`/`music_volume`; a toggle survives a relaunch because `music` itself is untouched.
+    pub fn music_level(&self) -> f32 {
+        if self.music_on {
+            self.music
+        } else {
+            0.
+        }
+    }
+    /// The volume to actually play sound effects at: `sfx` when `sfx_on`, else 0.
+    pub fn sfx_level(&self) -> f32 {
+        if self.sfx_on {
+            self.sfx
+        } else {
+            0.
+        }
+    }
+    /// Flip whether music plays. Does not persist; call [`Settings::store`] afterwards.
+    pub fn toggle_music(&mut self) -> bool {
+        self.music_on = !self.music_on;
+        self.music_on
+    }
+    /// Flip whether sound effects play. Does not persist; call [`Settings::store`] afterwards.
+    pub fn toggle_sfx(&mut self) -> bool {
+        self.sfx_on = !self.sfx_on;
+        self.sfx_on
     }
     /// Load and sanitise (missing or corrupt file: defaults).
     pub fn load(path: &Path) -> Self {
@@ -213,6 +288,44 @@ mod tests {
     }
 
     #[test]
+    fn toggles_flip_and_remember_the_underlying_volume() {
+        let mut s = Settings::default();
+        assert_eq!((s.music_level(), s.sfx_level()), (s.music, s.sfx));
+        assert!(!s.toggle_music());
+        assert_eq!(s.music_level(), 0., "off plays silent");
+        assert_eq!(
+            s.music, 0.6,
+            "the remembered volume is untouched by toggling"
+        );
+        assert!(s.toggle_music());
+        assert_eq!(
+            s.music_level(),
+            0.6,
+            "toggling back on restores the remembered volume"
+        );
+        assert!(!s.toggle_sfx());
+        assert_eq!(s.sfx_level(), 0.);
+        assert_eq!(s.music_level(), 0.6, "the two toggles are independent");
+    }
+
+    #[test]
+    fn a_settings_file_from_before_toggles_existed_still_loads_as_on() {
+        let path = temp("pre-toggle.json");
+        std::fs::write(
+            &path,
+            r#"{"sensitivity":1.0,"music":0.6,"sfx":0.9,"fullscreen":false}"#,
+        )
+        .unwrap();
+        let s = Settings::load(&path);
+        assert!(
+            s.music_on && s.sfx_on,
+            "missing keys default to on, not off"
+        );
+        assert_eq!((s.music_level(), s.sfx_level()), (0.6, 0.9));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
     fn records_only_beat_when_higher_and_are_kept_per_mode() {
         let mut r = Records::default();
         assert!(r.record("normal", 100));
@@ -223,6 +336,36 @@ mod tests {
             (r.best("normal"), r.best("easy"), r.best("hard"), r.runs),
             (100, 10, 0, 4)
         );
+    }
+
+    #[test]
+    fn sanitize_filename_keeps_safe_characters_and_never_returns_empty() {
+        assert_eq!(sanitize_filename("Spooky Kart"), "Spooky Kart");
+        assert_eq!(sanitize_filename("Foo/Bar:Baz*?\"<>|"), "FooBarBaz");
+        assert_eq!(sanitize_filename("  padded  "), "padded");
+        assert_eq!(sanitize_filename(":::"), "download");
+        assert_eq!(sanitize_filename(""), "download");
+    }
+
+    #[test]
+    fn unique_path_avoids_existing_files_and_numbers_from_two() {
+        let dir = temp("unique").with_extension("");
+        std::fs::create_dir_all(&dir).unwrap();
+        assert_eq!(unique_path(&dir, "track", "wav"), dir.join("track.wav"));
+        std::fs::write(dir.join("track.wav"), b"a").unwrap();
+        assert_eq!(unique_path(&dir, "track", "wav"), dir.join("track (2).wav"));
+        std::fs::write(dir.join("track (2).wav"), b"b").unwrap();
+        assert_eq!(unique_path(&dir, "track", "wav"), dir.join("track (3).wav"));
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    #[test]
+    fn downloads_dir_joins_home_and_is_none_without_it() {
+        assert_eq!(
+            downloads_from(Some("/home/alice".into())),
+            Some(PathBuf::from("/home/alice/Downloads"))
+        );
+        assert_eq!(downloads_from(None), None);
     }
 
     #[test]

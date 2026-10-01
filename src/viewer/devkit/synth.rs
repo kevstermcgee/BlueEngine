@@ -14,6 +14,8 @@
 //!   ends click-free and sets the peak.
 //! * [`music_loop`] renders a seamless looping backing track as three stems. It is a starting point that
 //!   was checked by measurement (see the tests), not by ear: keep it or replace it with real music.
+//! * [`ambient_loop`] renders a seamless, beat-free pad-and-air loop for background listening (sleep,
+//!   focus, a menu) instead of a song; `be2-tools ambient-music OUT.wav` writes one straight to a file.
 //! * [`wav_bytes`], [`wav_bytes_stereo`] and [`parse_wav`] convert between samples and 16-bit PCM WAV.
 //!
 //! Everything is deterministic: the same arguments give the same samples on the same platform. (The
@@ -2071,6 +2073,163 @@ pub fn music_loop(spec: &MusicSpec) -> Stems {
     }
 }
 
+// ------------------------------------------------------------------------------------- ambient
+
+/// Parameters for a seamless, calm pad-and-air loop: no beat, no lead, meant for background listening
+/// (sleep, focus, a menu) rather than a song. See [`ambient_loop`].
+#[derive(Clone, Debug, PartialEq)]
+pub struct AmbientSpec {
+    /// Length of the loop in minutes, clamped to 0.5 to 10. `SoundBank` plays a stem on an endless
+    /// loop, so a short, well-looped track reads the same as a long one.
+    pub minutes: f32,
+    /// The tonic as a MIDI note number; only its pitch class matters.
+    pub root_midi: u8,
+    /// Natural minor when true, major when false. Minor tends to read as more melancholy/ambient.
+    pub minor: bool,
+    /// How many chords the loop holds, clamped 2 to 8. Fewer means longer, stiller chords.
+    pub chords: usize,
+    /// 0 (dark and close) to 1 (airy and open): the pad's filter cutoff and the loudness of the soft
+    /// air/chime layer.
+    pub brightness: f32,
+    /// Picks the chord progression, the sparse high chimes and nothing else: two specs that differ
+    /// only here still share the same chord progression's shape.
+    pub seed: u64,
+}
+
+impl Default for AmbientSpec {
+    fn default() -> Self {
+        Self {
+            minutes: 2.,
+            root_midi: 57,
+            minor: true,
+            chords: 4,
+            brightness: 0.4,
+            seed: 1,
+        }
+    }
+}
+
+impl AmbientSpec {
+    fn clamped(&self) -> (f32, usize, f32) {
+        let minutes = if self.minutes.is_finite() {
+            self.minutes.clamp(0.5, 10.)
+        } else {
+            2.
+        };
+        let brightness = if self.brightness.is_finite() {
+            self.brightness.clamp(0., 1.)
+        } else {
+            0.4
+        };
+        (minutes, self.chords.clamp(2, 8), brightness)
+    }
+
+    /// Length of the whole loop in seconds (after clamping). Example: 2 minutes is `120.0`.
+    pub fn loop_seconds(&self) -> f32 {
+        self.clamped().0 * 60.
+    }
+}
+
+/// A warm, slow pad voice: a tone and its lower octave, each as two slightly detuned triangles,
+/// through a lowpass that breathes with a slow LFO. `env(t)` shapes the whole voice (a long attack and
+/// a long release, so successive chords crossfade rather than cut).
+fn pad_voice(dur: f32, tone_hz: f32, cutoff_hz: f32, env: impl Fn(f32) -> f32) -> Vec<f32> {
+    let mut mixed = vec![0f32; n_samples(dur)];
+    for (octave, gain) in [(0.5, 0.5), (1.0, 0.35)] {
+        for detune in [-0.0035, 0.0035] {
+            let hz = tone_hz * octave * (1. + detune);
+            for (d, v) in mixed.iter_mut().zip(osc(dur, |_| hz, triangle)) {
+                *d += v * gain;
+            }
+        }
+    }
+    let breathing = filter(
+        &mixed,
+        FilterKind::Low,
+        |t| cutoff_hz * (1. + 0.18 * (TAU * t / 23.).sin()),
+        0.8,
+    );
+    shape(breathing, env)
+}
+
+/// Render a seamless ambient background loop: held pads over [`AmbientSpec::chords`] chords with slow
+/// attacks and long overlapping releases (each crossfades into the next, wrapping), a lowpass that
+/// breathes slowly, a soft filtered-noise air bed, and a few sparse high chimes. No beat, no lead.
+/// Deterministic in `spec`. It is a starting point checked by measurement (see the tests), not by ear:
+/// keep it, parameterise it per game, or replace it with recorded music.
+/// Example: `ambient_loop(&AmbientSpec::default())`.
+pub fn ambient_loop(spec: &AmbientSpec) -> Vec<f32> {
+    let (minutes, chord_count, brightness) = spec.clamped();
+    let total_seconds = minutes * 60.;
+    let total = n_samples(total_seconds);
+    let mut rng = Rng::new(spec.seed);
+    let scale = scale_of(spec.minor);
+    let progressions = if spec.minor {
+        &MINOR_PROGRESSIONS
+    } else {
+        &MAJOR_PROGRESSIONS
+    };
+    let progression = progressions[rng.below(4)];
+    let tonic = i32::from(spec.root_midi % 12);
+    let chord_len = total_seconds / chord_count as f32;
+    // Each voice runs past its slot and wraps, so one chord's release crossfades into the next.
+    let overlap = (chord_len * 0.6).min(6.);
+    let cutoff = 350. + 2600. * brightness;
+
+    let mut mix = Mix::with_len(total);
+    for i in 0..chord_count {
+        let chord = Chord::new(scale, tonic, progression[i % 4]);
+        let voice_len = chord_len + overlap;
+        let attack = (chord_len * 0.4).min(5.);
+        let env = move |t: f32| {
+            (t / attack).min(1.)
+                * if t > chord_len {
+                    decay(t - chord_len, overlap * 0.5)
+                } else {
+                    1.
+                }
+        };
+        for &tone in &chord.tones {
+            let voice = pad_voice(voice_len, midi(tone), cutoff, env);
+            mix.add_wrapped(i as f32 * chord_len, &voice, 0.11);
+        }
+        mix.add_wrapped(
+            i as f32 * chord_len,
+            &pad_voice(voice_len, midi(chord.bass), cutoff * 0.6, env),
+            0.16,
+        );
+        // A sparse, quiet high chime: at most one per chord, more likely as the loop gets brighter.
+        if rng.chance(0.35 + 0.3 * brightness) {
+            let tone = *rng.pick(&chord.tones).unwrap_or(&chord.tones[0]);
+            let at = i as f32 * chord_len + rng.range(chord_len * 0.15, chord_len * 0.85);
+            let chime = bell(
+                2.5,
+                midi(tone + 24.),
+                &[(1., 1.6, 1.), (2.0, 1.0, 0.4), (3.0, 0.7, 0.2)],
+            );
+            mix.add_wrapped(at, &chime, 0.04 + 0.05 * brightness);
+        }
+    }
+    // A continuous soft air bed under everything, slowly amplitude-modulated so it never reads as a
+    // static hiss.
+    let air = bandpass(
+        &noise(total_seconds, &mut rng),
+        500. + 3000. * brightness,
+        0.9,
+    );
+    let air_period = (total_seconds / 3.).max(4.);
+    let air: Vec<f32> = air
+        .iter()
+        .enumerate()
+        .map(|(i, v)| v * (0.6 + 0.4 * (TAU * i as f32 / SR / air_period).sin()))
+        .collect();
+    mix.add(0., &air, 0.015 + 0.02 * brightness);
+
+    let mut v = mix.into_vec();
+    soft_clip(&mut v, 1.1);
+    finish(v, 0.45, 60.)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -3392,6 +3551,118 @@ mod tests {
                 "{name}: seam step {seam} vs local steps {local}"
             );
         }
+    }
+
+    fn short_ambient() -> AmbientSpec {
+        AmbientSpec {
+            minutes: 0.5,
+            chords: 2,
+            ..AmbientSpec::default()
+        }
+    }
+
+    #[test]
+    fn ambient_is_deterministic_and_loop_seconds_matches_render_length() {
+        let spec = short_ambient();
+        let a = ambient_loop(&spec);
+        let b = ambient_loop(&spec);
+        assert_eq!(a, b, "same spec, same samples");
+        assert_eq!(a.len(), n_samples(spec.loop_seconds()));
+        let mut different = spec.clone();
+        different.seed = 2;
+        assert_ne!(
+            a,
+            ambient_loop(&different),
+            "a different seed changes the render"
+        );
+    }
+
+    #[test]
+    fn ambient_clamps_degenerate_input() {
+        let wild = AmbientSpec {
+            minutes: f32::NAN,
+            chords: 0,
+            brightness: f32::INFINITY,
+            ..AmbientSpec::default()
+        };
+        assert_eq!(wild.loop_seconds(), 120.);
+        let rendered = ambient_loop(&wild);
+        assert!(rendered.iter().all(|x| x.is_finite()));
+        assert!(peak(&rendered) <= 1.0001);
+        let long = AmbientSpec {
+            minutes: 999.,
+            ..AmbientSpec::default()
+        };
+        assert_eq!(
+            long.loop_seconds(),
+            600.,
+            "clamped to the ten-minute buffer cap"
+        );
+    }
+
+    #[test]
+    fn ambient_loops_without_a_seam() {
+        let s = ambient_loop(&short_ambient());
+        let n = s.len();
+        let seam = (s[n - 1] - s[0]).abs();
+        let step = |a: &[f32]| {
+            a.windows(2)
+                .map(|w| (w[1] - w[0]).abs())
+                .fold(0f32, f32::max)
+        };
+        let typical = s.windows(2).map(|w| (w[1] - w[0]).abs()).sum::<f32>() / (n - 1) as f32;
+        let local = step(&s[n - 2000..]).max(step(&s[..2000]));
+        assert!(
+            seam <= 3. * typical.max(1e-4),
+            "seam step {seam} vs typical step {typical}"
+        );
+        assert!(
+            seam <= 3. * local + 0.002,
+            "seam step {seam} vs local steps {local}"
+        );
+    }
+
+    #[test]
+    fn ambient_is_soft_and_has_no_sharp_beat_like_the_dance_loop() {
+        let ambient = ambient_loop(&short_ambient());
+        assert!(
+            peak(&ambient) <= 0.46,
+            "a soft loop should not approach full scale: peak {}",
+            peak(&ambient)
+        );
+        assert!(
+            rms(&ambient) > 0.03,
+            "a soft loop should still be audible, not near silence: {}",
+            rms(&ambient)
+        );
+        // No beat means no strong periodicity at a plausible tempo in the low end, unlike the dance
+        // loop's four-on-the-floor kick, which the same measure finds strongly periodic.
+        let (_, ambient_strength) = envelope_period(&ambient, n_samples(0.2), n_samples(2.0));
+        let (_, beat_strength) = envelope_period(&full_loop().base, n_samples(0.2), n_samples(2.0));
+        assert!(
+            ambient_strength < 0.5,
+            "ambient low end should not pulse at a steady beat: {ambient_strength}"
+        );
+        assert!(
+            beat_strength > 0.5,
+            "sanity: the dance loop's own kick should register as periodic: {beat_strength}"
+        );
+    }
+
+    #[test]
+    fn ambient_brightness_moves_the_spectrum_without_changing_the_chords() {
+        let dark = AmbientSpec {
+            brightness: 0.,
+            ..short_ambient()
+        };
+        let bright = AmbientSpec {
+            brightness: 1.,
+            ..short_ambient()
+        };
+        assert!(
+            spectral_centroid(&ambient_loop(&dark)) < spectral_centroid(&ambient_loop(&bright)),
+            "brightness should raise the spectral centroid"
+        );
     }
 
     /// Lag in samples and value of the strongest circular autocorrelation peak of the low-end envelope

@@ -134,6 +134,27 @@ impl ShellActions {
         }
     }
 }
+/// What the settings screen shows: whether music/sound effects currently play. The shell owns no
+/// volume or persistence; the game supplies this each frame and acts on the returned [`MenuOutcome`].
+#[derive(Clone, Copy, Default)]
+pub struct AudioMenu {
+    pub music_on: bool,
+    pub sfx_on: bool,
+}
+/// What the player did with [`GameShell::local_menu_with_audio`] this frame. At most the fields that
+/// actually changed are set; a game applies each one it cares about and persists what it changes.
+#[derive(Clone, Copy, Default)]
+pub struct MenuOutcome {
+    /// The player chose Quit.
+    pub quit: bool,
+    /// The player clicked the music toggle; flip the setting and re-apply its volume.
+    pub toggle_music: bool,
+    /// The player clicked the sound toggle; flip the setting and re-apply its volume.
+    pub toggle_sfx: bool,
+    /// The player clicked "Save music"; write the current track to a file (see
+    /// [`super::devkit::downloads_dir`]) and tell them whether it worked.
+    pub download_music: bool,
+}
 pub struct GameShell {
     pub paused: bool,
     pub fullscreen: bool,
@@ -142,6 +163,7 @@ pub struct GameShell {
     focus: Focus,
     captured: bool,
     controls: bool,
+    settings_screen: bool,
     selection: usize,
     suppress: bool,
     actions: ShellActions,
@@ -161,6 +183,7 @@ impl GameShell {
             focus: Focus { active: true },
             captured: false,
             controls: false,
+            settings_screen: false,
             selection: 0,
             suppress: false,
             actions: ShellActions::default(),
@@ -202,6 +225,7 @@ impl GameShell {
         if self.focus.active && self.actions.pause {
             self.paused = !self.paused;
             self.controls = false;
+            self.settings_screen = false;
             self.suppress = true;
         }
         if self.actions.diagnostics {
@@ -229,6 +253,7 @@ impl GameShell {
             focus: Focus { active: true },
             captured,
             controls: false,
+            settings_screen: false,
             selection: 0,
             suppress,
             actions: ShellActions::default(),
@@ -255,6 +280,139 @@ impl GameShell {
     /// Shared pause menu for an application that pauses its local simulation.
     pub fn local_menu(&mut self, title: &str, controls: &[&str]) -> bool {
         self.menu_with_status(title, controls, "MENU  /  LOCAL SESSION PAUSED")
+    }
+    /// [`GameShell::local_menu`] with a fourth entry, Settings: music/sound toggles and a "Save music"
+    /// button (a drawn arrow, not a font glyph, so no font needs the glyph). The shell draws and reads
+    /// clicks; it owns no audio state itself, so any game can use this without a dependency on
+    /// `devkit::save` or `kit::audio` from this module.
+    pub fn local_menu_with_audio(
+        &mut self,
+        title: &str,
+        controls: &[&str],
+        audio: AudioMenu,
+    ) -> MenuOutcome {
+        self.menu_with_status_and_audio(title, controls, "MENU  /  LOCAL SESSION PAUSED", audio)
+    }
+    fn menu_with_status_and_audio(
+        &mut self,
+        title: &str,
+        controls: &[&str],
+        status: &str,
+        audio: AudioMenu,
+    ) -> MenuOutcome {
+        let mut outcome = MenuOutcome::default();
+        if !self.paused {
+            return outcome;
+        }
+        set_default_camera();
+        let w = screen_width();
+        let h = screen_height();
+        draw_rectangle(0., 0., w, h, Color::from_rgba(8, 18, 26, 130));
+        let scale = (w / 700.).min(h / 520.).min(1.0);
+        let pw = 420. * scale;
+        let ph = (if self.controls || self.settings_screen {
+            360.
+        } else {
+            376.
+        }) * scale;
+        let x = (w - pw) * 0.5;
+        let y = (h - ph) * 0.5;
+        let ink = Color::from_rgba(24, 43, 53, 255);
+        draw_rectangle(x, y, pw, ph, Color::from_rgba(243, 242, 232, 250));
+        draw_text(title, x + 28. * scale, y + 43. * scale, 29. * scale, ink);
+        draw_text(status, x + 28. * scale, y + 68. * scale, 14. * scale, ink);
+        if self.controls {
+            for (i, line) in controls.iter().enumerate() {
+                draw_text(
+                    line,
+                    x + 28. * scale,
+                    y + (108. + i as f32 * 26.) * scale,
+                    18. * scale,
+                    ink,
+                );
+            }
+            if self.button(
+                "Back",
+                x + 24. * scale,
+                y + ph - 64. * scale,
+                pw - 48. * scale,
+                42. * scale,
+                true,
+            ) || self.actions.accept
+            {
+                self.controls = false;
+                self.suppress = true;
+            }
+        } else if self.settings_screen {
+            let row = |i: f32| y + (108. + i * 54.) * scale;
+            let (bw, bh) = (pw - 48. * scale, 42. * scale);
+            let music_label = if audio.music_on {
+                "Music: On"
+            } else {
+                "Music: Off"
+            };
+            if self.button(music_label, x + 24. * scale, row(0.), bw, bh, false) {
+                outcome.toggle_music = true;
+                self.suppress = true;
+            }
+            let sfx_label = if audio.sfx_on {
+                "Sound: On"
+            } else {
+                "Sound: Off"
+            };
+            if self.button(sfx_label, x + 24. * scale, row(1.), bw, bh, false) {
+                outcome.toggle_sfx = true;
+                self.suppress = true;
+            }
+            let (dx, dy) = (x + 24. * scale, row(2.));
+            if self.button("Save music (.wav)", dx, dy, bw, bh, false) {
+                outcome.download_music = true;
+                self.suppress = true;
+            }
+            draw_download_arrow(dx + bw - 30. * scale, dy + bh * 0.5, 8. * scale);
+            if self.button(
+                "Back",
+                x + 24. * scale,
+                y + ph - 64. * scale,
+                pw - 48. * scale,
+                42. * scale,
+                true,
+            ) || self.actions.accept
+            {
+                self.settings_screen = false;
+                self.suppress = true;
+            }
+        } else {
+            if self.actions.next {
+                self.selection = (self.selection + 1) % 4;
+            }
+            if self.actions.previous {
+                self.selection = (self.selection + 3) % 4;
+            }
+            for (i, label) in ["Resume", "Controls", "Settings", "Quit game"]
+                .iter()
+                .enumerate()
+            {
+                let clicked = self.button(
+                    label,
+                    x + 24. * scale,
+                    y + (94. + i as f32 * 57.) * scale,
+                    pw - 48. * scale,
+                    46. * scale,
+                    self.selection == i,
+                );
+                if clicked || (self.selection == i && self.actions.accept) {
+                    self.suppress = true;
+                    match i {
+                        0 => self.paused = false,
+                        1 => self.controls = true,
+                        2 => self.settings_screen = true,
+                        _ => outcome.quit = true,
+                    }
+                }
+            }
+        }
+        outcome
     }
     fn menu_with_status(&mut self, title: &str, controls: &[&str], status: &str) -> bool {
         if !self.paused {
@@ -350,6 +508,19 @@ impl GameShell {
         );
         hover && is_mouse_button_pressed(MouseButton::Left)
     }
+}
+
+/// A small drawn download icon (a stem over a downward arrowhead) at `size` scale centred on
+/// `(cx, cy)`: no font glyph needs to exist for it, so it renders identically on every platform.
+fn draw_download_arrow(cx: f32, cy: f32, size: f32) {
+    let ink = Color::from_rgba(24, 43, 53, 255);
+    draw_line(cx, cy - size, cx, cy + size * 0.15, size * 0.3, ink);
+    draw_triangle(
+        vec2(cx - size * 0.75, cy),
+        vec2(cx + size * 0.75, cy),
+        vec2(cx, cy + size),
+        ink,
+    );
 }
 
 /// Both key layouts normalize diagonals in the shared movement controller.
