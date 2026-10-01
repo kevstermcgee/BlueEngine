@@ -30,7 +30,9 @@ Random numbers: `Rng::new(seed)`: `range(lo,hi)`, `below(n)`, `chance(p)`, `sign
 ## Devices (`game_input::ClientInput`, `game_client::GameShell`, `gamepad`)
 
 `input.begin_frame_with_keyboard(&mut shell, capture_cursor, focused, platform::keyboard())`,
-`input.pressed(KeyCode::X)` (edge), `input.down(KeyCode::X)` (held), `input.movement(&shell)` (WASD/arrows/stick →
+`input.pressed(KeyCode::X)` (edge), `input.down(KeyCode::X)` (held). The native Windows reader covers all letters,
+digits, F-keys, modifiers, navigation and common punctuation (`game_input::KEY_TABLE`); a `KeyCode` outside that
+table reads as never pressed on Windows. `input.movement(&shell)` (WASD/arrows/stick →
 forward, right, sprint, jump edge), `input.look_delta_with(&shell, dt)`, `input.menu_step()` (`MenuStep { up, down, left,
 right }`), `input.menu_select()`, `input.menu_back()`, `input.gamepad()` → `GamepadFrame { left_stick, right_stick,
 triggers: [left, right], down(Button), pressed(Button) }`. `gilrs` buttons are positional: `Button::South` = A,
