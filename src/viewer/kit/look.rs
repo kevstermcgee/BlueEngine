@@ -2,12 +2,13 @@
 //!
 //! The stock material (`mesh::material`) is tuned for baked house interiors. A game whose look is
 //! neon, a desert or a night sky wants its own light, fog and glow, and the smallest way to get them is
-//! four ready-made materials driven by one plain-data [`Look`]:
+//! five ready-made materials driven by one plain-data [`Look`]:
 //!
 //! | Material | Use |
 //! |---|---|
-//! | `world` | opaque, lit by a hemisphere ambient, one key light and a rim, glow, tone-mapped, fogged |
-//! | `fx_alpha` | translucent surfaces that do not write depth (shadows blobs, glass, halos); **never depth-tested either**, see below |
+//! | `world` | opaque, lit by a hemisphere ambient, one key light and a rim, glow, tone-mapped, fogged; the key light can be shadowed by a [`ShadowMap`](super::ShadowMap) |
+//! | `decal` | translucent flat geometry that **is** depth-tested (contact shadow blobs, tyre marks, scorch): see [`Batch::blob`](super::Batch::blob) |
+//! | `fx_alpha` | translucent surfaces that do not write depth (glass, halos, haze); **never depth-tested either**, see below |
 //! | `fx_add` | additive glow: sparks, beams, shockwaves; likewise never depth-tested |
 //! | `sky` | unlit vertex-coloured dome, drawn first without depth |
 //!
@@ -15,10 +16,11 @@
 //! `depth_write: false`, but miniquad 0.4.8 (`src/graphics/gl.rs`, `apply_pipeline`, around line 1303) only
 //! enables `GL_DEPTH_TEST` when `depth_write` is true and otherwise calls `glDisable(GL_DEPTH_TEST)`, so the
 //! requested comparison is silently ignored. Everything drawn with these two materials lands on top of the
-//! opaque world, whatever stands in front of it: a glow, a shadow blob or a pane of glass behind a wall is
-//! visible through the wall. Until the kit has a depth-tested translucent path, keep such geometry from
-//! being occluded (fade it with distance, cull it yourself, or draw it with `world` and a baked alpha
-//! cut-out instead).
+//! opaque world, whatever stands in front of it: a glow or a pane of glass behind a wall is visible through
+//! the wall. Keep such geometry from being occluded (fade it with distance, cull it yourself). **Contact
+//! shadow blobs and other flat marks on the ground go through `decal` instead**, the one translucent
+//! material that is depth-tested (it must write depth to be tested, and it carries its own clip-space depth
+//! bias because miniquad's polygon offset is dead too; see ADR 0036).
 //!
 //! Geometry comes from [`Template`](super::Template)/[`Batch`](super::Batch) (vertex `uv.x` is glow,
 //! `normal.xyz` the normal) or from `mesh::bake_with` for a static world.
@@ -258,6 +260,23 @@ void main() {
 }
 "#;
 
+/// How far `decal` pulls its geometry towards the camera, in NDC depth: 8 quanta of a 24-bit buffer
+/// (2^-23 each). Because the shift is in clip space, the world-space equivalent grows with the square of the
+/// distance exactly as the depth buffer's own resolution does ([`depth_resolution`]
+/// (super::lint::depth_resolution)), so a decal wins against a coplanar surface at 5 m and at 700 m alike
+/// while staying a few millimetres at close range.
+pub const DECAL_DEPTH_BIAS: f32 = 8. / 8_388_608.;
+
+pub(super) fn decal_vertex_source() -> String {
+    WORLD_VERTEX.replace(
+        "gl_Position = Projection * wp;",
+        &format!(
+            "gl_Position = Projection * wp;\n    gl_Position.z -= {:e} * gl_Position.w;",
+            DECAL_DEPTH_BIAS
+        ),
+    )
+}
+
 const FX_FRAGMENT: &str = r#"#version 100
 precision highp float;
 varying lowp vec4 vcolor;
@@ -349,12 +368,16 @@ fn additive_blend() -> Option<BlendState> {
     ))
 }
 
-/// The four materials. Load once after the window exists (`Materials::load()` needs the GL context),
-/// then each frame call [`Materials::set_scene`] and draw in this order: sky, world, `fx_alpha`,
-/// `fx_add`, each with `gl_use_material(&materials.world)` and so on.
+/// The five materials. Load once after the window exists (`Materials::load()` needs the GL context),
+/// then each frame call [`Materials::set_scene`] and draw in this order: sky, world (static), `decal`,
+/// world (dynamic actors), `fx_alpha`, `fx_add`, each with `gl_use_material(&materials.world)` and so on.
 pub struct Materials {
     /// Opaque, lit, fogged geometry.
     pub world: Material,
+    /// Alpha-blended flat geometry that is depth-tested *and* depth-writing, with a clip-space depth bias so
+    /// it wins against the coplanar ground (contact shadow blobs, marks). Draw it after the static world and
+    /// before the dynamic actors. Uses the same fog as `fx_alpha`; not lit.
+    pub decal: Material,
     /// Blended geometry that does not write depth, for translucent surfaces. It is also **not depth-tested**
     /// (miniquad ignores `depth_test` when `depth_write` is false), so nearer opaque geometry does not hide it:
     /// see the module documentation.
@@ -403,6 +426,24 @@ impl Materials {
                 },
             )
         };
+        let decal_source = decal_vertex_source();
+        let decal = load_material(
+            ShaderSource::Glsl {
+                vertex: &decal_source,
+                fragment: FX_FRAGMENT,
+            },
+            MaterialParams {
+                pipeline_params: PipelineParams {
+                    // depth_write must be true or miniquad turns the depth test off (see module docs).
+                    depth_test: Comparison::LessOrEqual,
+                    depth_write: true,
+                    color_blend: alpha_blend(),
+                    ..Default::default()
+                },
+                uniforms: uniforms(Some(&FX_UNIFORMS)),
+                ..Default::default()
+            },
+        )?;
         let sky = load_material(
             ShaderSource::Glsl {
                 vertex: SKY_VERTEX,
@@ -422,6 +463,7 @@ impl Materials {
             world,
             fx_alpha: fx(alpha_blend())?,
             fx_add: fx(additive_blend())?,
+            decal,
             sky,
         })
     }
@@ -467,7 +509,7 @@ impl Materials {
     /// Per-frame scene constants for the world and effect materials: the camera `eye`, `time` in
     /// seconds, a `pulse` (0-1) that brightens glowing surfaces (a beat, a charge-up) and the [`Look`].
     pub fn set_scene(&self, look: &Look, eye: Vec3, time: f32, pulse: f32) {
-        for m in [&self.world, &self.fx_alpha, &self.fx_add] {
+        for m in [&self.world, &self.decal, &self.fx_alpha, &self.fx_add] {
             m.set_uniform("Eye", eye);
             m.set_uniform("Env", vec4(pulse, time, look.fog_density, look.exposure));
             m.set_uniform("FogColor", Vec3::from(look.fog_color));

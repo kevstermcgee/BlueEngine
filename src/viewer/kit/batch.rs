@@ -513,6 +513,36 @@ impl Tint {
     }
 }
 
+/// Sides of the blob disc: enough that a 3 m blob under a close camera still reads as round.
+const BLOB_SIDES: usize = 20;
+/// Radii (fractions of the blob radius) of the rings of the unit blob, and its opacity at each: the
+/// profile `(1 - x^2)^2`, a soft bell with no visible edge.
+const BLOB_RINGS: [f32; 6] = [0., 0.35, 0.6, 0.8, 0.93, 1.];
+
+/// The unit blob (radius 1, opacity 1 at the middle, on y = 0), built once.
+pub(super) fn blob_template() -> &'static Template {
+    static BLOB: std::sync::OnceLock<Template> = std::sync::OnceLock::new();
+    BLOB.get_or_init(|| {
+        let mut t = Template::new();
+        let dark = [0.02, 0.015, 0.03];
+        let alpha = |r: f32| (1. - r * r) * (1. - r * r);
+        for pair in BLOB_RINGS.windows(2) {
+            t.soft_ring(
+                Vec3::ZERO,
+                pair[0],
+                pair[1],
+                dark,
+                alpha(pair[0]),
+                dark,
+                alpha(pair[1]),
+                0.,
+                BLOB_SIDES,
+            );
+        }
+        t
+    })
+}
+
 fn to_u8(x: f32) -> u8 {
     (x.clamp(0., 1.) * 255.).round() as u8
 }
@@ -605,6 +635,25 @@ impl Batch {
             mesh.vertices.push(vert);
         }
         mesh.indices.extend(t.idx.iter().map(|i| i + base));
+    }
+
+    /// A soft dark disc lying flat on the ground at `center` (world space): a contact shadow. `radius` is the
+    /// full extent where it fades to nothing, `strength` (0-1) the darkness at the middle. Draw the batch
+    /// with [`Materials::decal`](super::Materials::decal), after the static world and before the dynamic
+    /// actors: `decal` is depth-tested (walls hide it, actors cover it) and carries its own depth bias, so
+    /// `center` can sit exactly on the surface. Non-finite or non-positive input adds nothing. For a game
+    /// with a ground height function and fading with height, use [`Shadows::blob`](super::Shadows::blob).
+    pub fn blob(&mut self, center: Vec3, radius: f32, strength: f32) {
+        if !(center.is_finite() && radius.is_finite() && radius > 0. && strength.is_finite()) {
+            return;
+        }
+        let strength = strength.clamp(0., 1.);
+        if strength <= 0. {
+            return;
+        }
+        let transform =
+            Mat4::from_scale_rotation_translation(Vec3::splat(radius), Quat::IDENTITY, center);
+        self.add(blob_template(), transform, Tint::alpha(strength));
     }
 
     /// A camera-facing quad of `w` x `h` centred on `center`, spanned by the camera's `right` and `up`

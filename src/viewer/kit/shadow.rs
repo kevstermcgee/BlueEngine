@@ -40,7 +40,9 @@
 //! ```
 use macroquad::{camera::Camera, prelude::*, texture::RenderPass};
 
-use super::look::{Look, Materials, WORLD_FRAGMENT};
+use super::batch::Batch;
+use super::look::{Look, Materials};
+use crate::viewer::devkit::ShadowQuality;
 
 /// Smallest and largest shadow map side, in texels.
 pub const MIN_RESOLUTION: u32 = 256;
@@ -356,6 +358,190 @@ impl ShadowMap {
     }
 }
 
+/// How a blob shrinks as its caster rises: gone at this many radii above the ground.
+pub const BLOB_FADE_RADII: f32 = 4.;
+/// Highest strength of a blob at ground contact.
+pub const BLOB_STRENGTH: f32 = 0.65;
+/// How far below the ground a caster may sink before its blob is dropped (metres): a wheel in a rut keeps
+/// its blob, a caster that fell through the floor does not leave a stain on top of it.
+const BLOB_SINK: f32 = 0.5;
+/// How high above the ground a blob sits, metres. The decal's own depth bias does the real work; this only
+/// keeps it clear of float noise on a slightly uneven ground.
+const BLOB_LIFT: f32 = 0.004;
+
+/// The blob for something `height` metres above the ground: its radius and strength, or `None` when it
+/// should not be drawn (non-finite, sunk through the ground, or too high to cast a contact shadow).
+/// Strength falls off with the square of the height and the blob widens slightly: a soft contact shadow
+/// for a hovering or jumping thing.
+pub fn blob_for_height(radius: f32, height: f32, strength: f32) -> Option<(f32, f32)> {
+    if !(radius.is_finite() && radius > 0. && height.is_finite() && strength.is_finite()) {
+        return None;
+    }
+    if height < -BLOB_SINK {
+        return None;
+    }
+    let t = (height.max(0.) / (radius * BLOB_FADE_RADII)).clamp(0., 1.);
+    if t >= 1. {
+        return None;
+    }
+    Some((
+        radius * (1. + 0.3 * t),
+        strength.clamp(0., 1.) * (1. - t) * (1. - t),
+    ))
+}
+
+/// The game-facing shadow helper: owns the player's [`ShadowQuality`], the map (only when `Full`) and the
+/// blob batch (only when `Simple`). Everything is a no-op at `Off`, and a game that never calls it renders
+/// exactly as before. See the module documentation for the frame order.
+///
+/// ```ignore
+/// let mut shadows = kit::Shadows::new(settings.shadow_quality);   // once, after the window exists
+/// shadows.set_ground(|x, z| terrain_height(x, z));                // optional: default is flat at y = 0
+/// // per frame:
+/// shadows.begin_frame(&look, player_pos);
+/// for kart in &karts { shadows.blob(kart.pos, 1.4); }             // Simple only
+/// shadows.cast(|| { statics.draw(); actors.draw(); });            // Full only
+/// /* set_camera(main); materials.set_scene(..); */
+/// shadows.apply(&materials);
+/// /* draw statics */ shadows.draw_decals(&materials); /* draw actors */
+/// ```
+pub struct Shadows {
+    quality: ShadowQuality,
+    resolution: u32,
+    half_extent: f32,
+    depth: f32,
+    strength: f32,
+    map: Option<ShadowMap>,
+    camera: Option<ShadowCamera>,
+    blobs: Batch,
+    ground: Box<dyn Fn(f32, f32) -> f32>,
+}
+
+impl Shadows {
+    /// A helper at `quality`. Call after the window (GL context) exists: `Full` allocates the map. If the
+    /// map cannot be created the helper falls back to `Simple` (see [`Shadows::quality`]).
+    pub fn new(quality: ShadowQuality) -> Self {
+        let mut shadows = Self {
+            quality: ShadowQuality::Off,
+            resolution: DEFAULT_RESOLUTION,
+            half_extent: DEFAULT_HALF_EXTENT,
+            depth: DEFAULT_DEPTH,
+            strength: DEFAULT_STRENGTH,
+            map: None,
+            camera: None,
+            blobs: Batch::new(),
+            ground: Box::new(|_, _| 0.),
+        };
+        shadows.set_quality(quality);
+        shadows
+    }
+    /// Shadow map side in texels (256 to 4096, default 2048). Takes effect before the first `Full` frame.
+    pub fn with_resolution(mut self, resolution: u32) -> Self {
+        let resolution = resolution.clamp(MIN_RESOLUTION, MAX_RESOLUTION);
+        if resolution != self.resolution {
+            self.resolution = resolution;
+            self.map = None;
+            let quality = std::mem::replace(&mut self.quality, ShadowQuality::Off);
+            self.set_quality(quality);
+        }
+        self
+    }
+    /// Size of the light box in metres: `half_extent` each side of the focus (default 40) and `depth` along
+    /// the light (default 160). Smaller means crisper shadows; it must still reach every caster that can
+    /// shadow the focus area (tall buildings towards the sun) and the focus's surroundings.
+    pub fn with_range(mut self, half_extent: f32, depth: f32) -> Self {
+        self.half_extent = half_extent;
+        self.depth = depth;
+        self
+    }
+    /// Shadow darkness 0-1 (default 0.85). 1 removes the whole key light in shadow; ambient stays.
+    pub fn with_strength(mut self, strength: f32) -> Self {
+        self.strength = strength.clamp(0., 1.);
+        self
+    }
+    /// Where the ground is, for blobs: `|x, z| height`. The default is flat at 0.
+    pub fn set_ground(&mut self, ground: impl Fn(f32, f32) -> f32 + 'static) {
+        self.ground = Box::new(ground);
+    }
+    /// The tier actually in effect (`Full` requested but unavailable reads as `Simple`).
+    pub fn quality(&self) -> ShadowQuality {
+        self.quality
+    }
+    /// Change the tier (the Settings screen does this). Allocates the map the first time `Full` is chosen.
+    pub fn set_quality(&mut self, quality: ShadowQuality) {
+        self.quality = quality;
+        if quality == ShadowQuality::Full {
+            if self.map.is_none() {
+                self.map = ShadowMap::new(self.resolution).ok();
+            }
+            if self.map.is_none() {
+                self.quality = ShadowQuality::Simple;
+            }
+        }
+        if self.quality != ShadowQuality::Full {
+            self.camera = None;
+        }
+    }
+    /// Start a frame: forget last frame's blobs and, at `Full`, fit the light box around `focus` (the human
+    /// player, the camera target: whatever the box should follow).
+    pub fn begin_frame(&mut self, look: &Look, focus: Vec3) {
+        self.blobs.clear();
+        self.camera = match (&self.map, self.quality) {
+            (Some(map), ShadowQuality::Full) => {
+                Some(map.camera(look, focus, self.half_extent, self.depth))
+            }
+            _ => None,
+        };
+    }
+    /// True when [`Shadows::cast`] will run its closure this frame (so a game can skip building casters
+    /// otherwise).
+    pub fn casting(&self) -> bool {
+        self.camera.is_some()
+    }
+    /// The shadow pass. At `Full`, calls `draw` with the caster material bound and the light camera active;
+    /// draw every mesh that should cast (statics, actors; not fx, glass or a first-person viewmodel). At
+    /// other tiers it does nothing and `draw` is not called. Fill your batches first; call before the
+    /// frame's `set_camera` for the main view.
+    pub fn cast(&self, draw: impl FnOnce()) {
+        if let (Some(map), Some(camera)) = (&self.map, &self.camera) {
+            map.pass(camera, draw);
+        }
+    }
+    /// Bind this frame's map to the world material, or switch shadowing off for it. Call every frame after
+    /// `Materials::set_scene` (the Off and Simple tiers need the call to clear a map left from `Full`).
+    pub fn apply(&self, materials: &Materials) {
+        match (&self.map, &self.camera) {
+            (Some(map), Some(camera)) => materials.set_shadow(map, camera, self.strength),
+            _ => materials.clear_shadow(),
+        }
+    }
+    /// Simple tier: a contact blob under something at `pos` (its position on or above the ground: the feet,
+    /// the bottom of a kart) with `radius` metres. The ground height comes from [`Shadows::set_ground`];
+    /// the blob fades and widens as the thing rises and disappears under the ground. No-op unless the tier
+    /// is `Simple` (at `Full` the real shadow does the job).
+    pub fn blob(&mut self, pos: Vec3, radius: f32) {
+        if self.quality != ShadowQuality::Simple || !pos.is_finite() {
+            return;
+        }
+        let ground = (self.ground)(pos.x, pos.z);
+        if !ground.is_finite() {
+            return;
+        }
+        if let Some((radius, strength)) = blob_for_height(radius, pos.y - ground, BLOB_STRENGTH) {
+            self.blobs
+                .blob(vec3(pos.x, ground + BLOB_LIFT, pos.z), radius, strength);
+        }
+    }
+    /// Draw this frame's blobs with the depth-tested `decal` material. Call after the static world and
+    /// before the dynamic actors.
+    pub fn draw_decals(&self, materials: &Materials) {
+        if self.blobs.vertex_count() > 0 {
+            gl_use_material(&materials.decal);
+            self.blobs.draw();
+        }
+    }
+}
+
 impl Materials {
     /// Bind `map` and its `camera` to the world material for the main pass: the key light's term is darkened
     /// by up to `strength` (0..1) wherever the map says a caster is in the way. Call after
@@ -386,6 +572,9 @@ impl Materials {
 
 #[cfg(test)]
 mod tests {
+    use super::super::batch::{blob_template, Template};
+    use super::super::lint;
+    use super::super::look::{DECAL_DEPTH_BIAS, WORLD_FRAGMENT};
     use super::*;
 
     fn texel_of(light: &LightBox, p: Vec3) -> Vec2 {
@@ -679,5 +868,252 @@ mod tests {
         assert!(ShadowMap::new(0).is_err());
         assert!(ShadowMap::new(100).is_err());
         assert!(ShadowMap::new(100_000).is_err());
+    }
+
+    // ---- Simple tier: blobs and the decal depth bias ----
+
+    #[test]
+    fn the_unit_blob_is_lint_clean_round_soft_and_flat() {
+        let blob = blob_template();
+        lint::assert_clean(blob, "blob");
+        assert!(blob.verts.iter().all(|v| v.p.y == 0. && v.n == Vec3::Y));
+        // Opaque at the middle, nothing at the rim, and opacity never rises with radius.
+        let mut by_radius: Vec<(f32, f32)> = blob
+            .verts
+            .iter()
+            .map(|v| (v.p.xz().length(), v.a))
+            .collect();
+        by_radius.sort_by(|a, b| a.0.total_cmp(&b.0));
+        assert!(
+            (by_radius[0].1 - 1.).abs() < 1e-6,
+            "the middle is fully dark"
+        );
+        let last = by_radius.last().unwrap();
+        assert!(
+            (last.0 - 1.).abs() < 1e-5 && last.1 < 1e-6,
+            "the rim fades to nothing: {last:?}"
+        );
+        assert!(
+            by_radius.windows(2).all(|w| w[1].1 <= w[0].1 + 1e-6),
+            "opacity falls with radius"
+        );
+        // Vertex count stays tiny: eight karts are a few hundred vertices.
+        assert!(blob.verts.len() < 250, "{}", blob.verts.len());
+    }
+
+    #[test]
+    fn batch_blob_places_scales_tints_and_refuses_nonsense() {
+        let mut batch = Batch::new();
+        batch.blob(vec3(10., 0.5, -4.), 2., 0.5);
+        let n = batch.vertex_count();
+        assert_eq!(n, blob_template().verts.len());
+        let mesh = &batch.meshes[0];
+        let centre = mesh.vertices.iter().find(|v| v.color[3] > 0).unwrap();
+        assert!((centre.position - vec3(10., 0.5, -4.)).length() < 1e-5);
+        let max_alpha = mesh.vertices.iter().map(|v| v.color[3]).max().unwrap();
+        assert_eq!(max_alpha, 128, "strength 0.5 of full opacity");
+        let widest = mesh
+            .vertices
+            .iter()
+            .map(|v| (v.position - vec3(10., 0.5, -4.)).length())
+            .fold(0., f32::max);
+        assert!((widest - 2.).abs() < 1e-4, "radius 2 m: {widest}");
+        for (c, r, s) in [
+            (Vec3::NAN, 1., 1.),
+            (Vec3::ZERO, 0., 1.),
+            (Vec3::ZERO, -1., 1.),
+            (Vec3::ZERO, f32::NAN, 1.),
+            (Vec3::ZERO, 1., f32::NAN),
+            (Vec3::ZERO, 1., 0.),
+        ] {
+            batch.blob(c, r, s);
+        }
+        assert_eq!(batch.vertex_count(), n, "nonsense adds nothing");
+        let before = batch.vertex_count();
+        batch.blob(Vec3::ZERO, 1., 7.);
+        let added = &batch.meshes[0].vertices[before..];
+        assert_eq!(
+            added.iter().map(|v| v.color[3]).max(),
+            Some(255),
+            "strength clamps to 1"
+        );
+    }
+
+    #[test]
+    fn a_blob_on_a_road_is_lint_clean_with_its_lift_and_the_bias_does_the_rest() {
+        let mut road = Template::new();
+        road.quad_facing(
+            [
+                vec3(-5., 0., -50.),
+                vec3(5., 0., -50.),
+                vec3(5., 0., 50.),
+                vec3(-5., 0., 50.),
+            ],
+            Vec3::Y,
+            [0.3; 3],
+            0.,
+        );
+        let mut scene = Batch::new();
+        scene.blob(vec3(0., BLOB_LIFT, 0.), 1.5, 1.);
+        let mut all = road.clone();
+        all.append(
+            &blob_template().transformed(Mat4::from_scale_rotation_translation(
+                Vec3::splat(1.5),
+                Quat::IDENTITY,
+                vec3(0., BLOB_LIFT, 0.),
+            )),
+        );
+        lint::assert_clean(&all, "road + blob");
+        assert!(BLOB_LIFT > lint::LintConfig::default().plane_epsilon);
+    }
+
+    /// Depth-buffer value (24 bit) of a point `d` metres in front of a perspective camera.
+    fn quantised_depth(near: f32, far: f32, d: f64, ndc_shift: f64) -> i64 {
+        let (n, f) = (f64::from(near), f64::from(far));
+        let ndc = (f + n) / (f - n) - 2. * f * n / ((f - n) * d) - ndc_shift;
+        ((ndc * 0.5 + 0.5) * 16_777_215.).floor() as i64
+    }
+
+    #[test]
+    fn a_decal_beats_a_coplanar_road_at_every_distance_with_the_real_planes() {
+        let (near, far) = (0.3_f32, 700_f32);
+        let shift = f64::from(DECAL_DEPTH_BIAS);
+        let mut d = 0.35_f64;
+        while d < 699. {
+            let road = quantised_depth(near, far, d, 0.);
+            let decal = quantised_depth(near, far, d, shift);
+            // At least 7 buffer steps in front (8 less one for flooring), so interpolation noise cannot flip it.
+            assert!(
+                road - decal >= 7,
+                "decal not in front at {d} m: {road} vs {decal}"
+            );
+            d *= 1.07;
+        }
+        // The bias expressed in metres is a fixed multiple of the buffer's resolution at that distance, and
+        // far smaller than anything a viewer could read as "in front".
+        for distance in [5_f32, 50., 300., 699.] {
+            let margin = DECAL_DEPTH_BIAS * (far - near) * distance * distance / (2. * far * near);
+            let resolution = lint::depth_resolution(near, distance);
+            assert!(
+                (6. ..=10.).contains(&(margin / resolution)),
+                "{margin} m vs one buffer step {resolution} m at {distance} m"
+            );
+        }
+        // Close up a blob still hides behind a wall only a few centimetres in front of it.
+        let margin_at_20 = DECAL_DEPTH_BIAS * (far - near) * 400. / (2. * far * near);
+        assert!(margin_at_20 < 0.005, "{margin_at_20} m at 20 m");
+    }
+
+    #[test]
+    fn a_decal_behind_a_wall_stays_hidden_and_one_under_an_actor_is_covered() {
+        // One pixel column: depth test LessOrEqual with depth writes, as the decal material does.
+        let (near, far) = (0.3_f32, 700_f32);
+        let shift = f64::from(DECAL_DEPTH_BIAS);
+        for distance in [3_f64, 12., 40., 90.] {
+            let ground = quantised_depth(near, far, distance, 0.);
+            let decal = quantised_depth(near, far, distance, shift);
+            let wall = quantised_depth(near, far, distance - 0.15, 0.); // a wall 15 cm in front of the blob
+            let actor = quantised_depth(near, far, distance - 0.4, 0.); // a body hovering 40 cm nearer
+                                                                        // Order: static world, decal, actor. A wall that is part of the static world is drawn first.
+            let mut depth = i64::MAX;
+            let mut shown = "sky";
+            for (name, z) in [("wall", wall), ("ground", ground), ("decal", decal)] {
+                if z <= depth {
+                    depth = z;
+                    shown = name;
+                }
+            }
+            assert_eq!(shown, "wall", "the wall hides the blob at {distance} m");
+            // Without the wall: the decal wins over the ground, then the actor over the decal.
+            let mut depth = i64::MAX;
+            let mut shown = "sky";
+            for (name, z) in [("ground", ground), ("decal", decal), ("actor", actor)] {
+                if z <= depth {
+                    depth = z;
+                    shown = name;
+                }
+            }
+            assert_eq!(
+                shown, "actor",
+                "the actor covers its own blob at {distance} m"
+            );
+        }
+    }
+
+    #[test]
+    fn the_decal_vertex_shader_carries_the_bias_and_the_world_one_does_not() {
+        let decal = super::super::look::decal_vertex_source();
+        assert!(decal.contains("gl_Position.z -= "), "{decal}");
+        assert!(decal.contains(&format!("{:e}", DECAL_DEPTH_BIAS)));
+        assert!(
+            decal.contains("* gl_Position.w;"),
+            "the bias is in clip space, scaled by w"
+        );
+    }
+
+    #[test]
+    fn blobs_follow_the_ground_fade_with_height_and_vanish_when_sunk_or_too_high() {
+        assert_eq!(blob_for_height(1., 0., 0.5), Some((1., 0.5)));
+        let (r1, s1) = blob_for_height(1., 1., 0.5).unwrap();
+        let (r2, s2) = blob_for_height(1., 2., 0.5).unwrap();
+        assert!(r1 > 1. && r2 > r1, "wider as it rises");
+        assert!(s1 < 0.5 && s2 < s1, "fainter as it rises");
+        assert_eq!(blob_for_height(1., BLOB_FADE_RADII, 0.5), None);
+        assert_eq!(blob_for_height(1., 100., 0.5), None);
+        assert!(
+            blob_for_height(1., -0.3, 0.5).is_some(),
+            "a wheel in a rut keeps its blob"
+        );
+        assert_eq!(
+            blob_for_height(1., -2., 0.5),
+            None,
+            "fallen through the floor"
+        );
+        for (r, h, s) in [
+            (f32::NAN, 0., 1.),
+            (0., 0., 1.),
+            (1., f32::NAN, 1.),
+            (1., 0., f32::INFINITY),
+        ] {
+            assert_eq!(blob_for_height(r, h, s), None);
+        }
+    }
+
+    #[test]
+    fn shadows_off_does_nothing_and_simple_draws_blobs_on_the_ground_function() {
+        let look = Look::daylight();
+        let mut shadows = Shadows::new(ShadowQuality::Off);
+        shadows.begin_frame(&look, Vec3::ZERO);
+        shadows.blob(vec3(1., 0., 1.), 1.);
+        assert_eq!(shadows.blobs.vertex_count(), 0, "Off adds no blobs");
+        assert!(!shadows.casting());
+        let mut ran = false;
+        shadows.cast(|| ran = true);
+        assert!(!ran, "Off never runs the shadow pass");
+
+        shadows.set_quality(ShadowQuality::Simple);
+        shadows.set_ground(|x, _| 0.1 * x);
+        shadows.begin_frame(&look, Vec3::ZERO);
+        shadows.blob(vec3(10., 1.2, 5.), 1.);
+        assert!(shadows.blobs.vertex_count() > 0);
+        let centre = shadows.blobs.meshes[0]
+            .vertices
+            .iter()
+            .max_by_key(|v| v.color[3])
+            .unwrap();
+        assert!(
+            (centre.position.y - (1. + BLOB_LIFT)).abs() < 1e-5,
+            "{:?}",
+            centre.position
+        );
+        assert!(!shadows.casting());
+        shadows.cast(|| ran = true);
+        assert!(!ran, "Simple never runs the shadow pass either");
+        // A new frame forgets the old blobs.
+        shadows.begin_frame(&look, Vec3::ZERO);
+        assert_eq!(shadows.blobs.vertex_count(), 0);
+        // Hovering 10 m up: too high for a contact shadow.
+        shadows.blob(vec3(0., 10., 0.), 1.);
+        assert_eq!(shadows.blobs.vertex_count(), 0);
     }
 }
