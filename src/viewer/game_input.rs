@@ -35,6 +35,11 @@ pub struct ClientInput {
     menu: MenuStep,
     /// Keys already reported as missing from the native table, so each is announced once.
     reported_unsupported: std::sync::Mutex<std::collections::HashSet<KeyCode>>,
+    /// A text field was fed during the previous frame (see [`ClientInput::text_input_active`]); latched into `typing`
+    /// at the start of the next frame, because the shell reads its hotkeys before the game draws its screen.
+    typing_next: std::sync::atomic::AtomicBool,
+    /// While true the plain letter hotkey (`F`, fullscreen) is ignored so typing a name does not toggle the window.
+    typing: bool,
 }
 impl Default for ClientInput {
     fn default() -> Self {
@@ -58,6 +63,8 @@ impl ClientInput {
             menu_nav: MenuNav::default(),
             menu: MenuStep::default(),
             reported_unsupported: Default::default(),
+            typing_next: Default::default(),
+            typing: false,
         }
     }
     /// Length of the current frame in seconds: the wall-clock interval between `begin_frame` calls,
@@ -120,7 +127,9 @@ impl ClientInput {
         if !self.focused {
             return ShellActions::default();
         }
-        let mut a = ShellActions::from_keys(keys);
+        // The letter F toggles fullscreen, so it must not fire while the player is typing into a text field.
+        let typing = self.typing;
+        let mut a = ShellActions::from_keys(|key| keys(key) && !(typing && key == KeyCode::F));
         a.pause |=
             self.frame.pressed(Button::Start) || (paused && self.frame.pressed(Button::East));
         if paused {
@@ -163,11 +172,26 @@ impl ClientInput {
         source: Option<&dyn Fn(i32) -> i16>,
     ) {
         self.poll_devices(focused, source);
+        self.latch_typing();
         shell.begin_frame_with_actions(
             capture_cursor,
             focused,
             self.shell_actions(shell.paused, |key| self.pressed(key)),
         );
+    }
+    /// Start of a frame: whether a text field was fed last frame becomes this frame's shell rule.
+    fn latch_typing(&mut self) {
+        self.typing = self
+            .typing_next
+            .swap(false, std::sync::atomic::Ordering::Relaxed);
+    }
+    /// Say that a text field has the keyboard this frame, for games that draw their own text box and do not use
+    /// [`ClientInput::feed_text`] (which calls this itself). The shell then ignores the plain `F` fullscreen hotkey
+    /// on the next frame, so typing a name that contains an F does not flip the window. `F11`, `Esc` and the rest
+    /// still work. Call it each frame the field is focused; it lapses by itself on the first frame you do not.
+    pub fn text_input_active(&self) {
+        self.typing_next
+            .store(true, std::sync::atomic::Ordering::Relaxed);
     }
     /// The device half of a frame (clock, controller, native keys): everything but the window shell.
     fn poll_devices(&mut self, focused: bool, source: Option<&dyn Fn(i32) -> i16>) {
@@ -283,6 +307,7 @@ impl ClientInput {
     /// [`ClientInput::frame_seconds`] for the repeat timing. Characters typed while the window is unfocused
     /// are discarded, not queued.
     pub fn feed_text(&self, field: &mut TextField) {
+        self.text_input_active();
         let mut typed = Vec::new();
         while let Some(c) = get_char_pressed() {
             typed.push(c);
@@ -395,6 +420,8 @@ mod tests {
             menu_nav: MenuNav::default(),
             menu: MenuStep::default(),
             reported_unsupported: Default::default(),
+            typing_next: Default::default(),
+            typing: false,
         }
     }
     /// A keyboard that holds `down` (and reports `pressed` as this frame's edges), as the normal per-frame poll would.
@@ -497,6 +524,42 @@ mod tests {
             ..Default::default()
         };
         assert!(input.navigation().previous);
+    }
+    #[test]
+    fn typing_in_a_text_field_masks_the_f_hotkey_for_the_next_frame_only() {
+        let mut input = input();
+        let f = |key: KeyCode| key == KeyCode::F;
+        assert!(
+            input.shell_actions(false, f).fullscreen,
+            "F is fullscreen when nobody is typing"
+        );
+        input.text_input_active();
+        assert!(
+            input.shell_actions(false, f).fullscreen,
+            "the rule starts on the next frame, not this one"
+        );
+        input.latch_typing();
+        assert!(
+            !input.shell_actions(false, f).fullscreen,
+            "typing an F must not toggle the window"
+        );
+        assert!(
+            input
+                .shell_actions(false, |key| key == KeyCode::F11)
+                .fullscreen,
+            "F11 still toggles"
+        );
+        assert!(
+            input
+                .shell_actions(false, |key| key == KeyCode::Escape)
+                .pause,
+            "Esc still pauses"
+        );
+        input.latch_typing();
+        assert!(
+            input.shell_actions(false, f).fullscreen,
+            "the rule lapses on the first frame the field is not fed"
+        );
     }
     #[test]
     fn start_back_and_dpad_route_to_shared_menus() {

@@ -129,6 +129,8 @@ See `docs/NETPLAY.md`. `net::codec::{Writer, Reader}` for layouts, `net::loopbac
 
 - Typing/paste: `let mut f = devkit::TextField::new(40, CharFilter::Address);` then each frame `input.feed_text(&mut f)`
   (or `f.feed_frame()`), draw `f.text` with the caret at `f.caret_byte()`. Ctrl+V pastes; `game_input::copy_to_clipboard(s)`.
+  `feed_text` also tells the shell a field has the keyboard, so typing an F does not toggle fullscreen (F11 and Esc still work);
+  a game with its own text box calls `input.text_input_active()` each frame the box is focused.
 - Address: `devkit::resolve_ipv4(&f.text, 27015)?` gives an IPv4 `SocketAddr` or an `AddressError` whose `Display` you
   can show; blocks on name lookup, so call it on Connect.
 - Default server: `devkit::ServerChoice::first_of_beside_exe(&[CliArg(..), FileBesideExe("server.txt"), LastUsed(..), Builtin(..)])`;
