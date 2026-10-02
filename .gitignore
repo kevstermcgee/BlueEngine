@@ -5,3 +5,4 @@ target/
 
 /.be2-work/
 __pycache__/
+.learning/
