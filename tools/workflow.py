@@ -341,7 +341,7 @@ def full_commands(test_profile='itest'):
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
-         'tools.test_xcapture', 'tools.test_upgrade'],
+         'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn'],
     ]
 
 
@@ -522,6 +522,14 @@ def validation_plan(paths=None, base=None, test_profile='itest'):
                         [sys.executable, 'scripts/publish_games.py', 'check']]),
         'upgrade': ({'tools/upgrade.py', 'tools/test_upgrade.py', 'tools/upgrade_migrations.json'},
                    [[sys.executable, '-m', 'unittest', 'tools.test_upgrade']]),
+        # ADR 0038: the learning tool and its data (ledger, tasks, eval log, reports). A `learn.py record` entry must
+        # not need the full engine gate; changes to FEATURES.json or this file still do.
+        'learning': ({'tools/learn.py', 'tools/test_learn.py', 'docs/learning/README.md', 'docs/learning/REPORT.md',
+                      'docs/learning/ledger.jsonl', 'docs/learning/tasks.jsonl', 'docs/learning/tasks_heldout.jsonl',
+                      'docs/learning/tasks_heldout2.jsonl', 'docs/learning/tasks_heldout3.jsonl',
+                      'docs/learning/eval_runs.jsonl', 'docs/learning/eval_floor.json',
+                      'docs/learning/dupes.json', 'docs/learning/dupes.md'},
+                     [[sys.executable, '-m', 'unittest', 'tools.test_learn']]),
     }
     covered = set().union(*(files for files, _ in scopes.values()))
     unknown = sorted(set(paths) - covered)

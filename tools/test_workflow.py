@@ -202,6 +202,11 @@ class SelectionTests(unittest.TestCase):
             plan = workflow.validation_plan(['tools/assets.py', path])
             self.assertEqual(plan['scope'], 'full', path)
             self.assertEqual(plan['commands'], workflow.full_commands())
+        learning = workflow.validation_plan(['docs/learning/ledger.jsonl', 'tools/learn.py'])
+        self.assertEqual(learning['scope'], 'learning')
+        self.assertEqual(learning['commands'], [[sys.executable, '-m', 'unittest', 'tools.test_learn']])
+        self.assertEqual(workflow.validation_plan(['docs/learning/ledger.jsonl', 'docs/adr/README.md'])['scope'], 'full')
+        self.assertIn('tools.test_learn', workflow.full_commands()[-1])
         self.assertEqual(workflow.validation_plan([])['scope'], 'no_changes')
         self.assertEqual(workflow.validation_plan([])['commands'], [])
 
