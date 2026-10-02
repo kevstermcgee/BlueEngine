@@ -474,7 +474,7 @@ def build_rows(aggregate):
     all_tools, all_bash = collections.Counter(), collections.Counter()
     read_counts, repeat_counts = collections.Counter(), collections.Counter()
     large_writes = []
-    totals = {'tokens': empty_tokens(), 'side_tokens': empty_tokens(), 'turns': 0, 'side_turns': 0,
+    totals = {'usage': empty_tokens(), 'side_usage': empty_tokens(), 'turns': 0, 'side_turns': 0,
               'reads': 0, 'repeat_reads': 0, 'repeat_reads_unedited': 0, 'searches': 0, 'empty_searches': 0}
     for session in aggregate.sessions.values():
         row_tokens, side_tokens = empty_tokens(), empty_tokens()
@@ -485,7 +485,7 @@ def build_rows(aggregate):
         for message in session.messages.values():
             area = message.area()
             target = areas.setdefault(area, {'area': area, 'sessions': set(), 'turns': 0, 'side_turns': 0,
-                                             'tokens': empty_tokens(), 'side_tokens': empty_tokens(),
+                                             'usage': empty_tokens(), 'side_usage': empty_tokens(),
                                              'tools': collections.Counter(), 'reads': 0, 'repeat_reads': 0,
                                              'repeat_reads_unedited': 0, 'searches': 0, 'empty_searches': 0,
                                              'large_writes': 0, 'large_write_chars': 0})
@@ -494,12 +494,12 @@ def build_rows(aggregate):
             totals['turns'] += 1
             for field, short in KIND_SHORT.items():
                 row_tokens[short] += message.usage[field]
-                target['tokens'][short] += message.usage[field]
-                totals['tokens'][short] += message.usage[field]
+                target['usage'][short] += message.usage[field]
+                totals['usage'][short] += message.usage[field]
                 if message.side:
                     side_tokens[short] += message.usage[field]
-                    target['side_tokens'][short] += message.usage[field]
-                    totals['side_tokens'][short] += message.usage[field]
+                    target['side_usage'][short] += message.usage[field]
+                    totals['side_usage'][short] += message.usage[field]
             if message.side:
                 target['side_turns'] += 1
                 totals['side_turns'] += 1
@@ -520,7 +520,7 @@ def build_rows(aggregate):
                 if path_area not in NON_GAME_AREAS:
                     session_large.append({'path': path, 'chars': length, 'area': path_area})
                     areas.setdefault(path_area, {'area': path_area, 'sessions': set(), 'turns': 0, 'side_turns': 0,
-                                                 'tokens': empty_tokens(), 'side_tokens': empty_tokens(),
+                                                 'usage': empty_tokens(), 'side_usage': empty_tokens(),
                                                  'tools': collections.Counter(), 'reads': 0, 'repeat_reads': 0,
                                                  'repeat_reads_unedited': 0, 'searches': 0, 'empty_searches': 0,
                                                  'large_writes': 0, 'large_write_chars': 0})
@@ -541,8 +541,8 @@ def build_rows(aggregate):
             'cwd': primary_cwd, 'branch': session.branches.most_common(1)[0][0] if session.branches else None,
             'area': session_areas.most_common(1)[0][0] if session_areas else area_of(primary_cwd),
             'turns': len(session.messages), 'side_turns': counters['side_turns'],
-            'tokens': row_tokens, 'work_tokens': work,
-            'side_work_tokens': side_work,
+            'usage': row_tokens, 'fresh_work': work,
+            'side_fresh_work': side_work,
             'side_share': round(side_work / work, 3) if work else 0.0,
             'tools': dict(tools.most_common()), 'bash_programs': dict(bash.most_common(12)),
             'reads': counters['reads'], 'distinct_files_read': len(session.read_counts),
@@ -555,14 +555,14 @@ def build_rows(aggregate):
     session_rows.sort(key=lambda row: (row['first'] or '', row['session']))
     area_rows = []
     for item in areas.values():
-        work = total_work(item['tokens'])
-        side_work = total_work(item['side_tokens'])
-        area_rows.append({**item, 'sessions': len(item['sessions']), 'work_tokens': work,
-                          'side_work_tokens': side_work,
+        work = total_work(item['usage'])
+        side_work = total_work(item['side_usage'])
+        area_rows.append({**item, 'sessions': len(item['sessions']), 'fresh_work': work,
+                          'side_fresh_work': side_work,
                           'side_share': round(side_work / work, 3) if work else 0.0,
                           'tools': dict(item['tools'].most_common(10))})
-    area_rows.sort(key=lambda row: -row['work_tokens'])
-    work = total_work(totals['tokens'])
+    area_rows.sort(key=lambda row: -row['fresh_work'])
+    work = total_work(totals['usage'])
     summary = {
         'files': aggregate.stats['files'], 'records': aggregate.stats['records'],
         'sessions': len(session_rows),
@@ -571,9 +571,9 @@ def build_rows(aggregate):
         'assistant_without_usage': aggregate.stats['assistant_without_usage'],
         'ignored_record_types': dict(aggregate.ignored_types.most_common()),
         'turns': totals['turns'], 'side_turns': totals['side_turns'],
-        'tokens': totals['tokens'], 'work_tokens': work,
-        'side_work_tokens': total_work(totals['side_tokens']),
-        'side_share': round(total_work(totals['side_tokens']) / work, 3) if work else 0.0,
+        'usage': totals['usage'], 'fresh_work': work,
+        'side_fresh_work': total_work(totals['side_usage']),
+        'side_share': round(total_work(totals['side_usage']) / work, 3) if work else 0.0,
         'tools': dict(all_tools.most_common()), 'bash_programs': dict(all_bash.most_common(15)),
         'reads': totals['reads'], 'distinct_files_read': len(read_counts),
         'repeat_reads': totals['repeat_reads'], 'repeat_reads_unedited': totals['repeat_reads_unedited'],
@@ -585,8 +585,8 @@ def build_rows(aggregate):
         'from_scratch_chars': sum(item['chars'] for item in large_writes),
         'from_scratch_top': sorted(large_writes, key=lambda item: -item['chars'])[:10],
         'write_threshold_chars': aggregate.write_threshold,
-        'areas': [{k: row[k] for k in ('area', 'sessions', 'turns', 'work_tokens', 'side_share')}
-                  | {'output': row['tokens']['output'], 'cache_read': row['tokens']['cache_read']}
+        'areas': [{k: row[k] for k in ('area', 'sessions', 'turns', 'fresh_work', 'side_share')}
+                  | {'output': row['usage']['output'], 'cache_read': row['usage']['cache_read']}
                   for row in area_rows[:12]],
     }
     return session_rows, area_rows, summary
@@ -600,12 +600,12 @@ def format_summary(summary):
              f"({summary['malformed_lines']} malformed lines, {summary['unreadable_files']} unreadable files, "
              f"{sum(summary['ignored_record_types'].values()):,} other record types ignored)",
              f"assistant turns {summary['turns']:,} (subagent {summary['side_turns']:,}); "
-             f"fresh work (input + cache writes + output) {k(summary['work_tokens'])}, "
-             f"output {k(summary['tokens']['output'])}, cache reads {k(summary['tokens']['cache_read'])}; "
+             f"fresh work (input + cache writes + output) {k(summary['fresh_work'])}, "
+             f"output {k(summary['usage']['output'])}, cache reads {k(summary['usage']['cache_read'])}; "
              f"subagent share of fresh work {summary['side_share']:.0%}", '',
              f"{'area':<44}{'sessions':>9}{'turns':>8}{'fresh work':>12}{'output':>10}{'subagent':>10}"]
     for row in summary['areas']:
-        lines.append(f"{row['area']:<44}{row['sessions']:>9}{row['turns']:>8}{k(row['work_tokens']):>12}"
+        lines.append(f"{row['area']:<44}{row['sessions']:>9}{row['turns']:>8}{k(row['fresh_work']):>12}"
                      f"{k(row['output']):>10}{row['side_share']:>10.0%}")
     top_tools = ', '.join(f'{name} {count}' for name, count in list(summary['tools'].items())[:10])
     lines += ['', f'tool calls: {top_tools}',
@@ -1568,14 +1568,14 @@ def local_sessions_section(local_dir):
     summary = json.loads(summary_path.read_text(encoding='utf-8'))
     out = ['## Where development effort went (local only, never committed)', '',
            f"From {summary['sessions']} sessions: {summary['turns']:,} assistant turns, fresh work "
-           f"{summary['work_tokens']:,} tokens, subagent share {summary['side_share']:.0%}; repeat file reads "
+           f"{summary['fresh_work']:,} tokens, subagent share {summary['side_share']:.0%}; repeat file reads "
            f"{summary['repeat_reads']:,} of {summary['reads']:,} (no edit in between: "
            f"{summary['repeat_reads_unedited']:,}); empty searches {summary['empty_searches']:,} of "
            f"{summary['searches']:,}; large new source files in game repos {summary['from_scratch_candidates']} "
            f"({summary['from_scratch_chars']:,} chars).", '',
            '| area | sessions | turns | fresh work | subagent share |', '|---|---|---|---|---|']
     for row in summary['areas'][:10]:
-        out.append(f"| {row['area']} | {row['sessions']} | {row['turns']:,} | {row['work_tokens']:,} | {row['side_share']:.0%} |")
+        out.append(f"| {row['area']} | {row['sessions']} | {row['turns']:,} | {row['fresh_work']:,} | {row['side_share']:.0%} |")
     out.append('')
     return '\n'.join(out)
 

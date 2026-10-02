@@ -155,11 +155,11 @@ class SessionTests(unittest.TestCase):
         self.assertEqual(summary['sessions'], 1)
         # Parent: output 40+5*8+500+5+5 ... computed from the maximum per message id, not summed per record.
         parent_output = 40 + 5 + 5 + 5 + 5 + 5 + 5 + 5 + 500 + 5 + 5
-        self.assertEqual(summary['tokens']['output'], parent_output + 200)
-        self.assertEqual(summary['tokens']['input'], 100 + 10 * 10 + 100)
+        self.assertEqual(summary['usage']['output'], parent_output + 200)
+        self.assertEqual(summary['usage']['input'], 100 + 10 * 10 + 100)
         self.assertEqual(summary['turns'], 11 + 2)
         self.assertEqual(summary['side_turns'], 2)
-        self.assertAlmostEqual(summary['side_share'], summary['side_work_tokens'] / summary['work_tokens'], places=3)
+        self.assertAlmostEqual(summary['side_share'], summary['side_fresh_work'] / summary['fresh_work'], places=3)
         self.assertGreater(summary['side_share'], 0)
 
     def test_tool_names_reads_repeats_and_searches(self):
@@ -316,7 +316,7 @@ class GarbageTests(unittest.TestCase):
             _, _, summary = learn.build_rows(agg)
             self.assertGreaterEqual(summary['malformed_lines'], 4)
             self.assertIn('queue-operation', summary['ignored_record_types'])
-            self.assertEqual(summary['tokens']['output'], 2)
+            self.assertEqual(summary['usage']['output'], 2)
             self.assertEqual(summary['tools']['Read'], 2)
 
     def test_unreadable_file_is_counted(self):
@@ -673,9 +673,9 @@ class ReportTests(unittest.TestCase):
                            'open friction one', '60,000 tokens', 'python3 tools/learn.py sessions'):
                 self.assertIn(needle, text)
             (local / 'summary.json').write_text(json.dumps({
-                'sessions': 3, 'turns': 10, 'work_tokens': 1234, 'side_share': 0.5, 'repeat_reads': 1, 'reads': 2,
+                'sessions': 3, 'turns': 10, 'fresh_work': 1234, 'side_share': 0.5, 'repeat_reads': 1, 'reads': 2,
                 'repeat_reads_unedited': 1, 'empty_searches': 0, 'searches': 4, 'from_scratch_candidates': 1,
-                'from_scratch_chars': 5000, 'areas': [{'area': 'SpookyKart', 'sessions': 1, 'turns': 5, 'work_tokens': 99, 'side_share': 0.1}]}))
+                'from_scratch_chars': 5000, 'areas': [{'area': 'SpookyKart', 'sessions': 1, 'turns': 5, 'fresh_work': 99, 'side_share': 0.1}]}))
             text2, local_text = learn.build_report(learning, local)
             self.assertEqual(text2, text, 'the committed report never changes because local data exists')
             self.assertIn('local only, never committed', local_text)
