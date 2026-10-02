@@ -66,6 +66,10 @@ each point can be checked; the last section says what was done about it.
 - Let bots drive real clients in tests and in load tests: it needs no extra code and finds real bugs.
 - Log a structured line per match from day one; balance and network quality become measurements.
 - Check `docs/perf` before guessing about speed, and record what you change.
+- Two quiet netplay traps: `ClientView::prediction()` defaults to zeros, so a game that never overrides it reports
+  "no corrections" forever (the default now warns once on stderr); and `ClientState::Rejected("Could not reach the
+  server")` once read like a refusal when nobody had answered. Use `NetClient::failure().hint()` for the player
+  (`docs/NETPLAY.md`, "When connecting fails").
 
 ## What was done about it
 

@@ -46,10 +46,59 @@ and a client loop calls `client.poll(now)`, `client.tick(input)` once per fixed 
 
 - Lobby choices survive 30% packet loss. Events arrive exactly once even with loss and jitter.
 - Ten percent loss leaves under a tenth of ticks running on a repeated input (redundant bundles).
-- A wrong join key, a different game version, a ninth player and another address using a player's token are refused;
+- A wrong join key, a different game version, a ninth player and another address using a player's token are refused,
+  and the client says which (`NetClient::failure`; a silent server is `Unreachable`, not a refusal);
   garbage datagrams are counted, never fatal (the decoders are fuzz-tested).
 - A player who leaves or goes silent mid-match is handed to the game's AI and the match finishes.
 - Late joiners wait out the running match and are welcome afterwards.
+
+## When connecting fails
+
+`ClientState::Rejected(String)` is kept as it always was, but its text is not what to show a player. Ask the client
+why: `client.failure()` returns `Option<ConnectFailure>` (set whenever `state()` is `Rejected`):
+
+| `ConnectFailure` | Meaning |
+|---|---|
+| `Unreachable { addr, waited_secs }` | no datagram came back in 8 s: server offline, wrong address, or the UDP port is not forwarded. Nobody refused; nobody answered. |
+| `VersionMismatch` | the server's `fingerprint()` differs: update the game |
+| `WrongKey` | the server has a join key and ours did not match |
+| `MatchInProgress` | a match is running; the server takes players between rounds, so retry shortly |
+| `Full` | every seat is taken |
+| `Other(String)` | any other reason the server sent, verbatim |
+
+`failure.hint()` is one short, actionable sentence for each ("No reply from 203.0.113.5:27015 after 8 s: the server
+may be offline, the address may be wrong, or its port may not be forwarded."). Show that, not
+`format!("The server turned you away: {reason}")`, which reads like a refusal even when nobody answered. The
+`Rejected` text for an unreachable server is now "No reply from {addr} after 8 s". The server's reason strings are
+constants in `netplay::failure` (`REASON_VERSION`, `REASON_KEY`, `REASON_MATCH`, `full_reason`) shared with the
+classifier, so they cannot drift; `ConnectFailure::classify(&str)` also recognises the older wording by keyword.
+
+Trap: `ClientView::prediction()` has a default that reports zeros, so a game that never overrides it shows
+`corrections: 0, max_error: 0` and looks perfectly predicted. The default now prints one warning to stderr naming
+your view type; override it (with `PredictionStats::default()` if you really predict nothing).
+
+## Typing and pasting a server address
+
+`devkit::TextField` (pure logic; fields `text`, `caret`, `max_len`, `filter`) replaces a hand-rolled `Vec<char>`:
+`insert_str` sanitises a paste (control characters removed, `CharFilter::{Any, Address, Name, Digits}` applied,
+cut to `max_len`, a multi-line paste keeps its first non-empty line), plus `backspace`, `delete`, `move_left`,
+`move_right`, `home`, `end`, `clear`, `caret_byte()` for drawing. With the `client` feature,
+`input.feed_text(&mut field)` (focus-gated, native-key-reader aware) or `field.feed_frame()` (macroquad directly)
+handles typing, Backspace/Delete/arrows/Home/End with hold-to-repeat, and Ctrl+V / Shift+Insert / Cmd+V from the
+clipboard; `game_input::copy_to_clipboard(text)` backs a "copy invite" button. Call it only while the field has focus
+and never while another field or the game is reading keys.
+
+`devkit::resolve_ipv4(text, default_port) -> Result<SocketAddr, AddressError>` accepts `host`, `host:port` and
+`ip:port` (IPv4 only, because servers bind `0.0.0.0`; an IPv6 literal gets a message saying so). `AddressError`'s
+`Display` is player-facing. A name lookup blocks, so resolve when the player presses Connect (or on a thread), not
+every frame; `resolve_ipv4_with` takes the lookup as a closure for tests.
+
+The default server: `ServerChoice::first_of(dir, &[ServerSource::CliArg(flag_value(&args, "--connect")),
+ServerSource::FileBesideExe("server.txt"), ServerSource::LastUsed(settings.last_server.as_deref()),
+ServerSource::Builtin("play.example.com:27015")])` returns the first non-empty one, with its `origin` and, for a
+`server.txt` (line 1 address, optional line 2 join key, `#` comments), the `join_key`.
+`first_of_beside_exe` reads the file next to the executable. After a successful connect, store what the player typed
+in `Settings::last_server` (`#[serde(default)]`: old `settings.json` files still load).
 
 ## Limits and what is not covered
 

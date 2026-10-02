@@ -1035,6 +1035,8 @@
         "docs/adr/0021-stick-look-menu-steps-and-exit.md",
         "src/viewer/devkit/level.rs",
         "src/viewer/devkit/waypoints.rs",
+        "src/viewer/devkit/text_field.rs",
+        "src/viewer/devkit/net_address.rs",
         "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md"
       ],
       "checks": [
@@ -1043,9 +1045,10 @@
         "generated custom-sim project: cargo test, real-window --capture/--script/--perf run, ship gate",
         "cargo test --locked --lib devkit::look",
         "cargo test --locked --lib devkit::scale",
-        "cargo test --locked --lib devkit::menu"
+        "cargo test --locked --lib devkit::menu",
+        "cargo test --locked --lib devkit::text_field devkit::net_address"
       ],
-      "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files (music/sfx volume and on/off toggles, downloads_dir, unique_path, sanitize_filename), Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio, including AmbientSpec/ambient_loop for seamless background music; `be2-tools ambient-music` generates one from the command line, see docs/AUDIO.md), wall_along_x/wall_along_z (straight walls with doorway gaps) and WaypointGraph (small branching graph, breadth-first path/nearest-node lookup) for a hand-built indoor level and the NPCs that move through it (ADR 0034). kit::Materials::draw_static(&meshes) binds the world material and draws a scene's static geometry in one call, so the two-step version cannot be called in the wrong order (silently renders nothing otherwise). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
+      "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files (music/sfx volume and on/off toggles, downloads_dir, unique_path, sanitize_filename), Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio, including AmbientSpec/ambient_loop for seamless background music; `be2-tools ambient-music` generates one from the command line, see docs/AUDIO.md), wall_along_x/wall_along_z (straight walls with doorway gaps) and WaypointGraph (small branching graph, breadth-first path/nearest-node lookup) for a hand-built indoor level and the NPCs that move through it (ADR 0034). kit::Materials::draw_static(&meshes) binds the world material and draws a scene's static geometry in one call, so the two-step version cannot be called in the wrong order (silently renders nothing otherwise). TextField/CharFilter (sanitised typing and paste, caret, hold-to-repeat; ClientInput::feed_text / TextField::feed_frame add the keyboard and Ctrl+V clipboard glue) and resolve_ipv4/ServerChoice (typed server address to an IPv4 SocketAddr with player-facing errors; default server from --connect, server.txt, Settings::last_server, built-in). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
       "keywords": [
         "custom",
         "simulation",
@@ -1114,7 +1117,15 @@
         "dpad",
         "quit",
         "exit",
-        "request_exit"
+        "request_exit",
+        "text input",
+        "textfield",
+        "paste",
+        "clipboard",
+        "server address",
+        "resolve",
+        "server.txt",
+        "default server"
       ],
       "contract": {
         "owns": "Frame timing, fixed-step accumulation, per-tick input, replay/capture/perf plumbing, saves, screen feel, synthesised audio",
@@ -1464,6 +1475,7 @@
         "src/viewer/netplay/wire.rs",
         "src/viewer/netplay/server.rs",
         "src/viewer/netplay/client.rs",
+        "src/viewer/netplay/failure.rs",
         "src/viewer/netplay/toy.rs",
         "src/viewer/net/codec.rs",
         "src/viewer/net/loopback.rs",
@@ -1477,7 +1489,7 @@
         "cargo test --locked --lib net::codec net::loopback",
         "python tools/check_headless.py"
       ],
-      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. Extracted from Spooky Kart; toy.rs is the smallest complete game.",
+      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. A failed connect is a typed NetClient::failure() (ConnectFailure: Unreachable/VersionMismatch/WrongKey/MatchInProgress/Full/Other) with a player-facing hint(). Extracted from Spooky Kart; toy.rs is the smallest complete game.",
       "keywords": [
         "netplay",
         "multiplayer",
@@ -1505,7 +1517,11 @@
         "custom",
         "simulation",
         "kart",
-        "racing"
+        "racing",
+        "connect",
+        "failure",
+        "unreachable",
+        "rejected"
       ],
       "depends_on": [
         "multiplayer",
