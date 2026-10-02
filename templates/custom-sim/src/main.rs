@@ -285,7 +285,7 @@ async fn main() {
                 juice = Juice::default();
             }
         }
-        if sim.over && (input.pressed(KeyCode::R) || input.pressed(KeyCode::Enter)) {
+        if input.restart_requested(sim.over) {
             sim = Sim::new(life.restart_seed());
             fx.clear();
             life.reset_input();

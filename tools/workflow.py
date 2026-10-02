@@ -192,6 +192,44 @@ def full_commands(test_profile='itest'):
     ]
 
 
+WINDOWS_TARGET = 'x86_64-pc-windows-gnu'
+WINDOWS_PROVES = (
+    'Rust type-check of the engine library, every binary, example and test for ' + WINDOWS_TARGET +
+    ' with default and headless features: cfg(windows) code (native key/focus readers, windows-sys '
+    'calls, console handlers) compiles and type-checks. It does NOT prove anything about running on '
+    'Windows: no linking, no execution, no real key/focus/console behavior, and the C parts of '
+    'dependencies (ring) are not built for Windows. CI on windows-latest remains the real gate.')
+
+
+def windows_plan(which=shutil.which, run=subprocess.run):
+    """Plan for `check --windows`: a cross type-check for the Windows target without a Windows C toolchain.
+
+    `cargo check` never links, but ring's build script still runs a C compiler for the target. With
+    no mingw gcc we hand it the host `cc`/`ar` through cc-rs' per-target variables: it compiles the C as
+    host objects that nothing links. That is fine for a type-check and says nothing about Windows C code.
+    `which` and `run` are injectable for tests. Raises RuntimeError with the remedy when it cannot work.
+    """
+    if not which('cargo') or not which('rustc'):
+        raise RuntimeError('Rust toolchain is missing; see tools/README.md')
+    libdir = run(['rustc', '--print', 'target-libdir', '--target', WINDOWS_TARGET],
+                 capture_output=True, text=True, **console_options())
+    if libdir.returncode or not (libdir.stdout.strip() and Path(libdir.stdout.strip()).is_dir()):
+        raise RuntimeError(f'Rust target {WINDOWS_TARGET} is not installed; run: rustup target add {WINDOWS_TARGET}')
+    env, compiler = {}, 'x86_64-w64-mingw32-gcc'
+    if not which(compiler):
+        host_cc = which('cc') or which('gcc') or which('clang')
+        host_ar = which('ar')
+        if not host_cc or not host_ar:
+            raise RuntimeError(f'No {compiler} and no host cc/ar to stand in for it; install a C compiler '
+                               f'(mingw-w64 or build-essential) so ring\'s build script can run')
+        env = {'CC_x86_64_pc_windows_gnu': host_cc, 'AR_x86_64_pc_windows_gnu': host_ar}
+    base = ['cargo', 'check', '--locked', '--target', WINDOWS_TARGET, '--all-targets']
+    return {'scope': 'windows_typecheck',
+            'reason': 'Windows-only code is invisible to Linux builds; type-check it for ' + WINDOWS_TARGET + '.',
+            'proves': WINDOWS_PROVES, 'env': env,
+            'commands': [base, [*base, '--no-default-features']]}
+
+
 def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode='default', _features=None,
                    test_profile='itest'):
     """Explicit iteration only. Derive targets from indexed evidence/files, never prose commands."""

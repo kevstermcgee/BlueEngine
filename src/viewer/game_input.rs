@@ -33,6 +33,8 @@ pub struct ClientInput {
     clock: FrameClock,
     menu_nav: MenuNav,
     menu: MenuStep,
+    /// Keys already reported as missing from the native table, so each is announced once.
+    reported_unsupported: std::sync::Mutex<std::collections::HashSet<KeyCode>>,
 }
 impl Default for ClientInput {
     fn default() -> Self {
@@ -55,6 +57,7 @@ impl ClientInput {
             clock: FrameClock::new(),
             menu_nav: MenuNav::default(),
             menu: MenuStep::default(),
+            reported_unsupported: Default::default(),
         }
     }
     /// Length of the current frame in seconds: the wall-clock interval between `begin_frame` calls,
@@ -146,34 +149,85 @@ impl ClientInput {
         focused: bool,
         reader: Option<fn(i32) -> i16>,
     ) {
-        self.clock.tick();
-        self.poll(focused);
-        if let Some(read) = reader {
-            self.keyboard
-                .get_or_insert_with(KeyboardFrame::default)
-                .poll(focused, read);
-        } else {
-            self.keyboard = None;
-        }
+        let source = reader.as_ref().map(|r| r as &dyn Fn(i32) -> i16);
+        self.begin_frame_with_key_source(shell, capture_cursor, focused, source);
+    }
+    /// As [`ClientInput::begin_frame_with_keyboard`] for any key-state source, not only a plain
+    /// function: `source(virtual_key)` follows `GetAsyncKeyState` (bit 15 held, bit 0 pressed since the
+    /// last query). A host or test that has no OS to ask passes a closure over its own key state.
+    pub fn begin_frame_with_key_source(
+        &mut self,
+        shell: &mut GameShell,
+        capture_cursor: bool,
+        focused: bool,
+        source: Option<&dyn Fn(i32) -> i16>,
+    ) {
+        self.poll_devices(focused, source);
         shell.begin_frame_with_actions(
             capture_cursor,
             focused,
             self.shell_actions(shell.paused, |key| self.pressed(key)),
         );
     }
+    /// The device half of a frame (clock, controller, native keys): everything but the window shell.
+    fn poll_devices(&mut self, focused: bool, source: Option<&dyn Fn(i32) -> i16>) {
+        self.clock.tick();
+        self.poll(focused);
+        if let Some(read) = source {
+            self.keyboard
+                .get_or_insert_with(KeyboardFrame::default)
+                .poll(focused, read);
+        } else {
+            self.keyboard = None;
+        }
+    }
+    /// True on the frame a key goes down. With a native reader installed (Windows), a key outside
+    /// [`native_key_supported`] is announced once on stderr and trips a `debug_assert!`: it could never
+    /// read as pressed, and that must not fail silently.
     pub fn pressed(&self, key: KeyCode) -> bool {
+        self.check_native_key(key);
         self.focused
             && self
                 .keyboard
                 .as_ref()
                 .map_or_else(|| is_key_pressed(key), |k| k.pressed.contains(&key))
     }
+    /// True while a key is held; the same native-table rules as [`ClientInput::pressed`].
     pub fn down(&self, key: KeyCode) -> bool {
+        self.check_native_key(key);
         self.focused
             && self
                 .keyboard
                 .as_ref()
                 .map_or_else(|| is_key_down(key), |k| k.down.contains(&key))
+    }
+    /// True once per press while a game is over, for the shared "play again" convention: `R` (always a
+    /// hotkey), Enter, or the controller's South (A / Cross) or Start button. False while the game is
+    /// running or the window is unfocused. Call it every frame with the game's own over flag; a held
+    /// key does not repeat, because each source is an edge.
+    pub fn restart_requested(&self, game_over: bool) -> bool {
+        game_over
+            && self.focused
+            && (self.pressed(KeyCode::R)
+                || self.pressed(KeyCode::Enter)
+                || self.frame.pressed(Button::South)
+                || self.frame.pressed(Button::Start))
+    }
+    /// Records and announces (once per key) a query the native table cannot answer.
+    fn check_native_key(&self, key: KeyCode) {
+        if self.keyboard.is_none() || native_key_supported(key) {
+            return;
+        }
+        if self.note_unsupported(key) {
+            eprintln!("vesper3d: {}", unsupported_message(key));
+        }
+        debug_assert!(false, "{}", unsupported_message(key));
+    }
+    /// True the first time `key` is reported; later calls are quiet.
+    fn note_unsupported(&self, key: KeyCode) -> bool {
+        self.reported_unsupported
+            .lock()
+            .is_ok_and(|mut seen| seen.insert(key))
     }
 
     /// Standard WASD/arrows, sprint, jump and crouch merged with analog input. Read whenever the game should be taking
@@ -340,6 +394,7 @@ mod tests {
             clock: FrameClock::new(),
             menu_nav: MenuNav::default(),
             menu: MenuStep::default(),
+            reported_unsupported: Default::default(),
         }
     }
     /// A keyboard that holds `down` (and reports `pressed` as this frame's edges), as the normal per-frame poll would.
@@ -454,6 +509,110 @@ mod tests {
         input.frame.button(Button::Start, true);
         assert!(input.shell_actions(false, |_| false).pause);
     }
+    /// A fake OS key state: `GetAsyncKeyState` semantics (bit 15 held, bit 0 pressed since last query).
+    fn fake_os(held: &std::cell::Cell<Option<i32>>) -> impl Fn(i32) -> i16 + '_ {
+        move |vk| {
+            if held.get() == Some(vk) {
+                0x8000u16 as i16
+            } else {
+                0
+            }
+        }
+    }
+    #[test]
+    fn a_native_frame_reports_a_restart_key_edge_exactly_once() {
+        // End to end through ClientInput: source -> table -> edges -> pressed(), the path that
+        // silently dropped R on Windows when it was missing from the table.
+        let (mut input, held) = (input(), std::cell::Cell::new(None));
+        let os = fake_os(&held);
+        input.poll_devices(true, Some(&os));
+        assert!(!input.pressed(KeyCode::R) && !input.down(KeyCode::R));
+        held.set(Some(0x52));
+        input.poll_devices(true, Some(&os));
+        assert!(input.pressed(KeyCode::R) && input.down(KeyCode::R));
+        input.poll_devices(true, Some(&os));
+        assert!(!input.pressed(KeyCode::R), "a held key is one edge");
+        assert!(input.down(KeyCode::R));
+        held.set(None);
+        input.poll_devices(true, Some(&os));
+        assert!(!input.down(KeyCode::R));
+        held.set(Some(0x52));
+        input.poll_devices(true, Some(&os));
+        assert!(input.pressed(KeyCode::R), "a second press is a second edge");
+        // Shell keys flow through the same source.
+        held.set(Some(0x1B));
+        input.poll_devices(true, Some(&os));
+        assert!(input.shell_actions(false, |k| input.pressed(k)).pause);
+    }
+    #[test]
+    fn restart_is_only_requested_while_the_game_is_over() {
+        let (mut input, held) = (input(), std::cell::Cell::new(None));
+        let os = fake_os(&held);
+        held.set(Some(0x52));
+        input.poll_devices(true, Some(&os));
+        assert!(
+            !input.restart_requested(false),
+            "R while playing is not a restart"
+        );
+        assert!(input.restart_requested(true));
+        input.poll_devices(true, Some(&os));
+        assert!(
+            !input.restart_requested(true),
+            "holding R restarts once, not every frame"
+        );
+        held.set(None);
+        input.poll_devices(true, Some(&os));
+        held.set(Some(0x0D));
+        input.poll_devices(true, Some(&os));
+        assert!(input.restart_requested(true), "Enter also restarts");
+        assert!(!input.restart_requested(false));
+        held.set(Some(0x52));
+        input.poll_devices(false, Some(&os));
+        assert!(
+            !input.restart_requested(true),
+            "an unfocused window never restarts"
+        );
+    }
+    #[test]
+    fn restart_accepts_the_controller() {
+        let mut input = with_keys(&[], &[]);
+        assert!(!input.restart_requested(true));
+        input.frame.button(Button::South, true);
+        assert!(input.restart_requested(true));
+        assert!(!input.restart_requested(false));
+        let mut start = with_keys(&[], &[]);
+        start.frame.button(Button::Start, true);
+        assert!(start.restart_requested(true));
+        // A button that is not a confirm or Start does not restart.
+        let mut other = with_keys(&[], &[]);
+        other.frame.button(Button::West, true);
+        assert!(!other.restart_requested(true));
+        input.focused = false;
+        assert!(!input.restart_requested(true));
+    }
+    #[test]
+    fn a_missing_native_key_is_announced_once_per_key() {
+        let input = with_keys(&[], &[]);
+        assert!(input.note_unsupported(KeyCode::F20));
+        assert!(!input.note_unsupported(KeyCode::F20));
+        assert!(
+            input.note_unsupported(KeyCode::KpEnter),
+            "another key reports again"
+        );
+        assert!(!native_key_supported(KeyCode::F20) && native_key_supported(KeyCode::R));
+    }
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "not in the native key table")]
+    fn asking_for_a_key_the_native_table_lacks_fails_loudly_in_debug() {
+        with_keys(&[], &[]).pressed(KeyCode::F20);
+    }
+    #[cfg(debug_assertions)]
+    #[test]
+    #[should_panic(expected = "not in the native key table")]
+    fn held_queries_are_checked_too() {
+        with_keys(&[], &[]).down(KeyCode::LeftSuper);
+    }
 }
 
 /// Pure key-edge tracking; the host owns the platform call.
@@ -467,7 +626,7 @@ struct KeyboardFrame {
 /// silently never pressed on Windows (the macroquad fallback is bypassed once a
 /// native reader is installed), so the table covers the full set a game might
 /// bind — polling ~90 virtual keys per frame costs nothing.
-const KEY_TABLE: &[(KeyCode, i32)] = &[
+pub const KEY_TABLE: &[(KeyCode, i32)] = &[
     (KeyCode::A, 0x41),
     (KeyCode::B, 0x42),
     (KeyCode::C, 0x43),
@@ -537,6 +696,25 @@ const KEY_TABLE: &[(KeyCode, i32)] = &[
     (KeyCode::Period, 0xBE),
     (KeyCode::Slash, 0xBF),
     (KeyCode::GraveAccent, 0xC0),
+    (KeyCode::Pause, 0x13),
+    (KeyCode::PrintScreen, 0x2C),
+    (KeyCode::NumLock, 0x90),
+    (KeyCode::ScrollLock, 0x91),
+    (KeyCode::Kp0, 0x60),
+    (KeyCode::Kp1, 0x61),
+    (KeyCode::Kp2, 0x62),
+    (KeyCode::Kp3, 0x63),
+    (KeyCode::Kp4, 0x64),
+    (KeyCode::Kp5, 0x65),
+    (KeyCode::Kp6, 0x66),
+    (KeyCode::Kp7, 0x67),
+    (KeyCode::Kp8, 0x68),
+    (KeyCode::Kp9, 0x69),
+    (KeyCode::KpMultiply, 0x6A),
+    (KeyCode::KpAdd, 0x6B),
+    (KeyCode::KpSubtract, 0x6D),
+    (KeyCode::KpDecimal, 0x6E),
+    (KeyCode::KpDivide, 0x6F),
     (KeyCode::F1, 0x70),
     (KeyCode::F2, 0x71),
     (KeyCode::F3, 0x72),
@@ -550,6 +728,45 @@ const KEY_TABLE: &[(KeyCode, i32)] = &[
     (KeyCode::F11, 0x7A),
     (KeyCode::F12, 0x7B),
 ];
+/// Keys a game could bind that the native reader deliberately does not report. Each one needs its own
+/// virtual-key decision (a shared code, or a platform quirk) before it can join [`KEY_TABLE`]; until
+/// then asking [`ClientInput::pressed`] about it is a bug the engine flags loudly.
+pub const UNSUPPORTED_NATIVE_KEYS: &[KeyCode] = &[
+    KeyCode::KpEnter, // Windows reports it as VK_RETURN (Enter) with an extended flag, not its own code.
+    KeyCode::KpEqual,
+    KeyCode::LeftSuper,
+    KeyCode::RightSuper,
+    KeyCode::Menu,
+    KeyCode::Back,
+    KeyCode::World1,
+    KeyCode::World2,
+    KeyCode::F13,
+    KeyCode::F14,
+    KeyCode::F15,
+    KeyCode::F16,
+    KeyCode::F17,
+    KeyCode::F18,
+    KeyCode::F19,
+    KeyCode::F20,
+    KeyCode::F21,
+    KeyCode::F22,
+    KeyCode::F23,
+    KeyCode::F24,
+    KeyCode::F25,
+    KeyCode::Unknown,
+];
+/// Whether the native Windows reader reports `key` (it is in [`KEY_TABLE`]). A key outside it reads as
+/// never pressed once a native reader is installed.
+pub fn native_key_supported(key: KeyCode) -> bool {
+    KEY_TABLE.iter().any(|&(k, _)| k == key)
+}
+fn unsupported_message(key: KeyCode) -> String {
+    format!(
+        "KeyCode::{key:?} is not in the native key table (game_input::KEY_TABLE), so it reads as \
+         never pressed while a native key reader is installed (Windows). Bind another key or add it \
+         to the table."
+    )
+}
 impl KeyboardFrame {
     fn poll(&mut self, focused: bool, read: impl Fn(i32) -> i16) {
         self.down.clear();
@@ -744,13 +961,177 @@ mod keyboard_tests {
             KeyCode::Key7,
             KeyCode::Key8,
             KeyCode::Key9,
+            KeyCode::F1,
+            KeyCode::F2,
+            KeyCode::F3,
+            KeyCode::F4,
+            KeyCode::F5,
+            KeyCode::F6,
+            KeyCode::F7,
+            KeyCode::F8,
+            KeyCode::F9,
+            KeyCode::F10,
+            KeyCode::F11,
+            KeyCode::F12,
+            KeyCode::Up,
+            KeyCode::Down,
+            KeyCode::Left,
+            KeyCode::Right,
+            KeyCode::LeftShift,
+            KeyCode::RightShift,
+            KeyCode::LeftControl,
+            KeyCode::RightControl,
+            KeyCode::LeftAlt,
+            KeyCode::RightAlt,
+            KeyCode::Space,
+            KeyCode::Enter,
+            KeyCode::Escape,
             KeyCode::Tab,
         ] {
             assert!(keys.contains(&key), "KEY_TABLE is missing {key:?}");
+            assert!(native_key_supported(key));
         }
         let vks: Vec<i32> = KEY_TABLE.iter().map(|&(_, vk)| vk).collect();
         let unique: std::collections::HashSet<i32> = vks.iter().copied().collect();
         assert_eq!(vks.len(), unique.len(), "duplicate virtual-key code");
         assert_eq!(keys.len(), vks.len(), "duplicate KeyCode entry");
+    }
+    #[test]
+    fn every_key_is_in_the_table_or_explicitly_unsupported() {
+        // All of macroquad's KeyCode variants. A new one (or a dropped table row) makes this fail
+        // until it is classified, so a key can never be missing without anyone having decided so.
+        use KeyCode::*;
+        let all = [
+            Space,
+            Apostrophe,
+            Comma,
+            Minus,
+            Period,
+            Slash,
+            Key0,
+            Key1,
+            Key2,
+            Key3,
+            Key4,
+            Key5,
+            Key6,
+            Key7,
+            Key8,
+            Key9,
+            Semicolon,
+            Equal,
+            A,
+            B,
+            C,
+            D,
+            E,
+            F,
+            G,
+            H,
+            I,
+            J,
+            K,
+            L,
+            M,
+            N,
+            O,
+            P,
+            Q,
+            R,
+            S,
+            T,
+            U,
+            V,
+            W,
+            X,
+            Y,
+            Z,
+            LeftBracket,
+            Backslash,
+            RightBracket,
+            GraveAccent,
+            World1,
+            World2,
+            Escape,
+            Enter,
+            Tab,
+            Backspace,
+            Insert,
+            Delete,
+            Right,
+            Left,
+            Down,
+            Up,
+            PageUp,
+            PageDown,
+            Home,
+            End,
+            CapsLock,
+            ScrollLock,
+            NumLock,
+            PrintScreen,
+            Pause,
+            F1,
+            F2,
+            F3,
+            F4,
+            F5,
+            F6,
+            F7,
+            F8,
+            F9,
+            F10,
+            F11,
+            F12,
+            F13,
+            F14,
+            F15,
+            F16,
+            F17,
+            F18,
+            F19,
+            F20,
+            F21,
+            F22,
+            F23,
+            F24,
+            F25,
+            Kp0,
+            Kp1,
+            Kp2,
+            Kp3,
+            Kp4,
+            Kp5,
+            Kp6,
+            Kp7,
+            Kp8,
+            Kp9,
+            KpDecimal,
+            KpDivide,
+            KpMultiply,
+            KpSubtract,
+            KpAdd,
+            KpEnter,
+            KpEqual,
+            LeftShift,
+            LeftControl,
+            LeftAlt,
+            LeftSuper,
+            RightShift,
+            RightControl,
+            RightAlt,
+            RightSuper,
+            Menu,
+            Back,
+            Unknown,
+        ];
+        for key in all {
+            assert_ne!(
+                native_key_supported(key),
+                UNSUPPORTED_NATIVE_KEYS.contains(&key),
+                "{key:?} must be in exactly one of KEY_TABLE and UNSUPPORTED_NATIVE_KEYS"
+            );
+        }
+        assert_eq!(KEY_TABLE.len() + UNSUPPORTED_NATIVE_KEYS.len(), all.len());
     }
 }

@@ -176,6 +176,30 @@ class MigrationSelectionTests(unittest.TestCase):
         migrations = self.by_id(upgrade.plan(fixture.root, ROOT, 'HEAD'))
         self.assertEqual(migrations['MIG-0022-NETPLAY-ADOPTION']['status'], 'optional_adoption')
 
+    def test_native_key_table_fix_is_reported_as_received_automatically(self):
+        fixture = CustomSimFixture()
+        self.addCleanup(fixture.close)
+        migration = self.by_id(upgrade.plan(fixture.root, ROOT, 'HEAD'))['MIG-0035-NATIVE-KEY-TABLE']
+        self.assertEqual(migration['status'], 'received_automatically')
+
+    def test_restart_helper_is_offered_only_to_games_that_bind_r(self):
+        with_r = CustomSimFixture(extra_src={'main.rs': 'if sim.over && input.pressed(KeyCode::R) { reset(); }\n'})
+        self.addCleanup(with_r.close)
+        self.assertEqual(self.by_id(upgrade.plan(with_r.root, ROOT, 'HEAD'))['MIG-0035-RESTART-CONVENTION']['status'],
+                         'optional_adoption')
+        # KeyCode::Right must not look like KeyCode::R.
+        without = CustomSimFixture(extra_src={'main.rs': 'let go = input.down(KeyCode::Right);\n'})
+        self.addCleanup(without.close)
+        self.assertEqual(self.by_id(upgrade.plan(without.root, ROOT, 'HEAD'))['MIG-0035-RESTART-CONVENTION']['status'],
+                         'not_applicable')
+
+    def test_every_registry_commit_is_a_real_ancestor_of_head(self):
+        ids = [m['id'] for m in upgrade.load_registry(ROOT)]
+        self.assertEqual(len(ids), len(set(ids)))
+        for migration in upgrade.load_registry(ROOT):
+            self.assertTrue(upgrade.is_ancestor(ROOT, migration['since_commit'], 'HEAD'), migration['id'])
+            self.assertTrue((ROOT / migration['reference']).is_file(), migration['id'])
+
     def test_unknown_layout_is_uncertain_not_silently_clear(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

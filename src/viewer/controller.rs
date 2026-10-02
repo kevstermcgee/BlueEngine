@@ -9,6 +9,9 @@ pub const JUMP_HEIGHT: f32 = 0.35;
 pub const WALK_SPEED: f32 = 3.2;
 pub const SPRINT_SPEED: f32 = 5.6;
 pub const CROUCH_SPEED: f32 = 1.3;
+/// Tallest ledge, in metres, the controller steps up onto while grounded (stairs, curbs); anything higher
+/// blocks. [`super::reach::STEP_HEIGHT`] is the path planner's slightly stricter 0.22.
+pub const STEP_HEIGHT: f32 = 0.221;
 /// Default gravity in m/s^2. A jump's launch speed follows it, so `jump_height` stays true at any gravity.
 pub const GRAVITY: f32 = 12.;
 /// Default decay rate (per second) of an impulse's horizontal push; see [`Controller::apply_impulse`].
@@ -422,7 +425,7 @@ impl Controller {
             .iter()
             .filter(|c| c.overlaps_body(target, self.feet, self.body_height, self.profile.radius))
         {
-            if c.max.1 - self.feet > 0.221 {
+            if c.max.1 - self.feet > STEP_HEIGHT {
                 return false;
             }
             top = top.max(c.max.1);
