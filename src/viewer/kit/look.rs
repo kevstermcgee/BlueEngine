@@ -7,9 +7,18 @@
 //! | Material | Use |
 //! |---|---|
 //! | `world` | opaque, lit by a hemisphere ambient, one key light and a rim, glow, tone-mapped, fogged |
-//! | `fx_alpha` | translucent surfaces that do not write depth (shadows blobs, glass, halos) |
-//! | `fx_add` | additive glow: sparks, beams, shockwaves |
+//! | `fx_alpha` | translucent surfaces that do not write depth (shadows blobs, glass, halos); **never depth-tested either**, see below |
+//! | `fx_add` | additive glow: sparks, beams, shockwaves; likewise never depth-tested |
 //! | `sky` | unlit vertex-coloured dome, drawn first without depth |
+//!
+//! **`fx_alpha` and `fx_add` are not depth-tested.** Their pipelines ask for `depth_test: LessOrEqual` with
+//! `depth_write: false`, but miniquad 0.4.8 (`src/graphics/gl.rs`, `apply_pipeline`, around line 1303) only
+//! enables `GL_DEPTH_TEST` when `depth_write` is true and otherwise calls `glDisable(GL_DEPTH_TEST)`, so the
+//! requested comparison is silently ignored. Everything drawn with these two materials lands on top of the
+//! opaque world, whatever stands in front of it: a glow, a shadow blob or a pane of glass behind a wall is
+//! visible through the wall. Until the kit has a depth-tested translucent path, keep such geometry from
+//! being occluded (fade it with distance, cull it yourself, or draw it with `world` and a baked alpha
+//! cut-out instead).
 //!
 //! Geometry comes from [`Template`](super::Template)/[`Batch`](super::Batch) (vertex `uv.x` is glow,
 //! `normal.xyz` the normal) or from `mesh::bake_with` for a static world.
@@ -315,9 +324,11 @@ fn additive_blend() -> Option<BlendState> {
 pub struct Materials {
     /// Opaque, lit, fogged geometry.
     pub world: Material,
-    /// Blended geometry that does not write depth, for translucent surfaces.
+    /// Blended geometry that does not write depth, for translucent surfaces. It is also **not depth-tested**
+    /// (miniquad ignores `depth_test` when `depth_write` is false), so nearer opaque geometry does not hide it:
+    /// see the module documentation.
     pub fx_alpha: Material,
-    /// Additive glow: sparks, beams, shockwaves.
+    /// Additive glow: sparks, beams, shockwaves. Not depth-tested, like `fx_alpha`.
     pub fx_add: Material,
     /// Unlit gradient sky, drawn first without depth.
     pub sky: Material,
@@ -349,6 +360,8 @@ impl Materials {
                 },
                 MaterialParams {
                     pipeline_params: PipelineParams {
+                        // Ignored by miniquad 0.4.8 while depth_write is false (it disables the depth
+                        // test): kept so the intent survives a backend that honours it. See module docs.
                         depth_test: Comparison::LessOrEqual,
                         depth_write: false,
                         color_blend: blend,
