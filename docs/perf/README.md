@@ -299,3 +299,24 @@ space available passed; no budgets or tests were relaxed. Windows CI, manual gra
 play, real WAN latency loads and aggregate multi-peer timings for these prop fixtures
 were not run. `tools/perf.py record --suite sim --profile fast` recorded the current
 headless diagnostic separately (22.429 us mean); it is not the matched prop benchmark.
+
+## Shadow tiers (`examples/shadow_demo.rs`, ADR 0036)
+
+The harness (`perf.py record`) measures builds, tests and the headless simulation, not rendering, so shadows are
+measured with the demo itself under Mesa llvmpipe on xvfb (`--capture DIR --frames 1 --exit-after 300 --perf`,
+1280x720, 4 cores, `fast` profile; rows `shadow_demo_*`, `source: manual-shadow-demo-2026-10-02`). The scene is small
+(a ground quad, a wall, a cube, a pillar and three moving actors), so these are **relative** costs of the tier, in
+software GL where fill rate dominates:
+
+| Tier | 300 frames, wall time | Own CPU work per frame (p50) |
+|---|---|---|
+| Off | 7.5 s | 0.27 ms |
+| Simple | 7.7 s (+3%) | 0.41 ms |
+| Full (2048 map) | 12.6 s (+68%, about 17 ms more per frame) | 11.8 ms |
+
+Simple is a few hundred extra vertices and one extra draw call. Full pays for a second pass over the casters and for
+clearing and filling a 2048x2048 colour plus depth target; under llvmpipe that is raster time, which a GPU does in
+a small fraction. Not measured: any real GPU, the Intel N97's own GPU, Windows, a scene with thousands of casters,
+the effect of the 9-tap lookup on a real shader core. Treat the Full figure as an upper bound on this machine's
+software path, not as a prediction for players; the first run on real hardware should add rows here.
+
