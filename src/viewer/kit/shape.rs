@@ -198,8 +198,7 @@ impl Template {
             } else {
                 k - 1
             };
-            for j in 0..m {
-                let (p, np) = rings[i][j];
+            for (j, &(p, np)) in rings[i].iter().enumerate() {
                 // The ring's own normal, made perpendicular to the way the surface runs along the loft.
                 let d = (rings[next][j].0 - rings[prev][j].0).normalize_or_zero();
                 let n = (np - d * np.dot(d)).normalize_or_zero();
@@ -459,7 +458,7 @@ impl Template {
         }
         let mut verts: Vec<Vert> = Vec::new();
         let mut idx: Vec<u16> = Vec::with_capacity(tris.len() * 3);
-        let mut seen: HashMap<([i64; 3], [i32; 3], [u32; 5]), u16> = HashMap::new();
+        let mut seen: HashMap<WeldKey, u16> = HashMap::new();
         for (t, face) in tris.iter().zip(&faces) {
             for &i in t {
                 let v = self.verts[i];
@@ -506,6 +505,9 @@ impl Template {
         self.idx = idx;
     }
 }
+
+/// A vertex identity for welding: position cell, quantised normal, colour/glow/alpha bits.
+type WeldKey = ([i64; 3], [i32; 3], [u32; 5]);
 
 /// How a [`Template::sweep`] shapes its section along the path.
 ///

@@ -178,7 +178,7 @@ pub fn lint_with(t: &Template, cfg: &LintConfig) -> Vec<Defect> {
     let mut out: Vec<Defect> = Vec::new();
     let mut truncated = false;
     let n_verts = t.verts.len();
-    if t.idx.len() % 3 != 0 {
+    if !t.idx.len().is_multiple_of(3) {
         out.push(Defect::BadIndex {
             tri: t.idx.len() / 3,
         });
