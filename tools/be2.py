@@ -141,6 +141,7 @@ def check(plan, timeout=None):
     directory = WORK / ('check-' + stamp)
     directory.mkdir(parents=True)
     report = {'ok': False, 'plan': plan, 'checks': []}
+    env = {**os.environ, **plan['env']} if plan.get('env') else None
     try:
         for i, original in enumerate(plan['commands']):
             cmd = list(original)
@@ -151,7 +152,7 @@ def check(plan, timeout=None):
             item = {'command': cmd, 'log': log.name, 'ok': False}
             report['checks'].append(item)
             try:
-                item.update(invoke(cmd, log=log, timeout=timeout, harness=plan.get('test_harness')))
+                item.update(invoke(cmd, log=log, env=env, timeout=timeout, harness=plan.get('test_harness')))
             except CommandFailure as error:
                 item.update(error.packet)
                 report['failure'] = error.packet
@@ -172,6 +173,8 @@ def check(plan, timeout=None):
             summary.update(feature=plan['feature'], feature_mode=plan['feature_mode'],
                            proves=plan['proves'] if report['ok'] else None, remaining=plan['remaining'])
             summary['tests_executed'] = sum(item.get('tests_executed', 0) for item in report['checks']) if plan.get('test_harness') else None
+        if plan['scope'] == 'windows_typecheck':
+            summary['proves'] = plan['proves'] if report['ok'] else None
         if 'failure' in report:
             summary.update(failure=report['failure'], exit_code=report['exit_code'])
         print(json.dumps(summary))
@@ -232,6 +235,9 @@ def main():
     c = sub.add_parser('check')
     c.add_argument('--changed', action='store_true', help='Select checks from the complete Git diff')
     c.add_argument('--base', default='HEAD', help='Compare current files against this commit (default HEAD)')
+    c.add_argument('--windows', action='store_true',
+                   help='Type-check cfg(windows) code for x86_64-pc-windows-gnu without a Windows C toolchain; '
+                        'not a Windows run (see docs/CHANGE_WORKFLOW.md)')
     c.add_argument('--plan', action='store_true', help='Print the plan without running checks')
     c.add_argument('--iterate', metavar='FEATURE', help='Focused iteration only; never final validation')
     c.add_argument('--typecheck', action='store_true', help='Iteration: engine library type-check only')
@@ -275,6 +281,13 @@ def main():
     elif args.command == 'check':
         if args.timeout is not None and (not 0 < args.timeout < float('inf')):
             parser.error('--timeout must be a finite positive number')
+        if args.windows:
+            if args.iterate or args.changed or args.base != 'HEAD' or args.typecheck or args.test or args.feature_mode:
+                parser.error('--windows is its own check; do not combine it with --iterate/--changed/--base/--typecheck/--test/--feature-mode')
+            plan = workflow.windows_plan()
+            if args.plan: print(json.dumps(plan, indent=2))
+            else: check(plan, args.timeout)
+            return
         if args.iterate:
             if args.changed or args.base != 'HEAD':
                 parser.error('--iterate cannot replace --changed or --base final checks')

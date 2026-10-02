@@ -42,6 +42,28 @@ upgrade and media-tools Python tests.
 Feature configurations are grouped to avoid repeated binary rebuilds. CI still runs
 the full Linux/Windows matrix, independent of local scope selection.
 
+### Windows type-check (`check --windows`)
+
+`python tools/be2.py check --windows` (add `--plan` to only see it) runs `cargo check --locked --target
+x86_64-pc-windows-gnu --all-targets` with default and with `--no-default-features`, from a Linux machine. It
+needs `rustup target add x86_64-pc-windows-gnu` and a C compiler for ring's build script: a real
+`x86_64-w64-mingw32-gcc` if present, otherwise the host `cc`/`ar`, which cc-rs is pointed at through
+`CC_x86_64_pc_windows_gnu`/`AR_x86_64_pc_windows_gnu`. That works because `cargo check` never links: the C is
+built as host objects nothing consumes. It is its own check; it does not combine with `--changed` and the
+default `check` does not run it (the first cold run builds every dependency again for the Windows target,
+a few minutes).
+
+What it proves: all `cfg(windows)` code in the library, binaries, examples and tests (native key and focus
+readers, `windows-sys` calls, console handlers) compiles and type-checks, so a Windows-only type error or a
+missing `windows-sys` feature is caught before CI. Verified by temporarily adding a deliberate type error under
+`#[cfg(windows)]`, which the check rejects.
+
+What it does not prove: anything about running on Windows. Nothing is linked or executed, so linker errors,
+runtime behavior, real key/focus/console handling and the Windows C code of dependencies are untested; a
+type-check is not a Windows run. The Windows CI job stays the real gate, and input changes still need a manual
+key test on Windows. The key reader's table logic is covered on Linux by driving it with a fake key source
+(`ClientInput::begin_frame_with_key_source`).
+
 Reports contain the resolved baseline, paths, plan and per-command log/status.
 Failure packets include the failed command, observed category, diagnostic/location,
 reproduction argv and full-log path. Complete output streams directly to disk.

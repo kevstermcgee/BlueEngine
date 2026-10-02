@@ -118,6 +118,38 @@ class DiskTests(unittest.TestCase):
         self.assertEqual(workflow.disk_report({'target': ROOT}, usage=broken)['locations'], {})
 
 
+class WindowsPlanTests(unittest.TestCase):
+    """`check --windows` needs a Windows target and some C compiler for ring's build script, and says so."""
+
+    def plan(self, tools, installed=True):
+        which = lambda name: ('/usr/bin/' + name) if name in tools else None
+        with tempfile.TemporaryDirectory() as directory:
+            libdir = directory if installed else directory + '-missing'
+            run = lambda *a, **k: SimpleNamespace(returncode=0, stdout=libdir + '\n')
+            return workflow.windows_plan(which=which, run=run)
+
+    def test_without_mingw_the_host_compiler_stands_in_for_the_type_check(self):
+        plan = self.plan({'cargo', 'rustc', 'cc', 'ar'})
+        self.assertEqual(plan['scope'], 'windows_typecheck')
+        self.assertEqual(plan['env'], {'CC_x86_64_pc_windows_gnu': '/usr/bin/cc',
+                                       'AR_x86_64_pc_windows_gnu': '/usr/bin/ar'})
+        self.assertEqual(plan['commands'][0][:6], ['cargo', 'check', '--locked', '--target',
+                                                   'x86_64-pc-windows-gnu', '--all-targets'])
+        self.assertIn('--no-default-features', plan['commands'][1])
+        self.assertIn('does NOT prove', plan['proves'])
+
+    def test_a_real_mingw_gcc_is_used_untouched(self):
+        self.assertEqual(self.plan({'cargo', 'rustc', 'x86_64-w64-mingw32-gcc'})['env'], {})
+
+    def test_missing_pieces_fail_with_the_remedy_not_a_fake_pass(self):
+        with self.assertRaisesRegex(RuntimeError, 'rustup target add'):
+            self.plan({'cargo', 'rustc', 'cc', 'ar'}, installed=False)
+        with self.assertRaisesRegex(RuntimeError, 'C compiler'):
+            self.plan({'cargo', 'rustc'})
+        with self.assertRaisesRegex(RuntimeError, 'toolchain'):
+            self.plan(set())
+
+
 class SelectionTests(unittest.TestCase):
     def test_iteration_reuses_index_and_never_claims_final_validation(self):
         plan = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
