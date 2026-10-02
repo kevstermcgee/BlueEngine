@@ -906,7 +906,10 @@ server = bin/spooky-kart-server
         assert_eq!(ids, ["deadfall", "spooky-kart"]);
         assert_eq!(c.games[0].public_set, vec![("bots".to_string(), 1)]);
         let s = c.hub.resolve(&HubSection::default()).unwrap();
-        assert_eq!((s.listen.port(), s.pool_start, s.pool_size, s.legacy), (4100, 4101, 16, Mode::Serve));
+        assert_eq!(
+            (s.listen.port(), s.pool_start, s.pool_size, s.legacy),
+            (4100, 4101, 16, Mode::Serve)
+        );
     }
 
     #[test]
