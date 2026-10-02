@@ -196,17 +196,19 @@ def ledger_hints(root, query, selected=()):
 def module_picks(summaries, feature, query_words, rarity=None):
     """Files a feature owns whose path or one-line summary share words with the task, best first.
 
-    A file is picked on two or more shared words, or one shared word that is also in its path; rarer shared words
-    rank higher (`rarity` maps a word to its weight). Nothing is read from source: the summaries are in the index.
+    A file is picked on two or more shared words, or one shared word that is in its path or that almost no other
+    file mentions; rarer shared words rank higher (`rarity` maps a word to its weight). Nothing is read from source: the summaries are in the index.
     """
     picks = []
+    distinct = math.log(1 + len(summaries) / 2)    # a word that only one or two files mention
     for order, path in enumerate(feature.get('files', [])):
         summary = summaries.get(path)
         if not summary:
             continue
         path_words = learned_words(re.sub(r'[/_.\-]', ' ', path))
         shared = query_words & (learned_words(summary) | path_words)
-        if len(shared) >= 2 or (shared and shared & path_words):
+        distinctive = any((rarity or {}).get(word, 0) >= distinct for word in shared)
+        if len(shared) >= 2 or (shared and (shared & path_words or distinctive)):
             picks.append((-sum((rarity or {}).get(word, 1.0) for word in shared), order, path))
     return [path for *_, path in sorted(picks)]
 
