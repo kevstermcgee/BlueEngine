@@ -1,5 +1,6 @@
 """Bounded context lookup and conservative validation selection. No Cargo discovery."""
 import json
+import math
 from pathlib import Path
 import re
 import shutil
@@ -55,6 +56,12 @@ def disk_report(locations, usage=shutil.disk_usage):
 
 def index(root):
     return json.loads((root / 'tools/FEATURES.json').read_text(encoding='utf-8'))['features']
+
+
+def modules(root):
+    """{path: one-line summary} of indexed files (`python tools/learn.py modules --write`); empty if absent."""
+    found = json.loads((root / 'tools/FEATURES.json').read_text(encoding='utf-8')).get('modules', {})
+    return found if isinstance(found, dict) else {}
 
 
 def closure(features, names, reverse=False):
@@ -183,6 +190,24 @@ def ledger_hints(root, query, selected=()):
     return lines
 
 
+def module_picks(summaries, feature, query_words, rarity=None):
+    """Files a feature owns whose path or one-line summary share words with the task, best first.
+
+    A file is picked on two or more shared words, or one shared word that is also in its path; rarer shared words
+    rank higher (`rarity` maps a word to its weight). Nothing is read from source: the summaries are in the index.
+    """
+    picks = []
+    for order, path in enumerate(feature.get('files', [])):
+        summary = summaries.get(path)
+        if not summary:
+            continue
+        path_words = learned_words(re.sub(r'[/_.\-]', ' ', path))
+        shared = query_words & (learned_words(summary) | path_words)
+        if len(shared) >= 2 or (shared and shared & path_words):
+            picks.append((-sum((rarity or {}).get(word, 1.0) for word in shared), order, path))
+    return [path for *_, path in sorted(picks)]
+
+
 def context(root, query, limit=3):
     if not query.strip() or len(query) > 100:
         raise ValueError(f'The query must be 1..100 characters (this one is {len(query)}): shorten it to the '
@@ -190,24 +215,46 @@ def context(root, query, limit=3):
     if not 1 <= limit <= 5:
         raise ValueError(f'--limit must be 1..5 (got {limit})')
     features = index(root)
+    summaries = modules(root)
     terms = set(re.findall(r'[a-z0-9]+', query.lower())) - {
         'add', 'fix', 'change', 'the', 'a', 'an', 'to', 'for', 'in', 'of', 'and'}
+    bags = {}
+    for name, feature in features.items():
+        # What a feature's files say about themselves (one line each) is searchable text of the feature.
+        text = json.dumps(feature).lower() + ' ' + ' '.join(summaries.get(path, '') for path in feature['files']).lower()
+        bags[name] = set(re.findall(r'[a-z0-9]+', text))
+    # A word found in many records says little about which one the task needs: weight each query word by how rare
+    # it is across the index (inverse document frequency), so a generic word cannot outvote a specific one.
+    weight = {term: math.log(1 + len(bags) / sum(term in words for words in bags.values()))
+              for term in terms if any(term in words for words in bags.values())}
     ranked = []
     for name, feature in features.items():
-        words = set(re.findall(r'[a-z0-9]+', json.dumps(feature).lower()))
+        words = bags[name]
         title = set(re.findall(r'[a-z0-9]+', name.lower()))
         keywords = set(re.findall(r'[a-z0-9]+', ' '.join(feature.get('keywords', [])).lower()))
         diagnostic = any(query.upper() == item['id'] for item in
                          feature.get('constraints', []) + feature.get('decisions', []))
-        score = 1000 if query.lower() == name or diagnostic else 4 * len(terms & (title | keywords)) + len(terms & words)
+        score = 1000 if query.lower() == name or diagnostic else round(sum(
+            weight[term] * (4 if term in title | keywords else 1) for term in terms & words), 3)
         if score:
             ranked.append((score, name, feature))
     ranked.sort(key=lambda item: (-item[0], item[1]))
     selected = ranked[:1] if ranked and ranked[0][0] >= 1000 else ranked[:limit]
     matches = []
+    query_words = learned_words(query)
+    frequency = {}
+    for text in summaries.values():
+        for word in learned_words(text):
+            frequency[word] = frequency.get(word, 0) + 1
+    rarity = {word: math.log(1 + len(summaries) / count) for word, count in frequency.items()}
     for position, (_, name, feature) in enumerate(selected):
         allowance = max(1, 5 // len(selected) + (position < 5 % len(selected)))
-        item = {'id': name, 'read_first': feature.get('read_first', feature['files'][:3])[:allowance],
+        curated = feature.get('read_first', feature['files'][:3])
+        # The best-matching file by its own summary leads (so a module inside a large feature is found by what it
+        # does); the curated entry points follow. Without a file match this is exactly the curated list.
+        picked = module_picks(summaries, feature, query_words, rarity)[:max(1, allowance - 1)]
+        read_first = (picked + [path for path in curated if path not in picked])[:allowance]
+        item = {'id': name, 'read_first': read_first,
                 'contract': feature.get('contract', feature['note']),
                 'tests': feature['checks'][:2]}
         for field in ('constraints', 'canonical_example', 'decisions', 'traps', 'depends_on', 'public_api'):

@@ -762,3 +762,89 @@ class ContextHookTests(unittest.TestCase):
                 self.assertLessEqual(sum(len(line) for line in result['learned']), 600)
         self.assertNotIn('learned', workflow.context(ROOT, 'zyxquantumunknown'))
         self.assertNotIn('learned', workflow.context(ROOT, 'movement', 1))
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# modules: per-file summaries, and context routing to a file by what it does
+# ---------------------------------------------------------------------------------------------------------------
+class ModuleTests(unittest.TestCase):
+    def test_summaries_come_from_rust_docs_python_docstrings_and_markdown_titles(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'a.rs').write_text('//! A tiny [`Thing`] with a [link](https://x.y/z) inside. More text here.\n//! Second line.\nfn f() {}\n')
+            (root / 'b.rs').write_text('fn f() {}\n//! not a module doc\n')
+            (root / 'c.py').write_text('#!/usr/bin/env python3\n"""Count the things:\nacross lines. Then more."""\nimport os\n')
+            (root / 'd.md').write_text('\n# ADR 0036: Shadows for kit games\n\ntext\n')
+            (root / 'e.rs').write_text('//! ' + 'word ' * 60 + '\n')
+            self.assertEqual(learn.module_summary(root / 'a.rs'), 'A tiny Thing with a link inside.')
+            self.assertIsNone(learn.module_summary(root / 'b.rs'))
+            self.assertEqual(learn.module_summary(root / 'c.py'), 'Count the things: across lines.')
+            self.assertEqual(learn.module_summary(root / 'd.md'), 'ADR 0036: Shadows for kit games')
+            self.assertLessEqual(len(learn.module_summary(root / 'e.rs')), learn.MODULE_SUMMARY_CHARS)
+            self.assertIsNone(learn.module_summary(root / 'missing.rs'))
+
+    def test_build_modules_uses_only_indexed_source_and_guides(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for rel, body in {'src/viewer/a.rs': '//! Alpha module.\n', 'src/viewer/tests.rs': '//! tests\n',
+                              'tools/test_x.py': '"""test"""\n', 'docs/G.md': '# Guide\n', 'other/z.rs': '//! Z.\n',
+                              'tools/t.py': '"""Tool."""\n'}.items():
+                (root / rel).parent.mkdir(parents=True, exist_ok=True)
+                (root / rel).write_text(body)
+            (root / 'tools' / 'FEATURES.json').write_text(json.dumps({'features': {'f': {
+                'files': ['src/viewer/a.rs', 'src/viewer/tests.rs', 'tools/test_x.py', 'docs/G.md', 'other/z.rs', 'tools/t.py', 'src/gone.rs']}}}))
+            self.assertEqual(learn.build_modules(root), {'docs/G.md': 'Guide', 'src/viewer/a.rs': 'Alpha module.', 'tools/t.py': 'Tool.'})
+
+    def test_modules_command_checks_and_writes(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'src').mkdir()
+            (root / 'src' / 'a.rs').write_text('//! Alpha.\n')
+            (root / 'tools').mkdir()
+            features = root / 'tools' / 'FEATURES.json'
+            features.write_text(json.dumps({'format': 1, 'features': {'f': {'files': ['src/a.rs'], 'checks': [], 'note': 'n'}}}))
+            with patch.object(learn, 'ROOT', root), patch.object(learn, 'FEATURES_FILE', features):
+                self.assertEqual(run_cli('modules', '--check')[0], 1)
+                self.assertEqual(run_cli('modules', '--write')[0], 0)
+                self.assertEqual(json.loads(features.read_text())['modules'], {'src/a.rs': 'Alpha.'})
+                self.assertEqual(run_cli('modules', '--check')[0], 0)
+
+    def test_committed_modules_exist_and_are_short(self):
+        modules = workflow.modules(ROOT)
+        self.assertGreater(len(modules), 100)
+        for path, summary in modules.items():
+            self.assertTrue((ROOT / path).is_file(), path)
+            self.assertTrue(summary and len(summary) <= learn.MODULE_SUMMARY_CHARS + 3, path)
+
+    def test_context_leads_with_the_file_that_matches_the_task(self):
+        feature = {'files': ['src/a/rng.rs', 'src/a/text_field.rs', 'src/a/mod.rs'], 'checks': ['c'], 'note': 'umbrella',
+                   'read_first': ['src/a/mod.rs']}
+        summaries = {'src/a/rng.rs': 'Tiny deterministic random numbers for simulations.',
+                     'src/a/text_field.rs': 'A single-line text box: typing, pasting, caret movement.',
+                     'src/a/mod.rs': 'Building blocks for games.'}
+        words = workflow.learned_words
+        self.assertEqual(workflow.module_picks(summaries, feature, words('random numbers that replay')), ['src/a/rng.rs'])
+        self.assertEqual(workflow.module_picks(summaries, feature, words('add a text box with paste')), ['src/a/text_field.rs'])
+        self.assertEqual(workflow.module_picks(summaries, feature, words('something about games')), [])
+        self.assertEqual(workflow.module_picks(summaries, feature, words('deterministic')), [], 'one shared word that is not in the path is not enough')
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'tools').mkdir()
+            (root / 'tools' / 'FEATURES.json').write_text(json.dumps({'format': 1, 'features': {'umbrella': {
+                **feature, 'keywords': ['simulation']}}, 'modules': summaries}))
+            packet = workflow.context(root, 'simulation random numbers')
+            self.assertEqual(packet['matches'][0]['read_first'][0], 'src/a/rng.rs')
+            plain = workflow.context(root, 'simulation')
+            self.assertEqual(plain['matches'][0]['read_first'], ['src/a/mod.rs', ], 'no file match: the curated list, unchanged')
+
+    def test_a_generic_word_does_not_outvote_a_specific_one(self):
+        features = {'big': {'files': ['a'], 'checks': [], 'note': 'player server game level map camera sound ' * 3},
+                    'big2': {'files': ['b'], 'checks': [], 'note': 'player server game level map camera sound'},
+                    'big3': {'files': ['c'], 'checks': [], 'note': 'player server game level'},
+                    'niche': {'files': ['d'], 'checks': [], 'note': 'quic certificate pinned'}}
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / 'tools').mkdir()
+            (root / 'tools' / 'FEATURES.json').write_text(json.dumps({'format': 1, 'features': features}))
+            self.assertEqual(workflow.context(root, 'player quic', 1)['matches'][0]['id'], 'niche')

@@ -6,6 +6,7 @@
   python tools/learn.py eval     [--tasks FILE] [-k N]                        does `be2.py context` find the right tools
   python tools/learn.py report                                                one page: docs/learning/REPORT.md
   python tools/learn.py record   --game G --area A --tokens N --note TEXT     one friction-ledger entry
+  python tools/learn.py modules  [--write|--check]                            per-file summaries that `context` uses to route to a file
   python tools/learn.py scan     PATH ...                                     leak scan: counts of secret-like values
 
 Privacy by design (docs/learning/README.md): `sessions` reads Claude Code session logs, which contain private
@@ -1290,6 +1291,81 @@ def cmd_record(args):
 
 
 # ---------------------------------------------------------------------------------------------------------------
+# modules: a one-line description of every indexed source file, so `context` can route a task to a file
+# ---------------------------------------------------------------------------------------------------------------
+MODULE_SUMMARY_CHARS = 110
+FEATURES_FILE = ROOT / 'tools' / 'FEATURES.json'
+
+
+def module_summary(path):
+    """First sentence of a Rust file's leading `//!` docs, a Python docstring or a Markdown title, or None."""
+    try:
+        text = Path(path).read_text(encoding='utf-8', errors='replace')
+    except OSError:
+        return None
+    if str(path).endswith('.md'):
+        title = re.search(r'^#\s+(.+)$', text, re.M)
+        joined = title.group(1).strip() if title else ''
+    elif str(path).endswith('.rs'):
+        lines = []
+        for line in text.splitlines():
+            if line.startswith('//!'):
+                lines.append(line[3:].strip())
+            elif lines or line.strip():
+                break
+        joined = ' '.join(l for l in lines if l)
+    else:
+        match = re.match(r'\s*(?:#![^\n]*\n)?\s*(?:\'\'\'|""")(.*?)(?:\'\'\'|""")', text, re.S)
+        joined = ' '.join(match.group(1).split()) if match else ''
+    joined = re.sub(r'\[`?([^\]`]+)`?\]\([^)]*\)', r'\1', joined)      # [text](link) -> text
+    joined = re.sub(r'\[`([^\]`]+)`\]', r'\1', joined).replace('`', '')   # [`Item`] -> Item
+    first = re.split(r'(?<=[.!?])\s', joined, maxsplit=1)[0].strip()
+    first = re.sub(r'^(AI-[A-Z]+ [A-Z0-9-]+: )', '', first)
+    if not first:
+        return None
+    if len(first) > MODULE_SUMMARY_CHARS:
+        first = first[:MODULE_SUMMARY_CHARS - 3].rsplit(' ', 1)[0].rstrip(' ,;:') + '...'
+    return first
+
+
+def build_modules(root=None):
+    """{path: summary} for the source files (src/, tools/, scripts/, templates/) and docs/*.md guides that indexed features own."""
+    root = Path(root) if root else ROOT
+    index = json.loads((root / 'tools' / 'FEATURES.json').read_text(encoding='utf-8'))
+    modules = {}
+    for feature in index['features'].values():
+        for rel in feature.get('files', []):
+            name = Path(rel).name
+            source = rel.startswith(('src/', 'tools/', 'scripts/', 'templates/')) and rel.endswith(('.rs', '.py'))
+            guide = rel.startswith('docs/') and rel.endswith('.md')
+            if not (source or guide):
+                continue
+            if name.startswith('test_') or name == 'tests.rs' or '/tests/' in rel or rel in modules:
+                continue
+            summary = module_summary(root / rel)
+            if summary:
+                modules[rel] = summary
+    return dict(sorted(modules.items()))
+
+
+def cmd_modules(args):
+    built = build_modules()
+    doc = json.loads(FEATURES_FILE.read_text(encoding='utf-8'))
+    current = doc.get('modules', {})
+    stale = sorted(path for path in set(built) | set(current) if built.get(path) != current.get(path))
+    if args.write:
+        doc['modules'] = built
+        FEATURES_FILE.write_text(json.dumps(doc, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+        print(f'wrote {len(built)} module summaries to tools/FEATURES.json ({len(stale)} changed)')
+        return 0
+    print(f'{len(built)} indexed source files have a summary; {len(stale)} differ from tools/FEATURES.json'
+          + (' (run `learn.py modules --write`)' if stale else ''))
+    for path in stale[:20]:
+        print('  ' + path)
+    return 1 if (args.check and stale) else 0
+
+
+# ---------------------------------------------------------------------------------------------------------------
 # eval: does `be2.py context` surface the right tools for realistic tasks?
 # ---------------------------------------------------------------------------------------------------------------
 TASKS = LEARNING / 'tasks.jsonl'
@@ -1445,7 +1521,8 @@ def cmd_eval(args):
                 stream.write(json.dumps({'kind': 'task', 'run': run_id, 'ts': stamp, 'commit': commit,
                                          'dirty': dirty, **row}, sort_keys=True) + '\n')
             stream.write(json.dumps({'kind': 'run', 'run': run_id, 'ts': stamp, 'commit': commit, 'dirty': dirty,
-                                     'k': args.k, **aggregate, **({'note': args.note} if args.note else {})},
+                                     'k': args.k, 'task_file': Path(args.tasks).name if args.tasks else TASKS.name,
+                                     **aggregate, **({'note': args.note} if args.note else {})},
                                     sort_keys=True) + '\n')
     if args.set_floor:
         floor = {'k': args.k, 'feature_recall': int((aggregate['feature_recall'] or 0) * 100) / 100,
@@ -1475,7 +1552,8 @@ def shorten(text, limit):
 
 def latest_runs(runs, k=3):
     """(first run row, latest run row, its task rows) for a given k."""
-    run_rows = [r for r in runs if r.get('kind') == 'run' and r.get('k') == k]
+    run_rows = [r for r in runs if r.get('kind') == 'run' and r.get('k') == k
+                and r.get('task_file', 'tasks.jsonl') == 'tasks.jsonl']
     if not run_rows:
         return None, None, []
     first, latest = run_rows[0], run_rows[-1]
@@ -1656,6 +1734,9 @@ def build_parser():
     c.add_argument('--ledger', metavar='FILE', help=argparse.SUPPRESS)
     c.add_argument('--dry-run', action='store_true', help='validate and print without writing')
     c.add_argument('--json', action='store_true')
+    m = sub.add_parser('modules', help='refresh the per-file summaries in tools/FEATURES.json that context uses to route to a file')
+    m.add_argument('--write', action='store_true', help='write the "modules" map into tools/FEATURES.json')
+    m.add_argument('--check', action='store_true', help='exit 1 when the committed map is stale')
     n = sub.add_parser('scan', help='count secret-like values in generated files (counts only)')
     n.add_argument('paths', nargs='+')
     n.add_argument('--where', action='store_true', help='also print key paths of matches (never the values)')
@@ -1666,7 +1747,7 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     handler = {'sessions': cmd_sessions, 'dupes': cmd_dupes, 'eval': cmd_eval, 'report': cmd_report,
-               'record': cmd_record, 'scan': cmd_scan}[args.command]
+               'record': cmd_record, 'scan': cmd_scan, 'modules': cmd_modules}[args.command]
     try:
         return handler(args)
     except LearnError as error:
