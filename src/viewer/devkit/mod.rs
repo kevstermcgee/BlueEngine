@@ -28,6 +28,8 @@
 //! | [`path::ClosedPath`] | a smooth closed loop (track, patrol route): length, point and tangent at a distance, progress and lateral offset of any position, arc distance with wrap-around, plus the yaw helpers `forward`, `right`, `yaw_of`, `yaw_facing`, `wrap_angle` |
 //! | [`wall_along_x`], [`wall_along_z`] | straight walls with doorway gaps cut out, for a hand-built indoor level (a `MapDocument` is not the only way to make rooms) |
 //! | [`WaypointGraph`] | a small walkable graph (doorway thresholds, room centres) with breadth-first shortest-path and nearest-node lookup, for an NPC or monster moving through such a level — unlike `ClosedPath`'s single loop, this one can branch |
+//! | [`TextField`], [`CharFilter`] | a single-line text box as pure logic: sanitised typing and paste, caret, hold-to-repeat (`TextField::feed_frame` reads the keyboard and clipboard) |
+//! | [`resolve_ipv4`], [`ServerChoice`] | a typed server address to an IPv4 `SocketAddr` with player-facing errors, and the default-server chain (`--connect`, `server.txt`, last used, built in) |
 //! | [`synth`] | procedural sound effects, a music loop, WAV writer and loudness/pitch measurement: audio with no recordings |
 //!
 //! The simulation stays authoritative and rendering-free; the window only reads it. One frame of a
@@ -65,6 +67,7 @@ mod level;
 mod lifecycle;
 mod look;
 mod menu;
+pub mod net_address;
 pub mod path;
 mod playback;
 mod rng;
@@ -73,6 +76,7 @@ mod scale;
 mod sim;
 pub mod snapshot;
 pub mod synth;
+pub mod text_field;
 mod waypoints;
 
 pub use crate::viewer::savestate::{
@@ -88,6 +92,9 @@ pub use look::{
     STICK_RADIANS_PER_SECOND,
 };
 pub use menu::{MenuNav, MenuStep, FLICK, RELEASE, REPEAT_DELAY, REPEAT_INTERVAL};
+pub use net_address::{
+    resolve_ipv4, resolve_ipv4_with, AddressError, ServerChoice, ServerOrigin, ServerSource,
+};
 pub use playback::{
     flag_value, has_flag, parse_frame_list, parse_size, CapturePlan, Cue, Playback, Timeline,
 };
@@ -101,4 +108,5 @@ pub use scale::{
 };
 pub use sim::{assert_deterministic, run_inputs, Simulation, StateHasher, Trace};
 pub use snapshot::{assert_resumes_as_promised, Migration, SavePolicy, Snapshot};
+pub use text_field::{CharFilter, EditKey, TextField};
 pub use waypoints::{Waypoint, WaypointGraph};

@@ -112,6 +112,9 @@ pub struct Settings {
     pub sfx_on: bool,
     /// Start in fullscreen.
     pub fullscreen: bool,
+    /// The server address the player last connected to (as typed), so the join screen can offer it again.
+    /// Absent from settings files written before this field existed; it then reads as `None`.
+    pub last_server: Option<String>,
 }
 
 impl Default for Settings {
@@ -123,6 +126,7 @@ impl Default for Settings {
             music_on: true,
             sfx_on: true,
             fullscreen: false,
+            last_server: None,
         }
     }
 }
@@ -306,6 +310,32 @@ mod tests {
         assert!(!s.toggle_sfx());
         assert_eq!(s.sfx_level(), 0.);
         assert_eq!(s.music_level(), 0.6, "the two toggles are independent");
+    }
+
+    #[test]
+    fn last_server_is_optional_in_old_files_and_survives_a_round_trip() {
+        let path = temp("last-server.json");
+        std::fs::write(
+            &path,
+            r#"{"sensitivity":1.5,"music":0.3,"sfx":0.9,"music_on":false,"sfx_on":true,"fullscreen":true}"#,
+        )
+        .unwrap();
+        let old = Settings::load(&path);
+        assert_eq!(old.last_server, None, "a file from before the field loads");
+        assert_eq!(
+            (old.sensitivity, old.music_on, old.fullscreen),
+            (1.5, false, true)
+        );
+        let mut s = old;
+        s.last_server = Some("play.example.com:27015".into());
+        assert!(s.store(&path));
+        assert_eq!(
+            Settings::load(&path).last_server.as_deref(),
+            Some("play.example.com:27015")
+        );
+        std::fs::write(&path, r#"{"last_server":null}"#).unwrap();
+        assert_eq!(Settings::load(&path), Settings::default());
+        let _ = std::fs::remove_file(&path);
     }
 
     #[test]
