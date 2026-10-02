@@ -1,5 +1,30 @@
 //! A camera description shared by the renderer, the sky and the HUD.
 use macroquad::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+/// A far/near ratio above this starves a 24-bit depth buffer: the resolution at distance `d` is about
+/// `d^2 / (near * 2^24)` ([`depth_resolution`](super::lint::depth_resolution)), so a 0.1 / 700 camera
+/// cannot tell two surfaces 3 cm apart at 700 m and coplanar-ish ground details (kerbs, decals, road
+/// markings) shimmer in the distance. See [`View::camera_checked`] and [`depth_ratio_warning`].
+pub const DEPTH_RATIO_WARN: f32 = 3000.;
+
+/// A one-line warning when `far / near` exceeds [`DEPTH_RATIO_WARN`] (or the planes are unusable), else
+/// `None`. Pure, so a test can assert a game's chosen planes.
+pub fn depth_ratio_warning(near: f32, far: f32) -> Option<String> {
+    if !(near > 0. && far > near) {
+        return Some(format!(
+            "camera planes near {near} / far {far} are invalid: need 0 < near < far"
+        ));
+    }
+    let ratio = far / near;
+    (ratio > DEPTH_RATIO_WARN).then(|| {
+        format!(
+            "camera near {near} / far {far} is a depth ratio of {ratio:.0} (> {DEPTH_RATIO_WARN:.0}): \
+             distant surfaces closer together than {:.3} at the far plane z-fight. Raise near or lower far",
+            super::lint::depth_resolution(near, far)
+        )
+    })
+}
 
 /// Where the camera is and how it looks this frame. Angles follow [`Controller`](crate::viewer::controller::Controller):
 /// yaw 0 faces -Z, positive yaw turns towards +X, pitch is up-positive.
@@ -53,6 +78,10 @@ impl View {
         up * c + right * s
     }
     /// The macroquad camera for this view.
+    ///
+    /// Watch the `far / near` ratio: depth precision is spent mostly near the camera, so a ratio over about
+    /// 3000 (0.1 / 700 is 7000) makes distant coplanar-ish surfaces fight. This method uses the planes
+    /// exactly as given; [`View::camera_checked`] is the same camera plus a one-time warning.
     pub fn camera(&self, near: f32, far: f32) -> Camera3D {
         Camera3D {
             position: self.eye,
@@ -63,6 +92,18 @@ impl View {
             z_far: far,
             ..Default::default()
         }
+    }
+    /// [`View::camera`] that prints one warning to stderr (once per process, however often it is called)
+    /// when `far / near` exceeds [`DEPTH_RATIO_WARN`]. The camera returned is identical either way; use it
+    /// in the frame loop to find out about a depth-precision trap during development.
+    pub fn camera_checked(&self, near: f32, far: f32) -> Camera3D {
+        static WARNED: AtomicBool = AtomicBool::new(false);
+        if let Some(msg) = depth_ratio_warning(near, far) {
+            if !WARNED.swap(true, Ordering::Relaxed) {
+                eprintln!("warning: {msg}");
+            }
+        }
+        self.camera(near, far)
     }
     /// The same orientation with the camera at the origin: draw a sky dome with this so it never
     /// moves closer.
@@ -142,6 +183,27 @@ mod tests {
                 "pitch {pitch}"
             );
         }
+    }
+
+    #[test]
+    fn a_depth_ratio_past_3000_warns_and_the_checked_camera_is_the_plain_camera() {
+        assert!(depth_ratio_warning(0.1, 250.).is_none());
+        assert!(
+            depth_ratio_warning(0.1, 300.).is_none(),
+            "exactly 3000 is fine"
+        );
+        let w = depth_ratio_warning(0.1, 700.).unwrap();
+        assert!(w.contains("7000"), "{w}");
+        assert!(depth_ratio_warning(0.05, 400.).is_some());
+        assert!(depth_ratio_warning(0., 100.).is_some() && depth_ratio_warning(5., 1.).is_some());
+        let view = View::first_person(vec3(1., 2., 3.), 0.3, 0.1);
+        let (plain, checked) = (view.camera(0.1, 700.), view.camera_checked(0.1, 700.));
+        let _ = view.camera_checked(0.1, 700.); // a second call must not warn again (and must not panic)
+        assert_eq!((plain.z_near, plain.z_far), (checked.z_near, checked.z_far));
+        assert_eq!(
+            (plain.position, plain.target, plain.up),
+            (checked.position, checked.target, checked.up)
+        );
     }
 
     #[test]

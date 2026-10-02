@@ -67,7 +67,7 @@ impl Template {
         self.verts.is_empty()
     }
 
-    fn push(&mut self, p: Vec3, n: Vec3, c: Rgb, e: f32) -> u16 {
+    pub(super) fn push(&mut self, p: Vec3, n: Vec3, c: Rgb, e: f32) -> u16 {
         // Indices are u16: past 65 535 vertices they would wrap and corrupt the mesh, so refuse loudly.
         let i = u16::try_from(self.verts.len()).expect(
             "a Template holds at most 65 535 vertices: build big scenes from several templates",
@@ -117,8 +117,9 @@ impl Template {
         self.alpha = old;
         for i in 0..sides as u16 {
             let a = base + i * 2;
+            // Counter-clockwise seen from above, like the +Y normals.
             self.idx
-                .extend_from_slice(&[a, a + 1, a + 2, a + 1, a + 3, a + 2]);
+                .extend_from_slice(&[a, a + 2, a + 1, a + 1, a + 2, a + 3]);
         }
     }
 
@@ -247,8 +248,9 @@ impl Template {
         for j in 0..rings as u16 {
             for i in 0..segs as u16 {
                 let a = base + j * w + i;
+                // Counter-clockwise seen from outside, like the normals (`lint` checks the agreement).
                 self.idx
-                    .extend_from_slice(&[a, a + w, a + 1, a + 1, a + w, a + w + 1]);
+                    .extend_from_slice(&[a, a + 1, a + w, a + 1, a + w + 1, a + w]);
             }
         }
     }
@@ -331,8 +333,9 @@ impl Template {
         }
         for i in 0..sides as u16 {
             let a = base + i * 2;
+            // Counter-clockwise seen from above, like the +Y normals.
             self.idx
-                .extend_from_slice(&[a, a + 1, a + 2, a + 1, a + 3, a + 2]);
+                .extend_from_slice(&[a, a + 2, a + 1, a + 1, a + 2, a + 3]);
         }
     }
 
