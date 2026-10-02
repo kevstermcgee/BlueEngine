@@ -1,0 +1,1037 @@
+{
+ "clusters": [
+  {
+   "copies": 13,
+   "engine_matches": [
+    {
+     "name": "Identity",
+     "where": "src/viewer/identity.rs"
+    },
+    {
+     "name": "IcoFrame",
+     "where": "src/viewer/icon.rs"
+    },
+    {
+     "name": "decode_png",
+     "where": "src/viewer/icon.rs"
+    },
+    {
+     "name": "parse_ico",
+     "where": "src/viewer/icon.rs"
+    },
+    {
+     "name": "identity",
+     "where": "src/viewer/mod.rs"
+    }
+   ],
+   "examples": [
+    {
+     "lines": "2-3199",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/scripts/ship.py",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "2-3199",
+     "path": "~/BlueEngineGames/games/dead-air/scripts/ship.py",
+     "project": "dead-air"
+    },
+    {
+     "lines": "2-3199",
+     "path": "~/BlueEngineGames/games/deadfall/scripts/ship.py",
+     "project": "deadfall"
+    },
+    {
+     "lines": "2-3199",
+     "path": "~/BlueEngineGames/games/magnet-mine/scripts/ship.py",
+     "project": "magnet-mine"
+    },
+    {
+     "lines": "2-3199",
+     "path": "~/BlueEngineGames/games/physics-lab/scripts/ship.py",
+     "project": "physics-lab"
+    },
+    {
+     "lines": "2-3199",
+     "path": "~/BlueEngineGames/games/pulse-nova/scripts/ship.py",
+     "project": "pulse-nova"
+    }
+   ],
+   "identifiers": [
+    "BITMAP",
+    "BITMAPINFO",
+    "BITMAPINFOHEADER",
+    "ConfigError",
+    "DIBSECTION",
+    "ICONINFO",
+    "IcoFrame",
+    "Identity",
+    "ImageError",
+    "Project",
+    "ShellLinkObject",
+    "ShipError"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 2609,
+   "more_examples": 7,
+   "projects": [
+    "clockworkpinball",
+    "deadair",
+    "deadfall",
+    "magnetmine",
+    "physicslab",
+    "prophunt",
+    "pulsenova",
+    "skyhooksprint",
+    "slapstick",
+    "spookykart",
+    "tumblemaze",
+    "wobbletower",
+    "wreckingorbit"
+   ],
+   "rank": 1,
+   "score": 33917,
+   "variants": 1,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 13,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "93-159",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/build.rs",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "93-159",
+     "path": "~/BlueEngineGames/games/dead-air/build.rs",
+     "project": "dead-air"
+    },
+    {
+     "lines": "93-159",
+     "path": "~/BlueEngineGames/games/deadfall/build.rs",
+     "project": "deadfall"
+    },
+    {
+     "lines": "93-159",
+     "path": "~/BlueEngineGames/games/physics-lab/build.rs",
+     "project": "physics-lab"
+    },
+    {
+     "lines": "93-159",
+     "path": "~/BlueEngineGames/games/spooky-kart/build.rs",
+     "project": "spooky-kart"
+    },
+    {
+     "lines": "93-159",
+     "path": "~/BlueEngineGames/games/tumble-maze/build.rs",
+     "project": "tumble-maze"
+    }
+   ],
+   "identifiers": [
+    "IDENTITY",
+    "JsonChars",
+    "find_rc",
+    "identity_text",
+    "json_code_point",
+    "json_hex4",
+    "json_read_string",
+    "json_string",
+    "json_string_reads_top_level_keys_only",
+    "json_string_survives_broken_input",
+    "newest_sdk_rc",
+    "rc_escape"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 227,
+   "more_examples": 7,
+   "projects": [
+    "clockworkpinball",
+    "deadair",
+    "deadfall",
+    "magnetmine",
+    "physicslab",
+    "prophunt",
+    "pulsenova",
+    "skyhooksprint",
+    "slapstick",
+    "spookykart",
+    "tumblemaze",
+    "wobbletower",
+    "wreckingorbit"
+   ],
+   "rank": 2,
+   "score": 2951,
+   "variants": 2,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 13,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "15-277",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/scripts/check.py",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "15-277",
+     "path": "~/BlueEngineGames/games/dead-air/scripts/check.py",
+     "project": "dead-air"
+    },
+    {
+     "lines": "15-277",
+     "path": "~/BlueEngineGames/games/deadfall/scripts/check.py",
+     "project": "deadfall"
+    },
+    {
+     "lines": "15-277",
+     "path": "~/BlueEngineGames/games/tumble-maze/scripts/check.py",
+     "project": "tumble-maze"
+    },
+    {
+     "lines": "15-277",
+     "path": "~/BlueEngineGames/games/wobble-tower/scripts/check.py",
+     "project": "wobble-tower"
+    },
+    {
+     "lines": "15-277",
+     "path": "~/PropHunt/scripts/check.py",
+     "project": "PropHunt"
+    }
+   ],
+   "identifiers": [
+    "commands",
+    "console_options",
+    "engine_path",
+    "engine_warnings",
+    "find_tools",
+    "parse_json_output",
+    "ship_stage",
+    "step_name"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 215,
+   "more_examples": 7,
+   "projects": [
+    "clockworkpinball",
+    "deadair",
+    "deadfall",
+    "magnetmine",
+    "physicslab",
+    "prophunt",
+    "pulsenova",
+    "skyhooksprint",
+    "slapstick",
+    "spookykart",
+    "tumblemaze",
+    "wobbletower",
+    "wreckingorbit"
+   ],
+   "rank": 3,
+   "score": 2795,
+   "variants": 2,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 11,
+   "engine_matches": [
+    {
+     "name": "identity",
+     "where": "src/viewer/mod.rs"
+    },
+    {
+     "name": "quick_save",
+     "where": "src/viewer/devkit/lifecycle.rs"
+    },
+    {
+     "name": "quick_load",
+     "where": "src/viewer/devkit/lifecycle.rs"
+    }
+   ],
+   "examples": [
+    {
+     "lines": "20-58",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/src/main.rs",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "312-344",
+     "path": "~/BlueEngineGames/games/dead-air/src/main.rs",
+     "project": "dead-air"
+    },
+    {
+     "lines": "9-357",
+     "path": "~/BlueEngineGames/games/magnet-mine/src/main.rs",
+     "project": "magnet-mine"
+    },
+    {
+     "lines": "343-385",
+     "path": "~/BlueEngineGames/games/pulse-nova/src/main.rs",
+     "project": "pulse-nova"
+    },
+    {
+     "lines": "154-392",
+     "path": "~/BlueEngineGames/games/skyhook-sprint/src/main.rs",
+     "project": "skyhook-sprint"
+    },
+    {
+     "lines": "1279-1312",
+     "path": "~/BlueEngineGames/games/spooky-kart/src/main.rs",
+     "project": "spooky-kart"
+    }
+   ],
+   "identifiers": [
+    "HAS_MUSIC",
+    "IDENTITY",
+    "SOUNDS",
+    "Scene",
+    "announce",
+    "build_scene",
+    "identity",
+    "quick_load",
+    "quick_save",
+    "react",
+    "render_audio",
+    "save_music"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 220,
+   "more_examples": 5,
+   "projects": [
+    "clockworkpinball",
+    "deadair",
+    "magnetmine",
+    "prophunt",
+    "pulsenova",
+    "skyhooksprint",
+    "slapstick",
+    "spookykart",
+    "tumblemaze",
+    "wobbletower",
+    "wreckingorbit"
+   ],
+   "rank": 4,
+   "score": 2420,
+   "variants": 11,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 3,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "11-363",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/src/physics.rs",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "11-363",
+     "path": "~/BlueEngineGames/games/tumble-maze/src/physics.rs",
+     "project": "tumble-maze"
+    },
+    {
+     "lines": "11-363",
+     "path": "~/BlueEngineGames/games/wobble-tower/src/physics.rs",
+     "project": "wobble-tower"
+    }
+   ],
+   "identifiers": [
+    "BodyState",
+    "Material",
+    "Physics",
+    "alive",
+    "angvel",
+    "dynamic_ball",
+    "dynamic_box",
+    "dynamic_box_planar",
+    "fixed_box",
+    "fixed_cylinder",
+    "get_mut",
+    "gravity"
+   ],
+   "kind": "identical",
+   "label": "no-equivalent: promote candidate",
+   "lines": 216,
+   "more_examples": 0,
+   "projects": [
+    "clockworkpinball",
+    "tumblemaze",
+    "wobbletower"
+   ],
+   "rank": 5,
+   "score": 648,
+   "variants": 1,
+   "weak_name_matches": [
+    "gravity",
+    "set_gravity",
+    "alive",
+    "get_mut"
+   ]
+  },
+  {
+   "copies": 9,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "2-72",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/scripts/dev.py",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "2-72",
+     "path": "~/BlueEngineGames/games/dead-air/scripts/dev.py",
+     "project": "dead-air"
+    },
+    {
+     "lines": "2-72",
+     "path": "~/BlueEngineGames/games/deadfall/scripts/dev.py",
+     "project": "deadfall"
+    },
+    {
+     "lines": "2-72",
+     "path": "~/BlueEngineGames/games/physics-lab/scripts/dev.py",
+     "project": "physics-lab"
+    },
+    {
+     "lines": "2-72",
+     "path": "~/BlueEngineGames/games/spooky-kart/scripts/dev.py",
+     "project": "spooky-kart"
+    },
+    {
+     "lines": "2-72",
+     "path": "~/BlueEngineGames/games/tumble-maze/scripts/dev.py",
+     "project": "tumble-maze"
+    }
+   ],
+   "identifiers": [
+    "close_running",
+    "package_name",
+    "target_dir"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 46,
+   "more_examples": 3,
+   "projects": [
+    "clockworkpinball",
+    "deadair",
+    "deadfall",
+    "physicslab",
+    "prophunt",
+    "slapstick",
+    "spookykart",
+    "tumblemaze",
+    "wobbletower"
+   ],
+   "rank": 6,
+   "score": 414,
+   "variants": 1,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 2,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "102-130",
+     "path": "~/BlueEngineGames/games/bluedm/src/main.rs",
+     "project": "bluedm"
+    },
+    {
+     "lines": "86-114",
+     "path": "~/BlueEngineGames/games/riftwake/src/main.rs",
+     "project": "riftwake"
+    }
+   ],
+   "identifiers": [
+    "Client",
+    "client_initial_look",
+    "draw_world",
+    "foreground",
+    "window_conf"
+   ],
+   "kind": "near-duplicate",
+   "label": "no-equivalent: promote candidate",
+   "lines": 180,
+   "more_examples": 0,
+   "projects": [
+    "bluedm",
+    "riftwake"
+   ],
+   "rank": 7,
+   "score": 360,
+   "variants": 2,
+   "weak_name_matches": [
+    "foreground"
+   ]
+  },
+  {
+   "copies": 7,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "383-411",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/src/lib.rs",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "514-537",
+     "path": "~/BlueEngineGames/games/spooky-kart/src/sim.rs",
+     "project": "spooky-kart"
+    },
+    {
+     "lines": "434-462",
+     "path": "~/BlueEngineGames/games/tumble-maze/src/lib.rs",
+     "project": "tumble-maze"
+    },
+    {
+     "lines": "333-361",
+     "path": "~/BlueEngineGames/games/wobble-tower/src/lib.rs",
+     "project": "wobble-tower"
+    },
+    {
+     "lines": "395-418",
+     "path": "~/PropHunt/src/sim.rs",
+     "project": "PropHunt"
+    },
+    {
+     "lines": "664-701",
+     "path": "~/Slapstick/src/sim.rs",
+     "project": "Slapstick"
+    }
+   ],
+   "identifiers": [
+    "POLICY",
+    "SimState",
+    "a_goal_is_detected_the_exact_tick_the_puck_crosses_the_goal_line",
+    "a_leading_player_wins_immediately_at_the_time_limit",
+    "a_paddle_never_crosses_the_center_line_into_the_opponents_half",
+    "a_tied_match_continues_past_the_time_limit_in_sudden_death",
+    "autoplay",
+    "capture",
+    "drain_events",
+    "hash_parts",
+    "quick_save_and_quick_load_go_through_a_slot_with_a_backup",
+    "releasing_a_participant_hands_their_paddle_to_the_bot_ai"
+   ],
+   "kind": "near-duplicate",
+   "label": "no-equivalent: promote candidate",
+   "lines": 42,
+   "more_examples": 1,
+   "projects": [
+    "clockworkpinball",
+    "prophunt",
+    "slapstick",
+    "spookykart",
+    "tumblemaze",
+    "wobbletower"
+   ],
+   "rank": 8,
+   "score": 294,
+   "variants": 7,
+   "weak_name_matches": [
+    "drain_events",
+    "hash_parts",
+    "POLICY",
+    "capture"
+   ]
+  },
+  {
+   "copies": 8,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "2-46",
+     "path": "~/BlueEngineGames/games/clockwork-pinball/src/platform.rs",
+     "project": "clockwork-pinball"
+    },
+    {
+     "lines": "2-46",
+     "path": "~/BlueEngineGames/games/dead-air/src/platform.rs",
+     "project": "dead-air"
+    },
+    {
+     "lines": "2-46",
+     "path": "~/BlueEngineGames/games/physics-lab/src/platform.rs",
+     "project": "physics-lab"
+    },
+    {
+     "lines": "2-46",
+     "path": "~/BlueEngineGames/games/spooky-kart/src/platform.rs",
+     "project": "spooky-kart"
+    },
+    {
+     "lines": "2-46",
+     "path": "~/BlueEngineGames/games/tumble-maze/src/platform.rs",
+     "project": "tumble-maze"
+    },
+    {
+     "lines": "2-46",
+     "path": "~/BlueEngineGames/games/wobble-tower/src/platform.rs",
+     "project": "wobble-tower"
+    }
+   ],
+   "identifiers": [
+    "attach_console",
+    "focused",
+    "keyboard",
+    "read_key"
+   ],
+   "kind": "identical",
+   "label": "no-equivalent: promote candidate",
+   "lines": 25,
+   "more_examples": 2,
+   "projects": [
+    "clockworkpinball",
+    "deadair",
+    "physicslab",
+    "prophunt",
+    "slapstick",
+    "spookykart",
+    "tumblemaze",
+    "wobbletower"
+   ],
+   "rank": 9,
+   "score": 200,
+   "variants": 1,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 3,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "39-65",
+     "path": "~/BlueEngineGames/games/spooky-kart/tests/net.rs",
+     "project": "spooky-kart"
+    },
+    {
+     "lines": "14-30",
+     "path": "~/PropHunt/tests/net.rs",
+     "project": "PropHunt"
+    },
+    {
+     "lines": "44-62",
+     "path": "~/Slapstick/tests/net.rs",
+     "project": "Slapstick"
+    }
+   ],
+   "identifiers": [
+    "run_until"
+   ],
+   "kind": "near-duplicate",
+   "label": "no-equivalent: promote candidate",
+   "lines": 66,
+   "more_examples": 0,
+   "projects": [
+    "prophunt",
+    "slapstick",
+    "spookykart"
+   ],
+   "rank": 10,
+   "score": 198,
+   "variants": 3,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 2,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "4-126",
+     "path": "~/BlueEngineGames/games/bluedm/src/native_input.rs",
+     "project": "bluedm"
+    },
+    {
+     "lines": "4-126",
+     "path": "~/BlueEngineGames/games/riftwake/src/native_input.rs",
+     "project": "riftwake"
+    }
+   ],
+   "identifiers": [
+    "is_key_down",
+    "is_key_pressed",
+    "is_mouse_button_down",
+    "is_mouse_button_pressed"
+   ],
+   "kind": "identical",
+   "label": "no-equivalent: promote candidate",
+   "lines": 93,
+   "more_examples": 0,
+   "projects": [
+    "bluedm",
+    "riftwake"
+   ],
+   "rank": 11,
+   "score": 186,
+   "variants": 1,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 3,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "86-103",
+     "path": "~/BlueEngineGames/games/spooky-kart/src/bin/spooky-kart-bots.rs",
+     "project": "spooky-kart"
+    },
+    {
+     "lines": "81-113",
+     "path": "~/PropHunt/src/bin/prop-hunt-bots.rs",
+     "project": "PropHunt"
+    },
+    {
+     "lines": "71-103",
+     "path": "~/Slapstick/src/bin/slapstick-bots.rs",
+     "project": "Slapstick"
+    }
+   ],
+   "identifiers": [],
+   "kind": "near-duplicate",
+   "label": "no-equivalent: promote candidate",
+   "lines": 55,
+   "more_examples": 0,
+   "projects": [
+    "prophunt",
+    "slapstick",
+    "spookykart"
+   ],
+   "rank": 12,
+   "score": 165,
+   "variants": 3,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 3,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "59-96",
+     "path": "~/BlueEngineGames/games/dead-air/tests/determinism.rs",
+     "project": "dead-air"
+    },
+    {
+     "lines": "103-139",
+     "path": "~/BlueEngineGames/games/pulse-nova/tests/determinism.rs",
+     "project": "pulse-nova"
+    },
+    {
+     "lines": "187-205",
+     "path": "~/PropHunt/tests/determinism.rs",
+     "project": "PropHunt"
+    }
+   ],
+   "identifiers": [
+    "a_bad_save_is_refused_and_the_running_game_is_left_alone",
+    "different_seeds_play_differently",
+    "quick_save_and_quick_load_go_through_a_slot_with_a_backup",
+    "recorded_inputs_round_trip_through_json_playback",
+    "scripted",
+    "the_same_seed_and_inputs_replay_identically"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 48,
+   "more_examples": 0,
+   "projects": [
+    "deadair",
+    "prophunt",
+    "pulsenova"
+   ],
+   "rank": 13,
+   "score": 144,
+   "variants": 3,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 5,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "2-48",
+     "path": "~/BlueEngineGames/games/deadfall/src/platform.rs",
+     "project": "deadfall"
+    },
+    {
+     "lines": "2-48",
+     "path": "~/BlueEngineGames/games/magnet-mine/src/platform.rs",
+     "project": "magnet-mine"
+    },
+    {
+     "lines": "2-48",
+     "path": "~/BlueEngineGames/games/pulse-nova/src/platform.rs",
+     "project": "pulse-nova"
+    },
+    {
+     "lines": "2-48",
+     "path": "~/BlueEngineGames/games/skyhook-sprint/src/platform.rs",
+     "project": "skyhook-sprint"
+    },
+    {
+     "lines": "2-48",
+     "path": "~/BlueEngineGames/games/wrecking-orbit/src/platform.rs",
+     "project": "wrecking-orbit"
+    }
+   ],
+   "identifiers": [
+    "attach_console",
+    "focused",
+    "keyboard",
+    "read_key"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 26,
+   "more_examples": 0,
+   "projects": [
+    "deadfall",
+    "magnetmine",
+    "pulsenova",
+    "skyhooksprint",
+    "wreckingorbit"
+   ],
+   "rank": 14,
+   "score": 130,
+   "variants": 1,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 3,
+   "engine_matches": [
+    {
+     "name": "drain_events",
+     "where": "src/viewer/netplay/client.rs"
+    },
+    {
+     "name": "POLICY",
+     "where": "tools/FEATURES.json#save_state"
+    },
+    {
+     "name": "capture",
+     "where": "src/viewer/game.rs"
+    }
+   ],
+   "examples": [
+    {
+     "lines": "546-557",
+     "path": "~/BlueEngineGames/games/dead-air/src/lib.rs",
+     "project": "dead-air"
+    },
+    {
+     "lines": "538-551",
+     "path": "~/BlueEngineGames/games/pulse-nova/src/lib.rs",
+     "project": "pulse-nova"
+    },
+    {
+     "lines": "130-141",
+     "path": "~/BlueEngineGames/games/skyhook-sprint/src/lib.rs",
+     "project": "skyhook-sprint"
+    }
+   ],
+   "identifiers": [
+    "BUMPER_SPEED",
+    "PLATFORM_HALF",
+    "POLICY",
+    "SimState",
+    "VOID_Y",
+    "capture",
+    "drain_events",
+    "save_tick",
+    "state_hash"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-template-copy: expected scaffold output, keep in sync",
+   "lines": 39,
+   "more_examples": 0,
+   "projects": [
+    "deadair",
+    "pulsenova",
+    "skyhooksprint"
+   ],
+   "rank": 15,
+   "score": 117,
+   "variants": 3,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 3,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "18-62",
+     "path": "~/BlueEngineGames/games/spooky-kart/src/bin/spooky-kart-server.rs",
+     "project": "spooky-kart"
+    },
+    {
+     "lines": "19-63",
+     "path": "~/PropHunt/src/bin/prop-hunt-server.rs",
+     "project": "PropHunt"
+    },
+    {
+     "lines": "19-63",
+     "path": "~/Slapstick/src/bin/slapstick-server.rs",
+     "project": "Slapstick"
+    }
+   ],
+   "identifiers": [],
+   "kind": "near-duplicate",
+   "label": "no-equivalent: promote candidate",
+   "lines": 35,
+   "more_examples": 0,
+   "projects": [
+    "prophunt",
+    "slapstick",
+    "spookykart"
+   ],
+   "rank": 16,
+   "score": 105,
+   "variants": 3,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 2,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "90-105",
+     "path": "~/BlueEngineGames/games/bluedm/src/server.rs",
+     "project": "bluedm"
+    },
+    {
+     "lines": "87-102",
+     "path": "~/BlueEngineGames/games/riftwake/src/server.rs",
+     "project": "riftwake"
+    }
+   ],
+   "identifiers": [
+    "ConnectedPlayer",
+    "local_addr",
+    "receive"
+   ],
+   "kind": "near-duplicate",
+   "label": "no-equivalent: promote candidate",
+   "lines": 49,
+   "more_examples": 0,
+   "projects": [
+    "bluedm",
+    "riftwake"
+   ],
+   "rank": 17,
+   "score": 98,
+   "variants": 2,
+   "weak_name_matches": [
+    "local_addr",
+    "receive"
+   ]
+  },
+  {
+   "copies": 2,
+   "engine_matches": [
+    {
+     "name": "ClientInput",
+     "where": "src/viewer/game_input.rs"
+    },
+    {
+     "name": "PROTOCOL_VERSION",
+     "where": "src/viewer/net.rs"
+    },
+    {
+     "name": "MAX_PACKET_BYTES",
+     "where": "src/viewer/net.rs"
+    },
+    {
+     "name": "encode",
+     "where": "src/viewer/net.rs"
+    },
+    {
+     "name": "decode",
+     "where": "src/viewer/net/worldwire.rs"
+    }
+   ],
+   "examples": [
+    {
+     "lines": "65-108",
+     "path": "~/BlueEngineGames/games/bluedm/src/protocol.rs",
+     "project": "bluedm"
+    },
+    {
+     "lines": "65-107",
+     "path": "~/BlueEngineGames/games/riftwake/src/protocol.rs",
+     "project": "riftwake"
+    }
+   ],
+   "identifiers": [
+    "ClientInput",
+    "MAX_PACKET_BYTES",
+    "PROTOCOL_VERSION",
+    "PlayerSnapshot",
+    "WireMessage",
+    "decode",
+    "encode",
+    "valid"
+   ],
+   "kind": "near-duplicate",
+   "label": "engine-has-equivalent: adopt",
+   "lines": 47,
+   "more_examples": 0,
+   "projects": [
+    "bluedm",
+    "riftwake"
+   ],
+   "rank": 18,
+   "score": 94,
+   "variants": 2,
+   "weak_name_matches": []
+  },
+  {
+   "copies": 2,
+   "engine_matches": [],
+   "examples": [
+    {
+     "lines": "13-42",
+     "path": "~/BlueEngineGames/games/bluedm/tests/network_smoke.rs",
+     "project": "bluedm"
+    },
+    {
+     "lines": "13-42",
+     "path": "~/BlueEngineGames/games/riftwake/tests/network_smoke.rs",
+     "project": "riftwake"
+    }
+   ],
+   "identifiers": [],
+   "kind": "near-duplicate",
+   "label": "no-equivalent: promote candidate",
+   "lines": 37,
+   "more_examples": 0,
+   "projects": [
+    "bluedm",
+    "riftwake"
+   ],
+   "rank": 19,
+   "score": 74,
+   "variants": 2,
+   "weak_name_matches": []
+  }
+ ],
+ "clusters_found": 19,
+ "engine_commit": "8c12898",
+ "files_scanned": 218,
+ "min_lines": 25,
+ "published_copies_collapsed": 46,
+ "roots": [
+  "~/BlueEngineGames/games",
+  "~/SpookyKart",
+  "~/PropHunt",
+  "~/Slapstick",
+  "~/DeadAir",
+  "~/PhysicsLab"
+ ],
+ "shingle_lines": 4,
+ "skipped_dirs": 24
+}
