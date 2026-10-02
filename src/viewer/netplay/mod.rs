@@ -22,6 +22,7 @@
 pub mod cli;
 pub mod client;
 pub mod failure;
+pub mod hub;
 pub mod server;
 pub mod toy;
 pub mod wire;
