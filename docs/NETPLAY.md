@@ -100,6 +100,43 @@ ServerSource::Builtin("play.example.com:27015")])` returns the first non-empty o
 `first_of_beside_exe` reads the file next to the executable. After a successful connect, store what the player typed
 in `Settings::last_server` (`#[serde(default)]`: old `settings.json` files still load).
 
+## The server main: `netplay::cli::serve`
+
+Do not write a server `main`: `serve::<MyGame>(&ServeSpec { bin_name, about, default_listen, default_report_dir, join_key_env,
+participants: Participants::Flag { flag: "racers", min: 1, max: 8, default: 8 } /* or Participants::Fixed(12) */,
+default_auto_start })` is the whole executable (`src/bin/be2-toy-server.rs` is the template). It gives `--listen`,
+`--transport development|production`, `--join-key` (or the environment variable you name), `--auto-start`, `--report-dir`,
+`--seed`, your participants flag, one `--flag` per setting plus `--set ID=VALUE`, `--status-lines`, `--exit-on-stdin-eof`,
+`--info` and `--help`, and stops cleanly on SIGINT/SIGTERM (ADR 0030). Match settings a hub or player may choose are
+`NetGame::settings() -> &'static [SettingSpec]` (typed `bool|int|choice` with id, name, flag, min, max, default; ids 1..=255,
+never reused) and `NetGame::configure(&[(u8, u32)])`, called once with every setting's value before the socket binds. Both are
+optional and default to none.
+
+`--info` prints `game=`, `fingerprint=` (the raw `NetGame::fingerprint()`), `build=` (`cli::build_id::<G>()`: the `Hello` value
+folded with the netplay envelope version), `max_seats=`, `tick_hz=` and one
+`setting=<id>:<name>:<flag>:<kind>:<min>:<max>:<default>` per setting, then exits 0. `--status-lines` prints
+`STATUS game=<name> players=<n> max=<participants> stage=lobby|match|results build=<hex8>` once a second. `cli::{Info, Status}`
+parse both. `NetServer::run_realtime_with(stop, max_ticks, |snapshot| ..)` is the hook behind the status line.
+
+## The hub: one name, one port, every game
+
+`be2-hub` (`netplay::hub`, ADR 0037, `deploy/hub/README.md`) lists and creates rooms for every registered game on one UDP port and
+starts one server process per room from a shared port pool. Players click Play Online, see the rooms of *their* game, pick or
+make one. The hub's registry (`hub.conf`) maps game ids to server programs and says which settings players may choose; a game
+appears by adding a `[game ID]` section and running `be2-hub reload ID`. Wire protocol `BEHB` v1 (`hub/wire.rs`): list, create
+with a source-address cookie, ping; old Deadfall `DFHB` v1 clients keep working (`hub/legacy.rs`, `legacy = serve|refuse`).
+Rooms close after 120 s empty, or 45 s if nobody ever joined; each game's Public room restarts if it dies; reload retires one
+game's rooms without ending matches in progress.
+
+A game's client side is `hub::client` (std only, no window): `HubClient::new(hub_addr, game_id)` for one non-blocking request
+at a time (`request_list`, `request_create_with(name, &[(setting_id, value)])`, `poll() -> Option<HubEvent>`), or the whole Play
+Online state machine, `Online::new(&hub.address, MyGame::NAME, hub::local_build::<MyGame>(), now)`: call `update(now)` each frame
+(it returns `Action::Join { addr, room }` when to connect), draw `view`, `rooms`, `dialog`, and call `join_selected`,
+`open_dialog`, `create`, `refresh`. Its rules are public for your own screens: `order_rooms`, `room_status`, `JoinWait`,
+`scroll_to`, `hub_error_message`, `connect_failure_message` (from `ConnectFailure`). `hub::default_hub(cli_arg, last_used)` is the
+`ServerChoice` chain (command line, `server.txt`, last used, `blue-engine.duckdns.org:4100`). A hub whose build differs from
+`local_build` (`Online::mismatch()`) would be refused by its rooms: show `update_message`.
+
 ## Limits and what is not covered
 
 - A snapshot must fit `MAX_DATAGRAM` (1,200 bytes). The kit sheds old events first; a snapshot that is too big on

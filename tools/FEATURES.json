@@ -1598,6 +1598,137 @@
         ]
       }
     },
+    "netplay_hub": {
+      "files": [
+        "src/viewer/netplay/cli.rs",
+        "src/viewer/netplay/hub/mod.rs",
+        "src/viewer/netplay/hub/wire.rs",
+        "src/viewer/netplay/hub/legacy.rs",
+        "src/viewer/netplay/hub/limits.rs",
+        "src/viewer/netplay/hub/registry.rs",
+        "src/viewer/netplay/hub/spawn.rs",
+        "src/viewer/netplay/hub/rooms.rs",
+        "src/viewer/netplay/hub/serve.rs",
+        "src/viewer/netplay/hub/client.rs",
+        "src/bin/be2-hub.rs",
+        "src/bin/be2-toy-server.rs",
+        "tests/hub.rs",
+        "deploy/hub/README.md",
+        "deploy/hub/hub.conf.example",
+        "docs/NETPLAY.md",
+        "docs/adr/0037-shared-multi-game-hub.md"
+      ],
+      "checks": [
+        "cargo test --locked --profile itest --test hub",
+        "cargo test --locked --profile itest --no-default-features --lib netplay::",
+        "python tools/check_headless.py"
+      ],
+      "note": "One hub for every netplay game (ADR 0037). netplay::cli::serve::<G>(ServeSpec) is the shared server main (--listen --transport --join-key --auto-start --report-dir --seed, a participants flag, --set ID=VALUE and per-setting flags from NetGame::settings(), --status-lines, --exit-on-stdin-eof, --info, --help). be2-hub lists and creates rooms for every game in its registry file on one UDP port, one server process per room on a shared round-robin port pool, protocol BEHB v1 (list, create with a source-address cookie, ping) plus the legacy DFHB v1 adapter for shipped Deadfall clients, token-bucket and room caps, never-joined (45 s) and empty (120 s) reaping, per-game Public rooms, and 'be2-hub reload GAME' that retires one game's rooms. hub::client is the game side: HubClient, the std-only Online Play Online state machine, local_build::<G>() and default_hub() (blue-engine.duckdns.org:4100). deploy/hub holds the systemd units, portmap (be2-hub ports), ddns and update.sh. Feta, BlueDM and Riftwake have their own netcode and are out of scope.",
+      "keywords": [
+        "hub",
+        "be2-hub",
+        "rooms",
+        "room",
+        "lobby",
+        "play online",
+        "public room",
+        "create room",
+        "registry",
+        "hub.conf",
+        "server main",
+        "serve",
+        "cli",
+        "--info",
+        "--status-lines",
+        "status line",
+        "settings",
+        "setting",
+        "build id",
+        "fingerprint",
+        "cookie",
+        "legacy",
+        "dfhb",
+        "behb",
+        "reload",
+        "port pool",
+        "portmap",
+        "duckdns",
+        "deploy",
+        "systemd",
+        "update.sh",
+        "server.txt",
+        "default hub",
+        "online",
+        "netplay",
+        "multiplayer",
+        "spooky kart",
+        "deadfall",
+        "host",
+        "hosting",
+        "blue-engine.duckdns.org"
+      ],
+      "depends_on": [
+        "netplay",
+        "multiplayer"
+      ],
+      "read_first": [
+        "docs/NETPLAY.md",
+        "docs/adr/0037-shared-multi-game-hub.md",
+        "src/viewer/netplay/cli.rs",
+        "src/viewer/netplay/hub/mod.rs"
+      ],
+      "canonical_example": "src/bin/be2-toy-server.rs",
+      "public_api": [
+        "cli::serve",
+        "cli::ServeSpec",
+        "cli::Participants",
+        "cli::build_id",
+        "cli::Info",
+        "cli::Status",
+        "NetGame::settings",
+        "NetGame::configure",
+        "SettingSpec",
+        "hub::HubClient",
+        "hub::Online",
+        "hub::local_build",
+        "hub::default_hub",
+        "hub::wire::Request",
+        "hub::legacy"
+      ],
+      "evidence": [
+        {
+          "suite": "hub",
+          "test": "a_room_made_through_the_hub_takes_two_real_players_with_the_settings_chosen_and_reports_them"
+        },
+        {
+          "suite": "hub",
+          "test": "the_hub_binary_answers_both_protocols_reloads_one_game_and_leaves_no_orphans"
+        },
+        {
+          "suite": "hub",
+          "test": "a_retired_room_keeps_its_players_until_they_leave"
+        }
+      ],
+      "contract": {
+        "owns": "Game-agnostic serving of netplay games: the shared server main and its machine formats, the hub protocol, the registry, room processes and ports, abuse limits, the legacy Deadfall protocol adapter, and the game-side hub client",
+        "inputs": "A NetGame (with optional settings) built into a server executable; a registry file naming those executables",
+        "outputs": "A hub that players list and create rooms on, and rooms that are ordinary netplay servers",
+        "may_depend_on": [
+          "netplay",
+          "simulation_contract"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio devices",
+          "a window"
+        ],
+        "performance": "One datagram each way; replies at most 1000 bytes and at most five times the padded request; about 5 MB per idle room process",
+        "consumers": [
+          "custom-sim games with online play",
+          "the box that hosts them"
+        ]
+      }
+    },
     "closed_path": {
       "files": [
         "src/viewer/devkit/path.rs",

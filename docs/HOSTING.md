@@ -23,7 +23,7 @@ numbers read from the code (`runtime_support`).
 | World updates | compact binary, acknowledged partial updates, nearest records first | one snapshot format for everyone, must fit one datagram |
 | Interest management | room-graph relevance per player | none |
 | Prediction | stock client | your `ClientView` |
-| Graceful shutdown | SIGINT/SIGTERM/SIGHUP: finish the tick, final save, exit 0 | not provided by the kit |
+| Graceful shutdown | SIGINT/SIGTERM/SIGHUP: finish the tick, final save, exit 0 | `netplay::cli::serve` installs SIGINT/SIGTERM handling; a hand-written loop does not |
 | Saving | `--autosave`, `--load`; saves hold up to 1024 players, so autosave works at any `--max-players` | `devkit::Snapshot` (same file format) |
 
 `be2-headless` refuses to start when `--max-players` plus the world's objects that can become networked props exceeds replication's
@@ -68,6 +68,13 @@ be2-ctl stop arena
 `be2-ctl` launched or has a saved definition for (`be2-ctl define NAME -- ARGS`), so it never fights a supervisor. `be2-ctl logs NAME`
 shows a launched server's log and `be2-ctl prune` removes records of servers that are gone. `--json` on `list` and `status` is for scripts.
 See ADR 0031. `be2-ctl` and `--name` are Unix only.
+
+## Hosting several games on one machine
+
+Games on the netplay kit share one hub: `be2-hub` listens on one UDP port, starts a server process per room on a pool of ports and
+tells games apart by id, so one DNS name and one set of router mappings serve every game. See
+[NETPLAY.md](NETPLAY.md#the-hub-one-name-one-port-every-game), ADR 0037 and `deploy/hub/README.md` (systemd units, router mapping,
+DuckDNS, `update.sh`).
 
 ## Serving more than eight players
 

@@ -1,0 +1,7 @@
+# Where update.sh builds each game's server from. Copy to ~/.config/blueengine/sources.conf and edit.
+# One game per line, whitespace separated:  GAME-ID  SOURCE-ROOT  CARGO-BIN  [extra cargo build arguments...]
+# GAME-ID is the id in hub.conf; SOURCE-ROOT is a git checkout (a leading ~ is your home); CARGO-BIN is the server's
+# `[[bin]]` name, installed as ~/blueengine/CARGO-BIN (the path hub.conf's `server =` names).
+# The servers need no window: build without graphics features.
+deadfall      ~/BlueEngineGames/games/deadfall   deadfall-server      --no-default-features
+spooky-kart   ~/SpookyKart                       spooky-kart-server   --no-default-features

@@ -899,6 +899,17 @@ server = bin/spooky-kart-server
     }
 
     #[test]
+    fn the_deploy_example_parses_and_names_deadfall_and_spooky_kart() {
+        let text = include_str!("../../../../deploy/hub/hub.conf.example");
+        let c = parse(text).unwrap();
+        let ids: Vec<_> = c.games.iter().map(|g| g.id.as_str()).collect();
+        assert_eq!(ids, ["deadfall", "spooky-kart"]);
+        assert_eq!(c.games[0].public_set, vec![("bots".to_string(), 1)]);
+        let s = c.hub.resolve(&HubSection::default()).unwrap();
+        assert_eq!((s.listen.port(), s.pool_start, s.pool_size, s.legacy), (4100, 4101, 16, Mode::Serve));
+    }
+
+    #[test]
     fn an_empty_or_comment_only_file_is_a_valid_empty_registry() {
         assert_eq!(parse("").unwrap(), Config::default());
         assert_eq!(parse("# nothing\n\n; here\n").unwrap(), Config::default());
