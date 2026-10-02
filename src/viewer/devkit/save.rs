@@ -96,6 +96,89 @@ pub fn unique_path(dir: &Path, stem: &str, ext: &str) -> PathBuf {
         .unwrap_or(first)
 }
 
+/// How much shadow a game draws; the player picks it in Esc > Settings and it is remembered.
+///
+/// `Simple` is the default: soft contact blobs under moving things, no extra render pass. `Full` adds one
+/// directional shadow map (see `kit::Shadows`). Variants compare in cost order, so `quality >= Simple`
+/// means "blobs or better". Stored as the lowercase word (`"off"`, `"simple"`, `"full"`); an unknown word
+/// reads as the default instead of discarding the rest of the settings file.
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
+#[serde(from = "String", into = "String")]
+pub enum ShadowQuality {
+    /// No shadows at all (flat lighting, cheapest).
+    Off,
+    /// Contact blobs under actors; no extra pass.
+    #[default]
+    Simple,
+    /// One directional shadow map plus the blobs' job done by real shadows.
+    Full,
+}
+
+impl ShadowQuality {
+    /// Every tier, cheapest first.
+    pub const ALL: [ShadowQuality; 3] = [Self::Off, Self::Simple, Self::Full];
+    /// The lowercase word used in the settings file and the `--shadows` flag.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Off => "off",
+            Self::Simple => "simple",
+            Self::Full => "full",
+        }
+    }
+    /// The player-facing label for the Settings screen.
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::Off => "Off",
+            Self::Simple => "Simple",
+            Self::Full => "Full",
+        }
+    }
+    /// Parse `off`, `simple` or `full` (any case, surrounding space ignored); `None` for anything else.
+    pub fn parse(text: &str) -> Option<Self> {
+        match text.trim().to_ascii_lowercase().as_str() {
+            "off" | "none" | "0" => Some(Self::Off),
+            "simple" | "blob" | "blobs" | "1" => Some(Self::Simple),
+            "full" | "on" | "2" => Some(Self::Full),
+            _ => None,
+        }
+    }
+    /// The next tier in Off, Simple, Full order, wrapping: what the Settings selector does on a press.
+    pub fn next(self) -> Self {
+        match self {
+            Self::Off => Self::Simple,
+            Self::Simple => Self::Full,
+            Self::Full => Self::Off,
+        }
+    }
+    /// The `--shadows off|simple|full` flag from the command line (`None` when absent). A bad value is an
+    /// error naming the choices, so a typo does not silently run at the default.
+    pub fn from_flag(args: &[String]) -> Result<Option<Self>, String> {
+        match super::flag_value(args, "--shadows") {
+            None if super::has_flag(args, "--shadows") => {
+                Err("--shadows needs a value: off, simple or full".into())
+            }
+            None => Ok(None),
+            Some(word) => Self::parse(word)
+                .map(Some)
+                .ok_or_else(|| format!("--shadows takes off, simple or full, not `{word}`")),
+        }
+    }
+}
+
+impl From<String> for ShadowQuality {
+    fn from(text: String) -> Self {
+        Self::parse(&text).unwrap_or_default()
+    }
+}
+
+impl From<ShadowQuality> for String {
+    fn from(quality: ShadowQuality) -> Self {
+        quality.as_str().to_owned()
+    }
+}
+
 /// The settings almost every action game exposes. Extend it by wrapping it in your own save struct.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
@@ -115,6 +198,8 @@ pub struct Settings {
     /// The server address the player last connected to (as typed), so the join screen can offer it again.
     /// Absent from settings files written before this field existed; it then reads as `None`.
     pub last_server: Option<String>,
+    /// Shadow tier for games that opt in (`kit::Shadows`). Absent from older files: reads as `Simple`.
+    pub shadow_quality: ShadowQuality,
 }
 
 impl Default for Settings {
@@ -127,6 +212,7 @@ impl Default for Settings {
             sfx_on: true,
             fullscreen: false,
             last_server: None,
+            shadow_quality: ShadowQuality::default(),
         }
     }
 }
@@ -173,6 +259,12 @@ impl Settings {
     pub fn toggle_sfx(&mut self) -> bool {
         self.sfx_on = !self.sfx_on;
         self.sfx_on
+    }
+    /// Move to the next shadow tier (Off, Simple, Full, wrapping). Does not persist; call
+    /// [`Settings::store`] afterwards.
+    pub fn cycle_shadow_quality(&mut self) -> ShadowQuality {
+        self.shadow_quality = self.shadow_quality.next();
+        self.shadow_quality
     }
     /// Load and sanitise (missing or corrupt file: defaults).
     pub fn load(path: &Path) -> Self {
@@ -353,6 +445,75 @@ mod tests {
         );
         assert_eq!((s.music_level(), s.sfx_level()), (0.6, 0.9));
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn shadow_quality_defaults_to_simple_and_old_files_still_load() {
+        let path = temp("pre-shadows.json");
+        std::fs::write(
+            &path,
+            r#"{"sensitivity":1.5,"music":0.3,"sfx":0.9,"music_on":false,"sfx_on":true,"fullscreen":true}"#,
+        )
+        .unwrap();
+        let old = Settings::load(&path);
+        assert_eq!(old.shadow_quality, ShadowQuality::Simple);
+        assert_eq!(
+            (old.sensitivity, old.music_on),
+            (1.5, false),
+            "the other values survive"
+        );
+        let mut s = old;
+        assert_eq!(s.cycle_shadow_quality(), ShadowQuality::Full);
+        assert!(s.store(&path));
+        assert!(std::fs::read_to_string(&path).unwrap().contains("\"full\""));
+        assert_eq!(Settings::load(&path).shadow_quality, ShadowQuality::Full);
+        // A hand-edited or future value must not throw away the rest of the file.
+        std::fs::write(&path, r#"{"sensitivity":2.0,"shadow_quality":"ultra"}"#).unwrap();
+        let odd = Settings::load(&path);
+        assert_eq!(
+            (odd.shadow_quality, odd.sensitivity),
+            (ShadowQuality::Simple, 2.0)
+        );
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn shadow_quality_cycles_parses_and_orders_by_cost() {
+        let mut q = ShadowQuality::Off;
+        let seen: Vec<_> = (0..4)
+            .map(|_| {
+                q = q.next();
+                q
+            })
+            .collect();
+        assert_eq!(
+            seen,
+            [
+                ShadowQuality::Simple,
+                ShadowQuality::Full,
+                ShadowQuality::Off,
+                ShadowQuality::Simple
+            ]
+        );
+        assert!(
+            ShadowQuality::Off < ShadowQuality::Simple
+                && ShadowQuality::Simple < ShadowQuality::Full
+        );
+        for tier in ShadowQuality::ALL {
+            assert_eq!(ShadowQuality::parse(tier.as_str()), Some(tier));
+            assert_eq!(
+                ShadowQuality::parse(&tier.label().to_uppercase()),
+                Some(tier)
+            );
+        }
+        assert_eq!(ShadowQuality::parse("ultra"), None);
+        let args = |a: &[&str]| a.iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        assert_eq!(ShadowQuality::from_flag(&args(&["game"])), Ok(None));
+        assert_eq!(
+            ShadowQuality::from_flag(&args(&["game", "--shadows", "full"])),
+            Ok(Some(ShadowQuality::Full))
+        );
+        assert!(ShadowQuality::from_flag(&args(&["game", "--shadows", "lots"])).is_err());
     }
 
     #[test]

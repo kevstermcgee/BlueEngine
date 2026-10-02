@@ -31,6 +31,7 @@ pub mod hud;
 pub mod lint;
 pub mod look;
 pub mod mirror;
+pub mod shadow;
 pub mod shape;
 pub mod view;
 
@@ -40,5 +41,6 @@ pub use fx::{Banner, Fx, Particle, ParticleKind, Popup};
 pub use lint::{Defect, LintConfig};
 pub use look::{Look, Materials, PointLight, MAX_POINT_LIGHTS};
 pub use mirror::{MirrorCamera, MirrorPlane, PlanarMirror};
+pub use shadow::{ShadowCamera, ShadowMap};
 pub use shape::{Quad, Ring, Section, StripOpts, Sweep};
 pub use view::View;

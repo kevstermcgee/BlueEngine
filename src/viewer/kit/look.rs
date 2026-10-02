@@ -184,7 +184,7 @@ void main() {
 }
 "#;
 
-const WORLD_FRAGMENT: &str = r#"#version 100
+pub(super) const WORLD_FRAGMENT: &str = r#"#version 100
 precision highp float;
 varying lowp vec4 vcolor;
 varying mediump vec3 vnormal;
@@ -206,6 +206,30 @@ uniform vec4 Color1;
 uniform vec4 Color2;
 uniform vec4 Color3;
 uniform vec4 Rim;      // rgb colour, w strength
+uniform mat4 LightVP;  // world to the shadow map's clip space
+uniform vec4 Shadow;   // x strength (0 = no shadows), y 1/map size, z normal offset (m), w depth bias (0..1)
+uniform highp sampler2D ShadowMap;  // RGBA8: light-space depth packed in rgb (kit::shadow)
+float shadowDepth(vec2 uv) {
+    vec3 c = texture2D(ShadowMap, uv).rgb;
+    return dot(c, vec3(1.0, 1.0 / 255.0, 1.0 / 65025.0));
+}
+// 1 = lit by the key light, down to 1 - strength in shadow. Mirrors kit::shadow::shadow_factor.
+float keyShadow(vec3 n) {
+    if (Shadow.x <= 0.0) { return 1.0; }
+    vec4 lp = LightVP * vec4(vpos + n * Shadow.z, 1.0);
+    vec3 s = lp.xyz / lp.w * 0.5 + 0.5;
+    float edge = max(abs(s.x - 0.5), abs(s.y - 0.5)) * 2.0;
+    float fade = 1.0 - smoothstep(0.85, 1.0, edge);
+    if (s.z >= 1.0 || s.z <= 0.0 || fade <= 0.0) { return 1.0; }
+    float lit = 0.0;
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            float stored = shadowDepth(s.xy + vec2(float(i), float(j)) * Shadow.y);
+            lit += step(s.z - Shadow.w, stored);
+        }
+    }
+    return mix(1.0, lit / 9.0, Shadow.x * fade);
+}
 vec3 localLight(vec4 source, vec4 color, vec3 n) {
     vec3 delta = source.xyz - vpos;
     float d = length(delta);
@@ -220,7 +244,8 @@ void main() {
     vec3 amb = mix(AmbientGround, AmbientSky, 0.5 + 0.5 * n.y);
     vec3 local = localLight(Point0, Color0, n) + localLight(Point1, Color1, n)
         + localLight(Point2, Color2, n) + localLight(Point3, Color3, n);
-    vec3 lit = vcolor.rgb * (amb + KeyColor * diff + local);
+    float sh = diff > 0.0 ? keyShadow(n) : 1.0;
+    vec3 lit = vcolor.rgb * (amb + KeyColor * (diff * sh) + local);
     float rim = pow(1.0 - max(dot(n, v), 0.0), 3.0);
     lit += Rim.rgb * rim * Rim.w;
     lit += vcolor.rgb * vemis * (0.85 + 0.85 * Env.x);
@@ -272,7 +297,7 @@ void main() { gl_FragColor = vcolor; }
 
 /// Uniform names and types of the world and effect materials; kept in one list so the GLSL above and
 /// the Rust that fills it cannot drift apart (a test compares them).
-const WORLD_UNIFORMS: [(&str, UniformType); 16] = [
+const WORLD_UNIFORMS: [(&str, UniformType); 18] = [
     ("Eye", UniformType::Float3),
     ("Env", UniformType::Float4),
     ("FogColor", UniformType::Float3),
@@ -289,7 +314,13 @@ const WORLD_UNIFORMS: [(&str, UniformType); 16] = [
     ("Color1", UniformType::Float4),
     ("Color2", UniformType::Float4),
     ("Color3", UniformType::Float4),
+    ("LightVP", UniformType::Mat4),
+    ("Shadow", UniformType::Float4),
 ];
+
+/// The extra sampler of the world material: the shadow map (`kit::shadow`). Unset, it reads macroquad's
+/// 1x1 white texture, which unpacks to "farther than anything": no shadow.
+pub(super) const SHADOW_SAMPLER: &str = "ShadowMap";
 
 /// Uniforms the effect shader actually declares (a material must not declare more than its shader has).
 const FX_UNIFORMS: [&str; 3] = ["Eye", "Env", "FogColor"];
@@ -349,7 +380,7 @@ impl Materials {
                     ..Default::default()
                 },
                 uniforms: uniforms(None),
-                ..Default::default()
+                textures: vec![SHADOW_SAMPLER.to_owned()],
             },
         )?;
         let fx = |blend| {
@@ -482,6 +513,7 @@ mod tests {
             let glsl_type = match kind {
                 UniformType::Float3 => "vec3",
                 UniformType::Float4 => "vec4",
+                UniformType::Mat4 => "mat4",
                 other => panic!("unexpected uniform type {other:?}"),
             };
             let declaration = format!("uniform {glsl_type} {name};");
@@ -490,11 +522,22 @@ mod tests {
                 "world fragment shader lacks `{declaration}`"
             );
         }
-        let declared = WORLD_FRAGMENT.matches("uniform ").count();
+        // Samplers are textures, not uniforms: they are declared through `MaterialParams::textures`.
+        let (samplers, plain): (Vec<&str>, Vec<&str>) = WORLD_FRAGMENT
+            .lines()
+            .filter(|l| l.starts_with("uniform "))
+            .partition(|l| l.contains("sampler2D"));
         assert_eq!(
-            declared,
+            plain.len(),
             WORLD_UNIFORMS.len(),
             "the shader declares a uniform the list does not know"
+        );
+        assert_eq!(
+            samplers,
+            [format!(
+                "uniform highp sampler2D {SHADOW_SAMPLER};  // RGBA8: light-space depth packed in rgb (kit::shadow)"
+            )],
+            "the world shader's only sampler is the shadow map, and it must be highp"
         );
         // The effect shader uses a subset of the same list (unused uniforms are allowed, undeclared are not).
         for line in FX_FRAGMENT.lines().filter(|l| l.starts_with("uniform ")) {

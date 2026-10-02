@@ -52,6 +52,10 @@ required-features = ["client"]
 name = "custom_client"
 required-features = ["client"]
 
+[[example]]
+name = "shadow_demo"
+required-features = ["client"]
+
 [dependencies]
 gilrs = { version = "=0.11.2", optional = true }
 serde = { version = "=1.0.219", features = ["derive"] }
