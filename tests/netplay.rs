@@ -11,7 +11,8 @@ use vesper3d::viewer::netplay::wire::{
     ServerMsg, SnapshotMsg, MAX_DATAGRAM,
 };
 use vesper3d::viewer::netplay::{
-    ClientConfig, ClientState, MatchLog, NetClient, NetGame, NetServer, ServerConfig, Stage,
+    ClientConfig, ClientState, ConnectFailure, MatchLog, NetClient, NetGame, NetServer,
+    ServerConfig, Stage,
 };
 
 fn addr(n: u16) -> SocketAddr {
@@ -279,6 +280,7 @@ fn a_full_server_a_wrong_key_and_a_wrong_version_are_turned_away() {
         "{:?}",
         ninth.state()
     );
+    assert_eq!(ninth.failure(), Some(ConnectFailure::Full));
     assert_eq!(w.server.players(), 8);
     let reasons: Vec<String> = [&mut wrong_key, &mut old_build]
         .into_iter()
@@ -423,6 +425,12 @@ fn a_late_joiner_waits_out_the_match_and_is_welcome_afterwards() {
         "{:?}",
         newcomer.state()
     );
+    assert_eq!(newcomer.failure(), Some(ConnectFailure::MatchInProgress));
+    assert!(newcomer
+        .failure()
+        .unwrap()
+        .hint()
+        .contains("between rounds"));
     assert!(w.run_until(60 * 60, |w| w.server.stage() == Stage::Results));
     assert!(w.run_until(600, |w| w.server.stage() == Stage::Lobby));
     let mut second = client_at(&w.net, 81, 3, "");
@@ -665,4 +673,94 @@ fn oversize_and_foreign_datagrams_are_refused() {
     w.f32(f32::NAN);
     assert!(Reader::new(&w.finish()).f32().is_err());
     let _ = ToyGame::NAME;
+}
+
+/// Run a fresh client against a live server until it settles, returning how it failed.
+fn failure_of(w: &mut World, mut client: Client) -> (ClientState, Option<ConnectFailure>) {
+    for i in 0..120 {
+        w.step();
+        client.poll((w.tick + i) as f64 / 60.);
+    }
+    (client.state().clone(), client.failure())
+}
+
+#[test]
+fn a_wrong_key_and_a_wrong_version_each_classify_as_what_they_are() {
+    let cfg = ServerConfig {
+        join_key: Some("hunter2".into()),
+        ..config()
+    };
+    let mut w = world(1, 0, 0., &[], cfg);
+    let wrong_key = client_at(&w.net, 70, 0, "nope");
+    let (state, failure) = failure_of(&mut w, wrong_key);
+    assert!(matches!(state, ClientState::Rejected(_)), "{state:?}");
+    assert_eq!(failure, Some(ConnectFailure::WrongKey));
+
+    // A build whose fingerprint differs: a client of another game name hashes differently, so forge the
+    // Hello by hand and read the answer through the client's own decoder path.
+    let mut old_build = w.net.endpoint(addr(71));
+    old_build
+        .send(
+            addr(0),
+            &encode_client::<ToyGame>(&ClientMsg::Hello {
+                key: "hunter2".into(),
+                name: "x".into(),
+                choice: 0,
+                nonce: [3, 3],
+                fingerprint: 1,
+            }),
+        )
+        .unwrap();
+    for _ in 0..30 {
+        w.step();
+    }
+    let reason = old_build
+        .receive()
+        .unwrap()
+        .into_iter()
+        .find_map(|d| match decode_server::<ToyGame>(&d.data) {
+            Ok(ServerMsg::Rejected { reason }) => Some(reason),
+            _ => None,
+        })
+        .expect("the server answers a stale build");
+    assert_eq!(
+        ConnectFailure::classify(&reason),
+        ConnectFailure::VersionMismatch
+    );
+    assert_eq!(w.server.players(), 0);
+}
+
+#[test]
+fn a_closed_loopback_port_is_unreachable_not_refused() {
+    use vesper3d::viewer::net::UdpTransport;
+    // Bind to learn a free port, then close it: nothing listens there any more.
+    let closed: SocketAddr = {
+        let probe = std::net::UdpSocket::bind("127.0.0.1:0").unwrap();
+        probe.local_addr().unwrap()
+    };
+    let mut client: NetClient<ToyGame, UdpTransport> = NetClient::new(
+        UdpTransport::bind("127.0.0.1:0").unwrap(),
+        closed,
+        ClientConfig {
+            name: "Lost".into(),
+            key: String::new(),
+            choice: 0,
+        },
+    )
+    .unwrap();
+    for i in 0..=(9 * 10) {
+        client.poll(i as f64 / 10.);
+    }
+    assert_eq!(
+        client.failure(),
+        Some(ConnectFailure::Unreachable {
+            addr: closed,
+            waited_secs: 8
+        })
+    );
+    let ClientState::Rejected(text) = client.state() else {
+        panic!("{:?}", client.state())
+    };
+    assert_eq!(text, &format!("No reply from {closed} after 8 s"));
+    assert!(!text.contains("turned you away"));
 }
