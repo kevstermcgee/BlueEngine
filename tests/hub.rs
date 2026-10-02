@@ -34,7 +34,12 @@ const HUB_BIN: &str = env!("CARGO_BIN_EXE_be2-hub");
 /// Tests in one process get disjoint runs; the bounded search skips ports something else holds.
 fn free_ports(n: u16) -> u16 {
     static NEXT: AtomicU16 = AtomicU16::new(0);
-    let seed = (std::process::id() % 40) as u16 * 40;
+    // Mix the clock into the start so two test processes started together (several suites on one machine) rarely
+    // pick the same run: the pid alone gave only 40 distinct starts.
+    let nanos = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.subsec_nanos());
+    let seed = ((std::process::id().wrapping_mul(2_654_435_761) ^ nanos) % 1_900) as u16;
     for _ in 0..200 {
         let step = NEXT.fetch_add(1, Ordering::SeqCst);
         let base = 43_000 + (seed + step * 24) % 1_900;

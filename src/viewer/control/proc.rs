@@ -156,8 +156,9 @@ mod tests {
     fn a_zombie_is_not_alive() {
         let mut child = std::process::Command::new("true").spawn().unwrap();
         let pid = child.id();
-        // Give it time to exit without reaping it: it becomes a zombie.
-        for _ in 0..100 {
+        // Give it time to exit without reaping it: it becomes a zombie. Ten seconds, not one: on a loaded machine the
+        // program can still be starting up (state D, waiting on disk) a second after the spawn.
+        for _ in 0..1000 {
             if state(pid) == Some('Z') {
                 break;
             }
