@@ -165,6 +165,29 @@
       "verification": "Capture the game at --shadows off, simple and full (python tools/xcapture.py) and read the images: blobs under moving things, no blob through walls or over the body, cast shadows in the right direction without acne or detached edges, no shimmer between consecutive frames. Engine side: cargo test --lib kit::shadow.",
       "limitations": "Detection is a grep for Materials::load(, which every kit game has, so it also matches games that already adopted Shadows; it only says the game uses the kit renderer and could adopt. Adoption is a visual decision (box size, which meshes cast), so no per-game check exists. The branch carrying this commit must be merged, not rebased or squashed, or the pinned revision stops existing.",
       "reference": "docs/adr/0036-shadows-for-kit-games.md"
+    },
+    {
+      "id": "MIG-0037-GAME-SERVER-CLI",
+      "since_commit": "49c62e4d36fb",
+      "title": "netplay::cli::serve replaces the hand-written server main, and makes the game hostable on a be2-hub",
+      "runtime": [
+        "custom_sim_netplay"
+      ],
+      "category": "optional_adoption",
+      "required": false,
+      "summary": "Each netplay game copied a ~65-line server executable (--listen, --transport, --join-key, --auto-start, --report-dir, --seed and a participants flag). netplay::cli::serve::<G>(&ServeSpec) is that main once, plus what a hub needs from a server: --info (game, fingerprint, build, settings schema), --status-lines (a machine-readable STATUS line each second), --exit-on-stdin-eof (the server dies with its parent) and --set ID=VALUE for per-room settings declared with the optional NetGame::settings() and NetGame::configure(). A game that adopts it can be listed in a be2-hub registry (ADR 0037); its fingerprint and gameplay do not change.",
+      "detect": {
+        "kind": "grep",
+        "pattern": "NetServer::<",
+        "include": [
+          "src/bin/*.rs"
+        ],
+        "exclude_paths": []
+      },
+      "repair": "Replace the body of the server binary with `serve::<MyGame>(&ServeSpec { bin_name, about, default_listen, default_report_dir, join_key_env, participants: Participants::Flag { flag: \"racers\", min: 1, max: 8, default: 8 } /* or Participants::Fixed(n) */, default_auto_start })`, as in src/bin/be2-toy-server.rs. Keep the old flags by declaring them as NetGame::settings() (typed bool/int/choice with an id that is never reused) and applying them in NetGame::configure(); a game that stores settings in a process-wide cell (Deadfall's sim::set_settings) fills it there. Then add a [game ID] section to the hub's hub.conf (deploy/hub/hub.conf.example). See docs/NETPLAY.md, \"The server main: netplay::cli::serve\".",
+      "verification": "Run the server with --info and with --status-lines (src/viewer/netplay/cli.rs documents both formats) and confirm the fingerprint is unchanged; with a hub, create a room and join it with two clients (tests/hub.rs in the engine does this for the toy game). Engine side: cargo test --profile itest --test hub and --lib netplay::cli.",
+      "limitations": "Detection is a grep for NetServer::< in src/bin/*.rs: a bin that is a bot driver or a load test rather than the server also matches, and a game whose server lives outside src/bin (an example, another crate) is a false negative. Adoption changes the server's command line only where the game redeclares its flags as settings; scripts that pass old flags need updating. There is no MIG-0037-HUB-CLIENT: a hand-rolled Play Online screen has no reliable signature (see ADR 0037). The branch carrying this commit must be merged, not rebased or squashed, or the pinned revision stops existing.",
+      "reference": "docs/adr/0037-shared-multi-game-hub.md"
     }
   ]
 }
