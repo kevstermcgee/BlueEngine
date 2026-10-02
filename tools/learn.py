@@ -41,7 +41,8 @@ UUID_RE = re.compile(r'(?<![0-9A-Za-z])[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]
 HEX_RE = re.compile(r'(?<![0-9A-Za-z])[0-9a-fA-F]{32,}(?![0-9A-Za-z])')
 B64_RE = re.compile(r'[A-Za-z0-9+_\-]{32,}={0,2}')
 PREFIX_RE = re.compile(r'(?<![A-Za-z0-9])(ghp_|gho_|ghs_|github_pat_|sk-[A-Za-z0-9]|AKIA[0-9A-Z]{8}|xox[abp]-|AIza[0-9A-Za-z_\-]{8})')
-ASSIGN_RE = re.compile(r'(?i)[A-Za-z_\-]*(?:key|token|secret|passw(?:or)?d|auth)\w*\s*[=:]\s*["\']?[^\s"\',;]{6,}')
+ASSIGN_RE = re.compile(r'(?i)(?:key|token|secret|passw(?:or)?d|authorization|auth)["\']?\s*(?:=\s*["\']?[^\s"\',;]{4,}'
+                       r'|:\s*["\']?(?=[A-Za-z0-9_\-+/=.]*[0-9])[A-Za-z0-9_\-+/=.]{12,})')
 KEYEQ_RE = re.compile(r'(?i)key\s*=')
 WORD_RE = re.compile(r'(?i)(password|passwd|secret|bearer|private[_ -]?key)')
 STRICT_WORD_RE = re.compile(r'(?i)(token|password|passwd|secret|key=)')
@@ -1142,6 +1143,7 @@ AREAS = ('networking', 'rendering', 'geometry', 'input', 'audio', 'physics', 'ai
 STATUSES = ('open', 'promoted', 'wontfix')
 MAX_TEXT = 400
 MAX_PATHS = 12
+MAX_WORDS = 20
 GAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9 ._/\-]{0,59}$')
 REF_RE = re.compile(r'^[A-Za-z0-9 ._#:/,+\-]{1,80}$')
 WORD_LIST_RE = re.compile(r'^[a-z0-9][a-z0-9 _.\-]{0,39}$')
@@ -1200,9 +1202,9 @@ def validate_entry(entry):
         errors.append(f'duplicated must be at most {MAX_PATHS} plain file paths')
     for field in ('keywords', 'features'):
         items = entry.get(field, [])
-        if not isinstance(items, list) or len(items) > 12 or \
+        if not isinstance(items, list) or len(items) > MAX_WORDS or \
                 any(not isinstance(item, str) or not WORD_LIST_RE.match(item) or secret_like(item) for item in items):
-            errors.append(f'{field} must be a list of at most 12 short lowercase words or feature ids')
+            errors.append(f'{field} must be a list of at most {MAX_WORDS} short lowercase words or feature ids')
     return errors
 
 

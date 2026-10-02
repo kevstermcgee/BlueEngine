@@ -280,7 +280,7 @@ class PrivacyTests(unittest.TestCase):
 
     def test_secret_like_classes(self):
         for text, label in [(FAKE_UUID, 'uuid'), (FAKE_HEX, 'long-hex'), (FAKE_KEY, 'credential-prefix'),
-                            ('password is hunter2', 'credential-word'), ('Authorization: Bearer abcdefg', 'credential-assignment'),
+                            ('password is hunter2', 'credential-word'), ('Authorization: Bearer abcdefg', 'credential-word'), ('auth: abcd1234efgh5678', 'credential-assignment'), ('{"token": "abcd1234efgh5678"}', 'credential-assignment'),
                             ('xY7' * 12, 'long-base64'), ('api_key=abcdef123456', 'credential-assignment')]:
             self.assertEqual(learn.secret_like(text), label, text)
         for text in ('Template::quad_facing winds a quad', 'commit 7ca1536 fixed it', 'src/viewer/netplay/server.rs',
