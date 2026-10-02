@@ -96,6 +96,9 @@ def impact(root, paths):
                               if {'simulation_contract', 'multiplayer', 'game_presentation'} <= affected else None)}
 
 
+# Words that say nothing about which feature a task needs (kept narrow: "game", "custom" and "kit" do).
+RANK_STOP = frozenset('add fix change the a an to for in of and that this my me our your at on or by as is it be are '
+                      'with from every can how when what which into out up so if'.split())
 LEARNED_MAX_LINES = 5
 LEARNED_MAX_CHARS = 600
 LEARNED_LINE_CHARS = 118
@@ -103,7 +106,7 @@ LEARNED_STOP = frozenset(('add make build write use using need want the for with
                           'get set new game games custom sim simulation kit engine blue ability support create does work works '
                           'thing things like when what why where which should would could than then them they their there '
                           'some any all one two out off its our too very just also only over under after before more most '
-                          'without within between instead through each every own press').split())
+                          'without within between instead through each every own press player players').split())
 
 
 def learned_words(text):
@@ -216,13 +219,16 @@ def context(root, query, limit=3):
         raise ValueError(f'--limit must be 1..5 (got {limit})')
     features = index(root)
     summaries = modules(root)
-    terms = set(re.findall(r'[a-z0-9]+', query.lower())) - {
-        'add', 'fix', 'change', 'the', 'a', 'an', 'to', 'for', 'in', 'of', 'and'}
-    bags = {}
+    terms = set(re.findall(r'[a-z0-9]+', query.lower())) - RANK_STOP
+    bags, described = {}, {}
     for name, feature in features.items():
         # What a feature's files say about themselves (one line each) is searchable text of the feature.
         text = json.dumps(feature).lower() + ' ' + ' '.join(summaries.get(path, '') for path in feature['files']).lower()
         bags[name] = set(re.findall(r'[a-z0-9]+', text))
+        # The feature's own description (note, or contract) is a better guide than the rest of its record.
+        contract = feature.get('contract', '')
+        described[name] = set(re.findall(r'[a-z0-9]+', (feature.get('note', '') + ' ' + (
+            contract if isinstance(contract, str) else contract.get('owns', ''))).lower()))
     # A word found in many records says little about which one the task needs: weight each query word by how rare
     # it is across the index (inverse document frequency), so a generic word cannot outvote a specific one.
     weight = {term: math.log(1 + len(bags) / sum(term in words for words in bags.values()))
@@ -235,7 +241,8 @@ def context(root, query, limit=3):
         diagnostic = any(query.upper() == item['id'] for item in
                          feature.get('constraints', []) + feature.get('decisions', []))
         score = 1000 if query.lower() == name or diagnostic else round(sum(
-            weight[term] * (4 if term in title | keywords else 1) for term in terms & words), 3)
+            weight[term] * (4 if term in title | keywords else 2 if term in described[name] else 1)
+            for term in terms & words), 3)
         if score:
             ranked.append((score, name, feature))
     ranked.sort(key=lambda item: (-item[0], item[1]))

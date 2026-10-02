@@ -28,7 +28,9 @@
         "affected",
         "verification",
         "AI",
-        "annotations"
+        "annotations",
+        "windows type-check",
+        "cross compile"
       ],
       "constraints": [
         {
@@ -190,7 +192,8 @@
         "src/viewer/control/proc.rs",
         "src/viewer/control/server.rs",
         "tests/server_ctl.rs",
-        "docs/adr/0031-be2-ctl-server-manager.md"
+        "docs/adr/0031-be2-ctl-server-manager.md",
+        "docs/HOSTING.md"
       ],
       "checks": [
         "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift",
@@ -263,7 +266,11 @@
         "protocol 8",
         "shutdown",
         "sigterm",
-        "graceful"
+        "graceful",
+        "hosting",
+        "dedicated server",
+        "systemd",
+        "be2-ctl"
       ],
       "read_first": [
         "src/viewer/net/replication.rs",
@@ -383,7 +390,14 @@
         "python -m unittest tools.test_assets -v"
       ],
       "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import.",
-      "depends_on": []
+      "depends_on": [],
+      "keywords": [
+        "asset",
+        "prefab",
+        "prop catalog",
+        "search assets",
+        "asset pack"
+      ]
     },
     "interior_prefabs": {
       "files": [
@@ -647,7 +661,8 @@
         "tests/game_box_errors.rs",
         "tests/mover_riding.rs",
         "tools/game.schema.json",
-        "docs/GAME_QUICKSTART.md"
+        "docs/GAME_QUICKSTART.md",
+        "docs/adr/0026-movers-carry-players.md"
       ],
       "checks": [
         "game_documents integration tests",
@@ -675,7 +690,9 @@
         "switch",
         "interactable",
         "game.json",
-        "map.json"
+        "map.json",
+        "mover",
+        "moving platform"
       ],
       "read_first": [
         "src/viewer/game.rs",
@@ -765,6 +782,12 @@
           "suite": "toolchain",
           "test": "test_pathing_and_physical_walk"
         }
+      ],
+      "keywords": [
+        "walk test",
+        "route",
+        "reachable",
+        "spawn to exit"
       ]
     },
     "procedural_gen": {
@@ -864,6 +887,12 @@
           "suite": "toolchain",
           "test": "test_headless_ui_layout_auditor"
         }
+      ],
+      "keywords": [
+        "menu layout",
+        "resolutions",
+        "screen sizes",
+        "text truncation"
       ]
     },
     "game_scaffolding": {
@@ -2351,6 +2380,7 @@
     "docs/GAME_QUICKSTART.md": "Playable games and source-free prototypes",
     "docs/GLOSSARY.md": "BE2 vocabulary",
     "docs/HEADLESS_CAPTURE.md": "Seeing a game on a machine with no display",
+    "docs/HOSTING.md": "Hosting a dedicated BlueEngine server",
     "docs/NETPLAY.md": "Netplay: online play for games that own their simulation",
     "docs/SAVE_STATE.md": "Save states",
     "docs/SHARED_GAMEPLAY.md": "Shared gameplay and presentation",
@@ -2363,6 +2393,7 @@
     "docs/adr/0020-look-scale-and-dev-loop.md": "ADR 0020: One mouse-look convention, checkable scale, and a dev loop that survives a running game",
     "docs/adr/0021-stick-look-menu-steps-and-exit.md": "ADR 0021: Stick look in the shared convention, discrete menu steps, and a graceful exit",
     "docs/adr/0022-custom-sim-multiplayer-kit.md": "ADR 0022: A multiplayer kit for custom simulations, and the fixes Spooky Kart called for",
+    "docs/adr/0026-movers-carry-players.md": "ADR 0026: Movers carry the players standing on them",
     "docs/adr/0031-be2-ctl-server-manager.md": "ADR 0031: be2-ctl, a small manager for servers on one machine",
     "docs/adr/0032-game-upgrade-workflow.md": "ADR 0032: A version-aware upgrade workflow for external games",
     "docs/adr/0033-ambient-music-and-persistent-audio-settings.md": "ADR 0033: Generated ambient music, and audio settings that survive a relaunch",

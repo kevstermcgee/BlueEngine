@@ -2,6 +2,6 @@
   "k": 3,
   "feature_recall": 1.0,
   "path_recall": 1.0,
-  "commit": "724fda1",
+  "commit": "c5d7a4d",
   "note": "Regression floor for tools.test_learn: recall must not drop below these (rounded down)."
 }
