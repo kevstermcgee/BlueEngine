@@ -45,3 +45,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0033: Generated ambient music, and audio settings that survive a relaunch](0033-ambient-music-and-persistent-audio-settings.md)
 - [0034: Level geometry and waypoint pathing promoted from Dead Air](0034-level-geometry-and-waypoint-pathing-from-dead-air.md)
 - [0035: A testable, loud native key reader, and one restart convention](0035-native-key-reader-and-restart-convention.md)
+- [0036: Shadows for kit games: contact blobs and one shadow map, behind one setting](0036-shadows-for-kit-games.md)

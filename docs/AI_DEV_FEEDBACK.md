@@ -129,7 +129,14 @@ across two files). Spooky Kart shipped two geometry bugs that no engine test cou
 - **`fx_alpha` and `fx_add` are never depth-tested.** Their pipelines request `depth_test: LessOrEqual` with
   `depth_write: false`, but miniquad 0.4.8 enables `GL_DEPTH_TEST` only when `depth_write` is true
   (`src/graphics/gl.rs`, `apply_pipeline`, line ~1303 calls `glDisable(GL_DEPTH_TEST)` otherwise). Translucent surfaces and glows
-  therefore show through walls. The doc comments now say so; behaviour is unchanged until a depth-tested decal / shadow path is
-  designed.
+  therefore show through walls. The doc comments now say so. `fx_alpha`/`fx_add` stay that way (changing them would change every
+  game's look); the depth-tested path is `Materials::decal` (it writes depth and carries its own clip-space bias, because polygon
+  offset is dead in miniquad 0.4.8 too) and `Batch::blob` / `kit::Shadows` (ADR 0036). A flat translucent mark on the ground that
+  shows through a wall or over the car standing on it is this trap.
+- **Shadows: render targets and sampling.** `render_target_ex` is always RGBA8 colour with an unreadable depth attachment; the
+  default `sample_count: 1` makes miniquad blit the whole target after every draw call (use 0); targets default to `Linear`
+  filtering, which corrupts a depth packed into bytes (use `Nearest`); a `sampler2D` is `lowp` unless declared `highp`; an unset
+  sampler binds a white texture, so a "no map yet" state must decode as "no shadow"; GLSL 100 has no `dFdx`, so acne is fixed
+  with normal-offset bias, not slope-scaled bias. `kit::shadow` does all of this; copy it rather than re-deriving it.
 - **Kit primitive winding.** `Template::ball` and `Template::ring` / `soft_ring` were wound against their own normals
   (found by the lint); the kit draws without back-face culling, so it never showed, but it is fixed.

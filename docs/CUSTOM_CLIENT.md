@@ -136,6 +136,45 @@ blank frames; `python tools/audio_report.py FILE.wav` reports clipping, clicks, 
 
 See [the shared gameplay kit](SHARED_GAMEPLAY.md) for the playable starter, public creative APIs, feature gates and runtime boundaries.
 
+## Shadows
+
+`kit::Shadows` is one helper and one setting (`devkit::ShadowQuality`, default `Simple`; Esc > Settings,
+`Settings.shadow_quality`, `--shadows off|simple|full`). `Off` draws nothing extra. `Simple` puts soft contact
+blobs under moving things with the depth-tested `Materials::decal` (no extra pass; walls hide them, actors cover
+them). `Full` adds one directional shadow map of the key light around a focus point (buildings, trees, walls and
+vehicles shadow everything; the four point lights stay unshadowed), at the cost of a second pass over the
+casters. A game adds about ten lines:
+
+```ignore
+let mut shadows = kit::Shadows::new(settings.shadow_quality);       // once, after the window exists
+// per frame, after filling the dynamic batches (CPU only):
+shadows.begin_frame(&look, player_position);                         // fits the light box, clears the blobs
+shadows.blob(kart.position, 1.4);                                    // Simple: per moving thing
+shadows.cast(|| { statics.draw(); actors.draw(); });                 // Full: same meshes, caster material
+set_camera(&view.camera(0.3, 400.));
+materials.set_scene(&look, view.eye, time, pulse);
+shadows.apply(&materials);                                           // every frame: binds the map or clears it
+materials.draw_static(&static_meshes);
+shadows.draw_decals(&materials);                                     // after statics, before actors
+gl_use_material(&materials.world); actors.draw();                    // draw_decals leaves `decal` bound
+```
+
+The menu: `shell.local_menu_with_options(title, &controls, audio_menu, shadows.quality())` adds a "Shadows: Simple"
+selector to Settings; when `outcome.cycle_shadows` is set, `shadows.set_quality(shadows.quality().next())`, copy
+`shadows.quality()` into `settings.shadow_quality` and store it. `Shadows::set_ground(|x, z| height)` tells the
+blobs where the ground is (default flat at 0). `with_range(half_extent, depth)` sizes the light box (default 40 m
+each side, 160 m deep: smaller is crisper, but it must still reach the casters that shadow the focus area) and
+`with_resolution` the map (default 2048).
+
+Rules that save a debugging session: draw the casters into the pass with the *same batches* you draw in the main
+pass (do not draw fx, glass or a first-person viewmodel there); fill the batches before `shadows.cast` (the pass
+only reads CPU geometry); `Full` falls back to `Simple` if the map cannot be created, so read `shadows.quality()`
+rather than assuming; a flat ground that is also drawn as a huge slab is fine as a receiver, but keep it out of
+the casters when it is thousands of metres wide. Tune acne and detached shadows with
+`ShadowMap::camera(..).with_bias(normal_offset_texels, depth_bias_texels)`. Everything here is explained, with
+the miniquad limits that shaped it (no polygon offset, no depth texture, depth test needs depth write), in
+[ADR 0036](adr/0036-shadows-for-kit-games.md). `examples/shadow_demo.rs` is the runnable reference.
+
 ## Local lights and planar mirrors
 
 `kit::PointLight::new(position, radius, rgb, intensity)` validates finite positive radius and
@@ -143,7 +182,7 @@ nonnegative RGB/intensity. Call `Materials::set_point_lights(&lights)` **after**
 for each camera pass. At most four unshadowed lights use Lambert diffuse with squared
 finite-radius falloff. Unused slots are cleared; oversized lists fail without changing uniforms.
 `set_scene` clears all lights so existing clients keep the same look. This is additive diffuse
-lighting, not PBR or shadow mapping.
+lighting, not PBR. Shadows are separate: see "Shadows" below.
 
 `MirrorPlane::new(center, right, up, size)` validates a rectangular aperture with perpendicular
 axes; `right × up` points to the viewer side. `PlanarMirror::new(plane, (width,height))` requires
