@@ -19,6 +19,7 @@
 //! `TICK_HZ / SNAPSHOT_EVERY`. A player who leaves or times out mid-match is handed to the game's own AI at once
 //! ([`NetGame::release`]). Every finished match appends one JSON line to `matches.jsonl` (the game's report
 //! plus per-player network quality and server load).
+pub mod cli;
 pub mod client;
 pub mod failure;
 pub mod server;
@@ -28,7 +29,8 @@ pub mod wire;
 pub use client::{ClientConfig, ClientState, NetClient, NetStats, PredictionStats};
 pub use failure::ConnectFailure;
 pub use server::{
-    MatchLog, NetReport, NetServer, PeerReport, PeerStats, ServerConfig, ServerLoad, Stage,
+    hello_fingerprint, MatchLog, NetReport, NetServer, PeerReport, PeerStats, ServerConfig,
+    ServerLoad, Stage, StatusSnapshot,
 };
 pub use wire::{LobbyEntry, LobbyState, MAX_DATAGRAM};
 
@@ -42,6 +44,57 @@ pub struct Seat {
     /// The lobby choice made (a character, a car, a team), `0..NetGame::CHOICES`.
     pub choice: u8,
     pub name: String,
+}
+
+/// What kind of value a [`SettingSpec`] holds.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SettingKind {
+    /// 0 or 1.
+    Bool,
+    /// A number between the spec's `min` and `max`.
+    Int,
+    /// One of `min..=max` options, by index (the game names them).
+    Choice,
+}
+
+impl SettingKind {
+    /// The word used in `--info` output: `bool`, `int` or `choice`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Bool => "bool",
+            Self::Int => "int",
+            Self::Choice => "choice",
+        }
+    }
+
+    pub fn parse(word: &str) -> Option<Self> {
+        match word {
+            "bool" => Some(Self::Bool),
+            "int" => Some(Self::Int),
+            "choice" => Some(Self::Choice),
+            _ => None,
+        }
+    }
+}
+
+/// One match setting a game's server accepts, so a hub can offer it to players without knowing the game.
+///
+/// Settings are typed numbers, never strings: a hub validates a request against `min..=max` and starts the
+/// room's server with `--set <id>=<value>`, so nothing a player typed reaches a command line. See
+/// [`cli`] for how the server prints and applies them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SettingSpec {
+    /// 1..=255, unique within the game, and never reused for something else (it is on the wire).
+    pub id: u8,
+    /// Lower-case words and hyphens, e.g. `kills` or `bot-skill`: what registries and `--flag` use.
+    pub name: &'static str,
+    /// The command-line flag (without the dashes) that sets it by hand when running a server yourself:
+    /// `--flag VALUE`, or just `--flag` for a [`SettingKind::Bool`]. Usually equal to `name`.
+    pub flag: &'static str,
+    pub kind: SettingKind,
+    pub min: u32,
+    pub max: u32,
+    pub default: u32,
 }
 
 /// Everything the kit needs to know about a game. Implemented once per game, on any type (usually a unit struct).
@@ -97,6 +150,20 @@ pub trait NetGame: Sized + 'static {
     fn is_over(m: &Self::Match) -> bool;
     /// A summary of the finished match for `matches.jsonl` (results, per-participant statistics).
     fn report(m: &Self::Match) -> serde_json::Value;
+
+    /// Match settings a hub may choose per room (kill target, bots on or off). Optional: the default offers none.
+    /// [`cli::serve`] prints them in `--info` and passes the chosen values to [`NetGame::configure`].
+    fn settings() -> &'static [SettingSpec] {
+        &[]
+    }
+    /// Apply the settings this server process was started with: one `(id, value)` for every entry of
+    /// [`NetGame::settings`] (the default for any not chosen), values already checked against `min..=max`.
+    /// Called once, before the server binds a socket; a process serves one set of settings (a hub starts one
+    /// process per room), so storing them in a process-wide cell is fine. The default accepts and ignores them.
+    fn configure(values: &[(u8, u32)]) -> Result<(), String> {
+        let _ = values;
+        Ok(())
+    }
 }
 
 /// What a client does with the server's answers. It owns the replica the game draws from.

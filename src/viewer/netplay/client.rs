@@ -303,7 +303,7 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
                         name: self.cfg.name.clone(),
                         choice: self.cfg.choice,
                         nonce: self.nonce,
-                        fingerprint: G::fingerprint() ^ super::server::name_hash_of::<G>(),
+                        fingerprint: super::server::hello_fingerprint::<G>(),
                     });
                 }
             }
