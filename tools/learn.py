@@ -167,8 +167,9 @@ def write_jsonl(path, rows):
 def git_head():
     try:
         out = subprocess.run(['git', 'rev-parse', '--short', 'HEAD'], cwd=ROOT, capture_output=True, text=True)
-        dirty = subprocess.run(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT,
-                               capture_output=True, text=True).stdout.strip()
+        # The eval log itself is appended to by every run; it does not make the engine "dirty".
+        dirty = subprocess.run(['git', 'status', '--porcelain', '--untracked-files=no', '--', '.',
+                                ':!docs/learning/eval_runs.jsonl'], cwd=ROOT, capture_output=True, text=True).stdout.strip()
         return (out.stdout.strip() or 'unknown'), bool(dirty)
     except OSError:
         return 'unknown', False
