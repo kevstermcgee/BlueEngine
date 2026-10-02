@@ -669,10 +669,17 @@
         "add-interactable",
         "game-explore",
         "winnable",
-        "reachability"
+        "reachability",
+        "button",
+        "console",
+        "switch",
+        "interactable",
+        "game.json",
+        "map.json"
       ],
       "read_first": [
         "src/viewer/game.rs",
+        "src/viewer/game_edit.rs",
         "src/viewer/game_example.rs",
         "tests/game_documents.rs"
       ],
@@ -733,6 +740,16 @@
           "suite": "toolchain",
           "test": "test_static_lint_and_reachability"
         }
+      ],
+      "keywords": [
+        "lint",
+        "reachability",
+        "unreachable",
+        "perimeter",
+        "leak",
+        "headroom",
+        "overlap",
+        "floating props"
       ]
     },
     "pathing_and_walk": {
@@ -885,7 +902,16 @@
         "migration",
         "engine revision",
         "dependency pin",
-        "provenance"
+        "provenance",
+        "old game",
+        "newest engine",
+        "engine version",
+        "update engine",
+        "move game"
+      ],
+      "read_first": [
+        "docs/UPGRADE.md",
+        "tools/upgrade.py"
       ]
     },
     "game_presentation": {
@@ -921,7 +947,22 @@
           "stock client",
           "generated games"
         ]
-      }
+      },
+      "keywords": [
+        "window",
+        "window_config",
+        "draw call",
+        "vertex capacity",
+        "macroquad conf",
+        "game window",
+        "resolution",
+        "pause menu",
+        "settings menu"
+      ],
+      "read_first": [
+        "src/viewer/game_client.rs",
+        "docs/GAME_PRESENTATION.md"
+      ]
     },
     "sandbox": {
       "files": [
@@ -955,6 +996,19 @@
       "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds.",
       "depends_on": [
         "movement"
+      ],
+      "keywords": [
+        "gamepad",
+        "controller",
+        "joystick",
+        "analog stick",
+        "trigger",
+        "button",
+        "dead zone"
+      ],
+      "read_first": [
+        "docs/CONTROLLERS.md",
+        "src/viewer/gamepad.rs"
       ]
     },
     "shared_gameplay": {
@@ -1001,6 +1055,7 @@
       ],
       "read_first": [
         "src/viewer/game_session.rs",
+        "src/viewer/game_input.rs",
         "src/viewer/playable.rs",
         "tests/game_runtime.rs"
       ],
@@ -1008,6 +1063,20 @@
         "GameSession::local",
         "GameSession::advance",
         "playable::run_game_with_options"
+      ],
+      "keywords": [
+        "restart",
+        "restart_requested",
+        "game over",
+        "key",
+        "keys",
+        "keyboard",
+        "windows",
+        "native key reader",
+        "dead key",
+        "KEY_TABLE",
+        "pressed",
+        "ClientInput"
       ]
     },
     "custom_simulation": {
@@ -1367,8 +1436,8 @@
       ],
       "read_first": [
         "docs/GAME_QUICKSTART.md",
-        "src/viewer/identity.rs",
-        "templates/game_ship.py"
+        "templates/game_ship.py",
+        "src/viewer/identity.rs"
       ],
       "depends_on": [
         "game_scaffolding"
@@ -1468,6 +1537,7 @@
       ],
       "read_first": [
         "docs/SAVE_STATE.md",
+        "src/viewer/devkit/snapshot.rs",
         "src/viewer/savestate/mod.rs"
       ],
       "canonical_example": "templates/custom-sim/src/lib.rs",
@@ -1623,7 +1693,16 @@
         "yaw",
         "heading",
         "bot steering",
-        "wrong way"
+        "wrong way",
+        "face",
+        "facing",
+        "look at",
+        "turn toward",
+        "direction",
+        "yaw_of",
+        "angle",
+        "spawn",
+        "landmark"
       ],
       "depends_on": [
         "custom_simulation"
@@ -1689,6 +1768,573 @@
       ],
       "depends_on": [
         "custom_simulation"
+      ]
+    },
+    "text_input": {
+      "files": [
+        "src/viewer/devkit/text_field.rs",
+        "src/viewer/devkit/net_address.rs",
+        "docs/NETPLAY.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit::text_field devkit::net_address"
+      ],
+      "note": "Typing in a custom-sim window: TextField (a single-line edit box with cursor, key repeat, character filters and clipboard paste glue) and the server-address chain (resolve_ipv4, first_of, first_of_beside_exe: command line, server.txt beside the exe, a built-in default) with an AddressError that names what was wrong. See docs/NETPLAY.md, \"Typing and pasting a server address\".",
+      "keywords": [
+        "text box",
+        "textfield",
+        "text field",
+        "paste",
+        "clipboard",
+        "typing",
+        "type",
+        "cursor",
+        "edit box",
+        "input line",
+        "server address",
+        "server.txt",
+        "default server",
+        "host port",
+        "ipv4",
+        "resolve"
+      ],
+      "read_first": [
+        "src/viewer/devkit/text_field.rs",
+        "src/viewer/devkit/net_address.rs"
+      ],
+      "public_api": [
+        "TextField",
+        "CharFilter",
+        "EditKey",
+        "resolve_ipv4",
+        "first_of",
+        "first_of_beside_exe",
+        "ServerChoice",
+        "AddressError"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
+    },
+    "level_waypoints": {
+      "files": [
+        "src/viewer/devkit/level.rs",
+        "src/viewer/devkit/waypoints.rs",
+        "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit::level devkit::waypoints"
+      ],
+      "note": "Hand-built indoor levels and AI movement for custom-sim games (promoted from Dead Air, ADR 0034): wall_along_x / wall_along_z cut doorway gaps out of straight wall runs; WaypointGraph is a small branching graph with nearest-node lookup and shortest path for patrol/investigate/hunt AI. Real-time, over a level built in code; the authored-map A* in pathing.rs is a different thing.",
+      "keywords": [
+        "wall",
+        "walls",
+        "doorway",
+        "door gap",
+        "gap",
+        "level",
+        "indoor",
+        "rooms",
+        "waypoint",
+        "waypoints",
+        "graph",
+        "shortest path",
+        "patrol",
+        "monster",
+        "enemy",
+        "navigation",
+        "nav",
+        "pathfinding",
+        "ai movement"
+      ],
+      "read_first": [
+        "src/viewer/devkit/waypoints.rs",
+        "src/viewer/devkit/level.rs"
+      ],
+      "public_api": [
+        "wall_along_x",
+        "wall_along_z",
+        "solid_ranges",
+        "WaypointGraph",
+        "Waypoint"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
+    },
+    "synth_audio": {
+      "files": [
+        "src/viewer/devkit/synth.rs",
+        "src/viewer/devkit/save.rs",
+        "src/viewer/kit/audio.rs",
+        "docs/adr/0033-ambient-music-and-persistent-audio-settings.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit::synth devkit::save kit::audio"
+      ],
+      "note": "Sound without audio files: devkit::synth builds sound effects and music from oscillators, filters, envelopes and a Mix (music_loop for an upbeat backing track, ambient_loop for a calm seamless pad loop, wav_bytes_stereo for output); kit::SoundBank plays them; devkit::Settings stores music/sfx volume across launches (ADR 0033). SoundBank::play has volume only (no pan or pitch).",
+      "keywords": [
+        "sound",
+        "sounds",
+        "sound effects",
+        "sfx",
+        "synth",
+        "synthesize",
+        "procedural audio",
+        "music",
+        "ambient",
+        "background music",
+        "volume",
+        "audio settings",
+        "wav",
+        "chords",
+        "loop",
+        "no audio files"
+      ],
+      "read_first": [
+        "src/viewer/devkit/synth.rs",
+        "docs/adr/0033-ambient-music-and-persistent-audio-settings.md"
+      ],
+      "public_api": [
+        "synth::AmbientSpec",
+        "synth::ambient_loop",
+        "synth::MusicSpec",
+        "synth::music_loop",
+        "synth::wav_bytes_stereo",
+        "Settings",
+        "SoundBank"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
+    },
+    "mouse_look": {
+      "files": [
+        "src/viewer/devkit/look.rs",
+        "src/viewer/devkit/scale.rs",
+        "docs/adr/0020-look-scale-and-dev-loop.md",
+        "docs/adr/0021-stick-look-menu-steps-and-exit.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit::look devkit::scale"
+      ],
+      "note": "One mouse-look convention for first-person custom-sim games: MouseLook (sensitivity range, invert_y, pitch limit, per-pixel and per-stick turning) and FpsCamera (yaw/pitch to a forward vector, walk_forward), plus stick_look for gamepads in the same convention (ADR 0020, 0021).",
+      "keywords": [
+        "mouse look",
+        "mouselook",
+        "first person",
+        "fps camera",
+        "sensitivity",
+        "invert",
+        "invert y",
+        "pitch",
+        "yaw",
+        "look",
+        "camera",
+        "stick look",
+        "aim"
+      ],
+      "read_first": [
+        "src/viewer/devkit/look.rs",
+        "docs/adr/0020-look-scale-and-dev-loop.md"
+      ],
+      "public_api": [
+        "MouseLook",
+        "FpsCamera",
+        "stick_look"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
+    },
+    "determinism_tests": {
+      "files": [
+        "src/viewer/devkit/sim.rs",
+        "src/viewer/devkit/playback.rs",
+        "src/viewer/devkit/rng.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit::sim devkit::playback"
+      ],
+      "note": "Proving a custom simulation is deterministic: the Simulation trait and StateHasher hash the state, assert_deterministic replays recorded inputs twice and reports the first diverging tick (Trace::first_divergence), Playback replays inputs from JSON or frames, Rng is the seeded generator. Replay tests are the cheapest regression test a game can have.",
+      "keywords": [
+        "deterministic",
+        "determinism",
+        "replay",
+        "replay test",
+        "regression test",
+        "state hash",
+        "same seed",
+        "recorded inputs",
+        "playback",
+        "assert_deterministic",
+        "StateHasher",
+        "divergence",
+        "simulation test"
+      ],
+      "read_first": [
+        "src/viewer/devkit/sim.rs",
+        "src/viewer/devkit/playback.rs"
+      ],
+      "public_api": [
+        "Simulation",
+        "StateHasher",
+        "assert_deterministic",
+        "run_inputs",
+        "Trace",
+        "Playback",
+        "Rng"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
+    },
+    "kit_shadows": {
+      "files": [
+        "src/viewer/kit/shadow.rs",
+        "examples/shadow_demo.rs",
+        "docs/adr/0036-shadows-for-kit-games.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib kit::shadow"
+      ],
+      "note": "Shadows for kit games (ADR 0036) behind one setting, devkit::ShadowQuality (Off/Simple/Full, --shadows, Esc > Settings): kit::Shadows draws depth-tested contact blobs (Batch::blob, Materials::decal) at Simple and adds one packed-depth shadow map at Full. Every call is a no-op at Off. Copy kit::shadow rather than re-deriving the miniquad render-target workarounds.",
+      "keywords": [
+        "shadow",
+        "shadows",
+        "blob",
+        "contact shadow",
+        "blob shadow",
+        "decal",
+        "shadow map",
+        "shadow quality",
+        "sun",
+        "light direction",
+        "under the car",
+        "ground mark"
+      ],
+      "read_first": [
+        "src/viewer/kit/shadow.rs",
+        "docs/adr/0036-shadows-for-kit-games.md"
+      ],
+      "public_api": [
+        "Shadows",
+        "ShadowMap",
+        "ShadowCamera",
+        "ShadowQuality",
+        "Batch::blob",
+        "Materials::decal"
+      ],
+      "depends_on": [
+        "client_kit"
+      ]
+    },
+    "kit_lighting": {
+      "files": [
+        "src/viewer/kit/look.rs",
+        "src/viewer/kit/mirror.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib kit::look kit::mirror"
+      ],
+      "note": "Scene lighting and reflections for kit games: Look (hemisphere ambient, key light, rim, fog, sky), PointLight (up to four lights), Materials, and PlanarMirror / MirrorPlane (a second camera rendered to a texture for mirrors and reflective floors).",
+      "keywords": [
+        "light",
+        "lights",
+        "point light",
+        "point lights",
+        "lamp",
+        "torch",
+        "flashlight",
+        "lighting",
+        "ambient light",
+        "fog",
+        "sky",
+        "mirror",
+        "reflection",
+        "planar mirror",
+        "reflective floor"
+      ],
+      "read_first": [
+        "src/viewer/kit/look.rs",
+        "src/viewer/kit/mirror.rs"
+      ],
+      "public_api": [
+        "Look",
+        "PointLight",
+        "Materials",
+        "MirrorPlane",
+        "PlanarMirror"
+      ],
+      "depends_on": [
+        "client_kit"
+      ]
+    },
+    "kit_hud": {
+      "files": [
+        "src/viewer/kit/hud.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib kit::hud"
+      ],
+      "note": "Immediate-mode HUD drawing for kit games: text_outlined / text_centered / text_right, bar, panel, crosshair, draw_banners and draw_popups for timed messages, a vignette overlay and ui_scale for resolution independence.",
+      "keywords": [
+        "hud",
+        "text",
+        "banner",
+        "popup",
+        "crosshair",
+        "health bar",
+        "bar",
+        "panel",
+        "score",
+        "overlay",
+        "vignette",
+        "draw text",
+        "ui scale"
+      ],
+      "read_first": [
+        "src/viewer/kit/hud.rs"
+      ],
+      "public_api": [
+        "hud::text_outlined",
+        "hud::crosshair",
+        "hud::draw_banners",
+        "hud::draw_popups",
+        "hud::bar"
+      ],
+      "depends_on": [
+        "client_kit"
+      ]
+    },
+    "net_codec": {
+      "files": [
+        "src/viewer/net/codec.rs",
+        "src/viewer/net/loopback.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib net::codec net::loopback"
+      ],
+      "note": "Compact binary encoding for datagrams: codec::Writer / Reader (bounds-checked, fuzz-tested; integers, signed, bool, text, raw bytes) for a game snapshot or input that must fit one 1,200-byte packet, and loopback::LoopNet to test it over a simulated lossy network.",
+      "keywords": [
+        "binary",
+        "codec",
+        "writer",
+        "reader",
+        "datagram",
+        "packet",
+        "bytes",
+        "serialize",
+        "encode",
+        "decode",
+        "snapshot encoding",
+        "wire format",
+        "varint",
+        "bounds",
+        "fuzz",
+        "pack"
+      ],
+      "read_first": [
+        "src/viewer/net/codec.rs",
+        "docs/NETPLAY.md"
+      ],
+      "public_api": [
+        "codec::Writer",
+        "codec::Reader",
+        "loopback::LoopNet"
+      ],
+      "depends_on": [
+        "netplay"
+      ]
+    },
+    "connect_failures": {
+      "files": [
+        "src/viewer/netplay/failure.rs",
+        "docs/NETPLAY.md"
+      ],
+      "checks": [
+        "cargo test --locked --profile itest --test netplay"
+      ],
+      "note": "Telling the player why joining failed: ConnectFailure classifies a failed connect (nobody answered, server full, wrong join key, match in progress, version mismatch) and hint() gives the sentence to show; NetClient::failure() returns it. A silent server is not a refusal.",
+      "keywords": [
+        "connect",
+        "connecting",
+        "failed",
+        "failure",
+        "unreachable",
+        "rejected",
+        "refused",
+        "timeout",
+        "could not reach",
+        "server full",
+        "wrong key",
+        "join key",
+        "version mismatch",
+        "error message",
+        "hint"
+      ],
+      "read_first": [
+        "src/viewer/netplay/failure.rs",
+        "docs/NETPLAY.md"
+      ],
+      "public_api": [
+        "ConnectFailure",
+        "NetClient::failure"
+      ],
+      "depends_on": [
+        "netplay"
+      ]
+    },
+    "net_seats": {
+      "files": [
+        "src/viewer/netplay/mod.rs",
+        "src/viewer/netplay/server.rs"
+      ],
+      "checks": [
+        "cargo test --locked --profile itest --test netplay"
+      ],
+      "note": "How many players a netplay server takes: NetGame::MAX_SEATS is the game's own seat limit (1..=16, checked when the server starts), ServerConfig::participants (default 8) is how many take part in one match, and the older DedicatedServer keeps its cap of 8 for the stock client.",
+      "keywords": [
+        "seats",
+        "seat",
+        "max players",
+        "player limit",
+        "limit players",
+        "how many players",
+        "capacity",
+        "slots",
+        "participants",
+        "server full",
+        "MAX_SEATS"
+      ],
+      "read_first": [
+        "src/viewer/netplay/mod.rs",
+        "src/viewer/netplay/server.rs"
+      ],
+      "public_api": [
+        "NetGame",
+        "Seat",
+        "ServerConfig"
+      ],
+      "depends_on": [
+        "netplay"
+      ]
+    },
+    "lag_compensation": {
+      "files": [
+        "src/viewer/net/lag_compensation.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib net::lag_compensation"
+      ],
+      "note": "PoseHistory<T>: a bounded per-tick history of poses (record, at_or_before, clamped, latest_tick) for lag compensation: rewind other players to the tick the shooter saw before testing a hit, or keep a snapshot ring for a killcam.",
+      "keywords": [
+        "lag compensation",
+        "rewind",
+        "hit registration",
+        "pose history",
+        "killcam",
+        "kill cam",
+        "snapshot ring",
+        "favor the shooter",
+        "seen tick",
+        "history"
+      ],
+      "read_first": [
+        "src/viewer/net/lag_compensation.rs"
+      ],
+      "public_api": [
+        "PoseHistory"
+      ],
+      "depends_on": [
+        "netplay"
+      ]
+    },
+    "headless_capture": {
+      "files": [
+        "tools/xcapture.py",
+        "tools/test_xcapture.py",
+        "docs/HEADLESS_CAPTURE.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_xcapture"
+      ],
+      "note": "Seeing a game without a display: python tools/xcapture.py runs a game window under xvfb with software GL and collects its --capture frames (docs/HEADLESS_CAPTURE.md). Software rendering is about 16 frames per second, so capture short scripted runs.",
+      "keywords": [
+        "screenshot",
+        "screenshots",
+        "capture",
+        "headless",
+        "no display",
+        "xvfb",
+        "frames",
+        "software rendering",
+        "see the game",
+        "visual check",
+        "xcapture"
+      ],
+      "read_first": [
+        "docs/HEADLESS_CAPTURE.md",
+        "tools/xcapture.py"
+      ]
+    },
+    "perf_tracking": {
+      "files": [
+        "tools/perf.py",
+        "docs/perf/README.md",
+        "docs/perf/metrics.jsonl"
+      ],
+      "checks": [
+        "python tools/perf.py report"
+      ],
+      "note": "Recording and comparing build, test and runtime performance: python tools/perf.py record (suites build, test, sim, server, kart; profiles fast, itest, release) appends rows to docs/perf/metrics.jsonl with commit, CPU and toolchain; report shows each series against the previous value. Check docs/perf before guessing about speed.",
+      "keywords": [
+        "perf",
+        "performance",
+        "benchmark",
+        "timing",
+        "timings",
+        "build time",
+        "test time",
+        "compile time",
+        "record",
+        "regression",
+        "profile",
+        "slow",
+        "speed",
+        "metrics"
+      ],
+      "read_first": [
+        "tools/perf.py",
+        "docs/perf/README.md"
+      ]
+    },
+    "games_publishing": {
+      "files": [
+        "scripts/publish_games.py",
+        "scripts/test_publish_games.py",
+        "docs/GAMES_PUBLISHING.md"
+      ],
+      "checks": [
+        "python -m unittest scripts.test_publish_games",
+        "python scripts/publish_games.py check"
+      ],
+      "note": "Publishing a finished game to the BlueEngineGames repository: scripts/publish_games.py (manifest, check, copy of the game source and release workflow) and docs/GAMES_PUBLISHING.md. A change to published source also requires python scripts/publish_games.py check.",
+      "keywords": [
+        "publish",
+        "publishing",
+        "release",
+        "games repo",
+        "BlueEngineGames",
+        "manifest",
+        "windows build",
+        "download",
+        "ship a game",
+        "finished game"
+      ],
+      "read_first": [
+        "docs/GAMES_PUBLISHING.md",
+        "scripts/publish_games.py"
       ]
     }
   }
