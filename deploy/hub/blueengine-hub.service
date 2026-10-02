@@ -1,0 +1,30 @@
+[Unit]
+Description=BlueEngine hub: lists and creates online rooms for every registered game
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/.local/share/blueengine
+# One hub answers on one UDP port (4100) and starts one game server per room from a shared pool of ports (4101-4116 by
+# default). Which games exist, where their servers are and what a room may be configured with all come from hub.conf.
+# It kills every room it started when it stops, and the rooms also quit on their own if the hub dies.
+ExecStart=%h/blueengine/be2-hub --config %h/.config/blueengine/hub.conf
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+KillMode=control-group
+# Sandbox. These need unprivileged user namespaces for the user manager; if `systemctl --user status` shows
+# status=226/NAMESPACE, comment out ProtectSystem, ReadWritePaths and PrivateTmp (see README.md).
+# The report_dir in hub.conf must be inside ReadWritePaths.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=%h/.local/share/blueengine
+PrivateTmp=true
+UMask=0077
+# About 5 MB per idle room plus a match's own needs; a pool of 16 fits easily.
+MemoryMax=2048M
+TasksMax=256
+
+[Install]
+WantedBy=default.target

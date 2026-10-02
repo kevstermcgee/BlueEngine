@@ -176,6 +176,25 @@ class MigrationSelectionTests(unittest.TestCase):
         migrations = self.by_id(upgrade.plan(fixture.root, ROOT, 'HEAD'))
         self.assertEqual(migrations['MIG-0022-NETPLAY-ADOPTION']['status'], 'optional_adoption')
 
+    def test_server_cli_adoption_is_offered_only_to_games_with_a_hand_written_server_main(self):
+        netplay = 'use vesper3d::viewer::netplay::ClientView;\n'
+        hand_rolled = CustomSimFixture(extra_src={
+            'net.rs': netplay,
+            'bin/server.rs': 'fn main() { let s = NetServer::<MyGame, _>::new(t, cfg); }\n'})
+        self.addCleanup(hand_rolled.close)
+        self.assertEqual(self.by_id(upgrade.plan(hand_rolled.root, ROOT, 'HEAD'))['MIG-0037-GAME-SERVER-CLI']['status'],
+                         'optional_adoption')
+        adopted = CustomSimFixture(extra_src={
+            'net.rs': netplay, 'bin/server.rs': 'fn main() -> R { serve::<MyGame>(&SPEC) }\n'})
+        self.addCleanup(adopted.close)
+        self.assertEqual(self.by_id(upgrade.plan(adopted.root, ROOT, 'HEAD'))['MIG-0037-GAME-SERVER-CLI']['status'],
+                         'not_applicable')
+        # A NetServer in the library (not a bin) is not a server main.
+        in_lib = CustomSimFixture(extra_src={'net.rs': netplay + 'fn t() { NetServer::<G, _>::new(a, b); }\n'})
+        self.addCleanup(in_lib.close)
+        self.assertEqual(self.by_id(upgrade.plan(in_lib.root, ROOT, 'HEAD'))['MIG-0037-GAME-SERVER-CLI']['status'],
+                         'not_applicable')
+
     def test_native_key_table_fix_is_reported_as_received_automatically(self):
         fixture = CustomSimFixture()
         self.addCleanup(fixture.close)

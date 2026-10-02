@@ -133,6 +133,12 @@ See `docs/NETPLAY.md`. `net::codec::{Writer, Reader}` for layouts, `net::loopbac
   can show; blocks on name lookup, so call it on Connect.
 - Default server: `devkit::ServerChoice::first_of_beside_exe(&[CliArg(..), FileBesideExe("server.txt"), LastUsed(..), Builtin(..)])`;
   remember it in `Settings::last_server`.
+- Server main: `netplay::cli::serve::<G>(&ServeSpec { .. })` is the whole executable (flags, `--info`, `--status-lines`, settings via
+  `NetGame::settings()`/`configure()`); template `src/bin/be2-toy-server.rs`. Hosting many games: `be2-hub`, `deploy/hub/README.md`.
+- Play Online: `hub::Online::new(&hub::default_hub(cli_arg, last).address, G::NAME, hub::local_build::<G>(), now)`; `online.update(now)`
+  each frame gives `Some(Action::Join { addr, room })` when to connect; draw `online.view/rooms/dialog`; `join_selected()`,
+  `open_dialog(name)`, `create()`, `refresh(now)`; `Online::mismatch()` means show `hub::client::update_message(title)`.
+  Rules for your own screens: `order_rooms`, `room_status`, `JoinWait`, `scroll_to`, `connect_failure_message`.
 - Connect failed: `client.failure()` is `Option<ConnectFailure>`; show `failure.hint()` ("No reply from ... after 8 s"
   is not a refusal). Also override `ClientView::prediction()` or your stats read 0.
 

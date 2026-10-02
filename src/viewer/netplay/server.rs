@@ -192,7 +192,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             Some(s) => s,
             None => random_token()?[0],
         };
-        let fingerprint = G::fingerprint() ^ name_hash(G::NAME);
+        let fingerprint = hello_fingerprint::<G>();
         Ok(Self {
             transport,
             sessions: SessionRegistry::new(G::MAX_SEATS, cfg.session_timeout),
@@ -826,9 +826,30 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         stop: Arc<AtomicBool>,
         max_ticks: Option<u64>,
     ) -> crate::Result<()> {
+        let mut seconds = 0u32;
+        self.run_realtime_with(stop, max_ticks, |s| {
+            seconds += 1;
+            if seconds.is_multiple_of(5) {
+                println!(
+                    "[Server] tick {} | stage {:?} | players {} | matches {}",
+                    s.tick, s.stage, s.players, s.matches
+                );
+            }
+        })
+    }
+
+    /// [`NetServer::run_realtime`] with a hook: `on_second` is called about once a second (and once right at the
+    /// start) with what the server looks like. [`cli::serve`](super::cli::serve) uses it to print the
+    /// machine-readable `STATUS` line a hub reads; the human status line of `run_realtime` is not printed here.
+    pub fn run_realtime_with(
+        &mut self,
+        stop: Arc<AtomicBool>,
+        max_ticks: Option<u64>,
+        mut on_second: impl FnMut(&StatusSnapshot),
+    ) -> crate::Result<()> {
         let frame = Duration::from_micros(1_000_000 / G::TICK_HZ);
         let mut next = Instant::now();
-        let mut last_status = Instant::now();
+        let mut last_status: Option<Instant> = None;
         println!(
             "[Server] {} listening on {} (fingerprint {:08x})",
             G::NAME,
@@ -842,15 +863,9 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             if max_ticks.is_some_and(|m| self.tick >= m) {
                 break;
             }
-            if last_status.elapsed() >= Duration::from_secs(5) {
-                last_status = Instant::now();
-                println!(
-                    "[Server] tick {} | stage {:?} | players {} | matches {}",
-                    self.tick,
-                    self.stage,
-                    self.sessions.count(),
-                    self.match_index
-                );
+            if last_status.is_none_or(|t| t.elapsed() >= Duration::from_secs(1)) {
+                last_status = Some(Instant::now());
+                on_second(&self.status_snapshot());
             }
             next += frame;
             let now = Instant::now();
@@ -862,6 +877,30 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         }
         Ok(())
     }
+
+    /// What the server looks like right now.
+    pub fn status_snapshot(&self) -> StatusSnapshot {
+        StatusSnapshot {
+            tick: self.tick,
+            stage: self.stage,
+            players: self.sessions.count(),
+            participants: self.cfg.participants,
+            matches: self.match_index,
+        }
+    }
+}
+
+/// The server's state at one moment, handed to the hook of [`NetServer::run_realtime_with`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct StatusSnapshot {
+    pub tick: u64,
+    pub stage: Stage,
+    /// Connected players.
+    pub players: usize,
+    /// Participants per match (`ServerConfig::participants`): the room's capacity as the lobby shows it.
+    pub participants: usize,
+    /// Matches finished since the server started.
+    pub matches: u32,
 }
 
 /// The input for this tick: the next in sequence, the next after a lost gap, or the last held.
@@ -916,9 +955,10 @@ fn sanitize(name: &str, id: u8) -> String {
     }
 }
 
-/// The part of the fingerprint that names the game (shared with the client).
-pub(super) fn name_hash_of<G: NetGame>() -> u32 {
-    name_hash(G::NAME)
+/// The value a client must send in `Hello` (and a server compares): the game's fingerprint folded with a hash
+/// of its name, so two different games never accept each other's players even on equal fingerprints.
+pub fn hello_fingerprint<G: NetGame>() -> u32 {
+    G::fingerprint() ^ name_hash(G::NAME)
 }
 
 fn name_hash(name: &str) -> u32 {

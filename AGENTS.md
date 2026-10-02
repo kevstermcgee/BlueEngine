@@ -38,8 +38,8 @@ with `python tools/author.py describe`; discover assets with
 see docs/ENGINE_MAINTENANCE.md only for relevant maintenance obligations.
 Custom-sim games: `docs/CUSTOM_SIM_CHEATSHEET.md` is the game-facing API on one page (read it before grepping the
 source). Online play is `viewer::netplay` (`docs/NETPLAY.md`): implement `NetGame` + `ClientView`, do not write a
-server. See a game without a display with `python tools/xcapture.py`. Silent-failure traps are documented in
-`docs/AI_DEV_FEEDBACK.md`.
+server (`netplay::cli::serve` is the server main; `be2-hub`, ADR 0037, hosts many games' rooms). See a game without a
+display with `python tools/xcapture.py`. Silent-failure traps are documented in `docs/AI_DEV_FEEDBACK.md`.
 Published-source changes also require `python scripts/publish_games.py check`.
 
 Expect small tasks to touch 1-4 source files, subsystem work 3-8. Above 10, recheck

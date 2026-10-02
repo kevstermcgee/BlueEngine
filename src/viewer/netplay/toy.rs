@@ -35,15 +35,43 @@
 //! assert_eq!(server.stage(), Stage::Match);
 //! assert!(client.view().mine.is_some_and(|x| x > 10.), "the predicted runner is running");
 //! ```
-use super::{ClientView, NetGame, PredictionStats, Seat};
+use super::{ClientView, NetGame, PredictionStats, Seat, SettingKind, SettingSpec};
 use crate::viewer::net::codec::{Reader, WireError, WireResult, Writer};
 use serde_json::json;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 
 /// Distance to win.
 pub const GOAL: f32 = 600.;
 const MAX_POSITION: f32 = 100_000.;
 
 pub struct ToyGame;
+
+/// How fast the game's own runners go, in percent of the normal pace (the toy's `ai-speed` setting).
+static AI_SPEED_PERCENT: AtomicU32 = AtomicU32::new(100);
+/// Whether the game's own runners fill the places no player took (the toy's `bots` setting).
+static BOTS: AtomicBool = AtomicBool::new(true);
+
+/// The toy's two settings: a template for [`NetGame::settings`] and what the hub tests configure rooms with.
+pub const TOY_SETTINGS: [SettingSpec; 2] = [
+    SettingSpec {
+        id: 1,
+        name: "ai-speed",
+        flag: "ai-speed",
+        kind: SettingKind::Int,
+        min: 25,
+        max: 400,
+        default: 100,
+    },
+    SettingSpec {
+        id: 2,
+        name: "bots",
+        flag: "bots",
+        kind: SettingKind::Bool,
+        min: 0,
+        max: 1,
+        default: 1,
+    },
+];
 
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct ToyInput {
@@ -214,9 +242,29 @@ impl NetGame for ToyGame {
         }
     }
 
+    fn settings() -> &'static [SettingSpec] {
+        &TOY_SETTINGS
+    }
+
+    fn configure(values: &[(u8, u32)]) -> Result<(), String> {
+        for &(id, value) in values {
+            match id {
+                1 => AI_SPEED_PERCENT.store(value, Ordering::Relaxed),
+                2 => BOTS.store(value != 0, Ordering::Relaxed),
+                _ => return Err(format!("the toy game has no setting {id}")),
+            }
+        }
+        Ok(())
+    }
+
     fn start(_seed: u64, seats: &[Seat], participants: usize) -> (ToyMatch, Vec<usize>) {
-        let n = participants.max(seats.len());
-        let mut speed = vec![0.9; n];
+        let n = if BOTS.load(Ordering::Relaxed) {
+            participants.max(seats.len())
+        } else {
+            seats.len()
+        };
+        let ai = 0.9 * AI_SPEED_PERCENT.load(Ordering::Relaxed) as f32 / 100.;
+        let mut speed = vec![ai; n];
         let mut human = vec![false; n];
         for (participant, seat) in seats.iter().enumerate() {
             speed[participant] = 0.8 + 0.1 * seat.choice as f32;

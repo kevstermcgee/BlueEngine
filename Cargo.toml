@@ -36,6 +36,14 @@ name = "be2-ctl"
 path = "src/bin/be2-ctl.rs"
 
 [[bin]]
+name = "be2-hub"
+path = "src/bin/be2-hub.rs"
+
+[[bin]]
+name = "be2-toy-server"
+path = "src/bin/be2-toy-server.rs"
+
+[[bin]]
 name = "be2-tools"
 path = "src/bin/be2-tools.rs"
 

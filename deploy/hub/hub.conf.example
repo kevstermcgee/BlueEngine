@@ -1,0 +1,40 @@
+# be2-hub registry: which games this hub carries. Copy to ~/.config/blueengine/hub.conf and edit.
+# Format and every key: src/viewer/netplay/hub/registry.rs (module docs). Comments are whole lines.
+# After editing a [game] section: be2-hub reload GAME. After editing [hub]: restart the hub (this ends every room).
+
+[hub]
+# The hub's own port. Players and games only ever know this one (blue-engine.duckdns.org:4100).
+listen = 0.0.0.0:4100
+# Rooms use pool_start .. pool_start + pool_size - 1, shared by every game. `be2-hub ports` prints the whole list for the
+# router mapping unit. Size it for memory (about 5 MB per idle room) and for the UPnP table (16-32 is comfortable).
+pool_start = 4101
+pool_size = 16
+# <report_dir>/<game>/port-<n>/matches.jsonl. Must be inside the unit's ReadWritePaths.
+report_dir = /home/kevin/.local/share/blueengine/reports
+# Old Deadfall clients (the DFHB protocol) keep working while this is "serve". Once everyone has updated, "refuse" makes
+# them show their own "update the game" message instead of "can't reach the servers".
+legacy = serve
+# Rooms one creator address may have open at once, and room servers in all (Public rooms included).
+max_rooms_per_ip = 2
+max_processes = 16
+
+[game deadfall]
+server = /home/kevin/blueengine/deadfall-server
+# A permanent room called Public, restarted if it dies.
+public = on
+public_name = Public
+# Settings are chosen by name from what the server's --info lists: public_set for the Public room, user_set as defaults for
+# rooms players make (a player's own choice wins, within the server's own limits).
+public_set = bots=1
+user_set = kills=40
+# Which settings players may choose when they create a room (default: all of the game's).
+client_settings = bots,kills
+# Player-made rooms at once, for this game.
+max_rooms = 4
+auto_start = 30
+
+[game spooky-kart]
+server = /home/kevin/blueengine/spooky-kart-server
+public = on
+max_rooms = 4
+auto_start = 30

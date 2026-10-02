@@ -1,0 +1,14 @@
+[Unit]
+Description=Renew the hub's temporary UPnP router mappings (the hub port and its room pool)
+After=network-online.target blueengine-hub.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# `be2-hub ports` prints the hub's port and then every port of the room pool, from the same hub.conf the hub runs with, so
+# this unit never hard-codes a range: change pool_start / pool_size in hub.conf and this follows.
+# blue_portmap.py maps one port per call (3600 s lease, only ever touches its own mappings), so loop over the list.
+# Every port is attempted; the unit fails if any one failed. "$$" is systemd's escape for a shell "$".
+ExecStart=/bin/sh -c 'rc=0; for p in $$(%h/blueengine/be2-hub ports --config %h/.config/blueengine/hub.conf); do /usr/bin/python3 %h/blueengine/blue_portmap.py enable --port "$$p" || rc=1; done; exit "$$rc"'
+NoNewPrivileges=true
+UMask=0077

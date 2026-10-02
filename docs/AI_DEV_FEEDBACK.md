@@ -140,3 +140,16 @@ across two files). Spooky Kart shipped two geometry bugs that no engine test cou
   with normal-offset bias, not slope-scaled bias. `kit::shadow` does all of this; copy it rather than re-deriving it.
 - **Kit primitive winding.** `Template::ball` and `Template::ring` / `soft_ring` were wound against their own normals
   (found by the lint); the kit draws without back-face culling, so it never showed, but it is fixed.
+
+## Hosting lessons (the shared hub, ADR 0037)
+
+- **`viewer::shutdown::install` makes SIGHUP a stop signal**, so "reload the config on SIGHUP" would end the hub and every room. The hub's
+  reload is a loopback-only control datagram (`be2-hub reload GAME`).
+- **A repeated nonce is a retry, not a new request.** The hub answers a second Create with the same (source, nonce) with the room the first made,
+  so a test that reuses one nonce for different creates sees the first room come back instead of a refusal or a new room.
+- **Killing `sh -c "..."` leaves its child holding the pipe.** A test script that stands in for a hung server must `exec` the long-running
+  command, or the kill does not end it and reading its output blocks.
+- **A game's `NetGame::NAME` is part of the `Hello` check and of the hub's game id rules** (1-24 of `a-z 0-9 -`): `cli::serve` refuses a name
+  that is not, because the hub could not carry that game.
+- **Rooms never outlive the hub only because the server watches its stdin.** A server `main` that skips `cli::serve` and ignores
+  `--exit-on-stdin-eof` leaves an orphan process holding its port after a hub crash.

@@ -1,0 +1,15 @@
+[Unit]
+Description=Point the BlueEngine DuckDNS names at this machine's current public IP
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# DOMAIN (the names without .duckdns.org, comma separated: blue-engine,deadfall-kevin) and TOKEN live in this file, which is
+# never in the repository (chmod 600).
+EnvironmentFile=%h/.config/blueengine/duckdns.env
+# The script passes the token to curl on stdin, so it never appears in a command line, `ps` or the journal.
+ExecStart=%h/blueengine/blueengine-ddns.sh
+NoNewPrivileges=true
+PrivateTmp=true
+UMask=0077
