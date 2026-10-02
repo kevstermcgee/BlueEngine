@@ -1620,6 +1620,43 @@
       "depends_on": [
         "custom_simulation"
       ]
+    },
+    "geometry_kit": {
+      "files": [
+        "src/viewer/kit/shape.rs",
+        "src/viewer/kit/lint.rs",
+        "docs/AI_DEV_FEEDBACK.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib kit::shape",
+        "cargo test --locked --lib kit::lint"
+      ],
+      "note": "Procedural modelling for Template (kit::shape: Section/Ring/Sweep, Template::loft, sweep, rounded_box, capsule, rod, mirror_x, smooth_normals, offset_strip/offset_band/offset_path/strip_quads with mitred, curvature-clamped corners so a ribbon cannot fold over itself) and the geometry-defect lint (kit::lint: lint/lint_with/assert_clean/strip_folds/depth_resolution finding zero-area triangles, winding against normals, coplanar overlapping triangles of different parts = z-fighting, folded strips). View::camera_checked / view::depth_ratio_warning guard a far/near ratio over 3000. Lessons: coplanar quads z-fight, never offset per segment normal without a mitre and clamp, mind the depth ratio, fx_alpha/fx_add are never depth-tested.",
+      "keywords": [
+        "loft",
+        "sweep",
+        "rounded box",
+        "capsule",
+        "mirror",
+        "smooth normals",
+        "road",
+        "kerb",
+        "border",
+        "strip",
+        "offset",
+        "z-fighting",
+        "z fight",
+        "flicker",
+        "coplanar",
+        "lint",
+        "geometry",
+        "procedural model",
+        "depth precision",
+        "near far"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
     }
   }
 }

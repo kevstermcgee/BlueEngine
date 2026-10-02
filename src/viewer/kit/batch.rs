@@ -67,7 +67,7 @@ impl Template {
         self.verts.is_empty()
     }
 
-    fn push(&mut self, p: Vec3, n: Vec3, c: Rgb, e: f32) -> u16 {
+    pub(super) fn push(&mut self, p: Vec3, n: Vec3, c: Rgb, e: f32) -> u16 {
         // Indices are u16: past 65 535 vertices they would wrap and corrupt the mesh, so refuse loudly.
         let i = u16::try_from(self.verts.len()).expect(
             "a Template holds at most 65 535 vertices: build big scenes from several templates",
