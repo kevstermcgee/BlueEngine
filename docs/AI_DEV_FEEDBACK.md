@@ -88,3 +88,34 @@ Decisions are in `docs/adr/0022-custom-sim-multiplayer-kit.md`. Mapping the fric
 
 Still open: predicting collisions on the client (a game concern, noted in the ADR), per-client interest management,
 snapshot splitting, and a generic vehicle model.
+
+## Geometry lessons (added after Spooky Kart's visuals pass and Deadfall's art)
+
+Art was 67% of Deadfall's ~2.4M-token development, and its weapon-model toolkit existed twice (about 1,500 lines
+across two files). Spooky Kart shipped two geometry bugs that no engine test could see. What was done:
+`kit::shape` (lofts, sweeps, rounded boxes, capsules, mirroring, smooth normals, `offset_strip`) and `kit::lint`
+(a geometry-defect lint with the exact cases below as tests). The lessons:
+
+- **Coplanar quads z-fight.** The kerb stripes sat at y = 0, the same plane as the road quad under them; which of the
+  two won each pixel changed with the camera. Never draw two same-facing surfaces in one plane. Lift the upper one by
+  more than the depth buffer can resolve at your farthest view (`lint::depth_resolution(near, distance)` is about
+  `distance^2 / (near * 2^24)`), or do not draw the lower one underneath. `lint::lint(&template)` reports the pair as
+  `CoplanarOverlap`; surfaces from different parts that merely share an edge are fine.
+- **Never offset a polyline per segment normal without a mitre and a clamp.** The road border moved every sample
+  along its own segment normal; at a tight bend the inner side's points crossed and the strip turned inside out. A corner needs the
+  mitre direction (neighbouring normals averaged and stretched), a miter limit for sharp corners, and on the inside of a bend an
+  offset kept short of the local centre of curvature. `Template::offset_strip` does this; `lint::strip_folds` checks any strip.
+  The clamp is local: a strip that is wider than the gap between two far-apart parts of its own path can still overlap itself,
+  and lint finds that as a coplanar overlap.
+- **Depth ratio.** `far / near` of 7000 (0.1 / 700) leaves about 6 mm of depth resolution at 100 m and 3 cm at 230 m
+  with a 24-bit buffer, so distant coplanar-ish details fight no matter how carefully you lifted them. Keep the ratio under
+  about 3000 (raise `near`; most first-person games can live with 0.3 or more). The engine's own custom-sim template uses
+  0.05 / 400 (ratio 8000) and is affected. `View::camera_checked(near, far)` warns once on stderr; `view::depth_ratio_warning` is the pure
+  check for a test.
+- **`fx_alpha` and `fx_add` are never depth-tested.** Their pipelines request `depth_test: LessOrEqual` with
+  `depth_write: false`, but miniquad 0.4.8 enables `GL_DEPTH_TEST` only when `depth_write` is true
+  (`src/graphics/gl.rs`, `apply_pipeline`, line ~1303 calls `glDisable(GL_DEPTH_TEST)` otherwise). Translucent surfaces and glows
+  therefore show through walls. The doc comments now say so; behaviour is unchanged until a depth-tested decal / shadow path is
+  designed.
+- **Kit primitive winding.** `Template::ball` and `Template::ring` / `soft_ring` were wound against their own normals
+  (found by the lint); the kit draws without back-face culling, so it never showed, but it is fixed.

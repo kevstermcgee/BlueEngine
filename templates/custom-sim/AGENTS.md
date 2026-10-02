@@ -33,6 +33,10 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
   `game_client::request_exit()` and break on `exit_requested()`; never `process::exit`.
 - Unit = metre. Check generated geometry without a window: `Bounds::of(points)?.expect_longest("shell",
   0.05..=0.30)` fails with the scale to apply; `kit::gizmo::human_scale`/`bbox` show it in a frame.
+- Geometry bugs a screenshot hides (z-fighting kerbs, a road border folded at a tight bend, inside-out triangles) are
+  caught headless: build the `Template` in a test and `kit::lint::assert_clean(&t, "name")` (needs the `client` feature);
+  `Template::offset_strip` makes road/kerb ribbons that cannot fold, `View::camera_checked` warns about a far/near
+  ratio over 3000. See docs/CUSTOM_SIM_CHEATSHEET.md in the engine checkout.
 - Rebuild with `scripts/blue dev` (closes a still-open copy first: a running .exe cannot be relinked on
   Windows) and use `scripts/blue dev -- --capture out --frames 30`; a release build is for `ship`.
 

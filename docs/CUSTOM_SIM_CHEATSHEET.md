@@ -71,6 +71,26 @@ pitch)` (`.fov`, `.roll`, `.project(p, w, h)`), `Fx::new(seed)` (`sparks`, `dust
 `banner`, `confetti_fountain`, `update(dt)`, `draw(..)`), `hud::{text_outlined, text_centered, text_right, panel, bar,
 wrap, col, ui_scale, overlay, draw_popups, draw_banners}`, `Juice { shake, kick, stop, flash, camera_shake() }`.
 
+Shapes beyond primitives (`kit::shape`, all add to a `Template`, triangles wound by their normals so nothing is inside-out):
+`t.loft(&[Section::across_z(z, x, y, half_w, half_h, corner_r), ..], Ring::Rounded(2) | Ring::Ellipse(14), caps, rgb, glow)`
+skins sections into a smooth solid (bodies, limbs, bottles; a section of size 0 is a point), `t.sweep(&path, &Sweep::round(plane_normal, r)
+| Sweep::strap(..), rgb, glow)` follows a planar path (`quad_bezier`, `arc` make paths; a path whose end equals its start closes into a
+loop), `t.rounded_box(center, half, radius, rgb, glow)`, `t.capsule(a, b, r, rgb, glow, sides)`, `t.rod(a, b, r0, r1, rgb, glow, sides)`
+(cone between two points), `t.mirror_x()` (model the +x half, get both, winding fixed; `mirrored_x()` for just the copy),
+`t.smooth_normals(angle_deg)` (weld by position, blend normals under the angle). Roads, kerbs, paths and any ribbon along a polyline:
+`t.offset_strip(&path_xyz, closed, half_width, &StripOpts::default(), rgb, glow)` and `t.offset_band(.., from, to, ..)` (lateral
+offsets, right of travel positive, for kerb stripes and verges). They mitre corners and clamp the inside of a bend to the local
+curvature, so a strip never folds over itself; `StripOpts { lift }` raises it off the surface under it. Never offset samples
+along their own segment normals by hand.
+
+Geometry lint (`kit::lint`, runs without a window): `lint::assert_clean(&template, "road")` in a unit test, or `lint::lint(&t)` returns
+`Defect`s: zero-area triangles, winding against the normals, **coplanar overlapping triangles of different parts (z-fighting)**,
+and `lint::strip_folds(&quads)` for a strip of quads. Tolerances: `LintConfig` (`plane_epsilon` default 1 mm: raise it to
+`lint::depth_resolution(near, farthest_view_distance)` for a strict check). Build your templates in a test and lint each.
+`view.camera_checked(near, far)` is `camera` plus a one-time stderr warning when `far / near` > 3000 (a 0.1 / 700 camera makes
+distant coplanar-ish surfaces fight; see `docs/AI_DEV_FEEDBACK.md`). `fx_alpha` and `fx_add` are never depth-tested (miniquad
+ignores `depth_test` when `depth_write` is false): translucent things show through walls.
+
 Local illumination: `PointLight::new(position, radius, rgb, intensity)?`; call
 `materials.set_point_lights(&lights)?` after each `set_scene`. Maximum four unshadowed lights;
 `set_scene` clears them so existing games keep their appearance.
@@ -119,4 +139,8 @@ is slow; capture a few frames, not a whole match.
   two real games have shipped a spawn yaw of `0.` or `PI` chosen by guessing, and guessed wrong both times.
 - A game's `scripts/blue` needs `python3` or `python`; `scripts/check.py` finds a built `be2-tools` in the engine
   checkout by itself (build it with `cargo build --profile fast --no-default-features --bin be2-tools`).
+- Two surfaces in the same plane z-fight (kerb stripes drawn at the road's own y flickered in Spooky Kart): lift one clear of
+  the other by more than `lint::depth_resolution(near, distance)`, or do not draw both. `kit::lint` finds the pair in a test.
+- Do not offset a polyline sample by its own segment normal to make a border: it folds over itself at a tight bend. Use
+  `Template::offset_strip` / `shape::offset_path`.
 - Build and test fast: `cargo build --profile fast`, `cargo test --profile itest` (see `docs/perf`).
