@@ -59,6 +59,10 @@ each point can be checked; the last section says what was done about it.
    every key dead in the race while the menus worked; scripted and autopilot runs bypass the gate, so nothing in
    the tests or captures could show it, and it was found by playing. See item 8 of "What was done".
 9. **Session and player caps are hard-coded** (`DedicatedServer` allows 8 sessions at `server.rs:230`).
+10. **The Linux headless path cannot catch Windows-only input bugs.** On Windows the standalone clients read keys through
+    a native reader that replaces macroquad's events, and it polled only a 23-key shortlist: R, digits and most letters were
+    silently never pressed in custom-sim games, while every Linux test and capture passed because Linux never uses that
+    reader. Nothing failed; the keys were just dead. See item 10 of "What was done".
 
 ## What I would tell the next agent
 
@@ -85,6 +89,12 @@ Decisions are in `docs/adr/0022-custom-sim-multiplayer-kit.md`. Mapping the fric
    right gate for a game without mouse look, and the cheat sheet warns that scripted runs cannot catch it.
 9. **Hard-coded caps:** the kit's server takes its seat limit from the game (`NetGame::MAX_SEATS`); the older
    `DedicatedServer` cap of 8 is unchanged (it serves the stock client).
+10. **Windows-only input:** the native reader now covers the full `game_input::KEY_TABLE`, can be driven by a fake key
+    source on Linux (`ClientInput::begin_frame_with_key_source`, tests in `game_input.rs`), and a key outside the table
+    is announced once on stderr and trips a `debug_assert!` instead of reading as never pressed. `python tools/be2.py
+    check --windows` type-checks the `cfg(windows)` code for `x86_64-pc-windows-gnu` (it proves it compiles, not that it
+    runs; see `docs/CHANGE_WORKFLOW.md`). Existing Windows releases need a rebuild to get the fix, and a manual key test
+    on Windows is still the only proof of real input.
 
 Still open: predicting collisions on the client (a game concern, noted in the ADR), per-client interest management,
 snapshot splitting, and a generic vehicle model.
