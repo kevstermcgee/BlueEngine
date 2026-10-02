@@ -28,7 +28,9 @@
         "affected",
         "verification",
         "AI",
-        "annotations"
+        "annotations",
+        "windows type-check",
+        "cross compile"
       ],
       "constraints": [
         {
@@ -190,7 +192,8 @@
         "src/viewer/control/proc.rs",
         "src/viewer/control/server.rs",
         "tests/server_ctl.rs",
-        "docs/adr/0031-be2-ctl-server-manager.md"
+        "docs/adr/0031-be2-ctl-server-manager.md",
+        "docs/HOSTING.md"
       ],
       "checks": [
         "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift",
@@ -263,7 +266,11 @@
         "protocol 8",
         "shutdown",
         "sigterm",
-        "graceful"
+        "graceful",
+        "hosting",
+        "dedicated server",
+        "systemd",
+        "be2-ctl"
       ],
       "read_first": [
         "src/viewer/net/replication.rs",
@@ -383,7 +390,14 @@
         "python -m unittest tools.test_assets -v"
       ],
       "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import.",
-      "depends_on": []
+      "depends_on": [],
+      "keywords": [
+        "asset",
+        "prefab",
+        "prop catalog",
+        "search assets",
+        "asset pack"
+      ]
     },
     "interior_prefabs": {
       "files": [
@@ -647,7 +661,8 @@
         "tests/game_box_errors.rs",
         "tests/mover_riding.rs",
         "tools/game.schema.json",
-        "docs/GAME_QUICKSTART.md"
+        "docs/GAME_QUICKSTART.md",
+        "docs/adr/0026-movers-carry-players.md"
       ],
       "checks": [
         "game_documents integration tests",
@@ -669,10 +684,19 @@
         "add-interactable",
         "game-explore",
         "winnable",
-        "reachability"
+        "reachability",
+        "button",
+        "console",
+        "switch",
+        "interactable",
+        "game.json",
+        "map.json",
+        "mover",
+        "moving platform"
       ],
       "read_first": [
         "src/viewer/game.rs",
+        "src/viewer/game_edit.rs",
         "src/viewer/game_example.rs",
         "tests/game_documents.rs"
       ],
@@ -733,6 +757,16 @@
           "suite": "toolchain",
           "test": "test_static_lint_and_reachability"
         }
+      ],
+      "keywords": [
+        "lint",
+        "reachability",
+        "unreachable",
+        "perimeter",
+        "leak",
+        "headroom",
+        "overlap",
+        "floating props"
       ]
     },
     "pathing_and_walk": {
@@ -748,6 +782,12 @@
           "suite": "toolchain",
           "test": "test_pathing_and_physical_walk"
         }
+      ],
+      "keywords": [
+        "walk test",
+        "route",
+        "reachable",
+        "spawn to exit"
       ]
     },
     "procedural_gen": {
@@ -847,6 +887,12 @@
           "suite": "toolchain",
           "test": "test_headless_ui_layout_auditor"
         }
+      ],
+      "keywords": [
+        "menu layout",
+        "resolutions",
+        "screen sizes",
+        "text truncation"
       ]
     },
     "game_scaffolding": {
@@ -885,7 +931,16 @@
         "migration",
         "engine revision",
         "dependency pin",
-        "provenance"
+        "provenance",
+        "old game",
+        "newest engine",
+        "engine version",
+        "update engine",
+        "move game"
+      ],
+      "read_first": [
+        "docs/UPGRADE.md",
+        "tools/upgrade.py"
       ]
     },
     "game_presentation": {
@@ -921,7 +976,22 @@
           "stock client",
           "generated games"
         ]
-      }
+      },
+      "keywords": [
+        "window",
+        "window_config",
+        "draw call",
+        "vertex capacity",
+        "macroquad conf",
+        "game window",
+        "resolution",
+        "pause menu",
+        "settings menu"
+      ],
+      "read_first": [
+        "src/viewer/game_client.rs",
+        "docs/GAME_PRESENTATION.md"
+      ]
     },
     "sandbox": {
       "files": [
@@ -955,6 +1025,19 @@
       "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds.",
       "depends_on": [
         "movement"
+      ],
+      "keywords": [
+        "gamepad",
+        "controller",
+        "joystick",
+        "analog stick",
+        "trigger",
+        "button",
+        "dead zone"
+      ],
+      "read_first": [
+        "docs/CONTROLLERS.md",
+        "src/viewer/gamepad.rs"
       ]
     },
     "shared_gameplay": {
@@ -1001,6 +1084,7 @@
       ],
       "read_first": [
         "src/viewer/game_session.rs",
+        "src/viewer/game_input.rs",
         "src/viewer/playable.rs",
         "tests/game_runtime.rs"
       ],
@@ -1008,6 +1092,20 @@
         "GameSession::local",
         "GameSession::advance",
         "playable::run_game_with_options"
+      ],
+      "keywords": [
+        "restart",
+        "restart_requested",
+        "game over",
+        "key",
+        "keys",
+        "keyboard",
+        "windows",
+        "native key reader",
+        "dead key",
+        "KEY_TABLE",
+        "pressed",
+        "ClientInput"
       ]
     },
     "custom_simulation": {
@@ -1367,8 +1465,8 @@
       ],
       "read_first": [
         "docs/GAME_QUICKSTART.md",
-        "src/viewer/identity.rs",
-        "templates/game_ship.py"
+        "templates/game_ship.py",
+        "src/viewer/identity.rs"
       ],
       "depends_on": [
         "game_scaffolding"
@@ -1468,6 +1566,7 @@
       ],
       "read_first": [
         "docs/SAVE_STATE.md",
+        "src/viewer/devkit/snapshot.rs",
         "src/viewer/savestate/mod.rs"
       ],
       "canonical_example": "templates/custom-sim/src/lib.rs",
@@ -1754,7 +1853,16 @@
         "yaw",
         "heading",
         "bot steering",
-        "wrong way"
+        "wrong way",
+        "face",
+        "facing",
+        "look at",
+        "turn toward",
+        "direction",
+        "yaw_of",
+        "angle",
+        "spawn",
+        "landmark"
       ],
       "depends_on": [
         "custom_simulation"
@@ -1821,6 +1929,300 @@
       "depends_on": [
         "custom_simulation"
       ]
+    },
+    "learning_loop": {
+      "files": [
+        "tools/learn.py",
+        "tools/test_learn.py",
+        "docs/learning/README.md",
+        "docs/learning/ledger.jsonl",
+        "docs/learning/tasks.jsonl",
+        "docs/learning/REPORT.md",
+        "docs/adr/0038-engine-learns-from-development.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_learn"
+      ],
+      "note": "How the engine learns from the games built on it (ADR 0038): python tools/learn.py record writes a friction entry (cost, workaround, trap, copied code) to docs/learning/ledger.jsonl; dupes finds code the games copied and checks whether the engine already has it; eval scores be2.py context against a task benchmark (recall, packet size); sessions (local only, never committed) aggregates where AI effort went from session logs without storing any content; modules refreshes the per-file summaries context routes by; report writes docs/learning/REPORT.md. be2.py context appends matching ledger traps and \"already solved by\" lines.",
+      "keywords": [
+        "friction",
+        "ledger",
+        "record friction",
+        "retrospective",
+        "lessons learned",
+        "feedback",
+        "promote",
+        "promotion",
+        "duplicated code",
+        "copied code",
+        "token cost",
+        "session logs",
+        "discovery benchmark",
+        "eval",
+        "learning loop",
+        "engine learns",
+        "learn.py",
+        "privacy"
+      ],
+      "read_first": [
+        "docs/learning/README.md",
+        "tools/learn.py"
+      ],
+      "depends_on": [
+        "change_workflow"
+      ]
+    },
+    "dev_tools": {
+      "files": [
+        "tools/xcapture.py",
+        "tools/test_xcapture.py",
+        "docs/HEADLESS_CAPTURE.md",
+        "tools/perf.py",
+        "docs/perf/README.md",
+        "docs/perf/metrics.jsonl",
+        "scripts/publish_games.py",
+        "scripts/test_publish_games.py",
+        "docs/GAMES_PUBLISHING.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_xcapture",
+        "python tools/perf.py report",
+        "python -m unittest scripts.test_publish_games",
+        "python scripts/publish_games.py check"
+      ],
+      "note": "Developer tools outside the engine library: headless screenshots under xvfb (xcapture.py), perf recording (perf.py), publishing a game to BlueEngineGames (publish_games.py). Each file is described in the modules map.",
+      "keywords": [
+        "screenshot",
+        "screenshots",
+        "capture",
+        "headless",
+        "no display",
+        "xvfb",
+        "frames",
+        "software rendering",
+        "see the game",
+        "visual check",
+        "xcapture",
+        "perf",
+        "performance",
+        "benchmark",
+        "timing",
+        "timings",
+        "build time",
+        "test time",
+        "compile time",
+        "record",
+        "regression",
+        "profile",
+        "slow",
+        "speed",
+        "metrics",
+        "publish",
+        "publishing",
+        "release",
+        "games repo",
+        "BlueEngineGames",
+        "manifest",
+        "windows build",
+        "download",
+        "ship a game",
+        "finished game"
+      ],
+      "read_first": [
+        "docs/HEADLESS_CAPTURE.md"
+      ]
     }
+  },
+  "modules": {
+    "docs/AI_DEV_FEEDBACK.md": "Developing Spooky Kart on BlueEngine: feedback from an AI agent",
+    "docs/AI_QUICKSTART.md": "BlueEngine prototype API",
+    "docs/BEHAVIORAL_TESTING.md": "Behavioral testing without a custom harness",
+    "docs/CHANGE_WORKFLOW.md": "Small context, scoped validation",
+    "docs/CONTROLLERS.md": "Native controllers",
+    "docs/CUSTOM_CLIENT.md": "Custom visible clients and custom simulations",
+    "docs/CUSTOM_SIM_CHEATSHEET.md": "Custom-sim cheat sheet: the game-facing API on one page",
+    "docs/GAMES_PUBLISHING.md": "Publishing to BlueEngineGames",
+    "docs/GAME_PRESENTATION.md": "Game presentation contract",
+    "docs/GAME_QUICKSTART.md": "Playable games and source-free prototypes",
+    "docs/GLOSSARY.md": "BE2 vocabulary",
+    "docs/HEADLESS_CAPTURE.md": "Seeing a game on a machine with no display",
+    "docs/HOSTING.md": "Hosting a dedicated BlueEngine server",
+    "docs/NETPLAY.md": "Netplay: online play for games that own their simulation",
+    "docs/SAVE_STATE.md": "Save states",
+    "docs/SHARED_GAMEPLAY.md": "Shared gameplay and presentation",
+    "docs/UPGRADE.md": "Upgrading an external game to a chosen engine revision",
+    "docs/adr/0001-shared-simulation.md": "0001: Shared simulation and optional presentation",
+    "docs/adr/0003-arena-shooter-primitives.md": "ADR 0003: Opt-in arena-shooter primitives",
+    "docs/adr/0014-bounded-replication.md": "ADR 0014: Bounded acknowledged partial-world replication",
+    "docs/adr/0018-physics-save-contract.md": "ADR 0018: The save contract a physics-backed simulation can keep",
+    "docs/adr/0019-lifecycle-and-save-policy.md": "ADR 0019: One lifecycle for custom-simulation windows, and a save policy declared per game",
+    "docs/adr/0020-look-scale-and-dev-loop.md": "ADR 0020: One mouse-look convention, checkable scale, and a dev loop that survives a running game",
+    "docs/adr/0021-stick-look-menu-steps-and-exit.md": "ADR 0021: Stick look in the shared convention, discrete menu steps, and a graceful exit",
+    "docs/adr/0022-custom-sim-multiplayer-kit.md": "ADR 0022: A multiplayer kit for custom simulations, and the fixes Spooky Kart called for",
+    "docs/adr/0026-movers-carry-players.md": "ADR 0026: Movers carry the players standing on them",
+    "docs/adr/0031-be2-ctl-server-manager.md": "ADR 0031: be2-ctl, a small manager for servers on one machine",
+    "docs/adr/0032-game-upgrade-workflow.md": "ADR 0032: A version-aware upgrade workflow for external games",
+    "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md": "ADR 0034: Level geometry and waypoint pathing promoted from Dead Air",
+    "docs/adr/0036-shadows-for-kit-games.md": "ADR 0036: Shadows for kit games: contact blobs and one shadow map, behind one setting",
+    "docs/adr/0037-shared-multi-game-hub.md": "ADR 0037: One hub, one name, every BlueEngine online game",
+    "docs/adr/0038-engine-learns-from-development.md": "ADR 0038: The engine learns from the games built on it",
+    "docs/analysis/external-inspiration-study.md": "External inspiration study",
+    "docs/learning/README.md": "Learning from the games built on Blue",
+    "docs/learning/REPORT.md": "What the engine has learned from the games built on it",
+    "docs/perf/README.md": "Performance data",
+    "scripts/build_sandbox_content.py": "Rebuild the sandbox's deterministic, source-derived content.",
+    "scripts/package_sandbox.py": "Package already-built optimized Windows binaries and sandbox content, without installation.",
+    "scripts/publish_games.py": "Export curated engine-made content into the companion Games repository.",
+    "scripts/validate_sandbox.py": "Native audits and authored traversal routes, with a persistent JSON report.",
+    "src/bin/be2-ctl.rs": "be2-ctl: list, inspect, start, stop and restart BlueEngine game servers on this machine (Unix).",
+    "src/bin/be2-headless.rs": "Headless simulation and authoritative dedicated server for Blue Engine V2.",
+    "src/bin/be2-hub.rs": "be2-hub: one hub for every BlueEngine online game (ADR 0037).",
+    "src/bin/be2-tools.rs": "Headless authoring commands; JSON output is suitable for agents and automation.",
+    "src/bin/be2-toy-server.rs": "The toy footrace server: the smallest complete use of netplay::cli::serve, and the game server the hub's...",
+    "src/bin/blueengine-sandbox.rs": "BlueEngine's local, reproducible content workbench.",
+    "src/bin/impact_audio/mod.rs": "Client-only sound: observe actual impacts, not input or wind-up animation.",
+    "src/bin/sandbox/input.rs": "One key-edge source on Windows, including accessibility-injected keys.",
+    "src/prelude.rs": "Generated external games consume this supported public surface.",
+    "src/viewer/arena.rs": "Rendering-independent building blocks for momentum-driven arena shooters.",
+    "src/viewer/authoring.rs": "Portable static map documents and transactional edits.",
+    "src/viewer/blueprint.rs": "Declarative blueprint compiler for BlueEngine.",
+    "src/viewer/builder.rs": "Declarative authoring over the existing validated map contract, without borrowed handles.",
+    "src/viewer/camera.rs": "Camera placement is independent of movement; gameplay rays still start at the player.",
+    "src/viewer/capabilities.rs": "Native discovery.",
+    "src/viewer/character.rs": "Procedural Scientist and Feta skins, with distance-driven animation.",
+    "src/viewer/character_skins.rs": "Cosmetic skins sharing the unmodified Scientist controller/hull.",
+    "src/viewer/content.rs": "Versioned content fingerprint for accidental map mismatch detection, not authentication.",
+    "src/viewer/control/mod.rs": "Managing running servers: where they register, how they are asked for status and told to stop (Unix only).",
+    "src/viewer/control/proc.rs": "Looking at and signalling operating-system processes, for the server manager (Unix only).",
+    "src/viewer/control/server.rs": "The server side of management: register, listen on the control socket, answer status and shutdown.",
+    "src/viewer/creative.rs": "Rendering-free creative placement and per-map persistence.",
+    "src/viewer/devkit/clock.rs": "Frame timing for real-time loops: one wall clock, a fixed-step accumulator and a perf report.",
+    "src/viewer/devkit/input.rs": "Device frames in, exactly one input per fixed tick out.",
+    "src/viewer/devkit/juice.rs": "\"Game feel\" state: screen shake, hit-stop, FOV kick, screen flash and a landing dip.",
+    "src/viewer/devkit/level.rs": "Straight walls with doorway gaps cut out, for a custom-sim game that builds its own indoor level in code...",
+    "src/viewer/devkit/lifecycle.rs": "The lifecycle around a custom simulation's window: run flags in, whole ticks with exactly one input each...",
+    "src/viewer/devkit/look.rs": "The one mouse-look convention: which way the camera turns for which way the hand moves.",
+    "src/viewer/devkit/menu.rs": "Discrete menu steps from a D-pad and an analog stick: flick once, hold to repeat.",
+    "src/viewer/devkit/mod.rs": "Building blocks for games that own their simulation.",
+    "src/viewer/devkit/net_address.rs": "Typed server addresses and the default-server chain, graphics-free.",
+    "src/viewer/devkit/path.rs": "A closed loop on the ground plane: race tracks, patrol routes, rails, a circular arena edge.",
+    "src/viewer/devkit/playback.rs": "Driving a loop without a human: recorded inputs, a tiny cue script and a screenshot schedule.",
+    "src/viewer/devkit/rng.rs": "Tiny deterministic random numbers for simulations, effects and procedural audio.",
+    "src/viewer/devkit/save.rs": "Player settings and records that survive restarts: one small JSON file, atomic, never fatal.",
+    "src/viewer/devkit/scale.rs": "Size checks a headless agent can run: how big is this thing, in metres, next to a person?",
+    "src/viewer/devkit/sim.rs": "An optional shape for games that own their simulation, plus the helpers that make it testable.",
+    "src/viewer/devkit/snapshot.rs": "Save and load a game's own simulation: F5 / F9 quick saves, autosaves and \"continue\" for a game that keeps...",
+    "src/viewer/devkit/synth.rs": "Procedural audio for games that ship no recordings: a small DSP toolkit, a WAV writer and parser, 23...",
+    "src/viewer/devkit/text_field.rs": "A single-line text box that is only logic: typing, pasting, caret movement, hold-to-repeat.",
+    "src/viewer/devkit/waypoints.rs": "A small walkable graph (doorway thresholds, room centres, patrol stops) with shortest-path lookup, for an...",
+    "src/viewer/doc_drift.rs": "Strong automated documentation drift protection.",
+    "src/viewer/fps.rs": "Reusable, rendering-independent foundations for authoritative FPS games.",
+    "src/viewer/game.rs": "Small declarative interaction rules shared by local play and the authoritative host.",
+    "src/viewer/game_client.rs": "Shared, opt-in presentation defaults for standalone games.",
+    "src/viewer/game_edit.rs": "Edit a game in place without hand-keeping its records in step.",
+    "src/viewer/game_example.rs": "Source-free Test Lab recipe: three one-shot switches unlock an exit terminal.",
+    "src/viewer/game_explore.rs": "Static and reachability analysis of a GameDocument, driven by the engine's own rule runtime.",
+    "src/viewer/game_input.rs": "Standard keyboard/mouse + native-controller adapter for standalone clients.",
+    "src/viewer/game_scenario.rs": "Turn game-explore's shortest win into a scenario that plays it: walk to each target, look at it, press it...",
+    "src/viewer/game_session.rs": "Graphics-free adapter for local authority or a server-owned game mirror.",
+    "src/viewer/game_text.rs": "Immutable ASCII atlas: no glyph uploads or texture replacement while drawing a frame.",
+    "src/viewer/game_ui.rs": "Shared immediate-mode game UI.",
+    "src/viewer/game_visuals.rs": "Reusable, cached world materials and recognizable first-person weapon silhouettes.",
+    "src/viewer/gamepad.rs": "Native gamepads without a window/rendering dependency (gamepad feature).",
+    "src/viewer/gen.rs": "Procedural placement generators for BlueEngine: scatter and line.",
+    "src/viewer/house.rs": "Small, low-poly two-story house.",
+    "src/viewer/icon.rs": "Deterministic, title-seeded application icons for BlueEngine games.",
+    "src/viewer/identity.rs": "A shipped game's identity: what it is called, what it says about itself and what it looks like.",
+    "src/viewer/interaction.rs": "Semantic actions independent of input devices and rendering.",
+    "src/viewer/kit/audio.rs": "Playing generated sound: a bank of effects with variants, and looping music stems that fade with the action.",
+    "src/viewer/kit/batch.rs": "Procedural geometry and per-frame dynamic batching.",
+    "src/viewer/kit/capture.rs": "Saving frames as PNG evidence for an agent (or a human) who cannot watch the game run.",
+    "src/viewer/kit/fx.rs": "Visual effects: particles, expanding rings, fireballs, light beams, floating popups and banners.",
+    "src/viewer/kit/gizmo.rs": "Debug wireframes for judging scale by eye: bounding boxes, axes and a person-sized silhouette.",
+    "src/viewer/kit/hud.rs": "2D drawing helpers for heads-up displays: scaled, outlined, centred text, panels, bars, a vignette...",
+    "src/viewer/kit/lint.rs": "A geometry-defect lint for Templates: the mesh bugs a headless test can catch before anyone has to look at...",
+    "src/viewer/kit/look.rs": "Scene lighting and the materials that draw dynamic geometry.",
+    "src/viewer/kit/mirror.rs": "One planar reflection pass with an off-axis aperture and an explicit depth buffer.",
+    "src/viewer/kit/mod.rs": "An opt-in client kit for games that draw their own world.",
+    "src/viewer/kit/shadow.rs": "Shadows for kit games: one setting, two tiers, one helper.",
+    "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves...",
+    "src/viewer/kit/view.rs": "A camera description shared by the renderer, the sky and the HUD.",
+    "src/viewer/landscaping.rs": "Reusable, static low-poly planting.",
+    "src/viewer/lint.rs": "Design-level static analysis (linting) for BlueEngine maps.",
+    "src/viewer/local_client.rs": "Ready-to-play local static-map client.",
+    "src/viewer/maps.rs": "Map selection is independent of graphics; studio remains a regression fixture.",
+    "src/viewer/mcp.rs": "Native Model Context Protocol (MCP) server over standard I/O for BlueEngine.",
+    "src/viewer/mesh.rs": "Tessellate Vesper's evaluated primitives once, baking visibility with its BVH.",
+    "src/viewer/metrics.rs": "Observability, performance tracking, explainability, and budget validation.",
+    "src/viewer/net.rs": "Low-latency server-authoritative multiplayer networking foundation.",
+    "src/viewer/net/any.rs": "One transport type for either engine socket, chosen at run time.",
+    "src/viewer/net/clock.rs": "Where the server's notion of \"now\" comes from, so time can be advanced by a test instead of waited for.",
+    "src/viewer/net/codec.rs": "A small binary codec for game protocols: little-endian fields, every read bounds-checked.",
+    "src/viewer/net/loopback.rs": "An in-memory datagram network with configurable delay, jitter and loss, for tests.",
+    "src/viewer/net/proxy.rs": "High-fidelity network impairment proxy and bad network simulation.",
+    "src/viewer/net/quic.rs": "Production-ready QUIC / TLS 1.3 datagram transport with pinned certificates.",
+    "src/viewer/net/replication.rs": "Only exact acknowledgement commits represented state; respect active payload limits.",
+    "src/viewer/net/session.rs": "Protocol-independent session management, random credentials, and handshake rate limiting.",
+    "src/viewer/net/transport.rs": "Generic datagram transport abstraction for game networking.",
+    "src/viewer/net/worldwire.rs": "The compact binary form of world updates (Packet::Snapshot and Packet::Delta), protocol 8.",
+    "src/viewer/netplay/cli.rs": "One reusable server main for every netplay game: serve.",
+    "src/viewer/netplay/client.rs": "The network client: connect, choose, play, for any NetGame.",
+    "src/viewer/netplay/failure.rs": "Why a connection attempt failed, as a type a game can show properly.",
+    "src/viewer/netplay/hub/client.rs": "The game's side of the hub: ask which rooms exist, make one, work out where the hub lives, and the rules...",
+    "src/viewer/netplay/hub/legacy.rs": "The DFHB version 1 protocol of the Deadfall hub, answered byte for byte as the old hub did.",
+    "src/viewer/netplay/hub/limits.rs": "The hub's abuse limits: token buckets per source, for creating, and over everyone; caps on rooms.",
+    "src/viewer/netplay/hub/mod.rs": "One hub, one name, every BlueEngine online game (ADR 0037).",
+    "src/viewer/netplay/hub/registry.rs": "Which games this hub carries: the config file, the games' --info, and the checks on both.",
+    "src/viewer/netplay/hub/rooms.rs": "The room table: which room servers exist, on which ports, and when they are closed.",
+    "src/viewer/netplay/hub/serve.rs": "The front door: abuse limits and the datagram handler in front of the room table, and the UDP loop.",
+    "src/viewer/netplay/hub/spawn.rs": "Starting and watching one room's server process.",
+    "src/viewer/netplay/hub/wire.rs": "The hub's datagram protocol, BEHB version 1, and the loopback control protocol BECT.",
+    "src/viewer/netplay/mod.rs": "Online play for games that own their simulation: a lobby, matches, results, on any DatagramTransport.",
+    "src/viewer/netplay/server.rs": "The authoritative server: a lobby, then a match, then results, forever, for any NetGame.",
+    "src/viewer/netplay/toy.rs": "The smallest complete NetGame: a footrace along a line.",
+    "src/viewer/netplay/wire.rs": "The netplay envelope: fixed messages around game-defined payloads.",
+    "src/viewer/newgame.rs": "be2-tools new-game NAME DIR [ENGINE_PATH] [TEMPLATE]: Scaffolds a standalone, green game project.",
+    "src/viewer/pathing.rs": "Auto-planned walk tests, A* pathfinding, and blocking obstacle diagnostics.",
+    "src/viewer/playable.rs": "Shared authored-game presentation.",
+    "src/viewer/presentation.rs": "Bounded snapshot presentation, independent of graphics and authoritative physics.",
+    "src/viewer/profile.rs": "Validated, rendering-independent locomotion parameters.",
+    "src/viewer/prop_physics.rs": "Loose-prop rigid bodies and shared pickup/drop behavior, independent of graphics.",
+    "src/viewer/prop_view.rs": "Reuses each prop mesh; rigid transforms update vertices without re-baking the map.",
+    "src/viewer/props.rs": "Simple matte props without decals or overlapping exterior trim.",
+    "src/viewer/props/accessories.rs": "Original static design accessories, assembled from native matte primitives.",
+    "src/viewer/props/decor_library.rs": "Reusable static shelf and tabletop decor.",
+    "src/viewer/reach.rs": "Reachability analysis for BlueEngine maps.",
+    "src/viewer/savestate/mod.rs": "Native save states: one framed, versioned, integrity-checked file format that every engine and game...",
+    "src/viewer/savestate/world.rs": "The engine world's save state: what HeadlessWorld::save_state captures and restore_state accepts.",
+    "src/viewer/scenario.rs": "Scripted scenario runner and deterministic replay divergence debugger for BlueEngine.",
+    "src/viewer/server.rs": "Authoritative dedicated multiplayer server for Blue Engine V2.",
+    "src/viewer/shutdown.rs": "Stop a server from a signal: the first request saves and exits, a second one exits at once.",
+    "src/viewer/simulation.rs": "Simulation must remain usable without graphics, audio or a window.",
+    "src/viewer/spans.rs": "A handful of named timing spans and one compact summary, for seeing where a tick goes.",
+    "src/viewer/spatial.rs": "Room / zone graph and spatial partitioning for indoor maps and interest management.",
+    "src/viewer/symbols.rs": "High-performance on-demand Rust source navigator for BlueEngine (be2-tools src).",
+    "src/viewer/ui_check.rs": "Headless 2D UI layout auditor for BlueEngine menus and screens.",
+    "src/viewer/verify.rs": "Unified self-verifying maps and games for BlueEngine.",
+    "src/viewer/weapons.rs": "Local weapon selection and pistol shots, independent of rendering and input APIs.",
+    "src/viewer/wrench.rs": "Frame-rate independent melee timing and closest-surface contact.",
+    "templates/custom-sim/src/lib.rs": "The game's rules: a pure, deterministic, fixed-step simulation with no window, no sound device and no wall...",
+    "templates/game_build.rs": "Embeds the game's icon and version info into its Windows executable, so Explorer, Task Manager and pinned...",
+    "templates/game_check.py": "Validate this game's content and Rust targets; never run the dependency's test suite.",
+    "templates/game_dev.py": "Rebuild and run this game without tripping over a copy of it that is still open.",
+    "templates/game_runtime_test.rs": "Same public session used by the visible generated client, exercised without graphics.",
+    "templates/game_ship.py": "Ship this game: package it, give it its own desktop shortcut, and prove both work.",
+    "templates/native_focus.rs": "Application-owned foreground check.",
+    "tools/assets.py": "BlueEngine's JSON asset catalog API.",
+    "tools/audio_report.py": "Numeric quality report for WAV files: an agent cannot listen to audio, but it can read numbers.",
+    "tools/author.py": "Source-free BE2 map authoring.",
+    "tools/be2.py": "BE2 development entry point.",
+    "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
+    "tools/learn.py": "Blue learns from the games built on it (ADR 0038).",
+    "tools/mcp_server.py": "BlueEngine MCP Server launcher.",
+    "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
+    "tools/place_interior.py": "Place data-only interior prefabs and validate with the packaged native engine.",
+    "tools/upgrade.py": "Version-aware upgrade planning and verification for games built on BlueEngine.",
+    "tools/workflow.py": "Bounded context lookup and conservative validation selection.",
+    "tools/xcapture.py": "See a game on a machine with no display: run it on a virtual display and save real screenshots."
   }
 }

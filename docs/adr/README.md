@@ -47,3 +47,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0035: A testable, loud native key reader, and one restart convention](0035-native-key-reader-and-restart-convention.md)
 - [0036: Shadows for kit games: contact blobs and one shadow map, behind one setting](0036-shadows-for-kit-games.md)
 - [0037: One hub, one name, every BlueEngine online game](0037-shared-multi-game-hub.md)
+- [0038: The engine learns from the games built on it](0038-engine-learns-from-development.md)

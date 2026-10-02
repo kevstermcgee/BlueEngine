@@ -27,6 +27,7 @@ Only these independent Python changes have reviewed narrower scopes:
 | tools/assets.py, tools/test_assets.py | All asset tests and catalog validation |
 | scripts/publish_games.py, scripts/test_publish_games.py | All publication tests and publication check |
 | tools/upgrade.py, tools/test_upgrade.py, tools/upgrade_migrations.json | All game-upgrade planner/verifier tests |
+| tools/learn.py, tools/test_learn.py, docs/learning data files (ledger, tasks, eval log, floor, dupes, report) | `python -m unittest tools.test_learn` (ADR 0038) |
 
 Combined edits union their checks. Any other path uses the full engine suite,
 including Rust, content, Cargo files, documentation, the feature index and the

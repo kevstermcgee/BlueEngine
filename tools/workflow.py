@@ -1,5 +1,6 @@
 """Bounded context lookup and conservative validation selection. No Cargo discovery."""
 import json
+import math
 from pathlib import Path
 import re
 import shutil
@@ -57,6 +58,12 @@ def index(root):
     return json.loads((root / 'tools/FEATURES.json').read_text(encoding='utf-8'))['features']
 
 
+def modules(root):
+    """{path: one-line summary} of indexed files (`python tools/learn.py modules --write`); empty if absent."""
+    found = json.loads((root / 'tools/FEATURES.json').read_text(encoding='utf-8')).get('modules', {})
+    return found if isinstance(found, dict) else {}
+
+
 def closure(features, names, reverse=False):
     result = set(names)
     pending = list(names)
@@ -89,6 +96,123 @@ def impact(root, paths):
                               if {'simulation_contract', 'multiplayer', 'game_presentation'} <= affected else None)}
 
 
+# Words that say nothing about which feature a task needs (kept narrow: "game", "custom" and "kit" do).
+RANK_STOP = frozenset('add fix change the a an to for in of and that this my me our your at on or by as is it be are '
+                      'with from every can how when what which into out up so if'.split())
+LEARNED_MAX_LINES = 5
+LEARNED_MAX_CHARS = 600
+LEARNED_LINE_CHARS = 118
+LEARNED_STOP = frozenset(('add make build write use using need want the for with and from into that this your have not but how can '
+                          'get set new game games custom sim simulation kit engine blue ability support create does work works '
+                          'thing things like when what why where which should would could than then them they their there '
+                          'some any all one two out off its our too very just also only over under after before more most '
+                          'without within between instead through each every own press player players').split())
+
+
+def learned_words(text):
+    """Lowercase word stems (plural -s, -ed and -ing dropped) of 3+ letters, minus filler words."""
+    words = set()
+    for word in re.findall(r'[a-z0-9]+', str(text).lower()):
+        for suffix in ('ing', 'ed', 's'):
+            if len(word) >= len(suffix) + 4 and word.endswith(suffix) and not word.endswith('ss'):
+                word = word[:-len(suffix)]
+                break
+        if len(word) >= 3 and word not in LEARNED_STOP:
+            words.add(word)
+    return words
+
+
+def learned_line(entry):
+    ref = f" ({entry['ref']})" if entry.get('ref') else ''
+    if entry.get('status') == 'promoted':
+        head, body = 'solved: ', entry.get('hint') or entry.get('workaround') or entry.get('note') or ''
+    elif entry.get('trap'):
+        head, body = 'trap: ', entry.get('hint') or entry['trap']
+    else:
+        head, body = ('open: ' if entry.get('status') == 'open' else 'note: '), entry.get('hint') or entry.get('note') or ''
+    body = ' '.join(str(body).split())
+    room = LEARNED_LINE_CHARS - len(head) - len(ref)
+    if len(body) > room:
+        body = body[:max(0, room - 3)].rstrip() + '...'
+    return head + body + ref
+
+
+def ledger_hints(root, query, selected=()):
+    """Up to five short lines from docs/learning/ledger.jsonl that match the task: a trap to avoid, or the engine
+    feature that already solves it. Bounded (600 characters); empty when nothing matches or there is no ledger.
+
+    Matching is word overlap between the query and each entry's curated `keywords` (at least one) plus its trap,
+    workaround and note text (two shared words in all); a shared feature id only breaks ties, so a feature match
+    alone never produces a hint.
+    """
+    path = Path(root) / 'docs' / 'learning' / 'ledger.jsonl'
+    try:
+        raw = path.read_text(encoding='utf-8').splitlines()
+    except (OSError, UnicodeDecodeError):
+        return []
+    query_words = learned_words(query)
+    if not query_words:
+        return []
+    entries = []
+    for line in raw:
+        try:
+            entry = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(entry, dict) and isinstance(entry.get('note'), str):
+            entries.append(entry)
+    keyword_sets = [learned_words(' '.join(w for w in entry.get('keywords', []) if isinstance(w, str)))
+                    if isinstance(entry.get('keywords', []), list) else set() for entry in entries]
+    frequency = {}
+    for words in keyword_sets:
+        for word in words:
+            frequency[word] = frequency.get(word, 0) + 1
+    scored = []
+    for number, (entry, keywords) in enumerate(zip(entries, keyword_sets)):
+        text = learned_words(' '.join(str(entry.get(field, '')) for field in ('trap', 'workaround', 'note')))
+        shared = query_words & keywords
+        keyword_hits, text_hits = len(shared), len(query_words & (text - keywords))
+        # Two shared words (one of them a curated keyword) are needed, so one generic word ("play", "box") never
+        # matches. A very short query ("add shadows") may match on a single distinctive keyword (at most three entries).
+        distinctive = len(query_words) <= 2 and any(frequency[word] <= 3 for word in shared)
+        if not (keyword_hits >= 1 and (keyword_hits + text_hits >= 2 or distinctive)):
+            continue
+        features = entry.get('features', [])
+        bonus = 1 if isinstance(features, list) and set(features) & set(selected) else 0
+        priority = 2 if entry.get('trap') else 1 if entry.get('status') == 'promoted' else 0
+        scored.append((-(3 * keyword_hits + text_hits + bonus), -priority, number, entry))
+    lines, used = [], 0
+    for *_, entry in sorted(scored, key=lambda item: item[:3]):
+        line = learned_line(entry)
+        if line in lines or used + len(line) > LEARNED_MAX_CHARS:
+            continue
+        lines.append(line)
+        used += len(line)
+        if len(lines) == LEARNED_MAX_LINES:
+            break
+    return lines
+
+
+def module_picks(summaries, feature, query_words, rarity=None):
+    """Files a feature owns whose path or one-line summary share words with the task, best first.
+
+    A file is picked on two or more shared words, or one shared word that is in its path or that almost no other
+    file mentions; rarer shared words rank higher (`rarity` maps a word to its weight). Nothing is read from source: the summaries are in the index.
+    """
+    picks = []
+    distinct = math.log(1 + len(summaries) / 2)    # a word that only one or two files mention
+    for order, path in enumerate(feature.get('files', [])):
+        summary = summaries.get(path)
+        if not summary:
+            continue
+        path_words = learned_words(re.sub(r'[/_.\-]', ' ', path))
+        shared = query_words & (learned_words(summary) | path_words)
+        distinctive = any((rarity or {}).get(word, 0) >= distinct for word in shared)
+        if len(shared) >= 2 or (shared and (shared & path_words or distinctive)):
+            picks.append((-sum((rarity or {}).get(word, 1.0) for word in shared), order, path))
+    return [path for *_, path in sorted(picks)]
+
+
 def context(root, query, limit=3):
     if not query.strip() or len(query) > 100:
         raise ValueError(f'The query must be 1..100 characters (this one is {len(query)}): shorten it to the '
@@ -96,24 +220,50 @@ def context(root, query, limit=3):
     if not 1 <= limit <= 5:
         raise ValueError(f'--limit must be 1..5 (got {limit})')
     features = index(root)
-    terms = set(re.findall(r'[a-z0-9]+', query.lower())) - {
-        'add', 'fix', 'change', 'the', 'a', 'an', 'to', 'for', 'in', 'of', 'and'}
+    summaries = modules(root)
+    terms = set(re.findall(r'[a-z0-9]+', query.lower())) - RANK_STOP
+    bags, described = {}, {}
+    for name, feature in features.items():
+        # What a feature's files say about themselves (one line each) is searchable text of the feature.
+        text = json.dumps(feature).lower() + ' ' + ' '.join(summaries.get(path, '') for path in feature['files']).lower()
+        bags[name] = set(re.findall(r'[a-z0-9]+', text))
+        # The feature's own description (note, or contract) is a better guide than the rest of its record.
+        contract = feature.get('contract', '')
+        described[name] = set(re.findall(r'[a-z0-9]+', (feature.get('note', '') + ' ' + (
+            contract if isinstance(contract, str) else contract.get('owns', ''))).lower()))
+    # A word found in many records says little about which one the task needs: weight each query word by how rare
+    # it is across the index (inverse document frequency), so a generic word cannot outvote a specific one.
+    weight = {term: math.log(1 + len(bags) / sum(term in words for words in bags.values()))
+              for term in terms if any(term in words for words in bags.values())}
     ranked = []
     for name, feature in features.items():
-        words = set(re.findall(r'[a-z0-9]+', json.dumps(feature).lower()))
+        words = bags[name]
         title = set(re.findall(r'[a-z0-9]+', name.lower()))
         keywords = set(re.findall(r'[a-z0-9]+', ' '.join(feature.get('keywords', [])).lower()))
         diagnostic = any(query.upper() == item['id'] for item in
                          feature.get('constraints', []) + feature.get('decisions', []))
-        score = 1000 if query.lower() == name or diagnostic else 4 * len(terms & (title | keywords)) + len(terms & words)
+        score = 1000 if query.lower() == name or diagnostic else round(sum(
+            weight[term] * (4 if term in title | keywords else 2 if term in described[name] else 1)
+            for term in terms & words), 3)
         if score:
             ranked.append((score, name, feature))
     ranked.sort(key=lambda item: (-item[0], item[1]))
     selected = ranked[:1] if ranked and ranked[0][0] >= 1000 else ranked[:limit]
     matches = []
+    query_words = learned_words(query)
+    frequency = {}
+    for text in summaries.values():
+        for word in learned_words(text):
+            frequency[word] = frequency.get(word, 0) + 1
+    rarity = {word: math.log(1 + len(summaries) / count) for word, count in frequency.items()}
     for position, (_, name, feature) in enumerate(selected):
         allowance = max(1, 5 // len(selected) + (position < 5 % len(selected)))
-        item = {'id': name, 'read_first': feature.get('read_first', feature['files'][:3])[:allowance],
+        curated = feature.get('read_first', feature['files'][:3])
+        # The best-matching file by its own summary leads (so a module inside a large feature is found by what it
+        # does); the curated entry points follow. Without a file match this is exactly the curated list.
+        picked = module_picks(summaries, feature, query_words, rarity)[:max(1, allowance - 1)]
+        read_first = (picked + [path for path in curated if path not in picked])[:allowance]
+        item = {'id': name, 'read_first': read_first,
                 'contract': feature.get('contract', feature['note']),
                 'tests': feature['checks'][:2]}
         for field in ('constraints', 'canonical_example', 'decisions', 'traps', 'depends_on', 'public_api'):
@@ -134,7 +284,8 @@ def context(root, query, limit=3):
         omitted.insert(0, matches.pop()['id'])
     related = closure(features, [item['id'] for item in matches])
     candidates = ['graphics', 'offline_renderer', 'asset_library', 'map_geometry']
-    return {'query': query, 'total': len(ranked), 'limit': limit,
+    learned = ledger_hints(root, query, [item['id'] for item in matches])
+    packet = {'query': query, 'total': len(ranked), 'limit': limit,
             'matches': matches,
             'omitted_matches': omitted,
             'confidence': 'high' if selected and selected[0][0] >= 1000 else 'low: keyword ranking; confirm read_first before editing',
@@ -145,6 +296,10 @@ def context(root, query, limit=3):
             'verify': 'python tools/be2.py check --changed --plan; then check --changed',
             'next': 'If uncertain, narrow by feature ID or use existing be2-tools src find/outline. Feature tests are iteration evidence, not final validation.',
             'no_match': 'No indexed capability; do not invent an API.'}
+    if learned:
+        # From docs/learning/ledger.jsonl (ADR 0038): traps other games hit and what already solves them.
+        packet['learned'] = learned
+    return packet
 
 
 def changed_paths(root, base='HEAD'):
@@ -188,7 +343,7 @@ def full_commands(test_profile='itest'):
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
-         'tools.test_xcapture', 'tools.test_upgrade'],
+         'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn'],
     ]
 
 
@@ -369,6 +524,14 @@ def validation_plan(paths=None, base=None, test_profile='itest'):
                         [sys.executable, 'scripts/publish_games.py', 'check']]),
         'upgrade': ({'tools/upgrade.py', 'tools/test_upgrade.py', 'tools/upgrade_migrations.json'},
                    [[sys.executable, '-m', 'unittest', 'tools.test_upgrade']]),
+        # ADR 0038: the learning tool and its data (ledger, tasks, eval log, reports). A `learn.py record` entry must
+        # not need the full engine gate; changes to FEATURES.json or this file still do.
+        'learning': ({'tools/learn.py', 'tools/test_learn.py', 'docs/learning/README.md', 'docs/learning/REPORT.md',
+                      'docs/learning/ledger.jsonl', 'docs/learning/tasks.jsonl', 'docs/learning/tasks_heldout.jsonl',
+                      'docs/learning/tasks_heldout2.jsonl', 'docs/learning/tasks_heldout3.jsonl',
+                      'docs/learning/eval_runs.jsonl', 'docs/learning/eval_floor.json',
+                      'docs/learning/dupes.json', 'docs/learning/dupes.md'},
+                     [[sys.executable, '-m', 'unittest', 'tools.test_learn']]),
     }
     covered = set().union(*(files for files, _ in scopes.values()))
     unknown = sorted(set(paths) - covered)

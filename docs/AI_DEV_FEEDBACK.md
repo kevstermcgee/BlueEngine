@@ -153,3 +153,8 @@ across two files). Spooky Kart shipped two geometry bugs that no engine test cou
   that is not, because the hub could not carry that game.
 - **Rooms never outlive the hub only because the server watches its stdin.** A server `main` that skips `cli::serve` and ignores
   `--exit-on-stdin-eof` leaves an orphan process holding its port after a hub crash.
+
+## Where friction is recorded now
+
+Friction notes are structured and harvested: `docs/learning/` holds the ledger (this document's items are its seed), the
+discovery benchmark for `be2.py context`, and a generated report; record new items with `python3 tools/learn.py record` (ADR 0038).
