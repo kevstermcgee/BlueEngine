@@ -141,6 +141,30 @@
       "verification": "No automated per-game regression exists; verify manually that after game over R, Enter and pad A each start a new run exactly once and that R during play does nothing. Engine side: the restart_* tests in src/viewer/game_input.rs.",
       "limitations": "A source grep for KeyCode::R, which is how nearly every hand-rolled restart is written, but R is also used for reload, rotate and other actions: a false positive needs a quick read of the match. A game that restarts on another key (or only through a menu) is a false negative. Treat it as a hint, not a verdict.",
       "reference": "docs/adr/0035-native-key-reader-and-restart-convention.md"
+    },
+    {
+      "id": "MIG-0036-SHADOWS",
+      "since_commit": "a2942c42f853",
+      "title": "kit::Shadows: contact blobs (Simple) and a shadow map (Full) behind one player setting",
+      "runtime": [
+        "custom_sim",
+        "custom_sim_netplay"
+      ],
+      "category": "optional_adoption",
+      "required": false,
+      "summary": "Kit games had no shadows at all, so scenes read flat. kit::Shadows (ADR 0036) adds a Simple tier (soft contact blobs drawn with the new depth-tested Materials::decal, no extra pass) and a Full tier (one directional shadow map of the key light around a focus point), chosen by devkit::ShadowQuality (default Simple, Settings.shadow_quality, --shadows off|simple|full, a Shadows row in Esc > Settings through GameShell::local_menu_with_options). A game that does not call it renders exactly as before.",
+      "detect": {
+        "kind": "grep",
+        "pattern": "Materials::load\\s*\\(",
+        "include": [
+          "src/**/*.rs"
+        ],
+        "exclude_paths": []
+      },
+      "repair": "Create `let mut shadows = kit::Shadows::new(settings.shadow_quality)` after the window exists; each frame, after filling the dynamic batches, call shadows.begin_frame(&look, focus), shadows.blob(feet, radius) per moving thing, shadows.cast(|| draw the same static and dynamic batches), then after set_scene call shadows.apply(&materials), draw the static world, shadows.draw_decals(&materials), then the actors. Swap local_menu_with_audio for local_menu_with_options and handle outcome.cycle_shadows. About ten lines; the custom-sim template and examples/shadow_demo.rs are the reference.",
+      "verification": "Capture the game at --shadows off, simple and full (python tools/xcapture.py) and read the images: blobs under moving things, no blob through walls or over the body, cast shadows in the right direction without acne or detached edges, no shimmer between consecutive frames. Engine side: cargo test --lib kit::shadow.",
+      "limitations": "Detection is a grep for Materials::load(, which every kit game has, so it also matches games that already adopted Shadows; it only says the game uses the kit renderer and could adopt. Adoption is a visual decision (box size, which meshes cast), so no per-game check exists. The branch carrying this commit must be merged, not rebased or squashed, or the pinned revision stops existing.",
+      "reference": "docs/adr/0036-shadows-for-kit-games.md"
     }
   ]
 }

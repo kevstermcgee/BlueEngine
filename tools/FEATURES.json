@@ -1172,7 +1172,8 @@
         "MenuNav",
         "MenuStep",
         "stick_look",
-        "request_exit"
+        "request_exit",
+        "ShadowQuality"
       ],
       "read_first": [
         "docs/CUSTOM_CLIENT.md",
@@ -1206,13 +1207,17 @@
         "docs/CUSTOM_CLIENT.md",
         "src/viewer/kit/gizmo.rs",
         "examples/minimal_game.rs",
-        "src/viewer/kit/mirror.rs"
+        "src/viewer/kit/mirror.rs",
+        "src/viewer/kit/shadow.rs",
+        "examples/shadow_demo.rs",
+        "docs/adr/0036-shadows-for-kit-games.md"
       ],
       "checks": [
         "cargo test --locked --lib kit",
-        "real-window capture of the custom-sim starter (world, effects, HUD) inspected by eye"
+        "real-window capture of the custom-sim starter (world, effects, HUD) inspected by eye",
+        "cargo test --locked --lib kit::shadow"
       ],
-      "note": "Opt-in renderer parts for a game that draws its own world, each independent and without genre logic: View (camera, screen projection), Template/Batch/Tint (small meshes packed per frame into few draw calls), Look/Materials (lit + fog + glow world material, alpha and additive effects, sky; presets daylight/dusk/night), Fx (particles, rings, fireballs, beams, popups, banners), hud (scaled outlined text, panels, bars, vignette, crosshair), SoundBank (off-thread rendered effects and music stems, backend woken during loading, start_music/update_music glides each stem toward a target volume), capture::save_frame (reports the real pixel size). PlanarMirror owns a depth-backed target, off-axis aperture projection, near-plane clipping and reflection UVs. PointLight adds four bounded unshadowed local lights per pass, cleared by set_scene for compatibility.",
+      "note": "Opt-in renderer parts for a game that draws its own world, each independent and without genre logic: View (camera, screen projection), Template/Batch/Tint (small meshes packed per frame into few draw calls), Look/Materials (lit + fog + glow world material, alpha and additive effects, sky; presets daylight/dusk/night), Fx (particles, rings, fireballs, beams, popups, banners), hud (scaled outlined text, panels, bars, vignette, crosshair), SoundBank (off-thread rendered effects and music stems, backend woken during loading, start_music/update_music glides each stem toward a target volume), capture::save_frame (reports the real pixel size). PlanarMirror owns a depth-backed target, off-axis aperture projection, near-plane clipping and reflection UVs. PointLight adds four bounded unshadowed local lights per pass, cleared by set_scene for compatibility. Shadows (ADR 0036): one setting (devkit::ShadowQuality Off/Simple/Full, default Simple, Settings.shadow_quality, --shadows flag, Esc > Settings via GameShell::local_menu_with_options) and one helper, kit::Shadows (begin_frame, blob, cast, apply, draw_decals). Simple is depth-tested contact blobs (Materials::decal with a clip-space depth bias, Batch::blob); Full is one texel-snapped directional shadow map of the key light (packed-depth RGBA8 target, normal-offset bias, 3x3 filter, key light only). examples/shadow_demo.rs is the runnable reference.",
       "keywords": [
         "kit",
         "renderer",
@@ -1256,7 +1261,15 @@
         "window",
         "mirror",
         "reflection",
-        "point lights"
+        "point lights",
+        "shadow",
+        "shadows",
+        "shadow map",
+        "blob",
+        "contact shadow",
+        "decal",
+        "shadow quality",
+        "depth"
       ],
       "contract": {
         "owns": "Dynamic batched geometry, materials, effect state, HUD drawing helpers and sound playback for custom renderers",
@@ -1288,7 +1301,11 @@
         "gizmo",
         "PointLight",
         "MirrorPlane",
-        "PlanarMirror"
+        "PlanarMirror",
+        "Shadows",
+        "ShadowMap",
+        "ShadowCamera",
+        "ShadowQuality"
       ],
       "read_first": [
         "src/viewer/kit/mod.rs",

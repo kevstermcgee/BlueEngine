@@ -159,6 +159,10 @@ pub struct MenuOutcome {
     /// The player clicked "Save music"; write the current track to a file (see
     /// [`super::devkit::downloads_dir`]) and tell them whether it worked.
     pub download_music: bool,
+    /// The player clicked the shadows selector (only offered by
+    /// [`GameShell::local_menu_with_options`]); step the setting with `Settings::cycle_shadow_quality`,
+    /// apply it to `kit::Shadows::set_quality` and persist it.
+    pub cycle_shadows: bool,
 }
 pub struct GameShell {
     pub paused: bool,
@@ -296,7 +300,32 @@ impl GameShell {
         controls: &[&str],
         audio: AudioMenu,
     ) -> MenuOutcome {
-        self.menu_with_status_and_audio(title, controls, "MENU  /  LOCAL SESSION PAUSED", audio)
+        self.menu_with_status_and_audio(
+            title,
+            controls,
+            "MENU  /  LOCAL SESSION PAUSED",
+            audio,
+            None,
+        )
+    }
+    /// [`GameShell::local_menu_with_audio`] for a game that supports shadows (`kit::Shadows`): the Settings
+    /// screen gains a "Shadows: Off / Simple / Full" selector below the sound toggle. Pass the current tier;
+    /// a click sets [`MenuOutcome::cycle_shadows`]. Games that call `local_menu_with_audio` keep exactly
+    /// the Settings screen they had.
+    pub fn local_menu_with_options(
+        &mut self,
+        title: &str,
+        controls: &[&str],
+        audio: AudioMenu,
+        shadows: super::devkit::ShadowQuality,
+    ) -> MenuOutcome {
+        self.menu_with_status_and_audio(
+            title,
+            controls,
+            "MENU  /  LOCAL SESSION PAUSED",
+            audio,
+            Some(shadows),
+        )
     }
     fn menu_with_status_and_audio(
         &mut self,
@@ -304,6 +333,7 @@ impl GameShell {
         controls: &[&str],
         status: &str,
         audio: AudioMenu,
+        shadows: Option<super::devkit::ShadowQuality>,
     ) -> MenuOutcome {
         let mut outcome = MenuOutcome::default();
         if !self.paused {
@@ -315,11 +345,17 @@ impl GameShell {
         draw_rectangle(0., 0., w, h, Color::from_rgba(8, 18, 26, 130));
         let scale = (w / 700.).min(h / 520.).min(1.0);
         let pw = 420. * scale;
+        let extra_row = if self.settings_screen && shadows.is_some() {
+            54.
+        } else {
+            0.
+        };
         let ph = (if self.controls || self.settings_screen {
             360.
         } else {
             376.
-        }) * scale;
+        } + extra_row)
+            * scale;
         let x = (w - pw) * 0.5;
         let y = (h - ph) * 0.5;
         let ink = Color::from_rgba(24, 43, 53, 255);
@@ -374,6 +410,14 @@ impl GameShell {
                 self.suppress = true;
             }
             next += 1.;
+            if let Some(quality) = shadows {
+                let label = format!("Shadows: {}", quality.label());
+                if self.button(&label, x + 24. * scale, row(next), bw, bh, false) {
+                    outcome.cycle_shadows = true;
+                    self.suppress = true;
+                }
+                next += 1.;
+            }
             if audio.has_music {
                 let (dx, dy) = (x + 24. * scale, row(next));
                 if self.button("Save music (.wav)", dx, dy, bw, bh, false) {

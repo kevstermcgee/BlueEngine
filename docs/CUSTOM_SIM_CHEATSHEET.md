@@ -40,7 +40,9 @@ triggers: [left, right], down(Button), pressed(Button) }`. `gilrs` buttons are p
 `shell.paused`, `shell.playing()` (mouse captured: first person), `shell.accepting_input()` (menu closed: any game),
 `shell.local_menu(title, &controls)` (returns true to quit), or `shell.local_menu_with_audio(title, &controls,
 AudioMenu { music_on, sfx_on, has_music })` for the same menu with a Settings screen (music/sound toggles, a
-"Save music" download) built in; returns `MenuOutcome { quit, toggle_music, toggle_sfx, download_music }`.
+"Save music" download) built in; returns `MenuOutcome { quit, toggle_music, toggle_sfx, download_music, cycle_shadows }`.
+`shell.local_menu_with_options(title, &controls, audio_menu, shadows.quality())` is the same with a "Shadows: Off /
+Simple / Full" selector (only games that call it get the row).
 
 ## Yaw and space (`devkit::path`)
 
@@ -89,10 +91,22 @@ and `lint::strip_folds(&quads)` for a strip of quads. Tolerances: `LintConfig` (
 `lint::depth_resolution(near, farthest_view_distance)` for a strict check). Build your templates in a test and lint each.
 `view.camera_checked(near, far)` is `camera` plus a one-time stderr warning when `far / near` > 3000 (a 0.1 / 700 camera makes
 distant coplanar-ish surfaces fight; see `docs/AI_DEV_FEEDBACK.md`). `fx_alpha` and `fx_add` are never depth-tested (miniquad
-ignores `depth_test` when `depth_write` is false): translucent things show through walls.
+ignores `depth_test` when `depth_write` is false): translucent things show through walls; use `Materials::decal` for flat
+ground marks and blobs.
+
+Shadows (`kit::Shadows`, ADR 0036; `Off`/`Simple`/`Full` = `devkit::ShadowQuality`, default `Simple`, stored as
+`Settings.shadow_quality`, flag `--shadows off|simple|full`): per game, once `let mut shadows = Shadows::new(quality)`
+(optionally `.with_range(half_extent_m, depth_m)`, `.with_resolution(n)`, `.set_ground(|x, z| y)`); per frame, after filling
+your batches: `shadows.begin_frame(&look, focus)`, `shadows.blob(feet_position, radius)` per moving thing (Simple),
+`shadows.cast(|| { statics.draw(); actors.draw(); })` (Full; the same batches, no fx or viewmodel), then after
+`set_camera` + `set_scene`: `shadows.apply(&materials)`, static world, `shadows.draw_decals(&materials)`, then
+`gl_use_material(&materials.world)` and the actors. Everything is a no-op at `Off`. Menu: `local_menu_with_options` and
+`outcome.cycle_shadows` -> `shadows.set_quality(shadows.quality().next())`. `Batch::blob(center, radius, strength)` +
+`Materials::decal` is the depth-tested translucent path for any flat ground mark (tyre marks, scorch); `fx_alpha`
+never is. Runnable reference: `examples/shadow_demo.rs`.
 
 Local illumination: `PointLight::new(position, radius, rgb, intensity)?`; call
-`materials.set_point_lights(&lights)?` after each `set_scene`. Maximum four unshadowed lights;
+`materials.set_point_lights(&lights)?` after each `set_scene`. Maximum four lights, never shadowed (only the key light is);
 `set_scene` clears them so existing games keep their appearance.
 
 Mirrors: `MirrorPlane::new(center, right, up, size)?` (`right × up` faces the viewer),

@@ -4,6 +4,7 @@
 //!   --capture DIR [--frames 30,90] [--exit-after N]   save screenshots (DIR must be new), then exit
 //!   --script "fwd:0-200,look:0.01@0-100,jump@60"      drive the human input path from a cue script
 //!   --seed N   --size WxH   --mute   --perf           reproducible run, window size, silence, frame times
+//!   --shadows off|simple|full                          shadow tier for this run (Esc > Settings changes and remembers it)
 //!   --load SLOT_OR_FILE   --save-dir DIR                resume a saved game / where F5 saves (default: next to the exe)
 //! F5 saves the run to the `quick` slot and F9 loads it. `--script` accepts `save@N` and `load@N` cues too.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -14,12 +15,12 @@ use std::sync::{Arc, OnceLock};
 use vesper3d::viewer::{
     devkit::{
         beside_exe, downloads_dir, flag_value, has_flag, parse_size, sanitize_filename, synth,
-        unique_path, Juice, Lifecycle, Notice, Settings,
+        unique_path, Juice, Lifecycle, Notice, Settings, ShadowQuality,
     },
     game_client::{self, AudioMenu, GameShell},
     game_input::ClientInput,
     identity::Identity,
-    kit::{self, hud, Batch, Fx, Look, Materials, Rendered, SoundBank, Template, Tint, View},
+    kit::{self, hud, Batch, Fx, Look, Materials, Rendered, Shadows, SoundBank, Template, Tint, View},
 };
 use {{lib}}::{Event, Input, Sim, PLATFORM_HALF};
 
@@ -236,6 +237,17 @@ async fn main() {
         move || render_audio(music_wav, &title, &tagline)
     })
     .await;
+    // Shadows: Off, Simple (contact blobs, the default) or Full (a shadow map). `--shadows` overrides the
+    // remembered setting for this run only. Delete this block, the `shadows.` lines in the frame and the
+    // `cycle_shadows` handling if the game wants no shadows.
+    let quality = match ShadowQuality::from_flag(&args) {
+        Ok(flag) => flag.unwrap_or(settings.shadow_quality),
+        Err(message) => {
+            eprintln!("{message}");
+            std::process::exit(2);
+        }
+    };
+    let mut shadows = Shadows::new(quality);
     let mut shell = GameShell::new();
     let mut input = ClientInput::new();
     let (mut fx, mut juice) = (Fx::new(seed), Juice::default());
@@ -317,8 +329,25 @@ async fn main() {
         view.roll = roll;
         view.fov = (72. + juice.fov_kick).to_radians();
 
-        // 4. Draw: sky, world, translucent effects, additive effects, then the 2D layer.
+        // 4. Draw: the dynamic geometry is filled first (CPU only), so the shadow pass can reuse it; then sky,
+        // world, blobs, translucent effects, additive effects, then the 2D layer.
         clear_background(look.clear_color());
+        world.clear();
+        alpha.clear();
+        add.clear();
+        shadows.begin_frame(&look, eye);
+        for (i, orb) in sim.orbs.iter().enumerate() {
+            let bob = 0.08 * (time * 3. + i as f32 * 2.).sin();
+            let at = vec3(orb.0, orb.1 + bob, orb.2);
+            world.add(&scene.orb, Mat4::from_translation(at), Tint::NONE);
+            shadows.blob(vec3(orb.0, 0., orb.2), 0.45);
+        }
+        for bumper in &sim.bumpers {
+            world.add(&scene.bumper, Mat4::from_translation(vec3(bumper.pos.0, bumper.pos.1, bumper.pos.2)), Tint::NONE);
+            shadows.blob(vec3(bumper.pos.0, 0., bumper.pos.2), 0.7);
+        }
+        fx.draw(&mut add, &mut alpha, view.eye, view.right(), view.up());
+        shadows.cast(|| world.draw()); // Full only: the same meshes, seen from the sun
         set_camera(&view.sky_camera());
         gl_use_material(&materials.sky);
         for mesh in &scene.sky {
@@ -326,19 +355,10 @@ async fn main() {
         }
         set_camera(&view.camera(0.05, 400.));
         materials.set_scene(&look, view.eye, time, 0.5 + 0.5 * (time * 3.).sin());
-        world.clear();
-        alpha.clear();
-        add.clear();
-        for (i, orb) in sim.orbs.iter().enumerate() {
-            let bob = 0.08 * (time * 3. + i as f32 * 2.).sin();
-            let at = vec3(orb.0, orb.1 + bob, orb.2);
-            world.add(&scene.orb, Mat4::from_translation(at), Tint::NONE);
-        }
-        for bumper in &sim.bumpers {
-            world.add(&scene.bumper, Mat4::from_translation(vec3(bumper.pos.0, bumper.pos.1, bumper.pos.2)), Tint::NONE);
-        }
-        fx.draw(&mut add, &mut alpha, view.eye, view.right(), view.up());
+        shadows.apply(&materials);
         materials.draw_static(&scene.platform);
+        shadows.draw_decals(&materials); // after the static world, before the actors
+        gl_use_material(&materials.world);
         world.draw();
         gl_use_material(&materials.fx_alpha);
         alpha.draw();
@@ -364,7 +384,7 @@ async fn main() {
             sfx_on: settings.sfx_on,
             has_music: HAS_MUSIC,
         };
-        let outcome = shell.local_menu_with_audio(&identity.title, &controls, audio_menu);
+        let outcome = shell.local_menu_with_options(&identity.title, &controls, audio_menu, shadows.quality());
         if outcome.toggle_music {
             settings.toggle_music();
             sounds.music_volume = settings.music_level();
@@ -373,6 +393,11 @@ async fn main() {
         if outcome.toggle_sfx {
             settings.toggle_sfx();
             sounds.sfx_volume = settings.sfx_level();
+            settings.store(&settings_path);
+        }
+        if outcome.cycle_shadows {
+            shadows.set_quality(shadows.quality().next());
+            settings.shadow_quality = shadows.quality();
             settings.store(&settings_path);
         }
         if outcome.download_music {

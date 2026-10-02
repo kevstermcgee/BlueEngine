@@ -11,7 +11,8 @@
 //! | [`Template`], [`Batch`], [`Tint`] | build small meshes once, pack hundreds per frame into a few draw calls |
 //! | [`shape`] | lofts, sweeps, rounded boxes, capsules, mirrored halves, smooth normals and fold-proof road strips for `Template` |
 //! | [`lint`] | geometry-defect lint: z-fighting coplanar surfaces, wrong winding, zero-area triangles, folded strips; depth-resolution maths |
-//! | [`Look`], [`Materials`] | lit + fogged + glowing world material, alpha and additive effect materials, a sky |
+//! | [`Look`], [`Materials`] | lit + fogged + glowing world material, a depth-tested `decal`, alpha and additive effect materials, a sky |
+//! | [`Shadows`], [`ShadowMap`], [`ShadowQuality`] | the shadow setting and its helper: contact blobs (`Simple`) or one directional shadow map (`Full`); see `docs/adr/0036-shadows-for-kit-games.md` |
 //! | [`PlanarMirror`], [`MirrorPlane`] | depth-backed off-axis planar reflections |
 //! | [`PointLight`] | up to four finite-radius local lights per pass |
 //! | [`Fx`] | particles, rings, fireballs, beams, popups, banners |
@@ -31,14 +32,17 @@ pub mod hud;
 pub mod lint;
 pub mod look;
 pub mod mirror;
+pub mod shadow;
 pub mod shape;
 pub mod view;
 
+pub use crate::viewer::devkit::ShadowQuality;
 pub use audio::{Rendered, SoundBank};
 pub use batch::{Batch, Rgb, Template, Tint, Vert, MAX_MESH_INDICES, MAX_MESH_VERTICES};
 pub use fx::{Banner, Fx, Particle, ParticleKind, Popup};
 pub use lint::{Defect, LintConfig};
 pub use look::{Look, Materials, PointLight, MAX_POINT_LIGHTS};
 pub use mirror::{MirrorCamera, MirrorPlane, PlanarMirror};
+pub use shadow::{ShadowCamera, ShadowMap, Shadows};
 pub use shape::{Quad, Ring, Section, StripOpts, Sweep};
 pub use view::View;
