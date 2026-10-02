@@ -57,7 +57,7 @@ service) and the data in `docs/learning/`:
   contract is unchanged. Measured cost when it was added: mean packet 1074 to 1103 tokens (+2.7%).
 - `FEATURES.json` gains a top-level `modules` map: the first sentence of each indexed file's own module docs
   (`learn.py modules --write`). `context` puts the file whose summary or name matches the task first in
-  `read_first` (the curated list is unchanged when nothing matches), counts the summaries as searchable text of
+  `read_first` (the curated list is unchanged when nothing matches; a word only one or two files mention can select a file on its own), counts the summaries as searchable text of
   the feature that owns the file, and weights query words by rarity across the index. An umbrella feature such as
   `custom_simulation` no longer hides the module a task needs.
 
@@ -97,22 +97,29 @@ upgrade plan` tell the same story.
 
 ## Results when this was written
 
-Benchmark: 39 realistic tasks written before any index change; recall at k=3 (features expected among the top
-three, expected paths anywhere in the packet), packet size in tokens (characters / 4).
+Benchmark: 39 realistic tasks written before any index change (41 now: two more check that the loop itself is
+discoverable); recall at k=3 (features expected among the top three, expected paths anywhere in the packet),
+packet size in tokens (characters / 4).
 
 | Run | Feature recall | Path recall | Top-1 expected | Tasks fully met | Mean packet |
 |---|---|---|---|---|---|
-| Baseline | 0.86 | 0.27 | 0.77 | 9 / 39 | 1074 |
-| Ledger hint added | 0.86 | 0.32 | 0.77 | 11 / 39 | 1103 |
-| After index and ranking work | 1.00 | 1.00 | 0.63 | 39 / 39 | 1022 |
+| Baseline (39 tasks) | 0.86 | 0.27 | 0.77 | 9 / 39 | 1074 |
+| Ledger hint added (39) | 0.86 | 0.32 | 0.77 | 11 / 39 | 1103 |
+| Final (41) | 1.00 | 0.84 | 0.92 | 33 / 41 | 1092 |
 
-The in-sample result is not the evidence of generalisation, so three further sets of 12 tasks were written later
-(`tasks_heldout*.jsonl`). Against the engine as of the hint commit, then at the end: set 1 (feature / path /
-tasks met) 0.75 / 0.58 / 7 to 1.00 / 0.83 / 10; set 2 0.82 / 0.17 / 2 to 1.00 / 0.92 / 11; set 3 0.75 / 0.25 / 3 to
-1.00 / 0.92 / 11. Sets 1 and 2 informed the routing design and set 3 informed one ranking weight, so they are
-partly in-sample too; right after the file routing and before that weight, set 3 (written after the design) scored
-0.75 / 0.67 / 8. Top-1 fell because specialised records now outrank the umbrella feature a task named: the first
-result is usually a correct module, but the metric only credits the named feature.
+Three further sets of 12 tasks were written later (`tasks_heldout*.jsonl`) to check generalisation. Engine as of the
+hint commit, then final (feature recall / path recall / tasks fully met): set 1 0.75 / 0.58 / 7 to 1.00 / 0.83 / 10;
+set 2 0.82 / 0.17 / 2 to 1.00 / 0.92 / 11; set 3 0.75 / 0.25 / 3 to 0.92 / 0.83 / 10. Sets 1 and 2 informed the routing
+design and set 3 informed one ranking weight, so they are partly in-sample; the honest summary is that file
+routing roughly tripled the share of tasks whose packet names the right file, and that about one task in six
+still misses (typically a module whose own docs do not use the words the task uses).
+
+A first attempt added sixteen small feature records for the missed capabilities and scored 1.00 / 1.00 in sample,
+but `tests/capabilities.rs` caps `be2-tools describe` (which lists every feature id) at 6,000 bytes and the records
+took it to 6,171; thin records also outranked the umbrella features the tasks named. They were replaced by the
+per-file routing above plus two records (`dev_tools`, `learning_loop`). The cap leaves about 60 bytes of headroom:
+the next feature id that does not fit should make `describe` list ids more compactly rather than force the index to
+stay coarse.
 
 ## Consequences
 
