@@ -8,13 +8,14 @@ the loop (policy: [ADR 0038](../adr/0038-engine-learns-from-development.md)). Ev
 |---|---|---|
 | `ledger.jsonl` | one line per friction item: what it cost, what was done instead, whether the engine fixed it | yes |
 | `tasks.jsonl` | the discovery benchmark: realistic task prompts with the features and files `be2.py context` should surface | yes |
+| `tasks_heldout.jsonl`, `tasks_heldout2.jsonl`, `tasks_heldout3.jsonl` | further task sets written after index changes, to check the fixes generalise (`learn.py eval --tasks FILE`) | yes |
 | `eval_runs.jsonl` | append-only results of `learn.py eval`, one row per task per run plus one summary row per run | yes |
 | `eval_floor.json` | recall floor that `tools/test_learn.py` enforces so discovery cannot silently get worse | yes |
 | `dupes.json`, `dupes.md` | last `learn.py dupes --save`: copied code across the games (paths, names, counts only) | yes |
 | `REPORT.md` | one page generated from all of the above | yes |
 | `../../.learning/` | `learn.py sessions` output derived from private session logs | **never** (git-ignored) |
 
-## The five commands
+## The commands
 
 ```sh
 python3 tools/learn.py record --game spooky-kart --area networking --tokens 50000 \
@@ -23,6 +24,7 @@ python3 tools/learn.py record --game spooky-kart --area networking --tokens 5000
 python3 tools/learn.py dupes --save        # what did the games copy? (cross-checked against the engine)
 python3 tools/learn.py eval                # does `be2.py context` find the right tool? (appends to eval_runs.jsonl)
 python3 tools/learn.py report              # rewrite REPORT.md (and .learning/REPORT.md if local data exists)
+python3 tools/learn.py modules --write     # refresh the per-file summaries in tools/FEATURES.json that context routes by
 python3 tools/learn.py sessions            # where did the effort go? local only, writes .learning/
 python3 tools/learn.py scan PATH...        # leak scan: counts of secret-like values in generated files
 ```
