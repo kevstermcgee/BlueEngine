@@ -224,11 +224,16 @@ pub async fn run_game_with_options(
         if playback_done || (options.capture.is_some() && playback.is_none() && frame >= 30) {
             shell.paused = true;
         }
+        let match_over = session.world().game.as_ref().is_some_and(|g| g.state().finished());
         let mut intent = GameInput {
             movement: input.movement(&shell),
             look: input.look_delta(&shell),
+            // E / X interact and replay; R is an extra replay hotkey once the match has ended
+            // (the engine's one restart convention, see ClientInput::restart_requested).
             interact: shell.playing()
-                && (input.pressed(KeyCode::E) || input.gamepad().pressed(Button::West)),
+                && (input.pressed(KeyCode::E)
+                    || input.gamepad().pressed(Button::West)
+                    || (match_over && input.pressed(KeyCode::R))),
         };
         if let Some(frames) = &playback {
             intent = frames.get(frame).copied().unwrap_or_default();
@@ -253,9 +258,9 @@ pub async fn run_game_with_options(
         let status = if !session.connected() {
             "Connecting...".to_owned()
         } else if game.state().completed {
-            "Objective complete! E / X to play again".to_owned()
+            "Objective complete! E / X / R to play again".to_owned()
         } else if game.state().failed {
-            "Objective failed! E / X to try again".to_owned()
+            "Objective failed! E / X / R to try again".to_owned()
         } else {
             game.document()
                 .counters
@@ -293,7 +298,7 @@ pub async fn run_game_with_options(
             "Move: WASD / arrows / left stick",
             "Look: mouse / right stick",
             "Jump: Space / A; crouch: Ctrl / B",
-            "Interact / carry / replay: E / X",
+            "Interact / carry / replay: E / X (R replays)",
             "Camera: Q / RS; fullscreen: F / F11",
             "Save / load: F5 / F9 (local games)",
             "Menu: Esc / Start; confirm: Enter / A",
