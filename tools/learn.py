@@ -86,7 +86,7 @@ NAME_RE = re.compile(r'^[A-Za-z0-9_:.\-]{1,80}$')
 
 def safe_name(value, default='other'):
     """A short enum-like name (tool, record type, model, program) or `default`; never free text."""
-    if isinstance(value, str) and NAME_RE.match(value) and secret_like(value, strict=True) is None:
+    if isinstance(value, str) and NAME_RE.fullmatch(value) and secret_like(value, strict=True) is None:
         return value
     return default
 
@@ -689,7 +689,7 @@ def scan_value(value, where, strict, found, depth=0):
             label = secret_like(key, strict=False) if isinstance(key, str) else None
             if label and label != 'credential-word':
                 found.append((label, where + '/<key>'))
-            scan_value(item, where + '/' + (key if isinstance(key, str) and NAME_RE.match(key) else '<key>'),
+            scan_value(item, where + '/' + (key if isinstance(key, str) and NAME_RE.fullmatch(key) else '<key>'),
                        strict, found, depth + 1)
     elif isinstance(value, list):
         for index, item in enumerate(value):
@@ -1148,8 +1148,9 @@ GAME_RE = re.compile(r'^[A-Za-z0-9][A-Za-z0-9 ._/\-]{0,59}$')
 REF_RE = re.compile(r'^[A-Za-z0-9 ._#:/,+\-]{1,80}$')
 WORD_LIST_RE = re.compile(r'^[a-z0-9][a-z0-9 _.\-]{0,39}$')
 HASH_TOKEN_RE = re.compile(r'\b[0-9a-f]{7,40}\b')
-ENTRY_FIELDS = ('id', 'date', 'game', 'area', 'tokens', 'note', 'workaround', 'duplicated', 'trap', 'status',
+ENTRY_FIELDS = ('id', 'date', 'game', 'area', 'tokens', 'note', 'workaround', 'duplicated', 'trap', 'hint', 'status',
                 'ref', 'keywords', 'features')
+MAX_HINT = 110
 
 
 def check_text(field, value, errors, required=False):
@@ -1180,7 +1181,7 @@ def validate_entry(entry):
     if unknown:
         errors.append('unknown fields: ' + ', '.join(safe_name(name, '<odd>') for name in unknown))
     game = entry.get('game')
-    if not isinstance(game, str) or not GAME_RE.match(game) or secret_like(game):
+    if not isinstance(game, str) or not GAME_RE.fullmatch(game) or secret_like(game):
         errors.append('game must be a short name like spooky-kart or engine')
     if entry.get('area') not in AREAS:
         errors.append('area must be one of: ' + ', '.join(AREAS))
@@ -1188,9 +1189,11 @@ def validate_entry(entry):
     if not isinstance(tokens, int) or isinstance(tokens, bool) or tokens < 0:
         errors.append('tokens must be a whole number >= 0 (0 = not measured)')
     check_text('note', entry.get('note'), errors, required=True)
-    for field in ('workaround', 'trap', 'ref'):
+    for field in ('workaround', 'trap', 'hint', 'ref'):
         check_text(field, entry.get(field), errors)
-    if entry.get('ref') and not REF_RE.match(entry['ref']):
+    if isinstance(entry.get('hint'), str) and len(entry['hint']) > MAX_HINT:
+        errors.append(f"hint is {len(entry['hint'])} characters; the context packet shows it as one short line, keep it under {MAX_HINT}")
+    if entry.get('ref') and not REF_RE.fullmatch(entry['ref']):
         errors.append('ref may only hold a commit, ADR or short reference (letters, digits, space and . _ # : / , + -)')
     if entry.get('status') not in STATUSES:
         errors.append('status must be one of: ' + ', '.join(STATUSES))
@@ -1203,7 +1206,7 @@ def validate_entry(entry):
     for field in ('keywords', 'features'):
         items = entry.get(field, [])
         if not isinstance(items, list) or len(items) > MAX_WORDS or \
-                any(not isinstance(item, str) or not WORD_LIST_RE.match(item) or secret_like(item) for item in items):
+                any(not isinstance(item, str) or not WORD_LIST_RE.fullmatch(item) or secret_like(item) for item in items):
             errors.append(f'{field} must be a list of at most {MAX_WORDS} short lowercase words or feature ids')
     return errors
 
@@ -1264,6 +1267,8 @@ def cmd_record(args):
         entry['workaround'] = args.workaround
     if args.trap:
         entry['trap'] = args.trap
+    if args.hint:
+        entry['hint'] = args.hint
     if args.duplicated:
         entry['duplicated'] = split_list(args.duplicated)
     if args.ref:
@@ -1451,7 +1456,8 @@ def cmd_eval(args):
     else:
         print(format_eval(aggregate, rows, tasks, args.k, commit + ('+dirty' if dirty else '')))
         if args.record:
-            print(f'recorded {len(rows) + 1} rows to {RUNS.relative_to(ROOT)}')
+            shown = RUNS.relative_to(ROOT) if RUNS.is_relative_to(ROOT) else RUNS
+            print(f'recorded {len(rows) + 1} rows to {shown}')
     return 0
 
 
@@ -1641,6 +1647,7 @@ def build_parser():
     c.add_argument('--workaround', help='what you did instead')
     c.add_argument('--duplicated', help='comma-separated paths of code you had to copy or write that others will too')
     c.add_argument('--trap', help='the silent failure to warn the next agent about')
+    c.add_argument('--hint', help=f'one line (under {MAX_HINT} chars) that be2.py context shows: the trap, or what already solves it')
     c.add_argument('--status', choices=STATUSES, default='open')
     c.add_argument('--ref', help='commit or ADR that fixed it (required when promoted)')
     c.add_argument('--keywords', help='comma-separated lowercase words a future task would use (helps retrieval)')

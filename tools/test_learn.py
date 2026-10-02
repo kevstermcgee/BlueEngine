@@ -441,3 +441,324 @@ class DupesTests(unittest.TestCase):
         cluster = next(c for c in result['clusters'] if any(e['path'].endswith('/tumble-maze/src/physics.rs') for e in c['examples']))
         self.assertEqual((cluster['kind'], cluster['copies']), ('identical', 3))
         self.assertGreaterEqual(cluster['lines'], 150)
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# ledger and record
+# ---------------------------------------------------------------------------------------------------------------
+def entry(**overrides):
+    base = {'game': 'spooky-kart', 'area': 'networking', 'tokens': 1200, 'note': 'Lobby stalled under packet loss.',
+            'status': 'open'}
+    base.update(overrides)
+    return base
+
+
+class LedgerTests(unittest.TestCase):
+    def test_a_good_entry_validates(self):
+        self.assertEqual(learn.validate_entry(entry()), [])
+        full = entry(workaround='use X', trap='silent', status='promoted', ref='7ca1536', duplicated=['~/G/src/a.rs'],
+                     keywords=['lobby', 'ready'], features=['netplay'], hint='short hint')
+        self.assertEqual(learn.validate_entry(full), [])
+
+    def test_validation_rejects_bad_fields_with_clear_messages(self):
+        cases = [
+            (entry(area='nonsense'), 'area must be one of'),
+            (entry(status='done'), 'status must be one of'),
+            (entry(tokens=-1), 'tokens must be'),
+            (entry(tokens='5'), 'tokens must be'),
+            (entry(note=''), 'note is required'),
+            (entry(note='x' * 401), 'under 400'),
+            (entry(note='two\nlines'), 'one line'),
+            (entry(status='promoted'), 'needs --ref'),
+            (entry(game='bad/../name\n'), 'game must be'),
+            (entry(hint='h' * 111), 'hint is 111'),
+            (entry(duplicated=['a'] * 13), 'at most 12'),
+            (entry(keywords=['Not Lowercase!']), 'keywords must be'),
+            (entry(ref='bad(ref)'), 'ref may only hold'),
+            (entry(extra='x'), 'unknown fields'),
+        ]
+        for bad, message in cases:
+            errors = learn.validate_entry(bad)
+            self.assertTrue(any(message in e for e in errors), (message, errors))
+
+    def test_secret_like_text_is_rejected_without_echoing_it(self):
+        for field in ('note', 'workaround', 'trap', 'hint'):
+            for secret in (FAKE_UUID, FAKE_KEY, FAKE_HEX, 'password is ' + FAKE_PASSWORD, 'api_key=abcdef123456',
+                           'Bearer abc.def'):
+                errors = learn.validate_entry(entry(**{field: 'the server said ' + secret}))
+                self.assertTrue(any('looks like a secret' in e for e in errors), (field, secret))
+                self.assertFalse(any(secret in e for e in errors))
+        self.assertTrue(learn.validate_entry(entry(duplicated=['~/x/' + FAKE_UUID + '.rs'])))
+        self.assertEqual(learn.validate_entry(entry(status='promoted', ref='7ca1536, ADR 0035 and 1e2d2bc')), [])
+        self.assertTrue(learn.validate_entry(entry(note='fixed in ' + 'a' * 40 + ' ok')), 'a bare 40-hex sha in prose is refused')
+
+    def test_record_appends_assigns_ids_and_refuses_duplicates_and_secrets(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ledger = str(Path(tmp) / 'ledger.jsonl')
+            code, out, err = run_cli('record', '--game', 'g', '--area', 'ai', '--tokens', '10', '--note', 'one',
+                                     '--ledger', ledger)
+            self.assertEqual(code, 0, err)
+            self.assertIn('L-001', out)
+            code, out, err = run_cli('record', '--game', 'g', '--area', 'ai', '--tokens', '10', '--note', 'two',
+                                     '--status', 'promoted', '--ref', 'ADR 0036', '--keywords', 'Foo, bar',
+                                     '--duplicated', '~/a.rs,~/b.rs', '--ledger', ledger, '--json')
+            self.assertEqual(code, 0, err)
+            stored = json.loads(out)
+            self.assertEqual((stored['id'], stored['keywords'], stored['duplicated']), ('L-002', ['foo', 'bar'], ['~/a.rs', '~/b.rs']))
+            self.assertEqual(list(stored)[:2], ['id', 'date'])
+            code, _, err = run_cli('record', '--game', 'g', '--area', 'ai', '--tokens', '10', '--note', 'two', '--ledger', ledger)
+            self.assertEqual(code, 2)
+            self.assertIn('already recorded as L-002', err)
+            code, _, err = run_cli('record', '--game', 'g', '--area', 'ai', '--tokens', '1', '--ledger', ledger,
+                                   '--note', 'found token ' + FAKE_KEY)
+            self.assertEqual(code, 2)
+            self.assertIn('looks like a secret', err)
+            self.assertNotIn(FAKE_KEY, err)
+            self.assertEqual(len(Path(ledger).read_text().splitlines()), 2, 'a rejected entry writes nothing')
+            code, out, _ = run_cli('record', '--game', 'g', '--area', 'ai', '--tokens', '1', '--note', 'dry', '--dry-run', '--ledger', ledger)
+            self.assertEqual(code, 0)
+            self.assertEqual(len(Path(ledger).read_text().splitlines()), 2)
+
+    def test_help_for_every_subcommand(self):
+        for command in ('sessions', 'dupes', 'eval', 'report', 'record', 'scan'):
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), self.assertRaises(SystemExit) as stop:
+                learn.main([command, '--help'])
+            self.assertEqual(stop.exception.code, 0)
+            self.assertIn('usage: learn.py ' + command, out.getvalue())
+
+    def test_committed_ledger_is_valid_unique_and_secret_free(self):
+        entries, bad = learn.load_ledger(ROOT / 'docs' / 'learning' / 'ledger.jsonl')
+        self.assertEqual(bad, 0)
+        self.assertGreaterEqual(len(entries), 40)
+        ids = [e['id'] for e in entries]
+        self.assertEqual(len(ids), len(set(ids)))
+        for item in entries:
+            self.assertEqual(learn.validate_entry({k: v for k, v in item.items() if k not in ('id', 'date')}), [], item['id'])
+        statuses = {e['status'] for e in entries}
+        self.assertTrue({'open', 'promoted'} <= statuses)
+        # The seed must carry the lessons the plan names, with their references.
+        refs = {e['ref'] for e in entries if e.get('ref')}
+        for needed in ('1e2d2bc', '7ca1536', '77f4d80', 'ADR 0036'):
+            self.assertTrue(any(needed in ref for ref in refs), needed)
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# eval
+# ---------------------------------------------------------------------------------------------------------------
+def packet(*ids, extra=''):
+    return json.dumps({'matches': [{'id': i, 'read_first': [f'src/{i}.rs']} for i in ids], 'extra': extra},
+                      separators=(',', ':'))
+
+
+class EvalTests(unittest.TestCase):
+    def test_scoring_recall_top1_paths_and_tokens(self):
+        task = {'id': 't', 'prompt': 'p', 'expect_features': ['a', 'b'], 'expect_paths': ['src/a.rs', 'docs/X.md']}
+        row = learn.score_task(task, packet('a', 'c', 'd', extra='see docs/X.md'), 3)
+        self.assertEqual((row['feature_recall'], row['path_recall'], row['top1']), (0.5, 1.0, True))
+        self.assertEqual(row['missed_features'], ['b'])
+        self.assertEqual(row['tokens'], -(-len(packet('a', 'c', 'd', extra='see docs/X.md')) // 4))
+        self.assertEqual(learn.score_task(task, packet('c', 'a'), 1)['feature_recall'], 0.0, 'only the top k count')
+        self.assertFalse(learn.score_task(task, packet('c', 'a', 'b'), 3)['top1'])
+        self.assertIsNone(learn.score_task({'id': 't', 'prompt': 'p', 'expect_paths': ['src/a.rs']}, packet('a'), 3)['feature_recall'])
+        failed = learn.score_task(task, '', 3, error='boom')
+        self.assertEqual((failed['feature_recall'], failed['error']), (0.0, 'boom'))
+        self.assertEqual(learn.score_task(task, 'not json', 3)['error'], 'unparseable packet')
+
+    def test_run_eval_aggregates_with_an_injected_runner(self):
+        tasks = [{'id': 'one', 'prompt': 'x', 'expect_features': ['a'], 'expect_paths': ['src/a.rs']},
+                 {'id': 'two', 'prompt': 'y', 'expect_features': ['b'], 'expect_paths': []},
+                 {'id': 'three', 'prompt': 'z', 'expect_features': ['c'], 'expect_paths': []}]
+        outputs = {'x': (packet('a'), None), 'y': (packet('z'), None), 'z': ('', 'The query must be 1..100 characters')}
+        rows, total = learn.run_eval(tasks, 3, runner=lambda prompt, k: outputs[prompt])
+        self.assertEqual((total['tasks'], total['full_hits'], total['errors']), (3, 1, 1))
+        self.assertAlmostEqual(total['feature_recall'], round(1 / 3, 3))
+        self.assertEqual(total['path_recall'], 1.0)
+        self.assertEqual(total['top1_rate'], round(1 / 3, 3))
+        text = learn.format_eval(total, rows, tasks, 3, 'abc1234')
+        self.assertIn('misses:', text)
+        self.assertIn('missing features: b (got z)', text)
+        self.assertIn('error: The query must be', text)
+
+    def test_cli_eval_records_rows_and_sets_a_floor(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            tasks = Path(tmp) / 'tasks.jsonl'
+            tasks.write_text(json.dumps({'id': 'one', 'prompt': 'x', 'expect_features': ['a'], 'expect_paths': []}) + '\n')
+            with patch.object(learn, 'subprocess_context', lambda prompt, k: (packet('a'), None)), \
+                    patch.object(learn, 'RUNS', Path(tmp) / 'runs.jsonl'), patch.object(learn, 'FLOOR', Path(tmp) / 'floor.json'):
+                code, out, err = run_cli('eval', '--tasks', str(tasks), '--note', 'baseline', '--set-floor')
+                self.assertEqual(code, 0, err)
+                run_cli('eval', '--tasks', str(tasks), '--no-record')
+                rows = [json.loads(line) for line in (Path(tmp) / 'runs.jsonl').read_text().splitlines()]
+                self.assertEqual([r['kind'] for r in rows], ['task', 'run'])
+                self.assertEqual(rows[1]['note'], 'baseline')
+                self.assertEqual((rows[1]['feature_recall'], rows[1]['k']), (1.0, 3))
+                self.assertIn('commit', rows[1])
+                self.assertEqual(json.loads((Path(tmp) / 'floor.json').read_text())['feature_recall'], 1.0)
+                self.assertEqual(run_cli('eval', '--tasks', str(tasks), '-k', '9')[0], 2)
+
+    def test_task_file_validation(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 't.jsonl'
+            for text, message in [('{bad', 'not valid JSON'), ('{"id": "a"}', 'prompt must be'),
+                                  ('{"id": "a", "prompt": "p"}', 'expect_features or expect_paths'),
+                                  ('{"id": "a", "prompt": "p", "expect_paths": ["x"]}\n{"id": "a", "prompt": "q", "expect_paths": ["x"]}', 'duplicate id'),
+                                  ('{"id": "a", "prompt": "p", "expect_features": "netplay"}', 'must be a list')]:
+                path.write_text(text)
+                with self.assertRaisesRegex(learn.LearnError, message):
+                    learn.load_tasks(path)
+
+    def test_committed_tasks_have_real_expectations(self):
+        tasks = learn.load_tasks(ROOT / 'docs' / 'learning' / 'tasks.jsonl')
+        self.assertGreaterEqual(len(tasks), 25)
+        features = workflow.index(ROOT)
+        for task in tasks:
+            self.assertLessEqual(len(task['prompt']), 100, task['id'])
+            for feature in task.get('expect_features', []):
+                self.assertIn(feature, features, task['id'])
+            for path in task.get('expect_paths', []):
+                self.assertTrue((ROOT / path).exists(), f"{task['id']}: {path}")
+
+    def test_discovery_does_not_regress_below_the_recorded_floor(self):
+        floor_path = ROOT / 'docs' / 'learning' / 'eval_floor.json'
+        if not floor_path.is_file():
+            self.skipTest('no floor recorded yet')
+        floor = json.loads(floor_path.read_text())
+        tasks = learn.load_tasks(ROOT / 'docs' / 'learning' / 'tasks.jsonl')
+
+        def in_process(prompt, k):
+            try:
+                return json.dumps(workflow.context(ROOT, prompt, k), separators=(',', ':')) + '\n', None
+            except ValueError as error:
+                return '', str(error)
+        _, total = learn.run_eval(tasks, floor['k'], runner=in_process)
+        self.assertGreaterEqual(total['feature_recall'], floor['feature_recall'], 'feature discovery regressed')
+        self.assertGreaterEqual(total['path_recall'], floor['path_recall'], 'file discovery regressed')
+        self.assertEqual(total['errors'], 0)
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# report
+# ---------------------------------------------------------------------------------------------------------------
+class ReportTests(unittest.TestCase):
+    def make(self, tmp):
+        learning = Path(tmp) / 'learning'
+        learning.mkdir()
+        (learning / 'tasks.jsonl').write_text(json.dumps({'id': 'one', 'prompt': 'find text box', 'expect_features': ['a'], 'expect_paths': ['src/a.rs']}) + '\n')
+        runs = [{'kind': 'run', 'run': 'r1', 'k': 3, 'commit': 'aaa', 'tasks': 1, 'feature_recall': 0.5, 'path_recall': 0.0,
+                 'top1_rate': 0.0, 'full_hits': 0, 'mean_tokens': 900.0},
+                {'kind': 'run', 'run': 'r2', 'k': 3, 'commit': 'bbb', 'tasks': 1, 'feature_recall': 1.0, 'path_recall': 0.5,
+                 'top1_rate': 1.0, 'full_hits': 0, 'mean_tokens': 950.0},
+                {'kind': 'task', 'run': 'r2', 'k': 3, 'task': 'one', 'missed_features': [], 'missed_paths': ['src/a.rs']}]
+        (learning / 'eval_runs.jsonl').write_text('\n'.join(json.dumps(r) for r in runs) + '\n')
+        learn.append_entry(entry(note='open friction one', tokens=60000), learning / 'ledger.jsonl', today='2026-10-01')
+        learn.append_entry(entry(note='solved thing', tokens=5, status='promoted', ref='ADR 1'), learning / 'ledger.jsonl', today='2026-10-01')
+        (learning / 'dupes.json').write_text(json.dumps({'files_scanned': 10, 'engine_commit': 'ccc', 'clusters_found': 2, 'clusters': [
+            {'label': 'no-equivalent: promote candidate', 'score': 648, 'copies': 3, 'lines': 216, 'projects': ['a', 'b'],
+             'examples': [{'path': '~/G/physics.rs'}], 'engine_matches': []},
+            {'label': 'engine-has-equivalent: adopt', 'score': 90, 'copies': 2, 'lines': 45, 'projects': ['c'],
+             'examples': [{'path': '~/G/x.rs'}], 'engine_matches': [{'name': 'ClosedPath'}]}]}))
+        return learning
+
+    def test_report_sections_and_no_local_content_in_the_committed_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            learning = self.make(tmp)
+            local = Path(tmp) / 'local'
+            local.mkdir()
+            text, local_text = learn.build_report(learning, local)
+            self.assertIsNone(local_text, 'no local section without local session output')
+            for needle in ('| feature recall | 0.50 | 1.00 |', 'Top discovery misses', '`one` find text box: missing src/a.rs',
+                           'score 648: 3 copies x 216 lines', 'ClosedPath', '2 entries: 1 open, 1 promoted',
+                           'open friction one', '60,000 tokens', 'python3 tools/learn.py sessions'):
+                self.assertIn(needle, text)
+            (local / 'summary.json').write_text(json.dumps({
+                'sessions': 3, 'turns': 10, 'work_tokens': 1234, 'side_share': 0.5, 'repeat_reads': 1, 'reads': 2,
+                'repeat_reads_unedited': 1, 'empty_searches': 0, 'searches': 4, 'from_scratch_candidates': 1,
+                'from_scratch_chars': 5000, 'areas': [{'area': 'SpookyKart', 'sessions': 1, 'turns': 5, 'work_tokens': 99, 'side_share': 0.1}]}))
+            text2, local_text = learn.build_report(learning, local)
+            self.assertEqual(text2, text, 'the committed report never changes because local data exists')
+            self.assertIn('local only, never committed', local_text)
+            self.assertIn('SpookyKart', local_text)
+            self.assertNotIn('SpookyKart', text)
+
+    def test_report_command_writes_the_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            learning = self.make(tmp)
+            from unittest.mock import patch
+            with patch.object(learn, 'LEARNING', learning), patch.object(learn, 'LOCAL', Path(tmp) / 'nolocal'):
+                code, out, err = run_cli('report', '--out', str(Path(tmp) / 'R.md'))
+            self.assertEqual(code, 0, err)
+            self.assertTrue((Path(tmp) / 'R.md').read_text().startswith('# What the engine has learned'))
+
+    def test_committed_report_has_no_session_derived_section(self):
+        report = ROOT / 'docs' / 'learning' / 'REPORT.md'
+        if report.is_file():
+            text = report.read_text(encoding='utf-8')
+            self.assertNotIn('local only, never committed', text)
+            self.assertIsNone(learn.secret_like(text))
+
+
+# ---------------------------------------------------------------------------------------------------------------
+# the be2.py context hook (docs/learning/ledger.jsonl -> `learned`)
+# ---------------------------------------------------------------------------------------------------------------
+class ContextHookTests(unittest.TestCase):
+    def root_with(self, tmp, entries):
+        root = Path(tmp)
+        (root / 'tools').mkdir()
+        (root / 'tools' / 'FEATURES.json').write_bytes((ROOT / 'tools' / 'FEATURES.json').read_bytes())
+        (root / 'docs' / 'learning').mkdir(parents=True)
+        (root / 'docs' / 'learning' / 'ledger.jsonl').write_text('\n'.join(json.dumps(e) for e in entries) + '\n')
+        return root
+
+    def test_matching_entries_become_short_solved_trap_and_open_lines(self):
+        entries = [
+            {'note': 'n', 'status': 'promoted', 'ref': 'ADR 0036', 'hint': 'Use kit::Shadows for shadows.', 'keywords': ['shadow', 'blob']},
+            {'note': 'n', 'status': 'open', 'trap': 'Quads wound the wrong way vanish.', 'keywords': ['quad', 'winding', 'culled']},
+            {'note': 'Lobby stalled.', 'status': 'open', 'keywords': ['lobby', 'ready', 'stall']},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root_with(tmp, entries)
+            lines = workflow.ledger_hints(root, 'add shadows to my kit game')
+            self.assertEqual(lines, ['solved: Use kit::Shadows for shadows. (ADR 0036)'])
+            self.assertEqual(workflow.ledger_hints(root, 'quad winding looks culled'), ['trap: Quads wound the wrong way vanish.'])
+            self.assertEqual(workflow.ledger_hints(root, 'lobby ready button stalls'), ['open: Lobby stalled.'])
+            self.assertEqual(workflow.ledger_hints(root, 'something unrelated entirely'), [])
+            packet_with = workflow.context(root, 'add shadows to my kit game')
+            self.assertEqual(packet_with['learned'], lines)
+            self.assertNotIn('learned', workflow.context(root, 'zyxquantumunknown'))
+
+    def test_hints_are_bounded_to_five_lines_and_600_characters(self):
+        entries = [{'note': 'n' * 300, 'status': 'promoted', 'ref': 'ADR %d' % i, 'workaround': 'w' * 300,
+                    'keywords': ['shadow', 'blob', 'light']} for i in range(30)]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root_with(tmp, entries)
+            lines = workflow.ledger_hints(root, 'shadow blob light')
+            self.assertLessEqual(len(lines), 5)
+            self.assertLessEqual(sum(len(line) for line in lines), 600)
+            self.assertTrue(all(len(line) <= 118 for line in lines))
+
+    def test_single_generic_word_or_feature_match_alone_never_hints(self):
+        entries = [{'note': 'Spatial audio is missing.', 'status': 'open', 'keywords': ['play', 'audio', 'pan'], 'features': ['netplay']}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root_with(tmp, entries)
+            self.assertEqual(workflow.ledger_hints(root, 'add online play and a lobby', ['netplay']), [])
+            self.assertEqual(workflow.ledger_hints(root, 'netplay', ['netplay']), [])
+
+    def test_missing_or_garbage_ledger_is_silent(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual(workflow.ledger_hints(tmp, 'shadows'), [])
+            root = self.root_with(tmp, [])
+            (root / 'docs' / 'learning' / 'ledger.jsonl').write_text('not json\n[1]\n{"note": 5}\n\x00\n')
+            self.assertEqual(workflow.ledger_hints(root, 'shadows please'), [])
+            self.assertNotIn('learned', workflow.context(root, 'shared_gameplay'))
+
+    def test_real_packets_stay_within_budget_with_the_committed_ledger(self):
+        for task in learn.load_tasks(ROOT / 'docs' / 'learning' / 'tasks.jsonl'):
+            result = workflow.context(ROOT, task['prompt'])
+            self.assertLess(len(json.dumps(result)), 8000, task['id'])
+            if 'learned' in result:
+                self.assertLessEqual(len(result['learned']), 5)
+                self.assertLessEqual(sum(len(line) for line in result['learned']), 600)
+        self.assertNotIn('learned', workflow.context(ROOT, 'zyxquantumunknown'))
+        self.assertNotIn('learned', workflow.context(ROOT, 'movement', 1))
