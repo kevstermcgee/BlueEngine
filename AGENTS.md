@@ -54,3 +54,9 @@ Build speed: iterate with `cargo build --profile fast`, not `--release`. `be2.py
 profile by default (about 3x faster overall, same assertions); `--profile dev` restores the plain profile.
 Measured data lives in docs/perf (`python tools/perf.py report`); after a change meant to speed things up,
 run `python tools/perf.py record --note "what changed"` so the next session can see whether it worked.
+
+Learning loop (ADR 0038, `docs/learning/README.md`): before writing low-level code, run `python3 tools/be2.py context "<task>" --compact`;
+its `learned` lines name traps other games hit and what the engine already provides. When you finish a game task, record each friction item
+(engine source you had to read, code you copied or wrote that other games will too, a silent failure, a big token cost) with
+`python3 tools/learn.py record --game NAME --area AREA --tokens N --note "..." [--trap ...] [--duplicated PATHS]`. Never copy session logs
+or credentials into a repository.

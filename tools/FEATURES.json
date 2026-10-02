@@ -2365,6 +2365,48 @@
         "docs/GAMES_PUBLISHING.md",
         "scripts/publish_games.py"
       ]
+    },
+    "learning_loop": {
+      "files": [
+        "tools/learn.py",
+        "tools/test_learn.py",
+        "docs/learning/README.md",
+        "docs/learning/ledger.jsonl",
+        "docs/learning/tasks.jsonl",
+        "docs/learning/REPORT.md",
+        "docs/adr/0038-engine-learns-from-development.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_learn"
+      ],
+      "note": "How the engine learns from the games built on it (ADR 0038): python tools/learn.py record writes a friction entry (cost, workaround, trap, copied code) to docs/learning/ledger.jsonl; dupes finds code the games copied and checks whether the engine already has it; eval scores be2.py context against a task benchmark (recall, packet size); sessions (local only, never committed) aggregates where AI effort went from session logs without storing any content; modules refreshes the per-file summaries context routes by; report writes docs/learning/REPORT.md. be2.py context appends matching ledger traps and \"already solved by\" lines.",
+      "keywords": [
+        "friction",
+        "ledger",
+        "record friction",
+        "retrospective",
+        "lessons learned",
+        "feedback",
+        "promote",
+        "promotion",
+        "duplicated code",
+        "copied code",
+        "token cost",
+        "session logs",
+        "discovery benchmark",
+        "eval",
+        "learning loop",
+        "engine learns",
+        "learn.py",
+        "privacy"
+      ],
+      "read_first": [
+        "docs/learning/README.md",
+        "tools/learn.py"
+      ],
+      "depends_on": [
+        "change_workflow"
+      ]
     }
   },
   "modules": {
@@ -2399,7 +2441,9 @@
     "docs/adr/0033-ambient-music-and-persistent-audio-settings.md": "ADR 0033: Generated ambient music, and audio settings that survive a relaunch",
     "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md": "ADR 0034: Level geometry and waypoint pathing promoted from Dead Air",
     "docs/adr/0036-shadows-for-kit-games.md": "ADR 0036: Shadows for kit games: contact blobs and one shadow map, behind one setting",
+    "docs/adr/0038-engine-learns-from-development.md": "ADR 0038: The engine learns from the games built on it",
     "docs/analysis/external-inspiration-study.md": "External inspiration study",
+    "docs/learning/README.md": "Learning from the games built on Blue",
     "docs/perf/README.md": "Performance data",
     "scripts/build_sandbox_content.py": "Rebuild the sandbox's deterministic, source-derived content.",
     "scripts/package_sandbox.py": "Package already-built optimized Windows binaries and sandbox content, without installation.",
@@ -2537,6 +2581,7 @@
     "tools/author.py": "Source-free BE2 map authoring.",
     "tools/be2.py": "BE2 development entry point.",
     "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
+    "tools/learn.py": "Blue learns from the games built on it (ADR 0038).",
     "tools/mcp_server.py": "BlueEngine MCP Server launcher.",
     "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
     "tools/place_interior.py": "Place data-only interior prefabs and validate with the packaged native engine.",

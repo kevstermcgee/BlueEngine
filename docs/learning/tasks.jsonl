@@ -37,3 +37,5 @@
 {"id": "tool-ship", "prompt": "give my game its own icon and desktop shortcut", "expect_features": ["game_shipping"], "expect_paths": ["templates/game_ship.py"], "notes": "ADR 0017 ship gate."}
 {"id": "doc-add-interactable", "prompt": "add a button the player can press to a game.json level", "expect_features": ["game_documents"], "expect_paths": ["src/viewer/game_edit.rs"], "notes": "be2-tools add-interactable, 9e0365d."}
 {"id": "map-reachability", "prompt": "check my map for unreachable areas and perimeter leaks", "expect_features": ["static_lint"], "expect_paths": ["src/viewer/lint.rs"], "notes": ""}
+{"id": "learn-record-friction", "prompt": "record the friction I hit in this game task so the engine can learn from it", "expect_features": ["learning_loop"], "expect_paths": ["docs/learning/README.md"], "notes": "Added with the learning_loop feature; checks the loop is discoverable by the people it is for."}
+{"id": "learn-find-duplicates", "prompt": "find code my games copied that should be promoted into the engine", "expect_features": ["learning_loop"], "expect_paths": ["tools/learn.py"], "notes": "learn.py dupes; ADR 0038 thresholds."}

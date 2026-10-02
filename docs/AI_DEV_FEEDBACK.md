@@ -140,3 +140,8 @@ across two files). Spooky Kart shipped two geometry bugs that no engine test cou
   with normal-offset bias, not slope-scaled bias. `kit::shadow` does all of this; copy it rather than re-deriving it.
 - **Kit primitive winding.** `Template::ball` and `Template::ring` / `soft_ring` were wound against their own normals
   (found by the lint); the kit draws without back-face culling, so it never showed, but it is fixed.
+
+## Where friction is recorded now
+
+Friction notes are structured and harvested: `docs/learning/` holds the ledger (this document's items are its seed), the
+discovery benchmark for `be2.py context`, and a generated report; record new items with `python3 tools/learn.py record` (ADR 0038).
