@@ -523,7 +523,7 @@ struct KeyboardFrame {
 /// silently never pressed on Windows (the macroquad fallback is bypassed once a
 /// native reader is installed), so the table covers the full set a game might
 /// bind — polling ~90 virtual keys per frame costs nothing.
-const KEY_TABLE: &[(KeyCode, i32)] = &[
+pub const KEY_TABLE: &[(KeyCode, i32)] = &[
     (KeyCode::A, 0x41),
     (KeyCode::B, 0x42),
     (KeyCode::C, 0x43),
