@@ -70,6 +70,44 @@
       "verification": "No automated per-game audio-settings regression exists in the engine; verify manually that toggling music/sound in the Settings screen takes effect immediately and that the choice survives quitting and relaunching the game (the settings.json file beside the executable).",
       "limitations": "Detection only confirms the game already uses SoundBank (true for essentially every custom-sim game); it cannot tell whether a game already hand-rolled its own equivalent of Settings persistence before this feature existed, which would be a false positive for 'nothing done yet'. Treat as a hint to check, not a verdict.",
       "reference": "docs/adr/0033-ambient-music-and-persistent-audio-settings.md"
+    },
+    {
+      "id": "MIG-0035-CONNECT-FAILURE",
+      "since_commit": "7ca15363cda5",
+      "title": "NetClient::failure() tells an unreachable server from a refusal",
+      "runtime": ["custom_sim_netplay"],
+      "category": "optional_adoption",
+      "required": false,
+      "summary": "Before this commit a client whose Hello went unanswered for 8 s ended in ClientState::Rejected(\"Could not reach the server\"), and games showed it as \"The server turned you away\", which reads like a refusal when nobody answered. NetClient::failure() now returns a typed ConnectFailure (Unreachable, VersionMismatch, WrongKey, MatchInProgress, Full, Other) whose hint() is a short actionable sentence. ClientState::Rejected(String) is unchanged, so nothing breaks without adoption.",
+      "detect": {
+        "kind": "grep",
+        "pattern": "ClientState::Rejected",
+        "include": ["src/**/*.rs"],
+        "exclude_paths": []
+      },
+      "repair": "Where the game shows the Rejected text, call client.failure() and show failure.hint() instead. See docs/NETPLAY.md, \"When connecting fails\". While there, make sure the game's ClientView overrides prediction() (the default reports zeros).",
+      "verification": "Point the client at a closed UDP port and read the message; engine side: tests/netplay.rs (a_closed_loopback_port_is_unreachable_not_refused and the classification tests).",
+      "limitations": "Grep only confirms the game matches on ClientState::Rejected; it cannot tell whether it already formats its own friendlier message.",
+      "reference": "docs/NETPLAY.md"
+    },
+    {
+      "id": "MIG-0035-TEXT-FIELD",
+      "since_commit": "77f4d80004ee",
+      "title": "devkit::TextField, resolve_ipv4 and ServerChoice replace hand-rolled text input and default-server code",
+      "runtime": ["custom_sim", "custom_sim_netplay"],
+      "category": "optional_adoption",
+      "required": false,
+      "summary": "Games hand-rolled text boxes from get_char_pressed (no paste, no caret) and each invented a default-server mechanism. devkit::TextField (sanitised typing and paste, caret, hold-to-repeat; ClientInput::feed_text / TextField::feed_frame add the keyboard and Ctrl+V), devkit::resolve_ipv4 (typed address to an IPv4 SocketAddr with player-facing errors), devkit::ServerChoice::first_of (--connect, server.txt, last used, built-in) and Settings::last_server are the shared versions.",
+      "detect": {
+        "kind": "grep",
+        "pattern": "get_char_pressed\\s*\\(",
+        "include": ["src/**/*.rs"],
+        "exclude_paths": []
+      },
+      "repair": "Replace the typed-character buffer with a TextField and call input.feed_text(&mut field) once per frame while it has focus; parse the address with resolve_ipv4 on Connect; read the default with ServerChoice::first_of_beside_exe. See docs/NETPLAY.md, \"Typing and pasting a server address\", and docs/CUSTOM_SIM_CHEATSHEET.md.",
+      "verification": "Paste an address with Ctrl+V in the real window (no automated per-game check exists); the engine's own tests cover the logic: cargo test --lib devkit::text_field devkit::net_address.",
+      "limitations": "Detection is a grep for get_char_pressed( and cannot tell a text box from, say, a cheat-code reader; it also says nothing about default-server code, which has no reliable signature.",
+      "reference": "docs/NETPLAY.md"
     }
   ]
 }

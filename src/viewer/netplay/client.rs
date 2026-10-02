@@ -5,6 +5,7 @@
 //! few so a lost datagram costs nothing, acknowledgement of the newest server tick and of events (each is
 //! delivered once), round-trip measurement and connection timeouts. What to draw and how to predict is the
 //! game's [`ClientView`].
+use super::failure::ConnectFailure;
 use super::wire::{
     decode_server, encode_client, ClientMsg, LobbyState, ServerMsg, Token, INPUT_BUNDLE,
 };
@@ -78,6 +79,7 @@ pub struct NetClient<G: NetGame, T: DatagramTransport> {
     server: SocketAddr,
     cfg: ClientConfig,
     state: ClientState,
+    failure: Option<ConnectFailure>,
     token: Option<Token>,
     id: u8,
     nonce: [u64; 2],
@@ -111,6 +113,7 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
             server,
             cfg,
             state: ClientState::Connecting,
+            failure: None,
             token: None,
             id: 0,
             nonce: random_nonce()?,
@@ -138,6 +141,11 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
 
     pub fn state(&self) -> &ClientState {
         &self.state
+    }
+    /// Why connecting failed, once `state()` is `Rejected`: nobody answered, or the server's own reason sorted
+    /// into a case. Show [`ConnectFailure::hint`] to the player instead of the raw `Rejected` text.
+    pub fn failure(&self) -> Option<ConnectFailure> {
+        self.failure.clone()
     }
     pub fn lobby(&self) -> Option<&LobbyState> {
         self.lobby.as_ref()
@@ -279,7 +287,15 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
         match &self.state {
             ClientState::Connecting => {
                 if now - started > CONNECT_TIMEOUT {
-                    self.state = ClientState::Rejected("Could not reach the server".into());
+                    let waited_secs = CONNECT_TIMEOUT as u32;
+                    self.failure = Some(ConnectFailure::Unreachable {
+                        addr: self.server,
+                        waited_secs,
+                    });
+                    self.state = ClientState::Rejected(format!(
+                        "No reply from {} after {waited_secs} s",
+                        self.server
+                    ));
                 } else if now - self.last_hello >= HELLO_EVERY {
                     self.last_hello = now;
                     self.send(&ClientMsg::Hello {
@@ -321,7 +337,10 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
                     self.state = ClientState::Lobby;
                 }
             }
-            ServerMsg::Rejected { reason } => self.state = ClientState::Rejected(reason),
+            ServerMsg::Rejected { reason } => {
+                self.failure = Some(ConnectFailure::classify(&reason));
+                self.state = ClientState::Rejected(reason);
+            }
             ServerMsg::Lobby(l) => {
                 let stage = l.stage;
                 self.lobby = Some(l);

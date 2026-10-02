@@ -2,6 +2,7 @@
 //!
 //! Generic over the game and over the engine's [`DatagramTransport`], so the same code runs on UDP, on QUIC/TLS
 //! and on the in-memory [`LoopNet`](crate::viewer::net::loopback::LoopNet) that the tests use.
+use super::failure::{full_reason, REASON_KEY, REASON_MATCH, REASON_VERSION};
 use super::wire::{
     decode_client, encode_server, ClientMsg, LobbyEntry, LobbyState, ServerMsg, SnapshotMsg, Token,
     MAX_DATAGRAM,
@@ -346,14 +347,11 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                     return;
                 }
                 if fingerprint != self.fingerprint {
-                    return self.reject(
-                        peer,
-                        "Game version differs from the server; update the game",
-                    );
+                    return self.reject(peer, REASON_VERSION);
                 }
                 if let Some(expected) = &self.cfg.join_key {
                     if !constant_time_eq(expected.as_bytes(), key.as_bytes()) {
-                        return self.reject(peer, "Wrong join key");
+                        return self.reject(peer, REASON_KEY);
                     }
                 }
                 // A repeated Hello from a connected peer (a lost Welcome) gets the same answer again.
@@ -375,9 +373,9 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                     return;
                 }
                 if self.stage == Stage::Match {
-                    return self.reject(peer, "A match is in progress; try again in a moment");
+                    return self.reject(peer, REASON_MATCH);
                 }
-                let full = format!("Server is full ({} players)", G::MAX_SEATS);
+                let full = full_reason(G::MAX_SEATS);
                 if self.sessions.get_by_peer(&peer).is_none() && self.sessions.is_full() {
                     return self.reject(peer, &full);
                 }

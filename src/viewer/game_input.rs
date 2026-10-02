@@ -3,7 +3,7 @@
 //! workers must shut down before Windows TLS teardown. No OS calls live here.
 use super::{
     controller::Movement,
-    devkit::{FrameClock, MenuNav, MenuStep},
+    devkit::{EditKey, FrameClock, MenuNav, MenuStep, TextField},
     game_client::{GameShell, ShellActions},
     game_ui::NavigationInput,
     gamepad::{Button, GamepadFrame, Gamepads},
@@ -222,6 +222,109 @@ impl ClientInput {
         }
         self.frame.look_delta(seconds)
     }
+    /// Feed this frame's typing, paste (Ctrl+V, Shift+Insert, Cmd+V) and editing keys into `field`. Key state
+    /// goes through [`ClientInput::pressed`]/[`ClientInput::down`], so it follows the same focus rule as the
+    /// rest of the input and works when the native Windows key reader is installed (macroquad's own key state
+    /// is bypassed then). Call it only while the field has the keyboard, once per frame, and use
+    /// [`ClientInput::frame_seconds`] for the repeat timing. Characters typed while the window is unfocused
+    /// are discarded, not queued.
+    pub fn feed_text(&self, field: &mut TextField) {
+        let mut typed = Vec::new();
+        while let Some(c) = get_char_pressed() {
+            typed.push(c);
+        }
+        if !self.focused {
+            return;
+        }
+        feed_text_with(
+            field,
+            &typed,
+            self.frame_seconds(),
+            |key| self.down(key),
+            |key| self.pressed(key),
+            paste_from_clipboard,
+        );
+    }
+}
+
+/// The text on the system clipboard, if there is any.
+pub fn paste_from_clipboard() -> Option<String> {
+    macroquad::miniquad::window::clipboard_get()
+}
+
+/// Put `text` on the system clipboard (a "copy invite" button).
+pub fn copy_to_clipboard(text: &str) {
+    macroquad::miniquad::window::clipboard_set(text);
+}
+
+impl TextField {
+    /// [`ClientInput::feed_text`] reading macroquad's keyboard directly, for a game that does not use
+    /// `ClientInput`. Assumes the window is focused.
+    pub fn feed_frame(&mut self) {
+        let mut typed = Vec::new();
+        while let Some(c) = get_char_pressed() {
+            typed.push(c);
+        }
+        feed_text_with(
+            self,
+            &typed,
+            get_frame_time(),
+            is_key_down,
+            is_key_pressed,
+            paste_from_clipboard,
+        );
+    }
+}
+
+/// The key handling behind both entry points, with every device read passed in so it is testable.
+fn feed_text_with(
+    field: &mut TextField,
+    typed: &[char],
+    dt: f32,
+    down: impl Fn(KeyCode) -> bool,
+    pressed: impl Fn(KeyCode) -> bool,
+    clipboard: impl FnOnce() -> Option<String>,
+) {
+    let ctrl = down(KeyCode::LeftControl) || down(KeyCode::RightControl);
+    let alt = down(KeyCode::LeftAlt) || down(KeyCode::RightAlt);
+    let command = down(KeyCode::LeftSuper) || down(KeyCode::RightSuper);
+    let shift = down(KeyCode::LeftShift) || down(KeyCode::RightShift);
+    // AltGr arrives as Ctrl+Alt and types real characters (@ on many layouts), so only a bare Ctrl or Cmd
+    // chord is a shortcut whose character must not be typed.
+    let shortcut = (ctrl && !alt) || command;
+    if !shortcut {
+        for &c in typed {
+            field.insert_char(c);
+        }
+    }
+    let paste = (shortcut && pressed(KeyCode::V)) || (shift && pressed(KeyCode::Insert));
+    if paste {
+        if let Some(text) = clipboard() {
+            field.insert_str(&text);
+        }
+    }
+    if pressed(KeyCode::Home) {
+        field.home();
+    }
+    if pressed(KeyCode::End) {
+        field.end();
+    }
+    let held = [
+        EditKey::Backspace,
+        EditKey::Delete,
+        EditKey::Left,
+        EditKey::Right,
+    ]
+    .into_iter()
+    .find(|key| {
+        down(match key {
+            EditKey::Backspace => KeyCode::Backspace,
+            EditKey::Delete => KeyCode::Delete,
+            EditKey::Left => KeyCode::Left,
+            _ => KeyCode::Right,
+        })
+    });
+    field.step_held(held, dt);
 }
 
 #[cfg(test)]
@@ -466,6 +569,113 @@ impl KeyboardFrame {
             } else {
                 self.previous.remove(&key);
             }
+        }
+    }
+}
+#[cfg(test)]
+mod text_tests {
+    use super::*;
+    use crate::viewer::devkit::CharFilter;
+    use std::collections::HashSet;
+
+    fn feed(
+        field: &mut TextField,
+        typed: &str,
+        keys: &[KeyCode],
+        pressed: &[KeyCode],
+        clip: Option<&str>,
+    ) {
+        let down: HashSet<KeyCode> = keys.iter().chain(pressed).copied().collect();
+        let edge: HashSet<KeyCode> = pressed.iter().copied().collect();
+        let typed: Vec<char> = typed.chars().collect();
+        feed_text_with(
+            field,
+            &typed,
+            1. / 60.,
+            |k| down.contains(&k),
+            |k| edge.contains(&k),
+            || clip.map(str::to_string),
+        );
+    }
+
+    #[test]
+    fn ctrl_v_and_shift_insert_paste_and_the_control_character_is_not_typed() {
+        let mut f = TextField::new(40, CharFilter::Address);
+        feed(&mut f, "ab", &[], &[], None);
+        feed(
+            &mut f,
+            "\u{16}",
+            &[KeyCode::LeftControl],
+            &[KeyCode::V],
+            Some("play.example.com:27015\r\n"),
+        );
+        assert_eq!(f.as_str(), "abplay.example.com:27015");
+        feed(
+            &mut f,
+            "",
+            &[KeyCode::LeftShift],
+            &[KeyCode::Insert],
+            Some("-x"),
+        );
+        assert_eq!(f.as_str(), "abplay.example.com:27015-x");
+        feed(&mut f, "", &[], &[KeyCode::V], Some("nope"));
+        assert_eq!(f.len(), 26, "V alone is only a letter, and no char arrived");
+        feed(&mut f, "", &[KeyCode::LeftControl], &[KeyCode::V], None);
+        assert_eq!(f.len(), 26, "an empty clipboard pastes nothing");
+    }
+
+    #[test]
+    fn ctrl_chords_do_not_type_but_altgr_does() {
+        let mut f = TextField::new(40, CharFilter::Any);
+        feed(&mut f, "a", &[KeyCode::LeftControl], &[KeyCode::A], None);
+        assert!(f.is_empty(), "Ctrl+A is a shortcut");
+        feed(
+            &mut f,
+            "@",
+            &[KeyCode::LeftControl, KeyCode::RightAlt],
+            &[],
+            None,
+        );
+        assert_eq!(f.as_str(), "@", "AltGr (Ctrl+Alt) types");
+    }
+
+    #[test]
+    fn editing_keys_move_and_delete() {
+        let mut f = TextField::with_text(40, CharFilter::Any, "hello");
+        feed(&mut f, "", &[], &[KeyCode::Home], None);
+        assert_eq!(f.caret, 0);
+        feed(&mut f, "", &[KeyCode::Delete], &[], None);
+        assert_eq!(f.as_str(), "ello");
+        feed(&mut f, "", &[], &[KeyCode::End], None);
+        feed(&mut f, "", &[], &[], None);
+        feed(&mut f, "", &[KeyCode::Backspace], &[], None);
+        assert_eq!(f.as_str(), "ell");
+        feed(&mut f, "", &[], &[], None);
+        feed(&mut f, "", &[KeyCode::Left], &[], None);
+        assert_eq!(f.caret, 2);
+    }
+
+    #[test]
+    fn the_keys_the_glue_reads_are_in_the_native_table() {
+        for key in [
+            KeyCode::V,
+            KeyCode::Insert,
+            KeyCode::LeftControl,
+            KeyCode::RightControl,
+            KeyCode::LeftAlt,
+            KeyCode::RightAlt,
+            KeyCode::LeftShift,
+            KeyCode::Backspace,
+            KeyCode::Delete,
+            KeyCode::Left,
+            KeyCode::Right,
+            KeyCode::Home,
+            KeyCode::End,
+        ] {
+            assert!(
+                KEY_TABLE.iter().any(|&(k, _)| k == key),
+                "{key:?} would never read on Windows"
+            );
         }
     }
 }

@@ -20,11 +20,13 @@
 //! ([`NetGame::release`]). Every finished match appends one JSON line to `matches.jsonl` (the game's report
 //! plus per-player network quality and server load).
 pub mod client;
+pub mod failure;
 pub mod server;
 pub mod toy;
 pub mod wire;
 
 pub use client::{ClientConfig, ClientState, NetClient, NetStats, PredictionStats};
+pub use failure::ConnectFailure;
 pub use server::{
     MatchLog, NetReport, NetServer, PeerReport, PeerStats, ServerConfig, ServerLoad, Stage,
 };
@@ -117,7 +119,20 @@ pub trait ClientView<G: NetGame> {
     /// Back to the lobby: forget the match.
     fn reset(&mut self);
     /// How well prediction is doing (for statistics).
+    ///
+    /// OVERRIDE THIS if the game predicts its own entity. The default reports all zeros, so a game that
+    /// forgets shows `corrections: 0, max_error: 0` in its stats and in `matches.jsonl` as if prediction were
+    /// perfect. The default prints one warning to stderr naming the view type the first time it is used; a
+    /// game with genuinely nothing to predict silences it by overriding with `PredictionStats::default()`.
     fn prediction(&self) -> PredictionStats {
+        static WARNED: std::sync::Once = std::sync::Once::new();
+        WARNED.call_once(|| {
+            eprintln!(
+                "[netplay] {} does not override ClientView::prediction(): its prediction statistics will read 0. \
+                 Report the real numbers, or override it with PredictionStats::default() to silence this.",
+                std::any::type_name::<Self>()
+            );
+        });
         PredictionStats::default()
     }
 }

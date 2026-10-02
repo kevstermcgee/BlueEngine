@@ -93,6 +93,15 @@ with `sounds.play(index, volume)`.
 See `docs/NETPLAY.md`. `net::codec::{Writer, Reader}` for layouts, `net::loopback::LoopNet` for tests,
 `net::{server_transport, client_transport}` for UDP or QUIC/TLS.
 
+- Typing/paste: `let mut f = devkit::TextField::new(40, CharFilter::Address);` then each frame `input.feed_text(&mut f)`
+  (or `f.feed_frame()`), draw `f.text` with the caret at `f.caret_byte()`. Ctrl+V pastes; `game_input::copy_to_clipboard(s)`.
+- Address: `devkit::resolve_ipv4(&f.text, 27015)?` gives an IPv4 `SocketAddr` or an `AddressError` whose `Display` you
+  can show; blocks on name lookup, so call it on Connect.
+- Default server: `devkit::ServerChoice::first_of_beside_exe(&[CliArg(..), FileBesideExe("server.txt"), LastUsed(..), Builtin(..)])`;
+  remember it in `Settings::last_server`.
+- Connect failed: `client.failure()` is `Option<ConnectFailure>`; show `failure.hint()` ("No reply from ... after 8 s"
+  is not a refusal). Also override `ClientView::prediction()` or your stats read 0.
+
 ## Seeing and testing without a display
 
 `python tools/xcapture.py GAME_BINARY --frames 30,300 -- --character ghost` runs the game on a virtual display and
@@ -119,4 +128,6 @@ is slow; capture a few frames, not a whole match.
   two real games have shipped a spawn yaw of `0.` or `PI` chosen by guessing, and guessed wrong both times.
 - A game's `scripts/blue` needs `python3` or `python`; `scripts/check.py` finds a built `be2-tools` in the engine
   checkout by itself (build it with `cargo build --profile fast --no-default-features --bin be2-tools`).
+- `ClientView::prediction()` defaults to all zeros: a view that never overrides it shows "0 corrections" and looks perfect
+  (it warns once on stderr). Override it, even if only with `PredictionStats::default()`.
 - Build and test fast: `cargo build --profile fast`, `cargo test --profile itest` (see `docs/perf`).
