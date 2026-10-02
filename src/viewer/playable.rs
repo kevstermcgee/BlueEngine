@@ -224,7 +224,11 @@ pub async fn run_game_with_options(
         if playback_done || (options.capture.is_some() && playback.is_none() && frame >= 30) {
             shell.paused = true;
         }
-        let match_over = session.world().game.as_ref().is_some_and(|g| g.state().finished());
+        let match_over = session
+            .world()
+            .game
+            .as_ref()
+            .is_some_and(|g| g.state().finished());
         let mut intent = GameInput {
             movement: input.movement(&shell),
             look: input.look_delta(&shell),
