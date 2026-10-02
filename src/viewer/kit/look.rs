@@ -262,9 +262,9 @@ void main() {
 
 /// How far `decal` pulls its geometry towards the camera, in NDC depth: 8 quanta of a 24-bit buffer
 /// (2^-23 each). Because the shift is in clip space, the world-space equivalent grows with the square of the
-/// distance exactly as the depth buffer's own resolution does ([`depth_resolution`]
-/// (super::lint::depth_resolution)), so a decal wins against a coplanar surface at 5 m and at 700 m alike
-/// while staying a few millimetres at close range.
+/// distance exactly as the depth buffer's own resolution does (see
+/// [`depth_resolution`](super::lint::depth_resolution)), so a decal wins against a coplanar surface at 5 m and
+/// at 700 m alike while staying a few millimetres at close range.
 pub const DECAL_DEPTH_BIAS: f32 = 8. / 8_388_608.;
 
 pub(super) fn decal_vertex_source() -> String {
