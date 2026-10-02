@@ -70,6 +70,39 @@
       "verification": "No automated per-game audio-settings regression exists in the engine; verify manually that toggling music/sound in the Settings screen takes effect immediately and that the choice survives quitting and relaunching the game (the settings.json file beside the executable).",
       "limitations": "Detection only confirms the game already uses SoundBank (true for essentially every custom-sim game); it cannot tell whether a game already hand-rolled its own equivalent of Settings persistence before this feature existed, which would be a false positive for 'nothing done yet'. Treat as a hint to check, not a verdict.",
       "reference": "docs/adr/0033-ambient-music-and-persistent-audio-settings.md"
+    },
+    {
+      "id": "MIG-0035-NATIVE-KEY-TABLE",
+      "since_commit": "1e2d2bce2ee0",
+      "title": "The Windows native key reader polls the full keyboard (R, digits and most letters were silently never pressed)",
+      "runtime": ["stock", "custom_sim", "custom_sim_netplay"],
+      "category": "received_automatically",
+      "required": false,
+      "summary": "Before this commit the native Windows key reader (the fn(i32) -> i16 reader a game passes to ClientInput::begin_frame_with_keyboard, usually platform::keyboard()) polled only a 23-key shortlist. Any other key, including R, the digits and most letters, never read as pressed on Windows once the reader was installed, while Linux (macroquad events) behaved correctly, so headless tests and captures could not show it. The engine now polls a full table (game_input::KEY_TABLE), and a key outside it prints once and trips a debug_assert!. Nothing in the game's source changes.",
+      "detect": null,
+      "repair": "None in the game's source: taking the dependency update applies it. An already-released Windows build does NOT pick it up until the game is rebuilt against the new engine revision and re-released (re-run scripts/blue ship and republish).",
+      "verification": "Engine side: the game_input tests drive the table-driven path with a fake key source on Linux. A real Windows key test (press R at game over) is still the only proof of real input; python tools/be2.py check --windows only type-checks the Windows code.",
+      "limitations": "No per-game evidence is checked, so this reports presence by revision range only. It cannot tell which games had a key silently dead; any game that binds R, a digit or a letter outside the old shortlist was affected.",
+      "reference": "docs/adr/0035-native-key-reader-and-restart-convention.md"
+    },
+    {
+      "id": "MIG-0035-RESTART-CONVENTION",
+      "since_commit": "e33e149af61e",
+      "title": "ClientInput::restart_requested: one \"play again\" check (R, Enter or pad A/Start) instead of a hand-rolled one",
+      "runtime": ["custom_sim", "custom_sim_netplay"],
+      "category": "optional_adoption",
+      "required": false,
+      "summary": "Games each hand-rolled restart differently (R only; R or Enter; plus a controller button), so players could not rely on one key. ClientInput::restart_requested(game_over) is true once per press of R, Enter or pad South/Start, only while the game is over and the window is focused. The custom-sim template uses it.",
+      "detect": {
+        "kind": "grep",
+        "pattern": "KeyCode::R\\b",
+        "include": ["src/**/*.rs"],
+        "exclude_paths": []
+      },
+      "repair": "Replace the game's own restart condition (for example `sim.over && (input.pressed(KeyCode::R) || ..)`) with `input.restart_requested(sim.over)` and keep any restart banner text saying R. Start also opens the pause menu in the shell, so check how the game behaves when both happen. See docs/CUSTOM_SIM_CHEATSHEET.md.",
+      "verification": "No automated per-game regression exists; verify manually that after game over R, Enter and pad A each start a new run exactly once and that R during play does nothing. Engine side: the restart_* tests in src/viewer/game_input.rs.",
+      "limitations": "A source grep for KeyCode::R, which is how nearly every hand-rolled restart is written, but R is also used for reload, rotate and other actions: a false positive needs a quick read of the match. A game that restarts on another key (or only through a menu) is a false negative. Treat it as a hint, not a verdict.",
+      "reference": "docs/adr/0035-native-key-reader-and-restart-convention.md"
     }
   ]
 }
