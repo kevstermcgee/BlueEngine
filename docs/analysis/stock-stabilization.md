@@ -22,6 +22,9 @@ The upgrade drift fixture now copies exact template bytes, preserving checkout l
 normalizing them while testing a byte hash. Windows process-cleanup verification requires permission to use
 `taskkill`: the sandbox denied it, while the unchanged cleanup test passed outside the sandbox. The final full
 local workflow is run with that permission; the earlier sandbox failure is not reported as a pass.
+The post-push rerun also exposed an intermittent Linux temporary-repository cleanup race with Git background
+maintenance. Fixture Git commands now disable automatic maintenance/GC, so deletion cannot race their own
+background lock cleanup. The engine-warning assertions and production Git behavior are unchanged.
 
 Rollback decisions verify the restored SHA-256 before skipping and resume incomplete installation, activation
 and readiness. Recovery uses only a validated previous artifact matching the receipt; absent or inconsistent

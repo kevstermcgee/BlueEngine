@@ -474,8 +474,10 @@ GIT = shutil.which('git')
 
 
 def git(directory, *args):
+    # Short-lived fixture repositories must not launch work that races their deletion.
     subprocess.run(['git', '-C', str(directory), '-c', 'user.name=t', '-c', 'user.email=t@example.com',
-                    '-c', 'commit.gpgsign=false', *args], check=True, capture_output=True,
+                    '-c', 'commit.gpgsign=false', '-c', 'maintenance.auto=false', '-c', 'gc.auto=0',
+                    *args], check=True, capture_output=True,
                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
 
 
