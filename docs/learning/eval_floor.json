@@ -1,7 +1,633 @@
 {
   "k": 3,
   "feature_recall": 1.0,
-  "path_recall": 0.84,
-  "commit": "976ef19",
-  "note": "Regression floor for tools.test_learn: recall must not drop below these (rounded down)."
+  "path_recall": 0.86,
+  "commit": "4136080",
+  "note": "Development/regression fixtures, including cases that informed tuning. Protect aggregate scores and individual retrieved feature/path expectations.",
+  "sets": {
+    "tasks.jsonl": {
+      "k": 3,
+      "feature_recall": 1.0,
+      "path_recall": 0.866,
+      "full_hits": 34,
+      "cases": {
+        "net-lobby": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "docs/NETPLAY.md",
+            "src/viewer/netplay/toy.rs"
+          ]
+        },
+        "net-server": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "docs/NETPLAY.md"
+          ]
+        },
+        "net-connect-fail": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "src/viewer/netplay/failure.rs"
+          ]
+        },
+        "net-seats": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "src/viewer/netplay/mod.rs"
+          ]
+        },
+        "net-codec": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "src/viewer/net/codec.rs"
+          ]
+        },
+        "net-prediction": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "docs/NETPLAY.md"
+          ]
+        },
+        "net-lagcomp": {
+          "features": [],
+          "paths": [
+            "src/viewer/net/lag_compensation.rs"
+          ]
+        },
+        "ui-textfield": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/text_field.rs"
+          ]
+        },
+        "ui-server-txt": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/net_address.rs"
+          ]
+        },
+        "ui-hud": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/hud.rs"
+          ]
+        },
+        "render-shadows": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/shadow.rs"
+          ]
+        },
+        "render-blob": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": []
+        },
+        "render-mirror": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/mirror.rs"
+          ]
+        },
+        "render-lights": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/look.rs"
+          ]
+        },
+        "render-window-capacity": {
+          "features": [
+            "game_presentation"
+          ],
+          "paths": [
+            "src/viewer/game_client.rs"
+          ]
+        },
+        "geom-road-border": {
+          "features": [
+            "geometry_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/shape.rs"
+          ]
+        },
+        "geom-zfight": {
+          "features": [
+            "geometry_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/lint.rs"
+          ]
+        },
+        "geom-loft": {
+          "features": [
+            "geometry_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/shape.rs"
+          ]
+        },
+        "sim-face-landmark": {
+          "features": [
+            "closed_path"
+          ],
+          "paths": [
+            "src/viewer/devkit/path.rs"
+          ]
+        },
+        "sim-track-progress": {
+          "features": [
+            "closed_path"
+          ],
+          "paths": [
+            "src/viewer/devkit/path.rs"
+          ]
+        },
+        "sim-bot-steering": {
+          "features": [
+            "closed_path"
+          ],
+          "paths": [
+            "src/viewer/devkit/path.rs"
+          ]
+        },
+        "sim-waypoints": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/waypoints.rs"
+          ]
+        },
+        "sim-wall-gaps": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/level.rs"
+          ]
+        },
+        "sim-replay-test": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": []
+        },
+        "sim-mouse-look": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/look.rs"
+          ]
+        },
+        "save-load": {
+          "features": [
+            "save_state"
+          ],
+          "paths": [
+            "src/viewer/devkit/snapshot.rs",
+            "docs/SAVE_STATE.md"
+          ]
+        },
+        "audio-ambient": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": []
+        },
+        "audio-sfx": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": []
+        },
+        "input-restart": {
+          "features": [
+            "shared_gameplay"
+          ],
+          "paths": [
+            "src/viewer/game_input.rs"
+          ]
+        },
+        "input-windows-key": {
+          "features": [
+            "shared_gameplay"
+          ],
+          "paths": [
+            "src/viewer/game_input.rs"
+          ]
+        },
+        "input-gamepad": {
+          "features": [
+            "native_controllers"
+          ],
+          "paths": [
+            "src/viewer/gamepad.rs",
+            "docs/CONTROLLERS.md"
+          ]
+        },
+        "tool-headless-shot": {
+          "features": [],
+          "paths": [
+            "tools/xcapture.py",
+            "docs/HEADLESS_CAPTURE.md"
+          ]
+        },
+        "tool-perf": {
+          "features": [],
+          "paths": [
+            "tools/perf.py"
+          ]
+        },
+        "tool-upgrade": {
+          "features": [
+            "game_upgrade"
+          ],
+          "paths": [
+            "tools/upgrade.py",
+            "docs/UPGRADE.md"
+          ]
+        },
+        "tool-publish": {
+          "features": [],
+          "paths": [
+            "docs/GAMES_PUBLISHING.md"
+          ]
+        },
+        "tool-scaffold": {
+          "features": [
+            "custom_simulation",
+            "game_scaffolding"
+          ],
+          "paths": [
+            "templates/custom-sim"
+          ]
+        },
+        "tool-ship": {
+          "features": [
+            "game_shipping"
+          ],
+          "paths": [
+            "templates/game_ship.py"
+          ]
+        },
+        "doc-add-interactable": {
+          "features": [
+            "game_documents"
+          ],
+          "paths": [
+            "src/viewer/game_edit.rs"
+          ]
+        },
+        "map-reachability": {
+          "features": [
+            "static_lint"
+          ],
+          "paths": [
+            "src/viewer/lint.rs"
+          ]
+        },
+        "learn-record-friction": {
+          "features": [
+            "learning_loop"
+          ],
+          "paths": [
+            "docs/learning/README.md"
+          ]
+        },
+        "learn-find-duplicates": {
+          "features": [
+            "learning_loop"
+          ],
+          "paths": [
+            "tools/learn.py"
+          ]
+        }
+      }
+    },
+    "tasks_heldout.jsonl": {
+      "k": 3,
+      "feature_recall": 1.0,
+      "path_recall": 0.833,
+      "full_hits": 10,
+      "cases": {
+        "h-checkpoint-save": {
+          "features": [
+            "save_state"
+          ],
+          "paths": [
+            "docs/SAVE_STATE.md"
+          ]
+        },
+        "h-bot-takeover": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "docs/NETPLAY.md"
+          ]
+        },
+        "h-kerb-flicker": {
+          "features": [
+            "geometry_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/lint.rs"
+          ]
+        },
+        "h-menu-nav": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/menu.rs"
+          ]
+        },
+        "h-trigger-zone": {
+          "features": [
+            "game_documents"
+          ],
+          "paths": [
+            "src/viewer/game.rs"
+          ]
+        },
+        "h-prop-throw": {
+          "features": [
+            "prop_physics"
+          ],
+          "paths": [
+            "src/viewer/prop_physics.rs"
+          ]
+        },
+        "h-invisible-mesh": {
+          "features": [
+            "rendering_traps"
+          ],
+          "paths": [
+            "src/viewer/kit/batch.rs"
+          ]
+        },
+        "h-hosting": {
+          "features": [
+            "multiplayer"
+          ],
+          "paths": []
+        },
+        "h-windows-compile": {
+          "features": [
+            "change_workflow"
+          ],
+          "paths": []
+        },
+        "h-scenario-test": {
+          "features": [
+            "simulation_scenarios"
+          ],
+          "paths": [
+            "docs/BEHAVIORAL_TESTING.md"
+          ]
+        },
+        "h-find-prop": {
+          "features": [
+            "asset_library"
+          ],
+          "paths": [
+            "tools/assets.py"
+          ]
+        },
+        "h-vertex-capacity": {
+          "features": [
+            "game_presentation"
+          ],
+          "paths": [
+            "src/viewer/game_client.rs"
+          ]
+        }
+      }
+    },
+    "tasks_heldout2.jsonl": {
+      "k": 3,
+      "feature_recall": 1.0,
+      "path_recall": 0.917,
+      "full_hits": 11,
+      "cases": {
+        "h2-seeded-random": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/rng.rs"
+          ]
+        },
+        "h2-screen-shake": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/juice.rs"
+          ]
+        },
+        "h2-particles": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/fx.rs"
+          ]
+        },
+        "h2-sky-fog": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": []
+        },
+        "h2-debug-draw": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/gizmo.rs"
+          ]
+        },
+        "h2-lossy-test": {
+          "features": [
+            "netplay"
+          ],
+          "paths": [
+            "src/viewer/net/loopback.rs"
+          ]
+        },
+        "h2-quic-tls": {
+          "features": [
+            "multiplayer"
+          ],
+          "paths": [
+            "src/viewer/net/quic.rs"
+          ]
+        },
+        "h2-movers": {
+          "features": [],
+          "paths": [
+            "docs/adr/0026-movers-carry-players.md"
+          ]
+        },
+        "h2-clean-shutdown": {
+          "features": [
+            "multiplayer"
+          ],
+          "paths": [
+            "src/viewer/shutdown.rs"
+          ]
+        },
+        "h2-ui-resolutions": {
+          "features": [
+            "ui_auditor"
+          ],
+          "paths": [
+            "src/viewer/ui_check.rs"
+          ]
+        },
+        "h2-scatter": {
+          "features": [
+            "procedural_gen"
+          ],
+          "paths": [
+            "src/viewer/gen.rs"
+          ]
+        },
+        "h2-corrupt-save": {
+          "features": [
+            "save_state"
+          ],
+          "paths": [
+            "docs/SAVE_STATE.md"
+          ]
+        }
+      }
+    },
+    "tasks_heldout3.jsonl": {
+      "k": 3,
+      "feature_recall": 0.917,
+      "path_recall": 0.833,
+      "full_hits": 10,
+      "cases": {
+        "h3-pad-hotplug": {
+          "features": [
+            "native_controllers"
+          ],
+          "paths": [
+            "src/viewer/gamepad.rs"
+          ]
+        },
+        "h3-fov-kick": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/juice.rs"
+          ]
+        },
+        "h3-capture-script": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/playback.rs"
+          ]
+        },
+        "h3-sound-bank": {
+          "features": [
+            "client_kit"
+          ],
+          "paths": [
+            "src/viewer/kit/audio.rs"
+          ]
+        },
+        "h3-fixed-timestep": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/clock.rs"
+          ]
+        },
+        "h3-scale-check": {
+          "features": [
+            "custom_simulation"
+          ],
+          "paths": [
+            "src/viewer/devkit/scale.rs"
+          ]
+        },
+        "h3-title-icon": {
+          "features": [
+            "game_shipping"
+          ],
+          "paths": [
+            "src/viewer/icon.rs"
+          ]
+        },
+        "h3-bad-network": {
+          "features": [
+            "multiplayer"
+          ],
+          "paths": []
+        },
+        "h3-walk-test": {
+          "features": [
+            "pathing_and_walk"
+          ],
+          "paths": [
+            "src/viewer/pathing.rs"
+          ]
+        },
+        "h3-weapon-spread": {
+          "features": [],
+          "paths": []
+        },
+        "h3-bunny-hop": {
+          "features": [
+            "arena_shooter_foundation"
+          ],
+          "paths": [
+            "src/viewer/arena.rs"
+          ]
+        },
+        "h3-interest": {
+          "features": [
+            "multiplayer"
+          ],
+          "paths": [
+            "src/viewer/net/replication.rs"
+          ]
+        }
+      }
+    }
+  }
 }

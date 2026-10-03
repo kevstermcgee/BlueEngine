@@ -29,7 +29,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("select", "MAP.json OBJECT_ID"),
     ("near", "MAP.json X,Y,Z RADIUS"),
     ("catalog", ""),
-    ("lint", "MAP.json"),
+    ("lint", "MAP.json [--game=GAME.json] [--scenario=SCENARIO.json]"),
     ("reach", "MAP.json"),
     ("walk-auto", "MAP.json FROM_X,Z TO_X,Z"),
     ("walk-explain", "MAP.json FROM_X,Z TO_X,Z OUT.svg"),
@@ -119,7 +119,7 @@ pub fn describe() -> Result<Value> {
         "limits": {
             "packet_bytes": super::net::MAX_PACKET_BYTES,
             "players": super::simulation::DEFAULT_MAX_PLAYERS,
-            "players_note": "the default a server admits; see runtime_support for what can be configured and what each path supports",
+            "players_note": "Default admission; runtime_support lists per-path configurable limits",
             "map_bytes": super::game::MAX_MAP_BYTES, "patch_operations": 1000, "search_results": 10
         },
         "runtime_support": runtime_support(),

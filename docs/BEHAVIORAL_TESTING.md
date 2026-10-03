@@ -38,6 +38,13 @@ Hand-timed movement (`right: 1.0` for 38 ticks, then stop) is fragile. Two input
   the player keeps the heading it has.
 * `face: "entity-id"` looks at the centre of that entity from where the player's eyes are now. Interaction needs
   line of sight within 2.5 m, so stand in range and `face` the target rather than working out a yaw.
+* `route: true` on a `walk_to` input uses A* waypoints around the world's **current** colliders and the active
+  controller profile. It replans every 30 executed steps, waiting when a moving gate still blocks the route,
+  within the same 1800-step walk timeout. The default remains direct steering. A route candidate is not proof
+  of physical completion: the shared simulation must actually arrive and satisfy the assertions.
+* `wait_ticks: 1` on each repeated press holds later inputs until another simulation step. Different timestamps
+  alone are insufficient: several overdue presses can become due together after a blocking walk, and authority
+  intentionally coalesces interaction intentions in one tick. `wait_ticks` accepts 0..60000 executed steps.
 
 `sim` also reports where each player ended up (`players`, eye position), so a walk can be checked without guessing.
 `tick` stays the earliest tick an input may run; inputs without `walk_to`/`face` behave exactly as they always did.
@@ -56,13 +63,51 @@ be2-tools game-explore game.json --scenario=win.json
 be2-tools sim win.json
 ```
 
-It walks to each target, faces it and presses it, and where the rules need time to pass (a switch that only works
+It routes to each target using current collision, faces it and presses it, and where the rules need time to pass (a switch that only works
 in one phase of a cycle) it waits until pressing does what the plan expects. The scenario is run through the same
 runner as `sim` before it is reported as verified, and an existing file is never overwritten. Paths that go through
 trigger zones are not generated yet. The file is named, and the command reports it, as **one winning route only**:
 it shows the rules can be won once in the order the planner found, and says nothing about losing, restarting,
 retrying after a mistake, pressing in the wrong order or timer variation. Treat it as the starting point: add the
 assertions and the failing and out-of-order cases yourself.
+
+The [observatory fixture](../assets/games/observatory/README.md) demonstrates an initially closed shutter,
+a turn around a baffle, three calibration presses, battery failure, restart and a successful run.
+Its never-opening-shutter variant is abstractly winnable but reports `scenario.verified:false`, with no written
+winning scenario. The command's `ok` describes abstract exploration; inspect the separate physical result.
+
+To inspect real stock frames without converting intents into hand-timed movement:
+
+```sh
+be2 --game assets/games/observatory/content/game.json --scenario assets/games/observatory/content/loss-restart-win.json --capture NEW_DIRECTORY
+```
+
+This verifies the scenario before rendering, then executes the same driver against local `GameSession` authority.
+It requires one player (id 1), default spawn, matching game content, and no `--connect`, `--server`, `--load`
+or `--playback`. Captures include world, loss, restart, win and menu frames when those transitions occur.
+It demonstrates rendered scripted behavior; it does not establish live keyboard/controller or network behavior.
+
+## Gate reachability in content checks
+
+Static `lint MAP` and `reach MAP` describe initial map collision. For an authored gate, pass a verified physical
+scenario as evidence instead of exempting movers:
+
+```sh
+be2-tools lint map.json --game=game.json --scenario=win.json
+```
+
+Game-aware lint runs the shared simulation for the exact game/map contents, using authored spawns (scenario
+spawn overrides are refused). It resolves an initial `unreachable` error only when that individual enabled
+target was observed within authoritative interaction reach and line of sight. The finding remains as
+`initial-unreachable-now-reached` information, naming the demonstrated scenario. Other targets, inaccessible
+movers and failed/mismatched scenarios remain errors or unresolved. This proves a selected run, not every state.
+`sim` exposes `reachable_targets` for the same evidence; this reads authority without changing rules.
+
+Generated `scripts/check.py --scenario tests/win.json --scenario tests/loss-restart-win.json` uses the first
+chosen scenario for game-aware lint when the GameDocument has movers, then executes all scenarios normally.
+Without a scenario it keeps static lint. Put a route demonstrating required targets first; a passing loss-only
+scenario does not establish their reachability. Existing games need no change unless opting into this evidence
+path; copy the updated engine template/check script (or use the engine's supported upgrade workflow).
 
 ## Four different claims
 

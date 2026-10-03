@@ -23,6 +23,36 @@ Every playable BlueEngine game should meet this baseline before delivery:
 
 ## Shared implementation
 
+Stock `GameDocument` games may opt into `presentation` in `game.json`:
+
+```json
+{"presentation": {
+  "objective": "Open shutter, calibrate three times, then transmit",
+  "success": "Observation transmitted! E / R to play again",
+  "failure": "Battery depleted. E / R to restart",
+  "counters": {
+    "battery": {"label": "Battery", "format": "clock"},
+    "calibration": {"label": "Calibration", "units": "/ 3"},
+    "internal": {"visible": false}
+  },
+  "palette": {"accent": [1, 0.74, 0.3, 1]},
+  "hud": {"scale": 1, "margin": 16, "width": 880, "crosshair": true}
+}}
+```
+
+Counter keys must name declared counters (including `internal` in this example). `number` is the default format; `clock` interprets the authoritative
+integer as seconds and displays minutes:seconds, retaining negative signs. Formatting never changes timers,
+counter values or win/loss rules. Hidden counters remain authoritative and saved/replicated.
+Palette slots are `background`, `panel`, `text`, `accent`, `success`, `failure`, each finite RGBA in 0..1.
+HUD scale is 0.75..1.5, margin 8..48 pixels and optional width 240..900 pixels, clamped to the window;
+text is fitted with an ellipsis. Wording is 1..200 printable ASCII bytes, labels <=48, units <=12 (or empty).
+Include restart controls in customized outcome wording if desired.
+
+Omitting `presentation` preserves stock defaults and legacy serialization; existing JSON games need no migration.
+Rust code constructing `GameDocument` directly must add `presentation: None` (or `Some(config)`).
+The renderer reads the same `GameState` as the headless runtime. See the
+[observatory fixture](../assets/games/observatory/README.md) for complete configuration and captured evidence.
+
 Enable the `presentation` feature and use `viewer::game_client::{window_config,
 GameShell, movement_axes, static_meshes}`. Call `begin_frame` before reading gameplay
 input and gate every action with `playing()` if the game captures the mouse (first person), or with

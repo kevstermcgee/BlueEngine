@@ -53,6 +53,11 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
 - Loads are all-or-nothing and saves are atomic with a backup; never write your own save file code.
 
 ## Checks
+Record development friction in the engine with `python tools/learn.py record --game {{name}} --area AREA
+--tokens N --note "..." --keywords "future,query,terms"` (add `--trap` for a silent failure).
+Verify the lesson appears in `python tools/be2.py context "representative future query" --compact`.
+Without keywords a record is archive-only. Do not copy session logs or credentials.
+
 - `cargo test` (rules + determinism, headless). Add a test for every rule you add.
 - Iterate with `python scripts/check.py --skip-ship`; `--content-only` needs no Cargo.
 - Look at it: `target/debug/{{name}} --capture out --frames 30,120 --seed 3`, then

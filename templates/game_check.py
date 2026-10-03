@@ -55,7 +55,12 @@ def commands(root, native, content_only=False, scenarios=()):
         maps = dict.fromkeys([main_map] if main_map.is_file() else [])
     checks = []
     for path in maps:
-        checks.extend([[str(native), 'audit', str(path)], [str(native), 'lint', str(path)]])
+        lint = [str(native), 'lint', str(path)]
+        # A chosen verified scenario can prove later reachability through authored movers.
+        # Without such evidence retain static errors; never exempt all moving gates.
+        if document is not None and document.get('movers') and scenarios and path == map_path:
+            lint.extend(['--game=' + str(game.resolve()), '--scenario=' + str((root / scenarios[0]).resolve())])
+        checks.extend([[str(native), 'audit', str(path)], lint])
         # Run authored expectations when present. Without a checks block use the
         # native lint contract, not verify's implicit ten-warning policy (the
         # shipped two-room blueprint has advisory shared-wall warnings).

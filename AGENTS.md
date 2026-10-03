@@ -58,5 +58,6 @@ run `python tools/perf.py record --note "what changed"` so the next session can 
 Learning loop (ADR 0038, `docs/learning/README.md`): before writing low-level code, run `python3 tools/be2.py context "<task>" --compact`;
 its `learned` lines name traps other games hit and what the engine already provides. When you finish a game task, record each friction item
 (engine source you had to read, code you copied or wrote that other games will too, a silent failure, a big token cost) with
-`python3 tools/learn.py record --game NAME --area AREA --tokens N --note "..." [--trap ...] [--duplicated PATHS]`. Never copy session logs
+`python3 tools/learn.py record --game NAME --area AREA --tokens N --note "..." --keywords "future,query,terms" [--trap ...] [--duplicated PATHS]`.
+Verify retrieval with `python tools/be2.py context "representative future query" --compact`. Missing keywords mean archive-only, no hints. Never copy session logs
 or credentials into a repository.

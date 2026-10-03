@@ -342,6 +342,9 @@ pub struct GameDocument {
     #[serde(default)]
     pub timers: Vec<TimerDefinition>,
     pub rules: Vec<Rule>,
+    /// Optional stock HUD configuration. Missing preserves legacy presentation and serialization.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub presentation: Option<super::stock_presentation::StockPresentation>,
 }
 
 #[derive(Clone)]
@@ -468,6 +471,9 @@ impl GameDocument {
     pub fn validate(&self, map: &MapDocument) -> Result<()> {
         map.validate()?;
         self.player_profile.validate()?;
+        if let Some(presentation) = &self.presentation {
+            presentation.validate(&self.counters)?;
+        }
         if self.schema_version != 1
             || self.name.is_empty()
             || self.name.len() > 100

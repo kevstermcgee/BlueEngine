@@ -662,13 +662,19 @@
         "tests/mover_riding.rs",
         "tools/game.schema.json",
         "docs/GAME_QUICKSTART.md",
-        "docs/adr/0026-movers-carry-players.md"
+        "docs/adr/0026-movers-carry-players.md",
+        "src/viewer/stock_presentation.rs",
+        "assets/games/observatory/author.py",
+        "assets/games/observatory/content/game.json",
+        "assets/games/observatory/README.md",
+        "tests/stock_observatory.rs",
+        "src/viewer/lint.rs"
       ],
       "checks": [
         "game_documents integration tests",
         "graphical --capture-game smoke"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries. Movers carry a grounded player standing on them (Controller::ride, ADR 0026).",
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting; movers translate authored gates. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries. Movers carry a grounded player standing on them (Controller::ride, ADR 0026). Optional stock presentation config sets objective/outcome wording, counter labels/visibility/units/clock, RGBA palette and bounded HUD; reads authority only. Canonical translate preserves exact box bounds after fractional edits.",
       "depends_on": [
         "simulation_contract"
       ],
@@ -692,7 +698,14 @@
         "game.json",
         "map.json",
         "mover",
-        "moving platform"
+        "moving platform",
+        "stock HUD",
+        "presentation",
+        "battery",
+        "shutter",
+        "calibration",
+        "canonical",
+        "translate"
       ],
       "read_first": [
         "src/viewer/game.rs",
@@ -813,13 +826,19 @@
         "src/viewer/game_scenario.rs",
         "tests/scenario_intents.rs",
         "tests/game_scenario.rs",
-        "tests/game_failure_paths.rs"
+        "tests/game_failure_paths.rs",
+        "src/viewer/pathing.rs",
+        "tests/stock_observatory.rs",
+        "assets/games/observatory/content/win.json",
+        "assets/games/observatory/content/loss-restart-win.json",
+        "assets/games/observatory/content/closed-gate.json",
+        "src/viewer/lint.rs"
       ],
       "checks": [
         "headless simulation scenarios and replay trace verification",
         "cargo test --locked --no-default-features --test game_failure_paths"
       ],
-      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025).",
+      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025). route:true plans walk_to around current colliders with the active body profile, waits and replans while gates move. wait_ticks:1 executes repeated presses on separate steps after blocking walks. Observatory loss/restart/win and never-opening gate fixtures distinguish abstract wins from physical proof. Stock --scenario --capture renders verified local single-player steps. Game-aware lint MAP --game=GAME --scenario=WIN retains initial static findings and resolves only individually observed authoritative targets; failed, mismatched or spawn-overriding proof is refused.",
       "evidence": [
         {
           "suite": "toolchain",
@@ -832,6 +851,14 @@
         {
           "suite": "game_scenario",
           "test": "a_press_that_is_only_right_in_one_phase_of_a_timer_waits_for_that_phase"
+        },
+        {
+          "suite": "stock_observatory",
+          "test": "changing_shutter_collision_and_turning_route_are_executed_before_the_win"
+        },
+        {
+          "suite": "stock_observatory",
+          "test": "overdue_repeated_presses_after_a_blocking_walk_use_separate_executed_steps"
         }
       ],
       "depends_on": [
@@ -841,7 +868,18 @@
       "keywords": [
         "walk_to",
         "face",
-        "generated scenario"
+        "generated scenario",
+        "route",
+        "pathing",
+        "obstacle",
+        "gate",
+        "shutter",
+        "repeated",
+        "wait_ticks",
+        "replan",
+        "game-aware lint",
+        "unreachable",
+        "reachability proof"
       ]
     },
     "verification_framework": {
@@ -950,7 +988,10 @@
         "docs/GAME_PRESENTATION.md",
         "src/viewer/game_text.rs",
         "src/viewer/game_visuals.rs",
-        "assets/ui/LICENSE_LIBERATION"
+        "assets/ui/LICENSE_LIBERATION",
+        "src/viewer/stock_presentation.rs",
+        "src/viewer/playable.rs",
+        "tests/stock_observatory.rs"
       ],
       "checks": [
         "presentation module tests",
@@ -962,7 +1003,7 @@
         "simulation_contract"
       ],
       "contract": {
-        "owns": "Window, menus, cosmetic rendering and input adaptation",
+        "owns": "Window, menus, cosmetic rendering and input adaptation; optional stock objective/outcome wording, counter labels/visibility/units/clock, palette and HUD configuration",
         "inputs": "Shared authoritative state and neutral gameplay inputs",
         "outputs": "Frames and intentions",
         "may_depend_on": [
@@ -986,11 +1027,19 @@
         "game window",
         "resolution",
         "pause menu",
-        "settings menu"
+        "settings menu",
+        "stock",
+        "HUD",
+        "palette",
+        "counter labels",
+        "clock",
+        "presentation"
       ],
       "read_first": [
         "src/viewer/game_client.rs",
-        "docs/GAME_PRESENTATION.md"
+        "docs/GAME_PRESENTATION.md",
+        "src/viewer/stock_presentation.rs",
+        "src/viewer/playable.rs"
       ]
     },
     "sandbox": {
@@ -1223,7 +1272,12 @@
         "server address",
         "resolve",
         "server.txt",
-        "default server"
+        "default server",
+        "script",
+        "scripted",
+        "playback",
+        "screenshots",
+        "frames"
       ],
       "contract": {
         "owns": "Frame timing, fixed-step accumulation, per-tick input, replay/capture/perf plumbing, saves, screen feel, synthesised audio",
@@ -1728,7 +1782,7 @@
         "python -m unittest tools.test_hub_deploy",
         "python tools/check_headless.py"
       ],
-      "note": "One hub for every netplay game (ADR 0037). netplay::cli::serve::<G>(ServeSpec) is the shared server main (--listen --transport --join-key --auto-start --report-dir --seed, a participants flag, --set ID=VALUE and per-setting flags from NetGame::settings(), --status-lines, --exit-on-stdin-eof, --info, --help). be2-hub lists and creates rooms for every game in its registry file on one UDP port, one server process per room on a shared round-robin port pool, protocol BEHB v1 (list, create with a source-address cookie, ping) plus the legacy DFHB v1 adapter for shipped Deadfall clients, token-bucket and room caps, never-joined (45 s) and empty (120 s) reaping, per-game Public rooms, and 'be2-hub reload GAME' that retires one game's rooms (new Public room first: a replacement that cannot start changes nothing), 'be2-hub verify GAME --server CANDIDATE' (the registry's rules on --info with time and output limits, plus an isolated start that must print STATUS) and 'be2-hub status GAME' (the hub's own view: registry build, whether the Public room process prints STATUS with the expected build; reload's acknowledgement is never readiness). transport = production is refused at load (hub rooms are raw UDP). hub::client is the game side: HubClient, the std-only Online Play Online state machine, local_build::<G>() and default_hub() (blue-engine.duckdns.org:4100). deploy/hub holds the systemd units, portmap (be2-hub ports), ddns and update.sh, whose per-game logic is tools/hub_deploy.py: dependency-aware build identity (game + path-dependency source, manifests, lockfile, toolchain, args, env; no rebuild when nothing relevant changed), staged candidate, verify, atomic promotion with BIN.previous, reload, status-confirmed readiness, a receipt per game whose phase (installing/installed/activated/ready) makes an incomplete activation retryable, and --rollback. Feta, BlueDM and Riftwake have their own netcode and are out of scope.",
+      "note": "One hub for every netplay game (ADR 0037). netplay::cli::serve::<G>(ServeSpec) is the shared server main (--listen --transport --join-key --auto-start --report-dir --seed, a participants flag, --set ID=VALUE and per-setting flags from NetGame::settings(), --status-lines, --exit-on-stdin-eof, --info, --help). be2-hub lists and creates rooms for every game in its registry file on one UDP port, one server process per room on a shared round-robin port pool, protocol BEHB v1 (list, create with a source-address cookie, ping) plus the legacy DFHB v1 adapter for shipped Deadfall clients, token-bucket and room caps, never-joined (45 s) and empty (120 s) reaping, per-game Public rooms, and 'be2-hub reload GAME' that retires one game's rooms (new Public room first: a replacement that cannot start changes nothing), 'be2-hub verify GAME --server CANDIDATE' (the registry's rules on --info with time and output limits, plus an isolated start that must print STATUS) and 'be2-hub status GAME' (the hub's own view: registry build, whether the Public room process prints STATUS with the expected build; reload's acknowledgement is never readiness). transport = production is refused at load (hub rooms are raw UDP). hub::client is the game side: HubClient, the std-only Online Play Online state machine, local_build::<G>() and default_hub() (blue-engine.duckdns.org:4100). deploy/hub holds the systemd units, portmap (be2-hub ports), ddns and update.sh, whose per-game logic is tools/hub_deploy.py: dependency-aware build identity (game + path-dependency source, manifests, lockfile, toolchain, args, env; no rebuild when nothing relevant changed), staged candidate, verify, atomic promotion with BIN.previous, reload, status-confirmed readiness, a receipt per game whose phase (installing/installed/activated/ready) makes an incomplete activation retryable, and --rollback. Feta, BlueDM and Riftwake have their own netcode and are out of scope. tools/hub_deploy.py resumes incomplete rollback installation/activation/readiness before skipping rejected source, verifies restored SHA-256, and recovers only from a receipt-matching previous artifact; otherwise fails without rebuilding the rejected source.",
       "keywords": [
         "hub",
         "be2-hub",
@@ -1770,7 +1824,12 @@
         "deadfall",
         "host",
         "hosting",
-        "blue-engine.duckdns.org"
+        "blue-engine.duckdns.org",
+        "rollback",
+        "updater",
+        "recovery",
+        "receipt",
+        "deployment"
       ],
       "depends_on": [
         "netplay",
@@ -1944,12 +2003,16 @@
         "docs/learning/ledger.jsonl",
         "docs/learning/tasks.jsonl",
         "docs/learning/REPORT.md",
-        "docs/adr/0038-engine-learns-from-development.md"
+        "docs/adr/0038-engine-learns-from-development.md",
+        "docs/learning/tasks_heldout.jsonl",
+        "docs/learning/tasks_heldout2.jsonl",
+        "docs/learning/tasks_heldout3.jsonl",
+        "docs/learning/eval_floor.json"
       ],
       "checks": [
         "python -m unittest tools.test_learn"
       ],
-      "note": "How the engine learns from the games built on it (ADR 0038): python tools/learn.py record writes a friction entry (cost, workaround, trap, copied code) to docs/learning/ledger.jsonl; dupes finds code the games copied and checks whether the engine already has it; eval scores be2.py context against a task benchmark (recall, packet size); sessions (local only, never committed) aggregates where AI effort went from session logs without storing any content; modules refreshes the per-file summaries context routes by; report writes docs/learning/REPORT.md. be2.py context appends matching ledger traps and \"already solved by\" lines.",
+      "note": "How the engine learns from the games built on it (ADR 0038): python tools/learn.py record writes a friction entry (cost, workaround, trap, copied code) to docs/learning/ledger.jsonl; dupes finds code the games copied and checks whether the engine already has it; eval scores be2.py context against a task benchmark (recall, packet size); sessions (local only, never committed) aggregates where AI effort went from session logs without storing any content; modules refreshes the per-file summaries context routes by; report writes docs/learning/REPORT.md. be2.py context appends matching ledger traps and \"already solved by\" lines. record --keywords supplies retrieval terms; missing terms warn archive-only. Promote solved entries in place while retaining history and replace obsolete workaround/hint. All four tuned development fixtures protect aggregate and individual discovery results, without appending evaluation history in tests.",
       "keywords": [
         "friction",
         "ledger",
@@ -2112,7 +2175,7 @@
     "src/viewer/devkit/mod.rs": "Building blocks for games that own their simulation.",
     "src/viewer/devkit/net_address.rs": "Typed server addresses and the default-server chain, graphics-free.",
     "src/viewer/devkit/path.rs": "A closed loop on the ground plane: race tracks, patrol routes, rails, a circular arena edge.",
-    "src/viewer/devkit/playback.rs": "Driving a loop without a human: recorded inputs, a tiny cue script and a screenshot schedule.",
+    "src/viewer/devkit/playback.rs": "Scripted playback runs recorded inputs and saves screenshots at chosen capture frames.",
     "src/viewer/devkit/rng.rs": "Tiny deterministic random numbers for simulations, effects and procedural audio.",
     "src/viewer/devkit/save.rs": "Player settings and records that survive restarts: one small JSON file, atomic, never fatal.",
     "src/viewer/devkit/scale.rs": "Size checks a headless agent can run: how big is this thing, in metres, next to a person?",
@@ -2154,7 +2217,7 @@
     "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves...",
     "src/viewer/kit/view.rs": "A camera description shared by the renderer, the sky and the HUD.",
     "src/viewer/landscaping.rs": "Reusable, static low-poly planting.",
-    "src/viewer/lint.rs": "Design-level static analysis (linting) for BlueEngine maps.",
+    "src/viewer/lint.rs": "Initial static map lint and individually demonstrated game reachability from verified physical scenarios.",
     "src/viewer/local_client.rs": "Ready-to-play local static-map client.",
     "src/viewer/maps.rs": "Map selection is independent of graphics; studio remains a regression fixture.",
     "src/viewer/mcp.rs": "Native Model Context Protocol (MCP) server over standard I/O for BlueEngine.",
@@ -2184,13 +2247,13 @@
     "src/viewer/netplay/hub/serve.rs": "The front door: abuse limits and the datagram handler in front of the room table, and the UDP loop.",
     "src/viewer/netplay/hub/spawn.rs": "Starting and watching one room's server process.",
     "src/viewer/netplay/hub/wire.rs": "The hub's datagram protocol, BEHB version 1, and the loopback control protocol BECT.",
-    "src/viewer/netplay/mod.rs": "Online play for games that own their simulation: a lobby, matches, results, on any DatagramTransport.",
+    "src/viewer/netplay/mod.rs": "Online play for custom simulations: NetGame::MAX_SEATS sets player join limits; cli::serve supplies the...",
     "src/viewer/netplay/server.rs": "The authoritative server: a lobby, then a match, then results, forever, for any NetGame.",
     "src/viewer/netplay/toy.rs": "The smallest complete NetGame: a footrace along a line.",
     "src/viewer/netplay/wire.rs": "The netplay envelope: fixed messages around game-defined payloads.",
     "src/viewer/newgame.rs": "be2-tools new-game NAME DIR [ENGINE_PATH] [TEMPLATE]: Scaffolds a standalone, green game project.",
     "src/viewer/pathing.rs": "Auto-planned walk tests, A* pathfinding, and blocking obstacle diagnostics.",
-    "src/viewer/playable.rs": "Shared authored-game presentation.",
+    "src/viewer/playable.rs": "Stock game HUD configuration and rendered --scenario/--capture runs over shared authority.",
     "src/viewer/presentation.rs": "Bounded snapshot presentation, independent of graphics and authoritative physics.",
     "src/viewer/profile.rs": "Validated, rendering-independent locomotion parameters.",
     "src/viewer/prop_physics.rs": "Loose-prop rigid bodies and shared pickup/drop behavior, independent of graphics.",
@@ -2207,6 +2270,7 @@
     "src/viewer/simulation.rs": "Simulation must remain usable without graphics, audio or a window.",
     "src/viewer/spans.rs": "A handful of named timing spans and one compact summary, for seeing where a tick goes.",
     "src/viewer/spatial.rs": "Room / zone graph and spatial partitioning for indoor maps and interest management.",
+    "src/viewer/stock_presentation.rs": "Stock GameDocument HUD wording, counter labels/units and palette; reads authoritative state only.",
     "src/viewer/symbols.rs": "High-performance on-demand Rust source navigator for BlueEngine (be2-tools src).",
     "src/viewer/ui_check.rs": "Headless 2D UI layout auditor for BlueEngine menus and screens.",
     "src/viewer/verify.rs": "Unified self-verifying maps and games for BlueEngine.",

@@ -352,6 +352,9 @@ fn run() -> Result<()> {
                 "set_visible":"interactable presentation only; never changes eligibility or collision",
                 "profiles":"one shared validated movement profile; spawns use feet coordinates and round-robin server IDs",
                 "map":"relative child file inside game directory; loaded content participates in fingerprint",
+                "authoring":"add-interactable GAME ID --at=X,Y,Z --write creates matching material/node/collider/entity/game records; apply a translate patch selecting node, collider and entity together to edit without recalculating bounds",
+                "presentation":"optional presentation: objective/success/failure wording, counters {visible,label,units,format:number|clock}, RGBA palette, hud {scale:0.75..1.5,margin:8..48,width:240..900,crosshair}; reads authoritative state, missing preserves defaults",
+                "physical_scenarios":"game-explore GAME --scenario=NEW.json routes around current colliders with the active profile and verifies a win in shared simulation; route:true enables replanning on walk_to; wait_ticks:1 separates repeated presses after blocking walks; be2 --game GAME --scenario SCENARIO --capture NEW_DIR renders the same steps",
                 "unsupported":["recursive events","custom weapon actions","per-player inventory"]
             })
         ),
@@ -921,7 +924,29 @@ fn run() -> Result<()> {
         }
         "lint" => {
             let d = MapDocument::load(Path::new(arg(1)?))?;
-            let rep = vesper3d::viewer::lint::lint_map(&d, false, &[]);
+            let (mut game, mut scenario) = (None, None);
+            for flag in &a[2..] {
+                if let Some(path) = flag.strip_prefix("--game=") {
+                    if game.replace(path).is_some() {
+                        return Err("Duplicate --game".into());
+                    }
+                } else if let Some(path) = flag.strip_prefix("--scenario=") {
+                    if scenario.replace(path).is_some() {
+                        return Err("Duplicate --scenario".into());
+                    }
+                } else {
+                    return Err("Use lint MAP [--game=GAME --scenario=SCENARIO]".into());
+                }
+            }
+            let rep = match (game, scenario) {
+                (None, None) => vesper3d::viewer::lint::lint_map(&d, false, &[]),
+                (Some(game), Some(scenario)) => vesper3d::viewer::lint::lint_game(
+                    &d,
+                    &vesper3d::viewer::game::GameDocument::load(Path::new(game))?,
+                    &vesper3d::viewer::scenario::load_scenario(Path::new(scenario))?,
+                )?,
+                _ => return Err("Game-aware lint requires both --game and --scenario".into()),
+            };
             println!("{}", serde_json::to_string_pretty(&rep)?);
             if !rep.ok {
                 std::process::exit(1);
@@ -1011,6 +1036,7 @@ fn run() -> Result<()> {
                     "final_checksum": format!("0x{:016x}", last_chk),
                     "assertions": report.assertions,
                     "players": report.players,
+                    "reachable_targets": report.reachable_targets,
                 })
             );
             if !report.ok {

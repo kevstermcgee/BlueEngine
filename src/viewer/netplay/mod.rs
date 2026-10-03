@@ -1,4 +1,4 @@
-//! Online play for games that own their simulation: a lobby, matches, results, on any [`DatagramTransport`](super::net::DatagramTransport).
+//! Online play for custom simulations: NetGame::MAX_SEATS sets player join limits; cli::serve supplies the server and hub rooms.
 //!
 //! The stock runner networks `GameDocument` games. A game with its own rules (`custom-sim`) used to write its
 //! own server and client from the transport up. Measured on Spooky Kart, that was about 2,000 lines, none of

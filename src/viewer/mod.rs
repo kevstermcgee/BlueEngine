@@ -26,6 +26,7 @@ pub mod presentation;
 pub mod profile;
 pub mod room;
 pub mod savestate;
+pub mod stock_presentation;
 
 pub mod wrench;
 

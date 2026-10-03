@@ -126,6 +126,7 @@ impl TestHub {
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
         let report_dir = dir.join("reports");
+        let (ready, started) = std::sync::mpsc::sync_channel(1);
         let thread = std::thread::spawn(move || {
             let text = std::fs::read_to_string(&conf_path).unwrap();
             let cfg = parse_config(&text, conf_path.parent().unwrap()).unwrap();
@@ -152,8 +153,14 @@ impl TestHub {
                 config_path: Some(conf_path),
             };
             let mut hub = Hub::new(opts, registry, spawner(), Box::new(info));
+            ready.send(()).unwrap();
             hub::serve(&socket, &mut hub, &flag).unwrap();
         });
+        // ProcessInfo starts real executables. Its startup can outlast a short UDP
+        // read timeout on Windows; rate tests must begin after registry initialization.
+        started
+            .recv_timeout(Duration::from_secs(10))
+            .expect("hub initialization");
         TestHub {
             addr: ([127, 0, 0, 1], base).into(),
             pool: base + 1..base + 1 + pool,
@@ -1092,25 +1099,17 @@ fn the_hub_binary_refuses_to_start_on_a_taken_port_and_skips_games_that_cannot_r
 
     // A missing server binary and a server whose --info fails are skipped; the good game still runs.
     let base = free_ports(2);
-    let conf = dir.path().join("two.conf");
-    std::fs::write(
-        &conf,
-        format!(
-            "[hub]\nlisten = 127.0.0.1:{base}\npool_size = 2\nreport_dir = {}\n\n\
+    let config = format!(
+        "[hub]\nlisten = 127.0.0.1:{base}\npool_size = 2\nreport_dir = {}\n\n\
              [game toy-footrace]\nserver = {TOY_SERVER}\npublic = on\nauto_start = 0\n\n\
-             [game ghost]\nserver = {}/does-not-exist\n\n[game broken]\nserver = /bin/false\n",
-            dir.path().join("r").display(),
-            dir.path().display()
-        ),
-    )
-    .unwrap();
-    let mut child = Command::new(HUB_BIN)
-        .arg("--config")
-        .arg(&conf)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+             [game ghost]\nserver = {}/does-not-exist\n\n[game broken]\nserver = {HUB_BIN}\n",
+        dir.path().join("r").display(),
+        dir.path().display()
+    );
+    // The hub binary is an executable whose --info fails on either OS. Reuse the
+    // readiness/RAII fixture: immediate Windows ICMP errors must not exhaust a
+    // fixed retry count before the new process has initialized, or leak it on panic.
+    let _hub = HubProcess::start_with_config(dir.path(), base, 2, &config, &[]);
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
     sock.set_read_timeout(Some(Duration::from_millis(200)))
         .unwrap();
@@ -1146,8 +1145,6 @@ fn the_hub_binary_refuses_to_start_on_a_taken_port_and_skips_games_that_cannot_r
             ..
         }
     ));
-    let _ = child.kill();
-    let _ = child.wait();
 }
 
 #[test]

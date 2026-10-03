@@ -176,6 +176,12 @@ hub is stopped is not a failure.
 * **Roll back**: `update.sh --rollback GAME` verifies `CARGO-BIN.previous`, reinstalls it, reloads and waits for ready. The source
   that was rolled back is remembered, so the next run does not deploy it again until the source changes (or `--force`).
   `CARGO-BIN.previous` is only ever refreshed from a server whose activation completed.
+  Remembering that rejected source never completes an unfinished rollback: the ordinary updater verifies the restored
+  executable's size and SHA-256 against its receipt, resumes installation if interrupted, then resumes activation/readiness.
+  A missing or inconsistent installed artifact is restored only from the receipt-matching, validated previous executable;
+  if that artifact is also unavailable or inconsistent, recovery fails clearly without rebuilding the rejected revision.
+  A stopped hub or failed readiness leaves the receipt incomplete and retryable. Only a verified artifact with completed
+  activation/readiness may skip. Other games retain their own receipts and artifacts.
 * **`no-answer` from `status`**: the running hub was started before `status` existed. Restart it when nobody is playing
   (`systemctl --user restart blueengine-hub`); until then `update.sh` honestly reports the game as activated, not ready.
 * **Killed in the middle** (power, `kill -9`): run it again. The lock is released with the process.

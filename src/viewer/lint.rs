@@ -1,4 +1,4 @@
-//! Design-level static analysis (linting) for BlueEngine maps.
+//! Initial static map lint and individually demonstrated game reachability from verified physical scenarios.
 //!
 //! Catches common map design mistakes that ruin gameplay:
 //! - `duplicate-id`: identical IDs in nodes, colliders, or entities
@@ -45,6 +45,69 @@ pub struct LintReport {
     pub errors: usize,
     pub warnings: usize,
     pub findings: Vec<Finding>,
+}
+
+/// Keep initial static findings, resolving only targets physically reached in a successful
+/// shared-simulation scenario for these exact game/map contents. Other movers/targets remain unresolved.
+pub fn lint_game(
+    doc: &MapDocument,
+    game: &super::game::LoadedGame,
+    scenario: &super::scenario::Scenario,
+) -> crate::Result<LintReport> {
+    if scenario.players.iter().any(|p| p.spawn.is_some()) {
+        return Err(
+            "Reachability proof must use authored spawns, not scenario spawn overrides".into(),
+        );
+    }
+    if serde_json::to_value(doc)? != serde_json::to_value(&game.map)? {
+        return Err("Lint map differs from the game's map".into());
+    }
+    let source = scenario
+        .game_path
+        .as_ref()
+        .ok_or("Reachability proof must name game_path")?;
+    if super::game::GameDocument::load(std::path::Path::new(source))?
+        .world()?
+        .content_hash
+        != game.clone().world()?.content_hash
+    {
+        return Err("Reachability scenario content differs from the game".into());
+    }
+    let proof = super::scenario::evaluate_scenario(scenario)?;
+    if !proof.ok {
+        return Err("Reachability scenario failed physical verification; initial findings remain unresolved".into());
+    }
+    let mut report = lint_map(doc, false, &[]);
+    for finding in &mut report.findings {
+        if finding.code == "unreachable" {
+            if !finding.ids.is_empty()
+                && finding
+                    .ids
+                    .iter()
+                    .all(|id| proof.reachable_targets.contains(id))
+            {
+                finding.code = "initial-unreachable-now-reached".into();
+                finding.severity = Severity::Info;
+                finding.message = format!("Initially statically unreachable; demonstrated later interaction reach in scenario '{}': {}", scenario.name, finding.ids.join(", "));
+            } else {
+                finding
+                    .message
+                    .push_str(" (initial collision; unresolved by the supplied scenario)");
+            }
+        }
+    }
+    report.errors = report
+        .findings
+        .iter()
+        .filter(|f| f.severity == Severity::Error)
+        .count();
+    report.warnings = report
+        .findings
+        .iter()
+        .filter(|f| f.severity == Severity::Warn)
+        .count();
+    report.ok = report.errors == 0;
+    Ok(report)
 }
 
 pub fn lint_map(doc: &MapDocument, strict: bool, ignore_codes: &[String]) -> LintReport {

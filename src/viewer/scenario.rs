@@ -49,6 +49,14 @@ pub struct TimedInput {
     /// tick arithmetic. Unless `face` is given the player keeps the heading it has.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub walk_to: Option<[f32; 2]>,
+    /// Plan a walk around current colliders using the player's profile, rechecking every 30 executed ticks.
+    /// If a gate blocks the route, wait and replan up to the walk timeout. False preserves direct steering.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub route: bool,
+    /// Hold later inputs for this player for this many executed simulation steps after this input applies.
+    /// Use 1 on repeated presses: overdue timestamps alone do not prevent interaction coalescing. Maximum 60,000.
+    #[serde(default, skip_serializing_if = "is_u32_zero")]
+    pub wait_ticks: u32,
     /// Look at the centre of this entity (yaw and pitch are set from where the player's eyes are now).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub face: Option<String>,
@@ -85,6 +93,9 @@ fn is_zero(v: &f32) -> bool {
 }
 fn is_false(v: &bool) -> bool {
     !*v
+}
+fn is_u32_zero(v: &u32) -> bool {
+    *v == 0
 }
 
 fn default_tolerance() -> f32 {
@@ -171,6 +182,10 @@ pub struct ScenarioRunReport {
     pub assertions: Vec<AssertionOutcome>,
     /// Where each player ended up (eye position), so a scenario's walk can be checked without guessing.
     pub players: Vec<FinalPlayer>,
+    /// Enabled targets actually observed within authoritative interaction reach/line of sight.
+    /// This selected run proves later reachability, not reachability in every possible state.
+    #[serde(default)]
+    pub reachable_targets: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -190,11 +205,17 @@ const WALK_TIMEOUT_TICKS: u32 = 1800;
 /// the replay verifier both use it, so they cannot disagree about what an input does.
 pub struct InputDriver {
     pending: Vec<TimedInput>,
-    walking: std::collections::BTreeMap<u64, (V2, u32)>,
+    walking: std::collections::BTreeMap<u64, Walk>,
     settling: std::collections::BTreeMap<u64, u32>,
     problems: Vec<String>,
 }
 type V2 = [f32; 2];
+struct Walk {
+    target: V2,
+    ticks: u32,
+    routed: bool,
+    points: std::collections::VecDeque<V2>,
+}
 
 impl InputDriver {
     pub fn new(inputs: &[TimedInput]) -> Self {
@@ -279,7 +300,18 @@ impl InputDriver {
         };
         world.input(input.player, movement, yaw, pitch);
         if let Some(target) = input.walk_to {
-            self.walking.insert(input.player, (target, 0));
+            self.walking.insert(
+                input.player,
+                Walk {
+                    target,
+                    ticks: 0,
+                    routed: input.route,
+                    points: Default::default(),
+                },
+            );
+        }
+        if input.wait_ticks > 0 {
+            self.settling.insert(input.player, input.wait_ticks);
         }
         if input.interact {
             world.request_interaction(input.player);
@@ -307,7 +339,7 @@ impl InputDriver {
         Some((d.0.atan2(-d.2), d.1.atan2(level)))
     }
     fn steer(&mut self, world: &mut HeadlessWorld, id: u64) {
-        let Some((target, ticks)) = self.walking.get(&id).copied() else {
+        let Some(mut walk) = self.walking.remove(&id) else {
             return;
         };
         let Some(player) = world.player(id) else {
@@ -315,6 +347,7 @@ impl InputDriver {
             return;
         };
         let (position, yaw, pitch) = (player.position, player.yaw, player.pitch);
+        let (target, ticks) = (walk.target, walk.ticks);
         let (dx, dz) = (target[0] - position.0, target[1] - position.2);
         let distance = dx.hypot(dz);
         let stop = Movement {
@@ -336,6 +369,39 @@ impl InputDriver {
                 target[0], target[1], position.0, position.2
             ));
         } else {
+            if walk.routed {
+                if ticks.is_multiple_of(30) {
+                    let feet = player.feet_height();
+                    walk.points = super::pathing::plan_route_with_profile(
+                        &world.room.colliders,
+                        V(position.0, feet, position.2),
+                        V(target[0], feet, target[1]),
+                        player.profile(),
+                    )
+                    .unwrap_or_default()
+                    .into_iter()
+                    .skip(1)
+                    .map(|p| [p.x, p.z])
+                    .collect();
+                }
+                while walk.points.len() > 1
+                    && walk
+                        .points
+                        .front()
+                        .is_some_and(|p| (p[0] - position.0).hypot(p[1] - position.2) < 0.16)
+                {
+                    walk.points.pop_front();
+                }
+                if walk.points.is_empty() {
+                    world.input(id, stop, yaw, pitch);
+                    walk.ticks += 1;
+                    self.walking.insert(id, walk);
+                    return;
+                }
+            }
+            let aim = walk.points.front().copied().unwrap_or(target);
+            let (dx, dz) = (aim[0] - position.0, aim[1] - position.2);
+            let distance = dx.hypot(dz).max(0.001);
             // World direction to the target, expressed as forward/right for the current heading, and
             // eased in over the last half metre so the player stops close to the point.
             let (ux, uz) = (dx / distance, dz / distance);
@@ -348,7 +414,8 @@ impl InputDriver {
                 ..stop
             };
             world.input(id, movement, yaw, pitch);
-            self.walking.insert(id, (target, ticks + 1));
+            walk.ticks += 1;
+            self.walking.insert(id, walk);
         }
     }
 }
@@ -368,6 +435,9 @@ pub fn load_scenario(path: &Path) -> Result<Scenario> {
 
 /// Run every tick and return structured outcomes for all declared assertions.
 pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
+    if scenario.inputs.iter().any(|i| i.wait_ticks > 60_000) {
+        return Err("wait_ticks must be at most 60,000 executed steps".into());
+    }
     let mut world = if let Some(p) = &scenario.game_path {
         let doc = super::game::GameDocument::load(Path::new(p))?;
         doc.world()?
@@ -386,6 +456,7 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
     let initial_checksum = world.checksum();
     let mut checkpoints = Vec::new();
     let mut driver = InputDriver::new(&scenario.inputs);
+    let mut reachable_targets = std::collections::BTreeSet::new();
     let mut assertion_outcomes = scenario
         .assertions
         .iter()
@@ -399,6 +470,20 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
 
     for tick in 1..=scenario.ticks {
         driver.before_step(&mut world, tick);
+
+        if let Some(game) = &world.game {
+            for player in &scenario.players {
+                if let Some(index) = world
+                    .player(player.id)
+                    .and_then(|p| game.target(&world.room, p))
+                {
+                    if game.enabled(index) && !game.state().finished() {
+                        reachable_targets
+                            .insert(game.document().interactables[index].entity.clone());
+                    }
+                }
+            }
+        }
 
         world.step();
 
@@ -560,6 +645,7 @@ pub fn evaluate_scenario(scenario: &Scenario) -> Result<ScenarioRunReport> {
         trace,
         assertions: assertion_outcomes,
         players,
+        reachable_targets: reachable_targets.into_iter().collect(),
     })
 }
 

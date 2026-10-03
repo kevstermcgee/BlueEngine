@@ -98,7 +98,7 @@ mod os {
 
     extern "C" {
         fn signal(signum: i32, handler: extern "C" fn(i32)) -> usize;
-        fn write(fd: i32, buf: *const u8, count: usize) -> isize;
+        fn write(fd: i32, buf: *const std::ffi::c_void, count: usize) -> isize;
         fn _exit(status: i32) -> !;
     }
     const SIGHUP: i32 = 1;
@@ -127,7 +127,7 @@ mod os {
             b"[Server] Second shutdown request: exiting immediately without finishing the save\n";
         // SAFETY: `write` and `_exit` are async-signal-safe; the buffer is a static byte string.
         unsafe {
-            write(2, MESSAGE.as_ptr(), MESSAGE.len());
+            write(2, MESSAGE.as_ptr().cast(), MESSAGE.len());
             _exit(FORCED_EXIT_STATUS)
         }
     }

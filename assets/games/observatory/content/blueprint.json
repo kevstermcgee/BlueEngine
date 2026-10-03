@@ -1,0 +1,65 @@
+{
+  "name": "Observatory Night Watch",
+  "height": 3.2,
+  "rooms": [
+    {
+      "id": "control",
+      "rect": [
+        -6,
+        -4,
+        0,
+        4
+      ],
+      "lamp": true,
+      "floor_color": [
+        0.12,
+        0.18,
+        0.25
+      ],
+      "wall_color": [
+        0.28,
+        0.36,
+        0.48
+      ]
+    },
+    {
+      "id": "telescope",
+      "rect": [
+        0,
+        -4,
+        6,
+        4
+      ],
+      "lamp": true,
+      "floor_color": [
+        0.12,
+        0.18,
+        0.25
+      ],
+      "wall_color": [
+        0.28,
+        0.36,
+        0.48
+      ]
+    }
+  ],
+  "doors": [
+    {
+      "between": [
+        "control",
+        "telescope"
+      ],
+      "width": 2
+    }
+  ],
+  "spawns": [
+    {
+      "id": "watchkeeper",
+      "room": "control",
+      "offset": [
+        -1,
+        0
+      ]
+    }
+  ]
+}

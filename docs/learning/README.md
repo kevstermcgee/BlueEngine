@@ -20,7 +20,8 @@ the loop (policy: [ADR 0038](../adr/0038-engine-learns-from-development.md)). Ev
 ```sh
 python3 tools/learn.py record --game spooky-kart --area networking --tokens 50000 \
         --note "what happened" --workaround "what you did" --trap "the silent failure" \
-        --duplicated "~/Game/src/a.rs,~/Game/src/b.rs" --status open
+        --duplicated "~/Game/src/a.rs,~/Game/src/b.rs" --keywords "lobby,ready,packet,loss" --status open
+python3 tools/be2.py context "lobby ready state under packet loss" --compact # verify retrieval
 python3 tools/learn.py dupes --save        # what did the games copy? (cross-checked against the engine)
 python3 tools/learn.py eval                # does `be2.py context` find the right tool? (appends to eval_runs.jsonl)
 python3 tools/learn.py report              # rewrite REPORT.md (and .learning/REPORT.md if local data exists)
@@ -67,7 +68,7 @@ One JSON object per line; fields in this order. `record` fills `id` and `date`.
 | `trap` | text, optional | the silent failure to warn the next agent about (shown by `be2.py context`) |
 | `status` | `open` / `promoted` / `wontfix` | `promoted` means the engine now provides it |
 | `ref` | text, optional (required when promoted) | the commit, ADR or tracking note: `1e2d2bc`, `ADR 0036` |
-| `keywords` | up to 20 lowercase words, optional | words a future task would use; drives `context` hints |
+| `keywords` | up to 20 lowercase words, required for hints | words a future task would use; omission warns that the record is archive-only |
 | `features` | `FEATURES.json` ids, optional | features this relates to; drives `context` hints |
 
 `be2.py context` reads the ledger and, when entries match the task (keyword overlap with the query and the selected
@@ -78,7 +79,9 @@ nothing matches. A promoted entry becomes "solved: ... (ref)"; an entry with a `
 
 1. **Record at the end of a game task.** When a task hit friction (read engine source for something that should have
    been discoverable, copied code from another game, hit a silent failure, spent a big share of tokens on one thing)
-   run `learn.py record` once per item. This replaces the free-form retrospective as the thing to harvest.
+   run `learn.py record` once per item with `--keywords` from a representative future query (at least two useful
+   terms). Verify that query with `be2.py context`; feature IDs alone do not enable hints. Archive-only records
+   may omit terms but the command warns explicitly. This replaces the free-form retrospective as the thing to harvest.
 2. **Harvest weekly** (or before an engine change): `learn.py dupes --save` finds code copied across games,
    `learn.py report` lists open items and top candidates, and `learn.py sessions` (local) shows which areas and files
    consumed the most effort.
@@ -102,5 +105,13 @@ should appear anywhere in the packet an agent reads) and `notes`.
 feature recall@k, path recall, whether the top result is expected, and packet size in tokens (characters / 4, an
 approximation). Each run appends rows to `eval_runs.jsonl` with timestamp and engine commit, so progress is visible:
 the first run is the honest baseline and is never overwritten. Use `--note` to label a run and `--set-floor` to
-raise the regression floor after a real improvement. `tools/test_learn.py` re-scores the tasks in process and fails
-if recall drops below `eval_floor.json`.
+raise the regression floor after a real improvement. `tools/test_learn.py` re-scores all four committed task sets
+(`tasks.jsonl`, `tasks_heldout.jsonl`, `tasks_heldout2.jsonl`, `tasks_heldout3.jsonl`) in process and protects both
+aggregate feature/path recall and each previously retrieved expected feature/path. Routine verification is
+read-only and never appends to `eval_runs.jsonl`. To establish a floor for a set, pass
+`--tasks docs/learning/SET.jsonl --set-floor`; review the changes before accepting them.
+
+These sets informed tuning and are development/regression fixtures, despite their historical heldout filenames.
+Feature/path retrieval and packet size estimates do not establish actual token savings, faster development or
+better game-completion rates. The report computes current fixture scores read-only and distinguishes them from
+historical evaluation runs.

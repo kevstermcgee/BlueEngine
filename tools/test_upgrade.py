@@ -35,7 +35,8 @@ def commit_all(root, message):
     return run_git(root, 'rev-parse', 'HEAD').strip()
 
 
-TEMPLATE_CHECK = (ROOT / 'templates/game_check.py').read_text(encoding='utf-8')
+# Drift compares exact template bytes; do not normalize checkout line endings.
+TEMPLATE_CHECK = (ROOT / 'templates/game_check.py').read_bytes().decode('utf-8')
 
 
 def write_identity(root, engine_revision=OLD_BASELINE, extra=None):
@@ -71,7 +72,7 @@ class CustomSimFixture:
         write_identity(self.root, engine_revision=engine_revision)
         (self.root / 'scripts').mkdir(exist_ok=True)
         if check_script is not None:
-            (self.root / 'scripts/check.py').write_text(check_script, encoding='utf-8')
+            (self.root / 'scripts/check.py').write_bytes(check_script.encode('utf-8'))
 
     def close(self):
         self.temp.cleanup()

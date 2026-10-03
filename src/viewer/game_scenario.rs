@@ -134,12 +134,19 @@ fn attempt(
             tick: tick + 1,
             player: 1,
             walk_to: Some(stand),
+            route: true,
             ..Default::default()
         };
         recorded.push(walk.clone());
         driver.push(walk);
         while driver.busy(1) {
             step(&mut driver, &mut world, &mut tick);
+            if world.game.as_ref().is_some_and(|g| g.state().finished()) {
+                return Err(format!(
+                    "the game ended while routing to {name}; physical completion unproven"
+                )
+                .into());
+            }
             if tick > WAIT_LIMIT_TICKS * 4 {
                 return Err(format!("could not walk to {name}").into());
             }
@@ -180,6 +187,7 @@ fn attempt(
             player: 1,
             face: Some(name),
             interact: true,
+            wait_ticks: 1,
             ..Default::default()
         };
         recorded.push(press.clone());

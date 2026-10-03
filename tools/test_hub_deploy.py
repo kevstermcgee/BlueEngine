@@ -743,6 +743,12 @@ class Interruption(DeployTestCase):
 
 
 class PreviousArtifactAndRollback(DeployTestCase):
+    def prepare_rollback(self):
+        self.f.deploy()
+        first = self.f.installed()
+        self.assertOk(self.update_to('aaaa0002'))
+        return first
+
     def update_to(self, build, mode='ok'):
         self.f.write(self.f.game / 'src/lib.rs', f'pub fn rules() {{ /* {build} */ }}\n')
         self.f.set_artifact(build, mode)
@@ -785,6 +791,106 @@ class PreviousArtifactAndRollback(DeployTestCase):
         self.assertFailed(done, 'no ')
         self.assertIn('to roll back to', done.stdout)
 
+    def test_stopped_hub_rollback_resumes_readiness_without_redeploying_rejected_source(self):
+        first = self.prepare_rollback()
+        self.f.hub_active(False)
+        self.assertOk(self.f.run('--rollback', 'game'))
+        self.assertEqual((self.f.receipt()['phase'], self.f.receipt()['complete']), ('installed', False))
+        builds, statuses = len(self.f.builds()), len(self.f.hub_calls('status'))
+        self.f.hub_active(True)
+        self.assertOk(self.f.run())
+        self.assertEqual(self.f.installed(), first)
+        self.assertEqual(len(self.f.builds()), builds)
+        self.assertGreater(len(self.f.hub_calls('status')), statuses)
+        self.assertEqual((self.f.receipt()['phase'], self.f.receipt()['complete']), ('ready', True))
+        self.assertIn('restored executable verified', self.f.run().stdout)
+
+    def test_failed_rollback_activation_and_readiness_remain_retryable(self):
+        self.prepare_rollback()
+        self.f.ctl(reload=['fail', 'ok'], status=['real', 'starting', 'starting', 'ready'])
+        self.assertFailed(self.f.run('--rollback', 'game'), 'NOT activated')
+        builds = len(self.f.builds())
+        self.assertEqual((self.f.receipt()['phase'], self.f.receipt()['complete']), ('installed', False))
+        self.assertFailed(self.f.run(), 'NOT ready')
+        self.assertEqual((self.f.receipt()['phase'], self.f.receipt()['complete']), ('activated', False))
+        reloads = len(self.f.hub_calls('reload'))
+        self.assertOk(self.f.run())
+        self.assertEqual(len(self.f.hub_calls('reload')), reloads, 'readiness recovery does not retire rooms again')
+        self.assertEqual(len(self.f.builds()), builds)
+        self.assertTrue(self.f.receipt()['complete'])
+
+    def test_interrupted_rollback_on_either_side_of_installation_finishes_without_a_build(self):
+        first = self.prepare_rollback()
+        rejected = self.f.installed()
+        self.assertOk(self.f.run('--rollback', 'game'))
+        complete = self.f.receipt()
+        builds = len(self.f.builds())
+        for before_rename in (True, False):
+            with self.subTest(before_rename=before_rename):
+                (self.f.install / self.f.BIN).write_text(rejected if before_rename else first)
+                hub_deploy.write_json_atomic(self.f.state / 'deployed/game.json',
+                                             dict(complete, phase='installing', complete=False))
+                self.f.ctl(status=['ready'])
+                self.assertOk(self.f.run())
+                self.assertEqual(self.f.installed(), first)
+                self.assertEqual(len(self.f.builds()), builds)
+                self.assertEqual((self.f.receipt()['phase'], self.f.receipt()['complete']), ('ready', True))
+
+    def test_failed_rollback_rename_retains_a_recoverable_receipt(self):
+        first = self.prepare_rollback()
+        builds = len(self.f.builds())
+        destination = self.f.install / self.f.BIN
+        destination.unlink()
+        destination.mkdir()
+        obstacle = destination / 'blocks-rename'
+        obstacle.write_text('fixture')
+        self.assertFailed(self.f.run('--rollback', 'game'), 'FAILED')
+        self.assertEqual((self.f.receipt()['phase'], self.f.receipt()['complete']), ('installing', False))
+        self.assertFailed(self.f.run(), 'rollback installation failed')
+        self.assertEqual(len(self.f.builds()), builds)
+        obstacle.unlink()
+        destination.rmdir()
+        self.assertOk(self.f.run())
+        self.assertEqual(self.f.installed(), first)
+        self.assertEqual(len(self.f.builds()), builds)
+        self.assertTrue(self.f.receipt()['complete'])
+
+    def test_missing_or_modified_restored_executable_is_recovered_from_verified_previous(self):
+        first = self.prepare_rollback()
+        self.assertOk(self.f.run('--rollback', 'game'))
+        builds = len(self.f.builds())
+        dest = self.f.install / self.f.BIN
+        for missing in (True, False):
+            with self.subTest(missing=missing):
+                if missing:
+                    dest.unlink()
+                else:
+                    recorded_mtime = dest.stat().st_mtime_ns
+                    dest.write_text(first.replace('aaaa0001', 'ffff0001'))
+                    os.utime(dest, ns=(recorded_mtime, recorded_mtime))
+                self.assertOk(self.f.run())
+                self.assertEqual(self.f.installed(), first)
+                self.assertEqual(len(self.f.builds()), builds)
+                self.assertTrue(self.f.receipt()['complete'])
+
+    def test_missing_or_inconsistent_previous_fails_without_building_rejected_source(self):
+        self.prepare_rollback()
+        self.assertOk(self.f.run('--rollback', 'game'))
+        builds = len(self.f.builds())
+        receipt = self.f.receipt()
+        (self.f.install / self.f.BIN).unlink()
+        previous = self.f.install / (self.f.BIN + '.previous')
+        for missing in (False, True):
+            with self.subTest(missing=missing):
+                if missing:
+                    previous.unlink()
+                else:
+                    previous.write_text('inconsistent artifact')
+                self.assertFailed(self.f.run(), 'rollback recovery failed')
+                self.assertEqual(len(self.f.builds()), builds)
+                self.assertEqual(self.f.receipt(), receipt)
+                self.assertIsNone(self.f.installed())
+
 
 class IsolationBetweenGames(DeployTestCase):
     def add_second_game(self):
@@ -818,6 +924,21 @@ class IsolationBetweenGames(DeployTestCase):
         self.assertEqual(self.f.hub_calls('reload')[reloads:], ['reload game'])
         self.assertEqual((self.f.receipt('second'), (self.f.install / 'second-server').read_text()), second_before)
         self.assertNotIn('second:', done.stdout)
+
+    def test_rollback_recovery_leaves_the_other_games_artifact_and_receipt_unchanged(self):
+        self.add_second_game()
+        self.assertOk(self.f.run())
+        second = (self.f.receipt('second'), (self.f.install / 'second-server').read_text())
+        self.f.write(self.f.game / 'src/lib.rs', 'pub fn rules() { /* v2 */ }\n')
+        self.f.set_artifact('aaaa0002')
+        self.assertOk(self.f.run('game'))
+        self.f.hub_active(False)
+        self.assertOk(self.f.run('--rollback', 'game'))
+        self.f.hub_active(True)
+        reloads = len(self.f.hub_calls('reload'))
+        self.assertOk(self.f.run())
+        self.assertEqual((self.f.receipt('second'), (self.f.install / 'second-server').read_text()), second)
+        self.assertEqual(self.f.hub_calls('reload')[reloads:], ['reload game'])
 
     def test_a_failing_game_does_not_stop_the_others_but_fails_the_run(self):
         self.add_second_game()

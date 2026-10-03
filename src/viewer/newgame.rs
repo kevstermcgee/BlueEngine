@@ -494,6 +494,7 @@ windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_Win
             yaw: spawn.yaw,
         }],
         counters: std::collections::BTreeMap::from([("visits".into(), 0)]),
+        presentation: None,
         interactables: vec![super::game::Interactable {
             entity: "objective".into(),
             enabled: true,
@@ -628,6 +629,9 @@ physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its sim
   never hand-write save files). `run_map` is a static viewer only.
 
 ## Running Tests
+- Record friction in the engine: `python tools/learn.py record --game {name} --area AREA --tokens N
+  --note "..." --keywords "future,query,terms"`. Add `--trap` for a silent failure; verify a representative
+  future query with `be2.py context`. Without keywords the record is archive-only. Never copy session logs.
 - Cargo.lock is seeded from the engine's; any Cargo command settles it. Commit it. Never run
   `cargo generate-lockfile` (it drops the pins). Set BE2_TOOLS to a matching be2-tools binary
   (engine `python tools/be2.py build tools` prints its directory).

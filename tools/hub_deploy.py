@@ -610,7 +610,7 @@ def binary_record(path):
     return {'path': str(path), 'sha256': sha256_file(path), 'size': st.st_size, 'mtime_ns': st.st_mtime_ns}
 
 
-def installed_matches(receipt, path):
+def installed_matches(receipt, path, verify_hash=False):
     """Is the file at `path` the one the receipt recorded? Compares size and mtime first; hashes only if they moved."""
     rec = receipt.get('binary') or {}
     try:
@@ -619,9 +619,12 @@ def installed_matches(receipt, path):
         return False
     if st.st_size != rec.get('size'):
         return False
-    if st.st_mtime_ns == rec.get('mtime_ns'):
+    if not verify_hash and st.st_mtime_ns == rec.get('mtime_ns'):
         return True
-    return sha256_file(path) == rec.get('sha256')
+    try:
+        return sha256_file(path) == rec.get('sha256')
+    except OSError:
+        return False
 
 
 def is_complete(receipt):
@@ -713,9 +716,16 @@ def decide(inputs, receipt, destination, force):
         return {'action': 'build', 'why': f'--force: rebuilding ({short})'}
     if not receipt:
         return {'action': 'build', 'why': f'building: no deployment receipt yet ({short})'}
-    if receipt.get('rolled_back_from') == inputs.identity:
-        return {'action': 'skip', 'why': f'skipped: this source ({short}) was rolled back; '
-                                          f'change it or use --force to deploy it again'}
+    if receipt.get('rolled_back_from'):
+        # A rollback is an installation/activation operation too. Finish it before considering new source;
+        # in particular never rebuild the rejected revision to repair a missing restored executable.
+        if not installed_matches(receipt, destination, verify_hash=True) or not is_complete(receipt):
+            return {'action': 'resume', 'why': f'resuming rollback: verifying the restored executable and '
+                                              f'finishing phase "{receipt.get("phase")}"'}
+        if receipt['rolled_back_from'] == inputs.identity:
+            return {'action': 'skip', 'why': f'skipped: this source ({short}) was rolled back; '
+                                              f'restored executable verified, {describe_phase(receipt)}; '
+                                              f'change it or use --force to deploy it again'}
     if receipt.get('identity') != inputs.identity:
         return {'action': 'build',
                 'why': 'rebuilding: ' + explain_difference(receipt.get('components'), inputs.components)}
@@ -807,8 +817,27 @@ def keep_previous(destination, settings, bin_name, old_receipt):
 
 
 def resume(settings, result, receipt, destination):
-    """Finish an incomplete activation. The executable is already installed and matches the receipt."""
+    """Finish an incomplete activation, restoring an interrupted rollback only from its recorded artifact."""
     receipt = dict(receipt)
+    if receipt.get('rolled_back_from') and not installed_matches(receipt, destination, verify_hash=True):
+        previous = destination.with_name(destination.name + '.previous')
+        candidate = destination.with_name('.' + destination.name + '.candidate')
+        if not installed_matches(receipt, previous, verify_hash=True):
+            raise DeployError('rollback recovery failed: neither the installed nor previous executable matches '
+                              'the rollback receipt; restore that artifact or explicitly deploy new source. '
+                              'The rejected revision was not rebuilt')
+        try:
+            shutil.copyfile(previous, candidate)
+            os.chmod(candidate, 0o755)
+            report = hub_verify(settings, receipt['game'], candidate, destination)
+            if not installed_matches(receipt, candidate, verify_hash=True) or report['build'] != receipt['info']['build']:
+                raise DeployError('rollback recovery failed: the candidate differs from the rollback receipt')
+            record(settings, receipt, phase='installing', complete=False)
+            os.replace(candidate, destination)
+            record(settings, receipt, phase='installed', installed_at=now_iso(), binary=binary_record(destination))
+        except OSError as e:
+            raise DeployError(f'rollback installation failed: {e}; run again to recover the recorded artifact') from e
+        say(receipt['game'], 'recovered: restored the recorded rollback executable without rebuilding')
     if receipt.get('phase') == 'installing':
         # The rename happened (the installed file matches) but the crash came before "installed" was recorded.
         receipt.update(phase='installed', installed_at=now_iso(), binary=binary_record(destination))
@@ -907,7 +936,8 @@ def rollback_game(settings, entry):
         prior = receipt.get('previous') or {}
         new_receipt = {
             'schema': 1, 'game': game, 'bin': bin_name, 'identity': prior.get('identity') or 'rolled-back',
-            'components': {}, 'extras': receipt.get('extras') or {}, 'rolled_back_from': receipt.get('identity'),
+            'components': {}, 'extras': receipt.get('extras') or {},
+            'rolled_back_from': receipt.get('rolled_back_from') or receipt.get('identity'),
             'info': {'game': report.get('game'), 'build': report['build'], 'max_seats': report.get('max_seats'),
                      'settings': report.get('settings')},
             'binary': binary_record(candidate), 'phase': 'installing', 'complete': False, 'built_at': now_iso(),
@@ -919,7 +949,7 @@ def rollback_game(settings, entry):
         record(settings, new_receipt, phase='installed', installed_at=now_iso())
         say(game, f'rolled back: {destination} is the previous executable again (build {report["build"]})')
         return activate(settings, result, new_receipt, destination, fresh=True)
-    except DeployError as e:
+    except (DeployError, OSError) as e:
         return result.fail(str(e))
     finally:
         if candidate.exists() and not candidate.is_dir():

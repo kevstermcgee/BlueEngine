@@ -57,6 +57,15 @@ class GameCheckTests(unittest.TestCase):
         checks = game_check.commands(self.root, self.native, True)
         self.assertEqual([cmd[1] for cmd in checks], ['audit', 'lint', 'verify', 'game-validate'])
 
+    def test_mover_game_lint_uses_chosen_scenario_without_blanket_exemptions(self):
+        (self.root / 'game.json').write_text(json.dumps({'map':'maps/main.json','movers':[{'id':'gate'}]}))
+        static = game_check.commands(self.root, self.native, True)
+        self.assertEqual(static[1], [str(self.native), 'lint', str((self.root / 'maps/main.json').resolve())])
+        proven = game_check.commands(self.root, self.native, True, ['tests/win.json','tests/lose.json'])
+        self.assertEqual(proven[1][-2:], ['--game=' + str((self.root / 'game.json').resolve()),
+                                        '--scenario=' + str((self.root / 'tests/win.json').resolve())])
+        self.assertEqual([cmd[1] for cmd in proven], ['audit','lint','game-validate','sim','sim'])
+
     def test_failure_preserves_logs_stops_checks_and_reports_false(self):
         def fail(command, **kwargs):
             kwargs['stdout'].write('specific native error\n')
