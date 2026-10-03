@@ -1,6 +1,6 @@
 //! The hub over real loopback UDP with real server processes: a hub (in a thread, and as the `be2-hub` binary),
 //! the `be2-toy-server` binary as every game's server, a `HubClient` asking for rooms, and two real netplay clients
-//! joining the room it made. Loopback only; ports come from 43000-44999 and are checked free before use, and the
+//! joining the room it made. Loopback only; ports come from 25000-26899 and are checked free before use, and the
 //! live Deadfall hub's ports (4100-4107) are never touched.
 use std::io;
 use std::net::{SocketAddr, UdpSocket};
@@ -30,6 +30,9 @@ const HUB_BIN: &str = env!("CARGO_BIN_EXE_be2-hub");
 
 // ---- helpers --------------------------------------------------------------------------------------------------------
 
+/// Ports below 32768 on purpose: Linux hands that range and above (32768-60999) to every socket bound to port 0, and the
+/// 17 tests here open dozens of client sockets at once, so a port picked in the ephemeral range can be taken by one of
+/// them between the check and the bind (`Address already in use`).
 /// A fresh run of `n + 1` consecutive loopback UDP ports that are free right now (the hub's, then the pool).
 /// Tests in one process get disjoint runs; the bounded search skips ports something else holds.
 fn free_ports(n: u16) -> u16 {
@@ -42,7 +45,7 @@ fn free_ports(n: u16) -> u16 {
     let seed = ((std::process::id().wrapping_mul(2_654_435_761) ^ nanos) % 1_900) as u16;
     for _ in 0..200 {
         let step = NEXT.fetch_add(1, Ordering::SeqCst);
-        let base = 43_000 + (seed + step * 24) % 1_900;
+        let base = 25_000 + (seed + step * 24) % 1_900;
         let held: Vec<_> = (0..=n)
             .filter_map(|i| UdpSocket::bind(("127.0.0.1", base + i)).ok())
             .collect();
@@ -50,7 +53,7 @@ fn free_ports(n: u16) -> u16 {
             return base;
         }
     }
-    panic!("no free run of {} loopback ports in 43000-44999", n + 1);
+    panic!("no free run of {} loopback ports in 25000-26899", n + 1);
 }
 
 struct TempDir(PathBuf);
@@ -434,6 +437,47 @@ fn the_server_prints_status_lines_and_exits_when_its_parent_goes_away() {
     );
 }
 
+#[test]
+fn a_server_whose_output_reader_is_gone_keeps_running_instead_of_panicking() {
+    // The hub closes a room server's stdout pipe when it retires the room. `println!` panics on that broken pipe, so a
+    // room server used to die with a panic message instead of waiting for its stdin to close. `| true` is a reader that
+    // exits at once, so every progress line the server prints fails to write.
+    let port = free_ports(0);
+    let dir = TempDir::new("epipe");
+    let (err, code) = (dir.path().join("stderr"), dir.path().join("code"));
+    let mut sh = Command::new("sh")
+        .arg("-c")
+        .arg(
+            r#"( sleep 0.4; "$SRV" --listen "127.0.0.1:$PORT" --seats 5 --status-lines --exit-on-stdin-eof 2>"$ERR"; echo $? >"$CODE" ) | true"#,
+        )
+        .env("SRV", TOY_SERVER)
+        .env("PORT", port.to_string())
+        .env("ERR", &err)
+        .env("CODE", &code)
+        .stdin(Stdio::piped())
+        .spawn()
+        .unwrap();
+    std::thread::sleep(Duration::from_millis(1500));
+    assert!(
+        !code.exists() && sh.try_wait().unwrap().is_none(),
+        "the server died while only its output reader was gone: {:?} {:?}",
+        std::fs::read_to_string(&code),
+        std::fs::read_to_string(&err)
+    );
+    drop(sh.stdin.take()); // now the parent goes away, and the server may quit
+    assert!(
+        eventually(10, || sh.try_wait().unwrap().is_some()),
+        "the server quit when its stdin closed"
+    );
+    assert_eq!(
+        std::fs::read_to_string(&code).unwrap().trim(),
+        "0",
+        "a clean exit"
+    );
+    let stderr = std::fs::read_to_string(&err).unwrap_or_default();
+    assert!(!stderr.contains("panicked"), "no panic message: {stderr}");
+}
+
 // ---- the hub with real rooms --------------------------------------------------------------------------------------------
 
 #[test]
@@ -608,7 +652,10 @@ fn a_room_nobody_joins_closes_and_its_port_is_freed_while_public_stays() {
         panic!()
     };
     assert!(list(&mut hc).iter().any(|r| r.name == "Ghost"));
-    assert!(!port_is_free(room.port), "a live room holds its port");
+    assert!(
+        eventually(10, || !port_is_free(room.port)),
+        "a live room holds its port once its server has started"
+    );
     assert!(
         eventually(15, || list(&mut hc).iter().all(|r| r.name != "Ghost")),
         "never joined: closed (4 s in this test; 45 s by default)"
@@ -1196,7 +1243,7 @@ mod deployment {
     fn verify_applies_the_hubs_rules_to_a_candidate_with_bounded_probes_and_leaves_no_process() {
         let dir = TempDir::new("verify");
         let conf = dir.path().join("hub.conf");
-        std::fs::write(&conf, config_text(43_000, 4, dir.path(), "", false)).unwrap();
+        std::fs::write(&conf, config_text(25_000, 4, dir.path(), "", false)).unwrap();
         let conf_s = conf.display().to_string();
         let verify = |server: &Path, extra: &[&str]| {
             let mut args = vec!["verify", "toy-footrace", "--config", &conf_s, "--server"];
@@ -1463,7 +1510,10 @@ mod deployment {
         let out = hub_cmd(&["reload", "deadfall", "--config", &conf]);
         assert!(out.status.success(), "{}", text(&out.stderr));
         let build = format!("{:08x}", build_id::<ToyGame>());
-        let status = hub_cmd(&[
+        // Wait for readiness in short slices and keep both games' players talking in between: a client the test does not
+        // drive goes silent, the server times it out, and a retired room with nobody in it is closed on purpose, which on a
+        // starved machine would look like the update ending an occupied room.
+        let mut status = hub_cmd(&[
             "status",
             "deadfall",
             "--config",
@@ -1471,8 +1521,23 @@ mod deployment {
             "--expect-build",
             &build,
             "--wait",
-            "15",
+            "1",
         ]);
+        let waited = Instant::now();
+        while !status.status.success() && waited.elapsed() < Duration::from_secs(30) {
+            drive(&mut a_players, 0, |_| true);
+            drive(&mut b_players, 0, |_| true);
+            status = hub_cmd(&[
+                "status",
+                "deadfall",
+                "--config",
+                &conf,
+                "--expect-build",
+                &build,
+                "--wait",
+                "1",
+            ]);
+        }
         assert!(
             status.status.success(),
             "ready before anyone is sent to the new room: {}{}",

@@ -713,7 +713,7 @@ pub fn run<G: NetGame>(
         seed: opts.seed,
         ..Default::default()
     };
-    println!(
+    super::say(format_args!(
         "[Server] {} on {}, {} transport, {} participants, join key {}",
         G::NAME,
         opts.listen,
@@ -724,12 +724,14 @@ pub fn run<G: NetGame>(
         } else {
             "not required"
         }
-    );
+    ));
     if opts.transport == TransportProfile::Development
         && opts.join_key.is_none()
         && !opts.listen.starts_with("127.")
     {
-        println!("[Server] Warning: development UDP is unencrypted; use --transport production for the internet");
+        super::say(format_args!(
+            "[Server] Warning: development UDP is unencrypted; use --transport production for the internet"
+        ));
     }
     let transport = server_transport(opts.transport, &opts.listen)?;
     let mut server = NetServer::<G, _>::new(transport, cfg)?;

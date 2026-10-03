@@ -19,6 +19,14 @@
 //! `TICK_HZ / SNAPSHOT_EVERY`. A player who leaves or times out mid-match is handed to the game's own AI at once
 //! ([`NetGame::release`]). Every finished match appends one JSON line to `matches.jsonl` (the game's report
 //! plus per-player network quality and server load).
+/// Print a progress line to stdout without panicking when nobody is reading it. `println!` panics on a closed pipe, and a
+/// closed pipe is exactly what a supervisor (`be2-hub`) leaves behind when it retires a room: the room's server must carry
+/// on until it is told to stop (or its stdin closes), not die with a panic message.
+pub(crate) fn say(args: std::fmt::Arguments<'_>) {
+    use std::io::Write as _;
+    let _ = writeln!(std::io::stdout(), "{args}");
+}
+
 pub mod cli;
 pub mod client;
 pub mod failure;

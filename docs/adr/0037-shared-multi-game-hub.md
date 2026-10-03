@@ -101,7 +101,7 @@ Not adopted, deliberately:
 * A new netplay game gets a hostable server in about ten lines (`be2-toy-server` is the template) and appears on the hub by adding
   four lines to `hub.conf` and running `be2-hub reload`.
 * The shared code is exercised by `cargo test` without a network: `hub::*` unit tests inject time and fake processes; `tests/hub.rs`
-  runs real `be2-toy-server` processes and the real `be2-hub` binary over loopback (ports 43000-44999, checked free first).
+  runs real `be2-toy-server` processes and the real `be2-hub` binary over loopback (ports 25000-26899, below the ephemeral range and checked free first).
 * Restarting the hub still ends every room of every game; updating one game does not (reload).
 * A shared pool has a floor on cost: each running room is a process (about 5 MB idle), and each pool port is a UPnP mapping the router
   must renew; the default pool is 16 ports.

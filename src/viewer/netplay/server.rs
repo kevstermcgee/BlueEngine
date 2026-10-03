@@ -773,13 +773,13 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                 eprintln!("[Server] Could not write the match report: {e}");
             }
         }
-        println!(
+        super::say(format_args!(
             "[Server] Match {} finished: {} players, server tick mean {:.0} us max {} us",
             entry.match_index,
             entry.net.peers.len(),
             entry.net.server.tick_us_mean,
             entry.net.server.tick_us_max
-        );
+        ));
         self.log.push(entry);
         self.load.bad_datagrams = 0;
         self.stage = Stage::Results;
@@ -830,10 +830,10 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         self.run_realtime_with(stop, max_ticks, |s| {
             seconds += 1;
             if seconds.is_multiple_of(5) {
-                println!(
+                super::say(format_args!(
                     "[Server] tick {} | stage {:?} | players {} | matches {}",
                     s.tick, s.stage, s.players, s.matches
-                );
+                ));
             }
         })
     }
@@ -850,12 +850,12 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         let frame = Duration::from_micros(1_000_000 / G::TICK_HZ);
         let mut next = Instant::now();
         let mut last_status: Option<Instant> = None;
-        println!(
+        super::say(format_args!(
             "[Server] {} listening on {} (fingerprint {:08x})",
             G::NAME,
             self.local_addr()?,
             self.fingerprint
-        );
+        ));
         while !stop.load(Ordering::Relaxed) {
             let now = Instant::now();
             self.poll(now);
