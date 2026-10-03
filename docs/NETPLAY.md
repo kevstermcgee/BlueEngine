@@ -126,7 +126,9 @@ make one. The hub's registry (`hub.conf`) maps game ids to server programs and s
 appears by adding a `[game ID]` section and running `be2-hub reload ID`. Wire protocol `BEHB` v1 (`hub/wire.rs`): list, create
 with a source-address cookie, ping; old Deadfall `DFHB` v1 clients keep working (`hub/legacy.rs`, `legacy = serve|refuse`).
 Rooms close after 120 s empty, or 45 s if nobody ever joined; each game's Public room restarts if it dies; reload retires one
-game's rooms without ending matches in progress.
+game's rooms without ending matches in progress (at most 30 minutes). `be2-hub verify GAME --server CANDIDATE` checks a new server
+build with the registry's own rules before it is installed, and `be2-hub status GAME` reports what the running hub holds (a reload
+acknowledgement is not readiness); `deploy/hub/update.sh` uses both. Hub rooms are raw UDP, so `transport = production` is refused.
 
 A game's client side is `hub::client` (std only, no window): `HubClient::new(hub_addr, game_id)` for one non-blocking request
 at a time (`request_list`, `request_create_with(name, &[(setting_id, value)])`, `poll() -> Option<HubEvent>`), or the whole Play
