@@ -1,6 +1,6 @@
 # ADR 0037: One hub, one name, every BlueEngine online game
 
-Status: Accepted
+Status: Accepted. Updated 2026-10-02 (deployment): see "Deployment update" below; the original decisions stand.
 
 ## Context
 
@@ -85,8 +85,11 @@ a game id; everything game-specific comes from the game's own server program.
 Not adopted, deliberately:
 * **Feta, BlueDM and Riftwake** have their own netcode and are out of scope (they cannot be supervised through `--info` and
   `--status-lines`).
-* **QUIC rooms and join keys through the hub.** Hub rooms are raw UDP (the clients' "Development" transport) for simplicity; the
-  registry's `transport` key is passed to the server and a game that needs more must also change its client. A known tradeoff.
+* **QUIC rooms and join keys through the hub.** Hub rooms are raw UDP (the clients' "Development" transport): the hub protocol
+  carries neither a transport nor a join key, so no client could learn that a room wants more. The registry's `transport` key was
+  first passed through to the server; `production` is now **refused at load** (a room nobody could join, or a silent downgrade, are
+  both worse than an error). A game that needs QUIC/TLS is run by hand. The hub is a room directory and process supervisor: not a
+  relay, not an identity service, not an encrypted transport; rate limits and cookies reduce abuse and are no substitute.
 * **A relay or NAT traversal.** The hub only lists and starts rooms; clients still connect to `hub_host:room_port`, so the box needs
   its ports open (the portmap unit does that over UPnP).
 * **Mid-match join.** A join during a match is refused by the server (`MatchInProgress`); the client retries, as before.
@@ -107,3 +110,35 @@ Not adopted, deliberately:
   game whose `src/bin/*.rs` still instantiates `NetServer::<` is the signature. There is **no `MIG-0037-HUB-CLIENT`**: a hand-rolled
   hub client or Play Online screen has no reliable signature to grep for, and a low-confidence entry would weaken a registry whose
   value is being reliable hints (the same reasoning as ADR 0034); a game that wants the shared client reads NETPLAY.md.
+
+## Deployment update (2026-10-02)
+
+A review of `update.sh` found that a running match was being treated as evidence of a safe deployment. Existing room processes
+survive a replaced server file, so a broken replacement showed up only when the *next* room failed to start; and the rebuild test
+(git HEAD and tracked diff of the game's own checkout) both missed an engine-only change for a path-dependent game and ignored
+untracked source. The deployment path is now:
+
+* **Validate before promoting.** `be2-hub verify GAME --server CANDIDATE` (`hub::deploy`) applies the registry's own checks
+  (`Registry::load` on the candidate path: `--info` within 5 s and 64 KB, schema, `public_set`/`user_set`/`client_settings`, the
+  `game=` mismatch warning) and, with `--start`, runs the candidate as the hub would start its Public room (loopback ephemeral port,
+  scratch report directory) until its first `STATUS` line, whose build must equal `--info`'s; it is then stopped and reaped. The
+  updater stages the candidate beside the destination, so promotion is an atomic rename and `CARGO-BIN.previous` keeps the last server
+  whose activation completed.
+* **Installation, activation and readiness are separate states**, recorded as the phase of a per-game receipt
+  (`<state>/deployed/GAME.json`: `installing`, `installed`, `activated`, `ready`). `reload` returns once the hub has *asked* for a
+  replacement room; the new control `BECT` kind 2, `status`, returns what the hub holds (registry build; the Public room's process
+  and the build its own `STATUS` line reports), and only a match of that with the candidate's `--info` build is "ready". A stopped hub
+  is "installed, activation pending". An incomplete phase is retried by the next run without rebuilding; nothing writes a success
+  record before its evidence exists. Hubs older than `status` ignore kind 2 (silence): the updater reports "no answer" instead of ready.
+* **Reload is make-before-break.** The replacement Public room starts first; if it cannot (no free port or process slot, a server that
+  will not run) nothing is retired and the error says so. An empty old Public room is retired first when only capacity is in the way,
+  so an update remains possible on a full pool. A reload `be2-hub` resends because the hub was slow to answer (same source and nonce) is answered again, not run twice. Retirement still caps at 30 minutes; occupied old rooms are not preserved indefinitely.
+* **Build identity** (`tools/hub_deploy.py`, stdlib Python so no-change checks cost about 0.2 s and are testable with temporary
+  repositories and a fake `cargo`): content hashes of the selected package's and every local path dependency's source (from
+  `cargo metadata --locked --offline`), manifests, `Cargo.lock`, cargo config, `rustc -vV`, the build arguments and the
+  output-affecting environment, plus files the last build read outside `src/` (from that build's own dependency-info, never a scan of a
+  possibly shared target directory). Git state is provenance only. The identity is computed again after the build; a build whose inputs
+  moved is not promoted.
+* **Not done, deliberately**: an immutable versioned artifact store, a deployment daemon, automatic rollback after a failed readiness
+  check (a readiness failure is more often a full pool than a bad binary; `update.sh --rollback GAME` is one command), and a
+  network-free source of readiness for hubs that predate `status`.

@@ -32,7 +32,7 @@
 //! user_set = kills=40            # defaults for player-made rooms (a player's own choice wins)
 //! client_settings = bots,kills   # which settings players may choose (default: all of the game's)
 //! max_rooms = 4                  # player-made rooms at once (default 4, at most 24)
-//! transport = development        # development | production, passed to the server (default development)
+//! transport = development        # the only transport hub rooms have (default); production is refused, see below
 //! auto_start = 30                # passed as --auto-start (default: the server's own)
 //!
 //! [game spooky-kart]
@@ -41,6 +41,14 @@
 //! public_set = laps=3
 //! max_rooms = 4
 //! ```
+//!
+//! # Transport
+//! Rooms the hub starts are raw UDP (the engine's "development" transport, no encryption, no server
+//! authentication): the hub protocol carries neither a transport nor a join key, so a client has no way to
+//! learn that a room wants anything else. `transport = production` is therefore **refused at load** with an
+//! explanation instead of being passed to the server (a room nobody could join) or quietly run as raw UDP (a
+//! downgrade). A game that needs QUIC/TLS is run by hand with `--transport production` (docs/HOSTING.md). The
+//! hub's rate limits and creation cookies keep abuse down; they are not encryption and not authentication.
 use super::legacy::Mode;
 use super::wire::{game_id_ok, sanitize_name};
 use crate::viewer::netplay::cli::{resolve_settings, Info, SettingDef};
@@ -56,6 +64,8 @@ pub const MAX_ROOMS_HARD: usize = 24;
 pub const MAX_POOL: u16 = 64;
 /// How long `--info` may take before the server is declared broken.
 pub const INFO_TIMEOUT: Duration = Duration::from_secs(5);
+/// How much `--info` may print before the server is declared broken (a real one prints well under 4 KB).
+pub const INFO_MAX_BYTES: usize = 64 * 1024;
 
 /// A problem in the config file, with its line.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -413,15 +423,24 @@ pub fn parse_config(text: &str, base_dir: &Path) -> Result<Config, ConfigError> 
                         }
                         game.max_rooms = v;
                     }
-                    "transport" => {
-                        if value != "development" && value != "production" {
+                    "transport" => match value {
+                        "development" => game.transport = value.to_string(),
+                        "production" => {
                             return Err(err(
                                 n,
-                                format!("transport must be development or production, got {value:?}"),
-                            ));
+                                format!(
+                                    "transport = production is not available for hub rooms: the hub starts raw UDP rooms and its protocol carries neither a transport nor a join key, so [game {}] could not be joined. Remove the line (development is the only hub transport), or run that game's server by hand with --transport production (docs/HOSTING.md)",
+                                    game.id
+                                ),
+                            ))
                         }
-                        game.transport = value.to_string();
-                    }
+                        _ => {
+                            return Err(err(
+                                n,
+                                format!("transport must be development, got {value:?}"),
+                            ))
+                        }
+                    },
                     "auto_start" => {
                         game.auto_start = Some(
                             u32::try_from(num("auto_start")?)
@@ -477,11 +496,21 @@ pub trait InfoSource {
 
 /// Runs `<server> --info` and caches the answer by (path, mtime, size): the program runs again only when the
 /// file changed.
-#[derive(Default)]
 pub struct ProcessInfo {
     cache: HashMap<PathBuf, (FileKey, Info)>,
     /// How many times a server was really run (tests).
     pub runs: usize,
+    timeout: Duration,
+}
+
+impl Default for ProcessInfo {
+    fn default() -> Self {
+        Self {
+            cache: HashMap::new(),
+            runs: 0,
+            timeout: INFO_TIMEOUT,
+        }
+    }
 }
 
 impl ProcessInfo {
@@ -489,9 +518,25 @@ impl ProcessInfo {
         Self::default()
     }
 
-    /// Run `<server> --info` once, with a time limit.
+    /// Like [`ProcessInfo::new`] with another `--info` time limit (`be2-hub verify --info-timeout`).
+    pub fn with_timeout(timeout: Duration) -> Self {
+        Self {
+            timeout,
+            ..Self::default()
+        }
+    }
+
+    /// Run `<server> --info` once, with the standard time and output limits.
     pub fn run(server: &Path) -> Result<Info, String> {
+        Self::run_with(server, INFO_TIMEOUT)
+    }
+
+    /// Run `<server> --info` with a time limit and at most [`INFO_MAX_BYTES`] of output: a server that hangs,
+    /// floods its output or keeps the pipe open through a child process is killed and reported, never waited for.
+    pub fn run_with(server: &Path, timeout: Duration) -> Result<Info, String> {
         use std::io::Read;
+        use std::sync::atomic::{AtomicBool, Ordering};
+        use std::sync::{mpsc, Arc};
         let mut child = Command::new(server)
             .arg("--info")
             .stdin(Stdio::null())
@@ -500,16 +545,38 @@ impl ProcessInfo {
             .spawn()
             .map_err(|e| format!("cannot run {} --info: {e}", server.display()))?;
         let mut out = child.stdout.take().ok_or("no stdout")?;
-        let reader = std::thread::spawn(move || {
-            let mut s = String::new();
-            let _ = out.read_to_string(&mut s);
-            s
+        let too_long = Arc::new(AtomicBool::new(false));
+        let flag = too_long.clone();
+        let (tx, rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let mut text = Vec::new();
+            let mut chunk = [0u8; 4096];
+            loop {
+                match out.read(&mut chunk) {
+                    Ok(0) | Err(_) => break,
+                    Ok(n) if text.len() + n > INFO_MAX_BYTES => {
+                        flag.store(true, Ordering::SeqCst);
+                        break;
+                    }
+                    Ok(n) => text.extend_from_slice(&chunk[..n]),
+                }
+            }
+            let _ = tx.send(text);
         });
         let started = Instant::now();
         let status = loop {
+            if too_long.load(Ordering::SeqCst) {
+                let _ = child.kill();
+                let _ = child.wait();
+                return Err(format!(
+                    "{} --info printed more than {} bytes",
+                    server.display(),
+                    INFO_MAX_BYTES
+                ));
+            }
             match child.try_wait() {
                 Ok(Some(s)) => break s,
-                Ok(None) if started.elapsed() < INFO_TIMEOUT => {
+                Ok(None) if started.elapsed() < timeout => {
                     std::thread::sleep(Duration::from_millis(10))
                 }
                 Ok(None) => {
@@ -518,17 +585,33 @@ impl ProcessInfo {
                     return Err(format!(
                         "{} --info did not finish in {} s",
                         server.display(),
-                        INFO_TIMEOUT.as_secs()
+                        timeout.as_secs().max(1)
                     ));
                 }
                 Err(e) => return Err(format!("waiting for {} --info: {e}", server.display())),
             }
         };
-        let text = reader.join().unwrap_or_default();
+        let text = match rx.recv_timeout(Duration::from_secs(2)) {
+            Ok(text) => text,
+            Err(_) if too_long.load(Ordering::SeqCst) => {
+                return Err(format!(
+                    "{} --info printed more than {} bytes",
+                    server.display(),
+                    INFO_MAX_BYTES
+                ))
+            }
+            Err(_) => {
+                return Err(format!(
+                    "{} --info exited but left its output open (a child process holds it)",
+                    server.display()
+                ))
+            }
+        };
         if !status.success() {
             return Err(format!("{} --info exited with {status}", server.display()));
         }
-        Info::parse(&text).map_err(|e| format!("{}: {e}", server.display()))
+        Info::parse(&String::from_utf8_lossy(&text))
+            .map_err(|e| format!("{}: {e}", server.display()))
     }
 }
 
@@ -545,7 +628,7 @@ impl InfoSource for ProcessInfo {
                 return Ok((info.clone(), key));
             }
         }
-        let info = Self::run(server)?;
+        let info = Self::run_with(server, self.timeout)?;
         self.runs += 1;
         self.cache.insert(server.to_path_buf(), (key, info.clone()));
         Ok((info, key))
@@ -844,7 +927,7 @@ public_set = bots=1, kills=50
 user_set = kills=40
 client_settings = bots, kills
 max_rooms = 4
-transport = production
+transport = development
 auto_start = 30
 
 ; another comment
@@ -884,7 +967,7 @@ server = bin/spooky-kart-server
         );
         assert_eq!(
             (d.max_rooms, d.transport.as_str(), d.auto_start),
-            (4, "production", Some(30))
+            (4, "development", Some(30))
         );
         let k = &c.games[1];
         assert_eq!(
@@ -944,7 +1027,12 @@ server = bin/spooky-kart-server
             (
                 "[game a]\nserver=x\ntransport=carrier",
                 3,
-                "development or production",
+                "must be development",
+            ),
+            (
+                "[game a]\nserver=x\ntransport=production",
+                3,
+                "not available for hub rooms",
             ),
             ("[game a]\nserver=x\nwat=1", 3, "unknown [game] key"),
             ("[game a]\nserver=x\npublic_name=<b>", 3, "valid room name"),
@@ -1327,6 +1415,21 @@ server = bin/spooky-kart-server
                 .unwrap_err()
                 .contains("did not finish"));
             assert!(started.elapsed() < Duration::from_secs(15));
+            let _ = std::fs::remove_dir_all(&dir);
+        }
+
+        #[test]
+        fn a_server_that_floods_or_leaks_its_info_output_is_given_up_on() {
+            let dir = temp("flood");
+            let started = Instant::now();
+            let path = script(&dir, "exec yes game=flood");
+            let e = ProcessInfo::run_with(&path, Duration::from_secs(30)).unwrap_err();
+            assert!(e.contains("more than"), "{e}");
+            assert!(started.elapsed() < Duration::from_secs(10), "stopped early");
+            // A child that outlives --info and keeps the pipe open must not make the caller wait for it.
+            let path = script(&dir, "(sleep 4 &)\necho game=leak");
+            let e = ProcessInfo::run_with(&path, Duration::from_secs(30)).unwrap_err();
+            assert!(e.contains("left its output open"), "{e}");
             let _ = std::fs::remove_dir_all(&dir);
         }
     }

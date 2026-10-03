@@ -3,5 +3,8 @@
 # GAME-ID is the id in hub.conf; SOURCE-ROOT is a git checkout (a leading ~ is your home); CARGO-BIN is the server's
 # `[[bin]]` name, installed as ~/blueengine/CARGO-BIN (the path hub.conf's `server =` names).
 # The servers need no window: build without graphics features.
+# update.sh rebuilds a game only when its build inputs changed: the game's source, the source of every local path dependency
+# (so an engine change rebuilds a game that depends on the engine by path), manifests, Cargo.lock, toolchain, these extra
+# arguments and RUSTFLAGS/CARGO_* that change the output. A `-p PACKAGE` here names the package when several have this bin.
 deadfall      ~/BlueEngineGames/games/deadfall   deadfall-server      --no-default-features
 spooky-kart   ~/SpookyKart                       spooky-kart-server   --no-default-features

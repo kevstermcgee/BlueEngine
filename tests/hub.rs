@@ -776,8 +776,25 @@ impl HubProcess {
         legacy_deadfall: bool,
         extra_args: &[&str],
     ) -> HubProcess {
+        Self::start_with_config(
+            dir,
+            base,
+            pool,
+            &config_text(base, pool, dir, "", legacy_deadfall),
+            extra_args,
+        )
+    }
+
+    /// Like `start`, with the whole `dir/hub.conf` given.
+    fn start_with_config(
+        dir: &Path,
+        base: u16,
+        pool: u16,
+        config: &str,
+        extra_args: &[&str],
+    ) -> HubProcess {
         let conf = dir.join("hub.conf");
-        std::fs::write(&conf, config_text(base, pool, dir, "", legacy_deadfall)).unwrap();
+        std::fs::write(&conf, config).unwrap();
         let mut cmd = Command::new(HUB_BIN);
         cmd.arg("--config")
             .arg(&conf)
@@ -1113,4 +1130,610 @@ fn the_control_datagram_is_ignored_unless_it_comes_from_loopback_and_names_a_gam
         s.recv_from(&mut buf).is_err(),
         "a malformed control datagram gets silence"
     );
+}
+
+// ---- deployment: be2-hub verify / status, per-game isolation, and update.sh against the real hub ------------------------
+// Unix only: these run shell scripts and `update.sh`, and read /proc.
+#[cfg(unix)]
+mod deployment {
+    use super::*;
+
+    fn script_file(dir: &Path, name: &str, body: &str) -> PathBuf {
+        use std::os::unix::fs::PermissionsExt;
+        let path = dir.join(name);
+        let tmp = dir.join(format!("{name}.tmp"));
+        std::fs::write(&tmp, format!("#!/bin/sh\n{body}\n")).unwrap();
+        std::fs::set_permissions(&tmp, std::fs::Permissions::from_mode(0o755)).unwrap();
+        std::fs::rename(&tmp, &path).unwrap();
+        path
+    }
+
+    fn hub_cmd(args: &[&str]) -> std::process::Output {
+        Command::new(HUB_BIN)
+            .args(args)
+            .stdin(Stdio::null())
+            .output()
+            .unwrap()
+    }
+
+    fn text(out: &[u8]) -> String {
+        String::from_utf8_lossy(out).into_owned()
+    }
+
+    fn alive(pid: u32) -> bool {
+        Path::new(&format!("/proc/{pid}")).exists()
+    }
+
+    /// Direct children of `pid` (read from /proc, so no extra tools are needed).
+    fn children_of(pid: u32) -> Vec<u32> {
+        let mut kids = Vec::new();
+        for entry in std::fs::read_dir("/proc").unwrap().flatten() {
+            let Some(child) = entry
+                .file_name()
+                .to_str()
+                .and_then(|n| n.parse::<u32>().ok())
+            else {
+                continue;
+            };
+            let Ok(stat) = std::fs::read_to_string(entry.path().join("stat")) else {
+                continue;
+            };
+            // "pid (comm) S ppid ...": comm may contain spaces, so split after the last ')'.
+            let rest = stat.rsplit_once(')').map(|(_, r)| r).unwrap_or("");
+            if rest
+                .split_whitespace()
+                .nth(1)
+                .and_then(|p| p.parse::<u32>().ok())
+                == Some(pid)
+            {
+                kids.push(child);
+            }
+        }
+        kids
+    }
+
+    #[test]
+    fn verify_applies_the_hubs_rules_to_a_candidate_with_bounded_probes_and_leaves_no_process() {
+        let dir = TempDir::new("verify");
+        let conf = dir.path().join("hub.conf");
+        std::fs::write(&conf, config_text(43_000, 4, dir.path(), "", false)).unwrap();
+        let conf_s = conf.display().to_string();
+        let verify = |server: &Path, extra: &[&str]| {
+            let mut args = vec!["verify", "toy-footrace", "--config", &conf_s, "--server"];
+            let server = server.display().to_string();
+            args.push(&server);
+            args.extend_from_slice(extra);
+            hub_cmd(&args)
+        };
+        let toy = Path::new(TOY_SERVER);
+
+        // A good candidate: --info passes the registry rules and it prints STATUS with the build its --info promised.
+        let out = verify(toy, &["--start", "--installs-to", TOY_SERVER]);
+        assert!(out.status.success(), "{}", text(&out.stderr));
+        let report = text(&out.stdout);
+        assert!(
+            report.contains(&format!("build={:08x}", build_id::<ToyGame>())),
+            "{report}"
+        );
+        assert!(report.contains("startup=ok"), "{report}");
+        assert!(text(&verify(toy, &[]).stdout).contains("startup=not-checked"));
+
+        // The config must run the very file the updater installs; the game must be in the config.
+        let e = text(&verify(toy, &["--installs-to", "/somewhere/else"]).stderr);
+        assert!(e.contains("never use the new build"), "{e}");
+        let out = hub_cmd(&[
+            "verify", "ghost", "--config", &conf_s, "--server", TOY_SERVER,
+        ]);
+        assert!(!out.status.success() && text(&out.stderr).contains("not in the config"));
+
+        // --info that hangs, floods, or fails is cut off by the time and output limits.
+        let started = Instant::now();
+        let hang = script_file(dir.path(), "hang", "exec sleep 30");
+        let out = verify(&hang, &["--info-timeout", "1"]);
+        assert!(
+            !out.status.success() && text(&out.stderr).contains("did not finish in 1 s"),
+            "{}",
+            text(&out.stderr)
+        );
+        let flood = script_file(dir.path(), "flood", "exec yes game=flood");
+        let out = verify(&flood, &[]);
+        assert!(
+            text(&out.stderr).contains("more than"),
+            "{}",
+            text(&out.stderr)
+        );
+        let broken = script_file(dir.path(), "broken", "exit 4");
+        assert!(text(&verify(&broken, &[]).stderr).contains("exited"));
+        assert!(
+            started.elapsed() < Duration::from_secs(20),
+            "every probe is bounded"
+        );
+
+        // Valid --info but a server that dies at startup: only the isolated start can tell.
+        let dying = script_file(
+            dir.path(),
+            "dying",
+            &format!("if [ \"$1\" = --info ]; then exec {TOY_SERVER} --info; fi\nexit 3"),
+        );
+        assert!(
+            verify(&dying, &[]).status.success(),
+            "--info alone cannot see it"
+        );
+        let out = verify(&dying, &["--start"]);
+        assert!(
+            !out.status.success() && text(&out.stderr).contains("exited before"),
+            "{}",
+            text(&out.stderr)
+        );
+
+        // Valid --info, alive but silent: the deadline ends it, and the process is stopped and reaped (no orphan).
+        let pidfile = dir.path().join("silent.pid");
+        let silent = script_file(
+            dir.path(),
+            "silent",
+            &format!(
+                "if [ \"$1\" = --info ]; then exec {TOY_SERVER} --info; fi\necho $$ > {}\nexec sleep 30",
+                pidfile.display()
+            ),
+        );
+        let out = verify(&silent, &["--start", "--startup-timeout", "2"]);
+        assert!(
+            !out.status.success() && text(&out.stderr).contains("no STATUS line within 2 s"),
+            "{}",
+            text(&out.stderr)
+        );
+        let pid: u32 = std::fs::read_to_string(&pidfile)
+            .unwrap()
+            .trim()
+            .parse()
+            .unwrap();
+        assert!(
+            eventually(5, || !alive(pid)),
+            "the silent candidate was killed and reaped"
+        );
+
+        // The registry's other rules apply: a config naming a setting the candidate lacks, and the unsupported transport.
+        let bad = dir.path().join("bad.conf");
+        std::fs::write(
+            &bad,
+            format!(
+                "[game toy-footrace]\nserver = {TOY_SERVER}\npublic = on\npublic_set = nonexistent=1\n"
+            ),
+        )
+        .unwrap();
+        let out = hub_cmd(&[
+            "verify",
+            "toy-footrace",
+            "--config",
+            &bad.display().to_string(),
+            "--server",
+            TOY_SERVER,
+        ]);
+        assert!(
+            text(&out.stderr).contains("nonexistent") && !out.status.success(),
+            "{}",
+            text(&out.stderr)
+        );
+        let prod = dir.path().join("prod.conf");
+        std::fs::write(
+            &prod,
+            format!("[game toy-footrace]\nserver = {TOY_SERVER}\ntransport = production\n"),
+        )
+        .unwrap();
+        for args in [
+            vec!["ports", "--config", prod.to_str().unwrap()],
+            vec!["--config", prod.to_str().unwrap()],
+        ] {
+            let out = hub_cmd(&args);
+            let e = text(&out.stderr);
+            assert!(
+                !out.status.success()
+                    && e.contains("transport = production is not available for hub rooms")
+                    && e.contains("line 3"),
+                "a requested secure transport is refused, never downgraded: {e}"
+            );
+        }
+    }
+
+    #[test]
+    fn status_tells_ready_from_a_wrong_build_an_unknown_game_and_no_hub() {
+        let (base, pool) = (free_ports(3), 3);
+        let dir = TempDir::new("status");
+        let hubp = HubProcess::start(dir.path(), base, pool, false, &[]);
+        let conf = dir.path().join("hub.conf").display().to_string();
+        let build = format!("{:08x}", build_id::<ToyGame>());
+
+        let out = hub_cmd(&[
+            "status",
+            "toy-footrace",
+            "--config",
+            &conf,
+            "--expect-build",
+            &build,
+            "--wait",
+            "15",
+        ]);
+        let stdout = text(&out.stdout);
+        assert!(out.status.success(), "{stdout}{}", text(&out.stderr));
+        assert!(
+            stdout.contains("state=ready") && stdout.contains("public=up"),
+            "{stdout}"
+        );
+        assert!(
+            stdout.contains(&format!("public_build={build}")),
+            "the build comes from the room's own process: {stdout}"
+        );
+
+        let out = hub_cmd(&[
+            "status",
+            "toy-footrace",
+            "--config",
+            &conf,
+            "--expect-build",
+            "00000001",
+        ]);
+        assert!(
+            !out.status.success() && text(&out.stdout).contains("state=wrong-build"),
+            "{}",
+            text(&out.stdout)
+        );
+        let out = hub_cmd(&["status", "ghost", "--config", &conf]);
+        assert!(!out.status.success() && text(&out.stdout).contains("state=unknown-game"));
+
+        // A reload says what it did and that it is not proof of readiness.
+        let out = hub_cmd(&["reload", "toy-footrace", "--config", &conf]);
+        let said = text(&out.stdout);
+        assert!(
+            out.status.success()
+                && said.contains("reloaded (build")
+                && said.contains("Not proof of readiness"),
+            "{said}"
+        );
+        drop(hubp);
+
+        // Nothing listening: an honest "no answer", not a hang.
+        let quiet = free_ports(1);
+        let conf2 = dir.path().join("quiet.conf");
+        std::fs::write(&conf2, config_text(quiet, 1, dir.path(), "", false)).unwrap();
+        let started = Instant::now();
+        let out = hub_cmd(&[
+            "status",
+            "toy-footrace",
+            "--config",
+            &conf2.display().to_string(),
+        ]);
+        assert!(
+            !out.status.success() && text(&out.stdout).contains("state=no-answer"),
+            "{}",
+            text(&out.stdout)
+        );
+        assert!(started.elapsed() < Duration::from_secs(10));
+    }
+
+    #[test]
+    fn updating_one_game_leaves_the_other_games_occupied_room_running_and_new_joins_reach_the_new_server(
+    ) {
+        let (base, pool) = (free_ports(6), 6);
+        let dir = TempDir::new("isolate");
+        let marker = dir.path().join("b-starts");
+        // Game B's server is a wrapper around the toy server that records which version started each room.
+        let wrapper = |version: &str| {
+            script_file(
+                dir.path(),
+                "b-server",
+                &format!(
+                    "if [ \"$1\" != --info ]; then echo \"{version} $$\" >> {}; fi\nexec {TOY_SERVER} \"$@\"",
+                    marker.display()
+                ),
+            )
+        };
+        let b_server = wrapper("v1");
+        let config = format!(
+            "{}\n[game deadfall]\nserver = {}\npublic = on\nauto_start = 0\nmax_rooms = 2\n",
+            config_text(base, pool, dir.path(), "", false),
+            b_server.display()
+        );
+        let hubp = HubProcess::start_with_config(dir.path(), base, pool, &config, &[]);
+        let conf = dir.path().join("hub.conf").display().to_string();
+        let hub_pid = hubp.child.id();
+        let mut a = HubClient::new(hubp.addr(), "toy-footrace").unwrap();
+        let mut b = HubClient::new(hubp.addr(), "deadfall").unwrap();
+        let (a_public, b_public) = (list(&mut a)[0].clone(), list(&mut b)[0].clone());
+        assert_ne!(
+            a_public.port, b_public.port,
+            "two games share the pool without colliding"
+        );
+        assert!(std::fs::read_to_string(&marker).unwrap().starts_with("v1 "));
+
+        // A player in each game's Public room.
+        let mut a_players = vec![client(room_addr(hubp.addr(), a_public.port), "A player", 0)];
+        let mut b_players = vec![client(room_addr(hubp.addr(), b_public.port), "B player", 0)];
+        assert!(drive(&mut a_players, 20, |c| *c[0].state() == ClientState::Lobby));
+        assert!(drive(&mut b_players, 20, |c| *c[0].state() == ClientState::Lobby));
+        assert!(eventually(10, || {
+            drive(&mut a_players, 0, |_| true);
+            drive(&mut b_players, 0, |_| true);
+            list(&mut a)[0].players == 1 && list(&mut b)[0].players == 1
+        }));
+        let kids_before = children_of(hub_pid).len();
+        let a_settings_before = list(&mut a);
+
+        // "Update" B: a new server file appears (atomically), then the reload the updater sends.
+        wrapper("v2");
+        let out = hub_cmd(&["reload", "deadfall", "--config", &conf]);
+        assert!(out.status.success(), "{}", text(&out.stderr));
+        let build = format!("{:08x}", build_id::<ToyGame>());
+        let status = hub_cmd(&[
+            "status",
+            "deadfall",
+            "--config",
+            &conf,
+            "--expect-build",
+            &build,
+            "--wait",
+            "15",
+        ]);
+        assert!(
+            status.status.success(),
+            "ready before anyone is sent to the new room: {}{}",
+            text(&status.stdout),
+            text(&status.stderr)
+        );
+
+        // B: the new Public room runs the new server and is the only one listed; the occupied old room keeps its player.
+        let b_now = list(&mut b);
+        assert_eq!(b_now.len(), 1);
+        assert_ne!(b_now[0].port, b_public.port);
+        let starts = std::fs::read_to_string(&marker).unwrap();
+        assert_eq!(
+            starts.lines().filter(|l| l.starts_with("v2 ")).count(),
+            1,
+            "{starts}"
+        );
+        drive(&mut b_players, 3, |_| false);
+        assert_eq!(
+            *b_players[0].state(),
+            ClientState::Lobby,
+            "the occupied old room was not ended by the update"
+        );
+        assert!(!port_is_free(b_public.port));
+        let mut newcomer = vec![client(room_addr(hubp.addr(), b_now[0].port), "Newcomer", 0)];
+        assert!(
+            drive(&mut newcomer, 20, |c| *c[0].state() == ClientState::Lobby),
+            "a new join reaches the new server"
+        );
+
+        // A: same Public room on the same port, same player, same settings; nothing was retired; no extra A process.
+        drive(&mut a_players, 3, |_| false);
+        assert_eq!(
+            *a_players[0].state(),
+            ClientState::Lobby,
+            "game A was not touched"
+        );
+        let a_after = list(&mut a);
+        assert_eq!(a_after.len(), a_settings_before.len());
+        assert_eq!(
+            (a_after[0].port, a_after[0].capacity, a_after[0].public),
+            (a_public.port, a_public.capacity, true)
+        );
+        assert!(!port_is_free(a_public.port));
+
+        // The old B room follows the documented policy: it closes as soon as its last player leaves.
+        b_players[0].leave();
+        drive(&mut b_players, 1, |_| false);
+        drop(b_players);
+        assert!(
+            eventually(15, || port_is_free(b_public.port)),
+            "retired and empty: closed"
+        );
+        assert!(
+            !port_is_free(a_public.port),
+            "and A's occupied room is still running"
+        );
+
+        // Repeated updates of an unoccupied game do not leak processes: the hub has the same children as before
+        // (a Public room per game and the newcomer's), however many times B is reloaded.
+        drop(newcomer);
+        for round in 0..3 {
+            wrapper(&format!("round{round}"));
+            let out = hub_cmd(&["reload", "deadfall", "--config", &conf]);
+            assert!(out.status.success(), "{}", text(&out.stderr));
+        }
+        assert!(
+            eventually(20, || children_of(hub_pid).len() <= kids_before),
+            "children of the hub: {:?} (was {kids_before})",
+            children_of(hub_pid)
+        );
+        let _ = hubp;
+    }
+
+    /// A source root, a fake cargo, a fake rustc and systemctl, and the real be2-hub installed in a temporary home.
+    struct UpdateRig {
+        dir: TempDir,
+        install: PathBuf,
+        config: PathBuf,
+        state: PathBuf,
+        fake: PathBuf,
+    }
+
+    impl UpdateRig {
+        fn new(base: u16, pool: u16) -> (UpdateRig, HubProcess) {
+            let dir = TempDir::new("update");
+            let root = dir.path();
+            let (install, config, state, fake, src) = (
+                root.join("install"),
+                root.join("config"),
+                root.join("state"),
+                root.join("fake"),
+                root.join("src"),
+            );
+            for d in [&install, &config, &state, &fake, &src.join("src")] {
+                std::fs::create_dir_all(d).unwrap();
+            }
+            std::fs::copy(HUB_BIN, install.join("be2-hub")).unwrap();
+            std::fs::write(src.join("Cargo.toml"), "[package]\nname = \"toy\"\n").unwrap();
+            std::fs::write(src.join("Cargo.lock"), "# lock\n").unwrap();
+            std::fs::write(src.join("src/main.rs"), "fn main() {}\n").unwrap();
+            let metadata = format!(
+                "{{\"packages\":[{{\"id\":\"toy\",\"name\":\"toy\",\"source\":null,\"manifest_path\":\"{s}/Cargo.toml\",\
+                 \"targets\":[{{\"name\":\"toy-server\",\"kind\":[\"bin\"],\"src_path\":\"{s}/src/main.rs\"}}]}}],\
+                 \"workspace_members\":[\"toy\"],\"workspace_root\":\"{s}\",\"target_directory\":\"{f}/target\",\
+                 \"resolve\":{{\"nodes\":[{{\"id\":\"toy\",\"deps\":[]}}]}}}}",
+                s = src.display(),
+                f = fake.display()
+            );
+            std::fs::write(fake.join("metadata.json"), metadata).unwrap();
+            script_file(
+                &fake,
+                "cargo",
+                &format!(
+                    "case \"$1\" in\n -V) echo 'cargo 9.9.9 (fake)';;\n metadata) cat {f}/metadata.json;;\n \
+                     build) echo build >> {f}/builds.log\n  printf '{{\"reason\":\"compiler-artifact\",\"package_id\":\"path+file:///fake#0.1.0\",\
+                     \"target\":{{\"name\":\"toy-server\",\"kind\":[\"bin\"]}},\"filenames\":[\"{f}/artifact\"],\"executable\":\"{f}/artifact\"}}\\n';;\nesac",
+                    f = fake.display()
+                ),
+            );
+            script_file(&fake, "rustc", "echo 'rustc 1.99.0 (fake)'");
+            script_file(&fake, "systemctl", "exit 0");
+            std::fs::copy(TOY_SERVER, fake.join("artifact")).unwrap();
+            std::fs::write(
+                config.join("sources.conf"),
+                format!("toy-footrace {} toy-server\n", src.display()),
+            )
+            .unwrap();
+            let conf = format!(
+                "[hub]\nlisten = 127.0.0.1:{base}\npool_start = {}\npool_size = {pool}\nreport_dir = {}\n\
+                 rate_burst = 1000\nrate_per_sec = 1000\n\n[game toy-footrace]\nserver = {}\npublic = on\nauto_start = 0\n",
+                base + 1,
+                root.join("reports").display(),
+                install.join("toy-server").display()
+            );
+            // The hub runs the toy server from the installed path; there is none until the first update installs it.
+            std::fs::copy(TOY_SERVER, install.join("toy-server")).unwrap();
+            let hub = HubProcess::start_with_config(&config, base, pool, &conf, &[]);
+            let rig = UpdateRig {
+                dir,
+                install,
+                config,
+                state,
+                fake,
+            };
+            (rig, hub)
+        }
+
+        fn run(&self, args: &[&str]) -> std::process::Output {
+            let root = self.dir.path();
+            Command::new("bash")
+                .arg(concat!(env!("CARGO_MANIFEST_DIR"), "/deploy/hub/update.sh"))
+                .args(args)
+                .env_clear()
+                .env("PATH", format!("{}:/usr/bin:/bin", self.fake.display()))
+                .env("HOME", root.join("home"))
+                .env("LANG", "C.UTF-8")
+                .env("BLUEENGINE_HOME", &self.install)
+                .env("BLUEENGINE_CONFIG", &self.config)
+                .env("BLUEENGINE_STATE", &self.state)
+                .env("BLUEENGINE_ENGINE", root.join("engine"))
+                .env("BLUEENGINE_SYSTEMCTL", self.fake.join("systemctl"))
+                .env("BLUEENGINE_READY_WAIT", "15")
+                .env("CARGO", self.fake.join("cargo"))
+                .env("RUSTC", self.fake.join("rustc"))
+                .stdin(Stdio::null())
+                .output()
+                .unwrap()
+        }
+
+        fn builds(&self) -> usize {
+            std::fs::read_to_string(self.fake.join("builds.log")).map_or(0, |t| t.lines().count())
+        }
+    }
+
+    #[test]
+    fn update_sh_promotes_through_the_real_hub_reports_ready_only_from_its_status_and_refuses_a_dying_candidate(
+    ) {
+        let (base, pool) = (free_ports(3), 3);
+        let (rig, hubp) = UpdateRig::new(base, pool);
+        let mut hc = HubClient::new(hubp.addr(), "toy-footrace").unwrap();
+        let before = list(&mut hc);
+
+        // First run: build (fake cargo), verify (real be2-hub verify with an isolated start), install, reload, status.
+        let out = rig.run(&[]);
+        let stdout = text(&out.stdout);
+        assert!(out.status.success(), "{stdout}{}", text(&out.stderr));
+        for step in [
+            "candidate ok: build",
+            "installed ",
+            "activated: the hub accepted the reload",
+            "ready: the hub",
+        ] {
+            assert!(stdout.contains(step), "{step}: {stdout}");
+        }
+        let receipt =
+            std::fs::read_to_string(rig.state.join("deployed/toy-footrace.json")).unwrap();
+        assert!(
+            receipt.contains("\"phase\": \"ready\"") && receipt.contains("\"complete\": true"),
+            "{receipt}"
+        );
+        assert_eq!(rig.builds(), 1);
+        assert!(
+            eventually(10, || {
+                let now = list(&mut hc);
+                now.len() == 1 && now[0].port != before[0].port
+            }),
+            "the reload gave the game a fresh Public room"
+        );
+
+        // Nothing changed: no Cargo build, no hub traffic that changes anything.
+        let public_now = list(&mut hc)[0].port;
+        let out = rig.run(&[]);
+        assert!(
+            text(&out.stdout).contains("up to date"),
+            "{}",
+            text(&out.stdout)
+        );
+        assert_eq!(rig.builds(), 1);
+        assert_eq!(
+            list(&mut hc)[0].port,
+            public_now,
+            "an up-to-date game is not reloaded"
+        );
+
+        // A candidate whose --info is fine but which dies at startup is refused before it replaces anything.
+        let installed = std::fs::read(rig.install.join("toy-server")).unwrap();
+        script_file(
+            &rig.fake,
+            "artifact",
+            &format!("if [ \"$1\" = --info ]; then exec {TOY_SERVER} --info; fi\nexit 3"),
+        );
+        std::fs::write(
+            rig.dir.path().join("src/src/main.rs"),
+            "fn main() { /* v2 */ }\n",
+        )
+        .unwrap();
+        let out = rig.run(&[]);
+        let stdout = text(&out.stdout);
+        assert!(!out.status.success(), "{stdout}");
+        assert!(
+            stdout.contains("candidate rejected") && stdout.contains("exited before"),
+            "{stdout}"
+        );
+        assert!(!stdout.contains("activated"), "{stdout}");
+        assert_eq!(
+            std::fs::read(rig.install.join("toy-server")).unwrap(),
+            installed,
+            "the installed server is untouched"
+        );
+        assert_eq!(
+            list(&mut hc)[0].port,
+            public_now,
+            "and the hub's room never moved"
+        );
+        assert!(
+            std::fs::read_to_string(rig.state.join("deployed/toy-footrace.json"))
+                .unwrap()
+                .contains("\"phase\": \"ready\""),
+            "the record of the completed deployment is unchanged"
+        );
+        let _ = (hubp, &rig.config);
+    }
 }

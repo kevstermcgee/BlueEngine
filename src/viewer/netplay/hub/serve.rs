@@ -6,6 +6,7 @@
 //! Three protocols share the one port, told apart by the first four bytes: `BEHB` (the hub protocol, [`wire`]),
 //! `DFHB` (the Deadfall hub protocol of already-shipped clients, [`legacy`]) and `BECT` (loopback control).
 //! Anything else gets silence.
+use super::deploy::GameStatus;
 use super::legacy::{self, Mode};
 use super::limits::{Bucket, Limits, RateLimiter};
 use super::registry::{Change, Config, GameEntry, InfoSource, Registry};
@@ -69,6 +70,10 @@ pub struct Hub {
     /// room back instead of "name taken".
     recent_creates: VecDeque<(IpAddr, u32, String, String)>,
     last_binary_check_ms: u64,
+    /// The last reload (source, nonce) and its encoded reply: `be2-hub` resends a request it has had no answer to
+    /// yet, and a slow reload must not run twice (and retire the room it just started). Status is a read; it is
+    /// always answered afresh.
+    last_control: Option<(SocketAddr, u32, Vec<u8>)>,
 }
 
 impl Hub {
@@ -100,6 +105,7 @@ impl Hub {
             cookie_key: RandomState::new(),
             recent_creates: VecDeque::new(),
             last_binary_check_ms: 0,
+            last_control: None,
         };
         hub.manager.tick(0, &hub.registry);
         hub
@@ -121,7 +127,18 @@ impl Hub {
             for change in self.registry.poll_changes(self.info_source.as_mut()) {
                 match change {
                     Change::Updated(game) => {
-                        let n = self.manager.retire_game(&game, now_ms);
+                        // New Public room first, as `reload` does; if it cannot start, retire the old rooms anyway
+                        // (the registry already holds the new build, so listing the old rooms would mislead).
+                        let n = match self.registry.get(&game).cloned() {
+                            Some(entry) => self
+                                .manager
+                                .replace_game(&entry, now_ms)
+                                .unwrap_or_else(|why| {
+                                    log(&format!("{why}; retiring the old rooms instead"));
+                                    self.manager.retire_game(&game, now_ms)
+                                }),
+                            None => 0,
+                        };
                         log(&format!(
                             "The {game} server changed on disk: retired {n} room(s); new rooms use the new build"
                         ));
@@ -418,13 +435,51 @@ impl Hub {
         if !src.ip().is_loopback() {
             return None;
         }
-        let (nonce, Control::Reload { game }) = Control::decode(data)?;
-        let reply = match self.reload(&game, now_ms) {
-            Ok(text) => ControlReply { ok: true, text },
-            Err(text) => ControlReply { ok: false, text },
+        let (nonce, control) = Control::decode(data)?;
+        let is_reload = matches!(control, Control::Reload { .. });
+        if let Some((from, seen, reply)) = self.last_control.as_ref().filter(|_| is_reload) {
+            if *from == src && *seen == nonce {
+                return Some(reply.clone()); // a resend of a reload already done
+            }
+        }
+        let reply = match control {
+            Control::Reload { game } => {
+                let reply = match self.reload(&game, now_ms) {
+                    Ok(text) => ControlReply { ok: true, text },
+                    Err(text) => ControlReply { ok: false, text },
+                };
+                log(&format!("reload {game}: {}", reply.text));
+                reply
+            }
+            Control::Status { game } => match self.game_status(&game) {
+                Ok(status) => ControlReply {
+                    ok: true,
+                    text: status.to_text(),
+                },
+                Err(text) => ControlReply { ok: false, text },
+            },
         };
-        log(&format!("reload {game}: {}", reply.text));
-        Some(reply.encode(nonce))
+        let bytes = reply.encode(nonce);
+        if is_reload {
+            self.last_control = Some((src, nonce, bytes.clone()));
+        }
+        Some(bytes)
+    }
+
+    /// `be2-hub status <game>`: what the hub holds for a game right now. Changes nothing.
+    pub fn game_status(&self, game: &str) -> Result<GameStatus, String> {
+        let entry = self
+            .registry
+            .get(game)
+            .ok_or_else(|| format!("{game} is not loaded in the running hub"))?;
+        Ok(GameStatus::of(
+            game,
+            entry.info.build,
+            entry.config.public,
+            self.manager.public_room(game),
+            self.manager.retired_of(game),
+            self.manager.rooms_of(game).len(),
+        ))
     }
 
     /// `be2-hub reload <game>`: re-read the config file for this game, run its server's `--info` again, and
@@ -456,11 +511,20 @@ impl Hub {
                 let Some(entry) = fresh.get(game).cloned() else {
                     return Err(problems.join("; "));
                 };
+                // The replacement Public room starts before anything is retired: if it cannot, nothing changes.
+                let n = self.manager.replace_game(&entry, now_ms)?;
+                let build = entry.info.build;
                 self.registry.add(entry);
-                let n = self.manager.retire_game(game, now_ms);
                 self.manager.tick(now_ms, &self.registry);
+                let public = match self.manager.public_room(game) {
+                    Some(r) => format!("Public room on port {}, no status yet", r.port),
+                    None if self.registry.get(game).is_some_and(|g| g.config.public) => {
+                        "Public room not running yet".to_string()
+                    }
+                    None => "no Public room".to_string(),
+                };
                 Ok(format!(
-                    "{game} reloaded: {n} room(s) retired, new rooms use the new server"
+                    "{game} reloaded (build {build:08x}): {n} room(s) retired; {public}. Not proof of readiness: ask `be2-hub status {game}`"
                 ))
             }
             None if self.registry.get(game).is_some() => {
@@ -1301,6 +1365,235 @@ mod tests {
             .handle(lo, &Control::Reload { game: "zzz".into() }.encode(6), 0)
             .unwrap();
         assert!(!ControlReply::decode(&bad).unwrap().1.ok);
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    fn ask_status(h: &mut Hub, game: &str) -> Result<GameStatus, String> {
+        let lo = SocketAddr::from(([127, 0, 0, 1], 40000));
+        let reply = h
+            .handle(lo, &Control::Status { game: game.into() }.encode(3), 0)
+            .expect("loopback gets an answer");
+        let (nonce, r) = ControlReply::decode(&reply).unwrap();
+        assert_eq!(nonce, 3);
+        if r.ok {
+            Ok(GameStatus::parse(&r.text).expect("a well-formed status"))
+        } else {
+            Err(r.text)
+        }
+    }
+
+    #[test]
+    fn status_says_what_is_running_and_readiness_needs_the_new_builds_own_status_line() {
+        use super::super::deploy::Readiness;
+        let path = config_file(
+            "status",
+            "[game kart]\nserver=/srv/kart-server\npublic=on\n[game other]\nserver=/srv/other-server\npublic=on\n",
+        );
+        let w = Rc::new(RefCell::new(World::default()));
+        let mut s1 = Scripted::default();
+        s1.put("/srv/kart-server", 1, Ok(fake_info("kart", 0xAAAA)));
+        s1.put("/srv/other-server", 1, Ok(fake_info("other", 0xBBBB)));
+        let cfg = super::super::registry::parse_config(
+            &std::fs::read_to_string(&path).unwrap(),
+            path.parent().unwrap(),
+        )
+        .unwrap();
+        let (reg, problems) = Registry::load(&cfg, &mut s1);
+        assert!(problems.is_empty(), "{problems:?}");
+        let mut o = opts();
+        o.config_path = Some(path.clone());
+        let mut h = Hub::new(o, reg, Box::new(Fake(w.clone())), Box::new(s1));
+        let old = crate::viewer::netplay::cli::fold_build(0xAAAA);
+        let new = crate::viewer::netplay::cli::fold_build(0xCCCC);
+        let public_of = |h: &Hub, g: &str| h.manager().public_room(g).unwrap().port;
+        let say = |w: &Rc<RefCell<World>>, port: u16, build: u32, players: u8| {
+            let mut st = status(players, RoomState::Lobby);
+            st.build = build;
+            w.borrow_mut().status.insert(port, st);
+        };
+
+        // Started, silent: not ready. Printing the old build: ready for the old build, wrong for the new one.
+        let st = ask_status(&mut h, "kart").unwrap();
+        assert_eq!(st.readiness(None), Readiness::Starting);
+        let (kart_old, other_port) = (public_of(&h, "kart"), public_of(&h, "other"));
+        say(&w, kart_old, old, 1); // somebody is in it
+        say(&w, other_port, fake_info("other", 0xBBBB).build, 0);
+        h.tick(500);
+        let st = ask_status(&mut h, "kart").unwrap();
+        assert_eq!(st.readiness(Some(old)), Readiness::Ready);
+        assert_eq!(st.readiness(Some(new)), Readiness::WrongBuild);
+
+        // The server file is replaced and reloaded: the registry has the new build at once, but the new Public room is
+        // only "starting" until its own process prints a status line, and a line with the old build does not count.
+        let mut s2 = Scripted::default();
+        s2.put("/srv/kart-server", 2, Ok(fake_info("kart", 0xCCCC)));
+        s2.put("/srv/other-server", 1, Ok(fake_info("other", 0xBBBB)));
+        h.info_source = Box::new(s2);
+        let text = h.reload("kart", 1000).unwrap();
+        assert!(
+            text.contains(&format!("(build {new:08x})")) && text.contains("Not proof of readiness"),
+            "{text}"
+        );
+        assert!(
+            text.len() < 200,
+            "fits a control reply: {} bytes",
+            text.len()
+        );
+        let st = ask_status(&mut h, "kart").unwrap();
+        assert_eq!((st.registry_build, st.retired), (new, 1));
+        assert_eq!(st.readiness(Some(new)), Readiness::Starting);
+        let kart_new = public_of(&h, "kart");
+        assert_ne!(kart_new, kart_old);
+        say(&w, kart_new, old, 0);
+        h.tick(1500);
+        assert_eq!(
+            ask_status(&mut h, "kart").unwrap().readiness(Some(new)),
+            Readiness::WrongBuild
+        );
+        say(&w, kart_new, new, 0);
+        h.tick(2000);
+        assert_eq!(
+            ask_status(&mut h, "kart").unwrap().readiness(Some(new)),
+            Readiness::Ready
+        );
+        // The other game never changed: same build, same Public room, nothing retired.
+        let other = ask_status(&mut h, "other").unwrap();
+        assert_eq!(
+            (other.registry_build, other.public_port, other.retired),
+            (fake_info("other", 0xBBBB).build, Some(other_port), 0)
+        );
+
+        // Unknown games and non-loopback senders.
+        assert!(ask_status(&mut h, "ghost")
+            .unwrap_err()
+            .contains("not loaded"));
+        assert!(h
+            .handle(
+                src(1),
+                &Control::Status {
+                    game: "kart".into()
+                }
+                .encode(4),
+                0
+            )
+            .is_none());
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn a_reload_that_cannot_start_its_new_public_room_changes_nothing_and_says_so() {
+        let path = config_file(
+            "noreplace",
+            "[game kart]\nserver=/srv/kart-server\npublic=on\n",
+        );
+        let w = Rc::new(RefCell::new(World::default()));
+        let mut s1 = Scripted::default();
+        s1.put("/srv/kart-server", 1, Ok(fake_info("kart", 0xAAAA)));
+        let cfg = super::super::registry::parse_config(
+            &std::fs::read_to_string(&path).unwrap(),
+            path.parent().unwrap(),
+        )
+        .unwrap();
+        let (reg, _) = Registry::load(&cfg, &mut s1);
+        let mut o = opts();
+        o.config_path = Some(path.clone());
+        let mut h = Hub::new(o, reg, Box::new(Fake(w.clone())), Box::new(s1));
+        let before = h.manager().public_room("kart").unwrap().port;
+        let mut s2 = Scripted::default();
+        s2.put("/srv/kart-server", 2, Ok(fake_info("kart", 0xCCCC)));
+        h.info_source = Box::new(s2);
+        w.borrow_mut().fail_spawn = true;
+        let e = h.reload("kart", 1000).unwrap_err();
+        assert!(e.contains("nothing was changed"), "{e}");
+        assert_eq!(
+            h.registry().get("kart").unwrap().info.fingerprint,
+            0xAAAA,
+            "the registry still holds the build whose rooms are running"
+        );
+        assert_eq!(h.manager().public_room("kart").unwrap().port, before);
+        assert_eq!(h.manager().retired_of("kart"), 0);
+        let _ = std::fs::remove_dir_all(path.parent().unwrap());
+    }
+
+    #[test]
+    fn a_binary_replaced_on_a_full_pool_still_retires_the_old_rooms_instead_of_listing_a_stale_build(
+    ) {
+        let w = Rc::new(RefCell::new(World::default()));
+        let mut s = Scripted::default();
+        s.put("/srv/deadfall-server", 1, Ok(fake_info("deadfall", 1)));
+        s.put("/srv/kart-server", 1, Ok(fake_info("kart", 2)));
+        let cfg = Config {
+            hub: Default::default(),
+            games: vec![game_config("deadfall"), game_config("kart")],
+        };
+        let (reg, _) = Registry::load(&cfg, &mut s);
+        let mut o = opts();
+        o.manager.pool_size = 2;
+        o.manager.max_processes = 2;
+        let mut h = Hub::new(o, reg, Box::new(Fake(w.clone())), Box::new(s));
+        let old = h.manager().rooms_of("deadfall")[0].port;
+        w.borrow_mut()
+            .status
+            .insert(old, status(2, RoomState::Playing));
+        h.tick(1000);
+        let mut s2 = Scripted::default();
+        s2.put("/srv/deadfall-server", 2, Ok(fake_info("deadfall", 99)));
+        s2.put("/srv/kart-server", 1, Ok(fake_info("kart", 2)));
+        h.info_source = Box::new(s2);
+        h.tick(BINARY_CHECK_MS);
+        h.tick(2 * BINARY_CHECK_MS);
+        // No second process fits, so the new Public room cannot start first: the old occupied room is retired (its
+        // players keep playing) and the other game is untouched.
+        assert_eq!(h.manager().retired_of("deadfall"), 1);
+        assert!(h.manager().rooms_of("deadfall").is_empty());
+        assert_eq!(h.manager().rooms_of("kart").len(), 1);
+        assert_eq!(h.manager().retired_of("kart"), 0);
+    }
+
+    #[test]
+    fn a_resent_control_request_is_answered_again_without_running_twice() {
+        let path = config_file(
+            "resend",
+            "[game kart]\nserver=/srv/kart-server\npublic=on\n",
+        );
+        let w = Rc::new(RefCell::new(World::default()));
+        let mut src_info = Scripted::default();
+        src_info.put("/srv/kart-server", 1, Ok(fake_info("kart", 1)));
+        let cfg = super::super::registry::parse_config(
+            &std::fs::read_to_string(&path).unwrap(),
+            path.parent().unwrap(),
+        )
+        .unwrap();
+        let (reg, _) = Registry::load(&cfg, &mut src_info);
+        let mut o = opts();
+        o.config_path = Some(path.clone());
+        let mut h = Hub::new(o, reg, Box::new(Fake(w)), Box::new(src_info));
+        let lo = SocketAddr::from(([127, 0, 0, 1], 40000));
+        let ctl = Control::Reload {
+            game: "kart".into(),
+        }
+        .encode(5);
+        let first = h.handle(lo, &ctl, 0).unwrap();
+        let room = h.manager().public_room("kart").unwrap().port;
+        let again = h.handle(lo, &ctl, 10).unwrap();
+        assert_eq!(first, again, "the same answer");
+        assert_eq!(
+            h.manager().public_room("kart").unwrap().port,
+            room,
+            "the room the first reload started was not retired by the resend"
+        );
+        assert_eq!(
+            h.manager().retired_of("kart"),
+            1,
+            "one reload happened, not two"
+        );
+        // A new request (another nonce, or another process) is a new reload.
+        let next = Control::Reload {
+            game: "kart".into(),
+        }
+        .encode(6);
+        h.handle(lo, &next, 20).unwrap();
+        assert_ne!(h.manager().public_room("kart").unwrap().port, room);
         let _ = std::fs::remove_dir_all(path.parent().unwrap());
     }
 

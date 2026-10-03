@@ -13,6 +13,7 @@
 //! * [`registry`]: the config file, `--info` of each game's server, and the checks on both.
 //! * [`spawn`] and [`rooms`]: room processes, the port pool and the room lifetimes.
 //! * [`mod@serve`]: the datagram handler ([`Hub`]) and the UDP loop. `src/bin/be2-hub.rs` is the executable around it.
+//! * [`deploy`]: what the updater asks of the hub: verify a candidate server, read back a game's running state.
 //! * [`client`]: what a game links: the non-blocking [`HubClient`], the window-less [`Online`] state machine
 //!   behind a Play Online screen, build ids and the default hub address.
 //!
@@ -21,6 +22,7 @@
 //!
 //! Std only, no window: everything here is always compiled and runs headless.
 pub mod client;
+pub mod deploy;
 pub mod legacy;
 pub mod limits;
 pub mod registry;

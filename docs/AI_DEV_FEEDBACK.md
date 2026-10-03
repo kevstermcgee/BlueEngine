@@ -145,6 +145,12 @@ across two files). Spooky Kart shipped two geometry bugs that no engine test cou
 
 - **`viewer::shutdown::install` makes SIGHUP a stop signal**, so "reload the config on SIGHUP" would end the hub and every room. The hub's
   reload is a loopback-only control datagram (`be2-hub reload GAME`).
+- **"Reload accepted" is not "room ready".** The hub answers a reload as soon as it has started the replacement process; whether that
+  process works shows only in its own `STATUS` line. Ask `be2-hub status GAME --expect-build HEX8`, and check a candidate with
+  `be2-hub verify GAME --server PATH --start` *before* it replaces the installed file: a running match proves nothing about the next room.
+- **Never fingerprint a build from a shared target directory's `.d` files or from git.** With `CARGO_TARGET_DIR` shared by several
+  checkouts, `deps/*.d` lists other checkouts' files; `update.sh` reads dependency-info only from the build it just ran, and hashes
+  file contents (so untracked source counts and docs/other games do not).
 - **A repeated nonce is a retry, not a new request.** The hub answers a second Create with the same (source, nonce) with the room the first made,
   so a test that reuses one nonce for different creates sees the first room come back instead of a refusal or a new room.
 - **Killing `sh -c "..."` leaves its child holding the pipe.** A test script that stands in for a hung server must `exec` the long-running
