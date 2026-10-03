@@ -103,6 +103,31 @@ struct Room {
 
 use super::spawn::RoomProcess;
 
+/// A game's live Public room as the room table sees it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct PublicRoom {
+    pub port: u16,
+    /// The latest fresh status its process printed; `None` until it has printed one (or if it stopped).
+    pub status: Option<RoomStatus>,
+}
+
+/// Why a Public room could not be started.
+enum StartFail {
+    /// No process slot or pool port: waiting (or closing something) may fix it.
+    Capacity(String),
+    /// The server file would not run.
+    Spawn(String),
+}
+
+impl StartFail {
+    fn describe(&self, game: &str) -> String {
+        match self {
+            Self::Capacity(why) => format!("No Public room could be started for {game}: {why}"),
+            Self::Spawn(why) => format!("Could not start the Public room of {game}: {why}"),
+        }
+    }
+}
+
 impl Room {
     fn info(&self) -> RoomInfo {
         let (players, capacity, state) = match self.status {
@@ -284,51 +309,56 @@ impl RoomManager {
             if now_ms < self.next_public_try_ms.get(id).copied().unwrap_or(0) {
                 continue;
             }
-            let retry = self.cfg.public_restart_ms.max(5_000);
-            if self.rooms.len() >= self.cfg.max_processes {
-                self.next_public_try_ms
-                    .insert(id.to_string(), now_ms + retry);
-                continue;
-            }
-            let Some(port) = self.alloc_port() else {
-                log(&format!(
-                    "No free port for the Public room of {id}; will retry"
-                ));
-                self.next_public_try_ms
-                    .insert(id.to_string(), now_ms + retry);
-                continue;
-            };
-            let name = game.config.public_name.clone();
-            let spec = self.spec(game, &name, port, true, game.public_settings.clone());
-            match self.spawner.spawn(&spec) {
-                Ok(process) => {
-                    log(&format!(
-                        "Public room \"{name}\" of {id} is up on port {port}"
-                    ));
-                    self.rooms.push(Room {
-                        game: id.to_string(),
-                        name,
-                        port,
-                        public: true,
-                        process,
-                        status: None,
-                        capacity_hint: game.info.max_seats.min(255) as u8,
-                        created_ms: now_ms,
-                        ever_joined: false,
-                        empty_since_ms: Some(now_ms),
-                        creator: None,
-                        retired_at_ms: None,
-                    });
-                }
+            match self.start_public(game, now_ms) {
+                Ok(port) => log(&format!(
+                    "Public room \"{}\" of {id} is up on port {port}",
+                    game.config.public_name
+                )),
                 Err(e) => {
-                    log(&format!(
-                        "Could not start the Public room of {id}: {e}; will retry"
-                    ));
+                    let retry = self.cfg.public_restart_ms.max(5_000);
+                    log(&format!("{}; will retry", e.describe(id)));
                     self.next_public_try_ms
                         .insert(id.to_string(), now_ms + retry);
                 }
             }
         }
+    }
+
+    /// Start `game`'s Public room on a free pool port. Does not look at the rooms the game already has.
+    fn start_public(&mut self, game: &GameEntry, now_ms: u64) -> Result<u16, StartFail> {
+        let id = game.id();
+        if self.rooms.len() >= self.cfg.max_processes {
+            return Err(StartFail::Capacity(format!(
+                "all {} room processes are in use",
+                self.cfg.max_processes
+            )));
+        }
+        let Some(port) = self.alloc_port() else {
+            return Err(StartFail::Capacity(
+                "no pool port is free (all are in use or held by another program)".into(),
+            ));
+        };
+        let name = game.config.public_name.clone();
+        let spec = self.spec(game, &name, port, true, game.public_settings.clone());
+        let process = self
+            .spawner
+            .spawn(&spec)
+            .map_err(|e| StartFail::Spawn(e.to_string()))?;
+        self.rooms.push(Room {
+            game: id.to_string(),
+            name,
+            port,
+            public: true,
+            process,
+            status: None,
+            capacity_hint: game.info.max_seats.min(255) as u8,
+            created_ms: now_ms,
+            ever_joined: false,
+            empty_since_ms: Some(now_ms),
+            creator: None,
+            retired_at_ms: None,
+        });
+        Ok(port)
     }
 
     /// Every listed room of `game` (retired ones are not), the Public room first.
@@ -340,6 +370,17 @@ impl RoomManager {
             .collect();
         live.sort_by_key(|r| !r.public);
         live.into_iter().map(Room::info).collect()
+    }
+
+    /// The game's live (not retired) Public room: its port and the fresh status its process reported, if any.
+    pub fn public_room(&self, game: &str) -> Option<PublicRoom> {
+        self.rooms
+            .iter()
+            .find(|r| r.game == game && r.public && r.retired_at_ms.is_none())
+            .map(|r| PublicRoom {
+                port: r.port,
+                status: r.status,
+            })
     }
 
     /// Rooms of `game` that are being drained after a reload.
@@ -444,17 +485,56 @@ impl RoomManager {
 
     /// Retire every room of `game` (see the module docs). Returns how many were retired.
     pub fn retire_game(&mut self, game: &str, now_ms: u64) -> usize {
+        self.retire_except(game, now_ms, None)
+    }
+
+    fn retire_except(&mut self, game: &str, now_ms: u64, keep_port: Option<u16>) -> usize {
         let mut n = 0;
         for r in self
             .rooms
             .iter_mut()
-            .filter(|r| r.game == game && r.retired_at_ms.is_none())
+            .filter(|r| r.game == game && r.retired_at_ms.is_none() && Some(r.port) != keep_port)
         {
             r.retired_at_ms = Some(now_ms);
             n += 1;
         }
         self.next_public_try_ms.remove(game);
         n
+    }
+
+    /// What a reload does for a game whose server was replaced: start the new build's Public room **first**, then
+    /// retire the rooms that were there, so a replacement that cannot start (no free port or process slot, a
+    /// binary that will not run) leaves the game exactly as it was and says why. Returns how many rooms were
+    /// retired. One exception keeps updates possible on a full pool: when the only thing in the way is capacity and
+    /// the game's current Public room is empty (retiring it closes it at once), the old order is used.
+    pub fn replace_game(&mut self, game: &GameEntry, now_ms: u64) -> Result<usize, String> {
+        let id = game.id();
+        if !game.config.public {
+            return Ok(self.retire_game(id, now_ms));
+        }
+        match self.start_public(game, now_ms) {
+            Ok(port) => {
+                log(&format!(
+                    "Public room \"{}\" of {id} is up on port {port} (new build)",
+                    game.config.public_name
+                ));
+                Ok(self.retire_except(id, now_ms, Some(port)))
+            }
+            Err(StartFail::Capacity(why))
+                if self
+                    .public_room(id)
+                    .is_some_and(|r| r.status.is_some_and(|s| s.players == 0)) =>
+            {
+                log(&format!(
+                    "No room for a second {id} Public room ({why}): retiring the empty one first"
+                ));
+                Ok(self.retire_game(id, now_ms))
+            }
+            Err(e) => Err(format!(
+                "{}; nothing was changed, the old rooms keep running",
+                e.describe(id)
+            )),
+        }
     }
 
     /// Kill every child server.
@@ -937,6 +1017,162 @@ pub(crate) mod tests {
         m.tick(1000 + 30 * 60_000, &reg);
         assert_eq!(m.retired_of("deadfall"), 0);
         assert!(w.borrow().killed.contains(&old_public));
+    }
+
+    fn ports_of(m: &RoomManager, game: &str) -> Vec<u16> {
+        m.rooms_of(game).into_iter().map(|r| r.port).collect()
+    }
+
+    #[test]
+    fn replacing_a_game_starts_the_new_public_room_first_and_changes_only_that_game() {
+        let (mut m, w) = manager(cfg());
+        let a = entry("kart", 2);
+        let b_old = entry("deadfall", 1);
+        let b_new = entry("deadfall", 9);
+        let reg = registry(&[a.clone(), b_old.clone()]);
+        m.tick(0, &reg);
+        let a_busy = m.create(&a, "A busy", vec![], ip(1), 0).unwrap();
+        let b_busy = m.create(&b_old, "B busy", vec![], ip(2), 0).unwrap();
+        let (a_public, b_public) = (m.rooms_of("kart")[0].port, m.rooms_of("deadfall")[0].port);
+        for (port, players) in [
+            (a_busy.port, 2),
+            (b_busy.port, 3),
+            (a_public, 1),
+            (b_public, 0),
+        ] {
+            w.borrow_mut()
+                .status
+                .insert(port, status(players, RoomState::Playing));
+        }
+        m.tick(1000, &reg);
+        let a_before = (ports_of(&m, "kart"), names(&m, "kart"));
+
+        // A candidate whose server will not even start: nothing about B (or A) changes.
+        w.borrow_mut().fail_spawn = true;
+        let e = m.replace_game(&b_new, 2000).unwrap_err();
+        assert!(e.contains("nothing was changed"), "{e}");
+        w.borrow_mut().fail_spawn = false;
+        assert_eq!(m.retired_of("deadfall"), 0, "B still has its usable rooms");
+        assert_eq!(names(&m, "deadfall"), ["Public", "B busy"]);
+
+        // A good one: B's new Public room is already running when the old rooms are retired.
+        let n = m.replace_game(&b_new, 3000).unwrap();
+        assert_eq!(n, 2, "B's old Public room and B's busy room");
+        let mut reg = reg;
+        reg.add(b_new.clone());
+        m.tick(3500, &reg);
+        let b_rooms = m.rooms_of("deadfall");
+        assert_eq!(b_rooms.len(), 1);
+        assert!(b_rooms[0].public && b_rooms[0].port != b_public);
+        assert_eq!(
+            m.retired_of("deadfall"),
+            1,
+            "the empty old Public room closed at once; the occupied room drains"
+        );
+        assert!(w.borrow().killed.contains(&b_public));
+        assert!(
+            !w.borrow().killed.contains(&b_busy.port),
+            "players inside are not thrown out"
+        );
+        // A was not touched in any way.
+        assert_eq!((ports_of(&m, "kart"), names(&m, "kart")), a_before);
+        assert_eq!(m.retired_of("kart"), 0);
+        assert!(
+            !w.borrow().killed.contains(&a_busy.port) && !w.borrow().killed.contains(&a_public)
+        );
+        // The occupied old B room follows the documented cap: closed when the grace period ends, not before.
+        m.tick(3500 + 29 * 60_000, &reg);
+        assert!(!w.borrow().killed.contains(&b_busy.port));
+        m.tick(3000 + 30 * 60_000, &reg);
+        assert!(w.borrow().killed.contains(&b_busy.port));
+        assert!(
+            !w.borrow().killed.contains(&a_busy.port),
+            "and A's occupied room is still running"
+        );
+    }
+
+    #[test]
+    fn a_full_pool_or_a_busy_port_makes_replacing_fail_honestly_unless_the_old_public_room_is_empty(
+    ) {
+        let mut c = cfg();
+        c.pool_size = 2;
+        c.max_processes = 2;
+        let (mut m, w) = manager(c);
+        let a = entry("kart", 2);
+        let b_new = entry("deadfall", 9);
+        let mut reg = registry(&[a, entry("deadfall", 1)]);
+        m.tick(0, &reg);
+        assert_eq!(m.processes(), 2, "both Public rooms use the whole pool");
+        let b_public = m.rooms_of("deadfall")[0].port;
+        w.borrow_mut()
+            .status
+            .insert(b_public, status(2, RoomState::Playing));
+        m.tick(1000, &reg);
+        let e = m.replace_game(&b_new, 2000).unwrap_err();
+        assert!(
+            e.contains("room processes are in use") && e.contains("nothing was changed"),
+            "{e}"
+        );
+        assert_eq!(m.retired_of("deadfall"), 0);
+        assert_eq!(m.processes(), 2);
+
+        // The old Public room is empty: retiring it frees the slot, so an update is still possible on a full pool.
+        w.borrow_mut()
+            .status
+            .insert(b_public, status(0, RoomState::Lobby));
+        m.tick(2000, &reg);
+        let n = m.replace_game(&b_new, 3000).unwrap();
+        assert_eq!(n, 1);
+        reg.add(b_new.clone());
+        m.tick(3000, &reg);
+        let rooms = m.rooms_of("deadfall");
+        assert!(
+            rooms.len() == 1 && rooms[0].public,
+            "a new Public room replaced the empty one: {rooms:?}"
+        );
+        assert_eq!(
+            names(&m, "kart"),
+            ["Public"],
+            "the other game's room never moved"
+        );
+
+        // A process slot is free but every pool port is held by another program: the message says so.
+        let mut c = cfg();
+        c.pool_size = 2;
+        let (mut m, w) = manager(c);
+        m.tick(0, &registry(&[entry("deadfall", 1)]));
+        w.borrow_mut().busy_ports = vec![5001];
+        let e = m.replace_game(&b_new, 10).unwrap_err();
+        assert!(e.contains("no pool port is free"), "{e}");
+        assert_eq!(names(&m, "deadfall"), ["Public"]);
+    }
+
+    #[test]
+    fn the_public_room_reports_a_fresh_status_only_once_its_process_has_printed_one() {
+        let (mut m, w) = manager(cfg());
+        let d = entry("deadfall", 1);
+        let reg = registry(std::slice::from_ref(&d));
+        assert!(m.public_room("deadfall").is_none());
+        m.tick(0, &reg);
+        let p = m.public_room("deadfall").unwrap();
+        assert!(p.status.is_none(), "started, nothing printed yet");
+        let mut s = status(0, RoomState::Lobby);
+        s.build = d.info.build;
+        w.borrow_mut().status.insert(p.port, s);
+        m.tick(500, &reg);
+        assert_eq!(
+            m.public_room("deadfall").unwrap().status.unwrap().build,
+            d.info.build
+        );
+        // A status the server stopped printing is not trusted (the real process drops it after a few seconds).
+        w.borrow_mut().status.clear();
+        m.tick(900, &reg);
+        assert!(m.public_room("deadfall").unwrap().status.is_none());
+        m.retire_game("deadfall", 1000);
+        assert!(
+            m.public_room("deadfall").is_none(),
+            "a retired room is not the Public room"
+        );
     }
 
     #[test]

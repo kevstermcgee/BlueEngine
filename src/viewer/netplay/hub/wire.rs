@@ -33,8 +33,11 @@
 //! reply and cannot make a room in somebody else's name. The token is a keyed hash of the source IP and a coarse
 //! time window; the key never leaves the hub.
 //!
-//! **Control (`BECT`).** `"BECT" version(1) kind(1) nonce(u32) game` with kind 1 = reload; the reply is
-//! `"BECT" version kind|0x80 nonce ok(u8) text(string)`. The hub honours it only from a loopback address.
+//! **Control (`BECT`).** `"BECT" version(1) kind(1) nonce(u32) game` with kind 1 = reload and kind 2 = status; the
+//! reply is `"BECT" version kind|0x80 nonce ok(u8) text(string)`. The hub honours it only from a loopback address.
+//! Reload's `ok` means "the hub re-read the game and asked for a replacement room", not that the room is ready;
+//! status's text is what the hub holds right now (see [`deploy::GameStatus`](super::deploy::GameStatus)).
+//! Hubs older than status ignore kind 2 (silence), which `be2-hub status` reports as "no answer".
 use std::fmt;
 
 pub const MAGIC: [u8; 4] = *b"BEHB";
@@ -470,6 +473,9 @@ pub enum Control {
     /// Re-read the registry for this game and retire its rooms (they close once empty; new rooms use the new
     /// build). See the module docs of [`rooms`](super::rooms) for the exact semantics.
     Reload { game: String },
+    /// Report what the hub holds for this game: the registry's build, and the Public room's process and status.
+    /// Changes nothing.
+    Status { game: String },
 }
 
 /// The hub's answer to a [`Control`].
@@ -481,11 +487,14 @@ pub struct ControlReply {
 
 impl Control {
     pub fn encode(&self, nonce: u32) -> Vec<u8> {
-        let Control::Reload { game } = self;
+        let (kind, game) = match self {
+            Control::Reload { game } => (1, game),
+            Control::Status { game } => (2, game),
+        };
         let mut p = Put(Vec::new());
         p.0.extend_from_slice(&CONTROL_MAGIC);
         p.u8(VERSION);
-        p.u8(1);
+        p.u8(kind);
         p.u32(nonce);
         p.str(game, MAX_GAME_ID);
         p.0
@@ -499,6 +508,7 @@ impl Control {
         let mut c = Cur(&data[REQUEST_HEADER..]);
         match data[5] {
             1 => Some((nonce, Control::Reload { game: c.game()? })),
+            2 => Some((nonce, Control::Status { game: c.game()? })),
             _ => None,
         }
     }
@@ -806,13 +816,29 @@ mod tests {
             game: "deadfall".into(),
         };
         assert_eq!(Control::decode(&c.encode(9)), Some((9, c)));
+        let st = Control::Status {
+            game: "deadfall".into(),
+        };
+        assert_eq!(Control::decode(&st.encode(10)), Some((10, st.clone())));
+        assert_eq!(
+            st.encode(10)[5],
+            2,
+            "status is its own kind: reload's bytes are unchanged"
+        );
         let r = ControlReply {
             ok: true,
             text: "retired 2 rooms".into(),
         };
         assert_eq!(ControlReply::decode(&r.encode(9)), Some((9, r)));
         assert!(Control::decode(&Request::Cookie.encode(1)).is_none());
-        assert!(Control::decode(b"BECT\x01\x02\0\0\0\0").is_none());
+        assert!(
+            Control::decode(b"BECT\x01\x02\0\0\0\0").is_none(),
+            "no game"
+        );
+        assert!(
+            Control::decode(b"BECT\x01\x03\0\0\0\0\x03abc").is_none(),
+            "unknown kind"
+        );
         assert!(
             Control::decode(b"BECT\x01\x01\0\0\0\0\x03A!B").is_none(),
             "an invalid game id"
