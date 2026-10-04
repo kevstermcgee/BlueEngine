@@ -768,6 +768,15 @@ class ContextHookTests(unittest.TestCase):
         self.assertIn('custom_simulation', [m['id'] for m in packet['matches']])
         self.assertIn('src/viewer/devkit/playback.rs', json.dumps(packet))
 
+    def test_streamed_world_and_recorded_ambience_have_actionable_entry_points(self):
+        packet = workflow.context(ROOT, 'infinite procedural world streaming chunks day night cycle')
+        self.assertEqual(packet['matches'][0]['id'], 'procedural_gen')
+        self.assertIn('src/viewer/devkit/procedural.rs', packet['matches'][0]['read_first'])
+        self.assertIn('DayCycle', packet['matches'][0]['public_api'])
+        packet = workflow.context(ROOT, 'recorded birdsong ambience crossfade loop music')
+        self.assertEqual(packet['matches'][0]['id'], 'audio_authoring')
+        self.assertIn('docs/AUDIO.md', packet['matches'][0]['read_first'])
+
     def root_with(self, tmp, entries):
         root = Path(tmp)
         (root / 'tools').mkdir()

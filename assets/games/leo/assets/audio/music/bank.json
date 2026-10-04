@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "home": {
+      "file": "music-home.wav",
+      "checksum": "a61e5178d8e1983e",
+      "frames": 2116800,
+      "peak": 0.43826735,
+      "rms": 0.09977916,
+      "dc": 9.459694e-8,
+      "seam_jump": 0.004245598
+    },
+    "starlight": {
+      "file": "music-starlight.wav",
+      "checksum": "cd66b142718d2e9e",
+      "frames": 2116800,
+      "peak": 0.088326424,
+      "rms": 0.028721975,
+      "dc": 2.6744746e-9,
+      "seam_jump": 0.0025439523
+    },
+    "wander": {
+      "file": "music-wander.wav",
+      "checksum": "a7fcece4df9afeff",
+      "frames": 2116800,
+      "peak": 0.17262904,
+      "rms": 0.024501225,
+      "dc": 3.1522266e-8,
+      "seam_jump": 0.0003631441
+    }
+  },
+  "music_scale": 1.0
+}

@@ -33,6 +33,17 @@ The schema is version 1. Unknown fields, invalid names and out-of-range values f
 - `music` is optional: `{kind:"generated", bpm, bars, root_midi, minor}` produces `base`, `melodic`,
   `lead`; `{kind:"ambient", seconds, root_midi, minor, chords, brightness}` produces `ambient`;
   `{kind:"score", score:...}` produces the score's named layers.
+- Imported looping layers use `{kind:"clips", seconds:24, crossfade_seconds:1,
+  layers:{birds:{file:"dawn.wav", gain:0.45}}}`. Files are project-relative strict
+  44.1-kHz mono/stereo PCM16; stereo is preserved and mono becomes stereo. All
+  outputs have exactly `seconds` worth of frames. Supply at least loop length plus
+  crossfade in each source: the first crossfade span blends the source continuation
+  after the loop end back into its beginning, retaining normal adjacent samples
+  across the wrap. Fade is 0.005..2 seconds and at most half the loop. Loop length
+  is 0.1..180 seconds; 1..16 named layers share the existing stereo-duration budget,
+  safe path rules and worst-subset headroom. Nothing resamples or silently repeats
+  a short input. Leo's `assets/games/leo/assets/audio-source/nature.json` is a
+  recorded-ambience example; its separate `music.json` is an original adaptive score.
 - A score has `bpm` (40–240), `beats`, and `layers`. Each layer has a unique `name`, `gain` (0.001–1),
   `instrument` and `notes`. Notes use `at` and `beats` in beats, `midi` (12–108), `velocity` (0.001–1),
   and optional equal-power `pan` (-1 left to +1 right). Notes must fit the score; music release tails
@@ -72,6 +83,8 @@ frame seconds. `sounds.sfx_volume`/`music_volume` accept the existing settings' 
 Muted, Empty and Failed; `sounds.errors()` gives worker/file/decoder diagnostics. Muted at startup
 skips asset loading; load again to enable it later, or start unmuted with settings volumes at zero.
 Missing files or checksum mismatches fail the entire worker result before decoder submission.
+Custom-game project checks also run `audio check` for each `assets/audio/*/bank.json`.
+The loop option adds no device or gameplay dependency; existing projects remain valid.
 Existing `SoundBank::start` and its indexed APIs remain supported; `start_checked` adds a fallible
 render closure. Its music-only banks now become ready, and worker failures become explicit.
 

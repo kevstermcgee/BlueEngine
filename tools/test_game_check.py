@@ -253,6 +253,14 @@ class ProjectsWithoutGameDocumentTests(RunnerCase):
         self.assertEqual(self.names(content_only=True), ['audit', 'lint'])
         self.assertEqual(self.names(), ['audit', 'lint', 'metadata', 'test'])
 
+    def test_custom_named_audio_banks_are_checked_before_cargo(self):
+        bank = self.root / 'assets/audio/nature'
+        bank.mkdir(parents=True)
+        (bank / 'bank.json').write_text('{}')
+        commands = game_check.commands(self.root, self.native)
+        self.assertEqual(commands[0], [str(self.native), 'audio', 'check', str(bank.resolve())])
+        self.assertEqual(commands[1:], [LOCK, TEST])
+
     def test_authored_checks_run_verify_and_game_validate_is_skipped(self):
         (self.root / 'maps').mkdir()
         (self.root / 'maps/main.json').write_text('{"checks": {}}')
@@ -393,6 +401,15 @@ class ShipGateTests(RunnerCase):
         self.assertEqual(self.report()['ship'], SHIP_FAIL)
         self.assertFalse(self.report()['ok'])
 
+    def test_private_launcher_folder_is_forwarded_without_skipping_ship_verification(self):
+        self.install_ship(SHIP_PASS)
+        folder = self.root / 'private launchers'
+        ok, line, commands = self.run_with_real_ship(ship_folder=folder)
+        self.assertTrue(ok, line)
+        self.assertEqual(line['ship'], 'pass')
+        self.assertEqual(commands[-1][-2:], ['--folder', str(folder.resolve())])
+        self.assertEqual(self.report()['checks'][-1]['name'], 'ship')
+
     def test_the_gate_runs_after_cargo_test_not_before(self):
         self.install_ship(SHIP_PASS)
         _ok, _line, commands = self.run_with_real_ship()
@@ -474,11 +491,11 @@ class ShipGateTests(RunnerCase):
         with patch.object(game_check, 'run', side_effect=lambda *a: calls.append(a) or True), \
                 patch.object(sys, 'argv', ['check.py', '--tools', 'x', '--skip-ship']):
             self.assertEqual(game_check.main(), 0)
-        self.assertEqual(calls[0][2:], (False, [], True))
+        self.assertEqual(calls[0][2:], (False, [], True, None))
         with patch.object(game_check, 'run', side_effect=lambda *a: calls.append(a) or True), \
                 patch.object(sys, 'argv', ['check.py', '--tools', 'x', '--content-only']):
             game_check.main()
-        self.assertEqual(calls[1][2:], (True, [], False))
+        self.assertEqual(calls[1][2:], (True, [], False, None))
 
     def test_manual_text_names_the_evidence_and_what_still_needs_eyes(self):
         self.assertIn('dist/ship.json', game_check.MANUAL)

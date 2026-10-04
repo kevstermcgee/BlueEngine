@@ -1,4 +1,4 @@
-//! Named, data-authored audio: validate once, render off the game loop, load a reusable PCM bundle.
+//! Named audio: checked stereo scores and crossfaded imported ambience loops, rendered before runtime.
 //! Effects, stereo note scores and adaptive music share the existing synthesis toolkit. No device,
 //! window or gameplay rules live here. Discover the contract with `be2-tools audio describe`.
 use super::synth::{self, AmbientSpec, MusicSpec, Preset, RATE};
@@ -75,6 +75,12 @@ pub enum EffectSource {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub enum Music {
+    /// Imported ambience/stems, cropped to exact equal loop length with a bounded wrap crossfade.
+    Clips {
+        seconds: f32,
+        crossfade_seconds: f32,
+        layers: BTreeMap<String, Clip>,
+    },
     Score {
         score: Score,
     },
@@ -91,6 +97,14 @@ pub enum Music {
         chords: usize,
         brightness: f32,
     },
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Clip {
+    pub file: String,
+    #[serde(default = "one")]
+    pub gain: f32,
 }
 
 /// Beat-based polyphonic score. Music wraps released tails; one-shots retain the full release.
@@ -268,6 +282,28 @@ impl AudioProject {
         }
         if let Some(music) = &self.music {
             budget += match music {
+                Music::Clips {
+                    seconds,
+                    crossfade_seconds,
+                    layers,
+                } => {
+                    range("clip loop seconds", *seconds, 0.1, MAX_SECONDS)?;
+                    range(
+                        "clip crossfade seconds",
+                        *crossfade_seconds,
+                        0.005,
+                        seconds.min(4.) / 2.,
+                    )?;
+                    if layers.is_empty() || layers.len() > 16 {
+                        return Err("clips need 1..16 named layers".into());
+                    }
+                    for (id, clip) in layers {
+                        name(id)?;
+                        safe_relative(&clip.file)?;
+                        range("clip gain", clip.gain, 0.001, 1.)?;
+                    }
+                    *seconds * layers.len() as f32
+                }
                 Music::Score { score } => score.validate(true)?,
                 Music::Generated {
                     bpm,
@@ -614,6 +650,52 @@ impl AudioProject {
         }
         if let Some(music) = &self.music {
             let mut layers = match music {
+                Music::Clips {
+                    seconds,
+                    crossfade_seconds,
+                    layers,
+                } => {
+                    let frames = (*seconds * RATE as f32).round() as usize;
+                    let fade = (*crossfade_seconds * RATE as f32).round() as usize;
+                    let mut out = Vec::new();
+                    for (id, clip) in layers {
+                        let bytes = read_bounded(&root.join(&clip.file), MAX_BYTES)?;
+                        let (channels, samples) =
+                            checked_wav(&bytes).map_err(|e| format!("{}: {e}", clip.file))?;
+                        let length = samples.len() / usize::from(channels);
+                        if length < frames + fade || length > (MAX_SECONDS * RATE as f32) as usize {
+                            return Err(format!(
+                                "{}: needs loop + crossfade samples, at most 180 seconds",
+                                clip.file
+                            ));
+                        }
+                        let sample = |frame: usize, channel: usize| {
+                            samples[frame * usize::from(channels)
+                                + channel.min(usize::from(channels) - 1)]
+                        };
+                        let channel = |c| {
+                            (0..frames)
+                                .map(|i| {
+                                    let value = if i < fade {
+                                        let t = i as f32 / (fade - 1) as f32;
+                                        sample(frames + i, c) * (1. - t) + sample(i, c) * t
+                                    } else {
+                                        sample(i, c)
+                                    };
+                                    value * clip.gain
+                                })
+                                .collect()
+                        };
+                        out.push((
+                            id.clone(),
+                            Stereo {
+                                left: channel(0),
+                                right: channel(1),
+                            },
+                        ));
+                    }
+                    out
+                }
                 Music::Score { score } => score_render(score, true),
                 Music::Generated {
                     bpm,
@@ -841,5 +923,5 @@ impl RenderedProject {
 
 /// Compact discoverable contract; detailed DSP stays opt-in in `devkit::synth`.
 pub fn describe() -> serde_json::Value {
-    serde_json::json!({"version":1,"commands":["audio validate PROJECT.json","audio render PROJECT.json NEW_DIRECTORY","audio check BUNDLE_DIRECTORY"],"presets":Preset::ALL.map(|p|p.name()),"effects":["preset: preset name, all variants","score: beat-based polyphony","wav: relative 44100 Hz PCM16 mono/stereo"],"music":["generated: bpm,bars,root_midi,minor (base/melodic/lead)","ambient: seconds,root_midi,minor,chords,brightness","score: bpm,beats,layers; tails wrap"],"instrument":{"wave":["sine","triangle","saw","square"],"envelope_seconds":["attack","decay","release"],"sustain":"0..1","lowpass_hz":"optional 40..20000"},"notes":"at/beats in beats; midi 12..108; velocity 0..1; pan -1..1","bounds":"64 effects, 16 layers, 4096 notes/score, 180 stereo-seconds synthesis budget, 64 MiB bundle","example":"assets/audio/observatory/project.json","runtime":"kit::audio::AudioBank::load; poll; play(name,volume); music(dt,[(layer,level)])","quality":"per-file peak/rms/DC/seam measurements; adaptive subset headroom; measurements do not establish subjective quality","limitations":"no live spatial/pitch voice control; backend does not report device audibility or sample-clock alignment"})
+    serde_json::json!({"version":1,"commands":["audio validate PROJECT.json","audio render PROJECT.json NEW_DIRECTORY","audio check BUNDLE_DIRECTORY"],"presets":Preset::ALL.map(|p|p.name()),"effects":["preset: preset name, all variants","score: beat-based polyphony","wav: relative 44100 Hz PCM16 mono/stereo"],"music":["generated: bpm,bars,root_midi,minor (base/melodic/lead)","ambient: seconds,root_midi,minor,chords,brightness","score: bpm,beats,layers; tails wrap","clips: seconds,crossfade_seconds,layers {name:{file,gain}}; checked PCM16 loops with wrap crossfade"],"instrument":{"wave":["sine","triangle","saw","square"],"envelope_seconds":["attack","decay","release"],"sustain":"0..1","lowpass_hz":"optional 40..20000"},"notes":"at/beats in beats; midi 12..108; velocity 0..1; pan -1..1","bounds":"64 effects, 16 layers, 4096 notes/score, 180 stereo-seconds synthesis budget, 64 MiB bundle","example":"assets/audio/observatory/project.json","runtime":"kit::audio::AudioBank::load; poll; play(name,volume); music(dt,[(layer,level)])","quality":"per-file peak/rms/DC/seam measurements; adaptive subset headroom; measurements do not establish subjective quality","limitations":"no live spatial/pitch voice control; backend does not report device audibility or sample-clock alignment"})
 }

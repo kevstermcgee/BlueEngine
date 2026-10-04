@@ -118,6 +118,12 @@ are engine-owned. No recursion/rough reflection; one extra world render per visi
 
 ## Sound (`devkit::synth`, `kit::SoundBank`)
 
+Endless worlds: `devkit::procedural::{ChunkId, WorldPoint, ChunkCache, DayCycle}`;
+see `docs/PROCEDURAL_WORLDS.md` and `assets/games/leo`. Cache bounded seeded chunks,
+rebase previous/current poses together, save authoritative origin/seed/tick with
+`Snapshot`, and derive sky/audio from `DayCycle::at(tick)`. Custom collision camera:
+`viewer::camera::sweep_boom(anchor, desired, &colliders, radius)?`.
+
 Prefer a named JSON audio project: `be2-tools audio describe`, then `audio validate PROJECT`,
 `audio render PROJECT NEW_BUNDLE`, `audio check NEW_BUNDLE`. Reference: `assets/audio/observatory/project.json`,
 full contracts: `docs/AUDIO.md`. `kit::AudioBank::load(BUNDLE, false, sfx, music).await?`; poll

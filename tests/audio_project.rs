@@ -12,6 +12,62 @@ fn project() -> AudioProject {
     )
     .unwrap()
 }
+
+#[test]
+fn imported_ambience_loops_keep_stereo_length_and_safe_adaptive_subsets() {
+    let t = Temp::new();
+    let rate = synth::RATE as usize;
+    let samples: Vec<_> = (0..rate)
+        .flat_map(|i| {
+            let v = (i as f32 * 83. * std::f32::consts::TAU / rate as f32).sin() * 0.8;
+            [v, -v]
+        })
+        .collect();
+    // Write true stereo through the author's existing source WAV convention.
+    let mono = synth::wav_bytes(&samples, synth::RATE);
+    let mut stereo = mono;
+    stereo[22..24].copy_from_slice(&2u16.to_le_bytes());
+    stereo[28..32].copy_from_slice(&(synth::RATE * 4).to_le_bytes());
+    stereo[32..34].copy_from_slice(&4u16.to_le_bytes());
+    fs::write(t.0.join("nature.wav"), stereo).unwrap();
+    let p: AudioProject =
+        serde_json::from_value(serde_json::json!({"version":1,"headroom":0.7,"music":{
+        "kind":"clips","seconds":0.5,"crossfade_seconds":0.1,"layers":{
+            "birds":{"file":"nature.wav","gain":1.},"wind":{"file":"nature.wav","gain":1.}}}}))
+        .unwrap();
+    let rendered = p.render(&t.0).unwrap();
+    assert_eq!(rendered.manifest.music["birds"].frames, rate / 2);
+    assert!(rendered.manifest.music_scale < 0.5);
+    let (channels, samples) =
+        vesper3d::viewer::devkit::audio_project::checked_wav(&rendered.files["music-birds.wav"])
+            .unwrap();
+    assert_eq!(channels, 2);
+    assert!(samples
+        .chunks_exact(2)
+        .all(|f| (f[0] + f[1]).abs() < 0.00004));
+    assert!(rendered.manifest.music["birds"].seam_jump < 0.02);
+    let mut short = p.clone();
+    if let Some(Music::Clips { seconds, .. }) = &mut short.music {
+        *seconds = 1.;
+    }
+    assert!(short
+        .render(&t.0)
+        .err()
+        .unwrap()
+        .contains("loop + crossfade"));
+    let mut invalid = serde_json::to_value(&p).unwrap();
+    invalid["music"]["layers"]["birds"]["file"] = "../escape.wav".into();
+    assert!(serde_json::from_value::<AudioProject>(invalid)
+        .unwrap()
+        .validate()
+        .is_err());
+    let mut invalid = serde_json::to_value(&p).unwrap();
+    invalid["music"]["crossfade_seconds"] = 0.4.into();
+    assert!(serde_json::from_value::<AudioProject>(invalid)
+        .unwrap()
+        .validate()
+        .is_err());
+}
 struct Temp(PathBuf);
 impl Temp {
     fn new() -> Self {

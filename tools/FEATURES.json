@@ -160,7 +160,7 @@
         "--studio --capture-character DIR --feta",
         "furniture camera clearance and 30/60/144 Hz obstruction-release tests"
       ],
-      "note": "Scientist and Feta procedural skins; CharacterKind controls body/collision/speed. Launch selection gates gameplay. Q toggles perspective; reset preserves profile. Feta uses a low centered pitch-independent boom; CameraRig smooths obstruction release and rechecks current-pose collisions."
+      "note": "Scientist and Feta procedural skins; CharacterKind controls body/collision/speed. Launch selection gates gameplay. Q toggles perspective; reset preserves profile. Feta uses a low centered pitch-independent boom; CameraRig smooths obstruction release and rechecks current-pose collisions. Custom clients use sweep_boom(anchor, desired, colliders, radius) for sphere clearance without constructing a Room."
     },
     "multiplayer": {
       "files": [
@@ -815,18 +815,53 @@
     },
     "procedural_gen": {
       "files": [
-        "src/viewer/gen.rs"
+        "src/viewer/gen.rs",
+        "src/viewer/devkit/procedural.rs",
+        "docs/PROCEDURAL_WORLDS.md",
+        "tests/procedural_world.rs",
+        "assets/games/leo/src/lib.rs",
+        "assets/games/leo/README.md"
       ],
       "checks": [
+        "cargo test --locked --no-default-features --test procedural_world",
         "procedural scatter and line placement"
       ],
-      "note": "Deterministic procedural scatter and line placement with ground snapping and collision avoidance.",
+      "note": "Deterministic procedural scatter and line placement with ground snapping and collision avoidance. Custom infinite worlds use graphics-free devkit::procedural: seeded integer chunk identity, bounded transactional streaming, precision-safe local coordinates, seamless noise and an authoritative repeating day/night clock. Leo demonstrates fields/forests, a boy, sky transitions, nature audio and exact saves; bounded memory without turning huge global coordinates into floats.",
       "evidence": [
         {
           "suite": "toolchain",
           "test": "test_procedural_scatter_and_line"
         }
-      ]
+      ],
+      "read_first": [
+        "docs/PROCEDURAL_WORLDS.md",
+        "src/viewer/devkit/procedural.rs"
+      ],
+      "keywords": [
+        "procedural",
+        "infinite",
+        "endless",
+        "world",
+        "chunks",
+        "streaming",
+        "seed",
+        "forest",
+        "fields",
+        "day",
+        "night",
+        "sunrise",
+        "sunset",
+        "noise",
+        "rebasing"
+      ],
+      "public_api": [
+        "ChunkId",
+        "WorldPoint",
+        "ChunkCache",
+        "field",
+        "DayCycle"
+      ],
+      "canonical_example": "assets/games/leo/src/lib.rs"
     },
     "simulation_scenarios": {
       "files": [
@@ -1497,7 +1532,7 @@
         "python -m unittest tools.test_game_ship tools.test_game_check",
         "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)"
       ],
-      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass.",
+      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. check --ship-folder PRIVATE_FOLDER verifies the package and private launcher without changing the desktop; the ship gate still executes.",
       "keywords": [
         "ship",
         "shipping",
@@ -2133,7 +2168,11 @@
         "assets/games/observatory/content/audio-loss-restart-win.json",
         "assets/games/observatory/content/audio/",
         "tools/stock_audio_smoke.py",
-        "docs/analysis/stock-audio.md"
+        "docs/analysis/stock-audio.md",
+        "assets/games/leo/assets/audio-source/nature.json",
+        "assets/games/leo/assets/audio-source/music.json",
+        "assets/games/leo/AUDIO.md",
+        "tools/leo_smoke.py"
       ],
       "read_first": [
         "docs/AUDIO.md",
@@ -2182,11 +2221,17 @@
         "audio pipeline",
         "gameplay audio",
         "counter cue",
-        "stock music"
+        "stock music",
+        "ambience",
+        "birdsong",
+        "crickets",
+        "wind",
+        "crossfade",
+        "loop"
       ],
-      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream.",
+      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream. Imported clips support exact-length adaptive looping ambience with a bounded wrap crossfade, stereo preservation and worst-subset headroom. Leo uses recorded nature and a separate original score, driven by authoritative day/night state; edits need rendering, not a Rust rebuild.",
       "contract": {
-        "owns": "Data-authored effects and music, reusable checked PCM bundles, named presentation playback and numeric quality evidence",
+        "owns": "Data-authored effects and music, crossfaded imported ambience loops, reusable checked PCM bundles, named presentation playback and numeric quality evidence",
         "inputs": "Versioned AudioProject JSON, seed, optional imported WAV and read-only game events, optional presentation.audio state bindings",
         "outputs": "PCM16 stereo assets, bank metadata, diagnostics and playback submissions",
         "may_depend_on": [
@@ -2236,6 +2281,7 @@
     "docs/HEADLESS_CAPTURE.md": "Seeing a game on a machine with no display",
     "docs/HOSTING.md": "Hosting a dedicated BlueEngine server",
     "docs/NETPLAY.md": "Netplay: online play for games that own their simulation",
+    "docs/PROCEDURAL_WORLDS.md": "Streaming procedural worlds",
     "docs/SAVE_STATE.md": "Save states",
     "docs/SHARED_GAMEPLAY.md": "Shared gameplay and presentation",
     "docs/UPGRADE.md": "Upgrading an external game to a chosen engine revision",
@@ -2285,7 +2331,7 @@
     "src/viewer/control/proc.rs": "Looking at and signalling operating-system processes, for the server manager (Unix only).",
     "src/viewer/control/server.rs": "The server side of management: register, listen on the control socket, answer status and shutdown.",
     "src/viewer/creative.rs": "Rendering-free creative placement and per-map persistence.",
-    "src/viewer/devkit/audio_project.rs": "Named, data-authored audio: validate once, render off the game loop, load a reusable PCM bundle.",
+    "src/viewer/devkit/audio_project.rs": "Named audio: checked stereo scores and crossfaded imported ambience loops, rendered before runtime.",
     "src/viewer/devkit/clock.rs": "Frame timing for real-time loops: one wall clock, a fixed-step accumulator and a perf report.",
     "src/viewer/devkit/input.rs": "Device frames in, exactly one input per fixed tick out.",
     "src/viewer/devkit/juice.rs": "\"Game feel\" state: screen shake, hit-stop, FOV kick, screen flash and a landing dip.",
@@ -2297,6 +2343,7 @@
     "src/viewer/devkit/net_address.rs": "Typed server addresses and the default-server chain, graphics-free.",
     "src/viewer/devkit/path.rs": "A closed loop on the ground plane: race tracks, patrol routes, rails, a circular arena edge.",
     "src/viewer/devkit/playback.rs": "Scripted playback runs recorded inputs and saves screenshots at chosen capture frames.",
+    "src/viewer/devkit/procedural.rs": "Endless-world building blocks: seeded chunk identity, bounded streaming, local coordinates and day time.",
     "src/viewer/devkit/rng.rs": "Tiny deterministic random numbers for simulations, effects and procedural audio.",
     "src/viewer/devkit/save.rs": "Player settings and records that survive restarts: one small JSON file, atomic, never fatal.",
     "src/viewer/devkit/scale.rs": "Size checks a headless agent can run: how big is this thing, in metres, next to a person?",
@@ -2413,6 +2460,7 @@
     "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
     "tools/hub_deploy.py": "Per-game build, validation, promotion and activation for the shared hub (ADR 0037, deploy/hub/update.sh).",
     "tools/learn.py": "Blue learns from the games built on it (ADR 0038).",
+    "tools/leo_smoke.py": "Render Leo and submit its two audio banks only on opted-in remote CI's null sink.",
     "tools/mcp_server.py": "BlueEngine MCP Server launcher.",
     "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
     "tools/place_interior.py": "Place data-only interior prefabs and validate with the packaged native engine.",

@@ -37,17 +37,47 @@ jobs:
         run: python tools/be2.py check
       - run: cargo build --release --locked
       - run: cargo build --release --locked --no-default-features --bin be2-headless
+      - name: Leo project, headless and client verification
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          cargo fmt --manifest-path assets/games/leo/Cargo.toml --check
+          cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features
+          cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --all-targets -- -D warnings
+          cargo build --locked --release --manifest-path assets/games/leo/Cargo.toml
+      - name: Leo package and private launcher verification
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          python assets/games/leo/scripts/ship.py ship --folder .be2-work/leo-launchers --no-build --no-launch --no-smoke
+          python assets/games/leo/scripts/check.py --tools target/release/be2-tools --ship-folder .be2-work/leo-launchers
       - name: Stock audio offscreen verification (Linux)
         if: runner.os == 'Linux'
         env:
           BE2_AUDIO_OFFSCREEN: '1'
         run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/stock_audio_smoke.py target/release/be2 .be2-work/stock-audio
+      - name: Leo offscreen day, save and audio verification (Linux)
+        if: runner.os == 'Linux'
+        env:
+          BE2_AUDIO_OFFSCREEN: '1'
+        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/leo_smoke.py target/release/leo .be2-work/leo-capture
       - name: Verification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: engine-checks-${{ runner.os }}
           path: .be2-work/check-*/
+          include-hidden-files: true
+      - name: Leo rendered and packaged evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-${{ runner.os }}
+          path: |
+            .be2-work/leo-capture/
+            .be2-work/leo-launchers/
+            assets/games/leo/.blue-check/
+            assets/games/leo/dist/
           include-hidden-files: true
       - name: Stock audio rendered evidence
         if: always() && runner.os == 'Linux'

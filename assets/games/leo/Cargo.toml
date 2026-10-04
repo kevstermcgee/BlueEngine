@@ -1,0 +1,43 @@
+[package]
+name = "leo"
+version = "0.1.0"
+edition = "2021"
+description = "Leo: A little boy, an endless meadow, and a sky that always brings another morning."
+
+# The rules are a plain library so they can be tested without a window; the window is the binary.
+[lib]
+name = "leo"
+path = "src/lib.rs"
+
+[features]
+default = ["client"]
+client = ["vesper3d/client", "dep:macroquad", "dep:windows-sys"]
+
+[[bin]]
+name = "leo"
+path = "src/main.rs"
+required-features = ["client"]
+
+[dependencies]
+vesper3d = { package = "be2", path = "../../..", default-features = false }
+macroquad = { optional = true, version = "=0.4.14", default-features = false, features = ["audio"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { optional = true, version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_System_Console", "Win32_UI_Input_KeyboardAndMouse"] }
+
+# A frame here is real work (mesh building, effects), so debug builds must stay playable for captures
+# and scripted runs: the game at opt-level 2, dependencies at 3.
+[profile.dev]
+opt-level = 2
+debug = 1
+[profile.dev.package."*"]
+opt-level = 3
+debug = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+debug = false
