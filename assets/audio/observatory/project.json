@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "seed": 42,
+  "headroom": 0.85,
+  "effects": {
+    "shutter": {"gain": 0.55, "source": {"kind": "preset", "preset": "power_up"}},
+    "step": {"gain": 0.3, "source": {"kind": "preset", "preset": "footstep"}},
+    "success": {"gain": 0.65, "source": {"kind": "score", "score": {
+      "bpm": 120, "beats": 2,
+      "layers": [{"name": "resolved", "gain": 0.45, "instrument": {"wave": "sine", "attack": 0.01, "decay": 0.12, "sustain": 0.2, "release": 0.25},
+        "notes": [{"at": 0, "beats": 0.3, "midi": 69, "pan": -0.2}, {"at": 0.4, "beats": 0.3, "midi": 72, "pan": 0.2}, {"at": 0.8, "beats": 1.2, "midi": 76}, {"at": 0.8, "beats": 1.2, "midi": 69, "velocity": 0.5, "pan": -0.3}, {"at": 0.8, "beats": 1.2, "midi": 72, "velocity": 0.5, "pan": 0.3}]}]
+    }}},
+    "battery": {"gain": 0.4, "source": {"kind": "score", "score": {
+      "bpm": 120, "beats": 1.5,
+      "layers": [{"name": "alarm", "instrument": {"wave": "sine", "attack": 0.004, "release": 0.08},
+        "notes": [{"at": 0, "beats": 0.2, "midi": 81}, {"at": 0.5, "beats": 0.2, "midi": 76}, {"at": 1, "beats": 0.2, "midi": 81}]}]
+    }}}
+  },
+  "music": {"kind": "score", "score": {
+    "bpm": 90, "beats": 8,
+    "layers": [
+      {"name": "orbit", "gain": 0.28, "instrument": {"wave": "saw", "attack": 0.12, "decay": 0.3, "sustain": 0.55, "release": 0.9, "lowpass_hz": 850},
+       "notes": [{"at": 0, "beats": 4, "midi": 45, "pan": -0.35}, {"at": 0, "beats": 4, "midi": 52, "pan": 0.35}, {"at": 4, "beats": 4, "midi": 41, "pan": -0.35}, {"at": 4, "beats": 4, "midi": 48, "pan": 0.35}]},
+      {"name": "signal", "gain": 0.22, "instrument": {"wave": "sine", "attack": 0.005, "decay": 0.08, "sustain": 0.15, "release": 0.3},
+       "notes": [{"at": 0, "beats": 0.5, "midi": 69, "pan": -0.65}, {"at": 1, "beats": 0.5, "midi": 72, "pan": 0.65}, {"at": 2, "beats": 0.5, "midi": 76, "pan": -0.65}, {"at": 3, "beats": 0.5, "midi": 72, "pan": 0.65}, {"at": 4, "beats": 0.5, "midi": 65, "pan": -0.65}, {"at": 5, "beats": 0.5, "midi": 69, "pan": 0.65}, {"at": 6, "beats": 0.5, "midi": 72, "pan": -0.65}, {"at": 7, "beats": 0.5, "midi": 69, "pan": 0.65}]}
+    ]
+  }}
+}

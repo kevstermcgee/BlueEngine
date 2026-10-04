@@ -47,6 +47,7 @@ The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headles
 | `python tools/be2.py build client` | Locked release client and offline renderer |
 | `python tools/be2.py build headless` | Locked release server simulation with default features disabled |
 | `python tools/be2.py build tools` | Native editor without graphics/audio |
+| `be2-tools audio describe` | Small JSON authoring contract for named cues, stereo scores and reusable adaptive music bundles; see [AUDIO.md](../docs/AUDIO.md) |
 | `python tools/be2.py build all` | All three isolated builds |
 | `python tools/be2.py capture NEW_DIR --map MAP.json` | Twelve house camera captures and rendered menu; checks completion |
 | `python tools/be2.py package NEW.zip` | Builds a source + binary package with SHA256 manifest and Git provenance |

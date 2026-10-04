@@ -1031,6 +1031,23 @@ class LevelAndIssueTests(unittest.TestCase):
         self.assertIn("ends with a click", rep["issue_codes"])
         self.assertNotIn("starts with a click", rep["issue_codes"])
 
+    def test_loop_boundary_checks_continuity_instead_of_zero_endpoints(self):
+        n = RATE // 5
+        tone = [0.3 * math.cos(2 * math.pi * 440 * i / RATE) for i in range(n)]
+        wav = ar.parse_wav(wav_bytes([tone]))
+        self.assertIn("starts with a click", ar.analyze(wav)["issue_codes"])
+        loop = ar.analyze(wav, loop=True)
+        self.assertNotIn("starts with a click", loop["issue_codes"])
+        self.assertNotIn("ends with a click", loop["issue_codes"])
+        self.assertFalse(loop["loop"]["suspected_click"])
+        # A tapered start followed by an abrupt held endpoint creates a real repeating seam.
+        broken = tone[:]
+        for i in range(200): broken[i] *= i / 200
+        for i in range(n - 200, n): broken[i] = 0.3
+        rep = ar.analyze(ar.parse_wav(wav_bytes([broken, [-x for x in broken]])), loop=True)
+        self.assertIn("loop seam click", rep["issue_codes"])
+        self.assertTrue(rep["loop"]["scan_available"])
+
     def test_silence(self):
         rep = report_for([[0.0] * (RATE // 4)])
         self.assertEqual(rep["issue_codes"], ["silent"])

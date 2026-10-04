@@ -1,6 +1,93 @@
 # Audio: generated sound, generated ambient music, and settings that survive a relaunch
 
-Every sound a game built on BlueEngine plays is computed, not recorded (`devkit::synth`): an AI agent
+## Normal authoring path: a named audio project
+
+Start with `be2-tools audio describe`, then edit the small reference
+[`project.json`](../assets/audio/observatory/project.json). No Rust source exploration is needed for
+presets, imported clips, authored polyphonic stereo music or adaptive layers:
+
+```sh
+be2-tools audio validate project.json
+be2-tools audio render project.json NEW_BUNDLE_DIRECTORY
+be2-tools audio check NEW_BUNDLE_DIRECTORY
+cargo run --profile fast --example audio_preview -- NEW_BUNDLE_DIRECTORY
+python tools/audio_report.py NEW_BUNDLE_DIRECTORY/preview-mix.wav --loop --fail-on-issues
+```
+
+`validate` checks schema/ranges/resource estimates; `render` also reads and validates imported audio,
+computes the PCM assets and publishes `bank.json` last in an exclusively reserved directory. It fails
+without replacing an existing bundle. `check` rereads every runtime file and verifies PCM format,
+sample counts, checksums and equal music-layer lengths. Keep `project.json` in source control, render
+once before packaging, and ship the whole bundle. Edit audio data and rerender to a new directory;
+the runtime executable needs no rebuild and performs no music synthesis at startup. Bundles are
+versioned data, not an opaque compiled cache. Checksums detect stale/corrupt files; they are not
+cryptographic signatures. Rendering is repeatable on one platform; floating-point DSP does not promise
+identical bytes across operating systems.
+
+The schema is version 1. Unknown fields, invalid names and out-of-range values fail explicitly:
+
+- `effects` maps names to `{gain, source}`. A source is `{kind:"preset", preset:"footstep"}` (all
+  meaningful variants), `{kind:"score", score:...}`, or `{kind:"wav", file:"relative/path.wav"}`.
+  Imported clips must be nonempty, untruncated 44.1 kHz mono/stereo PCM16. Convert other encodings
+  before import; channels are preserved. Import paths cannot be absolute or contain `..`.
+- `music` is optional: `{kind:"generated", bpm, bars, root_midi, minor}` produces `base`, `melodic`,
+  `lead`; `{kind:"ambient", seconds, root_midi, minor, chords, brightness}` produces `ambient`;
+  `{kind:"score", score:...}` produces the score's named layers.
+- A score has `bpm` (40–240), `beats`, and `layers`. Each layer has a unique `name`, `gain` (0.001–1),
+  `instrument` and `notes`. Notes use `at` and `beats` in beats, `midi` (12–108), `velocity` (0.001–1),
+  and optional equal-power `pan` (-1 left to +1 right). Notes must fit the score; music release tails
+  wrap, while effect scores retain their complete final release. Chords are simultaneous notes.
+- Instruments default to sine, 8 ms attack, 80 ms decay, 0.6 sustain and 120 ms release. Opt in to
+  triangle, PolyBLEP saw/square, explicit ADSR seconds and `lowpass_hz` (40–20,000). Velocity and gain
+  preserve dynamics; notes are not individually normalized.
+
+The project `headroom` defaults to 0.85 (allowed 0.1–0.95). Effects share attenuation across their
+variants; music uses one attenuation factor based on the sum of absolute layer samples, so *any*
+subset at levels 0–1 stays under the ceiling, even when the full signed mix cancels. Relative layer
+balance survives attenuation. Simultaneous effect voices plus music can still sum beyond that ceiling
+in the legacy playback backend; this is asset headroom, not a final real-time master limiter.
+Each file records peak, RMS, DC and boundary jump. Empty/silent output, nonfinite samples or DC >0.02
+fail rendering. Bounds: 64 effects, 16 score layers, 4096 notes and 600 seconds of note synthesis per
+score, a conservative project budget of 180 stereo-seconds, at most 180 seconds per imported clip,
+64 MiB rendered files. Split large soundscapes into banks instead of disabling bounds.
+
+Runtime integration after creating the window:
+
+```rust,no_run
+use vesper3d::viewer::kit::{AudioBank, AudioState};
+# async fn example() -> Result<(), String> {
+let mut audio = AudioBank::load("assets/audio/bank", false, 0.8, 0.5).await?;
+audio.sounds.poll().await; // each frame: bounded decoder submissions
+if audio.sounds.state() == AudioState::Ready {
+    audio.play("shutter", 1.0)?; // once, after a confirmed gameplay event
+    audio.music(1.0 / 60.0, &[("orbit", 0.65), ("signal", 0.3)])?;
+}
+# Ok(()) }
+```
+
+`play` cycles cue variants and rejects unknown names, invalid volumes and incomplete/failed loads.
+`music` validates the whole named mix before changing it; omitted layers fade to zero. Supply real
+frame seconds. `sounds.sfx_volume`/`music_volume` accept the existing settings' effective levels;
+`sounds.stop_music()` stops loops and resets fades. `sounds.state()` distinguishes Loading, Ready,
+Muted, Empty and Failed; `sounds.errors()` gives worker/file/decoder diagnostics. Muted at startup
+skips asset loading; load again to enable it later, or start unmuted with settings volumes at zero.
+Missing files or checksum mismatches fail the entire worker result before decoder submission.
+Existing `SoundBank::start` and its indexed APIs remain supported; `start_checked` adds a fallible
+render closure. Its music-only banks now become ready, and worker failures become explicit.
+
+`audio_report.py --loop` checks the wrapped boundary using its discontinuity detector rather than
+flagging valid nonzero endpoints as one-shot clicks. It reports sample jump and whether the seam scan
+was available (very short files remain unresolved). Internal clicks, clipping, DC, silence and
+approximate loudness still apply. Use `--json` for machine-readable evidence or `--spectrogram OUT.png`
+for inspection. These measurements do not assess composition or perceived quality.
+
+This milestone uses the existing playback backend. Ready means checked assets submitted to its
+decoder, not audible-device acknowledgement. Loop starts are separate backend calls, not a promised
+sample-clock group. Panning and pitch here are authored into PCM; live spatial/distance or per-voice
+pitch control remains unsupported. The headless project renderer never opens an audio device.
+Custom instruments can still use the lower-level `devkit::synth` API below.
+
+BlueEngine can compute a game's sound without recordings (`devkit::synth`): an AI agent
 without a microphone can give a new game a full soundscape — sound effects and now background music —
 in a few calls, and measure what came out (`peak`, `rms`, `spectral_centroid`, ...) instead of listening
 to it. `kit::audio::SoundBank` plays it: sound effects by index, and looping music stems that fade with

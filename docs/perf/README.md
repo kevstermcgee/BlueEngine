@@ -330,6 +330,23 @@ play, real WAN latency loads and aggregate multi-peer timings for these prop fix
 were not run. `tools/perf.py record --suite sim --profile fast` recorded the current
 headless diagnostic separately (22.429 us mean); it is not the matched prop benchmark.
 
+## Verification speed evidence (2026-10-04)
+
+Canonical `itest` gates, dependency caching and the reviewed Python overlap were green on main at
+`75e6d00`. All platform/feature/release gates still ran. Measured GitHub job wall times:
+
+| Run | Windows | Linux |
+|---|---:|---:|
+| Prior green `66eacbf`, [37159681225](https://github.com/kevstermcgee/BlueEngine/actions/runs/37159681225) | 38m30s | 26m50s |
+| `75e6d00`, [cold attempt](https://github.com/kevstermcgee/BlueEngine/actions/runs/37164904952/attempts/1) | 23m10s | 14m20s |
+| Same revision, [warm attempt](https://github.com/kevstermcgee/BlueEngine/actions/runs/37164904952/attempts/2) | 15m14s | 9m32s |
+
+The canonical verification step itself took 14m04s/9m08s cold and 8m01s/5m21s warm
+(Windows/Linux). This is observed hosted-runner evidence, not a general hardware guarantee or
+statistical cold-build benchmark. The exact committed local full check passed in 309.0s versus the
+earlier 439.7s measurement on this Windows host. No test-result cache or removed assertions account
+for the improvement. Native authoring remains serial with Cargo; Python fixture checks overlap it.
+
 ## Shadow tiers (`examples/shadow_demo.rs`, ADR 0036)
 
 The harness (`perf.py record`) measures builds, tests and the headless simulation, not rendering, so shadows are

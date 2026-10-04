@@ -1467,7 +1467,9 @@
         "Shadows",
         "ShadowMap",
         "ShadowCamera",
-        "ShadowQuality"
+        "ShadowQuality",
+        "AudioBank",
+        "AudioState"
       ],
       "read_first": [
         "src/viewer/kit/mod.rs",
@@ -2110,11 +2112,99 @@
       "read_first": [
         "docs/HEADLESS_CAPTURE.md"
       ]
+    },
+    "audio_authoring": {
+      "files": [
+        "src/viewer/devkit/audio_project.rs",
+        "src/viewer/kit/audio.rs",
+        "src/viewer/capabilities.rs",
+        "src/bin/be2-tools.rs",
+        "examples/audio_preview.rs",
+        "tests/audio_project.rs",
+        "assets/audio/observatory/project.json",
+        "assets/audio/observatory/README.md",
+        "docs/AUDIO.md",
+        "tools/audio_report.py",
+        "tools/test_media_tools.py"
+      ],
+      "read_first": [
+        "docs/AUDIO.md",
+        "assets/audio/observatory/project.json"
+      ],
+      "canonical_example": "examples/audio_preview.rs",
+      "checks": [
+        "cargo test --locked --test audio_project",
+        "cargo test --locked --lib kit::audio",
+        "python -m unittest tools.test_media_tools"
+      ],
+      "keywords": [
+        "audio",
+        "music",
+        "sound",
+        "synthesis",
+        "synthesizer",
+        "synth",
+        "compose",
+        "composition",
+        "score",
+        "notes",
+        "midi",
+        "stereo",
+        "pan",
+        "pitch",
+        "envelope",
+        "instrument",
+        "filter",
+        "wav",
+        "bank",
+        "cue",
+        "variants",
+        "adaptive",
+        "layers",
+        "loop",
+        "seam",
+        "clipping",
+        "loudness",
+        "spectrogram",
+        "audio preview",
+        "sound effects"
+      ],
+      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported.",
+      "contract": {
+        "owns": "Data-authored effects and music, reusable checked PCM bundles, named presentation playback and numeric quality evidence",
+        "inputs": "Versioned AudioProject JSON, seed, optional imported WAV and read-only game events",
+        "outputs": "PCM16 stereo assets, bank metadata, diagnostics and playback submissions",
+        "may_depend_on": [
+          "custom_simulation",
+          "client_kit"
+        ],
+        "must_not_depend_on": [
+          "gameplay authority",
+          "audio devices in devkit"
+        ],
+        "performance": "Render before shipping; worker reads/checks assets, bounded decoder submissions per poll",
+        "consumers": [
+          "custom clients",
+          "audio authoring agents"
+        ]
+      },
+      "public_api": [
+        "AudioProject",
+        "AudioBundle",
+        "AudioBank",
+        "AudioState",
+        "checked_wav"
+      ],
+      "depends_on": [
+        "custom_simulation",
+        "client_kit"
+      ]
     }
   },
   "modules": {
     "docs/AI_DEV_FEEDBACK.md": "Developing Spooky Kart on BlueEngine: feedback from an AI agent",
     "docs/AI_QUICKSTART.md": "BlueEngine prototype API",
+    "docs/AUDIO.md": "Audio: generated sound, generated ambient music, and settings that survive a relaunch",
     "docs/BEHAVIORAL_TESTING.md": "Behavioral testing without a custom harness",
     "docs/CHANGE_WORKFLOW.md": "Small context, scoped validation",
     "docs/CONTROLLERS.md": "Native controllers",
@@ -2175,6 +2265,7 @@
     "src/viewer/control/proc.rs": "Looking at and signalling operating-system processes, for the server manager (Unix only).",
     "src/viewer/control/server.rs": "The server side of management: register, listen on the control socket, answer status and shutdown.",
     "src/viewer/creative.rs": "Rendering-free creative placement and per-map persistence.",
+    "src/viewer/devkit/audio_project.rs": "Named, data-authored audio: validate once, render off the game loop, load a reusable PCM bundle.",
     "src/viewer/devkit/clock.rs": "Frame timing for real-time loops: one wall clock, a fixed-step accumulator and a perf report.",
     "src/viewer/devkit/input.rs": "Device frames in, exactly one input per fixed tick out.",
     "src/viewer/devkit/juice.rs": "\"Game feel\" state: screen shake, hit-stop, FOV kick, screen flash and a landing dip.",

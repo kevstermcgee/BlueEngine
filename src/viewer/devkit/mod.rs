@@ -60,6 +60,7 @@
 //! }
 //! assert!((sim.x - 1.0).abs() < 0.03, "one second of walking at 60 ticks/s");
 //! ```
+pub mod audio_project;
 mod clock;
 mod input;
 mod juice;

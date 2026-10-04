@@ -22,6 +22,12 @@ the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
   depends on (precise or diegetic audio, rhythm timing, a soundtrack the game is itself about) or just
   does not suit the feel — do not force it in because the starter ships with it on. Sound effects
   (`SOUNDS`/`render`) are unaffected by this flag either way.
+- For authored audio, run the engine's `be2-tools audio describe` and read `docs/AUDIO.md`.
+  Named JSON projects support presets/variants, imported PCM16, stereo note scores and adaptive layers.
+  Render once before shipping; `kit::AudioBank::load` reads the bundle off-thread, and audio data edits
+  require rerendering rather than a Rust rebuild. Poll each frame, inspect `state()`/`errors()`, and
+  play named cues on confirmed events. Measure loops with `audio_report.py --loop`; native preview
+  is `examples/audio_preview.rs`. Numeric checks do not establish perceived quality or hardware audibility.
 
 ## Look, scale, iteration
 - Mouse look has one convention (`devkit::look`): hand right turns right, hand up looks up. Feed

@@ -37,7 +37,7 @@ pub mod shape;
 pub mod view;
 
 pub use crate::viewer::devkit::ShadowQuality;
-pub use audio::{Rendered, SoundBank};
+pub use audio::{AudioBank, AudioState, Rendered, SoundBank};
 pub use batch::{Batch, Rgb, Template, Tint, Vert, MAX_MESH_INDICES, MAX_MESH_VERTICES};
 pub use fx::{Banner, Fx, Particle, ParticleKind, Popup};
 pub use lint::{Defect, LintConfig};

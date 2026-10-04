@@ -3,14 +3,14 @@
 //!
 //! Rendering audio is CPU work (a full effect set is a fraction of a second, a music loop more). The
 //! bank therefore takes a `render` closure that runs on a worker thread and returns WAV files;
-//! [`SoundBank::poll`] hands them to the audio backend a few per frame, so the window opens at once and
-//! never hitches. The backend itself is initialised first, while the game is still loading, because its
+//! [`SoundBank::poll`] hands them to the audio backend a few per frame. Generation stays off the game
+//! loop; decoder cost still depends on asset size and backend. The backend is initialised first because its
 //! first use costs tens of milliseconds. With no audio device everything degrades to silence.
 //!
 //! Sounds are addressed by index (`Preset as usize`, your own enum's discriminant) and variant; the
 //! bank plays variants round-robin so repeated sounds do not fatigue.
 use macroquad::audio::{
-    load_sound_from_bytes, play_sound, set_sound_volume, PlaySoundParams, Sound,
+    load_sound_from_bytes, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
 };
 use std::collections::VecDeque;
 use std::sync::mpsc::{channel, Receiver, TryRecvError};
@@ -31,24 +31,26 @@ enum Slot {
 
 /// The pure half of loading: unpacks a [`Rendered`] into a queue and releases it in small batches.
 struct Loader {
-    rx: Option<Receiver<Rendered>>,
+    rx: Option<Receiver<Result<Rendered, String>>>,
     queue: VecDeque<Slot>,
     sounds: usize,
+    errors: Vec<String>,
 }
 
 impl Loader {
-    fn new(rx: Option<Receiver<Rendered>>) -> Self {
+    fn new(rx: Option<Receiver<Result<Rendered, String>>>) -> Self {
         Self {
             rx,
             queue: VecDeque::new(),
             sounds: 0,
+            errors: Vec::new(),
         }
     }
     /// Take the worker's result if it has arrived, then release up to `budget` queued sounds.
     fn pump(&mut self, budget: usize) -> Vec<Slot> {
         if let Some(rx) = &self.rx {
             match rx.try_recv() {
-                Ok(rendered) => {
+                Ok(Ok(rendered)) => {
                     self.rx = None;
                     self.sounds = rendered.sfx.len();
                     for (i, variants) in rendered.sfx.into_iter().enumerate() {
@@ -58,8 +60,15 @@ impl Loader {
                     self.queue
                         .extend(rendered.stems.into_iter().map(Slot::Stem));
                 }
-                // The worker died without a result (a panic in the render closure): stay silent.
-                Err(TryRecvError::Disconnected) => self.rx = None,
+                Ok(Err(error)) => {
+                    self.rx = None;
+                    self.errors.push(error);
+                }
+                Err(TryRecvError::Disconnected) => {
+                    self.rx = None;
+                    self.errors
+                        .push("audio worker exited without a result".into());
+                }
                 Err(TryRecvError::Empty) => {}
             }
         }
@@ -67,6 +76,20 @@ impl Loader {
     }
     fn finished(&self) -> bool {
         self.rx.is_none() && self.queue.is_empty()
+    }
+
+    fn state(&self, muted: bool, has_assets: bool) -> AudioState {
+        if !self.errors.is_empty() {
+            AudioState::Failed
+        } else if muted {
+            AudioState::Muted
+        } else if !self.finished() {
+            AudioState::Loading
+        } else if has_assets {
+            AudioState::Ready
+        } else {
+            AudioState::Empty
+        }
     }
 }
 
@@ -123,6 +146,17 @@ impl SoundBank {
         music_volume: f32,
         render: impl FnOnce() -> Rendered + Send + 'static,
     ) -> Self {
+        Self::start_checked(muted, sfx_volume, music_volume, move || Ok(render())).await
+    }
+
+    /// Fallible worker for imported or data-authored audio. Inspect `state()` and `errors()`;
+    /// a failed load never becomes ready, and no partial bank can be played after failure.
+    pub async fn start_checked(
+        muted: bool,
+        sfx_volume: f32,
+        music_volume: f32,
+        render: impl FnOnce() -> Result<Rendered, String> + Send + 'static,
+    ) -> Self {
         let rx = if muted {
             None
         } else {
@@ -148,8 +182,8 @@ impl SoundBank {
         }
     }
 
-    /// Finish loading once the worker is done: hands a few sounds to the backend per call, so it is
-    /// cheap to call every frame and never causes a hitch.
+    /// Finish loading once the worker is done: bounded decoder submissions per call. Call every
+    /// frame; expensive generation/file verification remains on the worker, not in this method.
     pub async fn poll(&mut self) {
         for slot in self.loader.pump(5) {
             match slot {
@@ -158,24 +192,48 @@ impl SoundBank {
                         self.sounds.resize_with(i + 1, Vec::new);
                         self.next.resize(i + 1, 0);
                     }
-                    if let Ok(sound) = load_sound_from_bytes(&bytes).await {
-                        self.sounds[i].push(sound);
+                    match load_sound_from_bytes(&bytes).await {
+                        Ok(sound) => self.sounds[i].push(sound),
+                        Err(error) => self.loader.errors.push(format!("effect {i}: {error}")),
                     }
                 }
-                Slot::Stem(bytes) => {
-                    if let Ok(sound) = load_sound_from_bytes(&bytes).await {
+                Slot::Stem(bytes) => match load_sound_from_bytes(&bytes).await {
+                    Ok(sound) => {
                         self.stems.push(sound);
                         self.stem_now.push(0.);
                         self.stem_target.push(0.);
                     }
-                }
+                    Err(error) => self.loader.errors.push(format!("music stem: {error}")),
+                },
             }
         }
     }
 
     /// True once every sound has been handed to the backend (immediately when muted).
     pub fn ready(&self) -> bool {
-        self.muted || (self.loader.finished() && self.loader.sounds > 0)
+        matches!(self.state(), AudioState::Ready | AudioState::Muted)
+    }
+
+    /// Loading/ready concerns assets and decoder submission; the backend cannot confirm audibility.
+    pub fn state(&self) -> AudioState {
+        self.loader.state(
+            self.muted,
+            self.sounds.iter().any(|v| !v.is_empty()) || !self.stems.is_empty(),
+        )
+    }
+
+    pub fn errors(&self) -> &[String] {
+        &self.loader.errors
+    }
+
+    /// Stop loops explicitly; restarting resets all layer levels to silence.
+    pub fn stop_music(&mut self) {
+        for stem in &self.stems {
+            stop_sound(stem);
+        }
+        self.music_playing = false;
+        self.stem_now.fill(0.);
+        self.stem_target.fill(0.);
     }
 
     fn volume(&self, volume: f32) -> f32 {
@@ -185,7 +243,7 @@ impl SoundBank {
     /// Play the next variant of `sound` at `volume` (0-1, scaled by [`SoundBank::sfx_volume`]).
     /// Unknown or not-yet-loaded sounds are ignored.
     pub fn play(&mut self, sound: usize, volume: f32) {
-        if self.muted {
+        if self.muted || !self.loader.errors.is_empty() {
             return;
         }
         let Some(variants) = self.sounds.get(sound).filter(|v| !v.is_empty()) else {
@@ -201,7 +259,7 @@ impl SoundBank {
 
     /// Play a specific variant (a combo pitch ladder). An out-of-range variant plays the last one.
     pub fn play_variant(&mut self, sound: usize, variant: usize, volume: f32) {
-        if self.muted {
+        if self.muted || !self.loader.errors.is_empty() {
             return;
         }
         if let Some(s) = self
@@ -221,7 +279,12 @@ impl SoundBank {
 
     /// Start every music stem together, silent until [`SoundBank::update_music`] raises them.
     pub fn start_music(&mut self) {
-        if self.muted || self.music_playing || self.stems.is_empty() || !self.loader.finished() {
+        if self.muted
+            || !self.loader.errors.is_empty()
+            || self.music_playing
+            || self.stems.is_empty()
+            || !self.loader.finished()
+        {
             return;
         }
         for stem in &self.stems {
@@ -244,6 +307,12 @@ impl SoundBank {
         if !self.music_playing {
             return;
         }
+        if self.muted || !self.loader.errors.is_empty() {
+            for stem in &self.stems {
+                set_sound_volume(stem, 0.);
+            }
+            return;
+        }
         let k = 1. - (-dt.clamp(0., 0.1) * 2.5).exp();
         for i in 0..self.stems.len() {
             self.stem_now[i] += (self.stem_target[i] - self.stem_now[i]) * k;
@@ -252,6 +321,118 @@ impl SoundBank {
                 (self.stem_now[i] * self.music_volume).clamp(0., 1.),
             );
         }
+    }
+}
+
+/// Asset-loading state. Ready is not confirmation from a physical audio device.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AudioState {
+    Loading,
+    Ready,
+    Muted,
+    Empty,
+    Failed,
+}
+
+/// Named, pre-rendered bank. Load after window creation; poll each frame. Editing JSON and rendering
+/// a replacement bundle requires no Rust rebuild. Names are resolved once from checked metadata.
+pub struct AudioBank {
+    pub sounds: SoundBank,
+    effects: std::collections::BTreeMap<String, usize>,
+    layers: std::collections::BTreeMap<String, usize>,
+    targets: Vec<f32>,
+}
+impl AudioBank {
+    pub async fn load(
+        root: impl Into<std::path::PathBuf>,
+        muted: bool,
+        sfx_volume: f32,
+        music_volume: f32,
+    ) -> Result<Self, String> {
+        for volume in [sfx_volume, music_volume] {
+            if !volume.is_finite() || !(0. ..=1.).contains(&volume) {
+                return Err("audio volumes must be finite 0..1".into());
+            }
+        }
+        let root = root.into();
+        let bank = crate::viewer::devkit::audio_project::AudioBundle::load(&root)?;
+        let effects = bank
+            .effects
+            .keys()
+            .enumerate()
+            .map(|(i, n)| (n.clone(), i))
+            .collect();
+        let layers = bank
+            .music
+            .keys()
+            .enumerate()
+            .map(|(i, n)| (n.clone(), i))
+            .collect();
+        let targets = vec![0.; bank.music.len()];
+        let sounds = SoundBank::start_checked(muted, sfx_volume, music_volume, move || {
+            let audio = bank.read_audio(&root)?;
+            Ok(Rendered {
+                sfx: audio.effects,
+                stems: audio.music,
+            })
+        })
+        .await;
+        Ok(Self {
+            sounds,
+            effects,
+            layers,
+            targets,
+        })
+    }
+
+    /// Unknown names and not-ready banks are errors; success means submitted, not audibly played.
+    pub fn play(&mut self, name: &str, volume: f32) -> Result<(), String> {
+        let index = *self
+            .effects
+            .get(name)
+            .ok_or_else(|| format!("unknown audio cue {name:?}"))?;
+        if !volume.is_finite() || !(0. ..=1.).contains(&volume) {
+            return Err("cue volume must be finite 0..1".into());
+        }
+        if !self.sounds.ready() {
+            return Err(format!(
+                "audio bank {:?}: {:?}",
+                self.sounds.state(),
+                self.sounds.errors()
+            ));
+        }
+        self.sounds.play(index, volume);
+        Ok(())
+    }
+
+    /// Complete named target mix: omitted layers fade to zero. Validate before changing any targets.
+    /// The legacy backend starts loops individually; this is not a sample-clock synchronisation API.
+    pub fn music(&mut self, dt: f32, levels: &[(&str, f32)]) -> Result<(), String> {
+        if !dt.is_finite() || dt < 0. {
+            return Err("audio dt must be finite and nonnegative".into());
+        }
+        for (name, level) in levels {
+            if !self.layers.contains_key(*name) {
+                return Err(format!("unknown music layer {name:?}"));
+            }
+            if !level.is_finite() || !(0. ..=1.).contains(level) {
+                return Err("music levels must be finite 0..1".into());
+            }
+        }
+        if !self.sounds.ready() {
+            return Err(format!(
+                "audio bank {:?}: {:?}",
+                self.sounds.state(),
+                self.sounds.errors()
+            ));
+        }
+        self.targets.fill(0.);
+        for (name, level) in levels {
+            self.targets[self.layers[*name]] = *level;
+        }
+        self.sounds.start_music();
+        self.sounds.update_music(dt, &self.targets);
+        Ok(())
     }
 }
 
@@ -277,7 +458,7 @@ mod tests {
             "nothing before the worker finishes"
         );
         assert!(!loader.finished());
-        tx.send(rendered(3, 2, 3)).unwrap();
+        tx.send(Ok(rendered(3, 2, 3))).unwrap();
         let first = loader.pump(5);
         assert_eq!(first.len(), 5);
         assert!(matches!(first[0], Slot::Sfx(0, _)) && matches!(first[2], Slot::Sfx(1, _)));
@@ -297,13 +478,39 @@ mod tests {
 
     #[test]
     fn a_dead_worker_leaves_a_silent_finished_loader() {
-        let (tx, rx) = channel::<Rendered>();
+        let (tx, rx) = channel::<Result<Rendered, String>>();
         let mut loader = Loader::new(Some(rx));
         drop(tx);
         assert!(loader.pump(5).is_empty());
         assert!(loader.finished(), "no result will ever arrive");
         assert_eq!(loader.sounds, 0);
+        assert_eq!(loader.errors, ["audio worker exited without a result"]);
         assert!(Loader::new(None).finished(), "muted: nothing to load");
+    }
+
+    #[test]
+    fn failures_are_terminal_and_music_only_is_ready_after_loading() {
+        let (tx, rx) = channel();
+        let mut loader = Loader::new(Some(rx));
+        assert_eq!(loader.state(false, false), AudioState::Loading);
+        tx.send(Err("missing bank file".into())).unwrap();
+        assert!(loader.pump(5).is_empty());
+        assert_eq!(
+            loader.state(false, true),
+            AudioState::Failed,
+            "partial assets never hide failure"
+        );
+        assert_eq!(loader.errors, ["missing bank file"]);
+        assert_eq!(loader.state(true, true), AudioState::Failed);
+        let (tx, rx) = channel();
+        let mut music = Loader::new(Some(rx));
+        tx.send(Ok(rendered(0, 0, 2))).unwrap();
+        assert_eq!(music.pump(1).len(), 1);
+        assert_eq!(music.state(false, true), AudioState::Loading);
+        assert_eq!(music.pump(1).len(), 1);
+        assert_eq!(music.state(false, true), AudioState::Ready);
+        assert_eq!(Loader::new(None).state(false, false), AudioState::Empty);
+        assert_eq!(Loader::new(None).state(true, false), AudioState::Muted);
     }
 
     #[test]

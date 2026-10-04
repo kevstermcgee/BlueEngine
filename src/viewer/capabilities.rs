@@ -43,6 +43,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("src", "ACTION [QUERY]"),
     ("new-game", "NAME DIRECTORY [ENGINE_PATH] [TEMPLATE]"),
     ("icon", "TITLE DIRECTORY [VARIANT] [--replace]"),
+    ("audio", "ACTION [PROJECT_OR_BUNDLE] [NEW_DIRECTORY]"),
     ("ambient-music", "OUT.wav [MINUTES] [SEED] [--major] [--title=TEXT] [--tagline=TEXT]"),
     ("game-explore", "GAME.json [--max-states=N] [--scenario=OUT.json]"),
     ("add-interactable", "GAME.json ID --at=X,Y,Z [--size=HX,HY,HZ] [--color=R,G,B] [--label=TEXT] [--disabled] [--hidden] [--write]"),
@@ -66,7 +67,7 @@ pub fn runtime_support() -> Value {
     use super::{game, net, netplay, savestate, simulation};
     json!({
         "stock_server": {
-            "what": "be2-headless --server: the authoritative DedicatedServer for GameDocument games and maps (used by the stock client)",
+            "what": "be2-headless --server: authoritative GameDocument/map server for the stock client",
             "players": {
                 "default": simulation::DEFAULT_MAX_PLAYERS,
                 "configurable_up_to": simulation::MAX_PLAYERS_LIMIT,
@@ -90,7 +91,7 @@ pub fn runtime_support() -> Value {
             "game_document": {"file_bytes": game::MAX_GAME_BYTES, "counters": game::MAX_GAME_COUNTERS, "flags": game::MAX_GAME_FLAGS},
         },
         "custom_sim_netplay": {
-            "what": "viewer::netplay (NetGame + ClientView) for games that own their simulation; it has its own server loop and is not the stock server",
+            "what": "viewer::netplay: NetGame + ClientView with the game's own server loop",
             "datagram_bytes": netplay::wire::MAX_DATAGRAM,
             "players": "NetGame::MAX_SEATS, chosen by each game",
             "replication": "one snapshot format for everyone: no partial updates and no interest management",
@@ -125,7 +126,7 @@ pub fn describe() -> Result<Value> {
         "runtime_support": runtime_support(),
         "start": ["be2-tools export-lab NEW.json", "be2-tools catalog", "be2-tools search multiplayer", "docs/AI_QUICKSTART.md", "python tools/be2.py context FEATURE --compact (engine checkout; no build)"],
         "unsupported": ["arbitrary gameplay scripts", "runtime mesh import"],
-        "metadata": "Curated feature index; executable commands/arities come from the native CLI registry."
+        "metadata": "Curated feature index; commands/arities use the native CLI registry."
     }))
 }
 

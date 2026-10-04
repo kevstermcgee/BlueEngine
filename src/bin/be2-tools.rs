@@ -766,6 +766,40 @@ fn run() -> Result<()> {
                        "signature": format!("{:016x}", signature(&spec)), "files": files})
             );
         }
+        "audio" => {
+            use vesper3d::viewer::devkit::audio_project::{self, AudioBundle, AudioProject};
+            let expected = match arg(1)? {
+                "describe" => 2,
+                "validate" | "check" => 3,
+                "render" => 4,
+                _ => 0,
+            };
+            if a.len() != expected {
+                return Err("Expected audio describe | validate PROJECT | render PROJECT NEW_DIRECTORY | check BUNDLE".into());
+            }
+            let report = match arg(1)? {
+                "describe" => audio_project::describe(),
+                "validate" => {
+                    let project = AudioProject::load(Path::new(arg(2)?))?;
+                    json!({"ok":true,"effects":project.effects.keys().collect::<Vec<_>>(),"has_music":project.music.is_some()})
+                }
+                "render" => {
+                    let path = Path::new(arg(2)?);
+                    let project = AudioProject::load(path)?;
+                    let rendered = project.render(path.parent().unwrap_or(Path::new(".")))?;
+                    rendered.write_new(Path::new(arg(3)?))?;
+                    json!({"ok":true,"directory":arg(3)?,"bank":rendered.manifest})
+                }
+                "check" => {
+                    let root = Path::new(arg(2)?);
+                    let bank = AudioBundle::load(root)?;
+                    bank.read_audio(root)?;
+                    json!({"ok":true,"bank":bank,"evidence":"checksums, PCM format and layer lengths; no device audibility claim"})
+                }
+                _ => return Err("Expected audio describe|validate|render|check".into()),
+            };
+            println!("{}", serde_json::to_string(&report)?);
+        }
         "ambient-music" => {
             use vesper3d::viewer::devkit::synth::{
                 ambient_loop, ambient_spec_for, peak, rms, wav_bytes, AmbientSpec, RATE,

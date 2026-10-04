@@ -16,6 +16,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ContextTests(unittest.TestCase):
+    def test_named_audio_authoring_is_discoverable_without_source_exploration(self):
+        packet = workflow.context(ROOT, 'compose stereo music score with MIDI notes and preview named sound effects')
+        feature = packet['matches'][0]
+        self.assertEqual(feature['id'], 'audio_authoring')
+        self.assertIn('docs/AUDIO.md', feature['read_first'])
+        self.assertEqual(feature['canonical_example'], 'examples/audio_preview.rs')
+        self.assertIn('AudioBank', feature['public_api'])
+        self.assertFalse(packet['engine_source_read'])
+
     def test_task_packet_and_diagnostic_routing(self):
         packet = workflow.context(ROOT, 'add replicated door state')
         self.assertEqual({item['id'] for item in packet['matches'][:2]},

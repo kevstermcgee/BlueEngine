@@ -42,6 +42,11 @@ server (`netplay::cli::serve` is the server main; `be2-hub`, ADR 0037, hosts man
 display with `python tools/xcapture.py`. Silent-failure traps are documented in `docs/AI_DEV_FEEDBACK.md`.
 Published-source changes also require `python scripts/publish_games.py check`.
 
+Audio authoring: `be2-tools audio describe`, `docs/AUDIO.md`, and `assets/audio/observatory/project.json`.
+Use named rendered bundles with `kit::AudioBank`; edits to audio JSON need rendering, not a Rust rebuild.
+Inspect state/errors and check bundles. Measure loops with `audio_report.py --loop`; numeric evidence
+does not prove subjective quality or audible hardware playback. Keep audio out of gameplay authority.
+
 Expect small tasks to touch 1-4 source files, subsystem work 3-8. Above 10, recheck
 impact; simulation + networking + presentation may belong at a shared lower layer.
 These are prompts to reconsider scope, not limits on necessary work or reading.
