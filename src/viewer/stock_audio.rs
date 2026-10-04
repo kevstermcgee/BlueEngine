@@ -261,16 +261,21 @@ pub(crate) struct StockSound {
 #[cfg(feature = "client")]
 impl StockSound {
     pub async fn load(
-        document: &GameDocument,
-        state: &GameState,
+        session: &mut super::game_session::GameSession,
         root: Option<&Path>,
         settings_path: Option<&Path>,
         muted: bool,
     ) -> Result<Option<Self>> {
-        let Some(config) = document
+        let Some(config) = session
+            .world()
+            .game
+            .as_ref()
+            .unwrap()
+            .document()
             .presentation
             .as_ref()
             .and_then(|p| p.audio.as_ref())
+            .cloned()
         else {
             return Ok(None);
         };
@@ -293,9 +298,15 @@ impl StockSound {
             .await?;
             let start = std::time::Instant::now();
             while !bank.sounds.ready() {
+                // Poll handshakes/snapshots without stepping authority or sending predicted input.
+                // Establish the current baseline after asset loading finishes.
+                session.advance(Default::default(), 0., false)?;
                 bank.sounds.poll().await;
                 if bank.sounds.state() == super::kit::AudioState::Failed {
                     return Err(format!("Stock audio failed: {:?}", bank.sounds.errors()).into());
+                }
+                if bank.sounds.state() == super::kit::AudioState::Empty {
+                    return Err("Stock audio bundle has no playable assets".into());
                 }
                 if start.elapsed().as_secs() >= 30 {
                     return Err("Stock audio loading timed out".into());
@@ -312,8 +323,9 @@ impl StockSound {
             }
             Some(bank)
         };
+        let runtime = session.world().game.as_ref().unwrap();
         Ok(Some(Self {
-            cursor: AudioCursor::new(config, document, state)?,
+            cursor: AudioCursor::new(&config, runtime.document(), runtime.state())?,
             bank,
             settings,
             settings_path,

@@ -183,8 +183,7 @@ pub async fn run_game_with_options(
     }
     let mut shell = GameShell::new();
     let mut audio = super::stock_audio::StockSound::load(
-        session.world().game.as_ref().unwrap().document(),
-        session.world().game.as_ref().unwrap().state(),
+        &mut session,
         options.audio_root.as_deref(),
         options.settings_path.as_deref(),
         options.mute,

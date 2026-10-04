@@ -45,6 +45,7 @@ def main():
     assert len(rows) == 1543 and rows[-1]['completed'] and rows[-1]['round'] == 1
     assert all(row['audio']['state'] == 'ready' and row['audio']['submitted'] for row in rows)
     events = [(row['tick'], cue) for row in rows for cue in row['audio']['cues']]
+    assert len(events) == 8, 'no reset-counter cues or repeated threshold alarms'
     assert sum(cue == 'step' for _, cue in events) == 3
     assert sum(cue == 'success' for _, cue in events) == 1
     assert (900, 'battery') in events and (1200, 'battery') in events and (1201, 'shutter') in events

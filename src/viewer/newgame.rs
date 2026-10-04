@@ -615,10 +615,9 @@ async fn run() -> vesper3d::Result<()> {
     let agents_md = format!(
         r#"# {name} - AI Agent Guide
 
-Standalone game; BlueEngine is a path dependency (`vesper3d` in Cargo.toml), and
-`assets/identity.json` records the engine commit it was built against. Read this game's files
-first; do not load engine source or run engine-wide checks for game-only edits. For an unfamiliar
-API run `python tools/be2.py context QUERY` in the engine checkout; missing capability means
+BlueEngine is a path dependency (`vesper3d`); `assets/identity.json` records its revision. Read
+this game's files first; do not load engine source or run engine-wide checks for game-only edits.
+For an unfamiliar API run `python tools/be2.py context QUERY` in the engine checkout; missing capability means
 engine work, not permission to invent an API.
 
 Rules that do not fit counters/interactables/timers (enemies, projectiles, scoring, AI, per-frame
@@ -633,9 +632,7 @@ physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its sim
 - `playable::run_game_with_options` runs authored rules, dynamic props and replay on shared
   authority; `--connect ADDR` uses server state. F5/F9 save and load (engine docs/SAVE_STATE.md;
   never hand-write save files). `run_map` is a static viewer only.
-- Stock audio: author an AudioProject, render its bundle into `assets/audio`, and bind named cues/music
-  in `game.json`'s `presentation.audio` (engine docs/AUDIO.md). `game-validate` checks names and assets;
-  no Rust rebuild for audio edits. Esc > Settings toggles persist; `--mute` skips audio for this run.
+- Stock audio: `presentation.audio` binds checked bundles in `assets/audio`; see engine docs/AUDIO.md.
 
 ## Running Tests
 - Record friction in the engine: `python tools/learn.py record --game {name} --area AREA --tokens N

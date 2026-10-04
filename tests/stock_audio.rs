@@ -31,6 +31,11 @@ fn loss_restart_win_cues_follow_actual_authority_without_replaying_reset_counter
         let state = session.world().game.as_ref().unwrap().state();
         events.extend(cursor.observe(state).into_iter().map(|c| (tick, c.cue)));
     }
+    assert_eq!(
+        events.len(),
+        8,
+        "no replayed reset counters or repeated threshold alarms"
+    );
     assert_eq!(events.iter().filter(|(_, cue)| cue == "step").count(), 3);
     assert_eq!(events.iter().filter(|(_, cue)| cue == "success").count(), 1);
     assert!(events.contains(&(900, "battery".into())));
@@ -55,6 +60,13 @@ fn catch_up_observes_each_tick_and_does_not_change_simulation() {
     let g = session.world().game.as_ref().unwrap();
     let mut cursor = AudioCursor::new(&config, g.document(), g.state()).unwrap();
     let mut cues = Vec::new();
+    let before = session.world().checksum();
+    assert_eq!(session.advance(GameInput::default(), 0., false).unwrap(), 0);
+    assert_eq!(
+        before,
+        session.world().checksum(),
+        "startup polling does not step local authority"
+    );
     assert_eq!(
         session
             .advance_observed(GameInput::default(), 0.14, true, |s| cues
@@ -194,4 +206,30 @@ fn stock_cli_exposes_mute_settings_and_constructed_content_root() {
         Path::new("custom/settings.json")
     );
     assert!(vesper3d::viewer::playable::GameOptions::from_args(&["--settings".into()]).is_err());
+}
+
+#[cfg(unix)]
+#[test]
+fn bundle_directory_symlinks_cannot_escape_the_content_root() {
+    let temp = std::env::temp_dir().join(format!(
+        "stock-audio-path-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    let root = temp.join("game");
+    let outside = temp.join("outside");
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::create_dir(&outside).unwrap();
+    std::os::unix::fs::symlink(&outside, root.join("escaped")).unwrap();
+    let mut audio = config();
+    audio.bundle = "escaped".into();
+    assert!(audio
+        .bundle_path(Some(&root))
+        .unwrap_err()
+        .to_string()
+        .contains("escapes"));
+    std::fs::remove_dir_all(temp).unwrap();
 }

@@ -11,6 +11,8 @@ read-only observer runs after each local fixed tick, preserving multiple changes
 Startup, online joining and save loads establish/rebase a baseline; resets emit a restart cue without
 playing counter-reset history. The shared simulation and input coalescing are unchanged. Online state
 snapshots can omit intermediate events; this is not a new reliable network event protocol.
+Loading continues network-only polling before establishing its baseline; local authority stays at
+its initial tick. This prevents slow loading from leaving the online handshake idle.
 
 Settings use the existing persistent Sound/Music toggles; muted runs explicitly skip assets/devices.
 The stock settings screen has no unimplemented export control. Loaded documents retain a private,
@@ -26,6 +28,8 @@ tests cover the real loss/restart/win simulation, eight separate catch-up transi
 checksum, pause/finish mixing, load baselines, invalid references/names, and cwd-independent paths.
 An initial test confused the scenario's final assertion step (1542) with the actual completion step
 (1539); authoritative state evidence corrected that expectation instead of delaying the cue.
+The first full check also caught an oversized generated guide. Its audio directions were condensed
+to one line linking the supported contract, retaining the existing 3000-byte limit (2937 bytes).
 
 No desktop game/capture was launched successfully in this work. Local GUI/audio verification was
 cancelled to respect the user's silent, unobtrusive PC preference. The added Linux CI gate instead
