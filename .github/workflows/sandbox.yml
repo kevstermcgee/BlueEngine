@@ -57,3 +57,4 @@ jobs:
         with:
           name: BlueEngineSandbox-Windows
           path: .be2-work/BlueEngineSandbox
+          include-hidden-files: true

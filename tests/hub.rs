@@ -7,7 +7,7 @@ use std::net::{SocketAddr, UdpSocket};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use vesper3d::viewer::net::{client_transport, TransportProfile};
@@ -36,16 +36,25 @@ const HUB_BIN: &str = env!("CARGO_BIN_EXE_be2-hub");
 /// A fresh run of `n + 1` consecutive loopback UDP ports that are free right now (the hub's, then the pool).
 /// Tests in one process get disjoint runs; the bounded search skips ports something else holds.
 fn free_ports(n: u16) -> u16 {
+    const SLOTS: u16 = 79;
+    const STRIDE: u16 = 24;
+    assert!(n < STRIDE);
     static NEXT: AtomicU16 = AtomicU16::new(0);
+    static START: OnceLock<u16> = OnceLock::new();
     // Mix the clock into the start so two test processes started together (several suites on one machine) rarely
     // pick the same run: the pid alone gave only 40 distinct starts.
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
-    let seed = ((std::process::id().wrapping_mul(2_654_435_761) ^ nanos) % 1_900) as u16;
-    for _ in 0..200 {
+    // Pick one rotation for the process, not a new random offset per call: independent
+    // offsets defeated NEXT's disjointness and raced between probe and child startup.
+    let seed = *START.get_or_init(|| {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.subsec_nanos());
+        ((std::process::id().wrapping_mul(2_654_435_761) ^ nanos) % u32::from(SLOTS)) as u16
+    });
+    for _ in 0..SLOTS {
         let step = NEXT.fetch_add(1, Ordering::SeqCst);
-        let base = 25_000 + (seed + step * 24) % 1_900;
+        assert!(step < SLOTS, "exhausted disjoint loopback port slots");
+        let base = 25_000 + ((seed + step) % SLOTS) * STRIDE;
         let held: Vec<_> = (0..=n)
             .filter_map(|i| UdpSocket::bind(("127.0.0.1", base + i)).ok())
             .collect();
@@ -867,7 +876,8 @@ impl HubProcess {
         });
         assert!(
             up && p.child.try_wait().unwrap().is_none(),
-            "be2-hub did not start"
+            "be2-hub did not start on port {base}; exit: {:?}",
+            p.child.try_wait().unwrap()
         );
         p
     }

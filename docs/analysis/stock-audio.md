@@ -29,7 +29,12 @@ checksum, pause/finish mixing, load baselines, invalid references/names, and cwd
 An initial test confused the scenario's final assertion step (1542) with the actual completion step
 (1539); authoritative state evidence corrected that expectation instead of delaying the cue.
 The first full check also caught an oversized generated guide. Its audio directions were condensed
-to one line linking the supported contract, retaining the existing 3000-byte limit (2937 bytes).
+to one line linking the supported contract, retaining the existing 3000-byte limit (2876 bytes for
+shared-starter, 2976 for the maximum-length game name).
+The next Linux run exposed a hub startup failure. Its test port helper randomized each allocation
+despite promising disjoint ranges; it now chooses one process rotation of nonoverlapping slots.
+This removes that within-process collision opportunity without retrying or weakening assertions.
+CI also explicitly uploads hidden work directories so diagnostic and rendered evidence survives.
 
 No desktop game/capture was launched successfully in this work. Local GUI/audio verification was
 cancelled to respect the user's silent, unobtrusive PC preference. The added Linux CI gate instead
