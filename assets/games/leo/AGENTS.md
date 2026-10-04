@@ -5,8 +5,10 @@ focus changes or automatic artifact opening. Background checks use low priority 
 bounded concurrency. Render/audio evidence runs only on remote Linux CI's virtual
 display with null ALSA. Package launchers in a private folder, never the desktop.
 
-Before engine reads, run `python tools/be2.py context "<need>" --compact` from the
-engine checkout (`../../..`). Follow its selected paths and public contracts.
+Locate the engine checkout through the `vesper3d` dependency path in Cargo.toml
+(the published game uses a different relative path). Before engine reads, run
+`python tools/be2.py context "<need>" --compact` from that engine root.
+Follow its selected paths and public contracts.
 Read `README.md`, `AUDIO.md` and engine `docs/PROCEDURAL_WORLDS.md` for this game.
 `docs/CUSTOM_SIM_CHEATSHEET.md` covers movement, input, geometry, sound and menus.
 

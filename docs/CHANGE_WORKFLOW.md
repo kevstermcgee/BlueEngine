@@ -277,6 +277,12 @@ executed tests and Cargo's reported fresh/built artifact counts. An artifact cou
 is not compile time or proof of freshness beyond Cargo's own dependency tracking.
 The runner always invokes Cargo; it never accepts cached validation receipts.
 
+CI runs the full engine and Leo game/package/render matrices concurrently on Linux
+and Windows. The existing `test` check names are final guards requiring both
+matrices to pass, including all headless and release gates. `leo-images` is uploaded
+early for visual iteration while other checks continue; it does not certify the
+revision. See [CI scheduling and evidence](perf/README.md#independent-engine-and-game-ci-lanes).
+
 Profiles, target directories, isolated release packaging and optimized builds are
 unchanged. No profile/cache tuning or new development build option is claimed:
 iteration already uses Cargo's dev/test profiles. Cold-cache/profile comparisons,

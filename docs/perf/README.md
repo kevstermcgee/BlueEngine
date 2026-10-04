@@ -64,6 +64,29 @@ alone consumed 24m 37s across the two feature modes. Updated CI uses the optimiz
 dependency profile, shared command plan and compilation caching. Its measured results
 accompany the delivered revision; local timing does not establish cold/warm CI savings.
 
+## Independent engine and game CI lanes
+
+Engine and Leo validation now run concurrently on Linux and Windows, rather than
+adding game builds, tests and captures after the full engine/release lane. Both
+matrices keep their previous commands. The existing required `test (ubuntu-latest)`
+and `test (windows-latest)` names are final guards: both matrices must succeed;
+failure, cancellation or skipping cannot count as green. Multi-command game steps
+use Bash's fail-fast behavior on Windows as well as Linux.
+
+`leo-images` contains only pictures, capture traces and logs and is uploaded as soon
+as the packaged game completes its offscreen run. It is visual feedback, not the
+final verdict. The later `leo-Linux`/`leo-Windows` artifacts retain packages and game
+reports; engine reports and the stock-audio capture remain in their own lane.
+This permits inspecting art while the remaining gates run, without duplicating
+the capture or full test suite. No game opens on the local PC.
+
+Both lanes restore the existing OS/toolchain/dependency cache prefix; only the
+engine lane saves it, avoiding competing writers. Every source build and assertion
+still executes. See the [cache action's inputs and implementation](https://github.com/Swatinem/rust-cache).
+Measure run timestamps and artifact-upload times against the former serial workflow;
+the scheduling change alone is not a measured timing improvement, and consumes
+additional remote runners. Local checks retain bounded concurrency/low priority.
+
 ## Server load (loopback, development transport, house map, `--profile fast`)
 
 `python tools/perf.py record --suite server` (about 2 minutes) runs `examples/server_load.rs` against

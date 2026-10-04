@@ -29,11 +29,15 @@ pub fn look(phase: f32) -> Look {
     let warm = (1. - elevation.abs() / 0.3).clamp(0., 1.);
     let sun = [(phase * std::f32::consts::TAU).sin(), elevation, 0.15];
     let light = if elevation >= 0. { sun } else { sun.map(|v| -v) };
+    // The engine shadows one directional light. Fade its contribution at the horizon
+    // so switching between opposite sun/moon directions cannot snap visible shadows.
+    let key = mix([0.32, 0.38, 0.65], mix([0.95, 0.9, 0.69], [1., 0.52, 0.30], warm), day)
+        .map(|c| c * smooth(elevation.abs() / 0.20));
     Look {
         ambient_sky: mix([0.20, 0.23, 0.36], [0.40, 0.48, 0.56], day),
         ambient_ground: mix([0.10, 0.12, 0.18], [0.24, 0.25, 0.18], day),
         key_direction: [light[0], light[1].max(0.15), light[2]],
-        key_color: mix([0.32, 0.38, 0.65], mix([0.95, 0.9, 0.69], [1., 0.52, 0.30], warm), day),
+        key_color: key,
         rim_color: mix([0.48, 0.55, 0.87], [1., 0.79, 0.47], day),
         rim_strength: 0.22,
         fog_color: mix([0.07, 0.085, 0.15], mix([0.64, 0.76, 0.73], [0.76, 0.47, 0.39], warm), day),
@@ -198,13 +202,36 @@ impl Scene {
         for x in [-0.19, 0.19] {
             body.ball(vec3(x, 1.13, 0.), vec3(0.032, 0.047, 0.025), skin, 0., 10, 6);
         }
-        // Soft chestnut hair, swept across the forehead with distinct curved locks.
-        body.ball(vec3(0., 1.195, 0.065), vec3(0.195, 0.14, 0.13), hair, 0., 16, 10);
+        // One full scalp silhouette under the fringe: no exposed temples between isolated locks.
+        let mut cap = Template::new();
+        cap.ball(vec3(0., 1.145, 0.010), vec3(0.207, 0.20, 0.185), hair, 0., 24, 16);
+        let mut above = Vec::with_capacity(cap.verts.len());
+        for vertex in &mut cap.verts {
+            let forehead = smooth((-vertex.p.z + 0.035) / 0.17);
+            let hairline = 1.105 + forehead * 0.098;
+            above.push(vertex.p.y >= hairline);
+            vertex.p.y = vertex.p.y.max(hairline);
+        }
+        // Remove the underside rather than closing a flat disc over the face.
+        cap.idx = cap
+            .idx
+            .as_chunks::<3>()
+            .0
+            .iter()
+            .filter(|face| face.iter().any(|i| above[usize::from(*i)]))
+            .flatten()
+            .copied()
+            .collect();
+        body.append(&cap);
+        for x in [-0.18, 0.18] {
+            body.ball(vec3(x, 1.185, -0.005), vec3(0.037, 0.075, 0.068), hair, 0., 12, 8);
+        }
+        // A soft side-swept fringe overlaps the cap and falls onto the forehead.
         for i in 0..6 {
             let x = -0.145 + i as f32 * 0.05;
             body.capsule(
                 vec3(x - 0.025, 1.285, -0.045),
-                vec3(x + 0.036, 1.225 + i as f32 * 0.009, -0.115),
+                vec3(x + 0.030, 1.214 + i as f32 * 0.006, -0.152),
                 0.038,
                 [0.36 + i as f32 * 0.009, 0.225 + i as f32 * 0.006, 0.135],
                 0.,
@@ -404,6 +431,19 @@ impl Scene {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn sun_moon_cutover_fades_without_a_lighting_jump() {
+        for horizon in [0.25, 0.75] {
+            let before = look(horizon - 0.0001);
+            let after = look(horizon + 0.0001);
+            for i in 0..3 {
+                assert!(before.key_color[i] < 0.0001 && after.key_color[i] < 0.0001);
+                assert!((before.ambient_sky[i] - after.ambient_sky[i]).abs() < 0.002);
+            }
+        }
+        assert!(look(0.5).key_color[0] > 0.8);
+        assert!(look(0.).key_color[2] > 0.5);
+    }
     #[test]
     fn seeded_chunk_art_and_boy_fit_mesh_and_physical_scale_limits() {
         let scene = Scene::new();

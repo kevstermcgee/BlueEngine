@@ -6,7 +6,7 @@ concurrency:
 permissions:
   contents: read
 jobs:
-  test:
+  engine:
     strategy:
       fail-fast: false
       matrix:
@@ -24,7 +24,8 @@ jobs:
           python-version: '3.13'
       - uses: Swatinem/rust-cache@v2
         with:
-          key: engine-checks
+          # Same cache prefix as the former key=engine-checks in job=test.
+          shared-key: engine-checks-test
       - name: Install FFmpeg (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
@@ -37,30 +38,11 @@ jobs:
         run: python tools/be2.py check
       - run: cargo build --release --locked
       - run: cargo build --release --locked --no-default-features --bin be2-headless
-      - name: Leo project, headless and client verification
-        env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/target
-        run: |
-          cargo fmt --manifest-path assets/games/leo/Cargo.toml --check
-          cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features
-          cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --all-targets -- -D warnings
-          cargo build --locked --release --manifest-path assets/games/leo/Cargo.toml
-      - name: Leo package and private launcher verification
-        env:
-          CARGO_TARGET_DIR: ${{ github.workspace }}/target
-        run: |
-          python assets/games/leo/scripts/ship.py ship --folder .be2-work/leo-launchers --no-build --no-launch --no-smoke
-          python assets/games/leo/scripts/check.py --ship-folder .be2-work/leo-launchers
       - name: Stock audio offscreen verification (Linux)
         if: runner.os == 'Linux'
         env:
           BE2_AUDIO_OFFSCREEN: '1'
         run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/stock_audio_smoke.py target/release/be2 .be2-work/stock-audio
-      - name: Leo offscreen day, save and audio verification (Linux)
-        if: runner.os == 'Linux'
-        env:
-          BE2_AUDIO_OFFSCREEN: '1'
-        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/leo_smoke.py assets/games/leo/dist/leo .be2-work/leo-capture
       - name: Verification evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -68,6 +50,90 @@ jobs:
           name: engine-checks-${{ runner.os }}
           path: .be2-work/check-*/
           include-hidden-files: true
+      - name: Stock audio rendered evidence
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-audio-offscreen
+          path: .be2-work/stock-audio/
+          include-hidden-files: true
+  # Preserve the existing required-check names. A successful engine lane alone must
+  # never certify a revision whose game/package/render lane failed or was skipped.
+  test:
+    if: always()
+    needs: [engine, leo]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Require all engine and game gates
+        shell: bash
+        env:
+          ENGINE_RESULT: ${{ needs.engine.result }}
+          LEO_RESULT: ${{ needs.leo.result }}
+        run: |
+          test "$ENGINE_RESULT" = success
+          test "$LEO_RESULT" = success
+  # Independent game checks overlap engine verification. Rendered feedback is available
+  # early; the workflow is green only after BOTH matrices finish every existing gate.
+  leo:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: engine-checks-test
+          save-if: false # Engine job owns writes; both restore compatible dependency artifacts.
+      - name: Install native dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+      - name: Build and package Leo
+        shell: bash # Fail on EACH native command on Windows too.
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          cargo fmt --manifest-path assets/games/leo/Cargo.toml --check
+          cargo build --locked --release --manifest-path assets/games/leo/Cargo.toml
+          python assets/games/leo/scripts/ship.py ship --folder .be2-work/leo-launchers --no-build --no-launch --no-smoke
+      - name: Leo offscreen day, save and audio verification (Linux)
+        if: runner.os == 'Linux'
+        env:
+          BE2_AUDIO_OFFSCREEN: '1'
+        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/leo_smoke.py assets/games/leo/dist/leo .be2-work/leo-capture
+      - name: Early Leo pictures (Linux)
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-images
+          path: |
+            .be2-work/leo-capture/*/shot_*.png
+            .be2-work/leo-capture/*/run.json
+            .be2-work/leo-capture/evidence.json
+            .be2-work/leo-capture/*.log
+          include-hidden-files: true
+      - name: Leo headless and client verification
+        shell: bash
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features
+          cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --all-targets -- -D warnings
+          cargo build --release --locked --bin be2-tools
+          python assets/games/leo/scripts/check.py --ship-folder .be2-work/leo-launchers
       - name: Leo rendered and packaged evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -78,11 +144,4 @@ jobs:
             .be2-work/leo-launchers/
             assets/games/leo/.blue-check/
             assets/games/leo/dist/
-          include-hidden-files: true
-      - name: Stock audio rendered evidence
-        if: always() && runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
-        with:
-          name: stock-audio-offscreen
-          path: .be2-work/stock-audio/
           include-hidden-files: true

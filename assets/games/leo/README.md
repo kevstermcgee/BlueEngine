@@ -22,15 +22,17 @@ A paused menu stops the authoritative clock.
 The world streams a bounded 7×7 grid of deterministic 32-metre chunks, with
 integer origin rebasing to preserve local movement precision. Trees block movement
 and protect the third-person camera. Chunks return unchanged when revisited.
-See [engine contracts](../../../docs/PROCEDURAL_WORLDS.md) and [audio credits](AUDIO.md).
+See [engine contracts](https://github.com/kevstermcgee/BlueEngine/blob/main/docs/PROCEDURAL_WORLDS.md)
+and [audio credits](AUDIO.md). Cargo.toml's `vesper3d` path locates the matching local
+engine checkout; build its native tools with `cargo build --profile fast --bin be2-tools`.
 
 From this directory, build without opening a window:
 
 ```sh
 cargo test --no-default-features
-python scripts/check.py --tools ../../../target/fast/be2-tools --skip-ship
+python scripts/check.py --skip-ship
 python scripts/ship.py ship --folder PRIVATE_LAUNCHERS --no-launch --no-smoke
-python scripts/check.py --tools ../../../target/fast/be2-tools --ship-folder PRIVATE_LAUNCHERS
+python scripts/check.py --ship-folder PRIVATE_LAUNCHERS
 ```
 
 Committed source WAVs, scores and rendered checked bundles ship inside `assets`.
