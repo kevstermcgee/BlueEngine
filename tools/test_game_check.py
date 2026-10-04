@@ -97,6 +97,26 @@ class GameCheckTests(unittest.TestCase):
         self.assertTrue(self.report()['ok'])
         self.assertTrue(self.report()['native_sha256'])
 
+    def test_repeated_timestamp_keeps_both_reports_and_original_failure_log(self):
+        output = io.StringIO()
+        def result(code, text):
+            def invoke(command, **kwargs):
+                kwargs['stdout'].write(text)
+                return subprocess.CompletedProcess(command, code)
+            return invoke
+        with patch.object(game_check.datetime, 'datetime') as clock, contextlib.redirect_stdout(output):
+            clock.now.return_value.strftime.return_value = 'same-timestamp'
+            with patch.object(game_check.subprocess, 'run', side_effect=result(7, 'original failure')):
+                self.assertFalse(game_check.run(self.root, self.native, True))
+            with patch.object(game_check.subprocess, 'run', side_effect=result(0, 'later success')):
+                self.assertTrue(game_check.run(self.root, self.native, True))
+        first, second = [Path(json.loads(line)['report']) for line in output.getvalue().splitlines()]
+        self.assertNotEqual(first, second)
+        self.assertFalse(json.loads(first.read_text())['ok'])
+        self.assertTrue(json.loads(second.read_text())['ok'])
+        self.assertEqual((first.parent / '1.log').read_text(), 'original failure')
+        self.assertEqual((second.parent / '1.log').read_text(), 'later success')
+
 
 class FindToolsTests(unittest.TestCase):
     """A game finds a built be2-tools in the engine checkout it depends on, without BE2_TOOLS."""

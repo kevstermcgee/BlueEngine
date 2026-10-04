@@ -1,33 +1,45 @@
 name: Engine checks
 on: [push, pull_request]
+concurrency:
+  group: engine-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Upgrade regressions inspect real revision ancestry.
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: engine-checks
       - name: Install FFmpeg (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress -y
-      - run: cargo fmt --check
-      - run: cargo clippy --all-targets --locked -- -D warnings
-      - run: cargo test --locked
+      # Same gate list and optimized dependency profile as local full verification.
+      # Cache compilation only: every check and every test still executes.
+      - name: Full engine verification
+        run: python tools/be2.py check
       - run: cargo build --release --locked
-
-      - run: cargo test --locked --no-default-features
-      - run: cargo clippy --all-targets --locked --no-default-features -- -D warnings
       - run: cargo build --release --locked --no-default-features --bin be2-headless
-
-      - run: cargo rustdoc --locked --lib -- -D warnings
-      - run: cargo rustdoc --locked --lib --no-default-features -- -D warnings
-      - run: python tools/check_headless.py
-      - run: python tools/check_authoring.py
-      - run: python -m unittest tools.test_workflow tools.test_assets scripts.test_publish_games tools.test_game_check tools.test_game_ship tools.test_media_tools tools.test_xcapture tools.test_hub_deploy tools.test_learn
+      - name: Verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-checks-${{ runner.os }}
+          path: .be2-work/check-*/

@@ -15,12 +15,18 @@ on:
       - .github/workflows/sandbox.yml
 permissions:
   contents: read
+concurrency:
+  group: sandbox-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   sandbox:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: sandbox-package
       - uses: actions/setup-python@v6
         with:
           python-version: '3.13'
@@ -40,6 +46,7 @@ jobs:
           $starter = Join-Path $env:RUNNER_TEMP "blueengine-starter"
           ./target/release/be2-tools.exe new-game shared-starter $starter ($env:GITHUB_WORKSPACE -replace '\\', '/')
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:CARGO_TARGET_DIR = Join-Path $env:GITHUB_WORKSPACE "target"
           cargo test --manifest-path "$starter/Cargo.toml" --no-default-features
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo build --release --locked --manifest-path "$starter/Cargo.toml"

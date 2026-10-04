@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 MANUAL = ('Inspect world/menu captures and exercise changed controls: no automated check can see or play the '
@@ -184,8 +185,11 @@ def ship_stage(root, report, directory, index):
 
 def run(root, native, content_only=False, scenarios=(), skip_ship=False):
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
-    directory = root / '.blue-check' / stamp
-    directory.mkdir(parents=True)
+    reports = root / '.blue-check'
+    reports.mkdir(parents=True, exist_ok=True)
+    # Wall-clock resolution can repeat, especially on Windows. Reserve atomically
+    # so rapid/concurrent checks never collide or overwrite earlier evidence.
+    directory = Path(tempfile.mkdtemp(prefix=stamp + '-', dir=reports))
     report = {'ok': False, 'scope': 'content' if content_only else 'project',
               'checks': [], 'warnings': [], 'skipped': [], 'manual': MANUAL}
     # The ship stage runs last; until it does, the report says why it did not (or could not) run.

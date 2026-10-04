@@ -2,6 +2,13 @@
 
 For source-free content authoring, start with `python tools/author.py describe` and [AUTHORING.md](AUTHORING.md). This compact JSON interface uses packaged binaries and adds bounded discovery, asset IDs, parameterized recipes and persistent regression reports without Cargo or engine source reads. The development runner below remains available for engine maintenance/builds.
 
+Full engine verification is `python tools/be2.py check`, shared with Linux/Windows CI.
+It reuses one `itest` profile, overlaps the independent Python batch with serial Cargo
+work (`--serial` opts out), emits stage progress/timings to stderr
+and retains complete logs and one JSON summary. CI adds shipping release builds and caches
+compilation, always executing the tests. Measure without an extra full run with
+`python tools/perf.py record --suite check --note "what changed"`; see [performance data](../docs/perf/README.md).
+
 For capability lookup use `python tools/be2.py context QUERY`: no Cargo, native binary,
 or source reads. The default is three feature records. Native `be2-tools describe`
 and `be2-tools search TEXT` remain available; `export-lab NEW.json` exports the Test Lab.

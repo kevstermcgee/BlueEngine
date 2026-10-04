@@ -11,14 +11,19 @@
         "docs/CHANGE_WORKFLOW.md",
         "tools/contact_sheet.py",
         "tools/audio_report.py",
-        "tools/test_media_tools.py"
+        "tools/test_media_tools.py",
+        "tools/check_authoring.py",
+        "tools/perf.py",
+        ".github/workflows/ci.yml",
+        ".github/workflows/sandbox.yml",
+        "docs/perf/README.md"
       ],
       "checks": [
         "python -m unittest tools.test_workflow tools.test_game_check",
         "shared_gameplay scaffold integration test",
         "generated external project content and locked Cargo checks"
       ],
-      "note": "Build-free bounded context and conservative final Git change plans. Explicit check --iterate reuses indexed suite/evidence paths or Python unittest mappings; --typecheck checks only the engine library. Focused success leaves full verification outstanding. Runner preserves command status and complete logs, distinguishes Cargo compiler diagnostics from plain test failures, rejects empty requested test selections, and records timing/artifact freshness. Generated games retain their separate project checks.",
+      "note": "Build-free bounded context and conservative Git change plans. check --iterate selects an indexed suite/exact test or library-only --typecheck; focused success leaves full verification outstanding. check runs the canonical full Linux/Windows CI gates with itest for tests, Clippy, rustdoc and fresh native authoring; CI additionally builds shipping releases and caches compiled dependencies, always executing tests. One reviewed independent Python batch overlaps serial Cargo work; native integration stays ordered. --serial opts out. Reports join started work on failure, retain complete logs/status/diagnostics, reject empty test selections, and record stage start offsets/durations. JSON stdout stays stable; progress goes to stderr. perf.py record --suite check measures one full run without extra rebuilds. Generated games retain their own project checks.",
       "depends_on": [
         "native_discovery"
       ],
@@ -30,7 +35,12 @@
         "AI",
         "annotations",
         "windows type-check",
-        "cross compile"
+        "cross compile",
+        "slow tests",
+        "CI",
+        "build cache",
+        "verification speed",
+        "check timings"
       ],
       "constraints": [
         {
@@ -2286,7 +2296,8 @@
     "tools/assets.py": "BlueEngine's JSON asset catalog API.",
     "tools/audio_report.py": "Numeric quality report for WAV files: an agent cannot listen to audio, but it can read numbers.",
     "tools/author.py": "Source-free BE2 map authoring.",
-    "tools/be2.py": "BE2 development entry point.",
+    "tools/be2.py": "BE2 context and canonical local/CI checks with timestamp-safe report directories, stage timings and...",
+    "tools/check_authoring.py": "Verify native authoring with fresh tools in the shared check profile (itest by default).",
     "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
     "tools/hub_deploy.py": "Per-game build, validation, promotion and activation for the shared hub (ADR 0037, deploy/hub/update.sh).",
     "tools/learn.py": "Blue learns from the games built on it (ADR 0038).",

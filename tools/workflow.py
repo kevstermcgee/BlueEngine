@@ -315,9 +315,8 @@ def changed_paths(root, base='HEAD'):
     return revision, sorted(set(filter(None, (tracked + untracked).split('\0'))))
 
 
-# Cargo profile for `cargo test` in local checks. `itest` (Cargo.toml) is dev with optimized
-# dependencies: same assertions, about 8x faster on the physics suites. CI runs cargo directly and is
-# unaffected. `dev` restores the plain profile.
+# Share one build profile across local and CI gates. `itest` (Cargo.toml) retains
+# dev assertions with optimized dependencies; `dev` restores the plain profile.
 TEST_PROFILES = ('itest', 'dev')
 
 
@@ -333,13 +332,13 @@ def full_commands(test_profile='itest'):
     commands = [['cargo', 'fmt', '--check']]
     for features in ([], ['--no-default-features']):
         commands.extend([
-            ['cargo', 'rustdoc', '--locked', '--lib', *features, '--', '-D', 'warnings'],
+            ['cargo', 'rustdoc', '--locked', '--lib', *profile_flags(test_profile), *features, '--', '-D', 'warnings'],
             ['cargo', 'test', '--locked', *profile_flags(test_profile), *features],
-            ['cargo', 'clippy', '--all-targets', '--locked', *features, '--', '-D', 'warnings'],
+            ['cargo', 'clippy', '--all-targets', '--locked', *profile_flags(test_profile), *features, '--', '-D', 'warnings'],
         ])
     return commands + [
         [sys.executable, 'tools/check_headless.py'],
-        [sys.executable, 'tools/check_authoring.py'],
+        [sys.executable, 'tools/check_authoring.py', *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
@@ -511,7 +510,8 @@ def command_evidence(log, returncode, harness=None):
 def validation_plan(paths=None, base=None, test_profile='itest'):
     full = full_commands(test_profile)
     if paths is None:
-        return {'scope': 'full', 'reason': 'Full engine validation requested.', 'commands': full}
+        return {'scope': 'full', 'reason': 'Full engine validation requested.', 'commands': full,
+                'independent_commands': [len(full) - 1]}
     # The declared feature graph is partial, not proof of independence.
     # Only independent Python entry points have reviewed verification scopes.
     scopes = {
@@ -547,4 +547,7 @@ def validation_plan(paths=None, base=None, test_profile='itest'):
             'reason': 'Unclassified inputs require all engine gates.' if unknown else
                       'Reviewed independent Python inputs only; no engine contract changed.' if paths else
                       'No changes relative to base; this does not certify the baseline.',
-            'commands': full if unknown else commands}
+            'commands': full if unknown else commands,
+            # The Python batch uses temporary fixture projects, never the engine
+            # build outputs. Keep Cargo and fresh native integration in order.
+            'independent_commands': [len(full) - 1] if unknown else []}

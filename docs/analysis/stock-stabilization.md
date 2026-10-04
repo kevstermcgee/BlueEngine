@@ -25,6 +25,9 @@ local workflow is run with that permission; the earlier sandbox failure is not r
 The post-push rerun also exposed an intermittent Linux temporary-repository cleanup race with Git background
 maintenance. Fixture Git commands now disable automatic maintenance/GC, so deletion cannot race their own
 background lock cleanup. The engine-warning assertions and production Git behavior are unchanged.
+Another post-push Windows rerun exposed repeated wall-clock timestamps colliding in generated-game
+report directories. Engine/game reports now reserve a unique suffix atomically, with forced-clock
+regressions preserving both reports and the original failure log.
 
 Rollback decisions verify the restored SHA-256 before skipping and resume incomplete installation, activation
 and readiness. Recovery uses only a validated previous artifact matching the receipt; absent or inconsistent
@@ -49,7 +52,8 @@ Night Shift at the Observatory was unavailable in the checkout. The explicitly i
 [Observatory Night Watch](../../assets/games/observatory/README.md), a stock content fixture in the existing engine
 executable. It opens a shutter, routes around a baffle, requires three calibration presses, transmits an
 observation, and can lose on battery depletion then restart into a successful run. It is not a newly published
-or separately shipped program; no live deployment/publication was performed.
+or separately shipped program; no live server deployment or manual game publication was performed.
+The authorized main push runs the repository's configured workflows.
 
 The reproducible recipe uses blueprint/build, add_box, add-interactable and translate. A fractional translate
 exposed another concrete bug: independently shifted bounds rounded differently from the shifted visual center.
@@ -94,3 +98,27 @@ Required final verification: `python tools/be2.py check --changed --plan`, then 
 `python scripts/publish_games.py check`, and the unchanged complete Linux/Windows Engine checks matrix on the
 exact delivered commit. Check reports/CI distinguish passed, failed, skipped, pending and unavailable work.
 No prior-revision or fixture-only result is substituted for a required final gate.
+
+## Verification speed follow-up
+
+CI now invokes the same full checker as local development, including learning and upgrade
+tests, with full Git history for ancestry fixtures. Tests, Clippy, rustdoc and fresh native
+authoring share `itest`; release builds and both OS/feature modes remain required.
+Compiled dependencies are cached, every test still executes, and superseded runs on a ref
+are cancelled without cancelling the other OS on failure. Sandbox/generated-project builds
+share a target directory for compatible dependency reuse. Complete reports/logs are uploaded
+on failure as well as success.
+
+One reviewed independent Python batch overlaps serial Cargo work; native integration stays
+ordered. Barrier fixtures prove overlap and that failures in either lane remain failures,
+pending gates stop, and all started work joins before reporting. `--serial` restores sequential
+execution. New report-directory clock fixtures preserve both reports and original failure logs.
+The unchanged authority/input/rendered evidence above remains applicable; this follow-up changes
+verification and generated-game reporting, not gameplay or rendering.
+
+The passed fixed-tree local measurement is 307.773 s versus the earlier warm 439.681 s,
+30.0% less wall time in one observation, with additional regressions and no reduced gates.
+The intermediate run invalidated by an in-flight template edit failed the upgrade drift check
+and is discarded; it appended no performance measurements. See [performance data](../perf/README.md)
+for conditions and the first profile-warming run. Exact delivered-revision CI remains the final
+cross-platform/release/package evidence, rather than inferring a pass from these local timings.

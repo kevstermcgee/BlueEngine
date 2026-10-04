@@ -9,11 +9,12 @@ Fields: `metric` (`build_headless`, `test_build`, `test_run_total`, `test_suite:
 `sim_mean_tick`), `kind` (`cold`, `incremental_edit`, `warm`, `runtime_2_players`), `profile`,
 `value`, `unit`. Rows with `source: manual-...` were measured by hand, not by the script.
 
-## Profiles (opt-in; default dev/release and CI are unchanged)
+## Profiles (shipping release remains unchanged)
 
 - `--profile fast`: release without LTO, 16 codegen units, incremental. For iterating and for
   running the headless server on this machine.
-- `--profile itest`: dev with optimized dependencies and line-tables-only debuginfo. For tests.
+- `--profile itest`: dev with optimized dependencies and line-tables-only debuginfo. Canonical
+  local and CI checks share this profile across tests, Clippy, rustdoc and native authoring.
 - `--release`: single-unit thin LTO. For shipping only.
 
 ## Baseline (Intel N97, 4 cores, 15 GB, rustc 1.98.1, default linker, no sccache)
@@ -32,7 +33,36 @@ the 27 test binaries links the full engine. Cold builds spend about 60 s in rapi
 nalgebra, rustls, quinn and ring.
 
 Full `python tools/be2.py check` (all gates, both feature modes): 1,068 s of commands on `dev`, 376 s on
-`itest`, which is now its default (`--profile dev` opts out; CI runs cargo directly and is unchanged).
+`itest`, which is its default (`--profile dev` opts out). These are historical measurements;
+current CI also uses `itest` and the canonical checker, with dependency caching. Every test
+still executes; shipping release builds remain required on both Linux and Windows.
+
+`python tools/perf.py record --suite check --note "what changed"` measures a single full
+verification in the current target directory. It appends `check_total` and `check_stage:N`
+rows only after success. Stage rows include command and executed-test count; the
+report also proves scheduling through start offsets. Rows distinguish `execution=serial`
+from `execution=overlap_python`; stage durations can exceed wall time when added together.
+Complete report/logs stay in `.be2-work/check-*`. `kind=current_target` can include compilation and
+reuse, so compare runs with matching target/cache conditions. This suite does not delete
+build artifacts or run the private cold-build probes, and is not included in `--suite all`.
+
+## Canonical verification measurement (2026-10-03)
+
+On the same Windows host (12 logical cores, AMD64 Family 25 Model 80, rustc 1.98.1,
+default linker, no sccache), the previous passed full workflow at `66eacbf` took
+439.681 s. The updated workflow took 307.773 s: 30.0% less wall time in this observation.
+Both used the existing target directory; this is not a cold-build or repeated statistical
+benchmark. The new run includes 919 default Rust tests, 773 headless Rust tests, 50 native
+authoring/game checks, and 512 Python tests (468 executed, 44 explicitly skipped on Windows).
+No gate or assertion was removed. Python took 247.773 s overlapping the serial Cargo lane;
+per-stage start offsets/durations document the overlap. The first serial profile-warming
+run took 556.156 s and is retained in the append-only metrics, rather than used as the baseline.
+
+The prior green [CI run](https://github.com/kevstermcgee/BlueEngine/actions/runs/37159681225)
+at `66eacbf` took 38m 30s on Windows and 26m 50s on Linux. Windows plain-dev Rust tests
+alone consumed 24m 37s across the two feature modes. Updated CI uses the optimized
+dependency profile, shared command plan and compilation caching. Its measured results
+accompany the delivered revision; local timing does not establish cold/warm CI savings.
 
 ## Server load (loopback, development transport, house map, `--profile fast`)
 
@@ -319,4 +349,3 @@ clearing and filling a 2048x2048 colour plus depth target; under llvmpipe that i
 a small fraction. Not measured: any real GPU, the Intel N97's own GPU, Windows, a scene with thousands of casters,
 the effect of the 9-tap lookup on a real shader core. Treat the Full figure as an upper bound on this machine's
 software path, not as a prediction for players; the first run on real hardware should add rows here.
-

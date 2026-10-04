@@ -84,7 +84,7 @@ windows-sys = { optional = true, version = "=0.61.2", features = ["Win32_UI_Wind
 lto = "thin"
 codegen-units = 1
 
-# Opt-in iteration profiles (CI and `cargo build --release` are unaffected).
+# Iteration/check profiles; shipping still uses `cargo build --release`.
 # `--profile fast`: optimized enough to run, but parallel codegen and no LTO, so an edit
 # relinks in seconds instead of a serial single-unit LTO build.
 [profile.fast]

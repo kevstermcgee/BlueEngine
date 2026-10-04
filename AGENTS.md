@@ -51,9 +51,15 @@ pass, and public docs reflect changed public contracts. STOP. Do not refactor ne
 code, add speculative abstractions or expand scope. Tasks may override this default.
 
 Build speed: iterate with `cargo build --profile fast`, not `--release`. `be2.py check` runs tests on the `itest`
-profile by default (about 3x faster overall, same assertions); `--profile dev` restores the plain profile.
+profile for tests, Clippy, rustdoc and native authoring, locally and in CI (same assertions);
+`--profile dev` restores the plain profile. CI caches compiled dependencies, always executes checks,
+and retains both platform/feature modes plus shipping release builds.
+The independent Python batch overlaps serial Cargo work; native integration remains ordered.
+`--serial` provides a comparison/debugging path, and reports join all started work on failure.
 Measured data lives in docs/perf (`python tools/perf.py report`); after a change meant to speed things up,
 run `python tools/perf.py record --note "what changed"` so the next session can see whether it worked.
+For verification speed use `record --suite check --note "what changed"`: one full check with
+per-stage measurements in the current target directory; no extra benchmark rebuild.
 
 Learning loop (ADR 0038, `docs/learning/README.md`): before writing low-level code, run `python3 tools/be2.py context "<task>" --compact`;
 its `learned` lines name traps other games hit and what the engine already provides. When you finish a game task, record each friction item
