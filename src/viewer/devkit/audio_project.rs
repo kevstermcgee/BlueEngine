@@ -344,8 +344,8 @@ pub fn checked_wav(bytes: &[u8]) -> Result<(u16, Vec<f32>), String> {
     if rate != RATE || !(1..=2).contains(&channels) || samples.is_empty() {
         return Err("audio requires nonempty 44100 Hz mono/stereo PCM16 WAV".into());
     }
-    let declared = u32::from_le_bytes(bytes[4..8].try_into().unwrap()) as usize + 8;
-    if declared != bytes.len() {
+    let declared = u64::from(u32::from_le_bytes(bytes[4..8].try_into().unwrap())) + 8;
+    if declared != bytes.len() as u64 {
         return Err("WAV RIFF length does not match file".into());
     }
     let mut pos = 12;

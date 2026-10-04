@@ -176,6 +176,9 @@ fn imports_reject_truncation_wrong_rate_missing_files_and_traversal() {
     fs::write(t.0.join("input.wav"), synth::wav_bytes(&samples, 22050)).unwrap();
     assert!(p.render(&t.0).is_err());
     let mut bytes = synth::wav_bytes(&samples, synth::RATE);
+    let mut oversized = bytes.clone();
+    oversized[4..8].copy_from_slice(&u32::MAX.to_le_bytes());
+    assert!(vesper3d::viewer::devkit::audio_project::checked_wav(&oversized).is_err());
     bytes.pop();
     fs::write(t.0.join("input.wav"), bytes).unwrap();
     assert!(p.render(&t.0).is_err());
