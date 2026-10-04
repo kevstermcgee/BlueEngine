@@ -6,11 +6,11 @@ use leo::{Input, Sim, DAY_TICKS};
 use macroquad::prelude::*;
 use std::path::{Path, PathBuf};
 use vesper3d::viewer::{
-    devkit::{beside_exe, flag_value, has_flag, parse_size, snapshot, Lifecycle, Settings, Simulation},
+    devkit::{beside_exe, flag_value, has_flag, parse_size, snapshot, Lifecycle, Settings, ShadowQuality, Simulation},
     game_client::{self, AudioMenu, GameShell},
     game_input::ClientInput,
     identity::Identity,
-    kit::{self, hud, AudioBank, AudioState, Materials},
+    kit::{self, hud, AudioBank, AudioState, Materials, Shadows},
 };
 const IDENTITY: &str = include_str!("../assets/identity.json");
 fn identity() -> Identity {
@@ -128,8 +128,12 @@ async fn main() {
         }
     }
     let materials = Materials::load().unwrap_or_else(|e| fail(e));
+    // Reuse the engine's texel-snapped directional map. Simple contact shadows remain available
+    // if this device cannot create the map; report the actual tier in capture evidence.
+    let mut shadows = Shadows::new(ShadowQuality::Full).with_range(32., 120.);
     let mut scene = scene::Scene::new();
-    let mut banks = audio(&asset_root(&args), muted, &settings).await.unwrap_or_else(|e| fail(e));
+    let assets = asset_root(&args);
+    let mut banks = audio(&assets, muted, &settings).await.unwrap_or_else(|e| fail(e));
     let mut shell = GameShell::new();
     shell.paused = !unattended;
     let mut devices = ClientInput::new();
@@ -180,15 +184,15 @@ async fn main() {
         life.feed(held, if jump { JUMP } else { 0 }, look);
         let (save, load) = life.save_load_requested(devices.pressed(KeyCode::F5), devices.pressed(KeyCode::F9));
         if save {
-            let n = life.quick_save(&sim, &format!("Leo · Day {}", sim.time().days + 1));
-            notice = format!("{} — {}", n.title, n.detail);
+            let n = life.quick_save(&sim, &format!("Leo - Day {}", sim.time().days + 1));
+            notice = format!("{}: {}", n.title, n.detail);
             if unattended && !n.ok {
                 fail(&notice);
             }
         }
         if load {
             let n = life.quick_load(&mut sim);
-            notice = format!("{} — {}", n.title, n.detail);
+            notice = format!("{}: {}", n.title, n.detail);
             if unattended && !n.ok {
                 fail(&notice);
             }
@@ -205,7 +209,7 @@ async fn main() {
             .unwrap_or_else(|e| fail(e));
         }
         if !unattended && (sim.tick.saturating_sub(auto_tick) >= 3600 || sim.time().days != auto_day) {
-            if let Err(e) = snapshot::autosave(&sim, &life.slots, 3, &format!("Leo · Day {}", sim.time().days + 1)) {
+            if let Err(e) = snapshot::autosave(&sim, &life.slots, 3, &format!("Leo - Day {}", sim.time().days + 1)) {
                 notice = format!("Autosave failed: {e}");
             }
             auto_tick = sim.tick;
@@ -223,31 +227,13 @@ async fn main() {
                 .unwrap_or_else(|e| fail(e));
             submissions += 1;
         }
-        scene.draw(&sim, life.alpha(), &materials, portrait).unwrap_or_else(|e| fail(e));
+        scene.draw(&sim, life.alpha(), &materials, &mut shadows, portrait).unwrap_or_else(|e| fail(e));
         let ui = hud::ui_scale();
-        hud::panel(22. * ui, 20. * ui, 208. * ui, 58. * ui, 14. * ui, Color::new(0.08, 0.12, 0.13, 0.50));
-        hud::text_outlined(
-            &format!("Day {}", sim.time().days + 1),
-            38. * ui,
-            47. * ui,
-            25. * ui,
-            Color::new(1., 0.94, 0.80, 1.),
-        );
         let phase = sim.time().phase;
-        let moment = if phase < 0.20 || phase >= 0.84 {
-            "Under the stars"
-        } else if phase < 0.34 {
-            "A new morning"
-        } else if phase < 0.69 {
-            "Time to wander"
-        } else {
-            "The evening glows"
-        };
-        hud::text_outlined(moment, 38. * ui, 68. * ui, 15. * ui, Color::new(0.88, 0.92, 0.80, 1.));
         if !notice.is_empty() {
             hud::text_outlined(&notice, 24. * ui, screen_height() - 24. * ui, 15. * ui, WHITE);
         }
-        let title = format!("Leo · Day {}", sim.time().days + 1);
+        let title = format!("Leo - Day {}", sim.time().days + 1);
         let outcome = shell.menu_with_audio_settings(
             &title,
             &controls,
@@ -279,12 +265,12 @@ async fn main() {
         next_frame().await;
     }
     if !unattended {
-        if let Err(e) = snapshot::autosave(&sim, &life.slots, 3, &format!("Leo · Day {}", sim.time().days + 1)) {
+        if let Err(e) = snapshot::autosave(&sim, &life.slots, 3, &format!("Leo - Day {}", sim.time().days + 1)) {
             eprintln!("Leo: autosave failed: {e}");
         }
     }
     if let Some(capture) = &life.options.capture {
-        let result = serde_json::json!({"schema":1,"game":"Leo","state":evidence,"muted":muted,"audio_submissions":submissions,"audibility_verified":false});
+        let result = serde_json::json!({"schema":1,"game":"Leo","state":evidence,"asset_root":assets,"muted":muted,"audio_submissions":submissions,"shadows":shadows.quality(),"gameplay_day_overlay":false,"audibility_verified":false});
         std::fs::write(capture.dir.join("run.json"), serde_json::to_vec_pretty(&result).unwrap())
             .unwrap_or_else(|e| fail(e));
     }

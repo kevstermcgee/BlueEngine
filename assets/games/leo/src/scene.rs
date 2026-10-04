@@ -1,4 +1,4 @@
-//! Cached plant geometry, a small animated boy, and a continuous storybook sky. Reads Sim only.
+//! Cached plants, a smiling rounded boy, storybook sky and engine cast shadows. Reads Sim only.
 use leo::{Meadow, Sim, CHUNK_SIZE};
 use macroquad::prelude::*;
 use std::collections::BTreeMap;
@@ -9,7 +9,7 @@ use vesper3d::{
             procedural::{ChunkId, WorldPoint},
             Rng,
         },
-        kit::{Batch, Look, Materials, Template, Tint, View},
+        kit::{Batch, Look, Materials, Shadows, Template, Tint, View},
     },
 };
 
@@ -18,7 +18,7 @@ pub fn smooth(x: f32) -> f32 {
     x * x * (3. - 2. * x)
 }
 pub fn daylight(phase: f32) -> f32 {
-    smooth((-(phase * std::f32::consts::TAU).cos() + 0.15) / 0.55)
+    smooth((-(phase * std::f32::consts::TAU).cos() + 0.22) / 0.44)
 }
 fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     std::array::from_fn(|i| a[i] + (b[i] - a[i]) * t)
@@ -27,15 +27,17 @@ pub fn look(phase: f32) -> Look {
     let day = daylight(phase);
     let elevation = -(phase * std::f32::consts::TAU).cos();
     let warm = (1. - elevation.abs() / 0.3).clamp(0., 1.);
+    let sun = [(phase * std::f32::consts::TAU).sin(), elevation, 0.15];
+    let light = if elevation >= 0. { sun } else { sun.map(|v| -v) };
     Look {
-        ambient_sky: mix([0.20, 0.23, 0.36], [0.56, 0.62, 0.72], day),
+        ambient_sky: mix([0.20, 0.23, 0.36], [0.40, 0.48, 0.56], day),
         ambient_ground: mix([0.10, 0.12, 0.18], [0.24, 0.25, 0.18], day),
-        key_direction: [(phase * std::f32::consts::TAU).sin(), elevation.abs().max(0.15), -0.32],
+        key_direction: [light[0], light[1].max(0.15), light[2]],
         key_color: mix([0.32, 0.38, 0.65], mix([0.95, 0.9, 0.69], [1., 0.52, 0.30], warm), day),
         rim_color: mix([0.48, 0.55, 0.87], [1., 0.79, 0.47], day),
         rim_strength: 0.22,
         fog_color: mix([0.07, 0.085, 0.15], mix([0.64, 0.76, 0.73], [0.76, 0.47, 0.39], warm), day),
-        fog_density: 0.035,
+        fog_density: 0.026,
         exposure: 1.,
     }
 }
@@ -48,11 +50,12 @@ pub struct Scene {
     chunks: BTreeMap<ChunkId, ChunkArt>,
     seed: Option<u64>,
     dome: Template,
-    stars: Template,
+    stars: Vec<Template>,
     body: Template,
     arm: Template,
     leg: Template,
     world: Batch,
+    actors: Batch,
     sky: Batch,
     glow: Batch,
 }
@@ -163,7 +166,7 @@ impl Scene {
         dome.sky_dome(200., |_| [0.; 3], 48, 24);
         let mut stars = Template::new();
         let mut rng = Rng::new(0x4c454f);
-        for i in 0..2600 {
+        for i in 0..6000 {
             // A tilted band suggests the Milky Way among the scattered brighter stars.
             let dir = if i % 2 == 0 {
                 let a = rng.range(0., std::f32::consts::TAU);
@@ -174,8 +177,8 @@ impl Scene {
             let at = dir * 185.;
             let r = dir.cross(Vec3::Y).normalize_or_zero();
             let u = r.cross(dir);
-            let size = if i % 17 == 0 { 0.24 } else { rng.range(0.035, 0.12) };
-            let brightness = rng.range(0.25, 0.95);
+            let size = if i % 37 == 0 { 0.48 } else { rng.range(0.11, 0.32) };
+            let brightness = rng.range(0.40, 0.95);
             stars.quad_facing(
                 [at - r * size, at + u * size, at + r * size, at - u * size],
                 -dir,
@@ -184,32 +187,66 @@ impl Scene {
             );
         }
         let mut body = Template::new();
-        body.rounded_box(vec3(0., 0.78, 0.), vec3(0.20, 0.24, 0.12), 0.05, [0.93, 0.68, 0.26], 0.);
-        body.box_(vec3(0., 0.54, 0.), vec3(0.17, 0.10, 0.12), [0.27, 0.41, 0.55], 0.);
-        body.ball(vec3(0., 1.14, 0.), vec3(0.17, 0.18, 0.15), [0.90, 0.65, 0.46], 0., 12, 8);
-        body.ball(vec3(0., 1.26, 0.015), vec3(0.175, 0.095, 0.15), [0.25, 0.16, 0.10], 0., 10, 6);
-        for x in [-0.065, 0.065] {
-            body.ball(vec3(x, 1.15, -0.137), Vec3::splat(0.018), [0.14, 0.15, 0.17], 0., 7, 4);
-            body.ball(vec3(x * 1.4, 1.10, -0.13), vec3(0.03, 0.018, 0.009), [0.91, 0.46, 0.41], 0., 6, 3);
+        let skin = [0.95, 0.72, 0.53];
+        let shirt = [0.96, 0.72, 0.32];
+        let hair = [0.35, 0.22, 0.13];
+        // Oval silhouette and rounded shoulders/hips instead of a box-shaped torso and bag.
+        body.ball(vec3(0., 0.78, 0.), vec3(0.185, 0.25, 0.125), shirt, 0., 16, 10);
+        body.capsule(vec3(-0.085, 0.54, 0.), vec3(0.085, 0.54, 0.), 0.105, [0.30, 0.46, 0.60], 0., 12);
+        body.capsule(vec3(0., 0.97, 0.), vec3(0., 1.05, 0.), 0.052, skin, 0., 10);
+        body.ball(vec3(0., 1.14, 0.), vec3(0.195, 0.19, 0.17), skin, 0., 20, 14);
+        for x in [-0.19, 0.19] {
+            body.ball(vec3(x, 1.13, 0.), vec3(0.032, 0.047, 0.025), skin, 0., 10, 6);
         }
-        body.rod(vec3(-0.025, 1.075, -0.144), vec3(0.025, 1.075, -0.144), 0.005, 0.005, [0.43, 0.24, 0.18], 0., 4);
-        body.rounded_box(vec3(0., 0.82, 0.18), vec3(0.145, 0.19, 0.075), 0.035, [0.55, 0.29, 0.24], 0.);
+        // Soft chestnut hair, swept across the forehead with distinct curved locks.
+        body.ball(vec3(0., 1.195, 0.065), vec3(0.195, 0.14, 0.13), hair, 0., 16, 10);
+        for i in 0..6 {
+            let x = -0.145 + i as f32 * 0.05;
+            body.capsule(
+                vec3(x - 0.025, 1.285, -0.045),
+                vec3(x + 0.036, 1.225 + i as f32 * 0.009, -0.115),
+                0.038,
+                [0.36 + i as f32 * 0.009, 0.225 + i as f32 * 0.006, 0.135],
+                0.,
+                10,
+            );
+        }
+        for x in [-0.065, 0.065] {
+            body.ball(vec3(x, 1.155, -0.159), vec3(0.022, 0.024, 0.011), [0.98, 0.95, 0.86], 0., 10, 6);
+            body.ball(vec3(x, 1.155, -0.169), vec3(0.011, 0.016, 0.006), [0.19, 0.25, 0.20], 0., 8, 5);
+            body.ball(vec3(x - 0.003, 1.160, -0.175), Vec3::splat(0.004), [1., 1., 0.94], 0.2, 6, 4);
+            body.ball(vec3(x * 1.6, 1.10, -0.147), vec3(0.034, 0.018, 0.009), [0.94, 0.55, 0.47], 0., 10, 5);
+        }
+        body.ball(vec3(0., 1.116, -0.169), vec3(0.018, 0.022, 0.023), skin, 0., 10, 6);
+        for i in 0..8 {
+            let smile = |a: f32| vec3(a * 0.048, 1.063 + a * a * 0.018, -0.163 + a * a * 0.006);
+            body.rod(
+                smile(i as f32 / 4. - 1.),
+                smile((i + 1) as f32 / 4. - 1.),
+                0.0045,
+                0.0045,
+                [0.48, 0.27, 0.22],
+                0.,
+                6,
+            );
+        }
         let mut arm = Template::new();
-        arm.capsule(Vec3::ZERO, vec3(0., -0.28, 0.), 0.065, [0.93, 0.68, 0.26], 0., 7);
-        arm.ball(vec3(0., -0.33, 0.), Vec3::splat(0.06), [0.90, 0.65, 0.46], 0., 7, 4);
+        arm.capsule(Vec3::ZERO, vec3(0., -0.28, 0.), 0.060, shirt, 0., 12);
+        arm.ball(vec3(0., -0.33, 0.), Vec3::splat(0.055), skin, 0., 12, 8);
         let mut leg = Template::new();
-        leg.capsule(Vec3::ZERO, vec3(0., -0.31, 0.), 0.065, [0.27, 0.41, 0.55], 0., 7);
+        leg.capsule(Vec3::ZERO, vec3(0., -0.31, 0.), 0.065, [0.30, 0.46, 0.60], 0., 12);
         leg.ball(vec3(0., -0.39, -0.035), vec3(0.075, 0.065, 0.115), [0.30, 0.22, 0.16], 0., 8, 4);
         Self {
             plants: (0..9).map(plant).collect(),
             chunks: BTreeMap::new(),
             seed: None,
             dome,
-            stars,
+            stars: stars.split(),
             body,
             arm,
             leg,
             world: Batch::new(),
+            actors: Batch::new(),
             sky: Batch::new(),
             glow: Batch::new(),
         }
@@ -250,7 +287,14 @@ impl Scene {
         }
         ChunkArt { trees: trees.split(), flowers: flowers.split() }
     }
-    pub fn draw(&mut self, sim: &Sim, alpha: f32, materials: &Materials, portrait: bool) -> Result<View, String> {
+    pub fn draw(
+        &mut self,
+        sim: &Sim,
+        alpha: f32,
+        materials: &Materials,
+        shadows: &mut Shadows,
+        portrait: bool,
+    ) -> Result<View, String> {
         if self.seed != Some(sim.seed) {
             self.chunks.clear();
             self.seed = Some(sim.seed);
@@ -265,9 +309,10 @@ impl Scene {
         let p = sim.interpolated(alpha);
         let yaw = sim.player.yaw + if portrait { std::f32::consts::PI } else { 0. };
         let focus = V(p.0, p.1 - sim.player.profile().eye_height + 0.95, p.2);
-        let desired = focus - V(yaw.sin(), 0., -yaw.cos()) * 4.8 + V(0., 1.05, 0.);
+        let (distance, height, pitch) = if portrait { (2.6, 0.45, -0.10) } else { (4.8, 1.05, -0.20) };
+        let desired = focus - V(yaw.sin(), 0., -yaw.cos()) * distance + V(0., height, 0.);
         let eye = sim.camera_eye(focus, desired)?;
-        let mut view = View::first_person(vec3(eye.0, eye.1, eye.2), yaw, (sim.player.pitch - 0.20).clamp(-1.2, 1.2));
+        let mut view = View::first_person(vec3(eye.0, eye.1, eye.2), yaw, (sim.player.pitch + pitch).clamp(-1.2, 1.2));
         view.fov = 65f32.to_radians();
         let phase = sim.time().phase;
         let day = daylight(phase);
@@ -278,13 +323,16 @@ impl Scene {
         for v in &mut self.dome.verts {
             let h = (v.p.y / 200.).max(0.).sqrt();
             let night = mix([0.08, 0.075, 0.16], [0.014, 0.02, 0.07], h);
-            let daylight = mix(mix([0.76, 0.80, 0.68], [0.92, 0.50, 0.37], warm), [0.28, 0.49, 0.69], h);
-            v.c = mix(night, daylight, day);
+            let daylight = mix([0.76, 0.80, 0.68], [0.28, 0.49, 0.69], h);
+            let twilight = mix([0.98, 0.59, 0.38], [0.26, 0.25, 0.49], h);
+            v.c = mix(mix(night, daylight, day), twilight, warm * (1. - h * 0.65));
         }
         self.sky.clear();
         self.glow.clear();
         self.sky.add(&self.dome, Mat4::IDENTITY, Tint::NONE);
-        self.glow.add(&self.stars, Mat4::IDENTITY, Tint { alpha: (1. - day).powi(2), ..Tint::NONE });
+        for stars in &self.stars {
+            self.glow.add(stars, Mat4::IDENTITY, Tint { alpha: (1. - day).powi(2), ..Tint::NONE });
+        }
         let mut objects = Template::new();
         let a = phase * std::f32::consts::TAU;
         let sun = vec3(a.sin(), -a.cos(), 0.15).normalize() * 180.;
@@ -297,6 +345,7 @@ impl Scene {
         gl_use_material(&materials.fx_add);
         self.glow.draw();
         self.world.clear();
+        self.actors.clear();
         for (id, chunk) in &self.chunks {
             let [x, z] = WorldPoint { chunk: *id, local: [0.; 2] }.relative(sim.origin, CHUNK_SIZE)?;
             let dist = (x + 16. - p.0).hypot(z + 16. - p.2);
@@ -317,25 +366,35 @@ impl Scene {
             * Mat4::from_rotation_y(-sim.player.yaw);
         let speed = (sim.player.position - sim.previous).length() / vesper3d::viewer::devkit::TICK;
         let stride = ((sim.tick as f64 * 0.23).sin() as f32) * (speed / 6.).clamp(0., 1.);
-        self.world.add(&self.body, root, Tint::NONE);
+        self.actors.add(&self.body, root, Tint::NONE);
         for sign in [-1., 1.] {
-            self.world.add(
+            self.actors.add(
                 &self.leg,
                 root * Mat4::from_translation(vec3(sign * 0.105, 0.44, 0.))
                     * Mat4::from_rotation_x(sign * stride * 0.55),
                 Tint::NONE,
             );
-            self.world.add(
+            self.actors.add(
                 &self.arm,
-                root * Mat4::from_translation(vec3(sign * 0.26, 0.95, 0.))
+                root * Mat4::from_translation(vec3(sign * 0.19, 0.95, 0.))
                     * Mat4::from_rotation_x(-sign * stride * 0.4),
                 Tint::NONE,
             );
         }
+        shadows.begin_frame(&mood, vec3(focus.0, focus.1, focus.2));
+        shadows.blob(vec3(p.0, p.1 - sim.player.profile().eye_height, p.2), 0.45);
+        shadows.cast(|| {
+            self.world.draw();
+            self.actors.draw();
+        });
         set_camera(&view.camera_checked(0.08, 180.));
         materials.set_scene(&mood, view.eye, (sim.tick % 2160000) as f32 / 60., 0.);
+        shadows.apply(materials);
         gl_use_material(&materials.world);
         self.world.draw();
+        shadows.draw_decals(materials);
+        gl_use_material(&materials.world);
+        self.actors.draw();
         gl_use_default_material();
         set_default_camera();
         Ok(view)

@@ -50,7 +50,7 @@ jobs:
           CARGO_TARGET_DIR: ${{ github.workspace }}/target
         run: |
           python assets/games/leo/scripts/ship.py ship --folder .be2-work/leo-launchers --no-build --no-launch --no-smoke
-          python assets/games/leo/scripts/check.py --tools target/release/be2-tools --ship-folder .be2-work/leo-launchers
+          python assets/games/leo/scripts/check.py --ship-folder .be2-work/leo-launchers
       - name: Stock audio offscreen verification (Linux)
         if: runner.os == 'Linux'
         env:
@@ -60,7 +60,7 @@ jobs:
         if: runner.os == 'Linux'
         env:
           BE2_AUDIO_OFFSCREEN: '1'
-        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/leo_smoke.py target/release/leo .be2-work/leo-capture
+        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/leo_smoke.py assets/games/leo/dist/leo .be2-work/leo-capture
       - name: Verification evidence
         if: always()
         uses: actions/upload-artifact@v4

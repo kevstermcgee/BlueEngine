@@ -10,5 +10,6 @@
     "--exit-after",
     "100"
   ],
-  "engine_revision": "678f4a9ab5e8"
+  "package": ["assets/audio", "AUDIO.md"],
+  "engine_revision": "2c2cebd4a3af"
 }

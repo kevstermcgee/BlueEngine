@@ -46,7 +46,14 @@ from this state; do not run a separate wall-clock day timer in the renderer.
 Save authoritative seed, chunk/local movement state and tick through `Snapshot`.
 Regenerate chunks on restore. Leo demonstrates origin rebasing, tree collision,
 an exact save continuation, day-count menu, imported nature loops and an authored
-score. Its fields are flat with decorative plant geometry; it adds no biome editor,
+score. Its walking view stays clear; the main and pause menus show the saved day.
+The renderer reuses `kit::Shadows` for the boy and trees, with the sun/moon direction
+derived from the same clock as the sky. The map follows the nearby render origin;
+it does not grow with the visited world. Full shadows fall back to contact shadows
+when the map is unavailable, and captures report the actual tier. Package the named
+banks through `identity.package` and capture the shipped executable without a source
+asset override: a successful source-tree preview cannot prove an installed game's assets.
+Its fields are flat with decorative plant geometry; it adds no biome editor,
 terrain tessellator, asynchronous chunk worker, network protocol or world database.
 
 Verification: `cargo test --profile itest --no-default-features --test procedural_world`,

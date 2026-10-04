@@ -4,7 +4,13 @@ A little boy, an endless meadow, and another morning. Wander through fields and
 groves of oak, silver birch, Scots pine and rowan, with daisies, buttercups, red
 clover and cornflowers. The stylized plants use real species as visual references.
 Each twelve-minute day moves continuously through sunrise, daylight, sunset and
-stars. The menu shows your current day. There is no score, combat or deadline.
+stars. The main and pause menus show your current day; the walking view has no
+day counter or status panel. There is no score, combat or deadline.
+
+Leo has a soft smile, rounded proportions and swept chestnut hair. He travels
+without a backpack. Trees and the boy cast directional sun/moon shadows using
+the engine's bounded, texel-snapped shadow map, with contact-shadow fallback on
+devices unable to create the map. The starfield and warm horizon fade continuously.
 
 WASD or the left stick moves; Shift runs; Space hops; mouse or right stick looks.
 Esc opens the menu, including Controls and Settings. Music starts enabled; its

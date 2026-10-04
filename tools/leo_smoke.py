@@ -21,23 +21,31 @@ def main():
     alsa.write_text("pcm.!default { type null }\n")
     env = {**os.environ, "ALSA_CONFIG_PATH": str(alsa), "LIBGL_ALWAYS_SOFTWARE": "1"}
     binary = args.binary.resolve()
-    assets = root / "assets/games/leo/assets"
-    def run(label, script, frames, end, *, source=assets, extra=()):
+    assets = binary.parent / "assets"
+    assert (assets / "audio/nature/bank.json").is_file(), "packaged nature assets missing"
+    assert (assets / "audio/music/bank.json").is_file(), "packaged score assets missing"
+    assert (binary.parent / "AUDIO.md").is_file(), "packaged credits missing"
+    def run(label, script, frames, end, *, source=None, extra=()):
         capture = output / label
-        command = [str(binary), "--assets", str(source), "--capture", str(capture), "--frames", frames,
+        command = [str(binary), "--capture", str(capture), "--frames", frames,
                    "--exit-after", str(end), "--day-seconds", "4", "--seed", "7", "--size", "960x600",
                    "--settings", str(output / "settings.json"), "--save-dir", str(output / "saves"),
                    "--script", script, "--perf", *extra]
+        if source is not None:
+            command += ["--assets", str(source)]
         result = subprocess.run(command, env=env, cwd=root, text=True, capture_output=True, timeout=600)
         (output / f"{label}.log").write_text(result.stdout + result.stderr)
         return result, capture
     positive, capture = run("cycle", "look:1.4/-0.12@0,fwd:1-320,sprint:1-320,right:90-140,left:220-260,jump@90,music@60,music@80,save@340,menu@500",
-                            "0,55,65,85,125,175,240,340,498,501", 503, extra=["--verify-audio"])
+                            "0,6,55,65,85,125,175,240,340,498,501", 503, extra=["--verify-audio"])
     if positive.returncode:
         raise RuntimeError(f"Leo capture failed ({positive.returncode}): {positive.stderr[-2000:]}")
     report = json.loads((capture / "run.json").read_text())
     rows = report["state"]
+    assert Path(report["asset_root"]).resolve() == assets.resolve(), "must load assets beside shipped exe"
     assert report["audio_submissions"] == 503 and not report["muted"]
+    assert report["shadows"] == "full", "capture must exercise the engine shadow map"
+    assert report["gameplay_day_overlay"] is False
     assert all(row["audio_ready"] and row["chunks"] == 49 for row in rows)
     assert rows[-1]["days"] >= 2 and rows[-1]["paused"]
     assert not next(r for r in rows if r["frame"] == 65)["music_on"]
@@ -56,6 +64,9 @@ def main():
     assert restored["tick"] == saved["tick"] - 1 and restored["days"] == saved["days"]
     assert restored["origin"] == saved["origin"] and restored["paused"]
     assert json.loads((output / "settings.json").read_text())["music_on"] is True
+    portrait, portrait_dir = run("portrait", "", "55", 56, extra=["--mute", "--portrait"])
+    assert portrait.returncode == 0, portrait.stderr
+    assert (portrait_dir / "shot_00055.png").stat().st_size > 1000
     # A corrupt bank fails explicitly; a normal silent capture proves only rendering and never submits audio.
     broken = output / "broken-assets"
     shutil.copytree(assets / "audio", broken / "audio")
@@ -68,7 +79,8 @@ def main():
     evidence = {"ok": True, "platform": "Linux CI / virtual display / software GL / null ALSA", "frames": 503,
                 "days": rows[-1]["days"], "audio_submissions": report["audio_submissions"],
                 "save_resume": True, "music_toggle_persisted": True, "negative_exit": negative.returncode,
-                "audibility_verified": False}
+                "shadows": report["shadows"], "day_count_in_menu_only": True,
+                "portrait": "portrait/shot_00055.png", "audibility_verified": False}
     (output / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
     print(json.dumps(evidence))
 
