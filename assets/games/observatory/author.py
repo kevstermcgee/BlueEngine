@@ -13,7 +13,7 @@ def write(path, value):
     path.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
 
 
-def author(directory, tools):
+def author(directory, tools, audio=False):
     directory.mkdir(parents=True, exist_ok=False)
     evidence = []
 
@@ -121,11 +121,23 @@ def author(directory, tools):
     run("game-explore", "game.json", "--scenario=win.json")
     run("lint", "edited-map.json", "--game=game.json", "--scenario=win.json")
     write(directory / "authoring-evidence.json", evidence)
+    if audio:
+        bindings = json.loads((Path(__file__).parent / "content/audio-bindings.json").read_text())
+        game["presentation"]["audio"] = bindings
+        write(directory / "game-audio.json", game)
+        project = Path(__file__).resolve().parents[2] / "audio/observatory/project.json"
+        run("audio", "render", str(project), "audio")
+        run("audio", "check", "audio")
+        run("game-validate", "game-audio.json")
+        scenario = json.loads((Path(__file__).parent / "content/loss-restart-win.json").read_text())
+        scenario["game_path"] = "game-audio.json"
+        write(directory / "audio-loss-restart-win.json", scenario)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     parser.add_argument("--tools", type=Path, required=True)
+    parser.add_argument("--audio", action="store_true", help="Render a checked bundle and stock audio acceptance variant")
     args = parser.parse_args()
-    author(args.directory.resolve(), args.tools.resolve())
+    author(args.directory.resolve(), args.tools.resolve(), args.audio)

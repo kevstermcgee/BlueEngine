@@ -461,10 +461,17 @@ impl GameDocument {
     }
 
     pub fn load(path: &Path) -> Result<LoadedGame> {
-        let document: Self = serde_json::from_slice(&read_bounded(path, MAX_GAME_BYTES)?)?;
+        let mut document: Self = serde_json::from_slice(&read_bounded(path, MAX_GAME_BYTES)?)?;
         let map_path = document.map_path(path)?;
         let map: MapDocument = serde_json::from_slice(&read_bounded(&map_path, MAX_MAP_BYTES)?)?;
         document.validate(&map)?;
+        if let Some(audio) = document
+            .presentation
+            .as_mut()
+            .and_then(|p| p.audio.as_mut())
+        {
+            audio.root = path.canonicalize()?.parent().map(Path::to_path_buf);
+        }
         Ok(LoadedGame { document, map })
     }
 

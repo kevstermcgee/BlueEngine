@@ -2125,7 +2125,15 @@
         "assets/audio/observatory/README.md",
         "docs/AUDIO.md",
         "tools/audio_report.py",
-        "tools/test_media_tools.py"
+        "tools/test_media_tools.py",
+        "src/viewer/stock_audio.rs",
+        "tests/stock_audio.rs",
+        "assets/games/observatory/content/audio-bindings.json",
+        "assets/games/observatory/content/game-audio.json",
+        "assets/games/observatory/content/audio-loss-restart-win.json",
+        "assets/games/observatory/content/audio/",
+        "tools/stock_audio_smoke.py",
+        "docs/analysis/stock-audio.md"
       ],
       "read_first": [
         "docs/AUDIO.md",
@@ -2135,7 +2143,8 @@
       "checks": [
         "cargo test --locked --test audio_project",
         "cargo test --locked --lib kit::audio",
-        "python -m unittest tools.test_media_tools"
+        "python -m unittest tools.test_media_tools",
+        "cargo test --locked --test stock_audio"
       ],
       "keywords": [
         "audio",
@@ -2167,12 +2176,18 @@
         "loudness",
         "spectrogram",
         "audio preview",
-        "sound effects"
+        "sound effects",
+        "stock audio",
+        "GameDocument audio",
+        "audio pipeline",
+        "gameplay audio",
+        "counter cue",
+        "stock music"
       ],
-      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported.",
+      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream.",
       "contract": {
         "owns": "Data-authored effects and music, reusable checked PCM bundles, named presentation playback and numeric quality evidence",
-        "inputs": "Versioned AudioProject JSON, seed, optional imported WAV and read-only game events",
+        "inputs": "Versioned AudioProject JSON, seed, optional imported WAV and read-only game events, optional presentation.audio state bindings",
         "outputs": "PCM16 stereo assets, bank metadata, diagnostics and playback submissions",
         "may_depend_on": [
           "custom_simulation",
@@ -2185,7 +2200,8 @@
         "performance": "Render before shipping; worker reads/checks assets, bounded decoder submissions per poll",
         "consumers": [
           "custom clients",
-          "audio authoring agents"
+          "audio authoring agents",
+          "stock GameDocument runner"
         ]
       },
       "public_api": [
@@ -2193,7 +2209,10 @@
         "AudioBundle",
         "AudioBank",
         "AudioState",
-        "checked_wav"
+        "checked_wav",
+        "StockAudio",
+        "AudioCursor",
+        "GameSession::advance_observed"
       ],
       "depends_on": [
         "custom_simulation",
@@ -2236,6 +2255,7 @@
     "docs/adr/0037-shared-multi-game-hub.md": "ADR 0037: One hub, one name, every BlueEngine online game",
     "docs/adr/0038-engine-learns-from-development.md": "ADR 0038: The engine learns from the games built on it",
     "docs/analysis/external-inspiration-study.md": "External inspiration study",
+    "docs/analysis/stock-audio.md": "Stock audio runtime integration",
     "docs/learning/README.md": "Learning from the games built on Blue",
     "docs/learning/REPORT.md": "What the engine has learned from the games built on it",
     "docs/perf/README.md": "Performance data",
@@ -2371,6 +2391,7 @@
     "src/viewer/simulation.rs": "Simulation must remain usable without graphics, audio or a window.",
     "src/viewer/spans.rs": "A handful of named timing spans and one compact summary, for seeing where a tick goes.",
     "src/viewer/spatial.rs": "Room / zone graph and spatial partitioning for indoor maps and interest management.",
+    "src/viewer/stock_audio.rs": "Stock GameDocument audio pipeline: checked bundles, confirmed-state cues, adaptive music and settings.",
     "src/viewer/stock_presentation.rs": "Stock GameDocument HUD wording, counter labels/units and palette; reads authoritative state only.",
     "src/viewer/symbols.rs": "High-performance on-demand Rust source navigator for BlueEngine (be2-tools src).",
     "src/viewer/ui_check.rs": "Headless 2D UI layout auditor for BlueEngine menus and screens.",
@@ -2395,6 +2416,7 @@
     "tools/mcp_server.py": "BlueEngine MCP Server launcher.",
     "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
     "tools/place_interior.py": "Place data-only interior prefabs and validate with the packaged native engine.",
+    "tools/stock_audio_smoke.py": "CI-only stock audio playback/capture on an isolated X display and null ALSA sink.",
     "tools/upgrade.py": "Version-aware upgrade planning and verification for games built on BlueEngine.",
     "tools/workflow.py": "Bounded context lookup and conservative validation selection.",
     "tools/xcapture.py": "See a game on a machine with no display: run it on a virtual display and save real screenshots."

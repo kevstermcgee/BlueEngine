@@ -354,6 +354,7 @@ fn run() -> Result<()> {
                 "map":"relative child file inside game directory; loaded content participates in fingerprint",
                 "authoring":"add-interactable GAME ID --at=X,Y,Z --write creates matching material/node/collider/entity/game records; apply a translate patch selecting node, collider and entity together to edit without recalculating bounds",
                 "presentation":"optional presentation: objective/success/failure wording, counters {visible,label,units,format:number|clock}, RGBA palette, hud {scale:0.75..1.5,margin:8..48,width:240..900,crosshair}; reads authoritative state, missing preserves defaults",
+                "audio":"optional presentation.audio: bundle child path, cues [{cue,on:{kind:counter_changed|counter_at_or_below|completed|failed|restarted},volume}], music {LAYER:{level,counter:{name,from,to}}}; see docs/AUDIO.md; game-validate checks configured assets, headless authority opens no device",
                 "physical_scenarios":"game-explore GAME --scenario=NEW.json routes around current colliders with the active profile and verifies a win in shared simulation; route:true enables replanning on walk_to; wait_ticks:1 separates repeated presses after blocking walks; be2 --game GAME --scenario SCENARIO --capture NEW_DIR renders the same steps",
                 "unsupported":["recursive events","custom weapon actions","per-player inventory"]
             })
@@ -364,7 +365,19 @@ fn run() -> Result<()> {
             println!("{}", json!({"ok":true,"directory":arg(1)?}));
         }
         "game-validate" => {
-            let world = vesper3d::viewer::game::GameDocument::load(Path::new(arg(1)?))?.world()?;
+            let loaded = vesper3d::viewer::game::GameDocument::load(Path::new(arg(1)?))?;
+            if let Some(audio) = loaded
+                .document
+                .presentation
+                .as_ref()
+                .and_then(|p| p.audio.as_ref())
+            {
+                let path = audio.bundle_path(None)?;
+                let bank = vesper3d::viewer::devkit::audio_project::AudioBundle::load(&path)?;
+                audio.validate_bank(&bank)?;
+                bank.read_audio(&path)?;
+            }
+            let world = loaded.world()?;
             println!(
                 "{}",
                 json!({"ok":true,"content_hash":format!("{:016x}",world.content_hash),"state":world.game.as_ref().unwrap().state()})

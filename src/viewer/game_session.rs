@@ -227,8 +227,20 @@ impl GameSession {
         Ok(())
     }
     /// Poll networking even while paused. Bounded catch-up avoids simulating a stall.
-    pub fn advance(&mut self, mut input: GameInput, seconds: f32, playing: bool) -> Result<usize> {
+    pub fn advance(&mut self, input: GameInput, seconds: f32, playing: bool) -> Result<usize> {
+        self.advance_observed(input, seconds, playing, |_| {})
+    }
+    /// Read-only presentation observer after network polling and every executed local tick.
+    /// Catch-up preserves separate transitions; online snapshots cannot recover unreplicated events.
+    pub fn advance_observed(
+        &mut self,
+        mut input: GameInput,
+        seconds: f32,
+        playing: bool,
+        mut observe: impl FnMut(&super::game::GameState),
+    ) -> Result<usize> {
         self.poll()?;
+        observe(self.world.game.as_ref().unwrap().state());
         if !seconds.is_finite() || seconds <= 0. {
             return Ok(0);
         }
@@ -300,6 +312,7 @@ impl GameSession {
                 if self.world.game.as_ref().unwrap().state().round != round {
                     self.previous = self.controller.clone();
                 }
+                observe(self.world.game.as_ref().unwrap().state());
             }
             self.remainder = (self.remainder - STEP).max(0.);
             steps += 1;

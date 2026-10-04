@@ -53,5 +53,6 @@ Limits: numeric evidence does not assess pleasantness, balance by ear, audible p
 actual AI token use or player-facing performance. The backend submits stems individually; no
 sample-clock start guarantee. Authored pan/pitch is PCM, not a live spatial/per-voice API. Asset
 headroom is not a final runtime limiter across simultaneous effects plus music. Large banks need
-partitioning. The stock GameDocument runner's audio pipeline and split-screen co-op are separate
-work; this fixture does not duplicate gameplay authority or claim those features.
+partitioning. The stock runner subsequently gained the opt-in pipeline documented in docs/AUDIO.md;
+its dedicated stock fixture is separate from this preview evidence. Split-screen co-op remains separate
+work; this fixture does not duplicate gameplay authority or claim that feature.

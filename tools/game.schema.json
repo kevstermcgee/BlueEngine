@@ -726,6 +726,186 @@
               "type": "boolean"
             }
           }
+        },
+        "audio": {
+          "anyOf": [
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "bundle": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 200,
+                  "pattern": "^[^\\\\:]+$"
+                },
+                "cues": {
+                  "type": "array",
+                  "maxItems": 64,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "cue": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 48,
+                        "pattern": "^[A-Za-z0-9_-]+$"
+                      },
+                      "volume": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "on": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "kind": {
+                                "const": "completed"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "kind": {
+                                "const": "failed"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "kind": {
+                                "const": "restarted"
+                              }
+                            },
+                            "required": [
+                              "kind"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "kind": {
+                                "const": "counter_changed"
+                              },
+                              "counter": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "counter"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "kind": {
+                                "const": "counter_at_or_below"
+                              },
+                              "counter": {
+                                "type": "string"
+                              },
+                              "value": {
+                                "type": "integer",
+                                "minimum": -1000000,
+                                "maximum": 1000000
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "counter",
+                              "value"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "cue",
+                      "on"
+                    ]
+                  }
+                },
+                "music": {
+                  "type": "object",
+                  "maxProperties": 16,
+                  "propertyNames": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 48,
+                    "pattern": "^[A-Za-z0-9_-]+$"
+                  },
+                  "additionalProperties": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                      "level": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "counter": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "from": {
+                                "type": "integer",
+                                "minimum": -1000000,
+                                "maximum": 1000000
+                              },
+                              "to": {
+                                "type": "integer",
+                                "minimum": -1000000,
+                                "maximum": 1000000
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "from",
+                              "to"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "play_when_finished": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "bundle"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     }

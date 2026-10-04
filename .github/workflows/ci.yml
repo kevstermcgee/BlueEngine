@@ -27,7 +27,7 @@ jobs:
           key: engine-checks
       - name: Install FFmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress -y
@@ -37,9 +37,20 @@ jobs:
         run: python tools/be2.py check
       - run: cargo build --release --locked
       - run: cargo build --release --locked --no-default-features --bin be2-headless
+      - name: Stock audio offscreen verification (Linux)
+        if: runner.os == 'Linux'
+        env:
+          BE2_AUDIO_OFFSCREEN: '1'
+        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/stock_audio_smoke.py target/release/be2 .be2-work/stock-audio
       - name: Verification evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: engine-checks-${{ runner.os }}
           path: .be2-work/check-*/
+      - name: Stock audio rendered evidence
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-audio-offscreen
+          path: .be2-work/stock-audio/

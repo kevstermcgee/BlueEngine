@@ -43,3 +43,22 @@ the closed-gate variant remains unproven. All engine verification gates remain i
 route and changing shutter, checks body-profile routing, compares separated/coalesced repeated interactions,
 and verifies loss/restart/win plus the rendered-session checksum. It also covers HUD defaults, formatting and
 invalid configuration. Real frame captures are documented in the implementation evidence report.
+
+## Stock audio
+
+`content/game-audio.json` opts into the real stock audio pipeline. Its checked `content/audio` bundle
+comes from `assets/audio/observatory/project.json`; `audio-bindings.json` maps the confirmed shutter
+counter to its cue, calibration changes to short ticks, battery crossing five to an alarm, loss and
+success to cues, and restart to a quieter cue. The signal layer rises with the authoritative calibration
+counter. This is stock playback, not the standalone audio-preview example.
+
+```sh
+python assets/games/observatory/author.py NEW_DIRECTORY --tools target/fast/be2-tools --audio
+target/fast/be2-tools game-validate assets/games/observatory/content/game-audio.json
+target/fast/be2 --game assets/games/observatory/content/game-audio.json --scenario assets/games/observatory/content/audio-loss-restart-win.json --capture NEW_CAPTURE_DIRECTORY --settings NEW_SETTINGS_FILE
+```
+
+Use `.exe` on Windows. Esc > Settings has persistent Sound/Music toggles; `--mute` explicitly skips
+audio for one run. Data edits only need rerendering and validation. Startup refuses corrupt/missing
+assets rather than continuing a scripted run with silent failure. The original silent fixture and its
+evidence remain available. Physical audibility and real controller input require separate hardware tests.

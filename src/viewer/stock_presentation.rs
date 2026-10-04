@@ -13,6 +13,9 @@ pub struct StockPresentation {
     pub counters: BTreeMap<String, CounterDisplay>,
     pub palette: Palette,
     pub hud: Hud,
+    /// Optional checked audio bundle and read-only state bindings. Missing remains silent.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub audio: Option<super::stock_audio::StockAudio>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -85,6 +88,9 @@ impl Default for Hud {
 
 impl StockPresentation {
     pub fn validate(&self, counters: &BTreeMap<String, i32>) -> Result<()> {
+        if let Some(audio) = &self.audio {
+            audio.validate(counters)?;
+        }
         let text_ok = |text: &str, limit: usize| {
             !text.is_empty() && text.len() <= limit && text.bytes().all(|b| (32..=126).contains(&b))
         };

@@ -16,6 +16,15 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ContextTests(unittest.TestCase):
+    def test_stock_audio_pipeline_and_bindings_are_discoverable(self):
+        packet = workflow.context(ROOT, 'stock GameDocument audio pipeline cues and adaptive music')
+        feature = packet['matches'][0]
+        self.assertEqual(feature['id'], 'audio_authoring')
+        self.assertIn('docs/AUDIO.md', feature['read_first'])
+        self.assertIn('StockAudio', feature['public_api'])
+        self.assertIn('AudioCursor', feature['public_api'])
+        self.assertFalse(packet['engine_source_read'])
+
     def test_named_audio_authoring_is_discoverable_without_source_exploration(self):
         packet = workflow.context(ROOT, 'compose stereo music score with MIDI notes and preview named sound effects')
         feature = packet['matches'][0]

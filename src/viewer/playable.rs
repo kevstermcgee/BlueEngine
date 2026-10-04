@@ -39,6 +39,12 @@ pub struct GameOptions {
     pub save_dir: Option<PathBuf>,
     /// Resume a saved game at start: a slot name in the save directory (`quick`) or a save file path.
     pub load: Option<String>,
+    /// Constructed games can supply their asset root; loaded documents already carry it.
+    pub audio_root: Option<PathBuf>,
+    /// Optional settings location, otherwise settings.json beside the executable.
+    pub settings_path: Option<PathBuf>,
+    /// Disable stock audio asset/device loading for this run.
+    pub mute: bool,
 }
 impl GameOptions {
     /// Shared stock/generated CLI: --connect, --transport, --auth-key, --character,
@@ -88,6 +94,9 @@ impl GameOptions {
             scenario: value("--scenario")?.map(PathBuf::from),
             save_dir: value("--save-dir")?.map(PathBuf::from),
             load: value("--load")?.map(str::to_owned),
+            audio_root: value("--audio-root")?.map(PathBuf::from),
+            settings_path: value("--settings")?.map(PathBuf::from),
+            mute: args.iter().any(|a| a == "--mute"),
         })
     }
 }
@@ -173,6 +182,14 @@ pub async fn run_game_with_options(
         toast.show(note);
     }
     let mut shell = GameShell::new();
+    let mut audio = super::stock_audio::StockSound::load(
+        session.world().game.as_ref().unwrap().document(),
+        session.world().game.as_ref().unwrap().state(),
+        options.audio_root.as_deref(),
+        options.settings_path.as_deref(),
+        options.mute,
+    )
+    .await?;
     let mut input = ClientInput::new();
     let mut perspective = if options.third_person {
         Perspective::Third
@@ -253,6 +270,11 @@ pub async fn run_game_with_options(
                     view.reset_camera();
                 }
                 toast.show(note);
+                if let Some(audio) = &mut audio {
+                    audio
+                        .cursor
+                        .rebase(session.world().game.as_ref().unwrap().state());
+                }
             }
         }
         // Wall-clock interval between frame starts, not macroquad's get_frame_time(), which is
@@ -294,12 +316,21 @@ pub async fn run_game_with_options(
         {
             perspective.toggle();
         }
+        let mut audio_cues = Vec::new();
+        let was_connected = session.connected();
         if let Some(driver) = &mut scenario_driver {
             if !playback_done {
                 session.advance_scenario(driver, frame as u64 + 1)?;
+                if let Some(audio) = &mut audio {
+                    audio_cues.extend(
+                        audio
+                            .cursor
+                            .observe(session.world().game.as_ref().unwrap().state()),
+                    );
+                }
             }
         } else {
-            session.advance(
+            session.advance_observed(
                 intent,
                 seconds,
                 if playback.is_some() {
@@ -307,8 +338,33 @@ pub async fn run_game_with_options(
                 } else {
                     shell.playing()
                 },
+                |state| {
+                    if let Some(audio) = &mut audio {
+                        if was_connected {
+                            audio_cues.extend(audio.cursor.observe(state));
+                        } else {
+                            audio.cursor.rebase(state);
+                        }
+                    }
+                },
             )?;
         }
+        let audio_trace = audio
+            .as_mut()
+            .map(|audio| {
+                audio.update(
+                    session.world().game.as_ref().unwrap().state(),
+                    if scripted {
+                        !playback_done
+                    } else {
+                        shell.playing()
+                    },
+                    input.frame_seconds(),
+                    &audio_cues,
+                    options.capture.is_some(),
+                )
+            })
+            .transpose()?;
         let default_presentation = super::stock_presentation::StockPresentation::default();
         let presentation = session
             .world()
@@ -408,7 +464,9 @@ pub async fn run_game_with_options(
             "Save / load: F5 / F9 (local games)",
             "Menu: Esc / Start; confirm: Enter / A",
         ];
-        let quit = if session.is_online() {
+        let quit = if let Some(audio) = &mut audio {
+            audio.menu(&mut shell, &title, &controls, session.is_online())
+        } else if session.is_online() {
             shell.menu(&title, &controls)
         } else {
             shell.local_menu(&title, &controls)
@@ -437,7 +495,7 @@ pub async fn run_game_with_options(
                 get_screen_data()
                     .export_png(dir.join(name).to_str().ok_or("Invalid capture path")?);
             }
-            history.push(serde_json::json!({"frame":frame,"tick":session.world().tick,"position":session.controller().position,"completed":now_completed,"failed":now_failed,"round":now_round,"counters":game.state().counters,"status":status}));
+            history.push(serde_json::json!({"frame":frame,"tick":session.world().tick,"position":session.controller().position,"completed":now_completed,"failed":now_failed,"round":now_round,"counters":game.state().counters,"status":status,"audio":audio_trace}));
             completed = now_completed;
             failed = now_failed;
             round = now_round;

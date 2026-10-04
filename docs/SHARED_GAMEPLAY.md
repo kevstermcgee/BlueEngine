@@ -7,6 +7,7 @@ application-specific.
 | Capability | Engine API | Features |
 |---|---|---|
 | Authored local/online game | `playable::run_game_with_options`, `GameOptions` | client |
+| Stock named cues/adaptive music/settings | `GameDocument::presentation.audio`, `stock_audio::{StockAudio, AudioCursor}` | client playback; configuration/observation headless |
 | Graphics-free local/online session | `game_session::{GameSession, GameInput}` | none |
 | Static viewer (no rules or dynamic props) | `local_client::run_map`, `MapPlayer` | client |
 | Keyboard/mouse + native controllers | `game_input::ClientInput` | client |

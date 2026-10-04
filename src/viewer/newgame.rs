@@ -570,7 +570,13 @@ fn content(file: &str) -> std::path::PathBuf {
 }
 
 #[macroquad::main(window)]
-async fn main() -> vesper3d::Result<()> {
+async fn main() {
+    if let Err(error) = run().await {
+        eprintln!("{}", serde_json::json!({"ok":false,"error":error.to_string()}));
+        std::process::exit(1);
+    }
+}
+async fn run() -> vesper3d::Result<()> {
     let game = GameDocument::load(&content("game.json"))?;
     let mut options = playable::GameOptions::from_args(&std::env::args().collect::<Vec<_>>())?;
     options.keyboard = platform::keyboard();
@@ -627,6 +633,9 @@ physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its sim
 - `playable::run_game_with_options` runs authored rules, dynamic props and replay on shared
   authority; `--connect ADDR` uses server state. F5/F9 save and load (engine docs/SAVE_STATE.md;
   never hand-write save files). `run_map` is a static viewer only.
+- Stock audio: author an AudioProject, render its bundle into `assets/audio`, and bind named cues/music
+  in `game.json`'s `presentation.audio` (engine docs/AUDIO.md). `game-validate` checks names and assets;
+  no Rust rebuild for audio edits. Esc > Settings toggles persist; `--mute` skips audio for this run.
 
 ## Running Tests
 - Record friction in the engine: `python tools/learn.py record --game {name} --area AREA --tokens N
