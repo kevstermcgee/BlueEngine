@@ -19,6 +19,6 @@
   "runtime": "portable",
   "mobile_controls": {
     "layout": "paddle",
-    "action_label": "Action"
+    "action_label": null
   }
 }

@@ -157,7 +157,7 @@ def build(game, skip_browser=False):
         mobile=project.get('mobile_controls',{'layout':'dpad','action_label':'Action'})
         page=page.replace('{{mobile_config}}',json.dumps(mobile).replace('<','\\u003c'))
         (out/'index.html').write_text(page)
-        (out/'app.webmanifest').write_text(json.dumps({'id':'./','name':identity['title'],'short_name':identity['title'][:24],'start_url':'./','scope':'./','display':'standalone','background_color':'#101923','theme_color':'#101923','icons':[{'src':'thumbnail.png','sizes':'256x256','type':'image/png'}]}))
+        (out/'app.webmanifest').write_text(json.dumps({'id':'./','name':identity['title'],'short_name':identity['title'][:24],'start_url':'./','scope':'./','display':'standalone','background_color':'#07111F','theme_color':'#07111F','icons':[{'src':'thumbnail.png','sizes':'256x256','type':'image/png'}]}))
         for name in identity.get('package',[]):
             source=safe_file(game,name)
             if not source.is_file():raise WebError(f'Web extra asset must be a declared regular file: {name}')

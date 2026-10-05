@@ -18,6 +18,6 @@
   "runtime": "portable",
   "mobile_controls": {
     "layout": "tap",
-    "action_label": "Action"
+    "action_label": "Plant"
   }
 }
