@@ -1525,14 +1525,15 @@
         "templates/game_check.py",
         "tools/test_game_ship.py",
         "tools/test_game_check.py",
-        "docs/GAME_QUICKSTART.md"
+        "docs/GAME_QUICKSTART.md",
+        "src/viewer/devkit/save.rs"
       ],
       "checks": [
         "cargo test --locked --lib identity icon",
         "python -m unittest tools.test_game_ship tools.test_game_check",
         "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)"
       ],
-      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. check --ship-folder PRIVATE_FOLDER verifies the package and private launcher without changing the desktop; the ship gate still executes.",
+      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. check --ship-folder PRIVATE_FOLDER verifies the package and private launcher without changing the desktop; the ship gate still executes. Smoke runs only the stamped payload in a fresh directory with hashes checked and fresh player state; devkit::runtime_assets prevents source fallback for shipped games. This is a clean layout check, not an OS sandbox.",
       "keywords": [
         "ship",
         "shipping",
@@ -1556,13 +1557,17 @@
         "delivery",
         "exe",
         "executable",
-        "release"
+        "release",
+        "missing runtime assets",
+        "isolated package",
+        "source fallback"
       ],
       "public_api": [
         "Identity::parse",
         "icon::write_icon_set",
         "icon::IconSpec",
-        "game_client::window_config_with_icon"
+        "game_client::window_config_with_icon",
+        "devkit::runtime_assets"
       ],
       "read_first": [
         "docs/GAME_QUICKSTART.md",

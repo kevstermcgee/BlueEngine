@@ -24,7 +24,10 @@
     "games/turret-trench",
     "games/weight-balance",
     "games/target-gallery",
-    "games/dead-air"
+    "games/dead-air",
+    "games/prop-hunt",
+    "games/slapstick",
+    "games/feta"
   ],
   "collections": {
     "games": [

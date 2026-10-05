@@ -71,6 +71,26 @@ class PublishGamesTests(unittest.TestCase):
 
     # -- ownership ------------------------------------------------------------------------------------
 
+    def test_native_build_outputs_and_player_files_never_become_published_source(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root, output = self.setup_repos(temp)
+            game = root / "source-games" / "native"
+            game.mkdir()
+            (game / "Cargo.toml").write_text('[package]\nname = "native"\n')
+            for name in ("target/debug/Game.exe", "dist/saves/quick.be2save", ".blue-check/run/log.txt",
+                         ".be2-work/capture.png", "__pycache__/module.pyc", ".git/config"):
+                path = game / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("local output, never source")
+            asset = game / "assets" / "target" / "model.json"
+            asset.parent.mkdir(parents=True)
+            asset.write_text("authored target model")
+            publish_games.publish(root, output, "r1")
+            paths = self.catalog_paths(output)
+            self.assertIn("games/native/assets/target/model.json", paths)
+            self.assertIn("games/native/Cargo.toml", paths)
+            self.assertEqual(len(paths), 6)
+
     def test_an_unknown_hand_added_game_survives_without_a_preserve_entry(self):
         with tempfile.TemporaryDirectory() as temp:
             root, output = self.setup_repos(temp)

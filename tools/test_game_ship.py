@@ -1154,6 +1154,82 @@ class PackageTests(TempTestCase):
         self.assertTrue((self.root / 'dist' / exe_name('zephyr')).exists())  # the sole [[bin]]
 
 
+class SmokePackageTests(TempTestCase):
+    """Run a stand-in game in the real staged filesystem on every platform."""
+
+    def setUp(self):
+        super().setUp()
+        import base64
+        self.root = make_game(self.tmp / 'source project', exe='zephyr')
+        png = base64.b64encode(encode_png(32, 32, draw_icon(3, 32))).decode('ascii')
+        script = (
+            'import base64, pathlib, sys\n'
+            'asset = pathlib.Path("runtime/data.txt")\n'
+            'if not asset.is_file(): asset = pathlib.Path("../assets/data.txt")\n'
+            'if not asset.is_file(): sys.exit("runtime asset missing")\n'
+            'pathlib.Path("settings.json").write_text("smoke settings")\n'
+            'out = pathlib.Path(sys.argv[sys.argv.index("--capture") + 1]); out.mkdir()\n'
+            f'(out / "world.png").write_bytes(base64.b64decode({png!r}))\n'
+        )
+        self.project = fake_dist(self.root, exe_bytes=script.encode())
+        self.verifier = game_ship.Verifier(self.project, smoke=True)
+        self.verifier.outcomes['identity'] = 'pass'
+        self.source_asset = self.root / 'assets/data.txt'
+        self.source_asset.write_text('present only in source')
+        self.dist_asset = self.project.dist / 'runtime/data.txt'
+        self.dist_asset.parent.mkdir()
+        self.dist_asset.write_text('packaged data')
+        self.settings = self.project.dist / 'settings.json'
+        self.settings.write_text('player settings')
+
+    def declare_asset(self):
+        stamp = self.project.read_stamp()
+        stamp['files'].append('runtime/data.txt')
+        stamp['file_sha256'] = {'runtime/data.txt': game_ship.sha256_file(self.dist_asset)}
+        self.project.write_stamp(stamp)
+
+    def smoke(self):
+        run = game_ship.run_process
+        # The fixture is Python code instead of a native binary; execution is still
+        # a real subprocess with the production cwd, environment and staged files.
+        def launch(args, **kwargs):
+            return run([sys.executable, *args], **kwargs)
+        with mock.patch.object(game_ship, 'has_display', return_value=True), \
+                mock.patch.object(game_ship, 'run_process', side_effect=launch):
+            return self.verifier.check_smoke()
+
+    def test_source_and_unlisted_dist_assets_cannot_mask_a_broken_package(self):
+        status, detail = self.smoke()
+        self.assertEqual(status, 'fail', detail)
+        self.assertIn('runtime asset missing', detail)
+        self.assertEqual(self.settings.read_text(), 'player settings')
+        self.assertTrue(self.source_asset.exists())
+
+    def test_declared_assets_run_from_a_clean_package_without_changing_player_files(self):
+        self.declare_asset()
+        status, detail = self.smoke()
+        self.assertEqual(status, 'pass', detail)
+        self.assertIn('clean staged package', detail)
+        self.assertEqual(self.settings.read_text(), 'player settings')
+
+    def test_missing_or_modified_shipped_assets_fail_before_launch(self):
+        self.declare_asset()
+        self.dist_asset.write_text('damaged')
+        with self.assertRaisesRegex(game_ship.ShipError, 'changed after packaging'):
+            self.smoke()
+        self.dist_asset.unlink()
+        with self.assertRaisesRegex(game_ship.ShipError, 'missing or leaves dist'):
+            self.smoke()
+
+    def test_manifest_paths_cannot_escape_or_copy_files_from_source(self):
+        for name in ['../assets/data.txt', '/outside', 'C:/outside', 'runtime/../data.txt', 'runtime\\data.txt']:
+            stamp = self.project.read_stamp()
+            stamp['files'] = [self.project.exe_file(), name]
+            self.project.write_stamp(stamp)
+            with self.subTest(name=name), self.assertRaisesRegex(game_ship.ShipError, 'unsafe'):
+                game_ship.stage_smoke_package(self.project, self.tmp / 'staged', self.project.exe_file())
+
+
 class FakeCargo:
     """A `cargo` on PATH that answers build/metadata like the real one (JSON messages, exit codes)."""
 

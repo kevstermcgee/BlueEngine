@@ -45,6 +45,12 @@ Playable game presentation follows [the shared presentation contract](GAME_PRESE
 
 ## A custom simulation
 
+Load runtime asset directories with `devkit::runtime_assets("assets", Path::new(env!("CARGO_MANIFEST_DIR")))`.
+It prefers assets beside the executable and permits the source directory during development.
+With `ship.json` beside the executable, or during the staged package check, source fallback
+is disabled. Propagate the error so missing audio or models fail startup instead of relying
+on the developer's checkout. Declare these files in `assets/identity.json`'s `package` list.
+
 `GameDocument` deliberately has no scripting. When a game's rules are code, the code is the authority:
 a pure library, fixed 60 Hz, seeded, no window, no sound device, no wall clock (the same contract the
 engine asks of its own `HeadlessWorld`). The window only *reads* it and reacts to its events, so there
