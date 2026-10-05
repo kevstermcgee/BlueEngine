@@ -19,14 +19,21 @@ try{
  for(const method of ['Runtime.enable','Page.enable'])await send(method);
  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw new Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
  const wait=async expression=>{for(let i=0;i<200;i++){const r=await evaluate(expression);if(r)return r;await new Promise(ok=>setTimeout(ok,100));}throw new Error('Timeout '+expression);};
- await send('Page.navigate',{url});await wait('document.querySelectorAll("[data-star]").length>0');
+ async function navigate(method,params={}) {
+   // A reload acknowledgement can precede the new document. Mark the old one so
+   // readyState cannot accidentally prove persistence against its existing DOM.
+   await evaluate('window.__be2CatalogPreviousDocument=true');
+   await send(method,params);
+   await wait('!window.__be2CatalogPreviousDocument&&document.readyState==="complete"&&document.querySelectorAll("[data-star]").length>0');
+ }
+ await navigate('Page.navigate',{url});
  const initial=await evaluate('Array.from(document.querySelectorAll("#grid .card")).map(c=>({id:c.dataset.id,browser:c.dataset.browser,native:c.dataset.native}))');
  if(new Set(initial.map(g=>g.id)).size!==initial.length)throw new Error('Duplicate game IDs in unified feed');
  if(!initial.some(g=>g.browser==='true')||!initial.some(g=>g.native==='true'))throw new Error('Feed must include browser and native games together');
  const chosen=initial.at(-1).id;
  await evaluate(`document.querySelector('[data-star="${chosen}"]').click()`);
  if(await evaluate('document.querySelector("#grid .card").dataset.id')!==chosen)throw new Error('Star did not pin game first');
- await send('Page.reload');await wait('document.querySelectorAll("[data-star]").length>0');
+ await navigate('Page.reload');
  if(await evaluate(`document.querySelector('[data-star="${chosen}"]').getAttribute('aria-pressed')`)!=='true'||await evaluate('document.querySelector("#grid .card").dataset.id')!==chosen)throw new Error('Favorite did not persist/pin after reload');
  await evaluate('document.getElementById("distribution").value="browser";document.getElementById("distribution").dispatchEvent(new Event("change"))');
  if(!await evaluate('Array.from(document.querySelectorAll("#grid .card")).filter(c=>getComputedStyle(c).display!=="none").every(c=>c.dataset.browser==="true")'))throw new Error('Browser filter did not hide native-only cards');
@@ -35,7 +42,7 @@ try{
  await evaluate('document.getElementById("presentation").value="";document.getElementById("presentation").dispatchEvent(new Event("change"))');
  await evaluate(`Storage.prototype.setItem=()=>{throw new Error('Denied')};document.querySelector('[data-star="${chosen}"]').click()`);
  if(!await evaluate('document.getElementById("favorites-status").textContent.includes("could not")'))throw new Error('Storage failure was hidden');
- await send('Page.reload');await wait('document.querySelectorAll("[data-star]").length>0');
+ await navigate('Page.reload');
  if(await evaluate(`document.querySelector('[data-star="${chosen}"]').getAttribute('aria-pressed')`)!=='true')throw new Error('Failed favorite write destroyed previous value');
  await send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:2,mobile:true});await send('Emulation.setTouchEmulationEnabled',{enabled:true});
  if(await evaluate('document.documentElement.scrollWidth>innerWidth'))throw new Error('Mobile feed overflows horizontally');
