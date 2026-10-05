@@ -12,8 +12,9 @@ window.AudioContext=class extends NativeAudioContext {
   }
 };
 const gameCanvas=document.getElementById("glcanvas");
-function activate() {gameCanvas.focus();for(const context of be2Audio.contexts) context.resume().catch(e=>be2.errors.push(String(e)));}
+function activate() {gameCanvas.focus({preventScroll:true});for(const context of be2Audio.contexts) context.resume().catch(e=>be2.errors.push(String(e)));}
 gameCanvas.addEventListener("pointerdown",activate);
+gameCanvas.addEventListener("pointerup",activate);
 gameCanvas.addEventListener("keydown",activate);
 // Only focused game controls are consumed. Tab, Ctrl/Cmd shortcuts and ordinary page keys survive.
 const keys=new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"]);
@@ -55,6 +56,9 @@ miniquad_add_plugin({register_plugin:imports=>{
       be2.keyboardBound=true;
     }
     Object.assign(be2,JSON.parse(decode(ptr,len)));
+    const play=document.querySelector('[data-control="play"]');
+    if(play){const label=!be2.started?'Play':be2.paused?'Resume':'Pause';play.setAttribute('aria-label',label);}
+    document.getElementById('status').textContent=be2.notice||(!be2.started?'Start to play. Your progress stays on this device.':'Progress saves automatically on this device.');
   };
   imports.env.be2_error=(ptr,len)=>{const message=decode(ptr,len);be2.errors.push(message);document.getElementById("status").textContent=message;};
   imports.env.be2_verify=()=>new URLSearchParams(location.search).get("verify")==="1"?1:0;
@@ -65,6 +69,14 @@ miniquad_add_plugin({register_plugin:imports=>{
     if(!pad)return 0;
     if(axis<2){const v=pad.axes[axis]||0;return Math.abs(v)>0.18?v:0;}
     const down=pad.buttons[0]?.pressed||false,edge=down&&!lastPad;lastPad=down;return edge?1:0;
+  };
+  imports.env.be2_touch=field=>{
+    const t=window.be2Touch;if(!t?.visible)return field===5||field===6?-1:0;
+    if(field===0)return t.x;if(field===1)return t.y;
+    if(field===2){const action=t.action;t.action=false;return Number(action);}
+    if(field===3){const commands=t.commands;t.commands=0;return commands;}
+    if(field===5)return t.pointer?.x??-1;if(field===6)return t.pointer?.y??-1;
+    return 0;
   };
 }});
 

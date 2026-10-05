@@ -350,7 +350,7 @@ def full_commands(test_profile='itest'):
         ['cargo','clippy','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
         ['cargo','rustdoc','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
     ])
-    for game in ('lantern-run','pocket-breaker','orchard-watch'):
+    for game in ('lantern-run','pocket-breaker','orchard-watch','lantern-grove'):
         manifest=f'games/{game}/Cargo.toml'
         commands.extend([['cargo','fmt','--manifest-path',manifest,'--check'],
                          ['cargo','test','--locked','--manifest-path',manifest,'--no-default-features'],

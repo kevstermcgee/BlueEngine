@@ -26,7 +26,17 @@ def publish(package,repository,run,integrity,directory_publish):
         destination=checkout/'site/web'
         receipt=directory_publish(package,destination)
         integrate_catalog(builder)
-        run(['git','add','site/web','site/build.py'],cwd=checkout)
+        # Verify the actual merged site before pushing, using the current native release catalog.
+        from tools.web_games import catalog_verify
+        validation=Path(folder)/'validation';validation.mkdir()
+        release=json.loads(run(['gh','api',f'repos/{repository}/releases/latest']))
+        (validation/'release.json').write_text(json.dumps(release))
+        catalog_name=next((name for name in ('Games-catalog.tsv','BlueEngineLauncher-catalog.tsv') if any(a['name']==name for a in release['assets'])),None)
+        if catalog_name is None:raise WebError('Current release has no supported native game catalog; verified package retained.')
+        run(['gh','release','download',release['tag_name'],'--repo',repository,'--pattern',catalog_name,'--dir',validation])
+        run(['python3',builder,'--catalog',validation/catalog_name,'--release-json',validation/'release.json','--games-dir',checkout/'games','--thumbs',checkout/'site/thumbs','--out',validation/'site'])
+        catalog_proof=catalog_verify(validation/'site',validation/'evidence')
+        run(['git','add','site/web','site/build.py','site/browser_catalog.py','site/app.js','site/catalog.css'],cwd=checkout)
         changed=bool(run(['git','diff','--cached','--name-only'],cwd=checkout).strip())
         deployment=None
         if changed:
@@ -56,21 +66,30 @@ def publish(package,repository,run,integrity,directory_publish):
                     for name,digest in metadata['file_sha256'].items():
                         with urllib.request.urlopen(url+name,timeout=30) as asset:
                             if hashlib.sha256(asset.read()).hexdigest()!=digest:raise WebError(f'Deployed file differs: {name}')
-                    return {'backend':'github-pages','url':url,'repository':repository,'deployment_commit':commit if changed else None,'library_commit':commit,'already_current':not changed,'run':deployment,'remote_manifest_verified':True,'remote_files_verified':True}
+                    return {'backend':'github-pages','url':url,'repository':repository,'deployment_commit':commit if changed else None,'library_commit':commit,'already_current':not changed,'run':deployment,'remote_manifest_verified':True,'remote_files_verified':True,'catalog_verified':catalog_proof}
                 last_error='old manifest is still cached'
             except Exception as error:last_error=str(error)
             time.sleep(3)
         raise WebError(f'Pages workflow succeeded but current package could not be confirmed: {last_error}. No verified URL receipt emitted.')
 
 def integrate_catalog(builder):
-    source=builder.read_text();marker='# BlueEngine web artifacts (static publisher contract v1)'
+    source=builder.read_text();marker='# BlueEngine unified catalog (static publisher contract v2)'
+    anchor='    (out / "index.html").write_text(page)'
+    sort_anchor='    games.sort(key=lambda g: g["name"])'
+    if anchor not in source or sort_anchor not in source:raise ValueError('Catalog build integration point changed; update the adapter instead of guessing edits')
+    # Upgrade the prior separate-page integration, preserving the native builder.
+    old='    # BlueEngine web artifacts (static publisher contract v1)\n    web_root = Path(__file__).resolve().parent / "web"\n    if web_root.is_dir():\n        shutil.copytree(web_root, out / "web", dirs_exist_ok=True)\n        page = page.replace(\'<main id="grid">\', \'<p><a href="web/index.html">Play 2D games in your browser</a></p><main id="grid">\')\n'
+    source=source.replace(old,'')
     if marker not in source:
-        anchor='    (out / "index.html").write_text(page)'
-        if anchor not in source:raise ValueError('Catalog build integration point changed; update the adapter instead of guessing edits')
-        source=source.replace(anchor,'''    # BlueEngine web artifacts (static publisher contract v1)
-    web_root = Path(__file__).resolve().parent / "web"
-    if web_root.is_dir():
-        shutil.copytree(web_root, out / "web", dirs_exist_ok=True)
-        page = page.replace('<main id="grid">', '<p><a href="web/index.html">Play 2D games in your browser</a></p><main id="grid">')
-'''+anchor)
-        builder.write_text(source)
+        source=source.replace(sort_anchor,'''    # BlueEngine unified catalog (static publisher contract v2)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from browser_catalog import merge_games, enhance_page
+    games = merge_games(games, rows, Path(__file__).resolve().parent / "web", out, args.games_dir)
+'''+sort_anchor)
+        source=source.replace(anchor,'    page = enhance_page(page)\n'+anchor)
+    builder.write_text(source)
+    web_index=builder.parent/'web/index.html'
+    if web_index.exists():web_index.write_text('<!doctype html><meta http-equiv="refresh" content="0;url=../"><a href="../">All BlueEngine games</a>')
+    templates=Path(__file__).resolve().parent.parent/'templates/catalog'
+    import shutil
+    for name in ('browser_catalog.py','app.js','catalog.css'):shutil.copy2(templates/name,builder.parent/name)

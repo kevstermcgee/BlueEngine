@@ -239,6 +239,58 @@
       {
         "source": "games/orchard-watch/.gitignore",
         "destination": "orchard-watch/.gitignore"
+      },
+      {
+        "source": "games/lantern-grove/src",
+        "destination": "lantern-grove/src"
+      },
+      {
+        "source": "games/lantern-grove/tests",
+        "destination": "lantern-grove/tests"
+      },
+      {
+        "source": "games/lantern-grove/assets",
+        "destination": "lantern-grove/assets"
+      },
+      {
+        "source": "games/lantern-grove/scripts",
+        "destination": "lantern-grove/scripts"
+      },
+      {
+        "source": "games/lantern-grove/Cargo.toml",
+        "destination": "lantern-grove/Cargo.toml"
+      },
+      {
+        "source": "games/lantern-grove/Cargo.lock",
+        "destination": "lantern-grove/Cargo.lock"
+      },
+      {
+        "source": "games/lantern-grove/build.rs",
+        "destination": "lantern-grove/build.rs"
+      },
+      {
+        "source": "games/lantern-grove/AGENTS.md",
+        "destination": "lantern-grove/AGENTS.md"
+      },
+      {
+        "source": "games/lantern-grove/CLAUDE.md",
+        "destination": "lantern-grove/CLAUDE.md"
+      },
+      {
+        "source": "games/lantern-grove/README.md",
+        "destination": "lantern-grove/README.md"
+      },
+      {
+        "source": "games/lantern-grove/STATUS.md",
+        "destination": "lantern-grove/STATUS.md"
+      },
+      {
+        "source": "games/lantern-grove/game.project.json",
+        "destination": "lantern-grove/game.project.json"
+      },
+      {
+        "source": "games/lantern-grove/.gitignore",
+        "destination": "lantern-grove/.gitignore"
       }
     ],
     "prototypes": [

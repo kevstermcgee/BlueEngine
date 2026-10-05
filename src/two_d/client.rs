@@ -137,6 +137,21 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     };
     let mut game = G::new(7);
     let verification = platform::verify_mode();
+    #[allow(unused_mut)]
+    let mut persist_progress = !verification;
+    #[cfg(not(target_arch = "wasm32"))]
+    {
+        persist_progress &= capture.is_none();
+    }
+    if persist_progress {
+        match storage::load_slot(&store, "progress", &mut game) {
+            Ok(true) => notice = "Progress restored. Start to continue.".into(),
+            Ok(false) => {}
+            Err(error) => notice = error,
+        }
+    }
+    let mut autosave_time = 0.;
+    let mut autosave_hash = None;
     let mut started = verification && cfg!(not(target_arch = "wasm32"));
     #[cfg(not(target_arch = "wasm32"))]
     {
@@ -158,7 +173,12 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         let dt = get_frame_time().clamp(0., 0.1);
         let view = Viewport::fit(800., 450., screen_width().max(1.), screen_height().max(1.));
         let (mx, my) = mouse_position();
-        let pointer = view.pointer(mx, my);
+        #[allow(unused_mut)]
+        let mut pointer = view.pointer(mx, my);
+        let digital = platform::touch();
+        if let Some(point) = digital.pointer {
+            pointer = Some(point);
+        }
         #[allow(unused_mut)]
         let mut x = i32::from(is_key_down(KeyCode::D) || is_key_down(KeyCode::Right))
             - i32::from(is_key_down(KeyCode::A) || is_key_down(KeyCode::Left));
@@ -171,6 +191,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         #[allow(unused_mut)]
         let mut start =
             is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left);
+        x += digital.x;
+        y += digital.y;
+        action |= digital.action;
+        start |= digital.commands & 1 != 0;
         #[cfg(target_arch = "wasm32")]
         {
             let pad = platform::pad();
@@ -191,7 +215,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             started = true;
             audio.play(0, settings.sound);
         }
-        if is_key_pressed(KeyCode::R) {
+        if is_key_pressed(KeyCode::R) || digital.commands & 4 != 0 {
             game = G::new(7);
             inputs.clear();
             last_tick = 0;
@@ -199,10 +223,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             started = true;
             notice.clear();
         }
-        if is_key_pressed(KeyCode::Escape) {
+        if is_key_pressed(KeyCode::Escape) || digital.commands & 2 != 0 {
             paused = !paused;
         }
-        if is_key_pressed(KeyCode::M) {
+        if is_key_pressed(KeyCode::M) || digital.commands & 8 != 0 {
             settings.sound = !settings.sound;
             match storage::write_settings(&store, &settings) {
                 Ok(()) => {
@@ -214,13 +238,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Err(e) => notice = e,
             }
         }
-        if is_key_pressed(KeyCode::K) {
+        if is_key_pressed(KeyCode::K) || digital.commands & 16 != 0 {
             notice = match storage::save(&store, &game) {
                 Ok(()) => "Game saved. L resumes it.".into(),
                 Err(e) => e,
             };
         }
-        if is_key_pressed(KeyCode::L) {
+        if is_key_pressed(KeyCode::L) || digital.commands & 32 != 0 {
             notice = match storage::load(&store, &mut game) {
                 Ok(true) => {
                     inputs.clear();
@@ -268,6 +292,24 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         for cue in game.take_cues() {
             audio.play(cue, settings.sound);
             particles.burst(Point::new(400, 200), if cue == 1 { PINK } else { GOLD });
+        }
+        autosave_time += dt;
+        if persist_progress
+            && started
+            && game.tick() > 0
+            && (autosave_time >= 1. || !focused || paused || game.outcome() != "playing")
+        {
+            autosave_time = 0.;
+            let hash = game.state_hash();
+            if autosave_hash != Some(hash) {
+                match storage::save_slot(&store, "progress", &game) {
+                    Ok(()) => autosave_hash = Some(hash),
+                    Err(error) => {
+                        notice = format!("Autosave failed: {error}");
+                        autosave_hash = Some(hash);
+                    }
+                }
+            }
         }
         let mut scene = Scene::default();
         scene.rect(-100, Rect::new(0, 0, 800, 450), INK);
@@ -353,6 +395,18 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     }
 }
 mod platform {
+    #[derive(Default)]
+    pub struct Digital {
+        pub x: i32,
+        pub y: i32,
+        pub action: bool,
+        pub commands: i32,
+        pub pointer: Option<super::Point>,
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn touch() -> Digital {
+        Digital::default()
+    }
     #[cfg(not(target_arch = "wasm32"))]
     pub fn muted() -> bool {
         let args: Vec<_> = std::env::args().collect();
@@ -392,6 +446,7 @@ mod platform {
             fn be2_focused() -> i32;
             fn be2_audio_active() -> i32;
             fn be2_pad(axis: i32) -> f32;
+            fn be2_touch(field: i32) -> i32;
         }
         pub fn report(value: &str) {
             unsafe {
@@ -419,6 +474,19 @@ mod platform {
                     (be2_pad(1) * 1.5) as i32,
                     be2_pad(2) > 0.,
                 )
+            }
+        }
+        pub fn touch() -> super::Digital {
+            unsafe {
+                let x = be2_touch(5);
+                let y = be2_touch(6);
+                super::Digital {
+                    x: be2_touch(0),
+                    y: be2_touch(1),
+                    action: be2_touch(2) != 0,
+                    commands: be2_touch(3),
+                    pointer: (x >= 0 && y >= 0).then_some(crate::two_d::Point::new(x, y)),
+                }
             }
         }
     }

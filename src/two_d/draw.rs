@@ -1,7 +1,63 @@
-//! Macroquad-backed drawing in logical pixels; stable painter layers, no 3D initialization.
+//! Portable layered presentation: logical 2D coordinates and optional depth-tested 3D views.
 use super::{Point, Rect};
 use macroquad::prelude::*;
+pub use macroquad::prelude::{Camera3D, Mesh, Vec3, Vertex};
 pub use macroquad::prelude::{Color, Texture2D};
+/// An optional 3D view, placed anywhere in the same layer list as sprites and HUD.
+/// Camera/meshes are presentation only; simulation owns collision and game rules.
+pub struct World {
+    pub camera: Camera3D,
+    items: Vec<Solid>,
+}
+enum Solid {
+    Cube(Vec3, Vec3, Color),
+    Sphere(Vec3, f32, Color),
+    Mesh(Mesh),
+}
+impl World {
+    pub fn new(position: [f32; 3], target: [f32; 3]) -> Self {
+        Self {
+            camera: Camera3D {
+                position: Vec3::from_array(position),
+                target: Vec3::from_array(target),
+                up: Vec3::Y,
+                ..Default::default()
+            },
+            items: vec![],
+        }
+    }
+    pub fn cube(&mut self, position: [f32; 3], size: [f32; 3], color: Color) {
+        self.items.push(Solid::Cube(
+            Vec3::from_array(position),
+            Vec3::from_array(size),
+            color,
+        ));
+    }
+    pub fn sphere(&mut self, position: [f32; 3], radius: f32, color: Color) {
+        self.items
+            .push(Solid::Sphere(Vec3::from_array(position), radius, color));
+    }
+    /// Arbitrary textured geometry using the engine's pinned renderer vertex/mesh format.
+    pub fn mesh(&mut self, mesh: Mesh) {
+        self.items.push(Solid::Mesh(mesh));
+    }
+    fn draw(mut self, rect: Rect, view: Viewport) -> Result<(), String> {
+        self.camera.viewport =
+            Some(view.physical_rect(rect, screen_height(), screen_dpi_scale())?);
+        let (_, _, width, height) = self.camera.viewport.unwrap();
+        self.camera.aspect = Some(width as f32 / height as f32);
+        set_camera(&self.camera);
+        for item in self.items {
+            match item {
+                Solid::Cube(p, s, c) => draw_cube(p, s, None, c),
+                Solid::Sphere(p, r, c) => draw_sphere(p, r, None, c),
+                Solid::Mesh(m) => draw_mesh(&m),
+            }
+        }
+        set_default_camera();
+        Ok(())
+    }
+}
 pub const INK: Color = Color::new(0.06, 0.10, 0.16, 1.);
 pub const WHITE: Color = Color::new(0.94, 0.94, 0.86, 1.);
 pub const GOLD: Color = Color::new(1., 0.72, 0.25, 1.);
@@ -30,6 +86,33 @@ impl Viewport {
                 (screen_h - height * scale) / 2.,
             ],
         }
+    }
+    /// Convert logical top-left coordinates into framebuffer bottom-left pixels.
+    /// 3D viewports bypass the 2D projection and therefore must include device DPI.
+    pub fn physical_rect(
+        &self,
+        rect: Rect,
+        screen_h: f32,
+        dpi: f32,
+    ) -> Result<(i32, i32, i32, i32), String> {
+        if rect.w <= 0
+            || rect.h <= 0
+            || rect.x < 0
+            || rect.y < 0
+            || rect.x as f32 + rect.w as f32 > self.width
+            || rect.y as f32 + rect.h as f32 > self.height
+            || !dpi.is_finite()
+            || dpi <= 0.
+        {
+            return Err("3D view must have positive dimensions inside the logical canvas and a valid device scale".into());
+        }
+        Ok((
+            ((self.offset[0] + rect.x as f32 * self.scale) * dpi).round() as i32,
+            ((screen_h - self.offset[1] - (rect.y as f32 + rect.h as f32) * self.scale) * dpi)
+                .round() as i32,
+            (rect.w as f32 * self.scale * dpi).round().max(1.) as i32,
+            (rect.h as f32 * self.scale * dpi).round().max(1.) as i32,
+        ))
     }
     pub fn pointer(&self, x: f32, y: f32) -> Option<Point> {
         let x = (x - self.offset[0]) / self.scale;
@@ -73,6 +156,7 @@ impl Animation {
     }
 }
 enum Shape {
+    World(Rect, World),
     Rect(Rect, Color),
     Circle(Point, f32, Color),
     Text(String, Point, f32, Color),
@@ -95,6 +179,11 @@ pub struct Scene {
     items: Vec<(i32, Shape)>,
 }
 impl Scene {
+    /// Insert a depth-tested 3D scene at this layer, bounded by logical pixels.
+    /// Later 2D layers can be maps/HUD; earlier layers can be backgrounds.
+    pub fn world(&mut self, layer: i32, viewport: Rect, world: World) {
+        self.items.push((layer, Shape::World(viewport, world)));
+    }
     pub fn rect(&mut self, layer: i32, r: Rect, c: Color) {
         self.items.push((layer, Shape::Rect(r, c)));
     }
@@ -153,6 +242,7 @@ impl Scene {
         };
         for (_, shape) in self.items.drain(..) {
             match shape {
+                Shape::World(rect, world) => world.draw(rect, view)?,
                 Shape::Rect(r, c) => {
                     let xy = p(r.x as f32, r.y as f32);
                     draw_rectangle(
@@ -280,6 +370,21 @@ pub trait Game: super::GameLogic {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn hybrid_views_align_with_2d_at_high_device_dpi() {
+        let view = Viewport::fit(800., 450., 400., 225.);
+        assert_eq!(
+            view.physical_rect(Rect::new(20, 55, 760, 345), 225., 2.)
+                .unwrap(),
+            (20, 50, 760, 345)
+        );
+        assert!(view
+            .physical_rect(Rect::new(800, 0, 1, 1), 225., 2.)
+            .is_err());
+        assert!(view
+            .physical_rect(Rect::new(i32::MAX, 0, i32::MAX, 1), 225., 2.)
+            .is_err());
+    }
     #[test]
     fn letterbox_coordinates_and_animation_are_explicit() {
         let v = Viewport::fit(800., 450., 1000., 1000.);

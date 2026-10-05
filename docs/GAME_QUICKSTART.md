@@ -5,6 +5,7 @@
 | The game's rules | Starter |
 |---|---|
 | fit counters, interactables, timers, triggers and movers (find things, press switches, open doors, timed objectives) | **stock**: `be2-tools new-game my-game ../my-game` |
+| want browser + local install, mobile, 2D/3D/hybrid | **portable** (default): `be2-tools new-game my-game ../my-game ../BlueEngine portable` — read [PORTABLE_GAMES.md](PORTABLE_GAMES.md) |
 | want a 2D offline browser/native game | **two-d**: `be2-tools new-game my-game ../my-game ../BlueEngine two-d` — read [TWO_D.md](TWO_D.md) |
 | need enemies, projectiles, scoring, AI, waves, procedural content or per-frame physics: anything `GameDocument` cannot express | **custom-sim**: `be2-tools new-game my-game ../my-game ../BlueEngine custom-sim` |
 

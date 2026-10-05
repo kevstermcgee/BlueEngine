@@ -198,11 +198,11 @@ def classify_runtime(game_root):
             project = json.loads(declaration.read_text())
         except (OSError, ValueError):
             return {'kind': 'unknown', 'reason': 'invalid game.project.json; repair declaration before upgrade', 'evidence': evidence}
-        if isinstance(project, dict) and project.get('presentation') == '2d':
+        if isinstance(project, dict) and (project.get('runtime') == 'portable' or project.get('presentation') == '2d'):
             evidence['game.project.json'] = project
             if has_lib_rs and not has_game_json and not uses_netplay and project.get('networking') == 'offline':
-                return {'kind': 'two_d', 'reason': 'explicit 2D/offline requirements + simulation library', 'evidence': evidence}
-            return {'kind': 'mixed_or_legacy', 'reason': '2D declaration conflicts with runtime layout/networking', 'evidence': evidence}
+                return {'kind': 'two_d', 'reason': 'portable offline requirements + simulation library', 'evidence': evidence}
+            return {'kind': 'mixed_or_legacy', 'reason': 'Portable declaration conflicts with runtime layout/networking', 'evidence': evidence}
     if has_game_json and has_lib_rs:
         return {'kind': 'mixed_or_legacy',
                 'reason': 'both game.json (stock GameDocument) and src/lib.rs (custom simulation) are present',
@@ -315,7 +315,7 @@ def provenance(identity, runtime_kind):
         return {'source': 'identity.json:provenance', 'template': recorded.get('template', 'unknown'),
                 'template_revision': recorded.get('template_revision', 'unknown'),
                 'generation_options': recorded.get('generation_options', {})}
-    guess = {'stock': 'stock', 'custom_sim': 'custom-sim', 'custom_sim_netplay': 'custom-sim', 'two_d': 'two-d'}.get(runtime_kind)
+    guess = {'stock': 'stock', 'custom_sim': 'custom-sim', 'custom_sim_netplay': 'custom-sim', 'two_d': 'portable'}.get(runtime_kind)
     if identity and identity.get('engine_revision') and guess:
         return {'source': 'inferred', 'template': guess,
                 'template_revision': ('unknown: assets/identity.json records the generation-time engine commit, '

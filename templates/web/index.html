@@ -1,6 +1,22 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>{{title}}</title><link rel="icon" href="thumbnail.png">
-<style>body{margin:0;background:#101923;color:#f2f2dc;font:16px system-ui}main{max-width:1100px;margin:auto;padding:12px}canvas{display:block;width:100%;height:min(75vh,620px);outline:2px solid #2a4550}a{color:#6de0d0}h1{font-size:24px;margin:8px 0}p{margin:8px 0}</style>
+<title>{{title}}</title><link rel="icon" href="thumbnail.png"><link rel="manifest" href="app.webmanifest"><meta name="theme-color" content="#101923">
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101923;color:#f2f2dc;font:16px system-ui}main{max-width:1100px;margin:auto;padding:12px}canvas{display:block;width:100%;height:min(75vh,620px);outline:2px solid #2a4550}a{color:#6de0d0}h1{font-size:24px;margin:8px 0}p{margin:8px 0}[hidden]{display:none!important}
+button,.digital-more summary{font:inherit;color:#f2f2dc;background:transparent;border:1px solid #57727a;border-radius:5px;min-height:44px;padding:8px 12px;cursor:pointer}button:active{color:#6de0d0;border-color:#6de0d0}
+#mobile-controls{touch-action:none;margin-top:12px;padding:16px 14px 10px;background:#c7cab8;border-radius:8px;color:#30363b}
+.digital-play{display:flex;align-items:center;justify-content:space-between;gap:20px;min-height:150px}.dpad{display:grid;grid-template-columns:repeat(3,46px);grid-template-rows:repeat(3,46px);gap:0;background:linear-gradient(#30363b,#30363b) center/46px 46px no-repeat}.dpad [data-control=up]{grid-column:2;grid-row:1}.dpad [data-control=left]{grid-column:1;grid-row:2}.dpad [data-control=down]{grid-column:2;grid-row:3}.dpad [data-control=right]{grid-column:3;grid-row:2}.dpad button{font-size:20px;padding:0;border:0;border-radius:3px;background:#30363b;color:#c7cab8}
+.face-buttons{display:flex;align-items:center;gap:12px}.face-buttons>div:last-child{margin-bottom:24px}.face-buttons>div{display:grid;justify-items:center;gap:5px}.face-buttons button{width:48px;height:48px;min-height:48px;border:0;border-radius:50%;padding:0;background:#843555;color:#fff;font-weight:700}.face-buttons small{font-size:11px}.digital-play input{min-width:0;width:100%;height:48px;accent-color:#843555}.digital-play p{font-size:13px}.digital-actions{display:flex;align-items:flex-start;justify-content:center;gap:14px;margin-top:10px}.digital-actions>[data-control=play],.digital-more summary{font-size:11px;letter-spacing:1px;color:#30363b;border:0;border-radius:24px;background:#a0a596;min-width:80px;min-height:44px;padding:14px 12px;text-align:center}.digital-more summary{list-style:none;cursor:pointer}.digital-more summary::-webkit-details-marker{display:none}.digital-menu{display:grid;gap:4px;margin-top:8px}.digital-menu button{width:100%;color:#30363b;border-color:#8a9183;font-size:13px}#install-help{font-size:14px;color:#b9cbd0}
+@media(pointer:coarse){canvas{height:auto;aspect-ratio:16/9;touch-action:none}main{padding:10px}h1{font-size:20px}.desktop-help{display:none}#mobile-controls{margin-top:10px}}
+</style>
 <main><h1>{{title}}</h1><p>{{description}}</p><canvas id="glcanvas" tabindex="0" aria-label="{{title}} game. {{controls}}"></canvas>
-<p>{{controls}}</p><p id="status">Click the game or press Enter to start and enable sound. K saves; L resumes. Saves stay in this browser on this site.</p><p><a href="manifest.json">Package information</a></p></main>
-<script src="platform.js"></script><script src="loader.js"></script><script>be2RegisterPlatform();load("game.wasm");</script></html>
+<section id="mobile-controls" aria-label="Touch game controls" hidden></section>
+<p class="desktop-help">{{controls}}</p><p id="status" role="status">Start the game to enable sound. Progress saves automatically on this device.</p>
+<button id="install" hidden>Install game</button><p id="install-help">To install: use your browser’s Install app or Add to Home Screen command. Installed games work offline after their first complete load. Saves stay on this device and site.</p>
+<p><a href="../../">Game library</a> · <a href="manifest.json">Package information</a></p></main>
+<script id="be2-mobile-config" type="application/json">{{mobile_config}}</script>
+<script src="platform.js"></script><script src="mobile.js"></script><script src="loader.js"></script><script>
+be2RegisterPlatform();load("game.wasm");
+let installPrompt;window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installPrompt=e;document.getElementById('install').hidden=false;});
+document.getElementById('install').onclick=async()=>{if(installPrompt){await installPrompt.prompt();installPrompt=null;document.getElementById('install').hidden=true;}};
+if('serviceWorker' in navigator)navigator.serviceWorker.register('service-worker.js').then(()=>navigator.serviceWorker.ready).then(()=>{window.be2OfflineReady=true;}).catch(e=>{document.getElementById('install-help').textContent='Offline installation failed: '+e.message;});
+</script></html>

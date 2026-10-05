@@ -59,8 +59,8 @@ def integrity(dist):
     if dist.is_symlink():raise WebError('Web package directory must not be a symlink')
     m=json.loads(safe_file(dist,'manifest.json').read_text())
     if not isinstance(m,dict):raise WebError('Web manifest must contain a JSON object')
-    if m.get('schema_version')!=SCHEMA or m.get('presentation')!='2d' or m.get('networking')!='offline':raise WebError('Unsupported web manifest requirements')
-    if m.get('runtime_abi')!=1 or not isinstance(m.get('id'),str) or not re.fullmatch('[a-z][a-z0-9-]{0,47}',m['id']):raise WebError('Invalid manifest runtime ABI/game ID')
+    if m.get('schema_version')!=SCHEMA or m.get('presentation') not in ('2d','3d','hybrid') or m.get('networking')!='offline':raise WebError('Unsupported web manifest requirements')
+    if m.get('runtime_abi') not in (1,2) or not isinstance(m.get('id'),str) or not re.fullmatch('[a-z][a-z0-9-]{0,47}',m['id']):raise WebError('Invalid manifest runtime ABI/game ID')
     for field in ('title','description','engine_revision','game_revision'):
         if not isinstance(m.get(field),str) or not m[field]:raise WebError(f'Manifest requires {field}')
     if not isinstance(m.get('targets'),list) or 'web' not in m['targets'] or any(t not in ('web','linux','windows','macos') for t in m['targets']):raise WebError('Manifest must declare supported web targets')
@@ -69,6 +69,9 @@ def integrity(dist):
     if not isinstance(proof,dict) or proof.get('outcome')!='won' or not isinstance(proof.get('hash'),str) or not re.fullmatch('[0-9a-f]{16}',proof['hash']):raise WebError('Manifest requires a winning headless verification hash/outcome')
     if m.get('thumbnail')!='thumbnail.png' or m.get('play')!='index.html' or not isinstance(m.get('compatibility'),dict):raise WebError('Manifest thumbnail/play/compatibility contract is invalid')
     files=m.get('file_sha256',{})
+    if m.get('runtime_abi')==2:
+        if not {'mobile.js','service-worker.js','app.webmanifest'} <= set(files):raise WebError('Portable package needs mobile controls and offline installation files')
+        if m.get('mobile_controls',{}).get('layout') not in ('dpad','paddle','tap'):raise WebError('Manifest needs a supported mobile control layout')
     if not isinstance(files,dict) or not {'index.html','game.wasm','loader.js','platform.js','thumbnail.png'}<=set(files):raise WebError('Incomplete web manifest: index, wasm, loader, platform and thumbnail are required')
     if len({n.casefold() for n in files})!=len(files):raise WebError('Case-colliding packaged paths')
     for name,digest in files.items():
@@ -99,7 +102,25 @@ def browser_verify(dist, evidence):
         finally:server.shutdown();server.server_close();thread.join()
     report=json.loads((evidence/'browser.json').read_text())
     if not report['ok']:raise WebError('Browser smoke failed; inspect browser.json')
+    if manifest.get('runtime_abi')==2:
+        # Separate profile and real touch events: desktop keyboard evidence cannot stand in for mobile.
+        with tempfile.TemporaryDirectory(prefix='be2-mobile-isolated-') as folder:
+            isolated=Path(folder)
+            for name in list(manifest['file_sha256'])+['manifest.json']:
+                path=safe_file(isolated,name);path.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(safe_file(dist,name),path)
+            server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(QuietHandler,directory=str(isolated)))
+            thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+            try:run(['node',ROOT/'tools/browser_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'mobile.json',evidence/'mobile.png','--mobile'])
+            finally:server.shutdown();server.server_close();thread.join()
+        report['mobile']=json.loads((evidence/'mobile.json').read_text())
     return report
+def catalog_verify(site,evidence):
+    evidence.mkdir(parents=True,exist_ok=True)
+    server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(QuietHandler,directory=str(site)))
+    thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
+    try:run(['node',ROOT/'tools/catalog_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'catalog.json',evidence/'catalog.png'])
+    finally:server.shutdown();server.server_close();thread.join()
+    return json.loads((evidence/'catalog.json').read_text())
 def build(game, skip_browser=False):
     start=time.monotonic();project=validate_project(game)
     if 'web' not in project['targets']:raise WebError('This game does not declare web; edit the proposal/project requirements deliberately before building')
@@ -130,17 +151,24 @@ def build(game, skip_browser=False):
     with tempfile.TemporaryDirectory(prefix='web-build-',dir=destination.parent) as stage:
         out=Path(stage)
         shutil.copy2(target/'wasm32-unknown-unknown/release'/f'{name.replace("-","_")}.wasm',out/'game.wasm') if (target/'wasm32-unknown-unknown/release'/f'{name.replace("-","_")}.wasm').exists() else shutil.copy2(target/'wasm32-unknown-unknown/release'/f'{name}.wasm',out/'game.wasm')
-        (out/'loader.js').write_bytes(loader_bytes);shutil.copy2(ROOT/'templates/web/platform.js',out/'platform.js');shutil.copy2(game/'assets/icon.png',out/'thumbnail.png')
+        (out/'loader.js').write_bytes(loader_bytes);shutil.copy2(ROOT/'templates/web/platform.js',out/'platform.js');shutil.copy2(ROOT/'templates/web/mobile.js',out/'mobile.js');shutil.copy2(game/'assets/icon.png',out/'thumbnail.png')
         page=(ROOT/'templates/web/index.html').read_text()
         for key,value in {'title':identity['title'],'description':project['description'],'controls':identity['controls']}.items():page=page.replace('{{'+key+'}}',html.escape(value,quote=True))
+        mobile=project.get('mobile_controls',{'layout':'dpad','action_label':'Action'})
+        page=page.replace('{{mobile_config}}',json.dumps(mobile).replace('<','\\u003c'))
         (out/'index.html').write_text(page)
+        (out/'app.webmanifest').write_text(json.dumps({'id':'./','name':identity['title'],'short_name':identity['title'][:24],'start_url':'./','scope':'./','display':'standalone','background_color':'#101923','theme_color':'#101923','icons':[{'src':'thumbnail.png','sizes':'256x256','type':'image/png'}]}))
         for name in identity.get('package',[]):
             source=safe_file(game,name)
             if not source.is_file():raise WebError(f'Web extra asset must be a declared regular file: {name}')
-            if name in ('manifest.json','game.wasm','index.html','loader.js','platform.js','thumbnail.png'):raise WebError(f'Extra asset collides with reserved package file: {name}; place it under assets/')
+            if name in ('manifest.json','game.wasm','index.html','loader.js','platform.js','thumbnail.png','mobile.js','service-worker.js','app.webmanifest'):raise WebError(f'Extra asset collides with reserved package file: {name}; place it under assets/')
             target_file=safe_file(out,name);target_file.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,target_file)
+        cache_hash=hashlib.sha256(b''.join(p.read_bytes() for p in sorted(out.rglob('*')) if p.is_file())).hexdigest()
+        files=[p.relative_to(out).as_posix() for p in sorted(out.rglob('*')) if p.is_file()]+['service-worker.js','manifest.json']
+        worker=(ROOT/'templates/web/service-worker.js').read_text().replace('{{cache}}',cache_hash).replace('{{files}}',json.dumps(files))
+        (out/'service-worker.js').write_text(worker)
         epoch=int(os.environ.get('SOURCE_DATE_EPOCH',run(['git','show','-s','--format=%ct','HEAD'],cwd=ROOT).strip()))
-        manifest={'schema_version':SCHEMA,'runtime_abi':1,'id':project['id'],'title':identity['title'],'description':project['description'],'engine_revision':git_revision(ROOT),'game_revision':git_revision(game),'game_source_sha256':source_hash(game),'presentation':project['presentation'],'targets':project['targets'],'input':project['input'],'networking':project['networking'],'built_at_epoch':epoch,'timestamp_policy':'SOURCE_DATE_EPOCH or source commit time for reproducible packaging','thumbnail':'thumbnail.png','play':'index.html','native_download':None,'compatibility':{'macroquad':macro['version'],'miniquad':mini['version'],'quad-snd':sound['version'],'loader_sha256':hashlib.sha256(loader_bytes).hexdigest(),'webgl':'WebGL 1','save_frame':1,'storage':'localStorage per origin + game ID; 4 MiB limit; Snapshot version/migrations'},'verification':expected,'file_sha256':{p.relative_to(out).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(out.rglob('*')) if p.is_file()}}
+        manifest={'schema_version':SCHEMA,'runtime_abi':2,'runtime':'portable','mobile_controls':mobile,'install':{'web':'app.webmanifest','offline':True},'id':project['id'],'title':identity['title'],'description':project['description'],'engine_revision':git_revision(ROOT),'game_revision':git_revision(game),'game_source_sha256':source_hash(game),'presentation':project['presentation'],'targets':project['targets'],'input':project['input'],'networking':project['networking'],'built_at_epoch':epoch,'timestamp_policy':'SOURCE_DATE_EPOCH or source commit time for reproducible packaging','thumbnail':'thumbnail.png','play':'index.html','native_download':None,'compatibility':{'macroquad':macro['version'],'miniquad':mini['version'],'quad-snd':sound['version'],'loader_sha256':hashlib.sha256(loader_bytes).hexdigest(),'webgl':'WebGL 1','save_frame':1,'storage':'localStorage per origin + game ID; 4 MiB limit; Snapshot version/migrations'},'verification':expected,'file_sha256':{p.relative_to(out).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(out.rglob('*')) if p.is_file()}}
         (out/'manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n');integrity(out)
         if not skip_browser:browser_verify(out,evidence)
         backup=out/'previous'
@@ -172,14 +200,18 @@ def directory_publish(package,destination):
     for p in sorted(destination.glob('*/manifest.json')):
         m=integrity(p.parent);catalog.append({k:m[k] for k in ('id','title','description','engine_revision','game_revision','presentation','networking','input','targets','built_at_epoch','compatibility')}|{'play':m['id']+'/index.html','thumbnail':m['id']+'/thumbnail.png','native_download':m['native_download']})
     temp=destination/'catalog.json.tmp';temp.write_text(json.dumps({'schema_version':1,'games':catalog},indent=2)+'\n');temp.replace(destination/'catalog.json')
-    cards=''.join(f'<li><a href="{html.escape(g["play"])}">{html.escape(g["title"])}</a> — 2D · singleplayer<p>{html.escape(g["description"])}</p></li>' for g in catalog)
-    (destination/'index.html').write_text('<!doctype html><meta charset="utf-8"><title>BlueEngine browser games</title><h1>Play in browser</h1><ul>'+cards+'</ul>')
+    spec=importlib.util.spec_from_file_location('be2_catalog',ROOT/'templates/catalog/browser_catalog.py')
+    feed=importlib.util.module_from_spec(spec);spec.loader.exec_module(feed)
+    cards=''.join(feed.card(g,prefix='')['card'] for g in catalog)
+    page=feed.enhance_page((ROOT/'templates/catalog/index.html').read_text().replace('{{cards}}',cards))
+    (destination/'index.html').write_text(page)
+    for name in ('app.js','style.css','catalog.css'):shutil.copy2(ROOT/'templates/catalog'/name,destination/name)
     return {'backend':'directory','deployed':str(slot),'url':None,'catalog':str(destination/'catalog.json'),'remaining_external_step':'Serve this directory through your static host; each game is under /GAME_ID/. No external URL has been created.'}
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['build','verify','publish','propose']);p.add_argument('game');p.add_argument('--skip-browser',action='store_true',help='Build only: explicitly unverified, cannot publish');p.add_argument('--backend',choices=['directory','github-pages'],default='directory');p.add_argument('--destination');p.add_argument('--repository');args=p.parse_args(argv)
     try:
         if args.command=='propose':
-            result={'title':args.game,'presentation':'2d','gameplay':'arcade or light strategy','session_minutes':10,'input':['keyboard','mouse'],'networking':'offline','targets':['web','windows'],'complexity':'low','next':'Adjust this proposal, then create with be2-tools new-game NAME DIR ENGINE two-d. Project requirements are editable before build.'}
+            result={'title':args.game,'presentation':'hybrid','runtime':'portable','mobile_controls':{'layout':'dpad','action_label':'Action'},'gameplay':'arcade or light strategy','session_minutes':10,'input':['keyboard','mouse'],'networking':'offline','targets':['web','windows'],'complexity':'low','next':'Adjust this proposal, then create with be2-tools new-game NAME DIR ENGINE portable. Choose 2d, 3d or hybrid deliberately; mix elements where useful. Project requirements are editable before build.'}
         else:
             game=Path(args.game).resolve()
             if args.command=='verify':result={'ok':True,'browser':browser_verify(game/'dist/web',game/'.blue-check/web')}

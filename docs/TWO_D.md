@@ -1,4 +1,6 @@
-# 2D games → browser
+# 2D presentation → browser/native
+
+For mobile controls, 3D/hybrid composition, autosave, offline install and the unified feed, read [PORTABLE_GAMES.md](PORTABLE_GAMES.md).
 
 Read this page, your game AGENTS, `game.project.json` and `src/lib.rs`. No 3D renderer knowledge is needed.
 
@@ -14,9 +16,8 @@ scripts/blue publish --backend github-pages --repository OWNER/BlueEngineGames
 ```
 
 Adjust presentation, targets, input, networking, description, session length and complexity in
-`game.project.json` **before implementing**. Unknown keys/unsupported combinations fail. Web supports
-2D + offline. Native 3D and existing native multiplayer remain unchanged. 2D multiplayer, browser UDP/QUIC,
-3D browser builds and touch-first controls are not supported by this milestone. No fallback targets.
+`game.project.json` **before implementing**. Unknown keys/unsupported combinations fail. Web supports portable 2D/3D/hybrid + offline. Legacy native 3D and existing native multiplayer remain unchanged.
+Browser UDP/QUIC and portable multiplayer are unsupported. No fallback targets.
 Native packaging checks declared native targets; legacy games without the file retain their existing path.
 
 The canonical starter is a small complete collector. Examples with different mechanics:
@@ -59,7 +60,7 @@ the player clears site data. They do not follow the player to another browser/de
 compatibility uses Snapshot VERSION/MIGRATIONS; storage namespace v1 is independent of save version.
 Missing settings use defaults. Unavailable/corrupt storage produces a visible notice and session defaults;
 failed writes preserve the prior value. K saves and L restores; M persists sound. Native uses the same
-API/bytes next to the executable. PlatformStorage supports 4 MiB browser values; quota remains browser-defined.
+API/bytes in user data (see PORTABLE_GAMES.md). PlatformStorage supports 4 MiB browser values; quota remains browser-defined.
 
 Install prerequisites once: Rust WASM target (`rustup target add wasm32-unknown-unknown`), cached Cargo
 dependencies, Node with `ws`, and Chromium/Chrome (`BE2_CHROMIUM` overrides discovery). Local builds need

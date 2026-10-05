@@ -722,8 +722,9 @@ fn run() -> Result<()> {
             let name = arg(1)?;
             let dir = arg(2)?;
             // NAME DIRECTORY [ENGINE_PATH] [TEMPLATE]; a lone template name may stand in for the path.
-            let unknown =
-                |t: &str| format!("Unknown template '{t}': use stock, custom-sim or two-d");
+            let unknown = |t: &str| {
+                format!("Unknown template '{t}': use portable, two-d, three-d, hybrid, stock or custom-sim")
+            };
             let (engine, template) =
                 match (a.get(3).map(String::as_str), a.get(4).map(String::as_str)) {
                     (Some(t), None) if Template::parse(t).is_some() => (None, Template::parse(t)),
@@ -732,7 +733,7 @@ fn run() -> Result<()> {
                     }
                     (engine, None) => (engine, None),
                 };
-            let template = template.unwrap_or_default();
+            let template = template.unwrap_or(Template::Portable);
             scaffold_new_game_with(name, Path::new(dir), engine, template)?;
             println!(
                 "{}",

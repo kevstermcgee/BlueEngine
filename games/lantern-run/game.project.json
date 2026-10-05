@@ -15,5 +15,10 @@
     "web",
     "linux",
     "windows"
-  ]
+  ],
+  "runtime": "portable",
+  "mobile_controls": {
+    "layout": "dpad",
+    "action_label": null
+  }
 }

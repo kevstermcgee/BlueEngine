@@ -49,3 +49,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0037: One hub, one name, every BlueEngine online game](0037-shared-multi-game-hub.md)
 - [0038: The engine learns from the games built on it](0038-engine-learns-from-development.md)
 - [0039: Shared 2D presentation and verified static browser artifacts](0039-two-d-browser-artifacts.md)
+- [0040: Portable composition, mobile controls, installation and one library](0040-portable-composition-mobile-install-and-library.md)

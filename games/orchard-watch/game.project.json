@@ -14,5 +14,10 @@
     "web",
     "linux",
     "windows"
-  ]
+  ],
+  "runtime": "portable",
+  "mobile_controls": {
+    "layout": "tap",
+    "action_label": "Action"
+  }
 }

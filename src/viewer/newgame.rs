@@ -31,6 +31,12 @@ pub enum Template {
     CustomSim,
     /// Offline 2D game with the shared browser/native client.
     TwoD,
+    /// Browser/native 3D presentation, with the same rules and services.
+    ThreeD,
+    /// Composable 2D + 3D browser/native presentation.
+    Hybrid,
+    /// Recommended flexible starter; equivalent to hybrid.
+    Portable,
 }
 
 impl Template {
@@ -40,7 +46,16 @@ impl Template {
             Self::Stock => "stock",
             Self::CustomSim => "custom-sim",
             Self::TwoD => "two-d",
+            Self::ThreeD => "three-d",
+            Self::Hybrid => "hybrid",
+            Self::Portable => "portable",
         }
+    }
+    pub fn is_portable(self) -> bool {
+        matches!(
+            self,
+            Self::TwoD | Self::ThreeD | Self::Hybrid | Self::Portable
+        )
     }
     /// Parse a command-line name.
     pub fn parse(text: &str) -> Option<Self> {
@@ -48,6 +63,9 @@ impl Template {
             "stock" => Some(Self::Stock),
             "custom-sim" => Some(Self::CustomSim),
             "two-d" => Some(Self::TwoD),
+            "three-d" => Some(Self::ThreeD),
+            "hybrid" => Some(Self::Hybrid),
+            "portable" => Some(Self::Portable),
             _ => None,
         }
     }
@@ -103,11 +121,13 @@ pub fn scaffold_new_game_with(
     let identity = match template {
         Template::Stock => scaffold_stock(&project)?,
         Template::CustomSim => scaffold_custom_sim(&project)?,
-        Template::TwoD => scaffold_two_d(&project)?,
+        Template::TwoD | Template::ThreeD | Template::Hybrid | Template::Portable => {
+            scaffold_two_d(&project, template)?
+        }
     };
     write_shipping_files(&project, identity, template)?;
     write_scripts(&project)?;
-    if template == Template::TwoD {
+    if template.is_portable() {
         project.write(
             "scripts/web.py",
             include_str!("../../templates/two-d/web.py"),
@@ -250,7 +270,7 @@ fn write_shipping_files(
         "scripts/dev.py",
         include_str!("../../templates/game_dev.py"),
     )?;
-    if template != Template::TwoD {
+    if !template.is_portable() {
         project.write(
             "src/platform.rs",
             include_str!("../../templates/native_focus.rs"),
@@ -284,8 +304,8 @@ fi
 
 cmd="${1:-help}"
 case "$cmd" in
-  web) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the two-d starter." >&2; exit 1; }; "$PY" scripts/web.py "$@" ;;
-  publish) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the two-d starter." >&2; exit 1; }; "$PY" scripts/web.py publish "$@" ;;
+  web) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py "$@" ;;
+  publish) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py publish "$@" ;;
   check)
     shift
     "$PY" scripts/check.py "$@"
@@ -334,12 +354,12 @@ Set-Location $Root
 
 switch ($cmd) {
     "web" {
-        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the two-d starter." }
+        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the portable starter." }
         python scripts/web.py @CheckArgs
         exit $LASTEXITCODE
     }
     "publish" {
-        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the two-d starter." }
+        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the portable starter." }
         python scripts/web.py publish @CheckArgs
         exit $LASTEXITCODE
     }
@@ -425,7 +445,7 @@ fn scaffold_custom_sim(project: &Project) -> Result<Identity> {
     Ok(identity)
 }
 
-fn scaffold_two_d(project: &Project) -> Result<Identity> {
+fn scaffold_two_d(project: &Project, template: Template) -> Result<Identity> {
     let identity = Identity::starter(
         project.name,
         "Collect four lanterns and reach the garden exit.",
@@ -445,7 +465,38 @@ fn scaffold_two_d(project: &Project) -> Result<Identity> {
         ("README.md","# {{title}}\nCollect the four lanterns, avoid the pink patrol and reach the teal exit.\nWASD/arrows move. Click/Enter starts. K saves, L resumes, M toggles sound, R restarts.\n"),
         ("STATUS.md","2D browser/native starter. Verify and inspect real captures before shipping.\n"),
     ] { project.write(path,fill(template,&values))?; }
-    project.write("game.project.json",serde_json::to_string_pretty(&serde_json::json!({"schema_version":1,"id":project.name,"presentation":"2d","targets":["web","linux","windows"],"networking":"offline","input":["keyboard","mouse","controller"],"description":identity.tagline,"session_minutes":1,"complexity":"low"}))?)?;
+    let presentation = match template {
+        Template::TwoD => "2d",
+        Template::ThreeD => "3d",
+        _ => "hybrid",
+    };
+    if template != Template::TwoD {
+        let original = fs::read_to_string(project.dir.join("src/lib.rs"))?;
+        let start = original
+            .find("#[cfg(feature=\"client\")]\nimpl draw::Game")
+            .ok_or("Portable starter draw implementation missing")?;
+        let end = original[start..]
+            .find("#[cfg(test)] mod tests")
+            .ok_or("Portable starter tests missing")?
+            + start;
+        let minimap = if presentation == "hybrid" {
+            r#"
+        s.rect(30,Rect::new(552,260,216,125),INK);
+        s.text(31,"MAP",Point::new(565,280),16.,TEAL);
+        for r in WALLS {s.rect(32,Rect::new(558+r.x/4,283+(r.y-60)/4,(r.w/4).max(2),(r.h/4).max(2)),TEAL);}
+        s.circle(33,Point::new(558+(r.x+12)/4,283+(r.y-48)/4),4.,GOLD);
+        "#
+        } else {
+            ""
+        };
+        let draw =
+            include_str!("../../templates/two-d/world.rs").replace("// {{minimap}}", minimap);
+        project.write(
+            "src/lib.rs",
+            format!("{}{}{}", &original[..start], draw, &original[end..]),
+        )?;
+    }
+    project.write("game.project.json",serde_json::to_string_pretty(&serde_json::json!({"schema_version":1,"id":project.name,"presentation":presentation,"runtime":"portable","mobile_controls":{"layout":"dpad","action_label":null},"targets":["web","linux","windows"],"networking":"offline","input":["keyboard","mouse","controller"],"description":identity.tagline,"session_minutes":1,"complexity":"low"}))?)?;
     Ok(identity)
 }
 
@@ -730,7 +781,14 @@ mod tests {
 
     #[test]
     fn templates_have_names_and_parse_back() {
-        for t in [Template::Stock, Template::CustomSim] {
+        for t in [
+            Template::Stock,
+            Template::CustomSim,
+            Template::TwoD,
+            Template::ThreeD,
+            Template::Hybrid,
+            Template::Portable,
+        ] {
             assert_eq!(Template::parse(t.name()), Some(t));
         }
         assert_eq!(Template::parse("racing"), None);

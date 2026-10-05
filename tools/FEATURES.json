@@ -2054,10 +2054,13 @@
         "templates/two-d/Cargo.toml.tmpl",
         "templates/two-d/lib.rs",
         "templates/two-d/main.rs",
-        "templates/two-d/web.py"
+        "templates/two-d/web.py",
+        "docs/PORTABLE_GAMES.md",
+        "templates/two-d/world.rs",
+        "tests/portable_storage.rs"
       ],
       "read_first": [
-        "docs/TWO_D.md",
+        "docs/PORTABLE_GAMES.md",
         "templates/two-d/AGENTS.md",
         "templates/two-d/lib.rs"
       ],
@@ -2065,7 +2068,7 @@
         "cargo test --locked --lib two_d --no-default-features --features two-d",
         "python -m unittest tools.test_web_games"
       ],
-      "note": "First-class 2D: explicit project requirements, two-d starter, integer collision/kinematic physics/triggers, logical viewport, layered primitives/text/sprites/transforms, tick animation/particles, shared fixed-step simulation and Snapshot storage. Shared client owns devices, audio, HUD, saves and browser/native boundaries. No 3D renderer inspection needed.",
+      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native/browser install. Choose elements by gameplay value; no legacy renderer exploration.",
       "keywords": [
         "2d",
         "2D",
@@ -2076,7 +2079,12 @@
         "cozy",
         "management",
         "dimensionality",
-        "game proposal"
+        "game proposal",
+        "hybrid",
+        "3d",
+        "portable",
+        "minimap",
+        "mixed dimensions"
       ],
       "canonical_example": "templates/two-d/lib.rs",
       "depends_on": [],
@@ -2086,7 +2094,9 @@
         "two_d::Rect",
         "two_d::Body",
         "two_d::draw::Scene",
-        "two_d::client::run"
+        "two_d::client::run",
+        "portable::draw::World",
+        "portable::draw::Scene::world"
       ]
     },
     "browser_games": {
@@ -2096,17 +2106,25 @@
         "tools/browser_smoke.mjs",
         "tools/test_web_games.py",
         "templates/web/index.html",
-        "templates/web/platform.js"
+        "templates/web/platform.js",
+        "templates/web/mobile.js",
+        "templates/web/service-worker.js",
+        "templates/catalog/browser_catalog.py",
+        "templates/catalog/index.html",
+        "templates/catalog/app.js",
+        "templates/catalog/style.css",
+        "templates/catalog/catalog.css",
+        "tools/catalog_smoke.mjs"
       ],
       "read_first": [
-        "docs/TWO_D.md",
+        "docs/PORTABLE_GAMES.md",
         "templates/two-d/AGENTS.md"
       ],
       "checks": [
         "python -m unittest tools.test_web_games",
         "isolated real Chromium WASM playthrough and persistence smoke"
       ],
-      "note": "Web target supports 2D/offline only: tests, locked WASM build, exact loader ABI, deterministic package integrity, browser/native state-hash comparison, gesture audio, persistence reload and real interaction probe. be2.py web build GAME and be2.py publish GAME. Directory backend returns a publication-ready library; optional GitHub Pages backend reports URL only after verified deployment.",
+      "note": "Portable offline 2D/3D/hybrid web/native authoring. Per-game dpad/paddle/tap controls below canvas on mobile, autosave/settings, offline browser installation, isolated desktop AND mobile touch/audio/storage/offline gates. Shared catalog joins native/browser by ID; persistent stars pin favorites. Build/publish remain separate.",
       "keywords": [
         "web",
         "wasm",
@@ -2117,7 +2135,15 @@
         "URL",
         "catalog",
         "localStorage",
-        "audio gesture"
+        "audio gesture",
+        "mobile",
+        "touch",
+        "PWA",
+        "install",
+        "favorites",
+        "star",
+        "feed",
+        "offline install"
       ],
       "depends_on": [
         "two_dimensional"
@@ -2141,7 +2167,7 @@
     "docs/NETPLAY.md": "Netplay: online play for games that own their simulation",
     "docs/SAVE_STATE.md": "Save states",
     "docs/SHARED_GAMEPLAY.md": "Shared gameplay and presentation",
-    "docs/TWO_D.md": "2D games → browser",
+    "docs/TWO_D.md": "2D games \u2192 browser",
     "docs/UPGRADE.md": "Upgrading an external game to a chosen engine revision",
     "docs/adr/0001-shared-simulation.md": "0001: Shared simulation and optional presentation",
     "docs/adr/0003-arena-shooter-primitives.md": "ADR 0003: Opt-in arena-shooter primitives",
@@ -2328,6 +2354,7 @@
     "tools/web_games.py": "Supported 2D web workflow: propose, build, verify, publish.",
     "tools/web_publish.py": "Optional GitHub Pages adapter.",
     "tools/workflow.py": "Bounded context lookup and conservative validation selection.",
-    "tools/xcapture.py": "See a game on a machine with no display: run it on a virtual display and save real screenshots."
+    "tools/xcapture.py": "See a game on a machine with no display: run it on a virtual display and save real screenshots.",
+    "docs/PORTABLE_GAMES.md": "Browser/native 2D/3D/hybrid authoring, mobile controls, persistence, install, unified feed"
   }
 }

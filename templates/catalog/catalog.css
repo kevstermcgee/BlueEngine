@@ -1,0 +1,7 @@
+
+[hidden]{display:none!important}
+.star{float:right;min-width:44px;min-height:44px;background:transparent;color:var(--accent);border:1px solid var(--muted);border-radius:6px;font-size:24px;cursor:pointer}
+.star[aria-pressed=true]{color:#ffce62;border-color:#ffce62}
+.dl.play{background:#6de0d0;margin-bottom:8px}
+#favorites-status{font-size:.85rem;color:var(--muted)}
+.toolbar select{max-width:100%}

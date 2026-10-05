@@ -8,13 +8,23 @@ pub trait Storage {
     fn write(&self, key: &str, bytes: &[u8]) -> Result<(), String>;
 }
 pub fn save<S: Snapshot>(store: &impl Storage, sim: &S) -> Result<(), String> {
+    save_slot(store, "quick", sim)
+}
+pub fn save_slot<S: Snapshot>(store: &impl Storage, slot: &str, sim: &S) -> Result<(), String> {
     store.write(
-        "quick",
+        slot,
         &snapshot::save(sim, "Quick save").map_err(|e| e.to_string())?,
     )
 }
 pub fn load<S: Snapshot>(store: &impl Storage, sim: &mut S) -> Result<bool, String> {
-    match store.read("quick")? {
+    load_slot(store, "quick", sim)
+}
+pub fn load_slot<S: Snapshot>(
+    store: &impl Storage,
+    slot: &str,
+    sim: &mut S,
+) -> Result<bool, String> {
+    match store.read(slot)? {
         None => Ok(false),
         Some(bytes) => {
             snapshot::restore(sim, &bytes).map_err(|e| e.to_string())?;
@@ -62,25 +72,54 @@ impl PlatformStorage {
 impl Storage for PlatformStorage {
     fn read(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
         let name = self.key(key)?.replace(':', "_");
-        let path = std::env::current_exe()
-            .map_err(|e| e.to_string())?
-            .with_file_name(name);
-        match std::fs::read(path) {
+        let path = native_directory()?.join(&name);
+        match std::fs::read(&path) {
             Ok(v) => Ok(Some(v)),
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                // Read-only migration from older executable-adjacent storage.
+                let legacy = std::env::current_exe()
+                    .map_err(|e| e.to_string())?
+                    .with_file_name(name);
+                match std::fs::read(legacy) {
+                    Ok(bytes) => {
+                        self.write(key, &bytes)?;
+                        Ok(Some(bytes))
+                    }
+                    Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(None),
+                    Err(e) => Err(format!("Legacy storage unavailable: {e}")),
+                }
+            }
             Err(e) => Err(format!("Storage unavailable: {e}")),
         }
     }
     fn write(&self, key: &str, bytes: &[u8]) -> Result<(), String> {
         let name = self.key(key)?.replace(':', "_");
-        let path = std::env::current_exe()
-            .map_err(|e| e.to_string())?
-            .with_file_name(name);
+        let directory = native_directory()?;
+        std::fs::create_dir_all(&directory).map_err(|e| format!("Storage unavailable: {e}"))?;
+        let path = directory.join(name);
         let tmp = path.with_extension("tmp");
         std::fs::write(&tmp, bytes)
             .and_then(|()| std::fs::rename(&tmp, &path))
             .map_err(|e| format!("Storage unavailable: {e}"))
     }
+}
+#[cfg(not(target_arch = "wasm32"))]
+fn native_directory() -> Result<std::path::PathBuf, String> {
+    use std::{env, path::PathBuf};
+    if let Some(path) = env::var_os("BLUEENGINE_DATA_DIR") {
+        return Ok(PathBuf::from(path));
+    }
+    #[cfg(target_os = "windows")]
+    let root = env::var_os("LOCALAPPDATA").map(PathBuf::from);
+    #[cfg(target_os = "macos")]
+    let root = env::var_os("HOME").map(|p| PathBuf::from(p).join("Library/Application Support"));
+    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    let root = env::var_os("XDG_DATA_HOME")
+        .map(PathBuf::from)
+        .or_else(|| env::var_os("HOME").map(|p| PathBuf::from(p).join(".local/share")));
+    root.map(|p| p.join("BlueEngine")).ok_or_else(|| {
+        "User storage location unavailable; set BLUEENGINE_DATA_DIR to a writable directory".into()
+    })
 }
 #[cfg(target_arch = "wasm32")]
 mod browser {
@@ -184,6 +223,22 @@ mod tests {
             self.0 = state;
             Ok(())
         }
+    }
+    #[test]
+    fn automatic_and_manual_slots_are_independent_and_share_snapshot_format() {
+        let store = Memory::default();
+        save(&store, &Counter(10)).unwrap();
+        save_slot(&store, "progress", &Counter(12)).unwrap();
+        let mut restored = Counter(0);
+        load(&store, &mut restored).unwrap();
+        assert_eq!(restored.0, 10);
+        load_slot(&store, "progress", &mut restored).unwrap();
+        assert_eq!(restored.0, 12);
+        store.blocked.set(true);
+        assert!(save_slot(&store, "progress", &Counter(14)).is_err());
+        store.blocked.set(false);
+        load_slot(&store, "progress", &mut restored).unwrap();
+        assert_eq!(restored.0, 12);
     }
     #[test]
     fn storage_failures_preserve_previous_save_and_corruption_preserves_simulation() {

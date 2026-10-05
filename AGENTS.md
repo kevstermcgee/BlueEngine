@@ -27,7 +27,7 @@ Never violate:
 - Preserve completed outputs on failure; never shell-interpolate scene values.
 - Preserve official assets/branding artwork. No plugin/service installation needed.
 
-Game projects start with their own AGENTS.md and project check. For 2D/browser games read docs/TWO_D.md, use the two-d starter and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
+Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
 (docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use the stock starter;
 enemies, projectiles, scoring, AI or per-frame physics use `new-game ... custom-sim`. A native game is
 done only when it ships with its own icon and desktop shortcut (`scripts/blue ship`; its

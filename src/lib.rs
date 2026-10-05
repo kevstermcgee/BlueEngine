@@ -1,6 +1,6 @@
 #![deny(unsafe_code)]
 #[cfg(all(target_arch = "wasm32", any(feature = "client", feature = "offline")))]
-compile_error!("Browser games require default-features=false and features=[two-d]. Use scripts/blue web build from the two-d starter; native 3D/client/offline features are not supported on WASM.");
+compile_error!("Browser games require default-features=false and features=[portable]. Use scripts/blue web build from the portable starter for 2D/3D/hybrid. Legacy native client/offline features are not supported on WASM.");
 #[cfg(not(target_arch = "wasm32"))]
 pub mod geometry;
 #[cfg(not(target_arch = "wasm32"))]
@@ -15,6 +15,11 @@ pub mod runtime;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod scene;
 pub mod two_d;
+/// Shared browser/native authoring path. Compose 2D and 3D presentation freely;
+/// deterministic rules, devices, sound and storage stay on the same runtime.
+pub mod portable {
+    pub use crate::two_d::*;
+}
 #[cfg(not(target_arch = "wasm32"))]
 pub mod viewer;
 #[cfg(target_arch = "wasm32")]

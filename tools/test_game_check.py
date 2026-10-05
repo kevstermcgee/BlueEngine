@@ -146,7 +146,7 @@ class GeneratedGameIntegrationTests(unittest.TestCase):
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory) / 'game with spaces'
-            subprocess.run([native, 'new-game', 'workflow-test', str(project)],
+            subprocess.run([native, 'new-game', 'workflow-test', str(project), 'stock'],
                            check=True, capture_output=True, creationflags=flags)
             command = [sys.executable, str(project / 'scripts/check.py'),
                        '--tools', native, '--content-only']

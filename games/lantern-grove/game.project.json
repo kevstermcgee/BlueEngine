@@ -1,0 +1,24 @@
+{
+  "complexity": "low",
+  "description": "Collect four lanterns and reach the garden exit.",
+  "id": "lantern-grove",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "mobile_controls": {
+    "action_label": null,
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "hybrid",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 1,
+  "targets": [
+    "web",
+    "linux",
+    "windows"
+  ]
+}

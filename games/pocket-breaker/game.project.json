@@ -15,5 +15,10 @@
     "web",
     "linux",
     "windows"
-  ]
+  ],
+  "runtime": "portable",
+  "mobile_controls": {
+    "layout": "paddle",
+    "action_label": "Action"
+  }
 }

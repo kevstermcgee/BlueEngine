@@ -25,6 +25,7 @@ default = ["client", "offline"]
 offline = ["dep:png", "dep:ctrlc"]
 presentation = ["dep:macroquad"]
 two-d = ["dep:macroquad"]
+portable = ["two-d"]
 client = ["presentation", "gamepad", "dep:windows-sys"]
 gamepad = ["dep:gilrs"]
 

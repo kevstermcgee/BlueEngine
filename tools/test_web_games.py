@@ -48,7 +48,7 @@ class RequirementsTests(unittest.TestCase):
             game=Path(directory)
             def write(p):(game/'game.project.json').write_text(json.dumps(p))
             write(project);self.assertEqual(web.validate_project(game)['targets'],['web','windows'])
-            for change,message in [({'presentation':'3d'},r'2d \+ offline'),({'networking':'native-multiplayer'},r'2d \+ offline'),({'targets':['browser']},'targets'),({'target':['web']},'Unknown project'),({'presentation':'2d','networking':'native-multiplayer','targets':['windows']},'offline only'),({'input':[]},'input'),({'id':23},'Game ID'),({'targets':[{}]},'targets'),({'input':[{}]},'input')]:
+            for change,message in [({'presentation':'3d'},r'portable \+ offline'),({'networking':'native-multiplayer'},r'portable \+ offline'),({'targets':['browser']},'targets'),({'target':['web']},'Unknown project'),({'presentation':'2d','networking':'native-multiplayer','targets':['windows']},'offline only'),({'input':[]},'input'),({'id':23},'Game ID'),({'targets':[{}]},'targets'),({'input':[{}]},'input')]:
                 with self.subTest(change=change):
                     write(project|change)
                     with self.assertRaisesRegex(web.WebError,message):web.validate_project(game)
@@ -73,16 +73,47 @@ class PublisherBoundaryTests(unittest.TestCase):
         from tools.web_publish import integrate_catalog
         with tempfile.TemporaryDirectory() as folder:
             builder=Path(folder)/'build.py'
-            original='import shutil\nfrom pathlib import Path\ndef build():\n    page = "native download cards"\n    (out / "index.html").write_text(page)\n'
+            original='import shutil\nfrom pathlib import Path\ndef build():\n    games.sort(key=lambda g: g["name"])\n    page = "native download cards"\n    (out / "index.html").write_text(page)\n'
             builder.write_text(original);integrate_catalog(builder)
             first=builder.read_text();integrate_catalog(builder)
             self.assertEqual(builder.read_text(),first)
             self.assertIn('native download cards',first)
-            self.assertIn('out / "web"',first)
+            self.assertIn('merge_games',first)
+            self.assertTrue((builder.parent/'browser_catalog.py').exists())
             compile(first,str(builder),'exec')
             builder.write_text('unexpected catalog interface')
             with self.assertRaisesRegex(ValueError,'integration point changed'):integrate_catalog(builder)
             self.assertEqual(builder.read_text(),'unexpected catalog interface')
+
+class PortableRequirementsTests(unittest.TestCase):
+    def test_all_presentations_accept_browser_and_native_on_shared_runtime(self):
+        project={'schema_version':1,'id':'portable-game','runtime':'portable','targets':['web','linux','windows'],'networking':'offline','input':['keyboard','mouse'],'description':'A mixed view','session_minutes':2,'complexity':'low'}
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)
+            for presentation in ('2d','3d','hybrid'):
+                for layout in ('dpad','paddle','tap'):
+                    (root/'game.project.json').write_text(json.dumps(project|{'presentation':presentation,'mobile_controls':{'layout':layout}}))
+                    self.assertEqual(web.validate_project(root)['presentation'],presentation)
+            for bad in ({'layout':'joystick-guess'},{'layout':'dpad','actions':7},{'layout':'dpad','action_label':'x'*25}):
+                (root/'game.project.json').write_text(json.dumps(project|{'presentation':'hybrid','mobile_controls':bad}))
+                with self.assertRaisesRegex(web.WebError,'mobile_controls'):web.validate_project(root)
+
+class UnifiedCatalogTests(unittest.TestCase):
+    def test_browser_and_native_join_by_id_and_preserve_downloads(self):
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('catalog',web.ROOT/'templates/catalog/browser_catalog.py')
+        catalog=importlib.util.module_from_spec(spec);spec.loader.exec_module(catalog)
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);(root/'web').mkdir();(root/'out').mkdir()
+            item={'id':'shared-game','title':'Shared','description':'A hybrid','presentation':'hybrid','networking':'offline','input':['mouse'],'targets':['web','windows'],'built_at_epoch':1,'play':'shared-game/index.html','thumbnail':'shared-game/thumbnail.png','native_download':None}
+            (root/'web/catalog.json').write_text(json.dumps({'games':[item,item|{'id':'browser-only','title':'<Unsafe>'}]}))
+            native=[{'card':'<article class="card"><h2>Shared</h2><p class="meta">v1</p><a class="dl" href="existing.zip">Download</a></article>','name':'Shared','created':'2026-01-01'}]
+            merged=catalog.merge_games(native,[{'slug':'shared-game','name':'Shared'}],root/'web',root/'out',root/'games')
+            self.assertEqual(len(merged),2)
+            self.assertIn('existing.zip',merged[0]['card']);self.assertIn('web/shared-game/index.html',merged[0]['card'])
+            self.assertIn('data-presentation="hybrid"',merged[0]['card']);self.assertEqual(merged[0]['card'].count('data-star='),1)
+            self.assertIn('&lt;Unsafe&gt;',merged[1]['card'])
+            self.assertTrue((root/'out/web/catalog.json').is_file())
 
 
 @unittest.skipUnless(web.os.environ.get('BE2_BROWSER_FIXTURE'), 'Set BE2_BROWSER_FIXTURE to a built web package for real browser negative tests')

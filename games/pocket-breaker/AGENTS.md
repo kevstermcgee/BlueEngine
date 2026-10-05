@@ -1,7 +1,7 @@
 # Pocket Breaker
 
 Read this file, src/lib.rs and game.project.json. For a rule change, update the tests in lib.rs.
-main.rs is platform glue; do not explore the 3D renderer. Engine docs/TWO_D.md is the API reference.
+main.rs is platform glue; use shared Scene/World composition; do not explore the legacy renderer. Engine docs/PORTABLE_GAMES.md is the platform/composition reference; docs/TWO_D.md covers primitives.
 
 - GameLogic + Simulation own fixed 60 Hz integer rules. Input is Intent. Draw only reads state.
 - Snapshot uses the engine frame/hash/migration contract on native and browser. Bump VERSION and
