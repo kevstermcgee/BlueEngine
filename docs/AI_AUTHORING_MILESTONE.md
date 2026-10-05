@@ -17,7 +17,9 @@ untouched in dist and are excluded from smoke. Failed runs retain full stdout/st
 
 Capture runs used to mute the entire audio path. `--audible`, `AudioStatus` and
 `verify_playback(expected_variants, expected_stems)` now distinguish silent screenshots from
-completed audio loading and playback submissions. The starter includes that gate. Missing
+completed audio loading and playback submissions. The starter includes that gate.
+Capture helper `--audible` opts out of its default mute and retains the executable's reports;
+the final packaged audit caught and repaired that override trap with regression coverage. Missing
 values for shared run flags are rejected. Analysis of actual generated WAVs exposed a chord
 tail cut at nonzero amplitude; the shared synth now fades finite tails before truncation.
 

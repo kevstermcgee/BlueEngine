@@ -2,6 +2,8 @@
 import contextlib
 import io
 import unittest
+import tempfile
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import patch
 
@@ -17,6 +19,27 @@ class CommandTests(unittest.TestCase):
         self.assertEqual(cmd[cmd.index('--exit-after') + 1], '320')
         self.assertEqual(cmd[-2:], ['--character', 'ghost'])
         self.assertIn('--mute', cmd)
+
+    def test_explicit_audio_verification_is_not_overridden_by_implicit_mute(self):
+        cmd = xcapture.build_command(Path('/g/game'), '30', '640x480', Path('/tmp/o'), ['--audible'])
+        self.assertIn('--audible', cmd)
+        self.assertNotIn('--mute', cmd)
+        explicit = xcapture.build_command(Path('/g/game'), '30', '640x480', Path('/tmp/o'), ['--audible', '--mute'])
+        self.assertIn('--mute', explicit)
+
+    def test_success_retains_executable_verification_report(self):
+        with tempfile.TemporaryDirectory() as d:
+            game = Path(d) / 'game'
+            game.touch()
+            out = Path(d) / 'shots'
+            out.mkdir()
+            (out / 'shot_00030.png').touch()
+            report = '{"audio":{"loaded_effects":18},"garden":{"outcome":"Won"}}'
+            done = SimpleNamespace(returncode=0, stdout=report+'\n', stderr='')
+            output = io.StringIO()
+            with patch.object(xcapture.shutil, 'which', return_value='xvfb-run'), patch.object(xcapture.subprocess, 'run', return_value=done), contextlib.redirect_stdout(output):
+                self.assertEqual(xcapture.main([str(game), '--out', str(out), '--', '--audible']), 0)
+            self.assertIn(report, output.getvalue())
 
     def test_missing_xvfb_says_how_to_install_it(self):
         err = io.StringIO()

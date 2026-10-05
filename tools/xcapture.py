@@ -26,9 +26,10 @@ def build_command(game, frames, size, out, extra, xvfb='xvfb-run'):
     """The command line for one capture run (pure, so it is testable without a display)."""
     width, height = size.split('x')
     last = max(int(f) for f in frames.split(','))
+    audio = [] if '--audible' in extra else ['--mute']
     return [xvfb, '-a', '-s', f'-screen 0 {width}x{height}x24', str(game),
             '--capture', str(out), '--frames', frames, '--exit-after', str(last + 20),
-            '--size', size, '--mute', *extra]
+            '--size', size, *audio, *extra]
 
 
 def main(argv):
@@ -64,6 +65,8 @@ def main(argv):
     for line in done.stdout.splitlines():
         if line.startswith('{"frame"'):
             print(json.loads(line)['path'])
+        else:
+            print(line)  # retain gameplay/audio/performance evidence from the executable
     if done.returncode or not shots:
         print(done.stderr[-1500:] or done.stdout[-1500:], file=sys.stderr)
         return done.returncode or 1
