@@ -31,6 +31,58 @@
       {
         "source": "assets/games",
         "destination": "."
+      },
+      {
+        "source": "games/signal-garden/src",
+        "destination": "signal-garden/src"
+      },
+      {
+        "source": "games/signal-garden/tests",
+        "destination": "signal-garden/tests"
+      },
+      {
+        "source": "games/signal-garden/assets",
+        "destination": "signal-garden/assets"
+      },
+      {
+        "source": "games/signal-garden/scripts",
+        "destination": "signal-garden/scripts"
+      },
+      {
+        "source": "games/signal-garden/Cargo.toml",
+        "destination": "signal-garden/Cargo.toml"
+      },
+      {
+        "source": "games/signal-garden/Cargo.lock",
+        "destination": "signal-garden/Cargo.lock"
+      },
+      {
+        "source": "games/signal-garden/build.rs",
+        "destination": "signal-garden/build.rs"
+      },
+      {
+        "source": "games/signal-garden/AGENTS.md",
+        "destination": "signal-garden/AGENTS.md"
+      },
+      {
+        "source": "games/signal-garden/CLAUDE.md",
+        "destination": "signal-garden/CLAUDE.md"
+      },
+      {
+        "source": "games/signal-garden/README.md",
+        "destination": "signal-garden/README.md"
+      },
+      {
+        "source": "games/signal-garden/STATUS.md",
+        "destination": "signal-garden/STATUS.md"
+      },
+      {
+        "source": "games/signal-garden/rustfmt.toml",
+        "destination": "signal-garden/rustfmt.toml"
+      },
+      {
+        "source": "games/signal-garden/.gitignore",
+        "destination": "signal-garden/.gitignore"
       }
     ],
     "prototypes": [

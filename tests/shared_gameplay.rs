@@ -97,6 +97,19 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     assert!(!unix.contains("cargo check"));
     assert!(unix.contains("\"$PY\" scripts/dev.py"));
     assert!(windows.contains("python scripts/dev.py"));
+    assert!(
+        !windows.contains("\"$PY\""),
+        "PowerShell must use its own Python command"
+    );
+    #[cfg(unix)]
+    {
+        let launched = std::process::Command::new(dir.join("scripts/blue"))
+            .arg("help")
+            .output()
+            .expect("the documented generated launcher must be directly executable");
+        assert!(launched.status.success());
+        assert!(String::from_utf8_lossy(&launched.stdout).contains("Usage: scripts/blue"));
+    }
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/dev.py")).unwrap(),
         include_str!("../templates/game_dev.py")

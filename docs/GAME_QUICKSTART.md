@@ -35,6 +35,20 @@ input accumulator, deterministic-replay and capture helpers, saves, screen-feel,
 3. You exercised the changed controls and looked at real frames of the shipped program, and you say what
    you did not verify.
 
+`python scripts/ship.py verify --json` verifies the package without a display: the manifest's
+portable relative paths, declared files, every recorded SHA-256, and stock `GameDocument.map`
+dependencies. A directory existing in dist is insufficient; missing nested files fail even when
+the checkout still has them. Old shipping scripts need refreshing from `templates/game_ship.py`.
+Player saves/settings stay in dist and survive packaging, but are excluded from smoke evidence.
+`verify --smoke` first performs integrity checks even without a display; with a display it copies
+only declared files to a temporary directory outside the checkout and launches there. Full smoke
+output is retained in `.blue-check/smoke-*.log`. This catches exercised undeclared relative reads;
+it cannot prove arbitrary code never reads an absolute path, nor vendor every system shared library.
+
+For a maintained custom-sim example, see `games/signal-garden/AGENTS.md`: public-input winning
+routes, audio verification, a saved-state migration and a bounded mechanic modification. Its
+simulation, graphical frames and shipped-package evidence are separate checks.
+
 ## The stock starter
 
 ```sh

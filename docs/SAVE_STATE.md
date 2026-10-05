@@ -158,8 +158,10 @@ Two independent numbers, so a change never strands a player's save:
    payload into `n + 1`. Loading runs the chain (`migrate`); a missing step is an error, never a silent skip. A
    migrated state's hash is not compared (the game may legitimately hash new fields differently).
 
-Never edit a released migration. Adding a field that has a serde `default` needs no migration; renaming,
-removing or re-typing one does.
+Never edit a released migration. Even a field with a serde `default` needs a version bump and
+migration when it changes `state_hash()`: an unmigrated Exact save must reproduce the old hash.
+Renaming, removing or re-typing a field also needs a migration. Signal Garden's version-one
+fixture proves that adding a saved shield timer still resumes the original winning route.
 
 ## Inspect a file
 

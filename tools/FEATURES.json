@@ -1227,7 +1227,7 @@
       ],
       "contract": {
         "owns": "Frame timing, fixed-step accumulation, per-tick input, replay/capture/perf plumbing, saves, screen feel, synthesised audio",
-        "inputs": "Device frames and the game's own per-tick Input",
+        "inputs": "Device frames and the game's own per-tick Input; --audible opts into unattended audio, --mute wins; valued run flags reject missing arguments",
         "outputs": "Whole fixed ticks, one input per tick, state hashes, capture schedules",
         "may_depend_on": [
           "movement"
@@ -1372,7 +1372,7 @@
       "contract": {
         "owns": "Dynamic batched geometry, materials, effect state, HUD drawing helpers and sound playback for custom renderers",
         "inputs": "Game state read by the window, a Look, real seconds",
-        "outputs": "Draw calls, screenshots, sound",
+        "outputs": "Draw calls, screenshots, sound, SoundBank::status rendering/loading failure and playback submission evidence",
         "may_depend_on": [
           "game_presentation",
           "custom_simulation"
@@ -1403,7 +1403,8 @@
         "Shadows",
         "ShadowMap",
         "ShadowCamera",
-        "ShadowQuality"
+        "ShadowQuality",
+        "AudioStatus"
       ],
       "read_first": [
         "src/viewer/kit/mod.rs",
@@ -1431,7 +1432,7 @@
         "python -m unittest tools.test_game_ship tools.test_game_check",
         "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)"
       ],
-      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass.",
+      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. Package verification is display-independent: strict portable manifest paths, every SHA-256, complete declared source inventory when available, and GameDocument.map closure. Graphical smoke copies only declarations outside the checkout and saves full stdout/stderr; mutable player files are preserved in dist but excluded from smoke.",
       "keywords": [
         "ship",
         "shipping",

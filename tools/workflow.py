@@ -337,6 +337,14 @@ def full_commands(test_profile='itest'):
             ['cargo', 'test', '--locked', *profile_flags(test_profile), *features],
             ['cargo', 'clippy', '--all-targets', '--locked', *features, '--', '-D', 'warnings'],
         ])
+    # Keep the maintained game on the real authoring path. Its own final ship check is exercised
+    # separately with a display; CI still compiles presentation and proves headless rules/saves.
+    game_manifest = 'games/signal-garden/Cargo.toml'
+    commands.extend([
+        ['cargo', 'fmt', '--manifest-path', game_manifest, '--check'],
+        ['cargo', 'test', '--locked', '--manifest-path', game_manifest, '--no-default-features'],
+        ['cargo', 'test', '--locked', '--manifest-path', game_manifest],
+    ])
     return commands + [
         [sys.executable, 'tools/check_headless.py'],
         [sys.executable, 'tools/check_authoring.py'],

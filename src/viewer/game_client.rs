@@ -385,58 +385,39 @@ impl GameShell {
                 self.suppress = true;
             }
         } else if self.settings_screen {
-            let row = |i: f32| y + (108. + i * 54.) * scale;
-            let (bw, bh) = (pw - 48. * scale, 42. * scale);
-            let mut next = 0.;
-            if audio.has_music {
-                let music_label = if audio.music_on {
-                    "Music: On"
-                } else {
-                    "Music: Off"
+            let rows = settings_rows(audio.has_music, shadows.is_some());
+            self.selection = menu_selection(self.selection, self.actions, rows.len());
+            for (i, row_kind) in rows.iter().enumerate() {
+                let label = match row_kind {
+                    SettingsRow::Music => {
+                        format!("Music: {}", if audio.music_on { "On" } else { "Off" })
+                    }
+                    SettingsRow::Sound => {
+                        format!("Sound: {}", if audio.sfx_on { "On" } else { "Off" })
+                    }
+                    SettingsRow::Shadows => format!("Shadows: {}", shadows.unwrap().label()),
+                    SettingsRow::Download => "Save music (.wav)".into(),
+                    SettingsRow::Back => "Back".into(),
                 };
-                if self.button(music_label, x + 24. * scale, row(next), bw, bh, false) {
-                    outcome.toggle_music = true;
-                    self.suppress = true;
+                let by = if *row_kind == SettingsRow::Back {
+                    y + ph - 64. * scale
+                } else {
+                    y + (108. + i as f32 * 54.) * scale
+                };
+                let clicked = self.button(
+                    &label,
+                    x + 24. * scale,
+                    by,
+                    pw - 48. * scale,
+                    42. * scale,
+                    self.selection == i,
+                );
+                if clicked || (self.selection == i && self.actions.accept) {
+                    self.apply_setting(*row_kind, &mut outcome);
                 }
-                next += 1.;
-            }
-            let sfx_label = if audio.sfx_on {
-                "Sound: On"
-            } else {
-                "Sound: Off"
-            };
-            if self.button(sfx_label, x + 24. * scale, row(next), bw, bh, false) {
-                outcome.toggle_sfx = true;
-                self.suppress = true;
-            }
-            next += 1.;
-            if let Some(quality) = shadows {
-                let label = format!("Shadows: {}", quality.label());
-                if self.button(&label, x + 24. * scale, row(next), bw, bh, false) {
-                    outcome.cycle_shadows = true;
-                    self.suppress = true;
+                if *row_kind == SettingsRow::Download {
+                    draw_download_arrow(x + pw - 54. * scale, by + 21. * scale, 8. * scale);
                 }
-                next += 1.;
-            }
-            if audio.has_music {
-                let (dx, dy) = (x + 24. * scale, row(next));
-                if self.button("Save music (.wav)", dx, dy, bw, bh, false) {
-                    outcome.download_music = true;
-                    self.suppress = true;
-                }
-                draw_download_arrow(dx + bw - 30. * scale, dy + bh * 0.5, 8. * scale);
-            }
-            if self.button(
-                "Back",
-                x + 24. * scale,
-                y + ph - 64. * scale,
-                pw - 48. * scale,
-                42. * scale,
-                true,
-            ) || self.actions.accept
-            {
-                self.settings_screen = false;
-                self.suppress = true;
             }
         } else {
             if self.actions.next {
@@ -462,13 +443,29 @@ impl GameShell {
                     match i {
                         0 => self.paused = false,
                         1 => self.controls = true,
-                        2 => self.settings_screen = true,
+                        2 => {
+                            self.settings_screen = true;
+                            self.selection = 0;
+                        }
                         _ => outcome.quit = true,
                     }
                 }
             }
         }
         outcome
+    }
+    fn apply_setting(&mut self, row: SettingsRow, outcome: &mut MenuOutcome) {
+        self.suppress = true;
+        match row {
+            SettingsRow::Music => outcome.toggle_music = true,
+            SettingsRow::Sound => outcome.toggle_sfx = true,
+            SettingsRow::Shadows => outcome.cycle_shadows = true,
+            SettingsRow::Download => outcome.download_music = true,
+            SettingsRow::Back => {
+                self.settings_screen = false;
+                self.selection = 0;
+            }
+        }
     }
     fn menu_with_status(&mut self, title: &str, controls: &[&str], status: &str) -> bool {
         if !self.paused {
@@ -592,4 +589,100 @@ pub fn movement_axes() -> (f32, f32) {
         held(KeyCode::W, KeyCode::Up) - held(KeyCode::S, KeyCode::Down),
         held(KeyCode::D, KeyCode::Right) - held(KeyCode::A, KeyCode::Left),
     )
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum SettingsRow {
+    Music,
+    Sound,
+    Shadows,
+    Download,
+    Back,
+}
+fn settings_rows(music: bool, shadows: bool) -> Vec<SettingsRow> {
+    let mut rows = Vec::new();
+    if music {
+        rows.push(SettingsRow::Music);
+    }
+    rows.push(SettingsRow::Sound);
+    if shadows {
+        rows.push(SettingsRow::Shadows);
+    }
+    if music {
+        rows.push(SettingsRow::Download);
+    }
+    rows.push(SettingsRow::Back);
+    rows
+}
+fn menu_selection(current: usize, actions: ShellActions, count: usize) -> usize {
+    let current = current % count;
+    if actions.next {
+        (current + 1) % count
+    } else if actions.previous {
+        (current + count - 1) % count
+    } else {
+        current
+    }
+}
+#[cfg(test)]
+mod settings_tests {
+    use super::*;
+    #[test]
+    fn keyboard_settings_visit_only_available_rows_and_activate_without_closing() {
+        for music in [false, true] {
+            for shadows in [false, true] {
+                let rows = settings_rows(music, shadows);
+                assert_eq!(rows.contains(&SettingsRow::Music), music);
+                assert_eq!(rows.contains(&SettingsRow::Download), music);
+                assert_eq!(rows.contains(&SettingsRow::Shadows), shadows);
+                let mut shell = GameShell::in_state(false, true, false);
+                shell.settings_screen = true;
+                for (i, row) in rows.iter().enumerate() {
+                    assert_eq!(shell.selection, i);
+                    let mut outcome = MenuOutcome::default();
+                    shell.apply_setting(*row, &mut outcome);
+                    match row {
+                        SettingsRow::Music => assert!(outcome.toggle_music),
+                        SettingsRow::Sound => assert!(outcome.toggle_sfx),
+                        SettingsRow::Shadows => assert!(outcome.cycle_shadows),
+                        SettingsRow::Download => assert!(outcome.download_music),
+                        SettingsRow::Back => assert!(!shell.settings_screen),
+                    }
+                    if *row != SettingsRow::Back {
+                        assert!(shell.settings_screen);
+                        shell.selection = menu_selection(
+                            shell.selection,
+                            ShellActions {
+                                next: true,
+                                ..Default::default()
+                            },
+                            rows.len(),
+                        );
+                    }
+                }
+                assert_eq!(
+                    menu_selection(
+                        0,
+                        ShellActions {
+                            previous: true,
+                            ..Default::default()
+                        },
+                        rows.len()
+                    ),
+                    rows.len() - 1
+                );
+                assert_eq!(
+                    menu_selection(
+                        rows.len() - 1,
+                        ShellActions {
+                            next: true,
+                            ..Default::default()
+                        },
+                        rows.len()
+                    ),
+                    0
+                );
+            }
+        }
+    }
 }

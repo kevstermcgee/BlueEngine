@@ -3,7 +3,7 @@
 //! Play it, or drive it without a human (an agent cannot watch a window); `devkit::Lifecycle` handles these:
 //!   --capture DIR [--frames 30,90] [--exit-after N]   save screenshots (DIR must be new), then exit
 //!   --script "fwd:0-200,look:0.01@0-100,jump@60"      drive the human input path from a cue script
-//!   --seed N   --size WxH   --mute   --perf           reproducible run, window size, silence, frame times
+//!   --seed N   --size WxH   --mute   --audible   --perf           reproducible run, window size, silence, frame times
 //!   --shadows off|simple|full                          shadow tier for this run (Esc > Settings changes and remembers it)
 //!   --load SLOT_OR_FILE   --save-dir DIR                resume a saved game / where F5 saves (default: next to the exe)
 //! F5 saves the run to the `quick` slot and F9 loads it. `--script` accepts `save@N` and `load@N` cues too.
@@ -419,4 +419,13 @@ async fn main() {
     if let Some(report) = life.report() {
         println!("{report}");
     }
+    if life.options.audible {
+        let status=sounds.status();
+        println!("audio: {status:?}");
+        let expected_effects=SOUNDS.iter().map(|p|p.variants()).sum();
+        if let Err(error)=status.verify_playback(expected_effects,usize::from(HAS_MUSIC)) {
+            eprintln!("{error}");std::process::exit(1);
+        }
+    }
+
 }

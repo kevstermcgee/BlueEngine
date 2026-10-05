@@ -5,9 +5,28 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
+from tools import author
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'tools' / 'author.py'
+
+
+class NativeDiscoveryTests(unittest.TestCase):
+    def test_build_tools_output_is_discovered_and_explicit_override_is_never_ignored(self):
+        with tempfile.TemporaryDirectory() as temp, mock.patch.object(author, 'ROOT', Path(temp)), \
+                mock.patch.dict(author.os.environ, {'BE2_TOOLS': '', 'CARGO_TARGET_DIR': ''}):
+            # An empty CARGO_TARGET_DIR is handled by Cargo as unspecified.
+            author.os.environ.pop('CARGO_TARGET_DIR')
+            name = 'be2-tools.exe' if author.os.name == 'nt' else 'be2-tools'
+            built = Path(temp) / 'target/be2-tools/release' / name
+            built.parent.mkdir(parents=True)
+            built.touch()
+            self.assertEqual(author.native_binary(), built)
+            author.os.environ['CARGO_TARGET_DIR'] = 'target'
+            self.assertEqual(author.native_binary(), built)
+            author.os.environ['BE2_TOOLS'] = str(Path(temp) / 'missing')
+            self.assertEqual(author.native_binary(), Path(temp) / 'missing')
 
 
 class AuthoringTests(unittest.TestCase):
@@ -74,4 +93,3 @@ class AuthoringTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-

@@ -25,13 +25,30 @@ def digest(path):
 
 
 def native_binary():
-    return Path(os.environ.get('BE2_TOOLS', ROOT / 'bin' / ('be2-tools.exe' if os.name == 'nt' else 'be2-tools')))
+    explicit = os.environ.get('BE2_TOOLS')
+    if explicit:
+        return Path(explicit)
+    name = 'be2-tools.exe' if os.name == 'nt' else 'be2-tools'
+    packaged = ROOT / 'bin' / name
+    if packaged.is_file():
+        return packaged
+    # Source-checkout workflow: be2.py build tools deliberately uses an isolated target directory.
+    # A fresh agent should not have to copy the result into a release package just to discover APIs.
+    base = Path(os.environ.get('CARGO_TARGET_DIR') or ROOT / 'target')
+    if not base.is_absolute():
+        base = ROOT / base
+    for profile in ('be2-tools/release', 'fast', 'release', 'debug'):
+        candidate = base / profile / name
+        if candidate.is_file():
+            return candidate
+    return packaged
 
 
 def native(args, timeout=60):
     binary = native_binary()
     if not binary.is_file():
-        raise ValueError('Packaged native tool missing. Use python tools/be2.py build tools and copy its binary to bin/.')
+        raise ValueError('Native tool missing. Run python tools/be2.py build tools in the engine checkout, '
+                         'or set BE2_TOOLS to the matching be2-tools binary.')
     run = subprocess.run([str(binary), *map(str, args)], capture_output=True,
                          text=True, timeout=timeout, cwd=ROOT)
     try:

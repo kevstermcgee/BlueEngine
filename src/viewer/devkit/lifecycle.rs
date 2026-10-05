@@ -61,6 +61,8 @@ pub struct Options {
     pub perf: bool,
     /// `--mute`.
     pub mute: bool,
+    /// `--audible`: opt in to audio during captures/scripts (default unattended runs are silent).
+    pub audible: bool,
     /// `--novsync`.
     pub novsync: bool,
     /// `--size WxH`, clamped to 320x240 .. 7680x4320.
@@ -70,6 +72,22 @@ pub struct Options {
 impl Options {
     /// Parse the flags. `vocabulary` names the cues a `--script` may use. Errors are one sentence each.
     pub fn parse(args: &[String], vocabulary: &[&str]) -> Result<Self, String> {
+        for flag in [
+            "--seed",
+            "--size",
+            "--load",
+            "--save-dir",
+            "--script",
+            "--capture",
+            "--frames",
+            "--exit-after",
+        ] {
+            if has_flag(args, flag) && flag_value(args, flag).is_none_or(|v| v.starts_with("--")) {
+                return Err(format!(
+                    "{flag} requires a value; see the game's AGENTS.md for run flags"
+                ));
+            }
+        }
         let capture = CapturePlan::from_args(args).map_err(|e| e.to_string())?;
         let script = match flag_value(args, "--script") {
             Some(text) => Some(Timeline::parse(text, vocabulary)?),
@@ -102,17 +120,18 @@ impl Options {
             load: flag_value(args, "--load").map(str::to_owned),
             perf: has_flag(args, "--perf"),
             mute: has_flag(args, "--mute"),
+            audible: has_flag(args, "--audible"),
             novsync: has_flag(args, "--novsync"),
             size,
         })
     }
-    /// True for captures and scripted runs: fixed-step and silent, whatever the display does.
+    /// True for captures and scripted runs: fixed-step, whatever the display does.
     pub fn unattended(&self) -> bool {
         self.capture.is_some() || self.script.is_some()
     }
-    /// True when no sound should play (`--mute`, or an unattended run).
+    /// True when no sound should play. `--audible` exercises unattended audio; `--mute` wins.
     pub fn silent(&self) -> bool {
-        self.mute || self.unattended()
+        self.mute || (self.unattended() && !self.audible)
     }
 }
 
@@ -462,6 +481,16 @@ mod tests {
     }
 
     #[test]
+    fn unattended_audio_is_opt_in_and_mute_always_wins() {
+        let audible = Options::parse(&args("game --script jump@1 --audible"), &["jump"]).unwrap();
+        assert!(audible.unattended());
+        assert!(!audible.silent());
+        let muted =
+            Options::parse(&args("game --script jump@1 --audible --mute"), &["jump"]).unwrap();
+        assert!(muted.silent());
+    }
+
+    #[test]
     fn flags_parse_with_a_named_reason_for_each_mistake() {
         let o = Options::parse(
             &args("game --seed 7 --size 4000x100 --mute --perf --novsync"),
@@ -487,6 +516,9 @@ mod tests {
         );
         for (bad, names, mentions) in [
             ("game --seed x", &[][..], "--seed"),
+            ("game --seed", &[], "--seed"),
+            ("game --save-dir --perf", &[], "--save-dir"),
+            ("game --load", &[], "--load"),
             ("game --size big", &[], "--size"),
             ("game --script", &[], "--script"),
             ("game --script dance:0-5", &["fwd"], "dance"),

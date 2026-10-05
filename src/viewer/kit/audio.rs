@@ -34,6 +34,8 @@ struct Loader {
     rx: Option<Receiver<Rendered>>,
     queue: VecDeque<Slot>,
     sounds: usize,
+    rendered: bool,
+    failed: bool,
 }
 
 impl Loader {
@@ -42,6 +44,8 @@ impl Loader {
             rx,
             queue: VecDeque::new(),
             sounds: 0,
+            rendered: false,
+            failed: false,
         }
     }
     /// Take the worker's result if it has arrived, then release up to `budget` queued sounds.
@@ -50,6 +54,7 @@ impl Loader {
             match rx.try_recv() {
                 Ok(rendered) => {
                     self.rx = None;
+                    self.rendered = true;
                     self.sounds = rendered.sfx.len();
                     for (i, variants) in rendered.sfx.into_iter().enumerate() {
                         self.queue
@@ -58,8 +63,11 @@ impl Loader {
                     self.queue
                         .extend(rendered.stems.into_iter().map(Slot::Stem));
                 }
-                // The worker died without a result (a panic in the render closure): stay silent.
-                Err(TryRecvError::Disconnected) => self.rx = None,
+                Err(TryRecvError::Disconnected) => {
+                    self.rx = None;
+                    self.failed = true;
+                    eprintln!("audio render worker failed: inspect the render closure's panic; audio is unavailable");
+                }
                 Err(TryRecvError::Empty) => {}
             }
         }
@@ -67,6 +75,42 @@ impl Loader {
     }
     fn finished(&self) -> bool {
         self.rx.is_none() && self.queue.is_empty()
+    }
+}
+
+/// Observable audio evidence. Loaded/submitted means the backend accepted it, not that a listener
+/// heard it: a disconnected or null output device still needs a listening check.
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct AudioStatus {
+    pub muted: bool,
+    pub rendered: bool,
+    pub pending: bool,
+    pub worker_failed: bool,
+    pub loaded_effects: usize,
+    pub loaded_stems: usize,
+    pub load_failures: usize,
+    pub effect_plays: u64,
+    pub music_playing: bool,
+}
+
+impl AudioStatus {
+    /// Require the intended bank AND playback submissions. Use after an `--audible` scripted run,
+    /// passing the number of effect variants and music stems the render closure promised. Silent,
+    /// incomplete and partly loaded banks fail; this still cannot verify a physical output device.
+    pub fn verify_playback(&self, effects: usize, stems: usize) -> Result<(), String> {
+        if self.muted
+            || !self.rendered
+            || self.pending
+            || self.worker_failed
+            || self.load_failures > 0
+            || self.loaded_effects != effects
+            || self.loaded_stems != stems
+            || (effects > 0 && self.effect_plays == 0)
+            || (stems > 0 && !self.music_playing)
+        {
+            return Err(format!("audio verification incomplete: {self:?}; expected {effects} effect variants and {stems} music stems; use --audible, exercise a cue, allow loading to finish, and inspect audio errors"));
+        }
+        Ok(())
     }
 }
 
@@ -112,6 +156,8 @@ pub struct SoundBank {
     music_playing: bool,
     stem_now: Vec<f32>,
     stem_target: Vec<f32>,
+    load_failures: usize,
+    effect_plays: u64,
 }
 
 impl SoundBank {
@@ -145,6 +191,8 @@ impl SoundBank {
             music_playing: false,
             stem_now: Vec::new(),
             stem_target: Vec::new(),
+            load_failures: 0,
+            effect_plays: 0,
         }
     }
 
@@ -158,24 +206,48 @@ impl SoundBank {
                         self.sounds.resize_with(i + 1, Vec::new);
                         self.next.resize(i + 1, 0);
                     }
-                    if let Ok(sound) = load_sound_from_bytes(&bytes).await {
-                        self.sounds[i].push(sound);
+                    match load_sound_from_bytes(&bytes).await {
+                        Ok(sound) => self.sounds[i].push(sound),
+                        Err(error) => {
+                            self.load_failures += 1;
+                            eprintln!("audio effect {i} failed to load: {error}; check the generated WAV bytes");
+                        }
                     }
                 }
-                Slot::Stem(bytes) => {
-                    if let Ok(sound) = load_sound_from_bytes(&bytes).await {
+                Slot::Stem(bytes) => match load_sound_from_bytes(&bytes).await {
+                    Ok(sound) => {
                         self.stems.push(sound);
                         self.stem_now.push(0.);
                         self.stem_target.push(0.);
                     }
-                }
+                    Err(error) => {
+                        self.load_failures += 1;
+                        eprintln!("audio music stem failed to load: {error}; check the generated WAV bytes");
+                    }
+                },
             }
         }
     }
 
-    /// True once every sound has been handed to the backend (immediately when muted).
+    /// True once rendering/loading finished (immediately when muted). Check [`Self::status`] for
+    /// success: readiness alone does not prove any sounds loaded. Music-only banks are supported.
     pub fn ready(&self) -> bool {
-        self.muted || (self.loader.finished() && self.loader.sounds > 0)
+        self.muted || self.loader.finished()
+    }
+
+    /// Inspect loading and playback submissions, including failures that would otherwise sound silent.
+    pub fn status(&self) -> AudioStatus {
+        AudioStatus {
+            muted: self.muted,
+            rendered: self.loader.rendered,
+            pending: !self.loader.finished(),
+            worker_failed: self.loader.failed,
+            loaded_effects: self.sounds.iter().map(Vec::len).sum(),
+            loaded_stems: self.stems.len(),
+            load_failures: self.load_failures,
+            effect_plays: self.effect_plays,
+            music_playing: self.music_playing,
+        }
     }
 
     fn volume(&self, volume: f32) -> f32 {
@@ -197,6 +269,7 @@ impl SoundBank {
             volume: self.volume(volume),
         };
         play_sound(&variants[v], params);
+        self.effect_plays += 1;
     }
 
     /// Play a specific variant (a combo pitch ladder). An out-of-range variant plays the last one.
@@ -216,6 +289,7 @@ impl SoundBank {
                     volume: self.volume(volume),
                 },
             );
+            self.effect_plays += 1;
         }
     }
 
@@ -258,6 +332,82 @@ impl SoundBank {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn audio_evidence_requires_complete_loading_and_actual_playback_submissions() {
+        let good = AudioStatus {
+            muted: false,
+            rendered: true,
+            pending: false,
+            worker_failed: false,
+            loaded_effects: 3,
+            loaded_stems: 1,
+            load_failures: 0,
+            effect_plays: 1,
+            music_playing: true,
+        };
+        assert!(good.verify_playback(3, 1).is_ok());
+        for bad in [
+            AudioStatus {
+                muted: true,
+                ..good.clone()
+            },
+            AudioStatus {
+                pending: true,
+                ..good.clone()
+            },
+            AudioStatus {
+                worker_failed: true,
+                ..good.clone()
+            },
+            AudioStatus {
+                load_failures: 1,
+                ..good.clone()
+            },
+            AudioStatus {
+                loaded_effects: 2,
+                ..good.clone()
+            },
+            AudioStatus {
+                loaded_stems: 0,
+                ..good.clone()
+            },
+            AudioStatus {
+                effect_plays: 0,
+                ..good.clone()
+            },
+            AudioStatus {
+                music_playing: false,
+                ..good.clone()
+            },
+        ] {
+            assert!(bad.verify_playback(3, 1).unwrap_err().contains("--audible"));
+        }
+        let music_only = AudioStatus {
+            loaded_effects: 0,
+            effect_plays: 0,
+            ..good
+        };
+        assert!(music_only.verify_playback(0, 1).is_ok());
+    }
+
+    #[test]
+    fn failed_worker_finishes_with_explicit_failure_evidence() {
+        let (tx, rx) = channel();
+        let mut loader = Loader::new(Some(rx));
+        drop(tx);
+        assert!(loader.pump(5).is_empty());
+        assert!(loader.finished() && loader.failed && !loader.rendered);
+    }
+
+    #[test]
+    fn music_only_render_is_finished_and_observable() {
+        let (tx, rx) = channel();
+        let mut loader = Loader::new(Some(rx));
+        tx.send(rendered(0, 0, 1)).unwrap();
+        assert!(matches!(loader.pump(5).as_slice(), [Slot::Stem(_)]));
+        assert!(loader.finished() && loader.rendered && !loader.failed);
+    }
 
     fn rendered(sfx: usize, variants: usize, stems: usize) -> Rendered {
         Rendered {

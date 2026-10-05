@@ -2260,7 +2260,9 @@ pub fn ambient_loop(spec: &AmbientSpec) -> Vec<f32> {
         let env = move |t: f32| {
             (t / attack).min(1.)
                 * if t > chord_len {
-                    decay(t - chord_len, overlap * 0.5)
+                    // Exponential decay is still 13.5% at the end of this finite voice. Fade the
+                    // last 50 ms to zero before add_wrapped stops it, or chord tails click mid-loop.
+                    decay(t - chord_len, overlap * 0.5) * tail(t, voice_len, 0.05)
                 } else {
                     1.
                 }
@@ -3674,6 +3676,26 @@ mod tests {
             600.,
             "clamped to the ten-minute buffer cap"
         );
+    }
+
+    #[test]
+    fn ambient_chord_tails_do_not_cut_at_nonzero_amplitude() {
+        let spec = ambient_spec_for(
+            "Signal Garden",
+            "Collect the glowing orbs and stay off the void.",
+        );
+        let samples = ambient_loop(&spec);
+        let (_, chords, _) = spec.clamped();
+        let chord_len = spec.loop_seconds() / chords as f32;
+        let overlap = (chord_len * 0.6).min(6.);
+        for i in 0..chords {
+            let cut = n_samples(i as f32 * chord_len + chord_len + overlap) % samples.len();
+            let jump = (samples[cut] - samples[(cut + samples.len() - 1) % samples.len()]).abs();
+            assert!(
+                jump < 0.01,
+                "chord {i} abruptly stops with a {jump} sample jump"
+            );
+        }
     }
 
     #[test]

@@ -122,6 +122,14 @@ Presets: Click, Select, Back, Blip, Coin, Pickup, PowerUp, Jump, Land, Hit, Thum
 Warning, Success, GameOver, Footstep, PowerDown, Hurt, Chime. Render them off-thread with `Rendered { sfx, stems }`, play
 with `sounds.play(index, volume)`.
 
+Capture/script runs default to silence. Pass `--audible` to exercise audio (`--mute` wins).
+`sounds.status()` reports muted/pending/rendered, worker failure, loaded effect/stem counts,
+load failures, effect playback submissions and music playback. `ready()` means loading finished,
+including failures; require the expected counts and zero failures before claiming audio passed.
+No counter proves speaker output. Settings support keyboard/pad Up/Down and Enter/A on each row.
+Use `sounds.status().verify_playback(expected_variant_count, expected_stem_count)` as a failing
+verification gate after exercising a cue; the custom-sim starter wires this for `--audible`.
+
 ## Online (`net`, `netplay`)
 
 See `docs/NETPLAY.md`. `net::codec::{Writer, Reader}` for layouts, `net::loopback::LoopNet` for tests,

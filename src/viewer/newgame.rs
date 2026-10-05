@@ -295,6 +295,14 @@ case "$cmd" in
 esac
 "#;
     project.write("scripts/blue", blue_sh)?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(
+            project.dir.join("scripts/blue"),
+            fs::Permissions::from_mode(0o755),
+        )?;
+    }
 
     let blue_ps1 = r#"param([string]$cmd = "help", [Parameter(ValueFromRemainingArguments=$true)][string[]]$CheckArgs)
 $ErrorActionPreference = "Stop"
@@ -315,7 +323,7 @@ switch ($cmd) {
         exit $LASTEXITCODE
     }
     "play" {
-        "$PY" scripts/dev.py --release
+        python scripts/dev.py --release
         exit $LASTEXITCODE
     }
     "package" {

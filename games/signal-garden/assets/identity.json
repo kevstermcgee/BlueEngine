@@ -1,0 +1,23 @@
+{
+  "title": "Signal Garden",
+  "tagline": "Restore six lantern relays before the signal fades. A small garden for a long night.",
+  "controls": "WASD/arrows move, E/pad X charge/heal, Q/pad LB shield, F5/F9 save/load, F fullscreen, Esc settings, R/Enter restart",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--seed",
+    "7",
+    "--script",
+    "left:0-24,fwd:25-48,interact:49-70,save@60,load@80",
+    "--expect",
+    "playing"
+  ],
+  "engine_revision": "4136080c7f42",
+  "package": [
+    "README.md"
+  ]
+}

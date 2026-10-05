@@ -274,6 +274,8 @@ def fake_dist(root, plat='linux', png=True, stamp=True, exe_bytes=b'#!/bin/sh\ne
     if stamp:
         project.write_stamp({'title': project.identity.title, 'exe': exe.name,
                              'exe_sha256': game_ship.sha256_file(exe), 'packaged_at': '2026-01-01T00:00:00Z',
+                             'file_sha256': {p.name: game_ship.sha256_file(p) for p in project.dist.iterdir()
+                                             if p.name != 'ship.json'},
                              'files': sorted(p.name for p in project.dist.iterdir() if p.name != 'ship.json')})
     return project
 
@@ -1841,10 +1843,118 @@ class VerifyPackageTests(VerifyBase):
         self.assertEqual(check_by_name(report, 'package')['status'], 'pass')
         self.assertEqual(report['ok'], True)
 
-    def test_missing_png_in_dist_is_a_warning(self):
+    def test_missing_png_in_dist_is_a_failure(self):
         (self.root / 'dist/zephyr.png').unlink()
         code, report = self.verify()
-        self.assertEqual(check_by_name(report, 'package')['status'], 'warn')
+        self.assertEqual(code, 1)
+        self.assertEqual(check_by_name(report, 'package')['status'], 'fail')
+
+
+class PackageIntegrityTests(VerifyBase):
+    def setUp(self):
+        super().setUp()
+        (self.root / 'maps/sub').mkdir(parents=True)
+        (self.root / 'maps/sub/level.json').write_text('{}')
+        identity = json.loads((self.root / 'assets/identity.json').read_text())
+        identity['package'] = ['maps']
+        (self.root / 'assets/identity.json').write_text(json.dumps(identity))
+        shutil.copytree(self.root / 'maps', self.project.dist / 'maps')
+        self.refresh_stamp()
+
+    def refresh_stamp(self):
+        stamp = self.project.read_stamp()
+        files = sorted(p.relative_to(self.project.dist).as_posix() for p in self.project.dist.rglob('*')
+                       if p.is_file() and p != self.project.stamp_path)
+        stamp.update(files=files, file_sha256={n: game_ship.sha256_file(self.project.dist / n) for n in files},
+                     exe_sha256=game_ship.sha256_file(self.project.dist_exe))
+        self.project.write_stamp(stamp)
+
+    def test_missing_nested_file_fails_without_display_even_when_source_exists(self):
+        (self.project.dist / 'maps/sub/level.json').unlink()
+        with mock.patch.dict(os.environ, {'DISPLAY': '', 'WAYLAND_DISPLAY': ''}):
+            self.assert_fails('package', 'maps/sub/level.json is missing', '--smoke')
+        self.assertTrue((self.root / 'maps/sub/level.json').is_file())
+
+    def test_modified_nested_file_fails_without_display(self):
+        (self.project.dist / 'maps/sub/level.json').write_text('{"changed": true}')
+        with mock.patch.object(game_ship, 'has_display', return_value=False):
+            self.assert_fails('package', 'maps/sub/level.json does not match', '--smoke')
+
+    def test_stock_runtime_dependency_must_be_declared_even_when_checkout_has_it(self):
+        (self.root / 'maps/sub/checkout-only.json').write_text('{}')
+        # Leave a stale runtime dependency in dist, then deliberately omit it from the manifest.
+        (self.project.dist / 'maps/sub/checkout-only.json').write_text('{}')
+        level = self.project.dist / 'maps/sub/level.json'
+        for reference, fragment in [('checkout-only.json', 'undeclared map'),
+                                    ('../../../outside.json', 'unsafe package file'),
+                                    ('C:/outside.json', 'unsafe package file')]:
+            level.write_text(json.dumps({'schema_version': 1, 'player_profile': {}, 'map': reference}))
+            self.refresh_stamp()
+            stamp = self.project.read_stamp()
+            stamp['files'].remove('maps/sub/checkout-only.json')
+            del stamp['file_sha256']['maps/sub/checkout-only.json']
+            self.project.write_stamp(stamp)
+            # Remove source inventory so this test isolates the runtime-reference check. The source
+            # level still exists; no bytes may be read from it to fulfill the reference.
+            (self.root / 'maps/sub/checkout-only.json').unlink(missing_ok=True)
+            with self.subTest(reference=reference), mock.patch.object(game_ship, 'has_display', return_value=False):
+                self.assert_fails('package', fragment, '--smoke')
+
+    def test_omitting_file_from_both_manifest_and_dist_cannot_use_source(self):
+        (self.project.dist / 'maps/sub/level.json').unlink()
+        self.refresh_stamp()
+        self.assert_fails('package', 'maps')
+
+    def test_unsafe_manifest_paths_and_invalid_hashes_are_actionable(self):
+        original = self.project.read_stamp()
+        for name in ('../secret', '/secret', 'C:/secret', 'maps\\secret', './secret', 'maps//secret', 'NUL.txt'):
+            stamp = dict(original, files=original['files'] + [name],
+                         file_sha256={**original['file_sha256'], name: '0' * 64})
+            self.project.write_stamp(stamp)
+            with self.subTest(name=name):
+                self.assert_fails('package', 'unsafe package file')
+        stamp = dict(original, file_sha256={**original['file_sha256'], 'maps/sub/level.json': 'not a hash'})
+        self.project.write_stamp(stamp)
+        self.assert_fails('package', 'invalid SHA-256')
+
+    def test_missing_hash_and_duplicate_manifest_entries_fail(self):
+        stamp = self.project.read_stamp()
+        stamp['file_sha256'].pop('maps/sub/level.json')
+        self.project.write_stamp(stamp)
+        self.assert_fails('package', 'exactly every packaged file')
+        stamp['files'].append('MAPS/sub/level.json')
+        self.project.write_stamp(stamp)
+        self.assert_fails('package', 'duplicate')
+
+    @unittest.skipUnless(POSIX, 'symlink permissions differ on Windows')
+    def test_symlink_cannot_satisfy_a_packaged_asset_from_the_checkout(self):
+        level = self.project.dist / 'maps/sub/level.json'
+        level.unlink()
+        level.symlink_to(self.root / 'maps/sub/level.json')
+        self.assert_fails('package', 'symlinks')
+
+    @unittest.skipUnless(POSIX, 'runs a POSIX executable fixture')
+    def test_isolated_smoke_rejects_an_undeclared_dependency_left_in_dist(self):
+        exe = self.project.dist_exe
+        exe.write_text('#!/usr/bin/env python3\n'
+                       'from pathlib import Path\nimport sys\n'
+                       'Path("hidden.txt").read_text()\n'
+                       'out = Path(sys.argv[sys.argv.index("--capture") + 1])\n'
+                       'out.mkdir()\n(out / "world.png").write_bytes(Path("zephyr.png").read_bytes())\n')
+        exe.chmod(0o755)
+        self.refresh_stamp()
+        (self.project.dist / 'hidden.txt').write_text('left over from development')
+        (self.root / 'hidden.txt').write_text('also in the checkout')
+        with mock.patch.object(game_ship, 'has_display', return_value=True):
+            check = check_by_name(self.verify('--smoke')[1], 'smoke')
+            self.assertEqual(check['status'], 'fail', check)
+            self.assertIn('hidden.txt', check['detail'])
+        # Declaring it then makes the SAME executable work outside both source and dist.
+        self.refresh_stamp()
+        with mock.patch.object(game_ship, 'has_display', return_value=True):
+            check = check_by_name(self.verify('--smoke')[1], 'smoke')
+            self.assertEqual(check['status'], 'pass', check)
+            self.assertIn('isolated declared-file package', check['detail'])
 
 
 class VerifyLinuxLauncherTests(VerifyBase):
