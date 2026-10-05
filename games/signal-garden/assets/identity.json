@@ -16,7 +16,6 @@
     "--expect",
     "playing"
   ],
-  "engine_revision": "4136080c7f42",
   "package": [
     "README.md"
   ]

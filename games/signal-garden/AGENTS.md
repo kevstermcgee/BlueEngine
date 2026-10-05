@@ -39,7 +39,9 @@ python3 tools/be2.py upgrade plan games/signal-garden --to TARGET --out /tmp/gar
 Read that packet, update `Cargo.toml` if relocating the engine, and copy newer shared shipping
 infrastructure when required: `cp templates/game_ship.py games/signal-garden/scripts/ship.py`.
 Rebuild/reverify before changing `engine_revision` in identity. A revision warning is not test evidence.
-The default dependency is the surrounding engine checkout (`../..`); after exporting this source
+This bundled source omits the optional historical engine_revision in identity; dist/ship.json records
+the exact engine commit actually packaged. The default dependency is the surrounding engine checkout
+(`../..`); after exporting this source
 alone, point it at the intended engine checkout. No source path is used by the shipped executable.
 
 ## Commands
