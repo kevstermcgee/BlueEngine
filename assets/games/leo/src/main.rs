@@ -6,7 +6,10 @@ use leo::{Input, Sim, DAY_TICKS};
 use macroquad::prelude::*;
 use std::path::{Path, PathBuf};
 use vesper3d::viewer::{
-    devkit::{beside_exe, flag_value, has_flag, parse_size, runtime_assets, snapshot, Lifecycle, Settings, ShadowQuality, Simulation},
+    devkit::{
+        beside_exe, flag_value, has_flag, parse_size, runtime_assets, snapshot, Lifecycle, Settings, ShadowQuality,
+        Simulation,
+    },
     game_client::{self, AudioMenu, GameShell},
     game_input::ClientInput,
     identity::Identity,
@@ -52,8 +55,7 @@ fn asset_root(args: &[String]) -> PathBuf {
     if let Some(path) = flag_value(args, "--assets") {
         return path.into();
     }
-    runtime_assets("assets", Path::new(env!("CARGO_MANIFEST_DIR")))
-        .unwrap_or_else(|error| fail(error))
+    runtime_assets("assets", Path::new(env!("CARGO_MANIFEST_DIR"))).unwrap_or_else(|error| fail(error))
 }
 fn toggle_music(settings: &mut Settings, path: &Path) -> Result<(), String> {
     settings.toggle_music();
