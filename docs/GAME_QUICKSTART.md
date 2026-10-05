@@ -32,6 +32,13 @@ input accumulator, deterministic-replay and capture helpers, saves, screen-feel,
      Where there is no desktop (CI) those checks report `skipped: no desktop`, never a silent pass.
      Linux gets a `.desktop` file, macOS a `.command`. `scripts/blue package` and `scripts/blue shortcut`
      run the halves separately.
+   - Smoke verification runs a fresh temporary copy containing only `ship.json`'s declared
+     payload, from that directory. It checks recorded file hashes before launching and keeps
+     captures under `.blue-check/`; existing player settings and saves in `dist/` stay untouched.
+     This detects undeclared files and working-directory assumptions. It is not an OS sandbox:
+     use `devkit::runtime_assets("assets", Path::new(env!("CARGO_MANIFEST_DIR")))` to disable
+     source-tree fallback whenever `ship.json` or `BLUEENGINE_PACKAGE_ROOT` marks a package.
+     A missing packaged asset must stop startup with the returned error.
 3. You exercised the changed controls and looked at real frames of the shipped program, and you say what
    you did not verify.
 

@@ -2230,6 +2230,33 @@ NEXT_STEPS = {
 }
 
 
+def stage_smoke_package(project, destination, exe_name):
+    """Copy only the shipping manifest, never neighboring source or player-created files.
+
+    A fresh layout exposes undeclared relative asset dependencies. This is not an OS
+    filesystem sandbox; applications must also avoid absolute source-tree fallbacks.
+    """
+    stamp = project.read_stamp()
+    files = stamp.get('files') if isinstance(stamp, dict) else None
+    if not isinstance(files, list) or not files or exe_name not in files:
+        raise ShipError('package has no complete file manifest: run python scripts/ship.py package')
+    hashes = stamp.get('file_sha256') or {}
+    seen = {STAMP_NAME.casefold()}
+    for name in files:
+        if (not isinstance(name, str) or not name or '\\' in name or ':' in name or
+                name.startswith('/') or any(part in ('', '.', '..') for part in name.split('/')) or
+                name.casefold() in seen):
+            raise ShipError('package manifest contains an unsafe or duplicate path')
+        seen.add(name.casefold())
+        source = project.dist / name
+        if not source.is_file() or not inside(source.resolve(), project.dist.resolve()):
+            raise ShipError(f'packaged file {name} is missing or leaves dist/: package again')
+        if name in hashes and sha256_file(source) != hashes[name]:
+            raise ShipError(f'packaged file {name} changed after packaging: package again')
+        _copy_file(source, destination / name)
+    _copy_file(project.stamp_path, destination / STAMP_NAME)
+
+
 class Verifier:
     """Runs every check even after a failure and collects a JSON-able report."""
 
@@ -2988,7 +3015,12 @@ class Verifier:
         capture = scratch / f'smoke-{datetime.datetime.now().strftime("%Y%m%dT%H%M%S%f")}'  # must not exist yet
         arguments = [a.replace('{dir}', str(capture)) for a in (identity.smoke_args or DEFAULT_SMOKE_ARGS)]
         try:
-            done = run_process([exe, *arguments], cwd=project.dist, timeout=SMOKE_TIMEOUT)
+            with tempfile.TemporaryDirectory(prefix='blueengine-package-') as directory:
+                staged = Path(directory)
+                stage_smoke_package(project, staged, exe.name)
+                env = dict(os.environ, BLUEENGINE_PACKAGE_ROOT=str(staged))
+                done = run_process([staged / exe.name, *arguments], cwd=staged,
+                                   timeout=SMOKE_TIMEOUT, env=env)
         except subprocess.TimeoutExpired:
             return FAIL, (f'{exe.name} {" ".join(arguments)} did not finish within {SMOKE_TIMEOUT} s '
                           '(smoke_args in assets/identity.json should make the game exit by itself)')
@@ -3010,7 +3042,7 @@ class Verifier:
                 blank.append(f'{png.name} is blank (luminance spread {spread:.2f})')
         if blank:
             return FAIL, '; '.join(blank) + f' [{project.display(capture)}]'
-        return PASS, f'{len(pngs)} PNG capture(s) in {project.display(capture)}: ' + ', '.join(described)
+        return PASS, f'{len(pngs)} PNG capture(s) from a clean staged package in {project.display(capture)}: ' + ', '.join(described)
 
 
 def prune_smoke_folders(scratch, keep=2):

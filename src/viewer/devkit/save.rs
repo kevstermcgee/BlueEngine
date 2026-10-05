@@ -54,6 +54,38 @@ pub fn beside_exe(file: &str) -> PathBuf {
         .unwrap_or_else(|| PathBuf::from(file))
 }
 
+/// Resolve a runtime asset directory beside the executable, or in `source_root`
+/// during development. A shipping stamp or an isolated package check forbids
+/// falling back to the source tree: missing shipped assets must fail visibly.
+pub fn runtime_assets(directory: &str, source_root: &Path) -> Result<PathBuf, String> {
+    let packaged = beside_exe(directory);
+    let strict =
+        beside_exe("ship.json").is_file() || std::env::var_os("BLUEENGINE_PACKAGE_ROOT").is_some();
+    runtime_assets_from(&packaged, &source_root.join(directory), strict)
+}
+
+fn runtime_assets_from(
+    packaged: &Path,
+    development: &Path,
+    strict: bool,
+) -> Result<PathBuf, String> {
+    if packaged.is_dir() {
+        Ok(packaged.into())
+    } else if !strict && development.is_dir() {
+        Ok(development.into())
+    } else {
+        Err(format!(
+            "Runtime assets missing at {}{}; include them in identity.package and package again",
+            packaged.display(),
+            if strict {
+                " (source fallback disabled for packaged games)"
+            } else {
+                ""
+            }
+        ))
+    }
+}
+
 /// The player's Downloads folder (`%USERPROFILE%\Downloads` on Windows, `$HOME/Downloads` elsewhere),
 /// or `None` when the home/profile environment variable is unset. A custom XDG `user-dirs.dirs` target
 /// on Linux is not consulted; this is the plain default location on every platform.
@@ -307,6 +339,28 @@ impl Records {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn packaged_assets_never_fall_back_to_existing_source_assets() {
+        let root = temp("runtime-assets");
+        let source = root.join("source/assets");
+        let packaged = root.join("installed/assets");
+        std::fs::create_dir_all(&source).unwrap();
+        assert_eq!(
+            runtime_assets_from(&packaged, &source, false),
+            Ok(source.clone())
+        );
+        let error = runtime_assets_from(&packaged, &source, true).unwrap_err();
+        assert!(error.contains("source fallback disabled"));
+        assert!(error.contains("identity.package"));
+        std::fs::create_dir_all(&packaged).unwrap();
+        assert_eq!(
+            runtime_assets_from(&packaged, &source, true),
+            Ok(packaged.clone())
+        );
+        assert_eq!(runtime_assets_from(&packaged, &source, false), Ok(packaged));
+        std::fs::remove_dir_all(root).unwrap();
+    }
 
     fn temp(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("devkit_save_{}_{name}", std::process::id()))

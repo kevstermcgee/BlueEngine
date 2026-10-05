@@ -44,6 +44,8 @@ jobs:
         run: |
           python -m unittest scripts.test_publish_games -v
           python scripts/publish_games.py export --output _games_repo --revision "$GITHUB_SHA"
+          # Catch a new native game without a Windows release definition before pushing it.
+          python _games_repo/distribution/check_catalog.py --root _games_repo
 
       - name: Commit and push changes
         working-directory: _games_repo
