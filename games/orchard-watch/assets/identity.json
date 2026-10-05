@@ -1,0 +1,17 @@
+{
+  "title": "Orchard Watch",
+  "tagline": "Spend seeds on guards and defend three orchard lanes through nine waves.",
+  "controls": "Mouse/keyboard play; K save, L load, M sound, R restart",
+  "smoke_args": [
+    "--verify",
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--size",
+    "1280x720",
+    "--mute"
+  ]
+}

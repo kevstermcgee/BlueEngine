@@ -2038,6 +2038,90 @@
       "read_first": [
         "docs/HEADLESS_CAPTURE.md"
       ]
+    },
+    "two_dimensional": {
+      "files": [
+        "src/viewer/web.rs",
+        "templates/game_project.py",
+        "docs/TWO_D.md",
+        "src/two_d/client.rs",
+        "src/two_d/draw.rs",
+        "src/two_d/mod.rs",
+        "src/runtime/hash.rs",
+        "src/runtime/mod.rs",
+        "src/runtime/storage.rs",
+        "templates/two-d/AGENTS.md",
+        "templates/two-d/Cargo.toml.tmpl",
+        "templates/two-d/lib.rs",
+        "templates/two-d/main.rs",
+        "templates/two-d/web.py"
+      ],
+      "read_first": [
+        "docs/TWO_D.md",
+        "templates/two-d/AGENTS.md",
+        "templates/two-d/lib.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib two_d --no-default-features --features two-d",
+        "python -m unittest tools.test_web_games"
+      ],
+      "note": "First-class 2D: explicit project requirements, two-d starter, integer collision/kinematic physics/triggers, logical viewport, layered primitives/text/sprites/transforms, tick animation/particles, shared fixed-step simulation and Snapshot storage. Shared client owns devices, audio, HUD, saves and browser/native boundaries. No 3D renderer inspection needed.",
+      "keywords": [
+        "2d",
+        "2D",
+        "sprite",
+        "arcade",
+        "top-down",
+        "platformer",
+        "cozy",
+        "management",
+        "dimensionality",
+        "game proposal"
+      ],
+      "canonical_example": "templates/two-d/lib.rs",
+      "depends_on": [],
+      "public_api": [
+        "two_d::GameLogic",
+        "two_d::Intent",
+        "two_d::Rect",
+        "two_d::Body",
+        "two_d::draw::Scene",
+        "two_d::client::run"
+      ]
+    },
+    "browser_games": {
+      "files": [
+        "tools/web_games.py",
+        "tools/web_publish.py",
+        "tools/browser_smoke.mjs",
+        "tools/test_web_games.py",
+        "templates/web/index.html",
+        "templates/web/platform.js"
+      ],
+      "read_first": [
+        "docs/TWO_D.md",
+        "templates/two-d/AGENTS.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_web_games",
+        "isolated real Chromium WASM playthrough and persistence smoke"
+      ],
+      "note": "Web target supports 2D/offline only: tests, locked WASM build, exact loader ABI, deterministic package integrity, browser/native state-hash comparison, gesture audio, persistence reload and real interaction probe. be2.py web build GAME and be2.py publish GAME. Directory backend returns a publication-ready library; optional GitHub Pages backend reports URL only after verified deployment.",
+      "keywords": [
+        "web",
+        "wasm",
+        "browser",
+        "publish",
+        "hosting",
+        "deployment",
+        "URL",
+        "catalog",
+        "localStorage",
+        "audio gesture"
+      ],
+      "depends_on": [
+        "two_dimensional"
+      ]
     }
   },
   "modules": {
@@ -2057,6 +2141,7 @@
     "docs/NETPLAY.md": "Netplay: online play for games that own their simulation",
     "docs/SAVE_STATE.md": "Save states",
     "docs/SHARED_GAMEPLAY.md": "Shared gameplay and presentation",
+    "docs/TWO_D.md": "2D games → browser",
     "docs/UPGRADE.md": "Upgrading an external game to a chosen engine revision",
     "docs/adr/0001-shared-simulation.md": "0001: Shared simulation and optional presentation",
     "docs/adr/0003-arena-shooter-primitives.md": "ADR 0003: Opt-in arena-shooter primitives",
@@ -2090,6 +2175,11 @@
     "src/bin/impact_audio/mod.rs": "Client-only sound: observe actual impacts, not input or wind-up animation.",
     "src/bin/sandbox/input.rs": "One key-edge source on Windows, including accessibility-injected keys.",
     "src/prelude.rs": "Generated external games consume this supported public surface.",
+    "src/runtime/mod.rs": "Shared rendering-free contracts.",
+    "src/runtime/storage.rs": "Fallible persistence, namespaced per game, with identical native/browser snapshot bytes.",
+    "src/two_d/client.rs": "One recommended offline client: fixed-step input, browser/native storage, audio, HUD and verification.",
+    "src/two_d/draw.rs": "Macroquad-backed drawing in logical pixels; stable painter layers, no 3D initialization.",
+    "src/two_d/mod.rs": "Small 2D facade: integer rules, logical-pixel presentation and shared runtime services.",
     "src/viewer/arena.rs": "Rendering-independent building blocks for momentum-driven arena shooters.",
     "src/viewer/authoring.rs": "Portable static map documents and transactional edits.",
     "src/viewer/blueprint.rs": "Declarative blueprint compiler for BlueEngine.",
@@ -2212,14 +2302,18 @@
     "src/viewer/ui_check.rs": "Headless 2D UI layout auditor for BlueEngine menus and screens.",
     "src/viewer/verify.rs": "Unified self-verifying maps and games for BlueEngine.",
     "src/viewer/weapons.rs": "Local weapon selection and pistol shots, independent of rendering and input APIs.",
+    "src/viewer/web.rs": "Browser builds expose shared contracts, not native 3D/UDP/QUIC services.",
     "src/viewer/wrench.rs": "Frame-rate independent melee timing and closest-surface contact.",
     "templates/custom-sim/src/lib.rs": "The game's rules: a pure, deterministic, fixed-step simulation with no window, no sound device and no wall...",
     "templates/game_build.rs": "Embeds the game's icon and version info into its Windows executable, so Explorer, Task Manager and pinned...",
     "templates/game_check.py": "Validate this game's content and Rust targets; never run the dependency's test suite.",
     "templates/game_dev.py": "Rebuild and run this game without tripping over a copy of it that is still open.",
+    "templates/game_project.py": "Canonical dimensionality/target requirements; copied into standalone game tooling.",
     "templates/game_runtime_test.rs": "Same public session used by the visible generated client, exercised without graphics.",
     "templates/game_ship.py": "Ship this game: package it, give it its own desktop shortcut, and prove both work.",
     "templates/native_focus.rs": "Application-owned foreground check.",
+    "templates/two-d/lib.rs": "Rules and presentation; shared client owns devices, audio, storage and timing.",
+    "templates/two-d/web.py": "Forward to the engine's supported web workflow; no copied deployment logic.",
     "tools/assets.py": "BlueEngine's JSON asset catalog API.",
     "tools/audio_report.py": "Numeric quality report for WAV files: an agent cannot listen to audio, but it can read numbers.",
     "tools/author.py": "Source-free BE2 map authoring.",
@@ -2231,6 +2325,8 @@
     "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
     "tools/place_interior.py": "Place data-only interior prefabs and validate with the packaged native engine.",
     "tools/upgrade.py": "Version-aware upgrade planning and verification for games built on BlueEngine.",
+    "tools/web_games.py": "Supported 2D web workflow: propose, build, verify, publish.",
+    "tools/web_publish.py": "Optional GitHub Pages adapter.",
     "tools/workflow.py": "Bounded context lookup and conservative validation selection.",
     "tools/xcapture.py": "See a game on a machine with no display: run it on a virtual display and save real screenshots."
   }

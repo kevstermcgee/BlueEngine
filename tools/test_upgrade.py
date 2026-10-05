@@ -118,6 +118,9 @@ class RuntimeClassificationTests(unittest.TestCase):
             (root / 'src').mkdir()
             (root / 'src/lib.rs').write_text('pub struct Sim;\n')
             self.assertEqual(upgrade.classify_runtime(root)['kind'], 'custom_sim')
+            (root / 'game.project.json').write_text(json.dumps({'presentation':'2d','networking':'offline','targets':['web']}))
+            self.assertEqual(upgrade.classify_runtime(root)['kind'], 'two_d')
+            (root / 'game.project.json').unlink()
             (root / 'src/net.rs').write_text('use vesper3d::viewer::netplay::NetGame;\n')
             self.assertEqual(upgrade.classify_runtime(root)['kind'], 'custom_sim_netplay')
         with tempfile.TemporaryDirectory() as directory:
@@ -357,6 +360,19 @@ if __name__ == '__main__':
 
 
 class VerificationIsTruthfulTests(unittest.TestCase):
+    def test_2d_upgrade_uses_fresh_browser_gate_not_a_native_only_success(self):
+        fixture=CustomSimFixture(check_script=FAKE_CHECK_OK)
+        self.addCleanup(fixture.close)
+        (fixture.root/'game.project.json').write_text(json.dumps({'presentation':'2d','networking':'offline','targets':['web']}))
+        script=fixture.root/'scripts/web.py'
+        script.write_text("import json\nprint(json.dumps({'ok':True,'browser':True}))\n")
+        result=upgrade.verify(fixture.root,ROOT)
+        self.assertTrue(result['ok']);self.assertEqual(result['command'][1],str(script))
+        self.assertIn('web',result['verification_target'])
+        script.write_text("import json,sys\nprint(json.dumps({'ok':False,'browser':False}))\nsys.exit(1)\n")
+        self.assertFalse(upgrade.verify(fixture.root,ROOT)['ok'])
+        self.assertFalse(upgrade.verify(fixture.root,ROOT,content_only=True)['ok'])
+
     def test_unavailable_when_no_check_script(self):
         fixture = CustomSimFixture(check_script=None)
         self.addCleanup(fixture.close)

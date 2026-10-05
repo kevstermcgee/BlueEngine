@@ -1,0 +1,19 @@
+{
+  "complexity": "low",
+  "description": "Steer a paddle to clear six stained-glass bands. Miss the ball and try again.",
+  "id": "pocket-breaker",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "networking": "offline",
+  "presentation": "2d",
+  "schema_version": 1,
+  "session_minutes": 2,
+  "targets": [
+    "web",
+    "linux",
+    "windows"
+  ]
+}

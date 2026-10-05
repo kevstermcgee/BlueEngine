@@ -33,4 +33,45 @@ jobs:
       - run: cargo fmt --manifest-path games/signal-garden/Cargo.toml --check
       - run: cargo test --locked --manifest-path games/signal-garden/Cargo.toml --no-default-features
       - run: cargo test --locked --manifest-path games/signal-garden/Cargo.toml
-      - run: python -m unittest tools.test_workflow tools.test_assets scripts.test_publish_games tools.test_game_check tools.test_game_ship tools.test_media_tools tools.test_xcapture tools.test_hub_deploy
+      - run: python -m unittest tools.test_workflow tools.test_assets scripts.test_publish_games tools.test_game_check tools.test_game_ship tools.test_media_tools tools.test_xcapture tools.test_hub_deploy tools.test_web_games
+      - run: cargo test --locked --no-default-features --features two-d --lib
+      - run: cargo clippy --locked --no-default-features --features two-d --lib -- -D warnings
+      - name: Check maintained 2D games (native and headless)
+        shell: bash
+        run: |
+          for game in lantern-run pocket-breaker orchard-watch; do
+            cargo fmt --manifest-path games/$game/Cargo.toml --check
+            cargo test --locked --manifest-path games/$game/Cargo.toml --no-default-features
+            cargo test --locked --manifest-path games/$game/Cargo.toml
+          done
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser verifier prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libasound2-dev libudev-dev pkg-config
+          google-chrome --version
+          npm install --prefix tools ws@8
+      - name: Build and verify each isolated browser game
+        run: |
+          for game in lantern-run pocket-breaker orchard-watch; do
+            python3 tools/be2.py web build games/$game
+          done
+      - name: Reject undeclared runtime dependencies in real browser
+        env:
+          BE2_BROWSER_FIXTURE: games/lantern-run/dist/web
+        run: python3 -m unittest tools.test_web_games.BrowserDependencyTests
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          include-hidden-files: true
+          path: games/*/.blue-check/web/

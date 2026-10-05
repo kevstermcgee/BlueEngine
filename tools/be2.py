@@ -256,6 +256,8 @@ def main():
     p = sub.add_parser('package'); p.add_argument('destination')
     t = sub.add_parser('map'); t.add_argument('arguments', nargs=argparse.REMAINDER)
     sub.add_parser('features')
+    web = sub.add_parser('web', help='2D web build/verify/publish/propose'); web.add_argument('arguments', nargs=argparse.REMAINDER)
+    pub = sub.add_parser('publish', help='Test/build/verify and publish a 2D web game'); pub.add_argument('arguments', nargs=argparse.REMAINDER)
     u = sub.add_parser('upgrade', help='Plan and verify moving an external game to a chosen engine revision')
     uc = u.add_subparsers(dest='upgrade_command', required=True)
     up = uc.add_parser('plan', help='Read-only: baseline/target identity, runtime, applicable migrations')
@@ -277,7 +279,10 @@ def main():
     uv.add_argument('--out', help='Write the full JSON result here (never written without this flag)')
     uv.add_argument('--json', action='store_true', help='Print the full JSON result instead of the human summary')
     args = parser.parse_args()
-    if args.command == 'doctor': doctor()
+    if args.command in ('web', 'publish'):
+        from web_games import main as web_main
+        raise SystemExit(web_main((['publish'] if args.command == 'publish' else []) + args.arguments))
+    elif args.command == 'doctor': doctor()
     elif args.command == 'check':
         if args.timeout is not None and (not 0 < args.timeout < float('inf')):
             parser.error('--timeout must be a finite positive number')

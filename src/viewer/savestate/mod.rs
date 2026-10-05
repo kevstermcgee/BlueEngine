@@ -46,7 +46,7 @@
 //! damaged[30] ^= 1;
 //! assert!(decode(&damaged).is_err(), "one flipped bit is always caught");
 //! ```
-use crate::viewer::net::session::sha256;
+use crate::runtime::hash::sha256;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::Value;
 use std::fmt;
@@ -54,6 +54,7 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
+#[cfg(not(target_arch = "wasm32"))]
 pub mod world;
 
 /// First eight bytes of every save file.
@@ -190,9 +191,7 @@ impl SaveHeader {
             version,
             engine: env!("CARGO_PKG_VERSION").into(),
             label: label.chars().take(MAX_LABEL).collect(),
-            saved_at_ms: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0, |d| d.as_millis() as u64),
+            saved_at_ms: crate::runtime::storage::timestamp_ms(),
             ..Self::default()
         }
     }
@@ -663,6 +662,7 @@ pub fn describe(path: &Path) -> Result<Value, SaveError> {
     let header = &loaded.header;
     let payload: Result<Value, _> = serde_json::from_slice(&loaded.payload);
     let summary = match &payload {
+        #[cfg(not(target_arch = "wasm32"))]
         Ok(_) if header.kind == world::KIND => {
             let expect = Expect {
                 kind: world::KIND,

@@ -37,7 +37,7 @@ The plan reports, distinctly:
   resolves to (`BE2_TOOLS`, `PATH`, or the dependency's target directory). `be2-tools` embeds no
   build-commit stamp, so this is reported as unverifiable provenance, never assumed to match the
   dependency commit; a `BE2_TOOLS` override outside the resolved dependency is flagged explicitly.
-- **Runtime classification**: `stock` (GameDocument), `custom_sim`, `custom_sim_netplay` (uses
+- **Runtime classification**: `two_d` (explicit game.project.json + simulation library), `stock` (GameDocument), `custom_sim`, `custom_sim_netplay` (uses
   `viewer::netplay`), `mixed_or_legacy`, or `unknown`, from `game.json`/`src/lib.rs` evidence. An
   unrecognized or mixed layout is reported `uncertain` for every migration, never a silent "nothing to
   do" — see `tools/test_upgrade.py`'s `test_unknown_layout_is_uncertain_not_silently_clear`.
@@ -109,3 +109,5 @@ Compatibility changes (B) and gameplay tuning (D) are tracked separately in the 
   plan compares only the current template against the game's current copy and says so.
 - No timing/throughput numbers are claimed for the planner itself beyond what is measured in
   `tools/test_upgrade.py`; this tool does not change engine build or test cost.
+
+For a declared 2D web project, `upgrade verify` invokes its `scripts/web.py build`: headless tests, locked WASM, package integrity and real browser checks. It reports this web target explicitly; native desktop shipping remains a separate gate. Old 3D migrations are marked inapplicable. Read docs/TWO_D.md and the game AGENTS/lib/project files; a rule change normally stays in lib.rs and its tests.

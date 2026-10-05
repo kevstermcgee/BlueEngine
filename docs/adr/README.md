@@ -48,3 +48,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0036: Shadows for kit games: contact blobs and one shadow map, behind one setting](0036-shadows-for-kit-games.md)
 - [0037: One hub, one name, every BlueEngine online game](0037-shared-multi-game-hub.md)
 - [0038: The engine learns from the games built on it](0038-engine-learns-from-development.md)
+- [0039: Shared 2D presentation and verified static browser artifacts](0039-two-d-browser-artifacts.md)

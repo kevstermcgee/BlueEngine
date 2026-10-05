@@ -1,0 +1,18 @@
+{
+  "complexity": "low",
+  "description": "Spend seeds on guards and defend three orchard lanes through nine waves.",
+  "id": "orchard-watch",
+  "input": [
+    "mouse",
+    "keyboard"
+  ],
+  "networking": "offline",
+  "presentation": "2d",
+  "schema_version": 1,
+  "session_minutes": 2,
+  "targets": [
+    "web",
+    "linux",
+    "windows"
+  ]
+}

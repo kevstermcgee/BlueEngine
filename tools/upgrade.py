@@ -172,7 +172,7 @@ RUNTIME_MARKERS = {
 
 
 def classify_runtime(game_root):
-    """kind in {stock, custom_sim, custom_sim_netplay, mixed_or_legacy, unknown}, with the evidence used."""
+    """kind in {stock, custom_sim, custom_sim_netplay, two_d, mixed_or_legacy, unknown}, with the evidence used."""
     root = Path(game_root)
     has_game_json = (root / 'game.json').is_file()
     has_lib_rs = (root / 'src/lib.rs').is_file()
@@ -192,6 +192,17 @@ def classify_runtime(game_root):
     evidence['uses_netplay_kit'] = uses_netplay
     if not has_cargo:
         return {'kind': 'unknown', 'reason': 'no Cargo.toml: not a Rust game project', 'evidence': evidence}
+    declaration = root / 'game.project.json'
+    if declaration.is_file():
+        try:
+            project = json.loads(declaration.read_text())
+        except (OSError, ValueError):
+            return {'kind': 'unknown', 'reason': 'invalid game.project.json; repair declaration before upgrade', 'evidence': evidence}
+        if isinstance(project, dict) and project.get('presentation') == '2d':
+            evidence['game.project.json'] = project
+            if has_lib_rs and not has_game_json and not uses_netplay and project.get('networking') == 'offline':
+                return {'kind': 'two_d', 'reason': 'explicit 2D/offline requirements + simulation library', 'evidence': evidence}
+            return {'kind': 'mixed_or_legacy', 'reason': '2D declaration conflicts with runtime layout/networking', 'evidence': evidence}
     if has_game_json and has_lib_rs:
         return {'kind': 'mixed_or_legacy',
                 'reason': 'both game.json (stock GameDocument) and src/lib.rs (custom simulation) are present',
@@ -254,6 +265,10 @@ def select_migrations(registry, engine_checkout, runtime_kind, baseline_commit, 
         since = migration['since_commit']
         entry = {'id': migration['id'], 'title': migration['title'], 'category': migration['category'],
                  'required': migration['required'], 'reference': migration['reference']}
+        if runtime_kind == 'two_d' and runtime_kind not in migration['runtime']:
+            entry.update(status='not_applicable', reason='This native 3D migration does not apply to the declared 2D path')
+            results.append(entry)
+            continue
         if baseline_commit is None:
             entry.update(status='uncertain',
                          reason='no recorded baseline engine revision (assets/identity.json engine_revision '
@@ -300,7 +315,7 @@ def provenance(identity, runtime_kind):
         return {'source': 'identity.json:provenance', 'template': recorded.get('template', 'unknown'),
                 'template_revision': recorded.get('template_revision', 'unknown'),
                 'generation_options': recorded.get('generation_options', {})}
-    guess = {'stock': 'stock', 'custom_sim': 'custom-sim', 'custom_sim_netplay': 'custom-sim'}.get(runtime_kind)
+    guess = {'stock': 'stock', 'custom_sim': 'custom-sim', 'custom_sim_netplay': 'custom-sim', 'two_d': 'two-d'}.get(runtime_kind)
     if identity and identity.get('engine_revision') and guess:
         return {'source': 'inferred', 'template': guess,
                 'template_revision': ('unknown: assets/identity.json records the generation-time engine commit, '
@@ -500,16 +515,26 @@ def verify(game_root, engine_root, *, skip_ship=False, content_only=False, scena
     result['engine_at_verification'] = {
         'dependency_path': str(dep_path) if dep_path else None, 'commit': engine_commit, 'dirty': engine_dirty,
         'tool_binary': {'path': str(tool_path), 'sha256': sha256_of(tool_path)} if tool_path else None}
-    if not tool_path:
-        result.update(ok=False, reason='No be2-tools binary found; scripts/check.py cannot run native checks.')
-        return result
-    args = [sys.executable, str(script), '--tools', str(tool_path)]
-    if content_only:
-        args.append('--content-only')
-    if skip_ship:
-        args.append('--skip-ship')
-    for scenario in scenarios:
-        args += ['--scenario', scenario]
+    runtime = classify_runtime(game_root)
+    requirements = runtime['evidence'].get('game.project.json', {})
+    if runtime['kind'] == 'two_d' and 'web' in requirements.get('targets', []):
+        web_script = game_root / 'scripts/web.py'
+        if content_only or scenarios or not web_script.is_file():
+            result.update(ok=False, reason='2D/browser upgrade verification needs scripts/web.py and a full web build; content-only/3D scenarios cannot prove this target.')
+            return result
+        args = [sys.executable, str(web_script), 'build']
+        result['verification_target'] = 'web (native desktop gate is separate)'
+    else:
+        if not tool_path:
+            result.update(ok=False, reason='No be2-tools binary found; scripts/check.py cannot run native checks.')
+            return result
+        args = [sys.executable, str(script), '--tools', str(tool_path)]
+        if content_only:
+            args.append('--content-only')
+        if skip_ship:
+            args.append('--skip-ship')
+        for scenario in scenarios:
+            args += ['--scenario', scenario]
     started = time.monotonic()
     try:
         completed = subprocess.run(args, cwd=game_root, capture_output=True, text=True, encoding='utf-8',

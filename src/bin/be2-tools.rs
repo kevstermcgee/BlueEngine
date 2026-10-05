@@ -722,7 +722,8 @@ fn run() -> Result<()> {
             let name = arg(1)?;
             let dir = arg(2)?;
             // NAME DIRECTORY [ENGINE_PATH] [TEMPLATE]; a lone template name may stand in for the path.
-            let unknown = |t: &str| format!("Unknown template '{t}': use stock or custom-sim");
+            let unknown =
+                |t: &str| format!("Unknown template '{t}': use stock, custom-sim or two-d");
             let (engine, template) =
                 match (a.get(3).map(String::as_str), a.get(4).map(String::as_str)) {
                     (Some(t), None) if Template::parse(t).is_some() => (None, Template::parse(t)),

@@ -1,0 +1,17 @@
+{
+  "title": "Lantern Run",
+  "tagline": "Collect four lanterns and reach the garden exit.",
+  "controls": "WASD/arrows/pad move; K save, L load, M sound, R restart",
+  "smoke_args": [
+    "--verify",
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--size",
+    "1280x720",
+    "--mute"
+  ]
+}

@@ -1,0 +1,6 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{title}}</title><link rel="icon" href="thumbnail.png">
+<style>body{margin:0;background:#101923;color:#f2f2dc;font:16px system-ui}main{max-width:1100px;margin:auto;padding:12px}canvas{display:block;width:100%;height:min(75vh,620px);outline:2px solid #2a4550}a{color:#6de0d0}h1{font-size:24px;margin:8px 0}p{margin:8px 0}</style>
+<main><h1>{{title}}</h1><p>{{description}}</p><canvas id="glcanvas" tabindex="0" aria-label="{{title}} game. {{controls}}"></canvas>
+<p>{{controls}}</p><p id="status">Click the game or press Enter to start and enable sound. K saves; L resumes. Saves stay in this browser on this site.</p><p><a href="manifest.json">Package information</a></p></main>
+<script src="platform.js"></script><script src="loader.js"></script><script>be2RegisterPlatform();load("game.wasm");</script></html>

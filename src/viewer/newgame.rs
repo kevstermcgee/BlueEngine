@@ -29,6 +29,8 @@ pub enum Template {
     Stock,
     /// A game that owns its simulation: pure library + window binary (devkit and kit).
     CustomSim,
+    /// Offline 2D game with the shared browser/native client.
+    TwoD,
 }
 
 impl Template {
@@ -37,6 +39,7 @@ impl Template {
         match self {
             Self::Stock => "stock",
             Self::CustomSim => "custom-sim",
+            Self::TwoD => "two-d",
         }
     }
     /// Parse a command-line name.
@@ -44,6 +47,7 @@ impl Template {
         match text {
             "stock" => Some(Self::Stock),
             "custom-sim" => Some(Self::CustomSim),
+            "two-d" => Some(Self::TwoD),
             _ => None,
         }
     }
@@ -99,9 +103,20 @@ pub fn scaffold_new_game_with(
     let identity = match template {
         Template::Stock => scaffold_stock(&project)?,
         Template::CustomSim => scaffold_custom_sim(&project)?,
+        Template::TwoD => scaffold_two_d(&project)?,
     };
-    write_shipping_files(&project, identity)?;
+    write_shipping_files(&project, identity, template)?;
     write_scripts(&project)?;
+    if template == Template::TwoD {
+        project.write(
+            "scripts/web.py",
+            include_str!("../../templates/two-d/web.py"),
+        )?;
+        project.write(
+            "scripts/project.py",
+            include_str!("../../templates/game_project.py"),
+        )?;
+    }
     fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
     Ok(())
 }
@@ -210,7 +225,11 @@ fn custom_sim_identity(project: &Project) -> Identity {
 
 /// Identity, icon set, build script, ship/check tooling, `.gitignore` and the seeded lock file: what
 /// every game needs to be delivered as a packaged program with its own name and icon.
-fn write_shipping_files(project: &Project, mut identity: Identity) -> Result<()> {
+fn write_shipping_files(
+    project: &Project,
+    mut identity: Identity,
+    template: Template,
+) -> Result<()> {
     identity.engine_revision = engine_revision(&project.engine_dir);
     project.write("assets/identity.json", identity.to_json())?;
     write_icon_set(
@@ -231,10 +250,12 @@ fn write_shipping_files(project: &Project, mut identity: Identity) -> Result<()>
         "scripts/dev.py",
         include_str!("../../templates/game_dev.py"),
     )?;
-    project.write(
-        "src/platform.rs",
-        include_str!("../../templates/native_focus.rs"),
-    )?;
+    if template != Template::TwoD {
+        project.write(
+            "src/platform.rs",
+            include_str!("../../templates/native_focus.rs"),
+        )?;
+    }
     project.write(
         "tests/identity.rs",
         include_str!("../../templates/game_identity_test.rs"),
@@ -263,6 +284,8 @@ fi
 
 cmd="${1:-help}"
 case "$cmd" in
+  web) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the two-d starter." >&2; exit 1; }; "$PY" scripts/web.py "$@" ;;
+  publish) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the two-d starter." >&2; exit 1; }; "$PY" scripts/web.py publish "$@" ;;
   check)
     shift
     "$PY" scripts/check.py "$@"
@@ -290,7 +313,7 @@ case "$cmd" in
     "$PY" scripts/ship.py ship "$@"
     ;;
   *)
-    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship}"
+    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship|web|publish}"
     ;;
 esac
 "#;
@@ -310,6 +333,16 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 switch ($cmd) {
+    "web" {
+        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the two-d starter." }
+        python scripts/web.py @CheckArgs
+        exit $LASTEXITCODE
+    }
+    "publish" {
+        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the two-d starter." }
+        python scripts/web.py publish @CheckArgs
+        exit $LASTEXITCODE
+    }
     "check" {
         python scripts/check.py @CheckArgs
         exit $LASTEXITCODE
@@ -339,7 +372,7 @@ switch ($cmd) {
         exit $LASTEXITCODE
     }
     default {
-        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|dev|play|package|shortcut|ship}"
+        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|dev|play|package|shortcut|ship|web|publish}"
     }
 }
 "#;
@@ -389,6 +422,30 @@ fn scaffold_custom_sim(project: &Project) -> Result<Identity> {
     for (path, template) in files {
         project.write(path, fill(template, &values))?;
     }
+    Ok(identity)
+}
+
+fn scaffold_two_d(project: &Project) -> Result<Identity> {
+    let identity = Identity::starter(
+        project.name,
+        "Collect four lanterns and reach the garden exit.",
+        "WASD/arrows/pad move; K save, L load, M sound, R restart",
+    );
+    let values = [
+        ("name", project.name),
+        ("lib", project.lib.as_str()),
+        ("title", identity.title.as_str()),
+        ("engine", project.engine_toml.as_str()),
+    ];
+    for (path,template) in [
+        ("Cargo.toml",include_str!("../../templates/two-d/Cargo.toml.tmpl")),
+        ("src/main.rs",include_str!("../../templates/two-d/main.rs")),
+        ("src/lib.rs",include_str!("../../templates/two-d/lib.rs")),
+        ("AGENTS.md",include_str!("../../templates/two-d/AGENTS.md")),
+        ("README.md","# {{title}}\nCollect the four lanterns, avoid the pink patrol and reach the teal exit.\nWASD/arrows move. Click/Enter starts. K saves, L resumes, M toggles sound, R restarts.\n"),
+        ("STATUS.md","2D browser/native starter. Verify and inspect real captures before shipping.\n"),
+    ] { project.write(path,fill(template,&values))?; }
+    project.write("game.project.json",serde_json::to_string_pretty(&serde_json::json!({"schema_version":1,"id":project.name,"presentation":"2d","targets":["web","linux","windows"],"networking":"offline","input":["keyboard","mouse","controller"],"description":identity.tagline,"session_minutes":1,"complexity":"low"}))?)?;
     Ok(identity)
 }
 

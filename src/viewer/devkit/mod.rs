@@ -60,8 +60,8 @@
 //! }
 //! assert!((sim.x - 1.0).abs() < 0.03, "one second of walking at 60 ticks/s");
 //! ```
-mod clock;
-mod input;
+use crate::runtime::clock;
+use crate::runtime::input;
 mod juice;
 mod level;
 mod lifecycle;
@@ -69,13 +69,13 @@ mod look;
 mod menu;
 pub mod net_address;
 pub mod path;
-mod playback;
-mod rng;
+use crate::runtime::playback;
+use crate::runtime::rng;
 mod save;
 mod scale;
-mod sim;
-pub mod snapshot;
-pub mod synth;
+use crate::runtime::sim;
+pub use crate::runtime::snapshot;
+pub use crate::runtime::synth;
 pub mod text_field;
 mod waypoints;
 

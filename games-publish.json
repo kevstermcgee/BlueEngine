@@ -83,6 +83,162 @@
       {
         "source": "games/signal-garden/.gitignore",
         "destination": "signal-garden/.gitignore"
+      },
+      {
+        "source": "games/lantern-run/src",
+        "destination": "lantern-run/src"
+      },
+      {
+        "source": "games/lantern-run/tests",
+        "destination": "lantern-run/tests"
+      },
+      {
+        "source": "games/lantern-run/assets",
+        "destination": "lantern-run/assets"
+      },
+      {
+        "source": "games/lantern-run/scripts",
+        "destination": "lantern-run/scripts"
+      },
+      {
+        "source": "games/lantern-run/Cargo.toml",
+        "destination": "lantern-run/Cargo.toml"
+      },
+      {
+        "source": "games/lantern-run/Cargo.lock",
+        "destination": "lantern-run/Cargo.lock"
+      },
+      {
+        "source": "games/lantern-run/build.rs",
+        "destination": "lantern-run/build.rs"
+      },
+      {
+        "source": "games/lantern-run/AGENTS.md",
+        "destination": "lantern-run/AGENTS.md"
+      },
+      {
+        "source": "games/lantern-run/CLAUDE.md",
+        "destination": "lantern-run/CLAUDE.md"
+      },
+      {
+        "source": "games/lantern-run/README.md",
+        "destination": "lantern-run/README.md"
+      },
+      {
+        "source": "games/lantern-run/STATUS.md",
+        "destination": "lantern-run/STATUS.md"
+      },
+      {
+        "source": "games/lantern-run/game.project.json",
+        "destination": "lantern-run/game.project.json"
+      },
+      {
+        "source": "games/lantern-run/.gitignore",
+        "destination": "lantern-run/.gitignore"
+      },
+      {
+        "source": "games/pocket-breaker/src",
+        "destination": "pocket-breaker/src"
+      },
+      {
+        "source": "games/pocket-breaker/tests",
+        "destination": "pocket-breaker/tests"
+      },
+      {
+        "source": "games/pocket-breaker/assets",
+        "destination": "pocket-breaker/assets"
+      },
+      {
+        "source": "games/pocket-breaker/scripts",
+        "destination": "pocket-breaker/scripts"
+      },
+      {
+        "source": "games/pocket-breaker/Cargo.toml",
+        "destination": "pocket-breaker/Cargo.toml"
+      },
+      {
+        "source": "games/pocket-breaker/Cargo.lock",
+        "destination": "pocket-breaker/Cargo.lock"
+      },
+      {
+        "source": "games/pocket-breaker/build.rs",
+        "destination": "pocket-breaker/build.rs"
+      },
+      {
+        "source": "games/pocket-breaker/AGENTS.md",
+        "destination": "pocket-breaker/AGENTS.md"
+      },
+      {
+        "source": "games/pocket-breaker/CLAUDE.md",
+        "destination": "pocket-breaker/CLAUDE.md"
+      },
+      {
+        "source": "games/pocket-breaker/README.md",
+        "destination": "pocket-breaker/README.md"
+      },
+      {
+        "source": "games/pocket-breaker/STATUS.md",
+        "destination": "pocket-breaker/STATUS.md"
+      },
+      {
+        "source": "games/pocket-breaker/game.project.json",
+        "destination": "pocket-breaker/game.project.json"
+      },
+      {
+        "source": "games/pocket-breaker/.gitignore",
+        "destination": "pocket-breaker/.gitignore"
+      },
+      {
+        "source": "games/orchard-watch/src",
+        "destination": "orchard-watch/src"
+      },
+      {
+        "source": "games/orchard-watch/tests",
+        "destination": "orchard-watch/tests"
+      },
+      {
+        "source": "games/orchard-watch/assets",
+        "destination": "orchard-watch/assets"
+      },
+      {
+        "source": "games/orchard-watch/scripts",
+        "destination": "orchard-watch/scripts"
+      },
+      {
+        "source": "games/orchard-watch/Cargo.toml",
+        "destination": "orchard-watch/Cargo.toml"
+      },
+      {
+        "source": "games/orchard-watch/Cargo.lock",
+        "destination": "orchard-watch/Cargo.lock"
+      },
+      {
+        "source": "games/orchard-watch/build.rs",
+        "destination": "orchard-watch/build.rs"
+      },
+      {
+        "source": "games/orchard-watch/AGENTS.md",
+        "destination": "orchard-watch/AGENTS.md"
+      },
+      {
+        "source": "games/orchard-watch/CLAUDE.md",
+        "destination": "orchard-watch/CLAUDE.md"
+      },
+      {
+        "source": "games/orchard-watch/README.md",
+        "destination": "orchard-watch/README.md"
+      },
+      {
+        "source": "games/orchard-watch/STATUS.md",
+        "destination": "orchard-watch/STATUS.md"
+      },
+      {
+        "source": "games/orchard-watch/game.project.json",
+        "destination": "orchard-watch/game.project.json"
+      },
+      {
+        "source": "games/orchard-watch/.gitignore",
+        "destination": "orchard-watch/.gitignore"
       }
     ],
     "prototypes": [
