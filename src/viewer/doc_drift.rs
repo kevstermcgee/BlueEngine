@@ -89,7 +89,7 @@ fn collect_md_recursive(dir: &Path, acc: &mut Vec<PathBuf>) -> Result<()> {
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
 
-        if name_str.starts_with('.') || name_str == "target" || name_str == ".be2-work" {
+        if name_str.starts_with('.') || name_str == "target" || name_str == "node_modules" {
             continue;
         }
 
@@ -354,5 +354,21 @@ mod tests {
         let files = collect_markdown_files(root).unwrap();
         assert!(!files.is_empty());
         assert!(files.iter().any(|f| f.ends_with("README.md")));
+    }
+
+    #[test]
+    fn installed_browser_dependencies_do_not_become_repository_documentation() {
+        let root =
+            std::env::temp_dir().join(format!("be2-doc-dependencies-{}", std::process::id()));
+        for directory in ["docs", "tools/node_modules/ws", "target", ".blue-check"] {
+            std::fs::create_dir_all(root.join(directory)).unwrap();
+            std::fs::write(root.join(directory).join("README.md"), "[link](missing.md)").unwrap();
+        }
+        let files = collect_markdown_files(&root).unwrap();
+        assert_eq!(files, vec![root.join("docs/README.md")]);
+        // Repository documentation remains subject to the original link audit.
+        let report = audit_documentation(&root).unwrap();
+        assert!(report.violations.iter().any(|v| v.file == "docs/README.md"));
+        std::fs::remove_dir_all(root).unwrap();
     }
 }

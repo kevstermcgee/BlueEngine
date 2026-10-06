@@ -341,7 +341,9 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         start |= digital.commands & 1 != 0;
         #[cfg(target_arch = "wasm32")]
         {
-            (x, y) = platform::keyboard_movement();
+            let keyboard = platform::keyboard_movement();
+            x = keyboard.0 + digital.x;
+            y = keyboard.1 + digital.y;
             let pad = platform::pad();
             x += pad.0;
             y += pad.1;
