@@ -34,7 +34,7 @@ class PackageTests(unittest.TestCase):
     def test_directory_publication_links_titles_to_play_and_download_details(self):
         out=self.root/'library';self.manifest['native_download']='https://example.test/game.exe';self.stamp()
         web.directory_publish(self.dist,out)
-        page=(out/'index.html').read_text();details=(out/'games/test-game/index.html').read_text()
+        page=(out/'index.html').read_text(encoding='utf-8');details=(out/'games/test-game/index.html').read_text(encoding='utf-8')
         self.assertIn('class="game-title" href="games/test-game/"',page)
         self.assertIn('href="../../test-game/index.html"',details)
         self.assertIn('https://example.test/game.exe',details)
