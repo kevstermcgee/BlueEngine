@@ -1,7 +1,7 @@
 {
   "title": "Leo",
   "tagline": "A little boy, an endless meadow, and another morning.",
-  "controls": "WASD/arrows wander \u00b7 drag to look \u00b7 Shift run \u00b7 Space/A hop \u00b7 Esc/B pause \u00b7 M sound \u00b7 N music \u00b7 K/L save/load",
+  "controls": "WASD/arrows or left stick wander \u00b7 drag or right stick to look \u00b7 Shift run \u00b7 Space/A/touch A hop",
   "smoke_args": [
     "--capture",
     "{dir}",
@@ -13,6 +13,5 @@
   "package": [
     "assets/audio",
     "AUDIO.md"
-  ],
-  "engine_revision": "2c2cebd4a3af"
+  ]
 }

@@ -11,6 +11,7 @@ button,.digital-more summary{font:inherit;color:#E6F2FB;background:transparent;b
 </style>
 <main><h1>{{title}}</h1><p>{{description}}</p><div id="player"><canvas id="glcanvas" tabindex="0" aria-label="{{title}} game. {{controls}}"></canvas>
 <section id="mobile-controls" aria-label="Touch game controls" hidden></section></div>
+<script id="be2-control-config" type="application/json">{{control_config}}</script>
 <p class="desktop-help">{{controls}}</p><p id="status" role="status">Start the game to enable sound. Progress saves automatically on this device.</p>
 <button id="install" hidden>Install game</button><p id="install-help">To install: use your browser’s Install app or Add to Home Screen command. Installed games work offline after their first complete load. Saves stay on this device and site.</p>
 <p><a href="../../">Game library</a> · <a href="manifest.json">Package information</a></p></main>

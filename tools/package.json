@@ -1,0 +1,7 @@
+{
+  "name": "blueengine-browser-verifier",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Chromium CDP verification dependency; never included in runtime packages",
+  "dependencies": { "ws": "8.22.0" }
+}

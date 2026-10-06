@@ -1,5 +1,6 @@
 /* Physical and digital devices feed the same Intent. This panel exists only on coarse-pointer devices. */
 (() => {
+  const commands=controlContract.commands;
   const config = JSON.parse(document.getElementById('be2-mobile-config').textContent);
   const panel = document.getElementById('mobile-controls');
   const canvas = document.getElementById('glcanvas');
@@ -36,19 +37,19 @@
   }
   const face=document.createElement('div');face.className='face-buttons';
   const action=config.action_label!==null;
-  const a=button('A',action?'action':'restart',()=>{if(action)state.action=true;else state.commands|=4;});
+  const a=button('A',action?'action':'restart',()=>{if(action)state.action=true;else state.commands|=commands.restart.bit;});
   a.setAttribute('aria-label',action?(config.action_label||'Action'):'Restart');
-  const b=button('B','pause',()=>{state.commands|=2;});b.setAttribute('aria-label','Pause or resume');
+  const b=button('B','pause',()=>{state.commands|=commands.pause.bit;});b.setAttribute('aria-label','Pause or resume');
   for(const [key,label] of [[b,'Pause'],[a,action?(config.action_label||'Action'):'Restart']]){
     const group=document.createElement('div');group.append(key);const caption=document.createElement('small');caption.textContent=label;group.append(caption);face.append(group);
   }
   play.append(face);panel.append(play);
   const actions=document.createElement('div');actions.className='digital-actions';
-  actions.append(button('START','play',()=>{state.commands|=window.be2?.started?2:1;}));
+  actions.append(button('START','play',()=>{state.commands|=window.be2?.started?commands.pause.bit:commands.start.bit;}));
   const more=document.createElement('details');more.className='digital-more';
   const summary=document.createElement('summary');summary.textContent='SELECT';summary.setAttribute('aria-label','Sound and saved game controls');more.append(summary);
   const menu=document.createElement('div');menu.className='digital-menu';
-  for(const [label,name,bit] of [...(action?[['Restart','restart',4]]:[]),['Sound','sound',8],['Music','music',64],['Save','save',16],['Load','load',32]])menu.append(button(label,name,()=>{state.commands|=bit;more.open=false;}));
+  for(const [label,name,bit] of [...(action?[['Restart','restart',commands.restart.bit]]:[]),['Sound','sound',commands.sound.bit],['Music','music',commands.music.bit],['Save','save',commands.save.bit],['Load','load',commands.load.bit]])menu.append(button(label,name,()=>{state.commands|=bit;more.open=false;}));
   more.append(menu);actions.append(more);
   panel.append(actions);
   const point=e=>{
@@ -56,9 +57,9 @@
     const x=(e.clientX-r.x-(r.width-800*scale)/2)/scale,y=(e.clientY-r.y-(r.height-450*scale)/2)/scale;
     return x>=0&&y>=0&&x<800&&y<450?{x:Math.floor(x),y:Math.floor(y)}:null;
   };
-  canvas.addEventListener('pointerdown',e=>{if(!state.visible||e.pointerType!=='touch')return;e.preventDefault();activate();canvas.setPointerCapture(e.pointerId);state.pointer=point(e);if(state.pointer)state.action=true;state.commands|=1;});
+  canvas.addEventListener('pointerdown',e=>{if(!state.visible||e.pointerType!=='touch')return;e.preventDefault();activate();canvas.setPointerCapture(e.pointerId);state.pointer=point(e);if(state.pointer)state.action=true;state.commands|=commands.start.bit;});
   canvas.addEventListener('pointermove',e=>{if(state.visible&&e.pointerType==='touch'&&e.buttons)state.pointer=point(e);});
-  canvas.addEventListener('pointerup',e=>{if(state.visible&&e.pointerType==='touch'){activate();state.commands|=1;}});
+  canvas.addEventListener('pointerup',e=>{if(state.visible&&e.pointerType==='touch'){activate();state.commands|=commands.start.bit;}});
   canvas.addEventListener('pointercancel',()=>{state.pointer=null;state.action=false;});
   visibility();
 })();

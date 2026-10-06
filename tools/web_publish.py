@@ -17,14 +17,17 @@ def publish(package,repository,run,integrity,directory_publish):
     if not permissions.get('permissions',{}).get('push'):raise WebError('GitHub connection lacks push permission for this library. Use --backend directory for a publication-ready artifact.')
     pages=json.loads(run(['gh','api',f'repos/{repository}/pages']))
     if pages.get('build_type')!='workflow' or not pages.get('html_url'):raise WebError('Repository needs existing workflow-based GitHub Pages hosting. Use the directory backend until configured.')
-    metadata=integrity(package)
+    packages=list(package) if isinstance(package,(list,tuple)) else [package]
+    metadata=[integrity(p) for p in packages]
     with tempfile.TemporaryDirectory(prefix='be2-publish-') as folder:
         checkout=Path(folder)/'library'
         run(['gh','repo','clone',repository,checkout,'--','--depth=1'])
         builder=checkout/'site/build.py';workflow=checkout/'.github/workflows/pages.yml'
         if not builder.is_file() or not workflow.is_file():raise WebError('This backend expects the central library site/build.py + pages.yml contract. Use a custom adapter/directory backend for another site layout.')
         destination=checkout/'site/web'
-        receipt=directory_publish(package,destination)
+        receipts=[directory_publish(p,destination) for p in packages]
+        metadata=[integrity(p) for p in packages]
+        source_proof=[r['source_retrieval'] for r in receipts]
         integrate_catalog(builder)
         # Verify the actual merged site before pushing, using the current native release catalog.
         from tools.web_games import catalog_verify
@@ -40,7 +43,7 @@ def publish(package,repository,run,integrity,directory_publish):
         changed=bool(run(['git','diff','--cached','--name-only'],cwd=checkout).strip())
         deployment=None
         if changed:
-            run(['git','-c','user.name=BlueEngine Publisher','-c','user.email=blueengine-publisher@users.noreply.github.com','commit','-m',f'Publish verified browser game {metadata["id"]}'],cwd=checkout)
+            run(['git','-c','user.name=BlueEngine Publisher','-c','user.email=blueengine-publisher@users.noreply.github.com','commit','-m','Publish reproducible browser games '+', '.join(m['id'] for m in metadata)],cwd=checkout)
             commit=run(['git','rev-parse','HEAD'],cwd=checkout).strip()
             run(['git','push','origin','HEAD:main'],cwd=checkout)
             # Confirm deployment, never invent a live URL from a successfully pushed commit.
@@ -56,21 +59,25 @@ def publish(package,repository,run,integrity,directory_publish):
             else:raise WebError(f'Pages deployment still pending for {commit}; local package retained. Check gh run list --repo {repository}.')
         else:
             commit=run(['git','rev-parse','HEAD'],cwd=checkout).strip()
-        url=pages['html_url'].rstrip('/')+'/web/'+metadata['id']+'/'
-        # Browser smoke already used the exact package. Confirm the host serves the same manifest.
-        last_error=None
-        for _ in range(20):
-            try:
-                with urllib.request.urlopen(url+'manifest.json',timeout=20) as response:remote=json.load(response)
-                if remote['file_sha256']==metadata['file_sha256'] and remote['engine_revision']==metadata['engine_revision']:
-                    for name,digest in metadata['file_sha256'].items():
-                        with urllib.request.urlopen(url+name,timeout=30) as asset:
-                            if hashlib.sha256(asset.read()).hexdigest()!=digest:raise WebError(f'Deployed file differs: {name}')
-                    return {'backend':'github-pages','url':url,'repository':repository,'deployment_commit':commit if changed else None,'library_commit':commit,'already_current':not changed,'run':deployment,'remote_manifest_verified':True,'remote_files_verified':True,'catalog_verified':catalog_proof}
-                last_error='old manifest is still cached'
-            except Exception as error:last_error=str(error)
-            time.sleep(3)
-        raise WebError(f'Pages workflow succeeded but current package could not be confirmed: {last_error}. No verified URL receipt emitted.')
+        # Confirm every exact manifest and runtime file after the successful shared deployment.
+        confirmed=[]
+        for item in metadata:
+            url=pages['html_url'].rstrip('/')+'/web/'+item['id']+'/'
+            last_error=None
+            for _ in range(20):
+                try:
+                    with urllib.request.urlopen(url+'manifest.json',timeout=20) as response:remote=json.load(response)
+                    if remote==item:
+                        for name,digest in item['file_sha256'].items():
+                            with urllib.request.urlopen(url+name,timeout=30) as asset:
+                                if hashlib.sha256(asset.read()).hexdigest()!=digest:raise WebError(f'Deployed file differs: {name}')
+                        confirmed.append({'id':item['id'],'url':url,'package_id':item['package_id'],'remote_manifest_verified':True,'remote_files_verified':True})
+                        break
+                    last_error='old manifest is still cached'
+                except Exception as error:last_error=str(error)
+                time.sleep(3)
+            else:raise WebError(f'Pages workflow succeeded but current package could not be confirmed: {last_error}. No verified URL receipt emitted.')
+        return {'source_retrieval':source_proof,'backend':'github-pages','url':confirmed[0]['url'] if len(confirmed)==1 else None,'games':confirmed,'repository':repository,'deployment_commit':commit if changed else None,'library_commit':commit,'already_current':not changed,'run':deployment,'remote_manifest_verified':True,'remote_files_verified':True,'catalog_verified':catalog_proof}
 
 def integrate_catalog(builder):
     source=builder.read_text();marker='# BlueEngine unified catalog (static publisher contract v2)'

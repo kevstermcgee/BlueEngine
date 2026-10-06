@@ -15,6 +15,10 @@ and `be2-tools search TEXT` remain available; `export-lab NEW.json` exports the 
 Engine maintainers follow AGENTS.md and the matching subsystem contract. This toolkit
 uses no AI service or plugins; Python runners require 3.10+ and the standard library.
 
+Browser games (2D/hybrid/3D): start with [BROWSER_WORKFLOW.md](../docs/BROWSER_WORKFLOW.md).
+`python3 tools/be2.py web capabilities` reports supported requirements; `web build GAME` runs the
+complete browser gate; `web reproduce GAME` proves a clean public-source rebuild.
+
 ## First five minutes
 
 Run from the repository root:

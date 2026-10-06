@@ -91,13 +91,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libasound2-dev libudev-dev pkg-config
           google-chrome --version
-          npm install --prefix tools ws@8
+          npm ci --ignore-scripts --prefix tools
       - name: Build and verify each isolated browser game
         run: |
           for game in lantern-run pocket-breaker orchard-watch lantern-grove; do
             python3 tools/be2.py web build games/$game
           done
           python3 tools/be2.py web build assets/games/leo
+      - name: Reproduce public browser sources with empty Cargo targets
+        if: github.event_name == 'push'
+        run: |
+          python3 tools/be2.py web reproduce games/lantern-run
+          python3 tools/be2.py web reproduce assets/games/leo
       - name: Reject undeclared runtime dependencies in real browser
         env:
           BE2_BROWSER_FIXTURE: games/lantern-run/dist/web

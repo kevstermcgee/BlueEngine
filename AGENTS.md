@@ -27,6 +27,11 @@ Never violate:
 - Preserve completed outputs on failure; never shell-interpolate scene values.
 - Preserve official assets/branding artwork. No plugin/service installation needed.
 
+Browser front door: read docs/BROWSER_WORKFLOW.md. Use `python3 tools/be2.py web capabilities`,
+`web prepare GAME`, `web build GAME`, `web verify GAME`, `web inspect GAME`, `web serve GAME`,
+`web reproduce GAME` and `web publish GAME`. Portable 2D/hybrid/3D share these commands. Commit/push
+source before publication; a receipt must confirm source retrieval AND deployed manifest/files.
+
 Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
 (docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use the stock starter;
 enemies, projectiles, scoring, AI or per-frame physics use `new-game ... custom-sim`. A native game is

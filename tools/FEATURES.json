@@ -2058,9 +2058,14 @@
         "src/runtime/camera_boom.rs",
         "src/runtime/shadow_quality.rs",
         "assets/games/leo/game.project.json",
-        "assets/games/leo/src/browser.rs"
+        "assets/games/leo/src/browser.rs",
+        "tools/web_release.py",
+        "tools/web_reproduce.py",
+        "templates/web/controls.json",
+        "docs/BROWSER_WORKFLOW.md"
       ],
       "read_first": [
+        "docs/BROWSER_WORKFLOW.md",
         "docs/PORTABLE_GAMES.md",
         "templates/two-d/AGENTS.md"
       ],
@@ -2068,7 +2073,7 @@
         "python -m unittest tools.test_web_games",
         "isolated real Chromium WASM playthrough and persistence smoke"
       ],
-      "note": "Portable offline 2D/3D/hybrid web/native authoring. Per-game dpad/paddle/tap controls below canvas on mobile, autosave/settings, offline browser installation, isolated desktop AND mobile touch/audio/storage/offline gates. Shared catalog joins native/browser by ID; persistent stars pin favorites. Build/publish remain separate.",
+      "note": "Portable offline 2D/3D/hybrid web/native authoring. Per-game dpad/paddle/tap controls below canvas on mobile, autosave/settings, offline browser installation, isolated desktop AND mobile touch/audio/storage/offline gates. Shared catalog joins native/browser by ID; persistent stars pin favorites. Build/publish remain separate. Canonical web prepare/build/verify/inspect/serve/reproduce/publish/capabilities. Public exact-commit source retrieval is mandatory before publication. Individual browser stage and update recovery evidence; runtime bank closure excludes previews.",
       "keywords": [
         "web",
         "wasm",
@@ -2091,7 +2096,13 @@
         "Leo",
         "fullscreen",
         "music",
-        "existing 3d port"
+        "existing 3d port",
+        "reproducibility",
+        "provenance",
+        "pause",
+        "service-worker",
+        "clean-checkout",
+        "performance"
       ],
       "depends_on": [
         "two_dimensional"
@@ -2604,12 +2615,13 @@
     "templates/two-d/lib.rs": "Rules and presentation; shared client owns devices, audio, storage and timing.",
     "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md": "ADR 0034: Level geometry and waypoint pathing promoted from Dead Air",
     "src/viewer/game_scenario.rs": "Turn game-explore's shortest win into a scenario that plays it: walk to each target, look at it, press it...",
-    "tools/web_games.py": "Supported 2D web workflow: propose, build, verify, publish.",
+    "tools/web_games.py": "Canonical portable browser commands and release gates; start with docs/BROWSER_WORKFLOW.md.",
     "src/viewer/server.rs": "Authoritative dedicated multiplayer server for Blue Engine V2.",
     "src/viewer/kit/look.rs": "Scene lighting and the materials that draw dynamic geometry.",
     "docs/SAVE_STATE.md": "Save states",
     "src/viewer/netplay/client.rs": "The network client: connect, choose, play, for any NetGame.",
     "src/viewer/spatial.rs": "Room / zone graph and spatial partitioning for indoor maps and interest management.",
-    "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves..."
+    "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves...",
+    "docs/BROWSER_WORKFLOW.md": "Browser 2D/hybrid/3D: create/build/test/publish/reproduce/upgrade commands, capabilities and evidence."
   }
 }

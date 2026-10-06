@@ -14,6 +14,9 @@ if(!executable)throw new Error('Browser verification needs Chromium/Chrome on PA
 const browser=spawn(executable,['--headless','--no-sandbox','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
 let socket;
 let errors=[];let requests=[];let browserLog='';
+const checks={wasm_instantiated:false,playable:false,input:false,save_write:false,reload_read:false,audio_initialized:false,offline_reload:false,gameplay_scenario:false,update_recovery:false};
+const timings={},clock=()=>performance.now();
+let stage='launch';
 const timeout=setTimeout(()=>{browser.kill('SIGKILL');console.error('Browser smoke timed out');process.exit(1);},360000);
 try {
   const endpoint=await new Promise((resolve,reject)=>{
@@ -40,28 +43,34 @@ try {
   const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(JSON.stringify(result.exceptionDetails));return result.result.value;};
   const wait=async expression=>{for(let i=0;i<900;i++){const result=await evaluate(expression);if(errors.length)throw new Error(errors.join('\n'));if(result)return result;await new Promise(r=>setTimeout(r,100));}throw new Error(`Timeout waiting for ${expression}; state ${JSON.stringify(await evaluate('window.be2'))}; digital ${JSON.stringify(await evaluate('window.be2Touch'))}`);};
   const key=async (key,code,vk)=>{if(mobile){const names={Enter:'play',Escape:'pause',KeyR:'restart',KeyK:'save',KeyL:'load',KeyM:'sound',KeyN:'music'};const point=await control(names[code]);await touch('touchStart',[point]);await new Promise(r=>setTimeout(r,100));await touch('touchEnd');return;}await send('Input.dispatchKeyEvent',{type:'keyDown',key,code,windowsVirtualKeyCode:vk});await new Promise(r=>setTimeout(r,100));await send('Input.dispatchKeyEvent',{type:'keyUp',key,code,windowsVirtualKeyCode:vk});};
+  stage='WASM instantiation';let t=clock();
   await send('Page.navigate',{url:url+'?verify=1'});
-  await writeFile(reportPath,JSON.stringify({ok:false,stage:'waiting for WASM ready',errors}));await wait('window.be2?.ready');
+  await writeFile(reportPath,JSON.stringify({ok:false,stage:'waiting for WASM ready',checks,errors}));await wait('window.be2?.ready');
+  timings.navigation_to_ready_roundtrip_ms=clock()-t;
+  const startup=await evaluate("({startup_ms:be2.wasm_instantiated_at_ms,time_to_playable_ms:be2.playable_at_ms,wasm_instantiation_ms:be2.wasm_instantiation_ms})");
+  Object.assign(timings,startup);checks.wasm_instantiated=true;checks.playable=true;
   if(!mobile){await key('f','KeyF',70);await wait('!!document.fullscreenElement');await key('f','KeyF',70);await wait('!document.fullscreenElement');}
   await key('Enter','Enter',13);
   await wait('be2.started');
   await writeFile(reportPath,JSON.stringify({ok:false,stage:'checking deterministic replay and audio',errors}));
   const verified=await wait('be2.verified && JSON.parse(JSON.stringify(be2))');
   const metadata=await evaluate('fetch("manifest.json").then(r=>r.json())');
+  checks.gameplay_scenario=true;
   if(verified.hash!==metadata.verification.hash||verified.outcome!==metadata.verification.outcome)throw new Error(`Browser/native mismatch: ${JSON.stringify(verified)} expected ${JSON.stringify(metadata.verification)}`);
   if(!verified.audio.activated||verified.audio.loaded!==3||verified.audio.submitted<1)throw new Error('No audio activation/decode/play submission evidence: '+JSON.stringify({audio:verified.audio,contexts:await evaluate('be2Audio.contexts.map(c=>c.state)'),activation:await evaluate('({active:navigator.userActivation.isActive,ever:navigator.userActivation.hasBeenActive})')}));
   if(verified.music?.loaded>0&&!verified.music.playing)throw new Error('Authored music/ambience loaded but never started');
   const audio=await evaluate('({states:be2Audio.contexts.map(c=>c.state),starts:be2Audio.starts})');
   if(!audio.states.length||audio.states.some(s=>s!=='running')||audio.starts<1)throw new Error('Audio buffers never reached a running playback context');
+  checks.audio_initialized=true;
   const screen=await send('Page.captureScreenshot',{format:'png'});await writeFile(screenshotPath,Buffer.from(screen.data,'base64'));
-  await key('k','KeyK',75);await wait('be2.notice.includes("saved")');
+  t=clock();await key('k','KeyK',75);await wait('be2.notice.includes("saved")');timings.save_ms=clock()-t;checks.save_write=true;
   const saved=await evaluate('be2.hash');
   await key('m','KeyM',77);await wait('!be2.sound');
   if(verified.music?.loaded>0){await key('n','KeyN',78);await wait('!be2.music_on');}
   await send('Page.reload');await writeFile(reportPath,JSON.stringify({ok:false,stage:'checking save/settings after reload',errors}));await wait('window.be2?.ready');
   if(await evaluate('be2.sound')!==false)throw new Error('Settings did not survive reload');
   if(verified.music?.loaded>0&&await evaluate('be2.music_on')!==false)throw new Error('Music settings did not survive reload');
-  await key('l','KeyL',76);await wait('be2.notice.includes("resumed")');
+  t=clock();await key('l','KeyL',76);await wait('be2.notice.includes("resumed")');timings.load_ms=clock()-t;checks.reload_read=true;
   if(await evaluate('be2.hash')!==saved)throw new Error('Save did not survive reload exactly');
   await evaluate('window.be2BlockStorage=true');await key('k','KeyK',75);
   await wait('be2.notice.includes("failed")');
@@ -102,7 +111,37 @@ try {
   if(probe.action&&mousePoint)await send('Input.dispatchMouseEvent',{type:'mouseReleased',...mousePoint,button:'left',clickCount:1});
   }
   }
-  await wait('be2.probe_passed');
+  await wait('be2.probe_passed');checks.input=true;
+  const render=await evaluate(`new Promise(resolve=>{const times=[],start=performance.now();let previous=start;function sample(now){times.push(now-previous);previous=now;if(now-start<2000)requestAnimationFrame(sample);else{times.sort((a,b)=>a-b);resolve({sample_ms:now-start,frames:times.length,fps:times.length*1000/(now-start),frame_p50_ms:times[Math.floor(times.length*.5)],frame_p95_ms:times[Math.floor(times.length*.95)],frame_max_ms:times.at(-1),wasm_memory_bytes:be2.memory_bytes,js_heap_bytes:performance.memory?.usedJSHeapSize??null,game_performance:be2.performance??null});}}requestAnimationFrame(sample);})`);
+  // Losing focus freezes authority and releases held controls. Returning must permit real input again.
+  if(!mobile)await send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
+  await evaluate('document.querySelector("canvas").blur()');await wait('be2.focused===false');
+  const unfocusedTick=await evaluate('be2.tick');await new Promise(r=>setTimeout(r,400));
+  if(await evaluate('be2.tick')!==unfocusedTick)throw new Error('Authority advanced after focus loss');
+  await evaluate('document.querySelector("canvas").focus()');await wait('be2.focused===true');
+  await wait('be2.tick>'+unfocusedTick);
+  if(!mobile){const movement=await evaluate('be2.accepted_input.movement_ticks');await new Promise(r=>setTimeout(r,400));if(await evaluate('be2.accepted_input.movement_ticks')!==movement)throw new Error('Held keys leaked across focus loss');}
+  await evaluate('window.dispatchEvent(new Event("blur"))');await wait('be2.focused===false');
+  await evaluate('window.dispatchEvent(new Event("focus"))');await wait('be2.focused===true');checks.focus_loss=true;checks.focus_return=true;
+  let controller=null;
+  if(!mobile&&metadata.input.includes('controller')){
+    await key('Escape','Escape',27);await wait('be2.paused');await key('r','KeyR',82);await key('Escape','Escape',27);await wait('!be2.paused');
+    await evaluate('window.testPad={mapping:"standard",axes:[0,0,0,0],buttons:Array.from({length:17},()=>({pressed:false,value:0}))};window.testPadReads=0;navigator.getGamepads=()=>{testPadReads++;return[testPad]}');
+    const pressPad=async index=>{
+      let count=await evaluate(`(()=>{testPad.buttons[${index}]={pressed:true,value:1};return testPadReads;})()`);await wait('testPadReads>'+count);
+      count=await evaluate(`(()=>{testPad.buttons[${index}]={pressed:false,value:0};return testPadReads;})()`);await wait('testPadReads>'+count);
+    };
+    const padProbe=await evaluate('be2.probe');
+    await evaluate(`testPad.axes=[${padProbe.x||(padProbe.pointer?1:0)},${padProbe.y||0},0,0]`);
+    const actionBefore=await evaluate("be2.accepted_input.action_ticks");
+    await pressPad(metadata.controls.primary.button);await wait("be2.accepted_input.action_ticks>"+actionBefore);
+    await wait('be2.probe_passed');await evaluate('testPad.axes=[0,0,0,0]');
+    await pressPad(metadata.controls.commands.pause.buttons[0]);await wait('be2.paused');
+    const tick=await evaluate('be2.tick');await new Promise(r=>setTimeout(r,400));if(await evaluate('be2.tick')!==tick)throw new Error('Controller pause did not freeze authority');
+    await pressPad(metadata.controls.commands.pause.buttons[0]);await wait('!be2.paused');await wait('be2.tick>'+tick);
+    await pressPad(metadata.controls.commands.start.buttons[0]);await wait('be2.paused');await pressPad(metadata.controls.commands.start.buttons[0]);await wait('!be2.paused');
+    controller={movement:true,primary_action:true,pause_resume:true,start_pause:true,physical:false};checks.controller=true;
+  }
   await writeFile(reportPath,JSON.stringify({ok:false,stage:'real input passed; checking offline installation',errors}));
   const playScreen=await send('Page.captureScreenshot',{format:'png'});await writeFile(screenshotPath.replace(/\.png$/, '-playing.png'),Buffer.from(playScreen.data,'base64'));
   const keyboard=await evaluate(`(()=>{const e=new KeyboardEvent('keydown',{code:'Tab',key:'Tab',cancelable:true});document.querySelector('canvas').dispatchEvent(e);return !e.defaultPrevented;})()`);
@@ -113,6 +152,7 @@ try {
   for(const request of requests){
     const resource=new URL(request.url);
     if(resource.protocol==='http:'||resource.protocol==='https:'){
+      if(resource.pathname.endsWith('/__be2_update')||resource.pathname.endsWith('/__be2_complete'))continue;
       if(resource.origin!==packageBase.origin||!resource.pathname.startsWith(packageBase.pathname)||!declared.has(decodeURIComponent(resource.pathname.slice(packageBase.pathname.length))))throw new Error(`Undeclared runtime dependency: ${resource}; embed it or declare its relative path in identity.package`);
     }
   }
@@ -135,10 +175,34 @@ try {
     if(await evaluate('be2.hash')!==progress)throw new Error('Autosave did not restore exact progress on offline reload');
     const installability=await send('Page.getInstallabilityErrors');
     if(installability.installabilityErrors.length)throw new Error('Browser app is not installable: '+JSON.stringify(installability));
+    checks.offline_reload=true;
     installation={service_worker:true,offline_reload:true,automatic_progress_resume:true,installability_errors:installability.installabilityErrors};
     await send('Network.emulateNetworkConditions',{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});
   }
-  const report={ok:true,mobile:mobile?mobileLayout:false,installation,verified,native_expected:metadata.verification,audio,persistence:'save and settings survive reload; blocked write fails explicitly and retains save',real_input:{probe,meaningful_result:true,start_pause_restart:true,tab_navigation_preserved:true,fullscreen:!mobile},canvas,requests,errors,screenshot:screenshotPath,browser:'Chromium CDP/software WebGL; no human listening or physical controller test'};
+  if(metadata.runtime_abi===2){
+    stage='interrupted update and recovery';
+    const oldCaches=await evaluate('caches.keys()');
+    const progress=await evaluate('be2.hash');
+    const update=await evaluate('fetch("__be2_update",{method:"POST"}).then(r=>r.json())');
+    const attempt=()=>evaluate(`(async()=>{const r=await navigator.serviceWorker.getRegistration();await r.update();const w=r.installing;if(w)await new Promise(resolve=>{if(w.state==='redundant'||w.state==='activated')resolve();else w.addEventListener('statechange',()=>{if(w.state==='redundant'||w.state==='activated')resolve();});});return true;})()`);
+    await attempt();
+    const failedCaches=await evaluate('caches.keys()');
+    if(JSON.stringify(failedCaches)!==JSON.stringify(oldCaches))throw new Error('Failed update replaced a valid cache');
+    await send('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
+    await send('Page.reload');await wait('window.be2?.ready');
+    if(await evaluate('be2.hash')!==progress)throw new Error('Failed update destroyed saved progress');
+    await send('Network.emulateNetworkConditions',{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});
+    await evaluate('fetch("__be2_complete",{method:"POST"})');await attempt();
+    await wait(`caches.keys().then(keys=>keys.length===1&&keys[0].endsWith('${update.package_id}'))`);
+    await send('Page.reload');await wait('window.be2?.ready');
+    if(await evaluate('be2.hash')!==progress)throw new Error('Successful upgrade destroyed saved progress');
+    if(await evaluate('fetch("manifest.json").then(r=>r.json()).then(m=>m.package_id)')!==update.package_id)throw new Error('Upgrade still serves old package');
+    await send('Network.emulateNetworkConditions',{offline:true,latency:0,downloadThroughput:0,uploadThroughput:0});
+    await send('Page.reload');await wait('window.be2?.ready');
+    if(await evaluate('be2.hash')!==progress)throw new Error('Updated package failed offline save recovery');
+    checks.update_recovery=true;installation.upgrade={incomplete_update_retains_old_version:true,retry_activates:true,cache_replaced:true,save_preserved:true,offline_after_upgrade:true};
+  }
+  const report={ok:true,checks,performance:{...timings,...render,replay_work:verified.performance,environment:"Headless Chromium SwiftShader on this Linux host; latency includes CDP/report polling",hardware_coverage:[]},controller,mobile:mobile?mobileLayout:false,installation,verified,native_expected:metadata.verification,audio,persistence:'save and settings survive reload; blocked write fails explicitly and retains save',real_input:{probe,meaningful_result:true,start_pause_restart:true,tab_navigation_preserved:true,fullscreen:!mobile},canvas,requests,errors,screenshot:screenshotPath,browser:'Chromium CDP/software WebGL; no human listening or physical controller test'};
   await writeFile(reportPath,JSON.stringify(report,null,2));console.log(JSON.stringify({ok:true,report:reportPath,hash:verified.hash}));
-} catch(error) {await writeFile(reportPath,JSON.stringify({ok:false,error:String(error),errors,requests,browserLog:browserLog.slice(-4000)},null,2));console.error(error);process.exitCode=1;}
+} catch(error) {await writeFile(reportPath,JSON.stringify({ok:false,stage,checks,performance:timings,error:String(error),errors,requests,browserLog:browserLog.slice(-4000)},null,2));console.error(error);process.exitCode=1;}
 finally {clearTimeout(timeout);socket?.close();browser.kill();await new Promise(r=>setTimeout(r,500));await rm(profile,{recursive:true,force:true});}

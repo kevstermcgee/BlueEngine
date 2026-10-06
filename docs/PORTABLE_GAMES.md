@@ -1,5 +1,7 @@
 # One game: mobile browser, installed browser app, native desktop
 
+For commands, release requirements and evidence read [BROWSER_WORKFLOW.md](BROWSER_WORKFLOW.md) first.
+
 Read this, the game's AGENTS.md, game.project.json and src/lib.rs. Use `portable` for new projects
 unless the user explicitly needs the legacy native world/netplay renderer. The CLI defaults to portable;
 explicit `stock`/`custom-sim` and the legacy scaffolding library default remain compatible.

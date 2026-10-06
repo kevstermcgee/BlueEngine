@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "movement": {
+    "keys": [
+      "KeyW",
+      "KeyA",
+      "KeyS",
+      "KeyD",
+      "ArrowUp",
+      "ArrowLeft",
+      "ArrowDown",
+      "ArrowRight"
+    ],
+    "axes": [
+      0,
+      1
+    ],
+    "touch": "project mobile_controls",
+    "directions": {
+      "KeyW": [
+        0,
+        -1
+      ],
+      "ArrowUp": [
+        0,
+        -1
+      ],
+      "KeyS": [
+        0,
+        1
+      ],
+      "ArrowDown": [
+        0,
+        1
+      ],
+      "KeyA": [
+        -1,
+        0
+      ],
+      "ArrowLeft": [
+        -1,
+        0
+      ],
+      "KeyD": [
+        1,
+        0
+      ],
+      "ArrowRight": [
+        1,
+        0
+      ]
+    }
+  },
+  "primary": {
+    "key": "Space",
+    "button": 0,
+    "touch": "action"
+  },
+  "look": {
+    "axes": [
+      2,
+      3
+    ],
+    "mouse": "canvas drag"
+  },
+  "commands": {
+    "start": {
+      "label": "Play",
+      "help": "Enter / A / Start / touch START",
+      "key": "Enter",
+      "buttons": [
+        9
+      ],
+      "bit": 1,
+      "touch": "play"
+    },
+    "pause": {
+      "label": "Pause/resume",
+      "help": "Esc / B / Start / touch B",
+      "key": "Escape",
+      "buttons": [
+        1
+      ],
+      "bit": 2,
+      "touch": "pause"
+    },
+    "restart": {
+      "label": "Restart",
+      "help": "R / touch Restart",
+      "key": "KeyR",
+      "buttons": [],
+      "bit": 4,
+      "touch": "restart"
+    },
+    "sound": {
+      "label": "Sound",
+      "help": "M / touch SELECT",
+      "key": "KeyM",
+      "buttons": [],
+      "bit": 8,
+      "touch": "sound"
+    },
+    "save": {
+      "label": "Save",
+      "help": "K / touch SELECT",
+      "key": "KeyK",
+      "buttons": [],
+      "bit": 16,
+      "touch": "save"
+    },
+    "load": {
+      "label": "Load",
+      "help": "L / touch SELECT",
+      "key": "KeyL",
+      "buttons": [],
+      "bit": 32,
+      "touch": "load"
+    },
+    "music": {
+      "label": "Music",
+      "help": "N / touch SELECT",
+      "key": "KeyN",
+      "buttons": [],
+      "bit": 64,
+      "touch": "music"
+    },
+    "fullscreen": {
+      "label": "Fullscreen",
+      "help": "F (desktop gesture)",
+      "key": "KeyF",
+      "buttons": [],
+      "bit": 0
+    }
+  },
+  "sprint": {
+    "keys": [
+      "ShiftLeft",
+      "ShiftRight"
+    ]
+  }
+}

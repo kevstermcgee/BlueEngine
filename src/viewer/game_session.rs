@@ -33,6 +33,7 @@ struct Online {
     player: Option<u64>,
     token: Option<SessionToken>,
     baseline: Option<WorldSnapshot>,
+    game_baselined: bool,
     prediction: PredictionBuffer,
     players: HashMap<u64, InterpolationBuffer<PlayerNetState>>,
     props: HashMap<String, InterpolationBuffer<PropNetState>>,
@@ -125,6 +126,7 @@ impl GameSession {
             player: None,
             token: None,
             baseline: None,
+            game_baselined: false,
             prediction: PredictionBuffer::new(128),
             players: HashMap::new(),
             props: HashMap::new(),
@@ -234,13 +236,27 @@ impl GameSession {
     /// Catch-up preserves separate transitions; online snapshots cannot recover unreplicated events.
     pub fn advance_observed(
         &mut self,
-        mut input: GameInput,
+        input: GameInput,
         seconds: f32,
         playing: bool,
         mut observe: impl FnMut(&super::game::GameState),
     ) -> Result<usize> {
-        self.poll()?;
-        observe(self.world.game.as_ref().unwrap().state());
+        self.advance_observed_with_baseline(input, seconds, playing, |state, _| observe(state))
+    }
+    /// Observe accepted authority only. The first online GameState is a baseline, even if Welcome
+    /// arrived earlier. Every subsequent accepted snapshot is a transition, including a batch in
+    /// one poll. A new connection starts a new baseline; observers never write simulation state.
+    pub fn advance_observed_with_baseline(
+        &mut self,
+        mut input: GameInput,
+        seconds: f32,
+        playing: bool,
+        mut observe: impl FnMut(&super::game::GameState, bool),
+    ) -> Result<usize> {
+        self.poll(&mut observe)?;
+        if self.online.is_none() {
+            observe(self.world.game.as_ref().unwrap().state(), false);
+        }
         if !seconds.is_finite() || seconds <= 0. {
             return Ok(0);
         }
@@ -312,7 +328,7 @@ impl GameSession {
                 if self.world.game.as_ref().unwrap().state().round != round {
                     self.previous = self.controller.clone();
                 }
-                observe(self.world.game.as_ref().unwrap().state());
+                observe(self.world.game.as_ref().unwrap().state(), false);
             }
             self.remainder = (self.remainder - STEP).max(0.);
             steps += 1;
@@ -320,7 +336,7 @@ impl GameSession {
         self.interpolate(seconds);
         Ok(steps)
     }
-    fn poll(&mut self) -> Result<()> {
+    fn poll(&mut self, observe: &mut impl FnMut(&super::game::GameState, bool)) -> Result<()> {
         let Some(net) = &mut self.online else {
             return Ok(());
         };
@@ -389,10 +405,12 @@ impl GameSession {
                     tick,
                     state,
                     session,
-                } if session == net.token => {
+                } if net.player.is_some() && session == net.token => {
                     let game = self.world.game.as_mut().unwrap();
                     let round = game.state().round;
                     if game.accept_snapshot(tick, state) {
+                        observe(game.state(), !net.game_baselined);
+                        net.game_baselined = true;
                         game.apply_mover_colliders(&mut self.world.room);
                         if game.state().round != round {
                             net.round_tick = tick;

@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
+from tools import web_release as release
 from tools import web_games as web
 
 class PackageTests(unittest.TestCase):
@@ -10,6 +12,12 @@ class PackageTests(unittest.TestCase):
         for name in ['index.html','loader.js','platform.js','thumbnail.png']:(self.dist/name).write_bytes(b'test')
         (self.dist/'game.wasm').write_bytes(b'\0asm\x01\0\0\0')
         self.manifest={'schema_version':1,'runtime_abi':1,'id':'test-game','presentation':'2d','networking':'offline','title':'Test Garden','description':'Test','targets':['web'],'input':['keyboard'],'engine_revision':'a'*40,'game_revision':'b'*40,'built_at_epoch':1,'compatibility':{},'native_download':None,'thumbnail':'thumbnail.png','play':'index.html','verification':{'hash':'1'*16,'outcome':'won'},'file_sha256':{p.name:web.hashlib.sha256(p.read_bytes()).hexdigest() for p in self.dist.iterdir()}}
+        self.manifest.update({'package_id':release.package_id(self.manifest['file_sha256']),
+            'sources':{'engine':{'repository':'https://example.test/engine.git','revision':'a'*40,'path':'.','clean':True},'game':{'repository':'https://example.test/game.git','revision':'b'*40,'path':'.','clean':True}},
+            'game_source_sha256':'c'*64,'reproduce':{'command':['build']},'required_capabilities':['WebAssembly'],
+            'browser_verification':{'compiled':True,'package_valid':True,'desktop':{k:True for k in ('wasm_instantiated','playable','input','save_write','reload_read','audio_initialized','offline_reload','gameplay_scenario','update_recovery','focus_loss','focus_return')},'mobile':{k:True for k in ('wasm_instantiated','playable','input','save_write','reload_read','audio_initialized','offline_reload','gameplay_scenario','update_recovery','focus_loss','focus_return')}}})
+        mock=patch.object(release,'retrieve_sources',return_value={'ok':True});mock.start();self.addCleanup(mock.stop)
+        mock=patch('tools.web_reproduce.reproduce',return_value={'ok':True,'compared_fields':['package_id','file_sha256']});mock.start();self.addCleanup(mock.stop)
         self.stamp()
     def stamp(self):(self.dist/'manifest.json').write_text(json.dumps(self.manifest))
     def test_open_ended_routes_require_explicit_meaningful_evidence(self):
@@ -170,7 +178,7 @@ class BrowserDependencyTests(unittest.TestCase):
             (root/'developer-only.txt').write_text('available in checkout')
             page=package/'index.html';page.write_text(page.read_text()+'<script>setTimeout(()=>fetch("../developer-only.txt"),500)</script>')
             manifest=json.loads((package/'manifest.json').read_text())
-            manifest['file_sha256']['index.html']=web.hashlib.sha256(page.read_bytes()).hexdigest()
+            manifest['file_sha256']['index.html']=web.hashlib.sha256(page.read_bytes()).hexdigest();manifest['package_id']=release.package_id(manifest['file_sha256'])
             (package/'manifest.json').write_text(json.dumps(manifest))
             web.integrity(package) # manifest/file checks alone cannot prove runtime dependency closure
             with self.assertRaisesRegex(web.WebError,'Browser errors|404|HTTP|Browser smoke'):
@@ -184,9 +192,73 @@ class BrowserDependencyTests(unittest.TestCase):
             thread=web.threading.Thread(target=server.serve_forever,daemon=True);thread.start()
             try:
                 page=package/'index.html';page.write_text(page.read_text()+f'<script>setTimeout(()=>fetch("http://127.0.0.1:{server.server_port}/external.txt",{{mode:"no-cors"}}),500)</script>')
-                manifest=json.loads((package/'manifest.json').read_text());manifest['file_sha256']['index.html']=web.hashlib.sha256(page.read_bytes()).hexdigest()
+                manifest=json.loads((package/'manifest.json').read_text());manifest['file_sha256']['index.html']=web.hashlib.sha256(page.read_bytes()).hexdigest();manifest['package_id']=release.package_id(manifest['file_sha256'])
                 (package/'manifest.json').write_text(json.dumps(manifest))
                 with self.assertRaisesRegex(web.WebError,'Undeclared runtime dependency'):web.browser_verify(package,root/'evidence')
             finally:server.shutdown();server.server_close();thread.join()
+
+
+class ReleaseRegressionTests(unittest.TestCase):
+    def test_anonymous_fetch_rejects_missing_revision_and_source_path(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);subprocess.run(['git','init',str(root)],check=True,capture_output=True)
+            (root/'Cargo.toml').write_text('[package]')
+            subprocess.run(['git','add','.'],cwd=root,check=True,capture_output=True)
+            subprocess.run(['git','-c','user.name=Test','-c','user.email=test@example.test','commit','-m','fixture'],cwd=root,check=True,capture_output=True)
+            revision=release.git(['rev-parse','HEAD'],root)
+            real_git=release.git;calls=[]
+            def local_git(args,cwd):
+                calls.append(args[:])
+                if 'fetch' in args:
+                    args=args[:];args[-2]=str(root)
+                return real_git(args,cwd)
+            def manifest(rev=revision,path='.'):
+                return {'engine_revision':rev,'game_revision':rev,'sources':{r:{'repository':'https://example.test/public.git','revision':rev,'path':path,'clean':True} for r in ('engine','game')}}
+            with patch.object(release,'git',side_effect=local_git):
+                self.assertTrue(release.retrieve_sources(manifest())['ok'])
+                self.assertEqual(sum('fetch' in c for c in calls),1)
+                self.assertIn('credential.helper=',next(c for c in calls if 'fetch' in c))
+                with self.assertRaisesRegex(release.ReleaseError,'retrieval failed'):release.retrieve_sources(manifest('f'*40))
+                with self.assertRaisesRegex(release.ReleaseError,'path is absent'):release.retrieve_sources(manifest(path='missing'))
+                with self.assertRaisesRegex(release.ReleaseError,'source hash differs'):release.retrieve_sources(manifest()|{'game_source_sha256':'0'*64})
+                dirty=manifest();dirty['sources']['engine']['clean']=False
+                with self.assertRaisesRegex(release.ReleaseError,'uncommitted'):release.retrieve_sources(dirty)
+                wrong=manifest();wrong['engine_revision']='a'*40
+                with self.assertRaisesRegex(release.ReleaseError,'contradicts'):release.retrieve_sources(wrong)
+            for bad in ('source-sha256:'+revision,revision[:12]):
+                with self.assertRaises(release.ReleaseError):release.validate_source({'repository':'https://example.test/repo','revision':bad,'path':'.'})
+
+    def test_runtime_audio_closure_excludes_previews_and_reports_but_keeps_credits(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);bank=root/'assets/audio/music';bank.mkdir(parents=True)
+            (bank/'bank.json').write_text(json.dumps({'music':{'score':{'file':'score.wav'}},'effects':{}}))
+            for name in ('score.wav','preview-mix.wav','report.json'):(bank/name).write_text(name)
+            (root/'AUDIO.md').write_text('Credits')
+            self.assertEqual(release.runtime_files(root,['assets/audio','AUDIO.md'],web.safe_file),['AUDIO.md','assets/audio/music/bank.json','assets/audio/music/score.wav'])
+            (bank/'score.wav').unlink()
+            with self.assertRaisesRegex(release.ReleaseError,'runtime file missing'):release.runtime_files(root,['assets/audio'],web.safe_file)
+            (bank/'bank.json').write_text(json.dumps({'music':{'escape':{'file':'../../../../private'}}}))
+            with self.assertRaises(web.WebError):release.runtime_files(root,['assets/audio'],web.safe_file)
+
+class PublicationGateTests(PackageTests):
+    def test_failed_provenance_cannot_write_or_replace_deployment(self):
+        target=self.root/'library'
+        with patch.object(release,'retrieve_sources',side_effect=release.ReleaseError('Source retrieval failed')):
+            with self.assertRaisesRegex(release.ReleaseError,'retrieval failed'):web.directory_publish(self.dist,target)
+        self.assertFalse(target.exists())
+    def test_failed_clean_reproduction_cannot_mutate_deployment(self):
+        target=self.root/'library'
+        with patch('tools.web_reproduce.reproduce',side_effect=release.ReleaseError('Clean reproduction differs')):
+            with self.assertRaisesRegex(release.ReleaseError,'reproduction differs'):web.directory_publish(self.dist,target)
+        self.assertFalse(target.exists())
+    def test_missing_browser_stage_and_legacy_metadata_cannot_publish(self):
+        for change in ({'browser_verification':{}},{'package_id':None}):
+            old=self.manifest.copy();self.manifest.update(change);self.stamp()
+            with self.assertRaises((web.WebError,release.ReleaseError)):
+                if 'sources' in change:
+                    with patch.object(release,'retrieve_sources',wraps=release.retrieve_sources):web.publication_gate(self.dist)
+                else:web.publication_gate(self.dist)
+            self.manifest=old
 
 if __name__=='__main__':unittest.main()

@@ -87,6 +87,9 @@ impl GameLogic for Walker {
     fn probe_success(&self) -> bool {
         self.sim.tick > 2 && self.sim.player.position.2 < 15.9
     }
+    fn streaming_marker(&self) -> (i64, i64) {
+        (self.sim.origin.x, self.sim.origin.z)
+    }
     fn take_cues(&mut self) -> Vec<usize> {
         std::mem::take(&mut self.cues)
     }

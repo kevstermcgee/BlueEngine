@@ -316,7 +316,6 @@ pub async fn run_game_with_options(
             perspective.toggle();
         }
         let mut audio_cues = Vec::new();
-        let was_connected = session.connected();
         if let Some(driver) = &mut scenario_driver {
             if !playback_done {
                 session.advance_scenario(driver, frame as u64 + 1)?;
@@ -329,7 +328,7 @@ pub async fn run_game_with_options(
                 }
             }
         } else {
-            session.advance_observed(
+            session.advance_observed_with_baseline(
                 intent,
                 seconds,
                 if playback.is_some() {
@@ -337,12 +336,12 @@ pub async fn run_game_with_options(
                 } else {
                     shell.playing()
                 },
-                |state| {
+                |state, baseline| {
                     if let Some(audio) = &mut audio {
-                        if was_connected {
-                            audio_cues.extend(audio.cursor.observe(state));
-                        } else {
+                        if baseline {
                             audio.cursor.rebase(state);
+                        } else {
+                            audio_cues.extend(audio.cursor.observe(state));
                         }
                     }
                 },

@@ -296,6 +296,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut last_tick = 0;
     let mut frame = 0;
     let mut last_pointer = None;
+    let mut step_max_ms = 0_f64;
+    let mut draw_max_ms = 0_f64;
+    let mut chunk_max_ms = 0_f64;
+    let mut chunk_updates = 0_u64;
+    let mut chunk_stalls = 0_u64;
+    let mut movement_ticks = 0_u64;
+    let mut action_ticks = 0_u64;
     #[cfg(not(target_arch = "wasm32"))]
     let mut fullscreen = false;
     #[cfg(all(not(target_arch = "wasm32"), feature = "gamepad"))]
@@ -312,7 +319,8 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         let (mx, my) = mouse_position();
         #[allow(unused_mut)]
         let mut pointer = view.pointer(mx, my);
-        let digital = platform::touch();
+        #[allow(unused_mut)]
+        let mut digital = platform::touch();
         if let Some(point) = digital.pointer {
             pointer = Some(point);
         }
@@ -323,22 +331,23 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         let mut y = i32::from(is_key_down(KeyCode::S) || is_key_down(KeyCode::Down))
             - i32::from(is_key_down(KeyCode::W) || is_key_down(KeyCode::Up));
         #[allow(unused_mut)]
-        let mut action =
-            is_key_pressed(KeyCode::Space) || is_mouse_button_pressed(MouseButton::Left);
+        let mut action = platform::primary_key() || is_mouse_button_pressed(MouseButton::Left);
         #[allow(unused_mut)]
         let mut start =
-            is_key_pressed(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left);
+            platform::command_key(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left);
         x += digital.x;
         y += digital.y;
         action |= digital.action;
         start |= digital.commands & 1 != 0;
         #[cfg(target_arch = "wasm32")]
         {
+            (x, y) = platform::keyboard_movement();
             let pad = platform::pad();
             x += pad.0;
             y += pad.1;
             action |= pad.2;
             start |= pad.2;
+            digital.commands |= pad.3;
         }
         #[allow(unused_mut)]
         let mut look_native = [0.; 2];
@@ -374,7 +383,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             started = true;
             audio.play(0, settings.sound);
         }
-        if is_key_pressed(KeyCode::R) || digital.commands & 4 != 0 {
+        if platform::command_key(KeyCode::R) || digital.commands & 4 != 0 {
             game = G::new(7);
             inputs.clear();
             last_tick = 0;
@@ -382,10 +391,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             started = true;
             notice.clear();
         }
-        if is_key_pressed(KeyCode::Escape) || digital.commands & 2 != 0 {
+        if platform::command_key(KeyCode::Escape) || digital.commands & 2 != 0 {
             paused = !paused;
         }
-        if is_key_pressed(KeyCode::M) || digital.commands & 8 != 0 {
+        if platform::command_key(KeyCode::M) || digital.commands & 8 != 0 {
             settings.sound = !settings.sound;
             match storage::write_settings(&store, &settings) {
                 Ok(()) => {
@@ -397,7 +406,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Err(e) => notice = e,
             }
         }
-        if is_key_pressed(KeyCode::N) || digital.commands & 64 != 0 {
+        if platform::command_key(KeyCode::N) || digital.commands & 64 != 0 {
             settings.music = !settings.music;
             notice = match storage::write_settings(&store, &settings) {
                 Ok(()) => format!(
@@ -407,13 +416,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Err(e) => e,
             };
         }
-        if is_key_pressed(KeyCode::K) || digital.commands & 16 != 0 {
+        if platform::command_key(KeyCode::K) || digital.commands & 16 != 0 {
             notice = match storage::save(&store, &game) {
                 Ok(()) => "Game saved. L resumes it.".into(),
                 Err(e) => e,
             };
         }
-        if is_key_pressed(KeyCode::L) || digital.commands & 32 != 0 {
+        if platform::command_key(KeyCode::L) || digital.commands & 32 != 0 {
             notice = match storage::load(&store, &mut game) {
                 Ok(true) => {
                     inputs.clear();
@@ -431,15 +440,19 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 y: y.clamp(-1, 1),
                 pointer,
                 action: false,
-                sprint: is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift),
+                sprint: platform::sprint_key(),
                 look: [0.; 2],
             }
         } else {
             Intent::default()
         };
+        if !focused || paused || !started {
+            inputs.clear();
+            last_pointer = None;
+        }
         inputs.feed(
             intent,
-            u32::from(action),
+            u32::from(action && focused && started && !paused),
             if focused && started && !paused {
                 look
             } else {
@@ -469,7 +482,18 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 intent = G::verification_input(verification_tick);
                 verification_tick += 1;
             }
+            movement_ticks += u64::from(intent.x != 0 || intent.y != 0);
+            action_ticks += u64::from(intent.action);
+            let marker = game.streaming_marker();
+            let step_start = platform::now_ms();
             game.step(&intent);
+            let elapsed = platform::now_ms() - step_start;
+            step_max_ms = step_max_ms.max(elapsed);
+            if game.streaming_marker() != marker {
+                chunk_updates += 1;
+                chunk_max_ms = chunk_max_ms.max(elapsed);
+                chunk_stalls += u64::from(elapsed > 50.);
+            }
         }
         for cue in game.take_cues() {
             audio.play(cue, settings.sound);
@@ -542,7 +566,9 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             );
         }
         clear_background(BLACK);
+        let draw_start = platform::now_ms();
         scene.draw(view, Point::default(), &mut renderer)?;
+        draw_max_ms = draw_max_ms.max(platform::now_ms() - draw_start);
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(plan) = &capture {
             if plan.wants(frame) {
@@ -557,7 +583,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         audio.evidence.enabled = settings.sound && !audio.muted;
         audio.evidence.activated = platform::audio_active();
         if game.tick() != last_tick || frame % 30 == 0 {
-            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
+            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
             platform::report(&report.to_string());
             last_tick = game.tick();
         }
@@ -609,6 +635,26 @@ mod platform {
         std::env::args().any(|a| a == "--verify")
     }
     #[cfg(not(target_arch = "wasm32"))]
+    pub fn primary_key() -> bool {
+        macroquad::prelude::is_key_pressed(macroquad::prelude::KeyCode::Space)
+    }
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn sprint_key() -> bool {
+        use macroquad::prelude::*;
+        is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift)
+    }
+    pub fn command_key(key: macroquad::prelude::KeyCode) -> bool {
+        #[cfg(target_arch = "wasm32")]
+        {
+            let _ = key;
+            false
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            macroquad::prelude::is_key_pressed(key)
+        }
+    }
+    #[cfg(not(target_arch = "wasm32"))]
     pub fn focused() -> bool {
         true
     }
@@ -618,6 +664,10 @@ mod platform {
     }
     #[cfg(not(target_arch = "wasm32"))]
     pub fn report(_: &str) {}
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn now_ms() -> f64 {
+        0. // Browser instrumentation only; native has its own performance/capture tooling.
+    }
     #[cfg(not(target_arch = "wasm32"))]
     pub fn error(error: &str) {
         eprintln!("2D client: {error}");
@@ -632,6 +682,8 @@ mod platform {
             fn be2_focused() -> i32;
             fn be2_audio_active() -> i32;
             fn be2_pad(axis: i32) -> f32;
+            fn be2_clock() -> f64;
+            fn be2_keyboard(axis: i32) -> i32;
             fn be2_touch(field: i32) -> i32;
         }
         pub fn report(value: &str) {
@@ -653,12 +705,25 @@ mod platform {
         pub fn audio_active() -> bool {
             unsafe { be2_audio_active() != 0 }
         }
-        pub fn pad() -> (i32, i32, bool) {
+        pub fn now_ms() -> f64 {
+            unsafe { be2_clock() }
+        }
+        pub fn keyboard_movement() -> (i32, i32) {
+            unsafe { (be2_keyboard(0), be2_keyboard(1)) }
+        }
+        pub fn primary_key() -> bool {
+            unsafe { be2_keyboard(3) != 0 }
+        }
+        pub fn sprint_key() -> bool {
+            unsafe { be2_keyboard(2) != 0 }
+        }
+        pub fn pad() -> (i32, i32, bool, i32) {
             unsafe {
                 (
                     (be2_pad(0) * 1.5) as i32,
                     (be2_pad(1) * 1.5) as i32,
                     be2_pad(2) > 0.,
+                    be2_pad(5) as i32,
                 )
             }
         }

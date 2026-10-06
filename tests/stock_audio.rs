@@ -233,3 +233,117 @@ fn bundle_directory_symlinks_cannot_escape_the_content_root() {
         .contains("escapes"));
     std::fs::remove_dir_all(temp).unwrap();
 }
+
+#[test]
+fn online_audio_waits_for_first_accepted_authority_and_rebases_on_reconnect() {
+    use std::{cell::RefCell, rc::Rc};
+    use vesper3d::viewer::net::{Datagram, DatagramTransport, Packet};
+    struct Queue(Rc<RefCell<Vec<Datagram>>>);
+    impl DatagramTransport for Queue {
+        fn send(&self, _: std::net::SocketAddr, data: &[u8]) -> vesper3d::Result<usize> {
+            Ok(data.len())
+        }
+        fn receive(&mut self) -> vesper3d::Result<Vec<Datagram>> {
+            Ok(std::mem::take(&mut *self.0.borrow_mut()))
+        }
+        fn local_addr(&self) -> vesper3d::Result<std::net::SocketAddr> {
+            Ok("127.0.0.1:11111".parse().unwrap())
+        }
+    }
+    let address = "127.0.0.1:11112".parse().unwrap();
+    // A newly connected session, including reconnection, must not replay prior counters/outcomes.
+    for finished in [false, true] {
+        for _connection in 0..2 {
+            let queue = Rc::new(RefCell::new(Vec::new()));
+            let mut client = GameSession::connect(
+                GameDocument::load(&fixture("game.json")).unwrap(),
+                Box::new(Queue(queue.clone())),
+                address,
+                None,
+            )
+            .unwrap();
+            let runtime = client.world().game.as_ref().unwrap();
+            let mut cursor =
+                AudioCursor::new(&config(), runtime.document(), runtime.state()).unwrap();
+            let mut state = runtime.state().clone();
+            state.counters[1] = 2;
+            state.completed = finished;
+            let enqueue = |packet: Packet| {
+                queue.borrow_mut().push(Datagram {
+                    peer: address,
+                    data: packet.encode().unwrap(),
+                })
+            };
+            let mut cues = Vec::new();
+            let mut observe = |s: &vesper3d::viewer::game::GameState, baseline: bool| {
+                if baseline {
+                    cursor.rebase(s)
+                } else {
+                    cues.extend(cursor.observe(s))
+                }
+            };
+            // Welcome and GameState may arrive on different rendered frames.
+            enqueue(Packet::Welcome {
+                player_id: 1,
+                server_tick: 100,
+                map_name: "test".into(),
+                session_token: Some([7, 8]),
+            });
+            client
+                .advance_observed_with_baseline(GameInput::default(), 0., false, &mut observe)
+                .unwrap();
+            enqueue(Packet::GameState {
+                session: Some([1, 2]),
+                tick: 999,
+                state: state.clone(),
+            });
+            client
+                .advance_observed_with_baseline(GameInput::default(), 0., false, &mut observe)
+                .unwrap();
+            enqueue(Packet::GameState {
+                session: Some([7, 8]),
+                tick: 101,
+                state: state.clone(),
+            });
+            client
+                .advance_observed_with_baseline(GameInput::default(), 0., false, &mut observe)
+                .unwrap();
+            assert!(
+                cues.is_empty(),
+                "joining must not replay historical counters or completion"
+            );
+            let baseline_checksum = client.world().checksum();
+            client.advance(GameInput::default(), 0., false).unwrap();
+            assert_eq!(
+                baseline_checksum,
+                client.world().checksum(),
+                "audio polling is read-only"
+            );
+            state.counters[1] = 3;
+            enqueue(Packet::GameState {
+                session: Some([7, 8]),
+                tick: 102,
+                state: state.clone(),
+            });
+            // Multiple accepted transitions in one poll must not collapse into a net-zero change.
+            state.counters[1] = 2;
+            enqueue(Packet::GameState {
+                session: Some([7, 8]),
+                tick: 103,
+                state: state.clone(),
+            });
+            let mut observe = |s: &vesper3d::viewer::game::GameState, baseline: bool| {
+                assert!(!baseline);
+                cues.extend(cursor.observe(s));
+            };
+            client
+                .advance_observed_with_baseline(GameInput::default(), 0., false, &mut observe)
+                .unwrap();
+            assert_eq!(
+                cues.iter().map(|c| c.cue.as_str()).collect::<Vec<_>>(),
+                vec!["step", "step"]
+            );
+            assert_eq!(client.world().game.as_ref().unwrap().state(), &state);
+        }
+    }
+}
