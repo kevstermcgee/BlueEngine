@@ -193,6 +193,25 @@ class AutomaticLoopTests(unittest.TestCase):
             self.assertEqual(len(ready['commands']), 1)
             self.assertEqual(ready['commands'][0][1], 'test')
 
+    @unittest.skipUnless(shutil.which('cargo'), 'Cargo required for fresh-lock regression')
+    def test_fresh_lock_setup_actually_allows_locked_cargo(self):
+        with tempfile.TemporaryDirectory() as directory:
+            game = Path(directory)
+            shutil.copyfile(ROOT / 'games/lantern-run/game.project.json', game / 'game.project.json')
+            (game / 'Cargo.toml').write_text('[package]\nname="new-root"\nversion="0.1.0"\nedition="2021"\n')
+            (game / 'src').mkdir()
+            (game / 'src/lib.rs').write_text('pub fn ready() {}\n')
+            # Scaffold locks initially describe the engine, not the new root.
+            (game / 'Cargo.lock').write_text('version = 3\n[[package]]\nname="old-root"\nversion="0.1.0"\n')
+            setup = workflow.game_plan(ROOT, game)['commands'][0]
+            result = subprocess.run(setup, capture_output=True, text=True, timeout=30)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            locked = subprocess.run(['cargo', 'metadata', '--locked', '--offline', '--format-version', '1',
+                                     '--manifest-path', str(game / 'Cargo.toml')],
+                                    capture_output=True, text=True, timeout=30)
+            self.assertEqual(locked.returncode, 0, locked.stderr)
+            self.assertEqual(workflow.game_plan(ROOT, game)['commands'][0][1], 'test')
+
     def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertIn('run: python tools/be2.py check', ci)

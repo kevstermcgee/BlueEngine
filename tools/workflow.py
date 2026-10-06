@@ -238,7 +238,7 @@ def game_plan(root, game, loop='inner'):
     lock = game / 'Cargo.lock'
     locked = tomllib.loads(lock.read_text(encoding='utf-8')) if lock.is_file() else {}
     if not any(p.get('name') == manifest['package']['name'] for p in locked.get('package', [])):
-        commands.append(['cargo', 'metadata', '--format-version', '1', '--no-deps',
+        commands.append(['cargo', 'metadata', '--format-version', '1',
                          '--manifest-path', str(game / 'Cargo.toml')]); harnesses.append(None)
     if loop != 'shipping':
         command = ['cargo', 'test', '--locked', '--manifest-path', str(game / 'Cargo.toml'),
