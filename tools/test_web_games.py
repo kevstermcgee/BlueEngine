@@ -283,6 +283,16 @@ if(existsSync(profile)||(browser.exitCode===null&&browser.signalCode===null))pro
             (bank/'bank.json').write_text(json.dumps({'music':{'escape':{'file':'../../../../private'}}}))
             with self.assertRaises(web.WebError):release.runtime_files(root,['assets/audio'],web.safe_file)
 
+    def test_checkout_parent_names_do_not_turn_runtime_credits_into_authoring_assets(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder)/'.be2-work'/'target'/'source';root.mkdir(parents=True)
+            (root/'AUDIO.md').write_text('Runtime audio credits')
+            self.assertEqual(release.runtime_files(root,['AUDIO.md'],web.safe_file),['AUDIO.md'])
+            debug=root/'assets/.blue-check';debug.mkdir(parents=True)
+            (debug/'report.json').write_text('{}')
+            with self.assertRaisesRegex(release.ReleaseError,'Authoring/verification'):
+                release.runtime_files(root,['assets/.blue-check'],web.safe_file)
+
 class WasmReproducibilityTests(unittest.TestCase):
     def test_debug_name_removal_preserves_runtime_and_other_custom_sections(self):
         header=b'\0asm\x01\0\0\0'

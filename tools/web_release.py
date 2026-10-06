@@ -178,7 +178,7 @@ def runtime_files(game, declarations, safe_file):
                 raise ReleaseError(f'Runtime asset must be a regular file: {name}')
             if any(parent in bank_dirs for parent in (path.parent, *path.parents)):
                 continue
-            if any(part in ('audio-source', '.blue-check', '.be2-work', 'target') for part in path.parts):
+            if any(part in ('audio-source', '.blue-check', '.be2-work', 'target') for part in Path(name).parts):
                 raise ReleaseError(f'Authoring/verification assets cannot be runtime directories: {name}')
             selected.add(name)
     return sorted(selected)
