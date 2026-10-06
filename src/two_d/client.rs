@@ -301,6 +301,9 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut chunk_max_ms = 0_f64;
     let mut chunk_updates = 0_u64;
     let mut chunk_stalls = 0_u64;
+    let mut chunk_render_max_ms = 0_f64;
+    let mut chunk_render_frames = 0_u64;
+    let mut chunk_render_stalls = 0_u64;
     let mut movement_ticks = 0_u64;
     let mut action_ticks = 0_u64;
     let mut step_ticks = 0_u64;
@@ -473,6 +476,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 0.
             })
         };
+        let mut streamed_this_frame = false;
         for _ in 0..ticks {
             if verification && verification_tick >= G::VERIFY_TICKS {
                 break;
@@ -494,6 +498,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             let elapsed = platform::now_ms() - step_start;
             step_max_ms = step_max_ms.max(elapsed);
             if game.streaming_marker() != marker {
+                streamed_this_frame = true;
                 chunk_updates += 1;
                 chunk_max_ms = chunk_max_ms.max(elapsed);
                 chunk_stalls += u64::from(elapsed > 50.);
@@ -572,7 +577,15 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         clear_background(BLACK);
         let draw_start = platform::now_ms();
         scene.draw(view, Point::default(), &mut renderer)?;
-        draw_max_ms = draw_max_ms.max(platform::now_ms() - draw_start);
+        let draw_elapsed = platform::now_ms() - draw_start;
+        draw_max_ms = draw_max_ms.max(draw_elapsed);
+        if streamed_this_frame {
+            // Include deferred presentation work on streaming frames. This is the whole draw,
+            // not a claim that every millisecond was spent generating chunk art.
+            chunk_render_frames += 1;
+            chunk_render_max_ms = chunk_render_max_ms.max(draw_elapsed);
+            chunk_render_stalls += u64::from(draw_elapsed > 50.);
+        }
         #[cfg(not(target_arch = "wasm32"))]
         if let Some(plan) = &capture {
             if plan.wants(frame) {
@@ -587,7 +600,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         audio.evidence.enabled = settings.sound && !audio.muted;
         audio.evidence.activated = platform::audio_active();
         if game.tick() != last_tick || frame % 30 == 0 {
-            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"step_ticks":step_ticks,"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
+            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"step_ticks":step_ticks,"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls,"chunk_render_max_ms":chunk_render_max_ms,"chunk_render_frames":chunk_render_frames,"chunk_render_stalls_over_50ms":chunk_render_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
             platform::report(&report.to_string());
             last_tick = game.tick();
         }

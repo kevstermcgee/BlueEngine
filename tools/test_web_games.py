@@ -204,6 +204,12 @@ class BrowserDependencyTests(unittest.TestCase):
 
 
 class ReleaseRegressionTests(unittest.TestCase):
+    def test_source_timeout_is_a_release_failure(self):
+        import subprocess
+        with patch.object(release.subprocess,'run',side_effect=subprocess.TimeoutExpired(['git','fetch'],600)):
+            with self.assertRaisesRegex(release.ReleaseError,'timed out'):
+                release.git(['fetch','https://example.test/repo','a'*40],web.ROOT)
+
     def test_anonymous_fetch_rejects_missing_revision_and_source_path(self):
         import subprocess
         with tempfile.TemporaryDirectory() as folder:

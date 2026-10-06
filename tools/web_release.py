@@ -13,7 +13,10 @@ class ReleaseError(ValueError):
 
 
 def git(args, cwd):
-    result = subprocess.run(['git', *args], cwd=cwd, capture_output=True, text=True, timeout=600 if 'fetch' in args else 120, env={**os.environ,'GIT_TERMINAL_PROMPT':'0'})
+    try:
+        result = subprocess.run(['git', *args], cwd=cwd, capture_output=True, text=True, timeout=600 if 'fetch' in args else 120, env={**os.environ,'GIT_TERMINAL_PROMPT':'0'})
+    except subprocess.TimeoutExpired as error:
+        raise ReleaseError('Source retrieval timed out; publication requires successful public retrieval') from error
     if result.returncode:
         raise ReleaseError(f"Source retrieval failed: git {' '.join(args)}\n{result.stderr[-2000:]}")
     return result.stdout.strip()
