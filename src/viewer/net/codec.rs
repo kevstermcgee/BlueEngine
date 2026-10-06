@@ -232,6 +232,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn length_prefixed_payload_tracks_remaining_bytes_without_consuming_failed_reads() {
+        let mut writer = Writer::new();
+        writer.varint(3);
+        writer.raw(b"map");
+        let packet = writer.finish();
+        let mut reader = Reader::new(&packet);
+        assert_eq!(reader.remaining(), packet.len());
+        let length = reader.varint_max(16).unwrap() as usize;
+        assert_eq!(reader.remaining(), length);
+        assert!(reader.take(length + 1).is_err());
+        assert!(reader.take(usize::MAX).is_err());
+        assert_eq!(
+            reader.remaining(),
+            length,
+            "refused reads preserve the payload"
+        );
+        assert_eq!(reader.take(length).unwrap(), b"map");
+        assert_eq!(reader.remaining(), 0);
+        reader.done().unwrap();
+    }
+
+    #[test]
     fn every_field_round_trips() {
         let mut w = Writer::new();
         w.u8(255);

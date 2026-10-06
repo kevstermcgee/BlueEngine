@@ -662,6 +662,58 @@ mod tests {
         }
     }
 
+    #[test]
+    fn legacy_saves_without_optional_content_or_tick_metadata_resume_and_resave() {
+        struct Plain(Walker);
+        impl Simulation for Plain {
+            type Input = f32;
+            fn step(&mut self, input: &f32) {
+                self.0.step(input);
+            }
+            fn state_hash(&self) -> u64 {
+                self.0.state_hash()
+            }
+        }
+        impl Snapshot for Plain {
+            const KIND: &'static str = "plain-walker";
+            type State = WalkerState;
+            fn capture(&self) -> WalkerState {
+                self.0.capture()
+            }
+            fn restore(&mut self, state: WalkerState) -> Result<(), String> {
+                self.0.restore(state)
+            }
+        }
+        let mut original = Plain(Walker::new(1));
+        for input in inputs(30) {
+            original.step(&input);
+        }
+        // Encode the existing v1 envelope with engine codecs, independently of current defaults.
+        let header = SaveHeader::new(Plain::KIND, Plain::VERSION, "legacy");
+        let payload = savestate::payload_bytes(&Envelope {
+            hash: content_string(original.state_hash()),
+            parts: vec![],
+            policy: Some(Plain::POLICY),
+            state: original.capture(),
+        })
+        .unwrap();
+        let legacy = savestate::encode(&header, &payload).unwrap();
+        let mut resumed = Plain(Walker::new(1));
+        restore(&mut resumed, &legacy).expect("v1 games need not implement optional metadata");
+        for input in inputs(60) {
+            original.step(&input);
+            resumed.step(&input);
+            assert_eq!(original.state_hash(), resumed.state_hash());
+        }
+        let saved_again = save(&resumed, "legacy").unwrap();
+        let decoded = decode(&saved_again).unwrap();
+        assert_eq!(decoded.header.content, header.content);
+        assert_eq!(decoded.header.tick, header.tick);
+        let mut fresh = Plain(Walker::new(1));
+        restore(&mut fresh, &saved_again).unwrap();
+        assert_eq!(fresh.state_hash(), original.state_hash());
+    }
+
     fn inputs(n: usize) -> Vec<f32> {
         (0..n).map(|i| if i % 7 < 4 { 1. } else { -0.5 }).collect()
     }

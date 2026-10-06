@@ -1,0 +1,1636 @@
+{
+  "schema_version": 1,
+  "status": "stopped",
+  "tool_version": "27.1.0",
+  "prototype_sha256": "d6e9dd27b9afc698e6eed0fed5e3476ade42d3487ef93e27dc9d1c95efbda600",
+  "rows": [
+    {
+      "run": "codec-before-3",
+      "version": "cargo-mutants 27.1.0",
+      "source_identity": {
+        "sha256": "0a17e47bee41e7275f9096d31c8a32277dd8b0b9df05eee8341f9f0ba7327b11",
+        "files": 1113
+      },
+      "source_identity_after": {
+        "sha256": "0a17e47bee41e7275f9096d31c8a32277dd8b0b9df05eee8341f9f0ba7327b11",
+        "files": 1113
+      },
+      "status": "failed",
+      "wall_seconds": 78.0754441699246,
+      "resources": null,
+      "candidate_count": 186,
+      "selected_count": 8,
+      "selected": [
+        "src/viewer/net/codec.rs:102:9: replace Writer::finish -> Vec<u8> with vec![0]",
+        "src/viewer/net/codec.rs:105:9: replace Writer::as_slice -> &[u8] with Vec::leak(Vec::new())",
+        "src/viewer/net/codec.rs:121:24: replace - with + in Reader<'a>::remaining",
+        "src/viewer/net/codec.rs:124:9: replace Reader<'a>::take -> WireResult<&'a[u8]> with WireResult::from(Vec::leak(Vec::new()))",
+        "src/viewer/net/codec.rs:133:9: replace Reader<'a>::u8 -> WireResult<u8> with WireResult::from(0)",
+        "src/viewer/net/codec.rs:136:9: replace Reader<'a>::u16 -> WireResult<u16> with WireResult::from(0)",
+        "src/viewer/net/codec.rs:139:9: replace Reader<'a>::u32 -> WireResult<u32> with WireResult::from(0)",
+        "src/viewer/net/codec.rs:142:9: replace Reader<'a>::u64 -> WireResult<u64> with WireResult::from(0)"
+      ],
+      "command": [
+        "/mnt/blueengine-usb/developer-tools/cargo-mutants-27.1.0/cargo-mutants",
+        "mutants",
+        "--no-config",
+        "--no-default-features",
+        "--profile",
+        "itest",
+        "--file",
+        "src/viewer/net/codec.rs",
+        "--re",
+        "^(?:src/viewer/net/codec\\.rs:102:9:\\ replace\\ Writer::finish\\ \\->\\ Vec<u8>\\ with\\ vec!\\[0\\]|src/viewer/net/codec\\.rs:105:9:\\ replace\\ Writer::as_slice\\ \\->\\ \\&\\[u8\\]\\ with\\ Vec::leak\\(Vec::new\\(\\)\\)|src/viewer/net/codec\\.rs:121:24:\\ replace\\ \\-\\ with\\ \\+\\ in\\ Reader<'a>::remaining|src/viewer/net/codec\\.rs:124:9:\\ replace\\ Reader<'a>::take\\ \\->\\ WireResult<\\&'a\\[u8\\]>\\ with\\ WireResult::from\\(Vec::leak\\(Vec::new\\(\\)\\)\\)|src/viewer/net/codec\\.rs:133:9:\\ replace\\ Reader<'a>::u8\\ \\->\\ WireResult<u8>\\ with\\ WireResult::from\\(0\\)|src/viewer/net/codec\\.rs:136:9:\\ replace\\ Reader<'a>::u16\\ \\->\\ WireResult<u16>\\ with\\ WireResult::from\\(0\\)|src/viewer/net/codec\\.rs:139:9:\\ replace\\ Reader<'a>::u32\\ \\->\\ WireResult<u32>\\ with\\ WireResult::from\\(0\\)|src/viewer/net/codec\\.rs:142:9:\\ replace\\ Reader<'a>::u64\\ \\->\\ WireResult<u64>\\ with\\ WireResult::from\\(0\\))$",
+        "--jobs",
+        "1",
+        "--jobserver-tasks",
+        "2",
+        "--copy-target=false",
+        "--timeout",
+        "30",
+        "--build-timeout",
+        "600",
+        "--no-shuffle",
+        "--output",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/mutations-codec-before-3",
+        "--cargo-arg=--locked",
+        "--cargo-arg=--lib",
+        "--cargo-arg=--test",
+        "--cargo-arg=netplay",
+        "--",
+        "--",
+        "viewer::net::codec::",
+        "a_closed_loopback_port_is_unreachable_not_refused",
+        "a_full_server_a_wrong_key_and_a_wrong_version_are_turned_away",
+        "a_laggy_lossy_network_still_produces_a_finished_match",
+        "a_late_joiner_waits_out_the_match_and_is_welcome_afterwards",
+        "a_player_who_leaves_mid_match_is_handed_to_the_games_ai",
+        "a_silent_player_times_out_and_is_handed_over",
+        "a_snapshot_that_cannot_fit_a_datagram_is_reported_by_its_size_so_it_is_never_sent",
+        "a_wrong_key_and_a_wrong_version_each_classify_as_what_they_are",
+        "another_address_cannot_use_a_players_token",
+        "events_reach_every_client_exactly_once_even_with_loss",
+        "every_finished_match_appends_one_json_line_to_matches_jsonl",
+        "every_message_round_trips_through_the_envelope",
+        "garbage_is_counted_and_the_match_carries_on",
+        "lobby_choices_survive_heavy_packet_loss",
+        "oversize_and_foreign_datagrams_are_refused",
+        "players_join_choose_ready_up_play_and_finish",
+        "prediction_statistics_survive_the_return_to_the_lobby",
+        "truncated_and_garbage_datagrams_never_panic_the_decoders"
+      ],
+      "counts": {
+        "total_mutants": 8,
+        "caught": 2,
+        "missed": 1,
+        "timeout": 0,
+        "unviable": 5
+      },
+      "baseline": {
+        "scenario": "Baseline",
+        "summary": "Success",
+        "log_path": "log/baseline.log",
+        "diff_path": null,
+        "phase_results": [
+          {
+            "phase": "Build",
+            "duration": 25.262301738,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--no-run",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "netplay"
+            ]
+          },
+          {
+            "phase": "Test",
+            "duration": 0.404975655,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "netplay",
+              "--",
+              "viewer::net::codec::",
+              "a_closed_loopback_port_is_unreachable_not_refused",
+              "a_full_server_a_wrong_key_and_a_wrong_version_are_turned_away",
+              "a_laggy_lossy_network_still_produces_a_finished_match",
+              "a_late_joiner_waits_out_the_match_and_is_welcome_afterwards",
+              "a_player_who_leaves_mid_match_is_handed_to_the_games_ai",
+              "a_silent_player_times_out_and_is_handed_over",
+              "a_snapshot_that_cannot_fit_a_datagram_is_reported_by_its_size_so_it_is_never_sent",
+              "a_wrong_key_and_a_wrong_version_each_classify_as_what_they_are",
+              "another_address_cannot_use_a_players_token",
+              "events_reach_every_client_exactly_once_even_with_loss",
+              "every_finished_match_appends_one_json_line_to_matches_jsonl",
+              "every_message_round_trips_through_the_envelope",
+              "garbage_is_counted_and_the_match_carries_on",
+              "lobby_choices_survive_heavy_packet_loss",
+              "oversize_and_foreign_datagrams_are_refused",
+              "players_join_choose_ready_up_play_and_finish",
+              "prediction_statistics_survive_the_return_to_the_lobby",
+              "truncated_and_garbage_datagrams_never_panic_the_decoders"
+            ]
+          }
+        ]
+      },
+      "results": [
+        {
+          "name": "src/viewer/net/codec.rs:102:9: replace Writer::finish -> Vec<u8> with vec![0]",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:105:9: replace Writer::as_slice -> &[u8] with Vec::leak(Vec::new())",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:121:24: replace - with + in Reader<'a>::remaining",
+          "summary": "MissedMutant",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:124:9: replace Reader<'a>::take -> WireResult<&'a[u8]> with WireResult::from(Vec::leak(Vec::new()))",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:133:9: replace Reader<'a>::u8 -> WireResult<u8> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:136:9: replace Reader<'a>::u16 -> WireResult<u16> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:139:9: replace Reader<'a>::u32 -> WireResult<u32> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:142:9: replace Reader<'a>::u64 -> WireResult<u64> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        }
+      ]
+    },
+    {
+      "run": "codec-after",
+      "version": "cargo-mutants 27.1.0",
+      "source_identity": {
+        "sha256": "3b7832454f7cd7d658ebab8f1a2c2fba169070ff187f6f4f5ab5384980824f5f",
+        "files": 1113
+      },
+      "source_identity_after": {
+        "sha256": "3b7832454f7cd7d658ebab8f1a2c2fba169070ff187f6f4f5ab5384980824f5f",
+        "files": 1113
+      },
+      "status": "passed",
+      "wall_seconds": 101.80423670692835,
+      "resources": null,
+      "candidate_count": 186,
+      "selected_count": 8,
+      "selected": [
+        "src/viewer/net/codec.rs:102:9: replace Writer::finish -> Vec<u8> with vec![0]",
+        "src/viewer/net/codec.rs:105:9: replace Writer::as_slice -> &[u8] with Vec::leak(Vec::new())",
+        "src/viewer/net/codec.rs:121:24: replace - with + in Reader<'a>::remaining",
+        "src/viewer/net/codec.rs:124:9: replace Reader<'a>::take -> WireResult<&'a[u8]> with WireResult::from(Vec::leak(Vec::new()))",
+        "src/viewer/net/codec.rs:133:9: replace Reader<'a>::u8 -> WireResult<u8> with WireResult::from(0)",
+        "src/viewer/net/codec.rs:136:9: replace Reader<'a>::u16 -> WireResult<u16> with WireResult::from(0)",
+        "src/viewer/net/codec.rs:139:9: replace Reader<'a>::u32 -> WireResult<u32> with WireResult::from(0)",
+        "src/viewer/net/codec.rs:142:9: replace Reader<'a>::u64 -> WireResult<u64> with WireResult::from(0)"
+      ],
+      "command": [
+        "/mnt/blueengine-usb/developer-tools/cargo-mutants-27.1.0/cargo-mutants",
+        "mutants",
+        "--no-config",
+        "--no-default-features",
+        "--profile",
+        "itest",
+        "--file",
+        "src/viewer/net/codec.rs",
+        "--re",
+        "^(?:src/viewer/net/codec\\.rs:102:9:\\ replace\\ Writer::finish\\ \\->\\ Vec<u8>\\ with\\ vec!\\[0\\]|src/viewer/net/codec\\.rs:105:9:\\ replace\\ Writer::as_slice\\ \\->\\ \\&\\[u8\\]\\ with\\ Vec::leak\\(Vec::new\\(\\)\\)|src/viewer/net/codec\\.rs:121:24:\\ replace\\ \\-\\ with\\ \\+\\ in\\ Reader<'a>::remaining|src/viewer/net/codec\\.rs:124:9:\\ replace\\ Reader<'a>::take\\ \\->\\ WireResult<\\&'a\\[u8\\]>\\ with\\ WireResult::from\\(Vec::leak\\(Vec::new\\(\\)\\)\\)|src/viewer/net/codec\\.rs:133:9:\\ replace\\ Reader<'a>::u8\\ \\->\\ WireResult<u8>\\ with\\ WireResult::from\\(0\\)|src/viewer/net/codec\\.rs:136:9:\\ replace\\ Reader<'a>::u16\\ \\->\\ WireResult<u16>\\ with\\ WireResult::from\\(0\\)|src/viewer/net/codec\\.rs:139:9:\\ replace\\ Reader<'a>::u32\\ \\->\\ WireResult<u32>\\ with\\ WireResult::from\\(0\\)|src/viewer/net/codec\\.rs:142:9:\\ replace\\ Reader<'a>::u64\\ \\->\\ WireResult<u64>\\ with\\ WireResult::from\\(0\\))$",
+        "--jobs",
+        "1",
+        "--jobserver-tasks",
+        "2",
+        "--copy-target=false",
+        "--timeout",
+        "30",
+        "--build-timeout",
+        "600",
+        "--no-shuffle",
+        "--output",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/mutations-codec-after",
+        "--cargo-arg=--locked",
+        "--cargo-arg=--lib",
+        "--cargo-arg=--test",
+        "--cargo-arg=netplay",
+        "--",
+        "--",
+        "viewer::net::codec::",
+        "a_closed_loopback_port_is_unreachable_not_refused",
+        "a_full_server_a_wrong_key_and_a_wrong_version_are_turned_away",
+        "a_laggy_lossy_network_still_produces_a_finished_match",
+        "a_late_joiner_waits_out_the_match_and_is_welcome_afterwards",
+        "a_player_who_leaves_mid_match_is_handed_to_the_games_ai",
+        "a_silent_player_times_out_and_is_handed_over",
+        "a_snapshot_that_cannot_fit_a_datagram_is_reported_by_its_size_so_it_is_never_sent",
+        "a_wrong_key_and_a_wrong_version_each_classify_as_what_they_are",
+        "another_address_cannot_use_a_players_token",
+        "events_reach_every_client_exactly_once_even_with_loss",
+        "every_finished_match_appends_one_json_line_to_matches_jsonl",
+        "every_message_round_trips_through_the_envelope",
+        "garbage_is_counted_and_the_match_carries_on",
+        "lobby_choices_survive_heavy_packet_loss",
+        "oversize_and_foreign_datagrams_are_refused",
+        "players_join_choose_ready_up_play_and_finish",
+        "prediction_statistics_survive_the_return_to_the_lobby",
+        "truncated_and_garbage_datagrams_never_panic_the_decoders"
+      ],
+      "counts": {
+        "total_mutants": 8,
+        "caught": 3,
+        "missed": 0,
+        "timeout": 0,
+        "unviable": 5
+      },
+      "baseline": {
+        "scenario": "Baseline",
+        "summary": "Success",
+        "log_path": "log/baseline.log",
+        "diff_path": null,
+        "phase_results": [
+          {
+            "phase": "Build",
+            "duration": 25.665762835,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--no-run",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "netplay"
+            ]
+          },
+          {
+            "phase": "Test",
+            "duration": 0.457735651,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "netplay",
+              "--",
+              "viewer::net::codec::",
+              "a_closed_loopback_port_is_unreachable_not_refused",
+              "a_full_server_a_wrong_key_and_a_wrong_version_are_turned_away",
+              "a_laggy_lossy_network_still_produces_a_finished_match",
+              "a_late_joiner_waits_out_the_match_and_is_welcome_afterwards",
+              "a_player_who_leaves_mid_match_is_handed_to_the_games_ai",
+              "a_silent_player_times_out_and_is_handed_over",
+              "a_snapshot_that_cannot_fit_a_datagram_is_reported_by_its_size_so_it_is_never_sent",
+              "a_wrong_key_and_a_wrong_version_each_classify_as_what_they_are",
+              "another_address_cannot_use_a_players_token",
+              "events_reach_every_client_exactly_once_even_with_loss",
+              "every_finished_match_appends_one_json_line_to_matches_jsonl",
+              "every_message_round_trips_through_the_envelope",
+              "garbage_is_counted_and_the_match_carries_on",
+              "lobby_choices_survive_heavy_packet_loss",
+              "oversize_and_foreign_datagrams_are_refused",
+              "players_join_choose_ready_up_play_and_finish",
+              "prediction_statistics_survive_the_return_to_the_lobby",
+              "truncated_and_garbage_datagrams_never_panic_the_decoders"
+            ]
+          }
+        ]
+      },
+      "results": [
+        {
+          "name": "src/viewer/net/codec.rs:102:9: replace Writer::finish -> Vec<u8> with vec![0]",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:105:9: replace Writer::as_slice -> &[u8] with Vec::leak(Vec::new())",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:121:24: replace - with + in Reader<'a>::remaining",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:124:9: replace Reader<'a>::take -> WireResult<&'a[u8]> with WireResult::from(Vec::leak(Vec::new()))",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:133:9: replace Reader<'a>::u8 -> WireResult<u8> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:136:9: replace Reader<'a>::u16 -> WireResult<u16> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:139:9: replace Reader<'a>::u32 -> WireResult<u32> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        },
+        {
+          "name": "src/viewer/net/codec.rs:142:9: replace Reader<'a>::u64 -> WireResult<u64> with WireResult::from(0)",
+          "summary": "Unviable",
+          "file": "src/viewer/net/codec.rs"
+        }
+      ]
+    },
+    {
+      "run": "simulation-before",
+      "version": "cargo-mutants 27.1.0",
+      "source_identity": {
+        "sha256": "3bef11354056d06c19419bf216fca41065a9df133d20dd16e771663e3b99df0e",
+        "files": 1113
+      },
+      "source_identity_after": {
+        "sha256": "3bef11354056d06c19419bf216fca41065a9df133d20dd16e771663e3b99df0e",
+        "files": 1113
+      },
+      "status": "failed",
+      "wall_seconds": 156.41763568704482,
+      "resources": null,
+      "candidate_count": 241,
+      "selected_count": 12,
+      "selected": [
+        "src/viewer/simulation.rs:1055:9: replace HeadlessWorld::snapshot_for_player -> super::net::WorldSnapshot with Default::default()",
+        "src/viewer/simulation.rs:110:9: replace PlayerStepper::reset with ()",
+        "src/viewer/simulation.rs:1139:9: replace HeadlessWorld::performance_snapshot -> super::metrics::PerformanceSnapshot with Default::default()",
+        "src/viewer/simulation.rs:123:12: delete ! in PlayerStepper::advance",
+        "src/viewer/simulation.rs:141:62: replace * with + in PlayerStepper::pose",
+        "src/viewer/simulation.rs:181:9: replace HeadlessWorld::with_static_room -> Self with Default::default()",
+        "src/viewer/simulation.rs:190:9: replace HeadlessWorld::with_room -> Self with Default::default()",
+        "src/viewer/simulation.rs:196:9: replace HeadlessWorld::try_with_room -> crate::Result<Self> with Ok(Default::default())",
+        "src/viewer/simulation.rs:209:9: replace HeadlessWorld::from_initialized_room -> Self with Default::default()",
+        "src/viewer/simulation.rs:241:9: replace HeadlessWorld::set_max_players with ()",
+        "src/viewer/simulation.rs:244:9: replace HeadlessWorld::max_players -> usize with 0",
+        "src/viewer/simulation.rs:249:31: replace >= with < in HeadlessWorld::join"
+      ],
+      "command": [
+        "/mnt/blueengine-usb/developer-tools/cargo-mutants-27.1.0/cargo-mutants",
+        "mutants",
+        "--no-config",
+        "--no-default-features",
+        "--profile",
+        "itest",
+        "--file",
+        "src/viewer/simulation.rs",
+        "--re",
+        "^(?:src/viewer/simulation\\.rs:1055:9:\\ replace\\ HeadlessWorld::snapshot_for_player\\ \\->\\ super::net::WorldSnapshot\\ with\\ Default::default\\(\\)|src/viewer/simulation\\.rs:110:9:\\ replace\\ PlayerStepper::reset\\ with\\ \\(\\)|src/viewer/simulation\\.rs:1139:9:\\ replace\\ HeadlessWorld::performance_snapshot\\ \\->\\ super::metrics::PerformanceSnapshot\\ with\\ Default::default\\(\\)|src/viewer/simulation\\.rs:123:12:\\ delete\\ !\\ in\\ PlayerStepper::advance|src/viewer/simulation\\.rs:141:62:\\ replace\\ \\*\\ with\\ \\+\\ in\\ PlayerStepper::pose|src/viewer/simulation\\.rs:181:9:\\ replace\\ HeadlessWorld::with_static_room\\ \\->\\ Self\\ with\\ Default::default\\(\\)|src/viewer/simulation\\.rs:190:9:\\ replace\\ HeadlessWorld::with_room\\ \\->\\ Self\\ with\\ Default::default\\(\\)|src/viewer/simulation\\.rs:196:9:\\ replace\\ HeadlessWorld::try_with_room\\ \\->\\ crate::Result<Self>\\ with\\ Ok\\(Default::default\\(\\)\\)|src/viewer/simulation\\.rs:209:9:\\ replace\\ HeadlessWorld::from_initialized_room\\ \\->\\ Self\\ with\\ Default::default\\(\\)|src/viewer/simulation\\.rs:241:9:\\ replace\\ HeadlessWorld::set_max_players\\ with\\ \\(\\)|src/viewer/simulation\\.rs:244:9:\\ replace\\ HeadlessWorld::max_players\\ \\->\\ usize\\ with\\ 0|src/viewer/simulation\\.rs:249:31:\\ replace\\ >=\\ with\\ <\\ in\\ HeadlessWorld::join)$",
+        "--jobs",
+        "1",
+        "--jobserver-tasks",
+        "2",
+        "--copy-target=false",
+        "--timeout",
+        "30",
+        "--build-timeout",
+        "600",
+        "--no-shuffle",
+        "--output",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/mutations-simulation-before",
+        "--cargo-arg=--locked",
+        "--cargo-arg=--lib",
+        "--cargo-arg=--test",
+        "--cargo-arg=simulation_flow",
+        "--cargo-arg=--test",
+        "--cargo-arg=shared_gameplay",
+        "--cargo-arg=--test",
+        "--cargo-arg=scenario_intents",
+        "--cargo-arg=--test",
+        "--cargo-arg=virtual_time",
+        "--",
+        "--",
+        "viewer::simulation::",
+        "arbitrary_asset_roots_place_and_remove_without_copied_sandbox_code",
+        "generated_project_has_a_valid_game_document_and_shared_playable_entry",
+        "history_and_save_paths_have_bounds",
+        "held_intent_persists_and_rejected_input_preserves_state",
+        "pending_jump_survives_replacement_and_is_consumed_once",
+        "a_manual_clock_is_shared_by_its_clones_and_a_real_clock_ignores_advance",
+        "a_returning_client_keeps_its_player_inside_the_reservation_and_loses_it_outside",
+        "a_silent_client_times_out_at_the_configured_moment_and_not_before",
+        "a_stale_input_frame_does_not_count_as_activity",
+        "another_address_cannot_claim_a_reserved_player",
+        "input_keeps_a_session_alive_and_silence_after_it_is_timed_from_the_last_input",
+        "the_default_clock_is_the_real_one",
+        "the_handshake_rate_limit_follows_the_clock",
+        "a_walking_scenario_replays_deterministically",
+        "face_aims_at_a_target_from_an_angle_and_a_distance_that_a_fixed_yaw_would_miss",
+        "inputs_without_intents_match_the_original_loop_exactly",
+        "problems_a_scenario_cannot_assert_are_reported_as_failures",
+        "walk_to_arrives_close_to_the_point_and_holds_later_inputs_until_it_does",
+        "walk_to_without_face_keeps_the_players_heading"
+      ],
+      "counts": {
+        "total_mutants": 12,
+        "caught": 4,
+        "missed": 4,
+        "timeout": 0,
+        "unviable": 4
+      },
+      "baseline": {
+        "scenario": "Baseline",
+        "summary": "Success",
+        "log_path": "log/baseline.log",
+        "diff_path": null,
+        "phase_results": [
+          {
+            "phase": "Build",
+            "duration": 26.238457622,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--no-run",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "simulation_flow",
+              "--test",
+              "shared_gameplay",
+              "--test",
+              "scenario_intents",
+              "--test",
+              "virtual_time"
+            ]
+          },
+          {
+            "phase": "Test",
+            "duration": 1.705818887,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "simulation_flow",
+              "--test",
+              "shared_gameplay",
+              "--test",
+              "scenario_intents",
+              "--test",
+              "virtual_time",
+              "--",
+              "viewer::simulation::",
+              "arbitrary_asset_roots_place_and_remove_without_copied_sandbox_code",
+              "generated_project_has_a_valid_game_document_and_shared_playable_entry",
+              "history_and_save_paths_have_bounds",
+              "held_intent_persists_and_rejected_input_preserves_state",
+              "pending_jump_survives_replacement_and_is_consumed_once",
+              "a_manual_clock_is_shared_by_its_clones_and_a_real_clock_ignores_advance",
+              "a_returning_client_keeps_its_player_inside_the_reservation_and_loses_it_outside",
+              "a_silent_client_times_out_at_the_configured_moment_and_not_before",
+              "a_stale_input_frame_does_not_count_as_activity",
+              "another_address_cannot_claim_a_reserved_player",
+              "input_keeps_a_session_alive_and_silence_after_it_is_timed_from_the_last_input",
+              "the_default_clock_is_the_real_one",
+              "the_handshake_rate_limit_follows_the_clock",
+              "a_walking_scenario_replays_deterministically",
+              "face_aims_at_a_target_from_an_angle_and_a_distance_that_a_fixed_yaw_would_miss",
+              "inputs_without_intents_match_the_original_loop_exactly",
+              "problems_a_scenario_cannot_assert_are_reported_as_failures",
+              "walk_to_arrives_close_to_the_point_and_holds_later_inputs_until_it_does",
+              "walk_to_without_face_keeps_the_players_heading"
+            ]
+          }
+        ]
+      },
+      "results": [
+        {
+          "name": "src/viewer/simulation.rs:110:9: replace PlayerStepper::reset with ()",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:123:12: delete ! in PlayerStepper::advance",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:141:62: replace * with + in PlayerStepper::pose",
+          "summary": "MissedMutant",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:181:9: replace HeadlessWorld::with_static_room -> Self with Default::default()",
+          "summary": "Unviable",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:190:9: replace HeadlessWorld::with_room -> Self with Default::default()",
+          "summary": "Unviable",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:196:9: replace HeadlessWorld::try_with_room -> crate::Result<Self> with Ok(Default::default())",
+          "summary": "Unviable",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:209:9: replace HeadlessWorld::from_initialized_room -> Self with Default::default()",
+          "summary": "Unviable",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:241:9: replace HeadlessWorld::set_max_players with ()",
+          "summary": "MissedMutant",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:244:9: replace HeadlessWorld::max_players -> usize with 0",
+          "summary": "MissedMutant",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:249:31: replace >= with < in HeadlessWorld::join",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:1055:9: replace HeadlessWorld::snapshot_for_player -> super::net::WorldSnapshot with Default::default()",
+          "summary": "MissedMutant",
+          "file": "src/viewer/simulation.rs"
+        },
+        {
+          "name": "src/viewer/simulation.rs:1139:9: replace HeadlessWorld::performance_snapshot -> super::metrics::PerformanceSnapshot with Default::default()",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/simulation.rs"
+        }
+      ]
+    },
+    {
+      "run": "snapshot-before",
+      "version": "cargo-mutants 27.1.0",
+      "source_identity": {
+        "sha256": "3bef11354056d06c19419bf216fca41065a9df133d20dd16e771663e3b99df0e",
+        "files": 1113
+      },
+      "source_identity_after": {
+        "sha256": "3bef11354056d06c19419bf216fca41065a9df133d20dd16e771663e3b99df0e",
+        "files": 1113
+      },
+      "status": "failed",
+      "wall_seconds": 198.6114836219931,
+      "resources": null,
+      "candidate_count": 346,
+      "selected_count": 12,
+      "selected": [
+        "src/runtime/../viewer/devkit/sim.rs:113:9: replace Trace::last -> u64 with 0",
+        "src/runtime/../viewer/devkit/snapshot.rs:129:9: replace Snapshot::content -> Option<u64> with Some(0)",
+        "src/viewer/savestate/mod.rs:115:9: replace <impl fmt::Display for SaveError>::fmt -> fmt::Result with Ok(Default::default())",
+        "src/viewer/savestate/world.rs:139:5: replace invalid -> SaveError with Default::default()",
+        "src/runtime/../viewer/devkit/sim.rs:117:9: replace Trace::first_divergence -> Option<usize> with None",
+        "src/runtime/../viewer/devkit/snapshot.rs:133:9: replace Snapshot::save_tick -> u64 with 1",
+        "src/viewer/savestate/mod.rs:148:21: replace == with != in io_error",
+        "src/viewer/savestate/world.rs:143:5: replace all_finite -> bool with false",
+        "src/runtime/../viewer/devkit/sim.rs:126:5: replace run_inputs -> Trace with Default::default()",
+        "src/runtime/../viewer/devkit/snapshot.rs:151:5: replace named_parts -> Vec<(String, String)> with vec![(\"xyzzy\".into(), \"xyzzy\".into())]",
+        "src/viewer/savestate/mod.rs:183:5: replace content_string -> String with \"xyzzy\".into()",
+        "src/viewer/savestate/world.rs:147:41: replace && with || in within"
+      ],
+      "command": [
+        "/mnt/blueengine-usb/developer-tools/cargo-mutants-27.1.0/cargo-mutants",
+        "mutants",
+        "--no-config",
+        "--no-default-features",
+        "--profile",
+        "itest",
+        "--file",
+        "src/runtime/../viewer/devkit/sim.rs",
+        "--file",
+        "src/runtime/../viewer/devkit/snapshot.rs",
+        "--file",
+        "src/viewer/savestate/mod.rs",
+        "--file",
+        "src/viewer/savestate/world.rs",
+        "--re",
+        "^(?:src/runtime/\\.\\./viewer/devkit/sim\\.rs:113:9:\\ replace\\ Trace::last\\ \\->\\ u64\\ with\\ 0|src/runtime/\\.\\./viewer/devkit/snapshot\\.rs:129:9:\\ replace\\ Snapshot::content\\ \\->\\ Option<u64>\\ with\\ Some\\(0\\)|src/viewer/savestate/mod\\.rs:115:9:\\ replace\\ <impl\\ fmt::Display\\ for\\ SaveError>::fmt\\ \\->\\ fmt::Result\\ with\\ Ok\\(Default::default\\(\\)\\)|src/viewer/savestate/world\\.rs:139:5:\\ replace\\ invalid\\ \\->\\ SaveError\\ with\\ Default::default\\(\\)|src/runtime/\\.\\./viewer/devkit/sim\\.rs:117:9:\\ replace\\ Trace::first_divergence\\ \\->\\ Option<usize>\\ with\\ None|src/runtime/\\.\\./viewer/devkit/snapshot\\.rs:133:9:\\ replace\\ Snapshot::save_tick\\ \\->\\ u64\\ with\\ 1|src/viewer/savestate/mod\\.rs:148:21:\\ replace\\ ==\\ with\\ !=\\ in\\ io_error|src/viewer/savestate/world\\.rs:143:5:\\ replace\\ all_finite\\ \\->\\ bool\\ with\\ false|src/runtime/\\.\\./viewer/devkit/sim\\.rs:126:5:\\ replace\\ run_inputs\\ \\->\\ Trace\\ with\\ Default::default\\(\\)|src/runtime/\\.\\./viewer/devkit/snapshot\\.rs:151:5:\\ replace\\ named_parts\\ \\->\\ Vec<\\(String,\\ String\\)>\\ with\\ vec!\\[\\(\"xyzzy\"\\.into\\(\\),\\ \"xyzzy\"\\.into\\(\\)\\)\\]|src/viewer/savestate/mod\\.rs:183:5:\\ replace\\ content_string\\ \\->\\ String\\ with\\ \"xyzzy\"\\.into\\(\\)|src/viewer/savestate/world\\.rs:147:41:\\ replace\\ \\&\\&\\ with\\ \\|\\|\\ in\\ within)$",
+        "--jobs",
+        "1",
+        "--jobserver-tasks",
+        "2",
+        "--copy-target=false",
+        "--timeout",
+        "30",
+        "--build-timeout",
+        "600",
+        "--no-shuffle",
+        "--output",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/mutations-snapshot-before",
+        "--cargo-arg=--locked",
+        "--cargo-arg=--lib",
+        "--cargo-arg=--test",
+        "--cargo-arg=save_state",
+        "--cargo-arg=--test",
+        "--cargo-arg=save_session",
+        "--cargo-arg=--test",
+        "--cargo-arg=physics_saves",
+        "--cargo-arg=--test",
+        "--cargo-arg=portable_storage",
+        "--",
+        "--",
+        "runtime::sim::",
+        "runtime::snapshot::",
+        "viewer::savestate::",
+        "native_storage_child",
+        "native_storage_survives_an_install_location_change",
+        "a_physics_save_that_does_not_restore_names_the_forgotten_part_not_the_world",
+        "a_resumed_run_of_sliding_boxes_stays_within_a_measured_distance_and_never_resumes_exactly",
+        "twenty_rolling_colliding_apples_load_as_a_pure_function_of_the_file",
+        "a_bad_load_changes_nothing_and_the_game_keeps_playing",
+        "a_load_drops_input_that_was_pending_and_forgets_partial_frames",
+        "an_online_client_refuses_to_save_or_load_because_the_server_owns_the_world",
+        "loading_a_quick_save_resumes_the_game_exactly_where_it_was_saved",
+        "slots_round_trip_and_fall_back_to_the_previous_save_when_the_latest_is_damaged",
+        "a_bad_save_is_refused_and_the_world_is_left_exactly_as_it_was",
+        "a_save_for_other_content_wrong_kind_or_newer_version_never_loads",
+        "a_saved_world_saves_identically_again_and_survives_a_json_round_trip",
+        "a_server_autosaves_on_schedule_keeps_a_ring_and_a_failing_disk_never_stops_it",
+        "a_server_resuming_a_world_keeps_its_own_players_and_drops_holds",
+        "every_shipped_map_restores_identically_regardless_of_what_loaded_it",
+        "save_info_describes_a_save_and_says_whether_it_belongs_to_a_game",
+        "saving_and_resuming_matches_an_uninterrupted_run_when_props_are_at_rest_or_falling",
+        "slots_hold_world_saves_with_a_last_good_backup",
+        "the_headless_server_saves_at_shutdown_and_a_new_run_resumes_from_it",
+        "the_test_lab_saves_and_resumes_exactly_once_it_has_settled",
+        "two_fresh_worlds_given_the_same_inputs_stay_identical",
+        "what_happens_after_a_load_depends_only_on_the_save_never_on_the_world_that_loaded_it"
+      ],
+      "counts": {
+        "total_mutants": 12,
+        "caught": 8,
+        "missed": 2,
+        "timeout": 0,
+        "unviable": 2
+      },
+      "baseline": {
+        "scenario": "Baseline",
+        "summary": "Success",
+        "log_path": "log/baseline.log",
+        "diff_path": null,
+        "phase_results": [
+          {
+            "phase": "Build",
+            "duration": 26.374889988,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--no-run",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "save_state",
+              "--test",
+              "save_session",
+              "--test",
+              "physics_saves",
+              "--test",
+              "portable_storage"
+            ]
+          },
+          {
+            "phase": "Test",
+            "duration": 15.089980039,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--lib",
+              "--test",
+              "save_state",
+              "--test",
+              "save_session",
+              "--test",
+              "physics_saves",
+              "--test",
+              "portable_storage",
+              "--",
+              "runtime::sim::",
+              "runtime::snapshot::",
+              "viewer::savestate::",
+              "native_storage_child",
+              "native_storage_survives_an_install_location_change",
+              "a_physics_save_that_does_not_restore_names_the_forgotten_part_not_the_world",
+              "a_resumed_run_of_sliding_boxes_stays_within_a_measured_distance_and_never_resumes_exactly",
+              "twenty_rolling_colliding_apples_load_as_a_pure_function_of_the_file",
+              "a_bad_load_changes_nothing_and_the_game_keeps_playing",
+              "a_load_drops_input_that_was_pending_and_forgets_partial_frames",
+              "an_online_client_refuses_to_save_or_load_because_the_server_owns_the_world",
+              "loading_a_quick_save_resumes_the_game_exactly_where_it_was_saved",
+              "slots_round_trip_and_fall_back_to_the_previous_save_when_the_latest_is_damaged",
+              "a_bad_save_is_refused_and_the_world_is_left_exactly_as_it_was",
+              "a_save_for_other_content_wrong_kind_or_newer_version_never_loads",
+              "a_saved_world_saves_identically_again_and_survives_a_json_round_trip",
+              "a_server_autosaves_on_schedule_keeps_a_ring_and_a_failing_disk_never_stops_it",
+              "a_server_resuming_a_world_keeps_its_own_players_and_drops_holds",
+              "every_shipped_map_restores_identically_regardless_of_what_loaded_it",
+              "save_info_describes_a_save_and_says_whether_it_belongs_to_a_game",
+              "saving_and_resuming_matches_an_uninterrupted_run_when_props_are_at_rest_or_falling",
+              "slots_hold_world_saves_with_a_last_good_backup",
+              "the_headless_server_saves_at_shutdown_and_a_new_run_resumes_from_it",
+              "the_test_lab_saves_and_resumes_exactly_once_it_has_settled",
+              "two_fresh_worlds_given_the_same_inputs_stay_identical",
+              "what_happens_after_a_load_depends_only_on_the_save_never_on_the_world_that_loaded_it"
+            ]
+          }
+        ]
+      },
+      "results": [
+        {
+          "name": "src/runtime/../viewer/devkit/sim.rs:113:9: replace Trace::last -> u64 with 0",
+          "summary": "CaughtMutant",
+          "file": "src/runtime/../viewer/devkit/sim.rs"
+        },
+        {
+          "name": "src/runtime/../viewer/devkit/sim.rs:117:9: replace Trace::first_divergence -> Option<usize> with None",
+          "summary": "CaughtMutant",
+          "file": "src/runtime/../viewer/devkit/sim.rs"
+        },
+        {
+          "name": "src/runtime/../viewer/devkit/sim.rs:126:5: replace run_inputs -> Trace with Default::default()",
+          "summary": "Unviable",
+          "file": "src/runtime/../viewer/devkit/sim.rs"
+        },
+        {
+          "name": "src/runtime/../viewer/devkit/snapshot.rs:129:9: replace Snapshot::content -> Option<u64> with Some(0)",
+          "summary": "MissedMutant",
+          "file": "src/runtime/../viewer/devkit/snapshot.rs"
+        },
+        {
+          "name": "src/runtime/../viewer/devkit/snapshot.rs:133:9: replace Snapshot::save_tick -> u64 with 1",
+          "summary": "MissedMutant",
+          "file": "src/runtime/../viewer/devkit/snapshot.rs"
+        },
+        {
+          "name": "src/runtime/../viewer/devkit/snapshot.rs:151:5: replace named_parts -> Vec<(String, String)> with vec![(\"xyzzy\".into(), \"xyzzy\".into())]",
+          "summary": "CaughtMutant",
+          "file": "src/runtime/../viewer/devkit/snapshot.rs"
+        },
+        {
+          "name": "src/viewer/savestate/mod.rs:115:9: replace <impl fmt::Display for SaveError>::fmt -> fmt::Result with Ok(Default::default())",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/savestate/mod.rs"
+        },
+        {
+          "name": "src/viewer/savestate/mod.rs:148:21: replace == with != in io_error",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/savestate/mod.rs"
+        },
+        {
+          "name": "src/viewer/savestate/mod.rs:183:5: replace content_string -> String with \"xyzzy\".into()",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/savestate/mod.rs"
+        },
+        {
+          "name": "src/viewer/savestate/world.rs:139:5: replace invalid -> SaveError with Default::default()",
+          "summary": "Unviable",
+          "file": "src/viewer/savestate/world.rs"
+        },
+        {
+          "name": "src/viewer/savestate/world.rs:143:5: replace all_finite -> bool with false",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/savestate/world.rs"
+        },
+        {
+          "name": "src/viewer/savestate/world.rs:147:41: replace && with || in within",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/savestate/world.rs"
+        }
+      ]
+    },
+    {
+      "run": "rules-before-2",
+      "version": "cargo-mutants 27.1.0",
+      "source_identity": {
+        "sha256": "0e086bd45a1978aad1eb5954ec3e5c313073b4fc28e63bb3b007eefcf0583392",
+        "files": 1116
+      },
+      "source_identity_after": {
+        "sha256": "0e086bd45a1978aad1eb5954ec3e5c313073b4fc28e63bb3b007eefcf0583392",
+        "files": 1116
+      },
+      "status": "failed",
+      "wall_seconds": 217.11541810096242,
+      "resources": {
+        "child_cpu_seconds": 256.680538,
+        "max_child_rss_bytes": 1202851840,
+        "rss_basis": "OS child high-water mark, not simultaneous whole-machine memory"
+      },
+      "candidate_count": 150,
+      "selected_count": 12,
+      "selected": [
+        "src/viewer/game.rs:1000:13: delete field round from struct GameState expression in GameRuntime::compile",
+        "src/viewer/game.rs:103:9: replace Condition::comparisons -> [(Cmp, Option<i32>); 6] with [(Default::default(), None); 6]",
+        "src/viewer/game.rs:1171:15: replace < with <= in GameRuntime::timer_active",
+        "src/viewer/game.rs:1180:9: replace GameRuntime::step_timers with ()",
+        "src/viewer/game.rs:120:16: replace += with *= in Condition::validate",
+        "src/viewer/game.rs:1389:15: replace < with <= in GameRuntime::enabled",
+        "src/viewer/game.rs:1395:9: replace GameRuntime::enabled_entity -> Option<bool> with None",
+        "src/viewer/game.rs:1419:9: replace GameRuntime::interact -> Option<GameEvent> with None",
+        "src/viewer/game.rs:1458:34: replace || with && in GameRuntime::step_triggers",
+        "src/viewer/game.rs:199:9: replace CompiledCondition::compile -> Self with Default::default()",
+        "src/viewer/game.rs:224:9: replace CompiledCondition::holds -> bool with false",
+        "src/viewer/game.rs:694:5: replace apply_effects with ()"
+      ],
+      "command": [
+        "/mnt/blueengine-usb/developer-tools/cargo-mutants-27.1.0/cargo-mutants",
+        "mutants",
+        "--no-config",
+        "--no-default-features",
+        "--profile",
+        "itest",
+        "--file",
+        "src/viewer/game.rs",
+        "--re",
+        "^(?:src/viewer/game\\.rs:1000:13:\\ delete\\ field\\ round\\ from\\ struct\\ GameState\\ expression\\ in\\ GameRuntime::compile|src/viewer/game\\.rs:103:9:\\ replace\\ Condition::comparisons\\ \\->\\ \\[\\(Cmp,\\ Option<i32>\\);\\ 6\\]\\ with\\ \\[\\(Default::default\\(\\),\\ None\\);\\ 6\\]|src/viewer/game\\.rs:1171:15:\\ replace\\ <\\ with\\ <=\\ in\\ GameRuntime::timer_active|src/viewer/game\\.rs:1180:9:\\ replace\\ GameRuntime::step_timers\\ with\\ \\(\\)|src/viewer/game\\.rs:120:16:\\ replace\\ \\+=\\ with\\ \\*=\\ in\\ Condition::validate|src/viewer/game\\.rs:1389:15:\\ replace\\ <\\ with\\ <=\\ in\\ GameRuntime::enabled|src/viewer/game\\.rs:1395:9:\\ replace\\ GameRuntime::enabled_entity\\ \\->\\ Option<bool>\\ with\\ None|src/viewer/game\\.rs:1419:9:\\ replace\\ GameRuntime::interact\\ \\->\\ Option<GameEvent>\\ with\\ None|src/viewer/game\\.rs:1458:34:\\ replace\\ \\|\\|\\ with\\ \\&\\&\\ in\\ GameRuntime::step_triggers|src/viewer/game\\.rs:199:9:\\ replace\\ CompiledCondition::compile\\ \\->\\ Self\\ with\\ Default::default\\(\\)|src/viewer/game\\.rs:224:9:\\ replace\\ CompiledCondition::holds\\ \\->\\ bool\\ with\\ false|src/viewer/game\\.rs:694:5:\\ replace\\ apply_effects\\ with\\ \\(\\))$",
+        "--jobs",
+        "1",
+        "--jobserver-tasks",
+        "2",
+        "--copy-target=false",
+        "--timeout",
+        "30",
+        "--build-timeout",
+        "600",
+        "--no-shuffle",
+        "--output",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/mutations-rules-before-2",
+        "--cargo-arg=--locked",
+        "--cargo-arg=--test",
+        "--cargo-arg=game_conditions",
+        "--cargo-arg=--test",
+        "--cargo-arg=game_runtime",
+        "--cargo-arg=--test",
+        "--cargo-arg=game_failure_paths",
+        "--",
+        "--",
+        "--test-threads=2",
+        "gameplay_is_fixed_rate_at_30_60_144_and_240_hz",
+        "generated_content_runs_on_separate_headless_process_with_two_scripted_clients",
+        "generated_game_runs_rules_physics_pause_and_transactional_restart",
+        "old_round_inputs_cannot_move_or_complete_the_restarted_world",
+        "prop_pickup_drop_and_restart_use_the_shared_authoritative_action",
+        "reordered_snapshots_cannot_undo_a_round_reset_or_run_client_rules",
+        "server_movers_are_mirrored_without_running_client_timers_or_triggers",
+        "two_shared_clients_observe_server_owned_win_reset_and_props",
+        "a_lost_match_restarts_and_can_then_be_won",
+        "a_mistake_half_way_through_resets_progress_but_the_once_bonus_is_not_given_twice",
+        "a_repeating_timer_fires_once_per_cycle",
+        "pressing_in_the_wrong_order_counts_a_mistake_and_a_retry_still_wins",
+        "restarting_a_match_that_is_still_running_fails_the_scenario",
+        "running_out_the_timer_loses_and_a_loss_freezes_the_match",
+        "the_exit_does_nothing_until_the_puzzle_is_solved",
+        "the_winning_route_wins_with_no_mistakes_and_one_bonus",
+        "without_the_deadline_rule_the_loss_scenario_fails",
+        "without_the_reset_rules_the_wrong_order_scenario_fails",
+        "all_any_and_not_compose_and_nest",
+        "comparisons_cover_every_operator_at_the_boundary",
+        "fail_ends_the_match_ignores_further_events_and_restart_clears_it",
+        "failed_is_absent_from_json_until_set_and_old_states_still_load",
+        "malformed_conditions_are_rejected_with_a_reason",
+        "modulo_compares_the_remainder_and_stays_positive_for_negative_counters",
+        "nesting_and_size_are_bounded",
+        "several_comparisons_on_one_counter_must_all_hold",
+        "the_original_counter_equals_form_still_parses_and_round_trips",
+        "timers_stop_firing_after_a_loss"
+      ],
+      "counts": {
+        "total_mutants": 18,
+        "caught": 9,
+        "missed": 7,
+        "timeout": 0,
+        "unviable": 2
+      },
+      "baseline": {
+        "scenario": "Baseline",
+        "summary": "Success",
+        "log_path": "log/baseline.log",
+        "diff_path": null,
+        "phase_results": [
+          {
+            "phase": "Build",
+            "duration": 18.958006099,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--no-run",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--test",
+              "game_conditions",
+              "--test",
+              "game_runtime",
+              "--test",
+              "game_failure_paths"
+            ]
+          },
+          {
+            "phase": "Test",
+            "duration": 4.659264619,
+            "process_status": "Success",
+            "argv": [
+              "cargo",
+              "test",
+              "--profile=itest",
+              "--verbose",
+              "--package=be2@0.2.0",
+              "--no-default-features",
+              "--locked",
+              "--test",
+              "game_conditions",
+              "--test",
+              "game_runtime",
+              "--test",
+              "game_failure_paths",
+              "--",
+              "--test-threads=2",
+              "gameplay_is_fixed_rate_at_30_60_144_and_240_hz",
+              "generated_content_runs_on_separate_headless_process_with_two_scripted_clients",
+              "generated_game_runs_rules_physics_pause_and_transactional_restart",
+              "old_round_inputs_cannot_move_or_complete_the_restarted_world",
+              "prop_pickup_drop_and_restart_use_the_shared_authoritative_action",
+              "reordered_snapshots_cannot_undo_a_round_reset_or_run_client_rules",
+              "server_movers_are_mirrored_without_running_client_timers_or_triggers",
+              "two_shared_clients_observe_server_owned_win_reset_and_props",
+              "a_lost_match_restarts_and_can_then_be_won",
+              "a_mistake_half_way_through_resets_progress_but_the_once_bonus_is_not_given_twice",
+              "a_repeating_timer_fires_once_per_cycle",
+              "pressing_in_the_wrong_order_counts_a_mistake_and_a_retry_still_wins",
+              "restarting_a_match_that_is_still_running_fails_the_scenario",
+              "running_out_the_timer_loses_and_a_loss_freezes_the_match",
+              "the_exit_does_nothing_until_the_puzzle_is_solved",
+              "the_winning_route_wins_with_no_mistakes_and_one_bonus",
+              "without_the_deadline_rule_the_loss_scenario_fails",
+              "without_the_reset_rules_the_wrong_order_scenario_fails",
+              "all_any_and_not_compose_and_nest",
+              "comparisons_cover_every_operator_at_the_boundary",
+              "fail_ends_the_match_ignores_further_events_and_restart_clears_it",
+              "failed_is_absent_from_json_until_set_and_old_states_still_load",
+              "malformed_conditions_are_rejected_with_a_reason",
+              "modulo_compares_the_remainder_and_stays_positive_for_negative_counters",
+              "nesting_and_size_are_bounded",
+              "several_comparisons_on_one_counter_must_all_hold",
+              "the_original_counter_equals_form_still_parses_and_round_trips",
+              "timers_stop_firing_after_a_loss"
+            ]
+          }
+        ]
+      },
+      "results": [
+        {
+          "name": "src/viewer/game.rs:96:13: delete field counter from struct Self expression in Condition::counter_equals",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:97:13: delete field equals from struct Self expression in Condition::counter_equals",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:103:9: replace Condition::comparisons -> [(Cmp, Option<i32>); 6] with [(Default::default(), None); 6]",
+          "summary": "Unviable",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:120:16: replace += with *= in Condition::validate",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:199:9: replace CompiledCondition::compile -> Self with Default::default()",
+          "summary": "Unviable",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:224:9: replace CompiledCondition::holds -> bool with false",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:694:5: replace apply_effects with ()",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1000:13: delete field round from struct GameState expression in GameRuntime::compile",
+          "summary": "MissedMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1001:13: delete field mover_ticks from struct GameState expression in GameRuntime::compile",
+          "summary": "MissedMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1006:13: delete field counters from struct GameState expression in GameRuntime::compile",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1007:13: delete field enabled from struct GameState expression in GameRuntime::compile",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1008:13: delete field visible from struct GameState expression in GameRuntime::compile",
+          "summary": "MissedMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1009:13: delete field enabled_zones from struct GameState expression in GameRuntime::compile",
+          "summary": "MissedMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1010:13: delete field mover_targets from struct GameState expression in GameRuntime::compile",
+          "summary": "MissedMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1011:13: delete field active_timers from struct GameState expression in GameRuntime::compile",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1171:15: replace < with <= in GameRuntime::timer_active",
+          "summary": "MissedMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1180:9: replace GameRuntime::step_timers with ()",
+          "summary": "CaughtMutant",
+          "file": "src/viewer/game.rs"
+        },
+        {
+          "name": "src/viewer/game.rs:1389:15: replace < with <= in GameRuntime::enabled",
+          "summary": "MissedMutant",
+          "file": "src/viewer/game.rs"
+        }
+      ]
+    }
+  ],
+  "plan_measurements": [
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "simulation",
+        "--plan"
+      ],
+      "seconds": 0.09931776998564601,
+      "stdout_bytes": 688,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "simulation",
+        "--plan"
+      ],
+      "seconds": 0.10961645795032382,
+      "stdout_bytes": 688,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "simulation",
+        "--plan"
+      ],
+      "seconds": 0.1011097839800641,
+      "stdout_bytes": 688,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "rules",
+        "--plan"
+      ],
+      "seconds": 0.09395409806165844,
+      "stdout_bytes": 785,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "rules",
+        "--plan"
+      ],
+      "seconds": 0.10042967600747943,
+      "stdout_bytes": 785,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "rules",
+        "--plan"
+      ],
+      "seconds": 0.16646225901786238,
+      "stdout_bytes": 785,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "codec",
+        "--plan"
+      ],
+      "seconds": 0.13154309603851289,
+      "stdout_bytes": 601,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "codec",
+        "--plan"
+      ],
+      "seconds": 0.12373001896776259,
+      "stdout_bytes": 601,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "codec",
+        "--plan"
+      ],
+      "seconds": 0.12321321398485452,
+      "stdout_bytes": 601,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "snapshot",
+        "--plan"
+      ],
+      "seconds": 0.12216051493305713,
+      "stdout_bytes": 846,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "snapshot",
+        "--plan"
+      ],
+      "seconds": 0.12486212106887251,
+      "stdout_bytes": 846,
+      "builds_triggered": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "mutations",
+        "--scope",
+        "snapshot",
+        "--plan"
+      ],
+      "seconds": 0.12110389303416014,
+      "stdout_bytes": 846,
+      "builds_triggered": 0
+    }
+  ],
+  "filter_repro": {
+    "argv": [
+      "/mnt/blueengine-usb/developer-tools/cargo-mutants-27.1.0/cargo-mutants",
+      "mutants",
+      "--no-config",
+      "--no-default-features",
+      "--file",
+      "src/viewer/game.rs",
+      "--re",
+      "^$",
+      "--list",
+      "--json"
+    ],
+    "expected_count": 0,
+    "actual": [
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field counter from struct Self expression in Condition::counter_equals\n@@ -88,17 +88,17 @@\n /// Bounds that keep a condition cheap to evaluate every tick and small in the document.\n pub const MAX_CONDITION_DEPTH: usize = 4;\n pub const MAX_CONDITION_NODES: usize = 16;\n \n impl Condition {\n     /// The original single-comparison guard.\n     pub fn counter_equals(counter: &str, value: i32) -> Self {\n         Self {\n-            counter: Some(counter.into()),\n+             /* ~ changed by cargo-mutants ~ */\n             equals: Some(value),\n             ..Self::default()\n         }\n     }\n \n     fn comparisons(&self) -> [(Cmp, Option<i32>); 6] {\n         [\n             (Cmp::Eq, self.equals),\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "Condition::counter_equals",
+          "return_type": "-> Self",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 100
+            },
+            "start": {
+              "column": 5,
+              "line": 93
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:96:13: delete field counter from struct Self expression in Condition::counter_equals",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 43,
+            "line": 96
+          },
+          "start": {
+            "column": 13,
+            "line": 96
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field equals from struct Self expression in Condition::counter_equals\n@@ -89,17 +89,17 @@\n pub const MAX_CONDITION_DEPTH: usize = 4;\n pub const MAX_CONDITION_NODES: usize = 16;\n \n impl Condition {\n     /// The original single-comparison guard.\n     pub fn counter_equals(counter: &str, value: i32) -> Self {\n         Self {\n             counter: Some(counter.into()),\n-            equals: Some(value),\n+             /* ~ changed by cargo-mutants ~ */\n             ..Self::default()\n         }\n     }\n \n     fn comparisons(&self) -> [(Cmp, Option<i32>); 6] {\n         [\n             (Cmp::Eq, self.equals),\n             (Cmp::Ne, self.not_equals),\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "Condition::counter_equals",
+          "return_type": "-> Self",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 100
+            },
+            "start": {
+              "column": 5,
+              "line": 93
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:97:13: delete field equals from struct Self expression in Condition::counter_equals",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 33,
+            "line": 97
+          },
+          "start": {
+            "column": 13,
+            "line": 97
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field round from struct GameState expression in GameRuntime::compile\n@@ -992,17 +992,17 @@\n         }\n         let mut active_timers = 0;\n         for (i, timer) in document.timers.iter().enumerate() {\n             if timer.auto_start {\n                 active_timers |= 1 << i;\n             }\n         }\n         let state = GameState {\n-            round: 0,\n+             /* ~ changed by cargo-mutants ~ */\n             mover_ticks: document\n                 .movers\n                 .iter()\n                 .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n                 .collect(),\n             counters: document.counters.values().copied().collect(),\n             enabled,\n             visible,\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1000:13: delete field round from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 22,
+            "line": 1000
+          },
+          "start": {
+            "column": 13,
+            "line": 1000
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field mover_ticks from struct GameState expression in GameRuntime::compile\n@@ -993,21 +993,17 @@\n         let mut active_timers = 0;\n         for (i, timer) in document.timers.iter().enumerate() {\n             if timer.auto_start {\n                 active_timers |= 1 << i;\n             }\n         }\n         let state = GameState {\n             round: 0,\n-            mover_ticks: document\n-                .movers\n-                .iter()\n-                .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n-                .collect(),\n+             /* ~ changed by cargo-mutants ~ */\n             counters: document.counters.values().copied().collect(),\n             enabled,\n             visible,\n             enabled_zones,\n             mover_targets,\n             active_timers,\n             ..Default::default()\n         };\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1001:13: delete field mover_ticks from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 28,
+            "line": 1005
+          },
+          "start": {
+            "column": 13,
+            "line": 1001
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field counters from struct GameState expression in GameRuntime::compile\n@@ -998,17 +998,17 @@\n         }\n         let state = GameState {\n             round: 0,\n             mover_ticks: document\n                 .movers\n                 .iter()\n                 .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n                 .collect(),\n-            counters: document.counters.values().copied().collect(),\n+             /* ~ changed by cargo-mutants ~ */\n             enabled,\n             visible,\n             enabled_zones,\n             mover_targets,\n             active_timers,\n             ..Default::default()\n         };\n         let targets = document\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1006:13: delete field counters from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 69,
+            "line": 1006
+          },
+          "start": {
+            "column": 13,
+            "line": 1006
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field enabled from struct GameState expression in GameRuntime::compile\n@@ -999,17 +999,17 @@\n         let state = GameState {\n             round: 0,\n             mover_ticks: document\n                 .movers\n                 .iter()\n                 .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n                 .collect(),\n             counters: document.counters.values().copied().collect(),\n-            enabled,\n+             /* ~ changed by cargo-mutants ~ */\n             visible,\n             enabled_zones,\n             mover_targets,\n             active_timers,\n             ..Default::default()\n         };\n         let targets = document\n             .interactables\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1007:13: delete field enabled from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 21,
+            "line": 1007
+          },
+          "start": {
+            "column": 13,
+            "line": 1007
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field visible from struct GameState expression in GameRuntime::compile\n@@ -1000,17 +1000,17 @@\n             round: 0,\n             mover_ticks: document\n                 .movers\n                 .iter()\n                 .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n                 .collect(),\n             counters: document.counters.values().copied().collect(),\n             enabled,\n-            visible,\n+             /* ~ changed by cargo-mutants ~ */\n             enabled_zones,\n             mover_targets,\n             active_timers,\n             ..Default::default()\n         };\n         let targets = document\n             .interactables\n             .iter()\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1008:13: delete field visible from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 21,
+            "line": 1008
+          },
+          "start": {
+            "column": 13,
+            "line": 1008
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field enabled_zones from struct GameState expression in GameRuntime::compile\n@@ -1001,17 +1001,17 @@\n             mover_ticks: document\n                 .movers\n                 .iter()\n                 .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n                 .collect(),\n             counters: document.counters.values().copied().collect(),\n             enabled,\n             visible,\n-            enabled_zones,\n+             /* ~ changed by cargo-mutants ~ */\n             mover_targets,\n             active_timers,\n             ..Default::default()\n         };\n         let targets = document\n             .interactables\n             .iter()\n             .map(|t| map.colliders[&t.entity].clone())\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1009:13: delete field enabled_zones from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 27,
+            "line": 1009
+          },
+          "start": {
+            "column": 13,
+            "line": 1009
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field mover_targets from struct GameState expression in GameRuntime::compile\n@@ -1002,17 +1002,17 @@\n                 .movers\n                 .iter()\n                 .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n                 .collect(),\n             counters: document.counters.values().copied().collect(),\n             enabled,\n             visible,\n             enabled_zones,\n-            mover_targets,\n+             /* ~ changed by cargo-mutants ~ */\n             active_timers,\n             ..Default::default()\n         };\n         let targets = document\n             .interactables\n             .iter()\n             .map(|t| map.colliders[&t.entity].clone())\n             .collect();\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1010:13: delete field mover_targets from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 27,
+            "line": 1010
+          },
+          "start": {
+            "column": 13,
+            "line": 1010
+          }
+        }
+      },
+      {
+        "diff": "--- src/viewer/game.rs\n+++ delete field active_timers from struct GameState expression in GameRuntime::compile\n@@ -1003,17 +1003,17 @@\n                 .iter()\n                 .map(|m| if m.initial_open { m.duration_ticks } else { 0 })\n                 .collect(),\n             counters: document.counters.values().copied().collect(),\n             enabled,\n             visible,\n             enabled_zones,\n             mover_targets,\n-            active_timers,\n+             /* ~ changed by cargo-mutants ~ */\n             ..Default::default()\n         };\n         let targets = document\n             .interactables\n             .iter()\n             .map(|t| map.colliders[&t.entity].clone())\n             .collect();\n         let trigger_zones = document\n",
+        "file": "src/viewer/game.rs",
+        "function": {
+          "function_name": "GameRuntime::compile",
+          "return_type": "-> Result<Self>",
+          "span": {
+            "end": {
+              "column": 6,
+              "line": 1065
+            },
+            "start": {
+              "column": 5,
+              "line": 803
+            }
+          }
+        },
+        "genre": "StructField",
+        "name": "src/viewer/game.rs:1011:13: delete field active_timers from struct GameState expression in GameRuntime::compile",
+        "package": "be2",
+        "replacement": "",
+        "span": {
+          "end": {
+            "column": 27,
+            "line": 1011
+          },
+          "start": {
+            "column": 13,
+            "line": 1011
+          }
+        }
+      }
+    ]
+  }
+}

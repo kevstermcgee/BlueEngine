@@ -1167,6 +1167,34 @@ impl HeadlessWorld {
 mod tests {
     use super::*;
     #[test]
+    fn fractional_display_pose_interpolates_motion_and_keeps_current_look() {
+        for fraction in [0.25, 0.5, 0.75] {
+            let mut player = Controller::default();
+            let start = player.position;
+            let mut stepper = PlayerStepper::default();
+            stepper.reset(&player);
+            assert_eq!(
+                stepper.advance(
+                    &mut player,
+                    Movement {
+                        forward: 1.,
+                        ..Default::default()
+                    },
+                    TICK_SECONDS * (1. + fraction),
+                    &[],
+                ),
+                1
+            );
+            let motion = player.position - start;
+            assert!(motion.length() > 0.001, "the tick must actually move");
+            player.yaw = 0.7;
+            player.pitch = -0.2;
+            let pose = stepper.pose(&player);
+            assert!((pose.position - (start + motion * fraction)).length() < 0.00001);
+            assert_eq!((pose.yaw, pose.pitch), (player.yaw, player.pitch));
+        }
+    }
+    #[test]
     fn render_rates_produce_same_simulation() {
         let mut end = Vec::new();
         for hz in [30, 60, 144, 240] {
