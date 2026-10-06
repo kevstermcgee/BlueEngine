@@ -57,7 +57,7 @@ def validate_project(game):
     except _project.ProjectError as error:raise WebError(str(error)) from error
 def integrity(dist):
     if dist.is_symlink():raise WebError('Web package directory must not be a symlink')
-    m=json.loads(safe_file(dist,'manifest.json').read_text())
+    m=json.loads(safe_file(dist,'manifest.json').read_text(encoding='utf-8'))
     if not isinstance(m,dict):raise WebError('Web manifest must contain a JSON object')
     if m.get('schema_version')!=SCHEMA or m.get('presentation') not in ('2d','3d','hybrid') or m.get('networking')!='offline':raise WebError('Unsupported web manifest requirements')
     if m.get('runtime_abi') not in (1,2) or not isinstance(m.get('id'),str) or not re.fullmatch('[a-z][a-z0-9-]{0,47}',m['id']):raise WebError('Invalid manifest runtime ABI/game ID')
@@ -104,16 +104,16 @@ class VerificationHandler(QuietHandler):
         root=Path(self.directory)
         if self.path=='/__be2_update':
             self.server.original_thumbnail=(root/'thumbnail.png').read_bytes()
-            (root/'index.html').write_text((root/'index.html').read_text()+'\n<!-- verified upgrade fixture -->\n')
+            (root/'index.html').write_text((root/'index.html').read_text(encoding='utf-8')+'\n<!-- verified upgrade fixture -->\n', encoding='utf-8', newline='\n')
             write_worker(root)
-            manifest=json.loads((root/'manifest.json').read_text())
+            manifest=json.loads((root/'manifest.json').read_text(encoding='utf-8'))
             manifest['file_sha256']={p.relative_to(root).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.rglob('*')) if p.is_file() and p.name!='manifest.json'}
             manifest['package_id']=release.package_id(manifest['file_sha256']);write_manifest(root,manifest)
             # HTTP 200 but wrong content: interrupted static deployment must not activate.
             (root/'thumbnail.png').write_bytes(b'incomplete deployment')
         else:(root/'thumbnail.png').write_bytes(self.server.original_thumbnail)
         self.send_response(200);self.send_header('Content-Type','application/json');self.end_headers()
-        self.wfile.write(json.dumps({'package_id':json.loads((root/'manifest.json').read_text())['package_id']}).encode())
+        self.wfile.write(json.dumps({'package_id':json.loads((root/'manifest.json').read_text(encoding='utf-8'))['package_id']}).encode())
 
 def capabilities():
     return {'ok':True,'presentation':['2d','hybrid','3d'],'runtime':'portable','networking':['offline'],
@@ -123,19 +123,19 @@ def capabilities():
             'human_required':['physical controllers','Android/iOS Safari','hardware audio','device performance']}
 
 def control_contract():
-    return json.loads((ROOT/'templates/web/controls.json').read_text())
+    return json.loads((ROOT/'templates/web/controls.json').read_text(encoding='utf-8'))
 
 def control_help():
     c=control_contract()
     return ' · '.join(f"{v['label']}: {v['help']}" for v in c['commands'].values())
 
 def write_manifest(out,manifest):
-    (out/'manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n')
+    (out/'manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n', encoding='utf-8', newline='\n')
 
 def write_worker(out):
     hashes={p.relative_to(out).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(out.rglob('*')) if p.is_file() and p.name not in ('manifest.json','service-worker.js')}
-    worker=(ROOT/'templates/web/service-worker.js').read_text().replace('{{cache}}',release.package_id(hashes)).replace('{{hashes}}',json.dumps(hashes,sort_keys=True))
-    (out/'service-worker.js').write_text(worker)
+    worker=(ROOT/'templates/web/service-worker.js').read_text(encoding='utf-8').replace('{{cache}}',release.package_id(hashes)).replace('{{hashes}}',json.dumps(hashes,sort_keys=True))
+    (out/'service-worker.js').write_text(worker, encoding='utf-8', newline='\n')
 
 def release_contract(game,manifest):
     engine=release.source(ROOT,['src','assets','templates','tools','Cargo.toml','Cargo.lock','build.rs','.cargo'])
@@ -184,7 +184,7 @@ def browser_verify(dist, evidence):
         try:
             run(['node',ROOT/'tools/browser_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'browser.json',evidence/'browser.png'])
         finally:server.shutdown();server.server_close();thread.join()
-    report=json.loads((evidence/'browser.json').read_text())
+    report=json.loads((evidence/'browser.json').read_text(encoding='utf-8'))
     if not report['ok']:raise WebError('Browser smoke failed; inspect browser.json')
     if manifest.get('runtime_abi')==2:
         # Separate profile and real touch events: desktop keyboard evidence cannot stand in for mobile.
@@ -196,7 +196,7 @@ def browser_verify(dist, evidence):
             thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
             try:run(['node',ROOT/'tools/browser_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'mobile.json',evidence/'mobile.png','--mobile'])
             finally:server.shutdown();server.server_close();thread.join()
-        report['mobile']=json.loads((evidence/'mobile.json').read_text())
+        report['mobile']=json.loads((evidence/'mobile.json').read_text(encoding='utf-8'))
     return report
 def catalog_verify(site,evidence):
     evidence.mkdir(parents=True,exist_ok=True)
@@ -204,12 +204,12 @@ def catalog_verify(site,evidence):
     thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
     try:run(['node',ROOT/'tools/catalog_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'catalog.json',evidence/'catalog.png'])
     finally:server.shutdown();server.server_close();thread.join()
-    return json.loads((evidence/'catalog.json').read_text())
+    return json.loads((evidence/'catalog.json').read_text(encoding='utf-8'))
 def build(game, skip_browser=False):
     start=time.monotonic();project=validate_project(game)
     if (game/'Cargo.toml').is_symlink():raise WebError('Game Cargo.toml cannot be a symlink')
     if 'web' not in project['targets']:raise WebError('This game does not declare web; edit the proposal/project requirements deliberately before building')
-    cargo=tomllib.loads((game/'Cargo.toml').read_text());name=cargo['package']['name']
+    cargo=tomllib.loads((game/'Cargo.toml').read_text(encoding='utf-8'));name=cargo['package']['name']
     if name!=project['id']:raise WebError('game.project id must match Cargo package name')
     web=project.get('web_build');binary=web['binary'] if web else name
     if web:
@@ -217,12 +217,12 @@ def build(game, skip_browser=False):
         if binary not in bins:raise WebError(f'web_build.binary {binary} is not a declared Cargo binary')
         missing=set(web['features'])-set(cargo.get('features',{}))
         if missing:raise WebError(f'web_build.features are not declared in Cargo.toml: {sorted(missing)}')
-    identity=json.loads(safe_file(game,web.get('identity','assets/identity.json') if web else 'assets/identity.json').read_text())
+    identity=json.loads(safe_file(game,web.get('identity','assets/identity.json') if web else 'assets/identity.json').read_text(encoding='utf-8'))
     if not identity.get('title') or not identity.get('controls'):raise WebError('identity.json requires title and controls')
     target=Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'target')).resolve()
     cargo_home=Path(os.environ.get('CARGO_HOME',Path.home()/'.cargo')).resolve()
-    wasm_flags=f'-C link-arg=--allow-undefined --remap-path-prefix={cargo_home}=/cargo --remap-path-prefix={ROOT}=/blueengine --remap-path-prefix={game}=/game'
-    env={**os.environ,'CARGO_TARGET_DIR':str(target),'RUSTC_WRAPPER':'','CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS':wasm_flags,'CARGO_ENCODED_RUSTFLAGS':'','RUSTFLAGS':'','RUSTC_WORKSPACE_WRAPPER':''}
+    wasm_flags=['-C','link-arg=--allow-undefined',f'--remap-path-prefix={cargo_home}=/cargo',f'--remap-path-prefix={ROOT}=/blueengine',f'--remap-path-prefix={game}=/game']
+    env={**os.environ,'CARGO_TARGET_DIR':str(target),'RUSTC_WRAPPER':'','RUSTC_WORKSPACE_WRAPPER':''}
     env.pop('CARGO_ENCODED_RUSTFLAGS',None)
     env.pop('RUSTFLAGS',None)
     evidence=game/'.blue-check/web';evidence.mkdir(parents=True,exist_ok=True)
@@ -231,13 +231,14 @@ def build(game, skip_browser=False):
     env['BE2_VERIFY_REPORT']=str(evidence/'native-state.json')
     state=evidence/'native-state.json';state.unlink(missing_ok=True)
     tests=run(['cargo','test','--offline','--locked','--no-default-features'],cwd=game,env=env)
-    (evidence/'headless.log').write_text(tests)
+    (evidence/'headless.log').write_text(tests, encoding='utf-8', newline='\n')
     if not state.is_file():raise WebError('Tests must export BE2_VERIFY_REPORT using two_d::verify, including expected hash/outcome. Copy the two-d starter verification test.')
-    expected=json.loads(state.read_text())
+    expected=json.loads(state.read_text(encoding='utf-8'))
     validate_proof(expected)
     build_args=['cargo','build','--offline','--locked','--release','--target','wasm32-unknown-unknown','--bin',binary]
     if web:build_args+=['--no-default-features','--features',','.join(web['features'])]
-    run(build_args,cwd=game,env=env)
+    # Cargo splits plain RUSTFLAGS on whitespace; encoded arguments preserve paths containing spaces.
+    run(build_args,cwd=game,env={**env,'CARGO_ENCODED_RUSTFLAGS':'\x1f'.join(wasm_flags)})
     metadata=json.loads(run(['cargo','metadata','--offline','--locked','--format-version','1'],cwd=game,env=env))
     engine=next(p for p in metadata['packages'] if p['name']=='be2')
     if Path(engine['manifest_path']).resolve()!=ROOT/'Cargo.toml':raise WebError('Build must use this workflow engine checkout; invoke the dependency engine tools/be2.py')
@@ -251,18 +252,18 @@ def build(game, skip_browser=False):
         out=Path(stage)
         shutil.copy2(target/'wasm32-unknown-unknown/release'/f'{binary.replace(chr(45),chr(95))}.wasm' if (target/'wasm32-unknown-unknown/release'/f'{binary.replace(chr(45),chr(95))}.wasm').exists() else target/'wasm32-unknown-unknown/release'/f'{binary}.wasm',out/'game.wasm')
         (out/'loader.js').write_bytes(loader_bytes);shutil.copy2(ROOT/'templates/web/platform.js',out/'platform.js');shutil.copy2(ROOT/'templates/web/mobile.js',out/'mobile.js');shutil.copy2(game/'assets/icon.png',out/'thumbnail.png')
-        page=(ROOT/'templates/web/index.html').read_text()
+        page=(ROOT/'templates/web/index.html').read_text(encoding='utf-8')
         for key,value in {'title':identity['title'],'description':project['description'],'controls':identity['controls']+' · '+control_help()}.items():page=page.replace('{{'+key+'}}',html.escape(value,quote=True))
         mobile=project.get('mobile_controls',{'layout':'dpad','action_label':'Action'})
         page=page.replace('{{control_config}}',json.dumps(control_contract()).replace('<','\\u003c'))
         page=page.replace('{{mobile_config}}',json.dumps(mobile).replace('<','\\u003c'))
-        (out/'index.html').write_text(page)
-        (out/'app.webmanifest').write_text(json.dumps({'id':'./','name':identity['title'],'short_name':identity['title'][:24],'start_url':'./','scope':'./','display':'standalone','background_color':'#07111F','theme_color':'#07111F','icons':[{'src':'thumbnail.png','sizes':'256x256','type':'image/png'}]}))
+        (out/'index.html').write_text(page, encoding='utf-8', newline='\n')
+        (out/'app.webmanifest').write_text(json.dumps({'id':'./','name':identity['title'],'short_name':identity['title'][:24],'start_url':'./','scope':'./','display':'standalone','background_color':'#07111F','theme_color':'#07111F','icons':[{'src':'thumbnail.png','sizes':'256x256','type':'image/png'}]}), encoding='utf-8', newline='\n')
         for name in release.runtime_files(game,identity.get('package',[]),safe_file):
             if name in ('manifest.json','build.json','game.wasm','index.html','loader.js','platform.js','thumbnail.png','mobile.js','service-worker.js','app.webmanifest'):raise WebError(f'Extra asset collides with reserved package file: {name}')
             target_file=safe_file(out,name);target_file.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(safe_file(game,name),target_file)
         epoch=int(os.environ.get('SOURCE_DATE_EPOCH',run(['git','show','-s','--format=%ct','HEAD'],cwd=ROOT).strip()))
-        (out/'build.json').write_text(json.dumps({'engine_revision':git_revision(ROOT),'game_revision':git_revision(game),'game_source_sha256':source_hash(game),'built_at_epoch':epoch},sort_keys=True)+'\n')
+        (out/'build.json').write_text(json.dumps({'engine_revision':git_revision(ROOT),'game_revision':git_revision(game),'game_source_sha256':source_hash(game),'built_at_epoch':epoch},sort_keys=True)+'\n', encoding='utf-8', newline='\n')
         write_worker(out)
         manifest={'schema_version':SCHEMA,'runtime_abi':2,'runtime':'portable','mobile_controls':mobile,'install':{'web':'app.webmanifest','offline':True},'id':project['id'],'title':identity['title'],'description':project['description'],'engine_revision':git_revision(ROOT),'game_revision':git_revision(game),'game_source_sha256':source_hash(game),'presentation':project['presentation'],'targets':project['targets'],'input':project['input'],'networking':project['networking'],'built_at_epoch':epoch,'timestamp_policy':'SOURCE_DATE_EPOCH or source commit time for reproducible packaging','thumbnail':'thumbnail.png','play':'index.html','native_download':None,'compatibility':{'macroquad':macro['version'],'miniquad':mini['version'],'quad-snd':sound['version'],'loader_sha256':hashlib.sha256(loader_bytes).hexdigest(),'webgl':'WebGL 1','save_frame':1,'storage':'localStorage per origin + game ID; 4 MiB limit; Snapshot version/migrations'},'verification':expected,'file_sha256':{p.relative_to(out).as_posix():hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(out.rglob('*')) if p.is_file()}}
         manifest.update(release_contract(game,manifest))
@@ -302,13 +303,13 @@ def directory_publish(package,destination):
     catalog=[]
     for p in sorted(destination.glob('*/manifest.json')):
         m=integrity(p.parent);catalog.append({k:m.get(k) for k in ('id','title','description','engine_revision','game_revision','presentation','networking','input','targets','built_at_epoch','compatibility','package_id','sources','browser_verification','required_capabilities')}|{'play':m['id']+'/index.html','thumbnail':m['id']+'/thumbnail.png','native_download':m['native_download']})
-    temp=destination/'catalog.json.tmp';temp.write_text(json.dumps({'schema_version':1,'games':catalog},indent=2)+'\n');temp.replace(destination/'catalog.json')
+    temp=destination/'catalog.json.tmp';temp.write_text(json.dumps({'schema_version':1,'games':catalog},indent=2)+'\n', encoding='utf-8', newline='\n');temp.replace(destination/'catalog.json')
     spec=importlib.util.spec_from_file_location('be2_catalog',ROOT/'templates/catalog/browser_catalog.py')
     feed=importlib.util.module_from_spec(spec);spec.loader.exec_module(feed)
     cards=''.join(feed.card(g,prefix='')['card'] for g in catalog)
     for game in catalog:feed.write_details(destination,game['id'],game['title'],game['description'],game['presentation'],game['networking'],game,game.get('native_download'),prefix='')
-    page=feed.enhance_page((ROOT/'templates/catalog/index.html').read_text().replace('{{cards}}',cards))
-    (destination/'index.html').write_text(page)
+    page=feed.enhance_page((ROOT/'templates/catalog/index.html').read_text(encoding='utf-8').replace('{{cards}}',cards))
+    (destination/'index.html').write_text(page, encoding='utf-8', newline='\n')
     for name in ('app.js','style.css','catalog.css'):shutil.copy2(ROOT/'templates/catalog'/name,destination/name)
     return {'source_retrieval':source_proof,'package_id':manifest['package_id'],'backend':'directory','deployed':str(slot),'url':None,'catalog':str(destination/'catalog.json'),'remaining_external_step':'Serve this directory through your static host; each game is under /GAME_ID/. No external URL has been created.'}
 def main(argv=None):

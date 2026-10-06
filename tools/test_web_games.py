@@ -20,6 +20,11 @@ class PackageTests(unittest.TestCase):
         mock=patch('tools.web_reproduce.reproduce',return_value={'ok':True,'compared_fields':['package_id','file_sha256']});mock.start();self.addCleanup(mock.stop)
         self.stamp()
     def stamp(self):(self.dist/'manifest.json').write_text(json.dumps(self.manifest))
+    def test_unicode_catalog_is_utf8_on_every_host(self):
+        self.manifest['title']='龙 🌱';self.stamp();out=self.root/'library'
+        web.directory_publish(self.dist,out)
+        self.assertIn('龙 🌱',(out/'games/test-game/index.html').read_text(encoding='utf-8'))
+        self.assertIn('←',(out/'games/test-game/index.html').read_text(encoding='utf-8'))
     def test_open_ended_routes_require_explicit_meaningful_evidence(self):
         proof={'hash':'1'*16,'outcome':'playing','ticks':1200,'purpose':'walk across streamed chunks'}
         self.manifest['verification']=proof;self.stamp();web.integrity(self.dist)

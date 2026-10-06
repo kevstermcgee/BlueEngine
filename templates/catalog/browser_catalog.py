@@ -19,7 +19,7 @@ def write_details(out,slug,title,description,presentation,network,web=None,nativ
     file=directory/'index.html'
     info=f'<p class="meta">{esc(presentation.upper())} · {"Singleplayer" if network=="offline" else "Multiplayer" if network=="native-multiplayer" else "Networking not specified"}</p>'
     if file.is_file():
-        page=file.read_text()
+        page=file.read_text(encoding='utf-8')
         page=re.sub(r'<!-- browser-details -->.*?<!-- /browser-details -->','',page,flags=re.S)
         if 'href="../../catalog.css"' not in page:
             page=page.replace('</head>','<link rel="stylesheet" href="../../catalog.css"></head>',1)
@@ -33,7 +33,7 @@ def write_details(out,slug,title,description,presentation,network,web=None,nativ
         actions=f'<!-- browser-details --><section class="browser-details"><h2>Play in your browser</h2>{info}<p>{esc(web["description"])}</p><p>Controls: {esc(controls)}. Mobile controls appear below the game. Press F for fullscreen on desktop.</p><a class="dl play" href="../../{esc(prefix+web["play"])}">Play in browser</a><p>Install from the browser to play offline after the first complete load. Progress stays on this device and browser; it is independent of native saves.</p></section><!-- /browser-details -->'
         # Keep both ways to play above the native release-history table.
         page=page.replace('</section>','</section>'+actions,1) if '</section>' in page else page.replace('</main>',actions+'</main>',1)
-    file.write_text(page)
+    file.write_text(page, encoding='utf-8', newline='\n')
 def card(game,prefix="web/"):
     slug=game['id'];title=game['title'];description=game['description'];presentation=game['presentation'];network=game['networking']
     created=datetime.datetime.fromtimestamp(game['built_at_epoch'],datetime.timezone.utc).date().isoformat()
@@ -49,14 +49,14 @@ def merge_games(games,rows,web_root,out,games_dir):
     shutil.copy2(Path(__file__).with_name('catalog.css'),out/'catalog.css')
     browser={}
     if (web_root/'catalog.json').is_file():
-        catalog=json.loads((web_root/'catalog.json').read_text())
+        catalog=json.loads((web_root/'catalog.json').read_text(encoding='utf-8'))
         browser={g['id']:g for g in catalog['games']}
         shutil.copytree(web_root,out/'web',dirs_exist_ok=True)
     result=[]
     for row,game in zip(rows,games):
         slug=row['slug'];web=browser.pop(slug,None)
         project_path=Path(games_dir)/slug/'game.project.json'
-        project=json.loads(project_path.read_text()) if project_path.is_file() else {}
+        project=json.loads(project_path.read_text(encoding='utf-8')) if project_path.is_file() else {}
         presentation=(web or project).get('presentation','3d')
         network=(web or project).get('networking','native-multiplayer' if row.get('online_args_b64') else 'unknown')
         body=game['card'].replace('<article ', '<article '+attributes(slug,presentation,network,bool(web),True)+' ',1)

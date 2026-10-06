@@ -95,8 +95,10 @@ jobs:
       - name: Build and verify each isolated browser game
         run: |
           for game in lantern-run pocket-breaker orchard-watch lantern-grove; do
+            python3 tools/be2.py web prepare games/$game
             python3 tools/be2.py web build games/$game
           done
+          python3 tools/be2.py web prepare assets/games/leo
           python3 tools/be2.py web build assets/games/leo
       - name: Reproduce public browser sources with empty Cargo targets
         if: github.event_name == 'push'

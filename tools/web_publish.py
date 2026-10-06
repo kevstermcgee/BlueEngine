@@ -33,7 +33,7 @@ def publish(package,repository,run,integrity,directory_publish):
         from tools.web_games import catalog_verify
         validation=Path(folder)/'validation';validation.mkdir()
         release=json.loads(run(['gh','api',f'repos/{repository}/releases/latest']))
-        (validation/'release.json').write_text(json.dumps(release))
+        (validation/'release.json').write_text(json.dumps(release), encoding='utf-8', newline='\n')
         catalog_name=next((name for name in ('Games-catalog.tsv','BlueEngineLauncher-catalog.tsv') if any(a['name']==name for a in release['assets'])),None)
         if catalog_name is None:raise WebError('Current release has no supported native game catalog; verified package retained.')
         run(['gh','release','download',release['tag_name'],'--repo',repository,'--pattern',catalog_name,'--dir',validation])
@@ -80,7 +80,7 @@ def publish(package,repository,run,integrity,directory_publish):
         return {'source_retrieval':source_proof,'backend':'github-pages','url':confirmed[0]['url'] if len(confirmed)==1 else None,'games':confirmed,'repository':repository,'deployment_commit':commit if changed else None,'library_commit':commit,'already_current':not changed,'run':deployment,'remote_manifest_verified':True,'remote_files_verified':True,'catalog_verified':catalog_proof}
 
 def integrate_catalog(builder):
-    source=builder.read_text();marker='# BlueEngine unified catalog (static publisher contract v2)'
+    source=builder.read_text(encoding='utf-8');marker='# BlueEngine unified catalog (static publisher contract v2)'
     anchor='    (out / "index.html").write_text(page)'
     sort_anchor='    games.sort(key=lambda g: g["name"])'
     if anchor not in source or sort_anchor not in source:raise ValueError('Catalog build integration point changed; update the adapter instead of guessing edits')
@@ -94,9 +94,9 @@ def integrate_catalog(builder):
     games = merge_games(games, rows, Path(__file__).resolve().parent / "web", out, args.games_dir)
 '''+sort_anchor)
         source=source.replace(anchor,'    page = enhance_page(page)\n'+anchor)
-    builder.write_text(source)
+    builder.write_text(source, encoding='utf-8', newline='\n')
     web_index=builder.parent/'web/index.html'
-    if web_index.exists():web_index.write_text('<!doctype html><meta http-equiv="refresh" content="0;url=../"><a href="../">All BlueEngine games</a>')
+    if web_index.exists():web_index.write_text('<!doctype html><meta http-equiv="refresh" content="0;url=../"><a href="../">All BlueEngine games</a>', encoding='utf-8', newline='\n')
     templates=Path(__file__).resolve().parent.parent/'templates/catalog'
     import shutil
     for name in ('browser_catalog.py','app.js','catalog.css'):shutil.copy2(templates/name,builder.parent/name)

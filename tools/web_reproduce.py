@@ -59,7 +59,7 @@ def reproduce(package, output=None):
                   'differences': differences, 'empty_target': True,
                   'checkout': 'anonymous exact commit, no local Git objects or working files',
                   'dependency_archives': 'Cargo cache allowed; all binaries compiled afresh'}
-        (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
+        (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8', newline='\n')
         if differences:
             raise release.ReleaseError(f'Clean reproduction differs; inspect {output / "result.json"}')
         return result

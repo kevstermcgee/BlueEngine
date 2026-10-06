@@ -13,7 +13,7 @@ class ReleaseError(ValueError):
 
 
 def git(args, cwd):
-    result = subprocess.run(['git', *args], cwd=cwd, capture_output=True, text=True, timeout=120, env={**os.environ,'GIT_TERMINAL_PROMPT':'0'})
+    result = subprocess.run(['git', *args], cwd=cwd, capture_output=True, text=True, timeout=600 if 'fetch' in args else 120, env={**os.environ,'GIT_TERMINAL_PROMPT':'0'})
     if result.returncode:
         raise ReleaseError(f"Source retrieval failed: git {' '.join(args)}\n{result.stderr[-2000:]}")
     return result.stdout.strip()
@@ -111,7 +111,7 @@ def runtime_files(game, declarations, safe_file):
         banks = [p for p in candidates if p.name == 'bank.json']
         bank_dirs = {p.parent for p in banks}
         for bank in banks:
-            value = json.loads(bank.read_text())
+            value = json.loads(bank.read_text(encoding='utf-8'))
             selected.add(bank.relative_to(game).as_posix())
             for group in ('effects', 'music'):
                 for spec in value.get(group, {}).values():

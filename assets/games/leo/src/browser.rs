@@ -77,7 +77,7 @@ impl GameLogic for Walker {
             x: if tick % 400 < 200 { 1 } else { -1 },
             sprint: true,
             action: tick % 200 == 50,
-            look: [if tick % 400 == 0 { 0.5 } else { 0. }, 0.],
+            look: [if tick.is_multiple_of(400) { 0.5 } else { 0. }, 0.],
             ..Default::default()
         }
     }
