@@ -96,10 +96,15 @@ def invoke(args, *, env=None, log=None, capture=False, timeout=None, harness=Non
     return result.stdout
 
 
+def target_directory():
+    path = Path(os.environ.get('CARGO_TARGET_DIR') or ROOT / 'target')
+    return (path if path.is_absolute() else ROOT / path).resolve()
+
+
 def environment(kind):
     env = os.environ.copy()
     # Keep feature-isolated outputs; never mix a graphics-enabled headless binary into a package.
-    base = Path(env.get('CARGO_TARGET_DIR', ROOT / 'target')).resolve()
+    base = target_directory()
     target = base / ('be2-' + kind)
     env['CARGO_TARGET_DIR'] = str(target)
     return env, target
@@ -119,8 +124,10 @@ def build(kind):
 def tool(args):
     # Share fresh headless authoring output with check_authoring; Cargo owns invalidation.
     # Isolated release builds remain the distribution/packaging path.
-    invoke(['cargo', 'build', '--locked', '--profile', 'itest', '--no-default-features', '--bin', 'be2-tools'])
-    target = Path(os.environ.get('CARGO_TARGET_DIR') or ROOT / 'target').resolve()
+    output = invoke(['cargo', 'build', '--locked', '--profile', 'itest', '--no-default-features', '--bin', 'be2-tools'], capture=True)
+    if output:
+        print(output, end='', file=sys.stderr)
+    target = target_directory()
     binary = target / 'itest' / ('be2-tools' + SUFFIX)
     invoke([binary, *args])
 
@@ -153,6 +160,7 @@ def check(plan, timeout=None):
     directory = Path(tempfile.mkdtemp(prefix='check-' + stamp + '-', dir=WORK))
     report = {'ok': False, 'plan': plan, 'checks': []}
     env = {**os.environ, **plan['env']} if plan.get('env') else None
+    report['target_directory'] = str(target_directory())
 
     def execute(i, original):
         cmd = list(original)
@@ -167,7 +175,14 @@ def check(plan, timeout=None):
         report['checks'].append(item)
         try:
             harness = (plan['command_harnesses'][i] if 'command_harnesses' in plan else plan.get('test_harness'))
-            item.update(invoke(cmd, log=log, env=env, timeout=timeout, harness=harness))
+            # Separate game manifests otherwise create separate target directories,
+            # rebuilding the same engine/dependencies once per game. Keep their
+            # original profiles/features: Cargo fingerprints decide actual reuse.
+            # The independent Python fixtures retain their own output directories.
+            command_env = env
+            if cmd[0] == 'cargo' or cmd[1:2] == ['tools/check_authoring.py']:
+                command_env = {**(env or os.environ), 'CARGO_TARGET_DIR': str(target_directory())}
+            item.update(invoke(cmd, log=log, env=command_env, timeout=timeout, harness=harness))
         except CommandFailure as error:
             item.update(error.packet)
             print(f'[{i+1}/{len(plan["commands"])}] FAILED: {error.packet["category"]}; log: {log}',

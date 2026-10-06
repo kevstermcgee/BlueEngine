@@ -37,6 +37,9 @@ required. FFmpeg is needed for offline tests. Linux graphical builds require
 `libasound2-dev`, `libudev-dev` and `pkg-config`.
 
 The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headless and tooling release outputs so packages cannot accidentally include a graphics-enabled headless executable. Missing dependencies and failed checks return nonzero; commands do not continue past failures. Check logs go in ignored `.be2-work/check-*/`.
+During checks, engine and game Cargo manifests share one target directory so matching
+engine/dependency artifacts compile once. Game profiles and features remain unchanged;
+independent Python fixtures retain their own targets.
 
 ## Command inventory
 

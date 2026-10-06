@@ -26,6 +26,9 @@ Native authoring uses `be2.py map ...`: Cargo checks freshness in the same headl
 `itest` output used by authoring integration. No release/LTO build is needed to scaffold
 or edit content. Distribution still uses isolated release outputs. Existing fast profiles,
 feature gating, dependency caches and the separate rendering-free authority remain intact.
+The check runner sends Cargo and native authoring to one target directory, including
+standalone game manifests. Each game retains its own profile/features; Cargo reuses only
+matching fingerprints. Independent Python fixtures keep their own output locations.
 
 For portable games, read the game AGENTS, `src/lib.rs`, project requirements and the
 public portable guide. The engine owns input normalization, fixed stepping, pause/restart,

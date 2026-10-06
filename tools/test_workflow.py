@@ -402,6 +402,25 @@ class RunnerTests(unittest.TestCase):
         self.assertIn('[1/2]', result.stderr)
         self.assertIn('FAILED: command_failure', result.stderr)
 
+    def test_game_manifests_share_cargo_outputs_without_moving_python_fixtures(self):
+        from tools import upgrade
+        with patch.dict(sys.modules, {'workflow': workflow, 'upgrade': upgrade}):
+            namespace = runpy.run_path(str(ROOT / 'tools/be2.py'))
+        check = namespace['check']; seen = []
+        def invoke(command, **options):
+            seen.append((command, options['env']))
+            return {'returncode': 0, 'elapsed_seconds': 0, 'log_bytes': 0}
+        plan = {'scope': 'full', 'commands': [
+            ['cargo', 'test', '--manifest-path', 'games/a/Cargo.toml'],
+            ['cargo', 'test', '--manifest-path', 'games/b/Cargo.toml'],
+            [sys.executable, '-m', 'unittest', 'independent_fixture']]}
+        with patch.dict(check.__globals__, {'ROOT': self.root, 'WORK': self.root / '.be2-work', 'invoke': invoke}), \
+                patch.dict(os.environ, {'CARGO_TARGET_DIR': ''}):
+            check(plan)
+        self.assertEqual(seen[0][1]['CARGO_TARGET_DIR'], str(self.root / 'target'))
+        self.assertEqual(seen[0][1]['CARGO_TARGET_DIR'], seen[1][1]['CARGO_TARGET_DIR'])
+        self.assertIsNone(seen[2][1])
+
     def test_progress_preserves_json_and_stage_timings(self):
         result, summary, report = self.run_check([sys.executable, '-c', 'print("fixture")'])
         self.assertEqual(result.returncode, 0)
