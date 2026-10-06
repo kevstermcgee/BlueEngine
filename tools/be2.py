@@ -368,6 +368,8 @@ def main():
     c = sub.add_parser('capture'); c.add_argument('destination'); c.add_argument('--map')
     p = sub.add_parser('package'); p.add_argument('destination')
     t = sub.add_parser('map'); t.add_argument('arguments', nargs=argparse.REMAINDER)
+    t = sub.add_parser('schemas', help='Opt-in Rust schema generation/parity and fixture verification')
+    t.add_argument('arguments', nargs=argparse.REMAINDER)
     f = sub.add_parser('features')
     f.add_argument('--feature', help='Derived implementation/interface/schema/test/example map for one feature')
     f.add_argument('--validate', action='store_true', help='Check indexed paths, dependency edges and test suites without a build')
@@ -393,6 +395,9 @@ def main():
     uv.add_argument('--timeout', type=float, default=600)
     uv.add_argument('--out', help='Write the full JSON result here (never written without this flag)')
     uv.add_argument('--json', action='store_true', help='Print the full JSON result instead of the human summary')
+    if len(sys.argv) > 1 and sys.argv[1] == 'schemas':
+        import schemas
+        raise SystemExit(schemas.main(sys.argv[2:]))
     args = parser.parse_args()
     if args.command in ('start', 'next', 'resume'):
         import springboard

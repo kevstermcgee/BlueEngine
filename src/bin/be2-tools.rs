@@ -360,6 +360,15 @@ fn run() -> Result<()> {
             })
         ),
         "game-schema" => println!("{}", include_str!("../../tools/game.schema.json")),
+        "schema-generate" => {
+            #[cfg(feature = "schema-generation")]
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&vesper3d::authoring_schemas::generate(arg(1)?)?)?
+            );
+            #[cfg(not(feature = "schema-generation"))]
+            return Err("schema-generate needs --no-default-features --features schema-generation; normal authoring commands remain available".into());
+        }
         "game-example" => {
             vesper3d::viewer::game_example::write(Path::new(arg(1)?))?;
             println!("{}", json!({"ok":true,"directory":arg(1)?}));

@@ -1,0 +1,58 @@
+{
+  "name": "generated, one winning route only (loss, retry, restart and wrong order are not covered): the shortest win (press button-a, press exit)",
+  "game_path": "game.json",
+  "ticks": 800,
+  "players": [
+    {
+      "id": 1,
+      "spawn": null
+    }
+  ],
+  "inputs": [
+    {
+      "tick": 1,
+      "player": 1,
+      "walk_to": [
+        -3.0,
+        2.5
+      ],
+      "route": true
+    },
+    {
+      "tick": 22,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "button-a"
+    },
+    {
+      "tick": 23,
+      "player": 1,
+      "walk_to": [
+        1.5475973,
+        1.3748688
+      ],
+      "route": true
+    },
+    {
+      "tick": 122,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "exit"
+    }
+  ],
+  "assertions": [
+    {
+      "tick": 125,
+      "tolerance": 0.0,
+      "completed_equals": true,
+      "failed_equals": false
+    },
+    {
+      "tick": 800,
+      "completed_equals": true,
+      "failed_equals": false
+    }
+  ]
+}

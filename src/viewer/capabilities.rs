@@ -9,6 +9,7 @@ pub const COMMANDS: &[(&str, &str)] = &[
     ("search", "TEXT"),
     ("game-describe", ""),
     ("game-schema", ""),
+    ("schema-generate", "KIND"),
     ("game-validate", "GAME.json"),
     ("game-example", "NEW_DIRECTORY"),
     ("export-house", "OUT.json"),
@@ -82,7 +83,7 @@ pub fn runtime_support() -> Value {
             },
             "interest_management": "room-graph relevance per player (HeadlessWorld::snapshot_for_player)",
             "prediction": "stock client (PredictionBuffer + reconciliation)",
-            "graceful_shutdown": "SIGINT, SIGTERM and SIGHUP: finish the tick, final autosave, exit 0; a second signal exits at once (tested on Unix; the Windows console-event path is compiled but has no runtime test)",
+            "graceful_shutdown": "SIGINT/SIGTERM/SIGHUP: finish tick, final autosave, exit 0; second signal exits immediately. Unix runtime-tested; Windows console path compile-only.",
             "saving": {
                 "autosave": "--autosave SECONDS (and once at shutdown); resume with --load auto",
                 "players_in_a_save": savestate::world::MAX_PLAYERS,

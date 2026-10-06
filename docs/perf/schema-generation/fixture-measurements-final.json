@@ -1,0 +1,422 @@
+[
+  {
+    "kind": "game",
+    "side": "before",
+    "attempt": 1,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      ".be2-work/old-game.schema.json",
+      "assets/games/three-switches/game.json",
+      "assets/games/observatory/content/game.json",
+      "assets/games/observatory/content/game-audio.json",
+      "assets/games/observatory/content/closed-gate.json"
+    ],
+    "seconds": 0.00726142106577754,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/games/three-switches/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game-audio.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/closed-gate.json",
+          "valid": true
+        }
+      ],
+      "schema": ".be2-work/old-game.schema.json",
+      "seconds": 0.005050902
+    },
+    "schema_sha256": "483e028b433ac3e505bdab36f1f8e8752f277ab94d5039e049a22e8dc56db505"
+  },
+  {
+    "kind": "game",
+    "side": "after",
+    "attempt": 1,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      "tools/game.schema.json",
+      "assets/games/three-switches/game.json",
+      "assets/games/observatory/content/game.json",
+      "assets/games/observatory/content/game-audio.json",
+      "assets/games/observatory/content/closed-gate.json"
+    ],
+    "seconds": 0.007201656000688672,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/games/three-switches/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game-audio.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/closed-gate.json",
+          "valid": true
+        }
+      ],
+      "schema": "tools/game.schema.json",
+      "seconds": 0.005027624
+    },
+    "schema_sha256": "e109044aa52168aa731e7028fb8d05d8cf5573197bc2d9d3422c5777116cee2f"
+  },
+  {
+    "kind": "game",
+    "side": "before",
+    "attempt": 2,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      ".be2-work/old-game.schema.json",
+      "assets/games/three-switches/game.json",
+      "assets/games/observatory/content/game.json",
+      "assets/games/observatory/content/game-audio.json",
+      "assets/games/observatory/content/closed-gate.json"
+    ],
+    "seconds": 0.008740262011997402,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/games/three-switches/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game-audio.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/closed-gate.json",
+          "valid": true
+        }
+      ],
+      "schema": ".be2-work/old-game.schema.json",
+      "seconds": 0.006229269
+    },
+    "schema_sha256": "483e028b433ac3e505bdab36f1f8e8752f277ab94d5039e049a22e8dc56db505"
+  },
+  {
+    "kind": "game",
+    "side": "after",
+    "attempt": 2,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      "tools/game.schema.json",
+      "assets/games/three-switches/game.json",
+      "assets/games/observatory/content/game.json",
+      "assets/games/observatory/content/game-audio.json",
+      "assets/games/observatory/content/closed-gate.json"
+    ],
+    "seconds": 0.010778859024867415,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/games/three-switches/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game-audio.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/closed-gate.json",
+          "valid": true
+        }
+      ],
+      "schema": "tools/game.schema.json",
+      "seconds": 0.007731358
+    },
+    "schema_sha256": "e109044aa52168aa731e7028fb8d05d8cf5573197bc2d9d3422c5777116cee2f"
+  },
+  {
+    "kind": "game",
+    "side": "before",
+    "attempt": 3,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      ".be2-work/old-game.schema.json",
+      "assets/games/three-switches/game.json",
+      "assets/games/observatory/content/game.json",
+      "assets/games/observatory/content/game-audio.json",
+      "assets/games/observatory/content/closed-gate.json"
+    ],
+    "seconds": 0.010059110936708748,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/games/three-switches/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game-audio.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/closed-gate.json",
+          "valid": true
+        }
+      ],
+      "schema": ".be2-work/old-game.schema.json",
+      "seconds": 0.007577928
+    },
+    "schema_sha256": "483e028b433ac3e505bdab36f1f8e8752f277ab94d5039e049a22e8dc56db505"
+  },
+  {
+    "kind": "game",
+    "side": "after",
+    "attempt": 3,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      "tools/game.schema.json",
+      "assets/games/three-switches/game.json",
+      "assets/games/observatory/content/game.json",
+      "assets/games/observatory/content/game-audio.json",
+      "assets/games/observatory/content/closed-gate.json"
+    ],
+    "seconds": 0.009825558983720839,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/games/three-switches/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/game-audio.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/observatory/content/closed-gate.json",
+          "valid": true
+        }
+      ],
+      "schema": "tools/game.schema.json",
+      "seconds": 0.006956816
+    },
+    "schema_sha256": "e109044aa52168aa731e7028fb8d05d8cf5573197bc2d9d3422c5777116cee2f"
+  },
+  {
+    "kind": "asset",
+    "side": "before",
+    "attempt": 1,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      ".be2-work/old-asset.schema.json",
+      "assets/models/cc0/pack.json",
+      "assets/games/blueengine-sandbox/assets.json"
+    ],
+    "seconds": 0.005574085982516408,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/models/cc0/pack.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/blueengine-sandbox/assets.json",
+          "valid": true
+        }
+      ],
+      "schema": ".be2-work/old-asset.schema.json",
+      "seconds": 0.004019542
+    },
+    "schema_sha256": "2a4dce4f944be962d6db8685adc7a64883c99da6b916298674a3ba7b140aee65"
+  },
+  {
+    "kind": "asset",
+    "side": "after",
+    "attempt": 1,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      "assets/asset-pack.schema.json",
+      "assets/models/cc0/pack.json",
+      "assets/games/blueengine-sandbox/assets.json"
+    ],
+    "seconds": 0.005468882038258016,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/models/cc0/pack.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/blueengine-sandbox/assets.json",
+          "valid": true
+        }
+      ],
+      "schema": "assets/asset-pack.schema.json",
+      "seconds": 0.003965786
+    },
+    "schema_sha256": "ee44fede66079af9e17de8698d4ed5365b257f081650cc3175cf6b0c52546cea"
+  },
+  {
+    "kind": "asset",
+    "side": "before",
+    "attempt": 2,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      ".be2-work/old-asset.schema.json",
+      "assets/models/cc0/pack.json",
+      "assets/games/blueengine-sandbox/assets.json"
+    ],
+    "seconds": 0.005908651044592261,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/models/cc0/pack.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/blueengine-sandbox/assets.json",
+          "valid": true
+        }
+      ],
+      "schema": ".be2-work/old-asset.schema.json",
+      "seconds": 0.004317805
+    },
+    "schema_sha256": "2a4dce4f944be962d6db8685adc7a64883c99da6b916298674a3ba7b140aee65"
+  },
+  {
+    "kind": "asset",
+    "side": "after",
+    "attempt": 2,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      "assets/asset-pack.schema.json",
+      "assets/models/cc0/pack.json",
+      "assets/games/blueengine-sandbox/assets.json"
+    ],
+    "seconds": 0.005613027955405414,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/models/cc0/pack.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/blueengine-sandbox/assets.json",
+          "valid": true
+        }
+      ],
+      "schema": "assets/asset-pack.schema.json",
+      "seconds": 0.004082212
+    },
+    "schema_sha256": "ee44fede66079af9e17de8698d4ed5365b257f081650cc3175cf6b0c52546cea"
+  },
+  {
+    "kind": "asset",
+    "side": "before",
+    "attempt": 3,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      ".be2-work/old-asset.schema.json",
+      "assets/models/cc0/pack.json",
+      "assets/games/blueengine-sandbox/assets.json"
+    ],
+    "seconds": 0.005831748014315963,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/models/cc0/pack.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/blueengine-sandbox/assets.json",
+          "valid": true
+        }
+      ],
+      "schema": ".be2-work/old-asset.schema.json",
+      "seconds": 0.004088847
+    },
+    "schema_sha256": "2a4dce4f944be962d6db8685adc7a64883c99da6b916298674a3ba7b140aee65"
+  },
+  {
+    "kind": "asset",
+    "side": "after",
+    "attempt": 3,
+    "argv": [
+      "/home/kevin/BlueEngine/target/itest/be2-schema-baseline",
+      "assets/asset-pack.schema.json",
+      "assets/models/cc0/pack.json",
+      "assets/games/blueengine-sandbox/assets.json"
+    ],
+    "seconds": 0.006580809014849365,
+    "result": {
+      "results": [
+        {
+          "errors": [],
+          "file": "assets/models/cc0/pack.json",
+          "valid": true
+        },
+        {
+          "errors": [],
+          "file": "assets/games/blueengine-sandbox/assets.json",
+          "valid": true
+        }
+      ],
+      "schema": "assets/asset-pack.schema.json",
+      "seconds": 0.00497956
+    },
+    "schema_sha256": "ee44fede66079af9e17de8698d4ed5365b257f081650cc3175cf6b0c52546cea"
+  }
+]

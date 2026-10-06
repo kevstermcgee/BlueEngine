@@ -126,145 +126,162 @@ pub fn run_mcp_server() -> crate::Result<()> {
 }
 
 fn list_mcp_tools() -> Vec<Value> {
-    vec![
-        json!({
-            "name": "describe",
-            "description": "Get BlueEngine capabilities, features, command registry, and specifications.",
-            "inputSchema": { "type": "object", "properties": {} }
-        }),
-        json!({
-            "name": "search",
-            "description": "Search features, source files, and tests across BlueEngine.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "query": { "type": "string", "description": "Search text (up to 100 bytes)" }
-                },
-                "required": ["query"]
-            }
-        }),
-        json!({
-            "name": "catalog",
-            "description": "List all available props in the asset catalog with their dimensions.",
-            "inputSchema": { "type": "object", "properties": {} }
-        }),
-        json!({
-            "name": "lint",
-            "description": "Perform design-level static analysis on a map document for floating props, leaks, overlaps, drop hazards, etc.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "map_path": { "type": "string", "description": "Path to map JSON" },
-                    "strict": { "type": "boolean", "description": "Fail on warnings" }
-                },
-                "required": ["map_path"]
-            }
-        }),
-        json!({
-            "name": "reach",
-            "description": "Analyze walkable reachability from spawn: detects drop hazards, perimeter leaks, and unreachable entities.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "map_path": { "type": "string", "description": "Path to map JSON" },
-                    "start": { "type": "array", "items": { "type": "number" }, "description": "Optional [x, y, z] start position" }
-                },
-                "required": ["map_path"]
-            }
-        }),
-        json!({
-            "name": "walk_auto",
-            "description": "Plan an A* route with player clearance and execute it using real 60 Hz physics. Pinpoints blockers if obstructed.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "map_path": { "type": "string", "description": "Path to map JSON" },
-                    "from": { "type": "array", "items": { "type": "number" }, "description": "[x, z] origin" },
-                    "to": { "type": "array", "items": { "type": "number" }, "description": "[x, z] destination" }
-                },
-                "required": ["map_path", "from", "to"]
-            }
-        }),
-        json!({
-            "name": "build_blueprint",
-            "description": "Compile a declarative blueprint specification into a complete, validated, lint-clean MapDocument.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "spec": { "type": "object", "description": "Blueprint JSON specification" },
-                    "out_path": { "type": "string", "description": "Output map path" }
-                },
-                "required": ["spec", "out_path"]
-            }
-        }),
-        json!({
-            "name": "scatter",
-            "description": "Procedurally scatter catalog props into a map within a rectangle, checking ground height and collision clearance.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "map_path": { "type": "string", "description": "Input map path" },
-                    "kind": { "type": "string", "description": "Prop kind from catalog" },
-                    "count": { "type": "integer", "description": "Number of props to place" },
-                    "rect": { "type": "array", "items": { "type": "number" }, "description": "[min_x, min_z, max_x, max_z]" },
-                    "seed": { "type": "integer", "description": "RNG seed" },
-                    "out_path": { "type": "string", "description": "Output map path" }
-                },
-                "required": ["map_path", "kind", "count", "rect", "out_path"]
-            }
-        }),
-        json!({
-            "name": "verify",
-            "description": "Run self-verification checks on a map or game (linting, reach, walk, objects, simulation scenarios).",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "map_path": { "type": "string", "description": "Map JSON path" }
-                },
-                "required": ["map_path"]
-            }
-        }),
-        json!({
-            "name": "sim",
-            "description": "Run a multi-agent headless gameplay simulation scenario and validate assertions.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "scenario_path": { "type": "string", "description": "Path to scenario JSON" }
-                },
-                "required": ["scenario_path"]
-            }
-        }),
-        json!({
-            "name": "replay_trace",
-            "description": "Replay a simulation trace and pinpoint the exact tick and state diff where divergence occurs.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "trace_path": { "type": "string", "description": "Path to trace JSON" },
-                    "game_path": { "type": "string", "description": "Optional game path" }
-                },
-                "required": ["trace_path"]
-            }
-        }),
-        json!({
-            "name": "src_lookup",
-            "description": "Navigate and inspect BlueEngine Rust symbols, signatures, and modules without dumping whole files.",
-            "inputSchema": {
-                "type": "object",
-                "properties": {
-                    "action": { "type": "string", "enum": ["map", "find", "outline", "show", "refs", "coverage"] },
-                    "query": { "type": "string", "description": "Symbol name, keyword, or file path" }
-                },
-                "required": ["action"]
-            }
-        }),
-        json!({
-            "name": "ui_check",
-            "description": "Audit BlueEngine UI screens (menu, lobby, HUD, pause) across 9 window resolutions.",
-            "inputSchema": { "type": "object", "properties": {} }
-        }),
-    ]
+    let schemas = input_schemas();
+    let tools = [
+        ("describe", "Get BlueEngine capabilities, features, command registry, and specifications."),
+        ("search", "Search features, source files, and tests across BlueEngine."),
+        ("catalog", "List all available props in the asset catalog with their dimensions."),
+        ("lint", "Perform design-level static analysis on a map document for floating props, leaks, overlaps, drop hazards, etc."),
+        ("reach", "Analyze walkable reachability from spawn: detects drop hazards, perimeter leaks, and unreachable entities."),
+        ("walk_auto", "Plan an A* route with player clearance and execute it using real 60 Hz physics. Pinpoints blockers if obstructed."),
+        ("build_blueprint", "Compile a declarative blueprint specification into a complete, validated, lint-clean MapDocument."),
+        ("scatter", "Procedurally scatter catalog props into a map within a rectangle, checking ground height and collision clearance."),
+        ("verify", "Run self-verification checks on a map or game (linting, reach, walk, objects, simulation scenarios)."),
+        ("sim", "Run a multi-agent headless gameplay simulation scenario and validate assertions."),
+        ("replay_trace", "Replay a simulation trace and pinpoint the exact tick and state diff where divergence occurs."),
+        ("src_lookup", "Navigate and inspect BlueEngine Rust symbols, signatures, and modules without dumping whole files."),
+        ("ui_check", "Audit BlueEngine UI screens (menu, lobby, HUD, pause) across 9 window resolutions."),
+    ];
+    tools.into_iter().map(|(name, description)| json!({
+        "name":name,"description":description,
+        "inputSchema":schemas.get(name).expect("generated input schema covers every MCP tool")
+    })).collect()
+}
+
+#[cfg(not(feature = "schema-generation"))]
+fn input_schemas() -> serde_json::Map<String, Value> {
+    serde_json::from_str(include_str!("../../tools/mcp.schemas.json"))
+        .expect("committed MCP schemas are validated by the generation gate")
+}
+
+#[cfg(feature = "schema-generation")]
+pub fn input_schemas() -> serde_json::Map<String, Value> {
+    use crate::authoring_schemas::generated;
+    use arguments::*;
+    let mut schemas = serde_json::Map::new();
+    macro_rules! insert {
+        ($name:literal, $ty:ty) => {
+            schemas.insert($name.into(), generated::<$ty>());
+        };
+    }
+    insert!("describe", Empty);
+    insert!("search", Search);
+    insert!("catalog", Empty);
+    insert!("lint", Lint);
+    insert!("reach", Reach);
+    insert!("walk_auto", Walk);
+    insert!("build_blueprint", Blueprint);
+    insert!("scatter", Scatter);
+    insert!("verify", MapPath);
+    insert!("sim", ScenarioPath);
+    insert!("replay_trace", Trace);
+    insert!("src_lookup", Lookup);
+    insert!("ui_check", Empty);
+    schemas
+}
+
+#[cfg(feature = "schema-generation")]
+mod arguments {
+    use schemars::JsonSchema;
+    use serde::{Deserialize, Serialize};
+    use serde_json::{Map, Value};
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Empty {}
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Search {
+        /// Search text (up to 100 bytes).
+        pub query: String,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct MapPath {
+        /// Path to map JSON.
+        pub map_path: String,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Lint {
+        /// Path to map JSON.
+        pub map_path: String,
+        /// Fail on warnings.
+        #[serde(default)]
+        pub strict: bool,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Reach {
+        /// Path to map JSON.
+        pub map_path: String,
+        /// Optional [x, y, z] start position.
+        pub start: Option<Vec<f32>>,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Walk {
+        /// Path to map JSON.
+        pub map_path: String,
+        /// [x, z] origin.
+        pub from: Vec<f32>,
+        /// [x, z] destination.
+        pub to: Vec<f32>,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Blueprint {
+        /// Blueprint JSON specification.
+        pub spec: Map<String, Value>,
+        /// Output map path.
+        pub out_path: String,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Scatter {
+        /// Input map path.
+        pub map_path: String,
+        /// Prop kind from catalog.
+        pub kind: String,
+        /// Number of props to place.
+        pub count: u64,
+        /// [min_x, min_z, max_x, max_z].
+        pub rect: Vec<f32>,
+        /// RNG seed.
+        pub seed: Option<u64>,
+        /// Output map path.
+        pub out_path: String,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct ScenarioPath {
+        /// Path to scenario JSON.
+        pub scenario_path: String,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Trace {
+        /// Path to trace JSON.
+        pub trace_path: String,
+        /// Optional game path.
+        pub game_path: Option<String>,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[schemars(transform = crate::authoring_schemas::mcp_arguments)]
+    pub struct Lookup {
+        pub action: LookupAction,
+        /// Symbol name, keyword, or file path.
+        pub query: Option<String>,
+    }
+    #[derive(Serialize, Deserialize, JsonSchema)]
+    #[serde(rename_all = "snake_case")]
+    pub enum LookupAction {
+        Map,
+        Find,
+        Outline,
+        Show,
+        Refs,
+        Coverage,
+    }
 }
 
 fn call_tool(name: &str, args: &Value) -> Value {

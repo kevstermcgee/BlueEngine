@@ -1,0 +1,42 @@
+[
+  {
+    "kind": "game",
+    "seconds": 0.0057933860225602984,
+    "bytes": 36372,
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "schema-generate",
+      "game"
+    ]
+  },
+  {
+    "kind": "patch",
+    "seconds": 0.0026840780628845096,
+    "bytes": 5511,
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "schema-generate",
+      "patch"
+    ]
+  },
+  {
+    "kind": "asset-pack",
+    "seconds": 0.0024967020144686103,
+    "bytes": 8205,
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "schema-generate",
+      "asset-pack"
+    ]
+  },
+  {
+    "kind": "mcp",
+    "seconds": 0.002253181068226695,
+    "bytes": 5323,
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "schema-generate",
+      "mcp"
+    ]
+  }
+]

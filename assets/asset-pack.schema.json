@@ -1,92 +1,245 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://blueengine.dev/schemas/asset-pack-v1.json",
-  "title": "BlueEngine Asset Pack",
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "pack",
-    "assets"
-  ],
-  "properties": {
-    "$schema": {
-      "type": "string"
-    },
-    "schema_version": {
-      "const": 1
-    },
-    "pack": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "id",
-        "name",
-        "version",
-        "scope",
-        "license"
-      ],
-      "properties": {
-        "id": {
-          "$ref": "#/$defs/id"
-        },
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-        },
-        "version": {
-          "type": "string",
-          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
-        },
-        "description": {
-          "type": "string",
-          "maxLength": 500
-        },
-        "scope": {
-          "enum": [
-            "game-local",
-            "shared"
-          ]
-        },
-        "license": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-        }
-      }
-    },
-    "assets": {
-      "type": "array",
-      "items": {
-        "$ref": "#/$defs/asset"
-      }
-    }
-  },
   "$defs": {
-    "id": {
-      "type": "string",
-      "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
-      "maxLength": 100
-    },
-    "vec3": {
-      "type": "array",
-      "prefixItems": [
-        {
-          "type": "number"
-        },
-        {
-          "type": "number"
-        },
-        {
-          "type": "number"
-        }
-      ],
-      "items": false
-    },
     "asset": {
-      "type": "object",
       "additionalProperties": false,
+      "properties": {
+        "description": {
+          "maxLength": 500,
+          "minLength": 1,
+          "type": "string"
+        },
+        "geometry": {
+          "additionalProperties": false,
+          "properties": {
+            "bounds_max": {
+              "items": {
+                "format": "float",
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            "bounds_min": {
+              "items": {
+                "format": "float",
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            "forward": {
+              "enum": [
+                "+x",
+                "-x",
+                "+z",
+                "-z"
+              ],
+              "type": "string"
+            },
+            "half_extents": {
+              "items": {
+                "format": "float",
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            "origin": {
+              "enum": [
+                "bottom-center",
+                "center",
+                "custom"
+              ],
+              "type": "string"
+            },
+            "triangle_count": {
+              "format": "uint64",
+              "minimum": 1,
+              "type": "integer"
+            },
+            "units": {
+              "enum": [
+                "meters"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "units",
+            "origin",
+            "half_extents"
+          ],
+          "type": "object"
+        },
+        "id": {
+          "maxLength": 100,
+          "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "lifecycle": {
+          "additionalProperties": false,
+          "properties": {
+            "notes": {
+              "maxLength": 500,
+              "type": "string"
+            },
+            "promoted_from": {
+              "maxLength": 100,
+              "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "experimental",
+                "candidate",
+                "stable",
+                "deprecated"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "status"
+          ],
+          "type": "object"
+        },
+        "physics": {
+          "additionalProperties": false,
+          "properties": {
+            "collision": {
+              "enum": [
+                "aabb",
+                "compound",
+                "conservative-bounds",
+                "mesh",
+                "none"
+              ],
+              "type": "string"
+            },
+            "metadata": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "mobility": {
+              "enum": [
+                "static",
+                "dynamic",
+                "runtime-policy",
+                "none"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "mobility",
+            "collision"
+          ],
+          "type": "object"
+        },
+        "source": {
+          "additionalProperties": false,
+          "properties": {
+            "attribution": {
+              "maxLength": 500,
+              "type": "string"
+            },
+            "derived_from": {
+              "maxLength": 100,
+              "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+              "type": "string"
+            },
+            "format": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "method": {
+              "enum": [
+                "reused",
+                "modified",
+                "generated",
+                "imported"
+              ],
+              "type": "string"
+            },
+            "original_sha256": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            "path": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "sha256": {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            "source_url": {
+              "format": "uri",
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "format",
+            "method"
+          ],
+          "type": "object"
+        },
+        "taxonomy": {
+          "additionalProperties": false,
+          "properties": {
+            "aliases": {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "categories": {
+              "items": {
+                "maxLength": 100,
+                "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+                "type": "string"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "tags": {
+              "items": {
+                "maxLength": 100,
+                "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          "required": [
+            "categories",
+            "tags",
+            "aliases"
+          ],
+          "type": "object"
+        },
+        "type": {
+          "enum": [
+            "prefab",
+            "mesh",
+            "material",
+            "texture",
+            "audio",
+            "animation"
+          ],
+          "type": "string"
+        }
+      },
       "required": [
         "id",
         "label",
@@ -98,205 +251,90 @@
         "physics",
         "lifecycle"
       ],
-      "properties": {
-        "id": {
-          "$ref": "#/$defs/id"
-        },
-        "label": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-        },
-        "description": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 500
-        },
-        "type": {
-          "enum": [
-            "prefab",
-            "mesh",
-            "material",
-            "texture",
-            "audio",
-            "animation"
-          ]
-        },
-        "source": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "path",
-            "format",
-            "method"
-          ],
-          "properties": {
-            "path": {
-              "type": "string",
-              "minLength": 1
-            },
-            "format": {
-              "type": "string",
-              "minLength": 1
-            },
-            "method": {
-              "enum": [
-                "reused",
-                "modified",
-                "generated",
-                "imported"
-              ]
-            },
-            "derived_from": {
-              "$ref": "#/$defs/id"
-            },
-            "attribution": {
-              "type": "string",
-              "maxLength": 500
-            },
-            "source_url": {
-              "type": "string",
-              "format": "uri"
-            },
-            "sha256": {
-              "type": "string",
-              "pattern": "^[a-f0-9]{64}$"
-            },
-            "original_sha256": {
-              "type": "string",
-              "pattern": "^[a-f0-9]{64}$"
-            }
-          }
-        },
-        "taxonomy": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "categories",
-            "tags",
-            "aliases"
-          ],
-          "properties": {
-            "categories": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/id"
-              },
-              "minItems": 1
-            },
-            "tags": {
-              "type": "array",
-              "items": {
-                "$ref": "#/$defs/id"
-              }
-            },
-            "aliases": {
-              "type": "array",
-              "items": {
-                "type": "string",
-                "minLength": 1
-              }
-            }
-          }
-        },
-        "geometry": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "units",
-            "origin",
-            "half_extents"
-          ],
-          "properties": {
-            "units": {
-              "const": "meters"
-            },
-            "origin": {
-              "enum": [
-                "bottom-center",
-                "center",
-                "custom"
-              ]
-            },
-            "half_extents": {
-              "$ref": "#/$defs/vec3"
-            },
-            "forward": {
-              "enum": [
-                "+x",
-                "-x",
-                "+z",
-                "-z"
-              ]
-            },
-            "bounds_min": {
-              "$ref": "#/$defs/vec3"
-            },
-            "bounds_max": {
-              "$ref": "#/$defs/vec3"
-            },
-            "triangle_count": {
-              "type": "integer",
-              "minimum": 1
-            }
-          }
-        },
-        "physics": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "mobility",
-            "collision"
-          ],
-          "properties": {
-            "mobility": {
-              "enum": [
-                "static",
-                "dynamic",
-                "runtime-policy",
-                "none"
-              ]
-            },
-            "collision": {
-              "enum": [
-                "aabb",
-                "compound",
-                "conservative-bounds",
-                "mesh",
-                "none"
-              ]
-            },
-            "metadata": {
-              "type": "string",
-              "minLength": 1
-            }
-          }
-        },
-        "lifecycle": {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "status"
-          ],
-          "properties": {
-            "status": {
-              "enum": [
-                "experimental",
-                "candidate",
-                "stable",
-                "deprecated"
-              ]
-            },
-            "promoted_from": {
-              "$ref": "#/$defs/id"
-            },
-            "notes": {
-              "type": "string",
-              "maxLength": 500
-            }
-          }
-        }
-      }
+      "type": "object"
+    },
+    "id": {
+      "maxLength": 100,
+      "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+      "type": "string"
+    },
+    "vec3": {
+      "items": {
+        "format": "float",
+        "type": "number"
+      },
+      "maxItems": 3,
+      "type": "array"
     }
-  }
+  },
+  "$id": "https://blueengine.dev/schemas/asset-pack-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/asset"
+      },
+      "type": "array"
+    },
+    "pack": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "maxLength": 500,
+          "type": "string"
+        },
+        "id": {
+          "maxLength": 100,
+          "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+          "type": "string"
+        },
+        "license": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 100,
+          "minLength": 1,
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "game-local",
+            "shared"
+          ],
+          "type": "string"
+        },
+        "version": {
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "version",
+        "scope",
+        "license"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 1,
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "pack",
+    "assets"
+  ],
+  "title": "BlueEngine Asset Pack",
+  "type": "object"
 }

@@ -1,0 +1,78 @@
+{
+  "exit_code": 0,
+  "captured_frames": 1471,
+  "last_tick": 1470,
+  "state_transitions": [
+    {
+      "tick": 1,
+      "round": 0,
+      "completed": false,
+      "failed": false,
+      "counters": [
+        0
+      ],
+      "status": ""
+    },
+    {
+      "tick": 651,
+      "round": 0,
+      "completed": false,
+      "failed": false,
+      "counters": [
+        1
+      ],
+      "status": ""
+    },
+    {
+      "tick": 1251,
+      "round": 0,
+      "completed": false,
+      "failed": true,
+      "counters": [
+        1
+      ],
+      "status": "Time expired. E / R to restart."
+    },
+    {
+      "tick": 1301,
+      "round": 1,
+      "completed": false,
+      "failed": false,
+      "counters": [
+        0
+      ],
+      "status": ""
+    },
+    {
+      "tick": 1323,
+      "round": 1,
+      "completed": false,
+      "failed": false,
+      "counters": [
+        1
+      ],
+      "status": ""
+    },
+    {
+      "tick": 1423,
+      "round": 1,
+      "completed": true,
+      "failed": false,
+      "counters": [
+        1
+      ],
+      "status": "Relay complete! E / R to restart."
+    }
+  ],
+  "captures_inspected": [
+    "world.png",
+    "loss-0.png",
+    "reset-1.png",
+    "win-1.png",
+    "menu.png"
+  ],
+  "png_dimensions": [
+    960,
+    600
+  ]
+}

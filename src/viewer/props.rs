@@ -4,7 +4,10 @@ mod decor_library;
 use super::room::Builder;
 use crate::{math::V, scene::Shape};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
+#[cfg_attr(feature = "schema-generation", schemars(rename_all = "kebab-case"))]
 pub enum PropKind {
+    #[cfg_attr(feature = "schema-generation", schemars(rename = "cereal"))]
     CerealBox,
     Chair,
     Table,

@@ -1,0 +1,244 @@
+{
+  "build_blueprint": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "out_path": {
+        "description": "Output map path.",
+        "type": "string"
+      },
+      "spec": {
+        "additionalProperties": true,
+        "description": "Blueprint JSON specification.",
+        "type": "object"
+      }
+    },
+    "required": [
+      "spec",
+      "out_path"
+    ],
+    "title": "Blueprint",
+    "type": "object"
+  },
+  "catalog": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {},
+    "title": "Empty",
+    "type": "object"
+  },
+  "describe": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {},
+    "title": "Empty",
+    "type": "object"
+  },
+  "lint": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "map_path": {
+        "description": "Path to map JSON.",
+        "type": "string"
+      },
+      "strict": {
+        "default": false,
+        "description": "Fail on warnings.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "map_path"
+    ],
+    "title": "Lint",
+    "type": "object"
+  },
+  "reach": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "map_path": {
+        "description": "Path to map JSON.",
+        "type": "string"
+      },
+      "start": {
+        "description": "Optional [x, y, z] start position.",
+        "items": {
+          "format": "float",
+          "type": "number"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "map_path"
+    ],
+    "title": "Reach",
+    "type": "object"
+  },
+  "replay_trace": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "game_path": {
+        "description": "Optional game path.",
+        "type": "string"
+      },
+      "trace_path": {
+        "description": "Path to trace JSON.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "trace_path"
+    ],
+    "title": "Trace",
+    "type": "object"
+  },
+  "scatter": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "count": {
+        "description": "Number of props to place.",
+        "format": "uint64",
+        "minimum": 0,
+        "type": "integer"
+      },
+      "kind": {
+        "description": "Prop kind from catalog.",
+        "type": "string"
+      },
+      "map_path": {
+        "description": "Input map path.",
+        "type": "string"
+      },
+      "out_path": {
+        "description": "Output map path.",
+        "type": "string"
+      },
+      "rect": {
+        "description": "[min_x, min_z, max_x, max_z].",
+        "items": {
+          "format": "float",
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "seed": {
+        "description": "RNG seed.",
+        "format": "uint64",
+        "minimum": 0,
+        "type": "integer"
+      }
+    },
+    "required": [
+      "map_path",
+      "kind",
+      "count",
+      "rect",
+      "out_path"
+    ],
+    "title": "Scatter",
+    "type": "object"
+  },
+  "search": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "query": {
+        "description": "Search text (up to 100 bytes).",
+        "type": "string"
+      }
+    },
+    "required": [
+      "query"
+    ],
+    "title": "Search",
+    "type": "object"
+  },
+  "sim": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "scenario_path": {
+        "description": "Path to scenario JSON.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "scenario_path"
+    ],
+    "title": "ScenarioPath",
+    "type": "object"
+  },
+  "src_lookup": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "action": {
+        "enum": [
+          "map",
+          "find",
+          "outline",
+          "show",
+          "refs",
+          "coverage"
+        ],
+        "type": "string"
+      },
+      "query": {
+        "description": "Symbol name, keyword, or file path.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "title": "Lookup",
+    "type": "object"
+  },
+  "ui_check": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {},
+    "title": "Empty",
+    "type": "object"
+  },
+  "verify": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "map_path": {
+        "description": "Path to map JSON.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "map_path"
+    ],
+    "title": "MapPath",
+    "type": "object"
+  },
+  "walk_auto": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "from": {
+        "description": "[x, z] origin.",
+        "items": {
+          "format": "float",
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "map_path": {
+        "description": "Path to map JSON.",
+        "type": "string"
+      },
+      "to": {
+        "description": "[x, z] destination.",
+        "items": {
+          "format": "float",
+          "type": "number"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "map_path",
+      "from",
+      "to"
+    ],
+    "title": "Walk",
+    "type": "object"
+  }
+}

@@ -1,991 +1,11 @@
 {
-  "type": "object",
-  "additionalProperties": false,
-  "required": [
-    "schema_version",
-    "name",
-    "map",
-    "player_profile",
-    "spawn_points",
-    "counters",
-    "interactables",
-    "rules"
-  ],
-  "properties": {
-    "schema_version": {
-      "const": 1
-    },
-    "name": {
-      "type": "string",
-      "minLength": 1,
-      "maxLength": 100
-    },
-    "map": {
-      "type": "string",
-      "minLength": 1
-    },
-    "player_profile": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "height",
-        "crouched_height",
-        "radius",
-        "eye_height",
-        "walk_speed",
-        "sprint_speed",
-        "crouch_speed",
-        "jump_height"
-      ],
-      "properties": {
-        "height": {
-          "type": "number",
-          "minimum": 0.1,
-          "maximum": 3
-        },
-        "crouched_height": {
-          "type": "number",
-          "minimum": 0.1,
-          "maximum": 3
-        },
-        "radius": {
-          "type": "number",
-          "minimum": 0.05,
-          "maximum": 1
-        },
-        "eye_height": {
-          "type": "number",
-          "minimum": 0.05,
-          "maximum": 3
-        },
-        "walk_speed": {
-          "type": "number",
-          "minimum": 0.1,
-          "maximum": 20
-        },
-        "sprint_speed": {
-          "type": "number",
-          "minimum": 0.1,
-          "maximum": 20
-        },
-        "crouch_speed": {
-          "type": "number",
-          "minimum": 0.1,
-          "maximum": 20
-        },
-        "jump_height": {
-          "type": "number",
-          "minimum": 0,
-          "maximum": 3
-        }
-      }
-    },
-    "spawn_points": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "feet",
-          "yaw"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_/-]+$"
-          },
-          "feet": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "minimum": -1000,
-              "maximum": 1000
-            },
-            "minItems": 3,
-            "maxItems": 3
-          },
-          "yaw": {
-            "type": "number"
-          }
-        }
-      },
-      "minItems": 1,
-      "maxItems": 8
-    },
-    "counters": {
-      "type": "object",
-      "maxProperties": 32,
-      "propertyNames": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 64,
-        "pattern": "^[A-Za-z0-9_/-]+$"
-      },
-      "additionalProperties": {
-        "type": "integer",
-        "minimum": -1000000,
-        "maximum": 1000000
-      }
-    },
-    "interactables": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "entity",
-          "enabled"
-        ],
-        "properties": {
-          "entity": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_/-]+$"
-          },
-          "enabled": {
-            "type": "boolean"
-          },
-          "visible": {
-            "type": "boolean",
-            "default": true
-          }
-        }
-      },
-      "minItems": 0,
-      "maxItems": 64
-    },
-    "trigger_zones": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "bounds",
-          "enabled"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_/-]+$"
-          },
-          "bounds": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-              "min",
-              "max"
-            ],
-            "properties": {
-              "min": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "minimum": -1000,
-                  "maximum": 1000
-                },
-                "minItems": 3,
-                "maxItems": 3
-              },
-              "max": {
-                "type": "array",
-                "items": {
-                  "type": "number",
-                  "minimum": -1000,
-                  "maximum": 1000
-                },
-                "minItems": 3,
-                "maxItems": 3
-              }
-            }
-          },
-          "enabled": {
-            "type": "boolean"
-          }
-        }
-      },
-      "minItems": 0,
-      "maxItems": 64
-    },
-    "movers": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "entity",
-          "translation"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_/-]+$"
-          },
-          "entity": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_/-]+$"
-          },
-          "translation": {
-            "type": "array",
-            "items": {
-              "type": "number",
-              "minimum": -1000,
-              "maximum": 1000
-            },
-            "minItems": 3,
-            "maxItems": 3
-          },
-          "duration_ticks": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 3600
-          },
-          "initial_open": {
-            "type": "boolean"
-          }
-        }
-      },
-      "minItems": 0,
-      "maxItems": 64
-    },
-    "timers": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "duration_ticks"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_/-]+$"
-          },
-          "duration_ticks": {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 36000
-          },
-          "auto_start": {
-            "type": "boolean"
-          },
-          "repeats": {
-            "type": "boolean"
-          }
-        }
-      },
-      "minItems": 0,
-      "maxItems": 64
-    },
-    "rules": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "id",
-          "once",
-          "actions"
-        ],
-        "properties": {
-          "id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^[A-Za-z0-9_/-]+$"
-          },
-          "on_interact": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 64,
-                "pattern": "^[A-Za-z0-9_/-]+$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "on_enter": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 64,
-                "pattern": "^[A-Za-z0-9_/-]+$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "on_exit": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 64,
-                "pattern": "^[A-Za-z0-9_/-]+$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "on_timer": {
-            "anyOf": [
-              {
-                "type": "string",
-                "minLength": 1,
-                "maxLength": 64,
-                "pattern": "^[A-Za-z0-9_/-]+$"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "condition": {
-            "anyOf": [
-              {
-                "$ref": "#/$defs/condition"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "once": {
-            "type": "boolean"
-          },
-          "actions": {
-            "type": "array",
-            "items": {
-              "oneOf": [
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action",
-                    "counter",
-                    "amount"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "increment"
-                    },
-                    "counter": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9_/-]+$"
-                    },
-                    "amount": {
-                      "type": "integer",
-                      "minimum": -1000000,
-                      "maximum": 1000000
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action",
-                    "entity",
-                    "visible"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "set_visible"
-                    },
-                    "entity": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9_/-]+$"
-                    },
-                    "visible": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action",
-                    "counter",
-                    "value"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "set_counter"
-                    },
-                    "counter": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9_/-]+$"
-                    },
-                    "value": {
-                      "type": "integer",
-                      "minimum": -1000000,
-                      "maximum": 1000000
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action",
-                    "entity",
-                    "enabled"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "set_enabled"
-                    },
-                    "entity": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9_/-]+$"
-                    },
-                    "enabled": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action",
-                    "mover",
-                    "open"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "set_mover"
-                    },
-                    "mover": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9_/-]+$"
-                    },
-                    "open": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action",
-                    "timer"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "start_timer"
-                    },
-                    "timer": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9_/-]+$"
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action",
-                    "timer"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "stop_timer"
-                    },
-                    "timer": {
-                      "type": "string",
-                      "minLength": 1,
-                      "maxLength": 64,
-                      "pattern": "^[A-Za-z0-9_/-]+$"
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "complete"
-                    }
-                  }
-                },
-                {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "required": [
-                    "action"
-                  ],
-                  "properties": {
-                    "action": {
-                      "const": "fail"
-                    }
-                  }
-                }
-              ]
-            },
-            "minItems": 1,
-            "maxItems": 4
-          }
-        }
-      },
-      "minItems": 1,
-      "maxItems": 64
-    },
-    "presentation": {
-      "type": [
-        "object",
-        "null"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "objective": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 200,
-          "pattern": "^[ -~]+$"
-        },
-        "success": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 200,
-          "pattern": "^[ -~]+$"
-        },
-        "failure": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "minLength": 1,
-          "maxLength": 200,
-          "pattern": "^[ -~]+$"
-        },
-        "counters": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-              "visible": {
-                "type": "boolean"
-              },
-              "label": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "minLength": 1,
-                "maxLength": 48,
-                "pattern": "^[ -~]+$"
-              },
-              "units": {
-                "type": "string",
-                "maxLength": 12,
-                "pattern": "^[ -~]*$"
-              },
-              "format": {
-                "enum": [
-                  "number",
-                  "clock"
-                ]
-              }
-            }
-          }
-        },
-        "palette": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "background": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              }
-            },
-            "panel": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              }
-            },
-            "text": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              }
-            },
-            "accent": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              }
-            },
-            "success": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              }
-            },
-            "failure": {
-              "type": "array",
-              "minItems": 4,
-              "maxItems": 4,
-              "items": {
-                "type": "number",
-                "minimum": 0,
-                "maximum": 1
-              }
-            }
-          }
-        },
-        "hud": {
-          "type": "object",
-          "additionalProperties": false,
-          "properties": {
-            "scale": {
-              "type": "number",
-              "minimum": 0.75,
-              "maximum": 1.5
-            },
-            "margin": {
-              "type": "number",
-              "minimum": 8,
-              "maximum": 48
-            },
-            "width": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "minimum": 240,
-              "maximum": 900
-            },
-            "crosshair": {
-              "type": "boolean"
-            }
-          }
-        },
-        "audio": {
-          "anyOf": [
-            {
-              "type": "object",
-              "additionalProperties": false,
-              "properties": {
-                "bundle": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 200,
-                  "pattern": "^[^\\\\:]+$"
-                },
-                "cues": {
-                  "type": "array",
-                  "maxItems": 64,
-                  "items": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "cue": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 48,
-                        "pattern": "^[A-Za-z0-9_-]+$"
-                      },
-                      "volume": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1
-                      },
-                      "on": {
-                        "oneOf": [
-                          {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "kind": {
-                                "const": "completed"
-                              }
-                            },
-                            "required": [
-                              "kind"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "kind": {
-                                "const": "failed"
-                              }
-                            },
-                            "required": [
-                              "kind"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "kind": {
-                                "const": "restarted"
-                              }
-                            },
-                            "required": [
-                              "kind"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "kind": {
-                                "const": "counter_changed"
-                              },
-                              "counter": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "counter"
-                            ]
-                          },
-                          {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "kind": {
-                                "const": "counter_at_or_below"
-                              },
-                              "counter": {
-                                "type": "string"
-                              },
-                              "value": {
-                                "type": "integer",
-                                "minimum": -1000000,
-                                "maximum": 1000000
-                              }
-                            },
-                            "required": [
-                              "kind",
-                              "counter",
-                              "value"
-                            ]
-                          }
-                        ]
-                      }
-                    },
-                    "required": [
-                      "cue",
-                      "on"
-                    ]
-                  }
-                },
-                "music": {
-                  "type": "object",
-                  "maxProperties": 16,
-                  "propertyNames": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 48,
-                    "pattern": "^[A-Za-z0-9_-]+$"
-                  },
-                  "additionalProperties": {
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                      "level": {
-                        "type": "number",
-                        "minimum": 0,
-                        "maximum": 1
-                      },
-                      "counter": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "additionalProperties": false,
-                            "properties": {
-                              "name": {
-                                "type": "string"
-                              },
-                              "from": {
-                                "type": "integer",
-                                "minimum": -1000000,
-                                "maximum": 1000000
-                              },
-                              "to": {
-                                "type": "integer",
-                                "minimum": -1000000,
-                                "maximum": 1000000
-                              }
-                            },
-                            "required": [
-                              "name",
-                              "from",
-                              "to"
-                            ]
-                          },
-                          {
-                            "type": "null"
-                          }
-                        ]
-                      }
-                    }
-                  }
-                },
-                "play_when_finished": {
-                  "type": "boolean"
-                }
-              },
-              "required": [
-                "bundle"
-              ]
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      }
-    }
-  },
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "BlueEngine GameDocument v1",
-  "$comment": "Native game-validate also checks references, UTF-8 byte limits, profile relationships, spawn clearance, static box bounds and confined map paths.",
+  "$comment": "Generated from Rust. Also run game-validate: references, byte limits, condition depth/nodes, profiles, paths and geometry need semantic validation.",
   "$defs": {
     "condition": {
-      "type": "object",
       "additionalProperties": false,
-      "description": "Exactly one form: a leaf (counter plus at least one comparison, all must hold) or one of all / any / not. Nest at most 4 deep, 16 parts in total.",
-      "properties": {
-        "counter": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 64,
-          "pattern": "^[A-Za-z0-9_/-]+$"
-        },
-        "modulo": {
-          "type": "integer",
-          "minimum": 1,
-          "maximum": 1000000,
-          "description": "compare counter mod modulo"
-        },
-        "equals": {
-          "type": "integer",
-          "minimum": -1000000,
-          "maximum": 1000000
-        },
-        "not_equals": {
-          "type": "integer",
-          "minimum": -1000000,
-          "maximum": 1000000
-        },
-        "less_than": {
-          "type": "integer",
-          "minimum": -1000000,
-          "maximum": 1000000
-        },
-        "greater_than": {
-          "type": "integer",
-          "minimum": -1000000,
-          "maximum": 1000000
-        },
-        "at_most": {
-          "type": "integer",
-          "minimum": -1000000,
-          "maximum": 1000000
-        },
-        "at_least": {
-          "type": "integer",
-          "minimum": -1000000,
-          "maximum": 1000000
-        },
-        "all": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 16,
-          "items": {
-            "$ref": "#/$defs/condition"
-          }
-        },
-        "any": {
-          "type": "array",
-          "minItems": 1,
-          "maxItems": 16,
-          "items": {
-            "$ref": "#/$defs/condition"
-          }
-        },
-        "not": {
-          "$ref": "#/$defs/condition"
-        }
-      },
+      "description": "A rule guard over counters. Exactly one form is used per node:\na leaf (`counter` plus one or more comparisons, all of which must hold), or a compound\n(`all`, `any`, `not`). `{\"counter\": \"x\", \"equals\": 1}` is the original form and still works.",
       "oneOf": [
         {
-          "required": [
-            "counter"
-          ],
           "anyOf": [
             {
               "required": [
@@ -1017,6 +37,9 @@
                 "at_least"
               ]
             }
+          ],
+          "required": [
+            "counter"
           ]
         },
         {
@@ -1034,7 +57,1260 @@
             "not"
           ]
         }
-      ]
+      ],
+      "properties": {
+        "all": {
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array"
+        },
+        "any": {
+          "items": {
+            "$ref": "#/$defs/condition"
+          },
+          "maxItems": 16,
+          "minItems": 1,
+          "type": "array"
+        },
+        "at_least": {
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": -1000000,
+          "type": "integer"
+        },
+        "at_most": {
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": -1000000,
+          "type": "integer"
+        },
+        "counter": {
+          "maxLength": 64,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9_/-]+$",
+          "type": "string"
+        },
+        "equals": {
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": -1000000,
+          "type": "integer"
+        },
+        "greater_than": {
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": -1000000,
+          "type": "integer"
+        },
+        "less_than": {
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": -1000000,
+          "type": "integer"
+        },
+        "modulo": {
+          "description": "Compare `counter mod modulo` (always 0..modulo) instead of the raw value.",
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": 1,
+          "type": "integer"
+        },
+        "not": {
+          "$ref": "#/$defs/condition"
+        },
+        "not_equals": {
+          "format": "int32",
+          "maximum": 1000000,
+          "minimum": -1000000,
+          "type": "integer"
+        }
+      },
+      "type": "object"
     }
-  }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "counters": {
+      "additionalProperties": {
+        "format": "int32",
+        "maximum": 1000000,
+        "minimum": -1000000,
+        "type": "integer"
+      },
+      "maxProperties": 32,
+      "propertyNames": {
+        "maxLength": 64,
+        "minLength": 1,
+        "pattern": "^[A-Za-z0-9_/-]+$",
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "interactables": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "entity": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "visible": {
+            "default": true,
+            "description": "Presentation state only. Hidden targets retain collision and interaction eligibility.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "entity",
+          "enabled"
+        ],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "minItems": 0,
+      "type": "array"
+    },
+    "map": {
+      "description": "Relative map path confined to the game document's directory (including symlinks).",
+      "minLength": 1,
+      "type": "string"
+    },
+    "movers": {
+      "default": [],
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "duration_ticks": {
+            "default": 60,
+            "format": "uint32",
+            "maximum": 3600,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "entity": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "initial_open": {
+            "default": false,
+            "type": "boolean"
+          },
+          "translation": {
+            "items": {
+              "maximum": 1000.0,
+              "minimum": -1000.0,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "entity",
+          "translation"
+        ],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "minItems": 0,
+      "type": "array"
+    },
+    "name": {
+      "maxLength": 100,
+      "minLength": 1,
+      "type": "string"
+    },
+    "player_profile": {
+      "additionalProperties": false,
+      "properties": {
+        "crouch_speed": {
+          "format": "float",
+          "maximum": 20,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "crouched_height": {
+          "format": "float",
+          "maximum": 3,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "eye_height": {
+          "format": "float",
+          "maximum": 3,
+          "minimum": 0.05,
+          "type": "number"
+        },
+        "height": {
+          "format": "float",
+          "maximum": 3,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "jump_height": {
+          "format": "float",
+          "maximum": 3,
+          "minimum": 0,
+          "type": "number"
+        },
+        "radius": {
+          "format": "float",
+          "maximum": 1,
+          "minimum": 0.05,
+          "type": "number"
+        },
+        "sprint_speed": {
+          "format": "float",
+          "maximum": 20,
+          "minimum": 0.1,
+          "type": "number"
+        },
+        "walk_speed": {
+          "format": "float",
+          "maximum": 20,
+          "minimum": 0.1,
+          "type": "number"
+        }
+      },
+      "required": [
+        "height",
+        "crouched_height",
+        "radius",
+        "eye_height",
+        "walk_speed",
+        "sprint_speed",
+        "crouch_speed",
+        "jump_height"
+      ],
+      "type": "object"
+    },
+    "presentation": {
+      "additionalProperties": false,
+      "description": "Optional stock HUD configuration. Missing preserves legacy presentation and serialization.",
+      "properties": {
+        "audio": {
+          "additionalProperties": false,
+          "description": "Optional checked audio bundle and read-only state bindings. Missing remains silent.",
+          "properties": {
+            "bundle": {
+              "description": "Child directory containing bank.json, relative to the game document.",
+              "maxLength": 200,
+              "minLength": 1,
+              "pattern": "^[^\\\\:]+$",
+              "type": "string"
+            },
+            "cues": {
+              "default": [],
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "cue": {
+                    "maxLength": 48,
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z0-9_-]+$",
+                    "type": "string"
+                  },
+                  "on": {
+                    "oneOf": [
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "counter": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "const": "counter_changed",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "counter"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "description": "Crossing from above to at/below; no repeating alarm while below the threshold.",
+                        "properties": {
+                          "counter": {
+                            "type": "string"
+                          },
+                          "kind": {
+                            "const": "counter_at_or_below",
+                            "type": "string"
+                          },
+                          "value": {
+                            "format": "int32",
+                            "maximum": 1000000,
+                            "minimum": -1000000,
+                            "type": "integer"
+                          }
+                        },
+                        "required": [
+                          "kind",
+                          "counter",
+                          "value"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "const": "completed",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "const": "failed",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "type": "object"
+                      },
+                      {
+                        "additionalProperties": false,
+                        "properties": {
+                          "kind": {
+                            "const": "restarted",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "kind"
+                        ],
+                        "type": "object"
+                      }
+                    ]
+                  },
+                  "volume": {
+                    "default": 1.0,
+                    "format": "float",
+                    "maximum": 1,
+                    "minimum": 0,
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "cue",
+                  "on"
+                ],
+                "type": "object"
+              },
+              "maxItems": 64,
+              "type": "array"
+            },
+            "music": {
+              "additionalProperties": {
+                "additionalProperties": false,
+                "properties": {
+                  "counter": {
+                    "additionalProperties": false,
+                    "default": null,
+                    "description": "Optional linear mapping: from -> zero, to -> level, clamped outside that range.",
+                    "properties": {
+                      "from": {
+                        "format": "int32",
+                        "maximum": 1000000,
+                        "minimum": -1000000,
+                        "type": "integer"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "to": {
+                        "format": "int32",
+                        "maximum": 1000000,
+                        "minimum": -1000000,
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "from",
+                      "to"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "level": {
+                    "default": 1.0,
+                    "format": "float",
+                    "maximum": 1,
+                    "minimum": 0,
+                    "type": "number"
+                  }
+                },
+                "type": "object"
+              },
+              "default": {},
+              "maxProperties": 16,
+              "propertyNames": {
+                "maxLength": 48,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9_-]+$",
+                "type": "string"
+              },
+              "type": "object"
+            },
+            "play_when_finished": {
+              "default": false,
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "bundle"
+          ],
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "counters": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "format": {
+                "default": "number",
+                "oneOf": [
+                  {
+                    "enum": [
+                      "number"
+                    ],
+                    "type": "string"
+                  },
+                  {
+                    "const": "clock",
+                    "description": "The authoritative integer is seconds, displayed as minutes:seconds. Negative values retain their sign.",
+                    "type": "string"
+                  }
+                ]
+              },
+              "label": {
+                "default": null,
+                "maxLength": 48,
+                "minLength": 1,
+                "pattern": "^[ -~]+$",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "units": {
+                "default": "",
+                "maxLength": 12,
+                "pattern": "^[ -~]*$",
+                "type": "string"
+              },
+              "visible": {
+                "default": true,
+                "type": "boolean"
+              }
+            },
+            "type": "object"
+          },
+          "default": {},
+          "type": "object"
+        },
+        "failure": {
+          "default": null,
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[ -~]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "hud": {
+          "additionalProperties": false,
+          "default": {
+            "crosshair": true,
+            "margin": 12.0,
+            "scale": 1.0,
+            "width": null
+          },
+          "properties": {
+            "crosshair": {
+              "default": true,
+              "type": "boolean"
+            },
+            "margin": {
+              "default": 12.0,
+              "format": "float",
+              "maximum": 48,
+              "minimum": 8,
+              "type": "number"
+            },
+            "scale": {
+              "default": 1.0,
+              "format": "float",
+              "maximum": 1.5,
+              "minimum": 0.75,
+              "type": "number"
+            },
+            "width": {
+              "default": null,
+              "format": "float",
+              "maximum": 900,
+              "minimum": 240,
+              "type": [
+                "number",
+                "null"
+              ]
+            }
+          },
+          "type": "object"
+        },
+        "objective": {
+          "default": null,
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[ -~]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "palette": {
+          "additionalProperties": false,
+          "default": {
+            "accent": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "background": [
+              0.47999998927116394,
+              0.6700000166893005,
+              0.800000011920929,
+              1.0
+            ],
+            "failure": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "panel": [
+              0.03999999910593033,
+              0.07999999821186066,
+              0.10000000149011612,
+              0.8500000238418579
+            ],
+            "success": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ],
+            "text": [
+              1.0,
+              1.0,
+              1.0,
+              1.0
+            ]
+          },
+          "properties": {
+            "accent": {
+              "default": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "background": {
+              "default": [
+                0.47999998927116394,
+                0.6700000166893005,
+                0.800000011920929,
+                1.0
+              ],
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "failure": {
+              "default": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "panel": {
+              "default": [
+                0.03999999910593033,
+                0.07999999821186066,
+                0.10000000149011612,
+                0.8500000238418579
+              ],
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "success": {
+              "default": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            },
+            "text": {
+              "default": [
+                1.0,
+                1.0,
+                1.0,
+                1.0
+              ],
+              "items": {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              "maxItems": 4,
+              "minItems": 4,
+              "type": "array"
+            }
+          },
+          "type": "object"
+        },
+        "success": {
+          "default": null,
+          "maxLength": 200,
+          "minLength": 1,
+          "pattern": "^[ -~]+$",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "rules": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "actions": {
+            "items": {
+              "oneOf": [
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "const": "increment",
+                      "type": "string"
+                    },
+                    "amount": {
+                      "format": "int32",
+                      "maximum": 1000000,
+                      "minimum": -1000000,
+                      "type": "integer"
+                    },
+                    "counter": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9_/-]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "counter",
+                    "amount"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "const": "set_counter",
+                      "type": "string"
+                    },
+                    "counter": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9_/-]+$",
+                      "type": "string"
+                    },
+                    "value": {
+                      "format": "int32",
+                      "maximum": 1000000,
+                      "minimum": -1000000,
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "counter",
+                    "value"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "const": "set_enabled",
+                      "type": "string"
+                    },
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "entity": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9_/-]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "entity",
+                    "enabled"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "const": "set_visible",
+                      "type": "string"
+                    },
+                    "entity": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9_/-]+$",
+                      "type": "string"
+                    },
+                    "visible": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "entity",
+                    "visible"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "const": "set_mover",
+                      "type": "string"
+                    },
+                    "mover": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9_/-]+$",
+                      "type": "string"
+                    },
+                    "open": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "mover",
+                    "open"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "const": "start_timer",
+                      "type": "string"
+                    },
+                    "timer": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9_/-]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "timer"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "properties": {
+                    "action": {
+                      "const": "stop_timer",
+                      "type": "string"
+                    },
+                    "timer": {
+                      "maxLength": 64,
+                      "minLength": 1,
+                      "pattern": "^[A-Za-z0-9_/-]+$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "timer"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "description": "End the match as won.",
+                  "properties": {
+                    "action": {
+                      "const": "complete",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ],
+                  "type": "object"
+                },
+                {
+                  "additionalProperties": false,
+                  "description": "End the match as lost. Like `complete`, later events are ignored until the game restarts.",
+                  "properties": {
+                    "action": {
+                      "const": "fail",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "action"
+                  ],
+                  "type": "object"
+                }
+              ]
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "type": "array"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "additionalProperties": false,
+                "description": "A rule guard over counters. Exactly one form is used per node:\na leaf (`counter` plus one or more comparisons, all of which must hold), or a compound\n(`all`, `any`, `not`). `{\"counter\": \"x\", \"equals\": 1}` is the original form and still works.",
+                "oneOf": [
+                  {
+                    "anyOf": [
+                      {
+                        "required": [
+                          "equals"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "not_equals"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "less_than"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "greater_than"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "at_most"
+                        ]
+                      },
+                      {
+                        "required": [
+                          "at_least"
+                        ]
+                      }
+                    ],
+                    "required": [
+                      "counter"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "all"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "any"
+                    ]
+                  },
+                  {
+                    "required": [
+                      "not"
+                    ]
+                  }
+                ],
+                "properties": {
+                  "all": {
+                    "items": {
+                      "$ref": "#/$defs/condition"
+                    },
+                    "maxItems": 16,
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "any": {
+                    "items": {
+                      "$ref": "#/$defs/condition"
+                    },
+                    "maxItems": 16,
+                    "minItems": 1,
+                    "type": "array"
+                  },
+                  "at_least": {
+                    "format": "int32",
+                    "maximum": 1000000,
+                    "minimum": -1000000,
+                    "type": "integer"
+                  },
+                  "at_most": {
+                    "format": "int32",
+                    "maximum": 1000000,
+                    "minimum": -1000000,
+                    "type": "integer"
+                  },
+                  "counter": {
+                    "maxLength": 64,
+                    "minLength": 1,
+                    "pattern": "^[A-Za-z0-9_/-]+$",
+                    "type": "string"
+                  },
+                  "equals": {
+                    "format": "int32",
+                    "maximum": 1000000,
+                    "minimum": -1000000,
+                    "type": "integer"
+                  },
+                  "greater_than": {
+                    "format": "int32",
+                    "maximum": 1000000,
+                    "minimum": -1000000,
+                    "type": "integer"
+                  },
+                  "less_than": {
+                    "format": "int32",
+                    "maximum": 1000000,
+                    "minimum": -1000000,
+                    "type": "integer"
+                  },
+                  "modulo": {
+                    "description": "Compare `counter mod modulo` (always 0..modulo) instead of the raw value.",
+                    "format": "int32",
+                    "maximum": 1000000,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "not": {
+                    "$ref": "#/$defs/condition"
+                  },
+                  "not_equals": {
+                    "format": "int32",
+                    "maximum": 1000000,
+                    "minimum": -1000000,
+                    "type": "integer"
+                  }
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "on_enter": {
+            "default": null,
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "on_exit": {
+            "default": null,
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "on_interact": {
+            "description": "None matches interaction with any declared, enabled target.",
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "on_timer": {
+            "default": null,
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "once": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "once",
+          "actions"
+        ],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "minItems": 1,
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "format": "uint32",
+      "minimum": 0,
+      "type": "integer"
+    },
+    "spawn_points": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "feet": {
+            "items": {
+              "maximum": 1000.0,
+              "minimum": -1000.0,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "yaw": {
+            "format": "float",
+            "type": "number"
+          }
+        },
+        "required": [
+          "id",
+          "feet",
+          "yaw"
+        ],
+        "type": "object"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "type": "array"
+    },
+    "timers": {
+      "default": [],
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "auto_start": {
+            "default": false,
+            "type": "boolean"
+          },
+          "duration_ticks": {
+            "format": "uint32",
+            "maximum": 36000,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "repeats": {
+            "default": false,
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "duration_ticks"
+        ],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "minItems": 0,
+      "type": "array"
+    },
+    "trigger_zones": {
+      "default": [],
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "bounds": {
+            "additionalProperties": false,
+            "properties": {
+              "max": {
+                "items": {
+                  "maximum": 1000.0,
+                  "minimum": -1000.0,
+                  "type": "number"
+                },
+                "maxItems": 3,
+                "minItems": 3,
+                "type": "array"
+              },
+              "min": {
+                "items": {
+                  "maximum": 1000.0,
+                  "minimum": -1000.0,
+                  "type": "number"
+                },
+                "maxItems": 3,
+                "minItems": 3,
+                "type": "array"
+              }
+            },
+            "required": [
+              "min",
+              "max"
+            ],
+            "type": "object"
+          },
+          "enabled": {
+            "default": true,
+            "type": "boolean"
+          },
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bounds",
+          "enabled"
+        ],
+        "type": "object"
+      },
+      "maxItems": 64,
+      "minItems": 0,
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "name",
+    "map",
+    "player_profile",
+    "spawn_points",
+    "counters",
+    "interactables",
+    "rules"
+  ],
+  "title": "BE2 GameDocument v1",
+  "type": "object"
 }

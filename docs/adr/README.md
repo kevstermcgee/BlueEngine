@@ -50,3 +50,7 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0038: The engine learns from the games built on it](0038-engine-learns-from-development.md)
 - [0039: Shared 2D presentation and verified static browser artifacts](0039-two-d-browser-artifacts.md)
 - [0040: Portable composition, mobile controls, installation and one library](0040-portable-composition-mobile-install-and-library.md)
+- [0041: Static CC0 model import](0041-static-model-import.md)
+- [0042: Hot reload acceptance and stopped experiments](0042-hot-reload-acceptance.md)
+- [0043: Scoped mutation diagnostics and stopped coordinator](0043-scoped-mutation-diagnostics.md)
+- [0044: Generate authoring schemas from opt-in Rust types](0044-generated-authoring-schemas.md)

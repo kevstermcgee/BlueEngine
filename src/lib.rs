@@ -1,5 +1,7 @@
 #![deny(unsafe_code)]
 pub mod asset_model;
+#[cfg(all(feature = "schema-generation", not(target_arch = "wasm32")))]
+pub mod authoring_schemas;
 #[cfg(all(feature = "model-import", not(target_arch = "wasm32")))]
 pub mod model_import;
 #[cfg(all(target_arch = "wasm32", any(feature = "client", feature = "offline")))]

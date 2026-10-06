@@ -54,6 +54,11 @@ pub struct Movement {
 
 #[derive(Clone, Debug, serde::Serialize, serde::Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(
+    all(feature = "schema-generation", not(target_arch = "wasm32")),
+    derive(schemars::JsonSchema)
+)]
+#[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::collider))]
 pub struct Collider {
     pub min: V,
     pub max: V,

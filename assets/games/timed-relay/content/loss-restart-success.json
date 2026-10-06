@@ -1,0 +1,118 @@
+{
+  "name": "Ten Second Relay: idle, expiry, frozen loss, restart reset, physical success",
+  "game_path": "game.json",
+  "ticks": 1470,
+  "players": [
+    {
+      "id": 1
+    }
+  ],
+  "inputs": [
+    {
+      "tick": 651,
+      "player": 1,
+      "face": "button-a",
+      "interact": true,
+      "wait_ticks": 1
+    },
+    {
+      "tick": 1301,
+      "player": 1,
+      "restart": true,
+      "wait_ticks": 1
+    },
+    {
+      "tick": 1302,
+      "player": 1,
+      "walk_to": [
+        -3.0,
+        2.5
+      ],
+      "route": true
+    },
+    {
+      "tick": 1323,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "button-a"
+    },
+    {
+      "tick": 1324,
+      "player": 1,
+      "walk_to": [
+        1.5475973,
+        1.3748688
+      ],
+      "route": true
+    },
+    {
+      "tick": 1423,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "exit"
+    }
+  ],
+  "assertions": [
+    {
+      "tick": 650,
+      "counter": "active",
+      "counter_equals": 0,
+      "failed_equals": false,
+      "completed_equals": false,
+      "target": "exit",
+      "enabled_equals": false
+    },
+    {
+      "tick": 651,
+      "counter": "active",
+      "counter_equals": 1,
+      "failed_equals": false,
+      "target": "button-a",
+      "enabled_equals": false
+    },
+    {
+      "tick": 1250,
+      "failed_equals": false,
+      "completed_equals": false
+    },
+    {
+      "tick": 1251,
+      "failed_equals": true,
+      "completed_equals": false
+    },
+    {
+      "tick": 1300,
+      "failed_equals": true,
+      "completed_equals": false
+    },
+    {
+      "tick": 1301,
+      "counter": "active",
+      "counter_equals": 0,
+      "failed_equals": false,
+      "completed_equals": false,
+      "target": "button-a",
+      "enabled_equals": true
+    },
+    {
+      "tick": 1301,
+      "target": "exit",
+      "enabled_equals": false
+    },
+    {
+      "tick": 1323,
+      "counter": "active",
+      "counter_equals": 1,
+      "target": "button-a",
+      "enabled_equals": false,
+      "failed_equals": false
+    },
+    {
+      "tick": 1426,
+      "completed_equals": true,
+      "failed_equals": false
+    }
+  ]
+}

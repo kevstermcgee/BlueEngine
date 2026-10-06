@@ -1,0 +1,17 @@
+{
+  "before": "cb5c8f1",
+  "results": {
+    "tools/game.schema.json": {
+      "constraints_compared": 319,
+      "differences": []
+    },
+    "tools/patch.schema.json": {
+      "constraints_compared": 60,
+      "differences": []
+    },
+    "assets/asset-pack.schema.json": {
+      "constraints_compared": 59,
+      "differences": []
+    }
+  }
+}

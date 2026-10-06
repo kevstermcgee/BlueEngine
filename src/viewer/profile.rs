@@ -4,6 +4,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(
+    all(feature = "schema-generation", not(target_arch = "wasm32")),
+    derive(schemars::JsonSchema)
+)]
+#[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::profile))]
 pub struct ControllerProfile {
     pub height: f32,
     pub crouched_height: f32,

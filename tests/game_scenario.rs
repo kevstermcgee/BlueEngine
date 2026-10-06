@@ -66,6 +66,53 @@ fn the_example_games_shortest_win_becomes_a_scenario_that_the_runner_confirms() 
 }
 
 #[test]
+fn maintained_timed_relay_runs_success_expiry_and_restart_on_real_authority() {
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("assets/games/timed-relay/content");
+    for name in [
+        "success.json",
+        "deadline-boundary.json",
+        "loss-restart-success.json",
+    ] {
+        let scenario = vesper3d::viewer::scenario::load_scenario(&root.join(name)).unwrap();
+        let run = evaluate_scenario(&scenario).unwrap();
+        assert!(run.ok, "{name}: {:?}", run.assertions);
+        assert!(
+            !run.assertions.is_empty(),
+            "{name} must assert authority, not just finish"
+        );
+        // Exercise the stock client's existing frame adapter against the same authority.
+        let mut session = vesper3d::viewer::game_session::GameSession::local(
+            GameDocument::load(&root.join("game.json")).unwrap(),
+        )
+        .unwrap();
+        let initial = session.world().game.as_ref().unwrap().state().clone();
+        let mut driver = vesper3d::viewer::scenario::InputDriver::new(&scenario.inputs);
+        for tick in 1..=scenario.ticks {
+            session.advance_scenario(&mut driver, tick).unwrap();
+            if name == "loss-restart-success.json" && tick == 1301 {
+                let mut reset = initial.clone();
+                reset.round = 1;
+                assert_eq!(
+                    session.world().game.as_ref().unwrap().state(),
+                    &reset,
+                    "restart must reset timers, once flags, counters and target eligibility"
+                );
+            }
+        }
+        let state = session.world().game.as_ref().unwrap().state();
+        assert_eq!(
+            state.active_timers, 0,
+            "{name}: one-shot expiry or completion must clear the timer"
+        );
+        assert_eq!(
+            session.world().checksum(),
+            run.trace.checkpoints.last().unwrap().checksum,
+            "{name}: stock frame adapter and headless runner must share authority"
+        );
+    }
+}
+
+#[test]
 fn a_press_that_is_only_right_in_one_phase_of_a_timer_waits_for_that_phase() {
     // The exit only counts while the clock's phase is odd. The player arrives at an even phase and has to wait.
     let g = variant(

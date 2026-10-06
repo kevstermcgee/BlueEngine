@@ -1,0 +1,39 @@
+{
+  "name": "Ten-second deadline boundary probe",
+  "game_path": "game.json",
+  "ticks": 603,
+  "players": [
+    {
+      "id": 1
+    }
+  ],
+  "inputs": [
+    {
+      "tick": 1,
+      "player": 1,
+      "face": "button-a",
+      "interact": true
+    }
+  ],
+  "assertions": [
+    {
+      "tick": 1,
+      "counter": "active",
+      "counter_equals": 1,
+      "completed_equals": false,
+      "failed_equals": false
+    },
+    {
+      "tick": 599,
+      "failed_equals": false
+    },
+    {
+      "tick": 600,
+      "failed_equals": false
+    },
+    {
+      "tick": 601,
+      "failed_equals": true
+    }
+  ]
+}

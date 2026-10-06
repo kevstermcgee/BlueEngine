@@ -27,6 +27,8 @@ presentation = ["dep:macroquad"]
 two-d = ["dep:macroquad"]
 portable = ["two-d"]
 model-import = ["presentation", "dep:gltf", "dep:base64", "dep:image"]
+schema-generation = ["dep:schemars"]
+schema-validation = ["schema-generation", "dep:jsonschema"]
 client = ["presentation", "gamepad", "dep:windows-sys"]
 gamepad = ["dep:gilrs"]
 
@@ -87,6 +89,8 @@ png = { version = "=0.17.16", optional = true }
 ctrlc = { version = "=3.4.5", optional = true }
 macroquad = { version = "=0.4.14", default-features = false, features = ["audio"], optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+schemars = { version = "=1.2.2", optional = true }
+jsonschema = { version = "=0.34.0", default-features = false, optional = true }
 gltf = { version = "=1.4.1", default-features = false, features = ["utils", "names", "KHR_materials_unlit"], optional = true }
 base64 = { version = "=0.22.1", optional = true }
 image = { version = "=0.24.9", default-features = false, features = ["png", "jpeg"], optional = true }
@@ -124,6 +128,11 @@ debug = false
 
 [dev-dependencies]
 rcgen = "0.14"
+
+[[test]]
+name = "authoring_schemas"
+path = "tests/authoring_schemas.rs"
+required-features = ["schema-validation"]
 
 [[example]]
 name = "model_import_compare"

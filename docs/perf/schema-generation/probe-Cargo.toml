@@ -1,0 +1,18 @@
+[package]
+name = "be2-schema-baseline"
+version = "0.1.0"
+edition = "2021"
+[dependencies]
+jsonschema = { version = "=0.34.0", default-features = false }
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = "=1.0.140"
+[profile.itest]
+inherits = "dev"
+debug = "line-tables-only"
+[profile.itest.package."*"]
+opt-level = 3
+debug = false
+
+[[bin]]
+name = "be2-schema-baseline"
+path = "fixture_probe.rs"

@@ -1,0 +1,397 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--write"
+      ],
+      "cache_condition": "priming",
+      "seconds": 0.47637574397958815,
+      "returncode": 0,
+      "output_bytes": 1094,
+      "packet": {
+        "schema_version": 1,
+        "action": "write",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "build",
+          "--locked",
+          "--message-format=json-render-diagnostics",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-generation",
+          "--bin",
+          "be2-tools",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/write-a1a40a14c2764b16b1485f030a572d1d.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "changed": [],
+        "unchanged": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "status": "passed",
+        "seconds": 0.3895125350682065
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--write"
+      ],
+      "cache_condition": "warm",
+      "seconds": 0.4739503499586135,
+      "returncode": 0,
+      "output_bytes": 1092,
+      "packet": {
+        "schema_version": 1,
+        "action": "write",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "build",
+          "--locked",
+          "--message-format=json-render-diagnostics",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-generation",
+          "--bin",
+          "be2-tools",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/write-7e126ee47f6446bf84b8d8164d040167.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "changed": [],
+        "unchanged": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "status": "passed",
+        "seconds": 0.38839751703199
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--write"
+      ],
+      "cache_condition": "warm",
+      "seconds": 0.5013770810328424,
+      "returncode": 0,
+      "output_bytes": 1094,
+      "packet": {
+        "schema_version": 1,
+        "action": "write",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "build",
+          "--locked",
+          "--message-format=json-render-diagnostics",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-generation",
+          "--bin",
+          "be2-tools",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/write-349d029d60df4ff790f7e610a916be53.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "changed": [],
+        "unchanged": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "status": "passed",
+        "seconds": 0.4158769709756598
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--write"
+      ],
+      "cache_condition": "warm",
+      "seconds": 0.47454539395403117,
+      "returncode": 0,
+      "output_bytes": 1095,
+      "packet": {
+        "schema_version": 1,
+        "action": "write",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "build",
+          "--locked",
+          "--message-format=json-render-diagnostics",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-generation",
+          "--bin",
+          "be2-tools",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/write-501d6094ea06442ab017f952e548cb21.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "changed": [],
+        "unchanged": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "status": "passed",
+        "seconds": 0.38821937795728445
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--check"
+      ],
+      "cache_condition": "priming",
+      "seconds": 0.5145226259483024,
+      "returncode": 0,
+      "output_bytes": 889,
+      "packet": {
+        "schema_version": 1,
+        "action": "check",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--test",
+          "authoring_schemas",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/check-c0cac64b0f6c4b0db51621008daccfbf.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "status": "passed",
+        "seconds": 0.42941101593896747
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--check"
+      ],
+      "cache_condition": "warm",
+      "seconds": 0.5073107859352604,
+      "returncode": 0,
+      "output_bytes": 888,
+      "packet": {
+        "schema_version": 1,
+        "action": "check",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--test",
+          "authoring_schemas",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/check-f0a4b9a1da5649a7b6a1708cdf9bf244.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "status": "passed",
+        "seconds": 0.4222482879413292
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--check"
+      ],
+      "cache_condition": "warm",
+      "seconds": 0.5069375080056489,
+      "returncode": 0,
+      "output_bytes": 889,
+      "packet": {
+        "schema_version": 1,
+        "action": "check",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--test",
+          "authoring_schemas",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/check-706df3079b4e483a9768d8cac3e06015.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "status": "passed",
+        "seconds": 0.42190729500725865
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "schemas",
+        "--check"
+      ],
+      "cache_condition": "warm",
+      "seconds": 0.5101958099985495,
+      "returncode": 0,
+      "output_bytes": 888,
+      "packet": {
+        "schema_version": 1,
+        "action": "check",
+        "cwd": "/mnt/blueengine-usb/blueengine-developer-tools",
+        "argv": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--test",
+          "authoring_schemas",
+          "-j",
+          "2"
+        ],
+        "files": [
+          "tools/game.schema.json",
+          "tools/patch.schema.json",
+          "assets/asset-pack.schema.json",
+          "tools/mcp.schemas.json"
+        ],
+        "semantic_gate": "Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.",
+        "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/schemas/check-9f4f6b54b25e4bc7bd7a99be742c3baa.log",
+        "input_identity": {
+          "sha256": "206cc93960d9d9b35c5f879a78aacdfb74ac8e549fd559d5427af7fe6e3096d4",
+          "files": 1136
+        },
+        "status": "passed",
+        "seconds": 0.4245842529926449
+      }
+    }
+  ]
+}

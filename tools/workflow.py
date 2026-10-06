@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 
 
 def console_options():
@@ -136,6 +137,18 @@ def validate_index(root):
     return {'ok': not errors, 'features': len(features), 'errors': errors}
 
 
+def suite_feature_groups(root, suites):
+    """Honor Cargo's authoritative test requirements without enabling tooling for all units."""
+    manifest = root / 'Cargo.toml'
+    definitions = tomllib.loads(manifest.read_text(encoding='utf-8')) if manifest.is_file() else {}
+    requirements = {test['name']: tuple(sorted(test.get('required-features', [])))
+                    for test in definitions.get('test', [])}
+    groups = {}
+    for suite in suites:
+        groups.setdefault(requirements.get(suite, ()), []).append(suite)
+    return groups
+
+
 def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     """Automatic iteration evidence, never permission to omit the shipping gates.
 
@@ -173,6 +186,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     native = any(p.startswith(('src/', 'tests/')) and p.endswith('.rs') for p in paths)
     native = native or any(p.startswith('templates/') and p.endswith(('.rs', '.tmpl')) for p in paths)
     if native:
+        groups = suite_feature_groups(root, suites)
         portable = bool({'two_dimensional', 'browser_games'} & set(affected['affected']))
         presentation = portable or bool({'graphics', 'game_presentation', 'client_kit', 'native_controllers',
                                          'offline_renderer', 'sandbox'} & set(affected['owners']))
@@ -181,7 +195,12 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
                   [[]] if presentation else [['--no-default-features']]))
         for flags in modes:
             add(['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, '--lib',
-                 *[arg for suite in suites for arg in ('--test', suite)], '--message-format=json'], 'rust')
+                 *[arg for suite in groups.get((), []) for arg in ('--test', suite)], '--message-format=json'], 'rust')
+        for required, selected in groups.items():
+            if required:
+                add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
+                     '--features', ','.join(required),
+                     *[arg for suite in selected for arg in ('--test', suite)], '--message-format=json'], 'rust')
         if loop == 'integration' and portable:
             add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
                  '--features', 'two-d', '--lib', '--message-format=json'], 'rust')
@@ -542,6 +561,8 @@ def full_commands(test_profile='itest'):
     commands.extend([
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'model-import', '--lib', 'model_import'],
         ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'model-import,portable', '--all-targets', '--', '-D', 'warnings'],
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'schema-validation', '--test', 'authoring_schemas'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'schema-validation', '--all-targets', '--', '-D', 'warnings'],
     ])
     for game in ('lantern-run','pocket-breaker','orchard-watch','lantern-grove'):
         manifest=f'games/{game}/Cargo.toml'
@@ -557,7 +578,7 @@ def full_commands(test_profile='itest'):
         [sys.executable, 'tools/check_headless.py'],
         [sys.executable, 'tools/check_authoring.py', *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
-         'tools.test_assets', 'tools.test_model_import', 'scripts.test_publish_games',
+         'tools.test_assets', 'tools.test_model_import', 'tools.test_schemas', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
          'tools.test_hub_deploy','tools.test_web_games','tools.test_springboard'],
@@ -628,6 +649,9 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
         if test and (selected not in suites or (separator and not name)):
             raise ValueError('Select an indexed SUITE or SUITE::exact_test; suites: ' + ', '.join(suites))
         selected_suites = [selected] if test else suites
+        required = sorted({feature for group in suite_feature_groups(root, selected_suites) for feature in group})
+        if required:
+            flags = [*flags, '--features', ','.join(required)]
         command = ['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, '--message-format=json']
         for suite in selected_suites:
             command += ['--test', suite]

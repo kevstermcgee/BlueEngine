@@ -146,6 +146,19 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertIn('two-d', rust[2])
         self.assertIn('browser', plan['requirements'])
 
+    def test_feature_guarded_schema_suite_runs_separately_from_normal_units(self):
+        plan = workflow.change_plan(ROOT, ['src/viewer/game.rs'])
+        rust = [command for command in plan['commands'] if command[:2] == ['cargo', 'test']]
+        self.assertNotIn('schema-validation', rust[0])
+        self.assertNotIn('authoring_schemas', rust[0])
+        guarded = [command for command in rust if 'authoring_schemas' in command]
+        self.assertEqual(len(guarded), 1)
+        self.assertIn('schema-validation', guarded[0])
+        self.assertIn('--no-default-features', guarded[0])
+        self.assertNotIn('--lib', guarded[0])
+        exact = workflow.iteration_plan(ROOT, 'game_documents', test='authoring_schemas')
+        self.assertIn('schema-validation', exact['commands'][0])
+
     def test_unknown_build_and_content_inputs_fail_closed(self):
         for path in ('src/new.rs', 'Cargo.toml', 'tools/FEATURES.json', '.github/workflows/ci.yml',
                      'assets/games/observatory/content/game.json', 'tools/place_interior.py'):

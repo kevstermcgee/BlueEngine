@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "name": "Ten Second Relay - Test Lab",
+  "map": "map.json",
+  "player_profile": {
+    "height": 1.8,
+    "crouched_height": 1.1,
+    "radius": 0.23,
+    "eye_height": 1.68,
+    "walk_speed": 3.2,
+    "sprint_speed": 5.6,
+    "crouch_speed": 1.3,
+    "jump_height": 0.35
+  },
+  "spawn_points": [
+    {
+      "id": "player-a",
+      "feet": [
+        -3.0,
+        0.0,
+        3.0
+      ],
+      "yaw": 0.0
+    }
+  ],
+  "counters": {
+    "active": 0
+  },
+  "interactables": [
+    {
+      "entity": "button-a",
+      "enabled": true,
+      "visible": true
+    },
+    {
+      "entity": "exit",
+      "enabled": false,
+      "visible": true
+    }
+  ],
+  "trigger_zones": [],
+  "movers": [],
+  "timers": [
+    {
+      "id": "deadline",
+      "duration_ticks": 600,
+      "auto_start": false,
+      "repeats": false
+    }
+  ],
+  "rules": [
+    {
+      "id": "start-round",
+      "on_interact": "button-a",
+      "condition": {
+        "counter": "active",
+        "equals": 0
+      },
+      "once": true,
+      "actions": [
+        {
+          "action": "set_counter",
+          "counter": "active",
+          "value": 1
+        },
+        {
+          "action": "set_enabled",
+          "entity": "button-a",
+          "enabled": false
+        },
+        {
+          "action": "set_enabled",
+          "entity": "exit",
+          "enabled": true
+        },
+        {
+          "action": "start_timer",
+          "timer": "deadline"
+        }
+      ]
+    },
+    {
+      "id": "finish-round",
+      "on_interact": "exit",
+      "condition": {
+        "counter": "active",
+        "equals": 1
+      },
+      "once": true,
+      "actions": [
+        {
+          "action": "stop_timer",
+          "timer": "deadline"
+        },
+        {
+          "action": "complete"
+        }
+      ]
+    },
+    {
+      "id": "deadline-expired",
+      "on_timer": "deadline",
+      "condition": {
+        "counter": "active",
+        "equals": 1
+      },
+      "once": true,
+      "actions": [
+        {
+          "action": "fail"
+        }
+      ]
+    }
+  ],
+  "presentation": {
+    "objective": "Press START, then reach FINISH within 10 seconds. E interacts.",
+    "success": "Relay complete! E / R to restart.",
+    "failure": "Time expired. E / R to restart.",
+    "counters": {
+      "active": {
+        "visible": false
+      }
+    }
+  }
+}

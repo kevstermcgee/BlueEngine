@@ -1,0 +1,272 @@
+{
+  "schema_version": 1,
+  "status": "passed",
+  "objective": "Stock-content variant: start begins ten-second challenge, finish before expiry wins, expiry loses, restart resets round; diagnose undeclared counter and leave valid content.",
+  "starting_revision": "d14c79dc5b5315589b9fd1aebc2d3d7488e10b8a",
+  "starting_working_tree": "clean",
+  "workflow_started_utc": "2026-10-06T23:50:38.484537+00:00",
+  "report_updated_utc": "2026-10-06T23:56:03.554957+00:00",
+  "elapsed_seconds": 325.07,
+  "elapsed_basis": "Wall time from normal be2 start task creation; initial AGENTS read preceded this timestamp.",
+  "environment": {
+    "cargo_jobs": 2,
+    "CARGO_TARGET_DIR": "/home/kevin/BlueEngine/target",
+    "TMPDIR": "/mnt/blueengine-usb/be2-task-tmp"
+  },
+  "files_inspected": [
+    "AGENTS.md",
+    "docs/GAME_QUICKSTART.md",
+    "docs/SCHEMAS.md",
+    "docs/GAME_PRESENTATION.md",
+    "docs/BEHAVIORAL_TESTING.md",
+    "docs/SHARED_GAMEPLAY.md",
+    "tools/game.schema.json",
+    "tools/patch.schema.json",
+    "assets/games/three-switches/game.json",
+    "assets/games/three-switches/scenario.json",
+    "assets/games/observatory/content/loss-restart-win.json",
+    "tools/README.md (targeted matches)",
+    "docs/AI_SPRINGBOARD.md (targeted matches)",
+    ".gitignore",
+    ".be2-work/authoring-trial/content/game.json",
+    ".be2-work/authoring-trial/content/map.json",
+    ".be2-work/authoring-trial/content/success.json",
+    ".be2-work/authoring-trial/rendered-640/run.json (parsed transitions only)",
+    ".be2-work/authoring-trial/rendered-summary.json",
+    ".be2-work/authoring-trial/rendered-640/world.png",
+    ".be2-work/authoring-trial/rendered-640/loss-0.png",
+    ".be2-work/authoring-trial/rendered-640/reset-1.png",
+    ".be2-work/authoring-trial/rendered-640/win-1.png",
+    ".be2-work/authoring-trial/rendered-640/menu.png"
+  ],
+  "source_files_changed": {
+    "tracked": [],
+    "primary_authored": [
+      ".be2-work/authoring-trial/content/game.json",
+      ".be2-work/authoring-trial/content/map.json"
+    ],
+    "scenario_files": [
+      ".be2-work/authoring-trial/content/success.json",
+      ".be2-work/authoring-trial/content/deadline-boundary.json",
+      ".be2-work/authoring-trial/content/loss-restart-success.json"
+    ],
+    "supporting_files": [
+      ".be2-work/authoring-trial/content/remove-unused-controls.patch.json",
+      ".be2-work/authoring-trial/content/game.invalid-counter.json",
+      ".be2-work/authoring-trial/content/map.base.json"
+    ],
+    "engine_code_or_new_runtime": false
+  },
+  "authoring": {
+    "base": "Public game-example stock fixture",
+    "variant": "Ten Second Relay - Test Lab",
+    "start_entity": "button-a",
+    "finish_entity": "exit",
+    "deadline": {
+      "id": "deadline",
+      "duration_ticks": 600,
+      "auto_start": false,
+      "repeats": false
+    },
+    "rules": [
+      "START sets active=1, disables START, enables FINISH, starts timer",
+      "FINISH while active stops timer and completes",
+      "Timer expiry while active fails"
+    ],
+    "restart": "Existing stock-authority restart resets counters, target eligibility, timer and once rules; no authored reset runtime."
+  },
+  "commands_and_attempts": [
+    {
+      "command": "python3 tools/be2.py start \"Author stock GameDocument ten-second start finish challenge with loss restart success and diagnose undeclared counter\" --compact",
+      "exit_code": 0,
+      "task": "f359c882f71d",
+      "note": "Initial keyword packet ranked audio at low confidence; narrowed before authoring."
+    },
+    {
+      "command": "python3 tools/be2.py context game_rules --level 2 --compact",
+      "exit_code": 0,
+      "note": "Identified game_documents, shared_gameplay; followed public authoring docs rather than engine implementation."
+    },
+    {
+      "command": "python3 tools/be2.py map describe",
+      "exit_code": 0,
+      "note": "Fresh no-default-features itest be2-tools built in 16.91s."
+    },
+    {
+      "command": "python3 tools/be2.py map game-example .be2-work/authoring-trial/content",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 tools/be2.py map game-describe",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 tools/be2.py map apply .be2-work/authoring-trial/content/map.json .be2-work/authoring-trial/content/remove-unused-controls.patch.json .be2-work/authoring-trial/content/map.json",
+      "exit_code": 1,
+      "note": "Toolkit refuses overwriting existing output; prior output preserved."
+    },
+    {
+      "command": "python3 tools/be2.py map apply .be2-work/authoring-trial/content/map.json .be2-work/authoring-trial/content/remove-unused-controls.patch.json .be2-work/authoring-trial/content/map.trimmed.json",
+      "exit_code": 0,
+      "note": "Moved preserved base map aside and renamed valid trimmed output to map.json."
+    },
+    {
+      "command": "python3 tools/be2.py map game-validate .be2-work/authoring-trial/content/game.json (deliberate undeclared counter)",
+      "exit_code": 1,
+      "diagnostic_file": ".be2-work/authoring-trial/invalid-counter-diagnostic.json"
+    },
+    {
+      "command": "Python jsonschema Draft202012Validator structural check",
+      "result": "not_run",
+      "note": "jsonschema not installed; no installation or structural-only validity claim."
+    },
+    {
+      "command": "python3 tools/be2.py map game-validate .be2-work/authoring-trial/content/game.json (repaired)",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 tools/be2.py map game-explore .be2-work/authoring-trial/content/game.json --scenario=.be2-work/authoring-trial/content/success.json",
+      "exit_code": 0,
+      "abstract_states": 4,
+      "findings": [],
+      "physically_verified": true,
+      "generated_win_ticks": 125
+    },
+    {
+      "command": "python3 tools/be2.py map sim .be2-work/authoring-trial/content/deadline-boundary.json .be2-work/authoring-trial/deadline-boundary.trace.json (initial boundary probe)",
+      "exit_code": 1,
+      "note": "Expected loss at tick600 was too early: activation tick1, expiry tick601 = exactly600 elapsed ticks. Corrected assertion, not timer."
+    },
+    {
+      "command": "Public be2-tools validation, sim, replay-trace and game-aware lint",
+      "details_file": ".be2-work/authoring-trial/verification-commands.json",
+      "all_exit_codes": 0
+    },
+    {
+      "command": "python3 tools/be2.py check --changed --plan; python3 tools/be2.py check --changed",
+      "exit_code": 0,
+      "scope": "no_changes",
+      "note": "Ignored content is not covered by changed-file gates; game scenarios supply behavioral evidence. No full engine-suite certification."
+    },
+    {
+      "command": "cargo build --locked --profile itest --bin be2",
+      "exit_code": 0,
+      "elapsed_seconds": 19.42,
+      "log": ".be2-work/authoring-trial/stock-client-build.log"
+    },
+    {
+      "command": "python3 tools/xcapture.py /home/kevin/BlueEngine/target/itest/be2 --size 1280x720 --out .be2-work/authoring-trial/rendered --sheet --timeout 180 -- --game .be2-work/authoring-trial/content/game.json --scenario .be2-work/authoring-trial/content/loss-restart-success.json",
+      "exit_code": 143,
+      "note": "Initial world frame inspected; slow software render deliberately stopped to retry at640x360. Generic helper adds frame/exit flags.",
+      "log": ".be2-work/authoring-trial/render.log"
+    },
+    {
+      "command": "LIBGL_ALWAYS_SOFTWARE=1 timeout 180s xvfb-run -a -s \"-screen 0 640x360x24\" /home/kevin/BlueEngine/target/itest/be2 --game .be2-work/authoring-trial/content/game.json --scenario .be2-work/authoring-trial/content/loss-restart-success.json --capture .be2-work/authoring-trial/rendered-640 --size 640x360 --mute",
+      "log": ".be2-work/authoring-trial/render-640.log",
+      "exit_code": 0,
+      "note": "Completed1470 scripted ticks. Requested640x360 did not change stock capture960x600; images and run.json retained."
+    },
+    {
+      "command": "be2-tools game-validate .be2-work/authoring-trial/content/game.invalid-counter.json",
+      "exit_code": 1,
+      "expected_failure": true,
+      "evidence_file": ".be2-work/authoring-trial/invalid-counter-before-repair.result.json"
+    },
+    {
+      "command": "be2-tools game-explore .be2-work/authoring-trial/content/game.json",
+      "exit_code": 0,
+      "evidence_file": ".be2-work/authoring-trial/explore.result.json"
+    },
+    {
+      "command": "be2-tools lint .be2-work/authoring-trial/content/map.base.json",
+      "exit_code": 0,
+      "evidence_file": ".be2-work/authoring-trial/baseline-lint.result.json",
+      "note": "Baseline13 warnings; final11 warnings are all inherited."
+    },
+    {
+      "command": "PNG size inspection using Python PIL",
+      "exit_code": 1,
+      "note": "Pillow absent; read standard PNG IHDR with Python struct instead."
+    }
+  ],
+  "results": {
+    "production_validation": "passed",
+    "abstract_exploration": "winnable and losable,4 states,no findings,not truncated",
+    "headless": {
+      "success": {
+        "ticks": 800,
+        "assertions_passed": 2,
+        "note": "Win at125 remains won past initial deadline."
+      },
+      "deadline_boundary": {
+        "ticks": 603,
+        "assertions_passed": 4,
+        "note": "Start at1; running at600, lost at601."
+      },
+      "loss_restart_success": {
+        "ticks": 1470,
+        "assertions_passed": 9,
+        "note": "Idle through650; start651; alive1250; lose1251; frozen loss1300; reset1301; start again1323; win1426."
+      }
+    },
+    "determinism": {
+      "success_verified_checkpoints": 54,
+      "loss_restart_success_verified_checkpoints": 98
+    },
+    "lint": {
+      "errors": 0,
+      "warnings": 11,
+      "note": "Inherited stock test-lab geometry warnings; details in lint.result.json.",
+      "baseline_warnings": 13,
+      "all_final_findings_inherited": true
+    },
+    "rendered": {
+      "exit_code": 0,
+      "environment": "Linux Xvfb + software OpenGL, muted",
+      "scripted_ticks": 1470,
+      "actual_png_dimensions": [
+        960,
+        600
+      ],
+      "summary_file": ".be2-work/authoring-trial/rendered-summary.json",
+      "captures_directory": ".be2-work/authoring-trial/rendered-640",
+      "captures_inspected": [
+        "world.png",
+        "loss-0.png",
+        "reset-1.png",
+        "win-1.png",
+        "menu.png"
+      ],
+      "observations": "Objective and E/X prompt readable; loss and success wording visible; reset restores initial view/prompt; menu renders stock title and local-pause controls. Simple inherited test-lab appearance.",
+      "live_input_tested": false
+    }
+  },
+  "diagnostics": [
+    {
+      "kind": "expected_semantic_failure",
+      "error": "Invalid condition in finish-round: condition references unknown counter undeclared_round",
+      "repair": "Use declared active counter in finish condition. Main game.json is valid; original invalid snapshot retained as evidence."
+    },
+    {
+      "kind": "boundary_probe",
+      "error": "failed is false, expected true at tick600",
+      "repair": "Assert running at600, lost601 for start at1."
+    },
+    {
+      "kind": "non_overwrite_authoring_tool",
+      "error": "File exists (os error17)",
+      "repair": "Write fresh map output then replace authored copy."
+    },
+    {
+      "kind": "presentation_size_request",
+      "observation": "--size640x360 and smaller Xvfb display still produced960x600 stock-game captures; smaller capture size is not claimed."
+    }
+  ],
+  "limitations": [
+    "No physical keyboard/controller, fullscreen, cursor capture or audio device test.",
+    "No Windows, browser, online multiplayer or packaged-game shipping evidence; this is a stock-content exercise.",
+    "No standalone JSON Schema structural validator available; production validator passed.",
+    "Chosen authoritative scenarios prove demonstrated paths, not exhaustive timing/physical state coverage.",
+    "No engine code changed; full engine verification not performed."
+  ]
+}

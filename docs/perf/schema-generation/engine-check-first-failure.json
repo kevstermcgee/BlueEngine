@@ -1,0 +1,555 @@
+{
+  "ok": false,
+  "plan": {
+    "scope": "full",
+    "reason": "Full engine validation requested.",
+    "commands": [
+      [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--lib",
+        "--profile",
+        "itest",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest"
+      ],
+      [
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--locked",
+        "--profile",
+        "itest",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--lib",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features"
+      ],
+      [
+        "cargo",
+        "clippy",
+        "--all-targets",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "games/signal-garden/Cargo.toml",
+        "--check"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/signal-garden/Cargo.toml",
+        "--no-default-features"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/signal-garden/Cargo.toml"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "two-d",
+        "--lib"
+      ],
+      [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--no-default-features",
+        "--features",
+        "two-d",
+        "--lib",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--no-default-features",
+        "--features",
+        "two-d",
+        "--lib",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "model-import",
+        "--lib",
+        "model_import"
+      ],
+      [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "model-import,portable",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "schema-validation",
+        "--test",
+        "authoring_schemas"
+      ],
+      [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "schema-validation",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "games/lantern-run/Cargo.toml",
+        "--check"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-run/Cargo.toml",
+        "--no-default-features"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-run/Cargo.toml"
+      ],
+      [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "games/pocket-breaker/Cargo.toml",
+        "--check"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/pocket-breaker/Cargo.toml",
+        "--no-default-features"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/pocket-breaker/Cargo.toml"
+      ],
+      [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "games/orchard-watch/Cargo.toml",
+        "--check"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/orchard-watch/Cargo.toml",
+        "--no-default-features"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/orchard-watch/Cargo.toml"
+      ],
+      [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "games/lantern-grove/Cargo.toml",
+        "--check"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-grove/Cargo.toml",
+        "--no-default-features"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-grove/Cargo.toml"
+      ],
+      [
+        "cargo",
+        "fmt",
+        "--manifest-path",
+        "assets/games/leo/Cargo.toml",
+        "--check"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "assets/games/leo/Cargo.toml",
+        "--no-default-features"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "assets/games/leo/Cargo.toml"
+      ],
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "assets/games/leo/Cargo.toml",
+        "--no-default-features",
+        "--features",
+        "portable-client"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/check_headless.py"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/check_authoring.py"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_workflow",
+        "tools.test_assets",
+        "tools.test_model_import",
+        "tools.test_schemas",
+        "scripts.test_publish_games",
+        "tools.test_game_check",
+        "tools.test_game_ship",
+        "tools.test_media_tools",
+        "tools.test_xcapture",
+        "tools.test_upgrade",
+        "tools.test_learn",
+        "tools.test_hub_deploy",
+        "tools.test_web_games",
+        "tools.test_springboard"
+      ]
+    ],
+    "independent_commands": [
+      35
+    ]
+  },
+  "checks": [
+    {
+      "step": 1,
+      "command": [
+        "cargo",
+        "fmt",
+        "--check"
+      ],
+      "log": "1.log",
+      "ok": true,
+      "started_seconds": 0.001,
+      "returncode": 0,
+      "log_bytes": 0,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 1.62
+    },
+    {
+      "step": 2,
+      "command": [
+        "cargo",
+        "rustdoc",
+        "--locked",
+        "--lib",
+        "--profile",
+        "itest",
+        "--message-format=json",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "log": "2.log",
+      "ok": true,
+      "started_seconds": 1.621,
+      "returncode": 0,
+      "log_bytes": 132949,
+      "cargo_artifacts": {
+        "fresh": 172,
+        "built": 1
+      },
+      "elapsed_seconds": 12.708
+    },
+    {
+      "step": 3,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--message-format=json"
+      ],
+      "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/check-20261007T001509808943Z-3ki43gz1/3.log",
+      "ok": false,
+      "started_seconds": 14.329,
+      "returncode": 101,
+      "log_bytes": 271965,
+      "cargo_artifacts": {
+        "fresh": 181,
+        "built": 81
+      },
+      "tests_executed": 642,
+      "category": "test_failure",
+      "diagnostics": [
+        "thread 'discovery_and_parser_share_command_signatures' (3574064) panicked at tests/capabilities.rs:40:5:",
+        "assertion failed: output.stdout.len() < 6000",
+        "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+        "failures:",
+        "    discovery_and_parser_share_command_signatures",
+        "test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+        "error: test failed, to rerun pass `--test capabilities`"
+      ],
+      "location": {
+        "file": "tests/capabilities.rs",
+        "line": 40,
+        "column": 5
+      },
+      "elapsed_seconds": 151.157,
+      "reproduction": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--message-format=json"
+      ],
+      "recovery": {
+        "likely_reason": "A behavioral assertion failed; inspect the named test and assertion location.",
+        "inspect": {
+          "file": "tests/capabilities.rs",
+          "line": 40,
+          "column": 5
+        },
+        "next_command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json"
+        ],
+        "previous_work": "Completed outputs and successful stage reports are retained; only the failed selection is unverified."
+      }
+    },
+    {
+      "step": 36,
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_workflow",
+        "tools.test_assets",
+        "tools.test_model_import",
+        "tools.test_schemas",
+        "scripts.test_publish_games",
+        "tools.test_game_check",
+        "tools.test_game_ship",
+        "tools.test_media_tools",
+        "tools.test_xcapture",
+        "tools.test_upgrade",
+        "tools.test_learn",
+        "tools.test_hub_deploy",
+        "tools.test_web_games",
+        "tools.test_springboard"
+      ],
+      "log": "36.log",
+      "ok": true,
+      "started_seconds": 0.001,
+      "returncode": 0,
+      "log_bytes": 3467,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "tests_executed": 564,
+      "elapsed_seconds": 160.091
+    }
+  ],
+  "target_directory": "/home/kevin/BlueEngine/target",
+  "independent_commands": [
+    35
+  ],
+  "failure": {
+    "returncode": 101,
+    "log_bytes": 271965,
+    "cargo_artifacts": {
+      "fresh": 181,
+      "built": 81
+    },
+    "tests_executed": 642,
+    "category": "test_failure",
+    "diagnostics": [
+      "thread 'discovery_and_parser_share_command_signatures' (3574064) panicked at tests/capabilities.rs:40:5:",
+      "assertion failed: output.stdout.len() < 6000",
+      "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+      "failures:",
+      "    discovery_and_parser_share_command_signatures",
+      "test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+      "error: test failed, to rerun pass `--test capabilities`"
+    ],
+    "location": {
+      "file": "tests/capabilities.rs",
+      "line": 40,
+      "column": 5
+    },
+    "elapsed_seconds": 151.157,
+    "command": [
+      "cargo",
+      "test",
+      "--locked",
+      "--profile",
+      "itest",
+      "--message-format=json"
+    ],
+    "reproduction": [
+      "cargo",
+      "test",
+      "--locked",
+      "--profile",
+      "itest",
+      "--message-format=json"
+    ],
+    "log": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/check-20261007T001509808943Z-3ki43gz1/3.log",
+    "recovery": {
+      "likely_reason": "A behavioral assertion failed; inspect the named test and assertion location.",
+      "inspect": {
+        "file": "tests/capabilities.rs",
+        "line": 40,
+        "column": 5
+      },
+      "next_command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--message-format=json"
+      ],
+      "previous_work": "Completed outputs and successful stage reports are retained; only the failed selection is unverified."
+    }
+  },
+  "exit_code": 101,
+  "elapsed_seconds": 165.486,
+  "commands_attempted": 4,
+  "failed_commands": 1,
+  "cargo_artifacts": {
+    "fresh": 353,
+    "built": 82
+  },
+  "resources": {
+    "child_cpu_seconds": 263.266,
+    "max_child_rss_bytes": 3002650624,
+    "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+  },
+  "successful_steps": [
+    1,
+    2,
+    36
+  ]
+}

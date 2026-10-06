@@ -434,15 +434,19 @@
         "tools/fetch_models.py",
         "tools/test_model_import.py",
         "docs/MODEL_IMPORT.md",
-        "assets/model-sources.json"
+        "assets/model-sources.json",
+        "docs/SCHEMAS.md",
+        "tests/authoring_schemas.rs",
+        "tools/schemas.py"
       ],
       "checks": [
         "python tools/assets.py validate",
         "python -m unittest tools.test_assets -v",
         "python -m unittest tools.test_model_import -v",
-        "cargo test --locked --no-default-features --features model-import --lib model_import"
+        "cargo test --locked --no-default-features --features model-import --lib model_import",
+        "python3 tools/be2.py schemas --check"
       ],
-      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import. Static glTF: read docs/MODEL_IMPORT.md; assets.py import-model writes CC0 packs and precomputed box metadata. Games embed preprocessed art in native/browser via asset_model::draw::Model; servers read only ColliderMetadata. Import-only dependencies are feature gated.",
+      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import. Static glTF: read docs/MODEL_IMPORT.md; assets.py import-model writes CC0 packs and precomputed box metadata. Games embed preprocessed art in native/browser via asset_model::draw::Model; servers read only ColliderMetadata. Import-only dependencies are feature gated. Schemas are generated from opt-in Rust types/constraints; maintain with be2.py schemas --write/--check (docs/SCHEMAS.md). Structural validity retains all existing semantic and shipping gates.",
       "depends_on": [],
       "keywords": [
         "asset",
@@ -459,7 +463,9 @@
         "imported assets",
         "furniture",
         "textured props",
-        "portable 3D model"
+        "portable 3D model",
+        "schemars",
+        "generated schema"
       ],
       "read_first": [
         "docs/MODEL_IMPORT.md",
@@ -1270,13 +1276,19 @@
         "assets/games/observatory/content/game.json",
         "assets/games/observatory/README.md",
         "tests/stock_observatory.rs",
-        "src/viewer/lint.rs"
+        "src/viewer/lint.rs",
+        "docs/SCHEMAS.md",
+        "tests/authoring_schemas.rs",
+        "tools/schemas.py",
+        "assets/games/timed-relay/README.md",
+        "assets/games/timed-relay/content/game.json"
       ],
       "checks": [
         "game_documents integration tests",
-        "graphical --capture-game smoke"
+        "graphical --capture-game smoke",
+        "python3 tools/be2.py schemas --check"
       ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting; movers translate authored gates. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries. Movers carry a grounded player standing on them (Controller::ride, ADR 0026). Optional stock presentation config sets objective/outcome wording, counter labels/visibility/units/clock, RGBA palette and bounded HUD; reads authority only. Canonical translate preserves exact box bounds after fractional edits.",
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting; movers translate authored gates. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries. Movers carry a grounded player standing on them (Controller::ride, ADR 0026). Optional stock presentation config sets objective/outcome wording, counter labels/visibility/units/clock, RGBA palette and bounded HUD; reads authority only. Canonical translate preserves exact box bounds after fractional edits. Schemas are generated from opt-in Rust types/constraints; maintain with be2.py schemas --write/--check (docs/SCHEMAS.md). Structural validity retains all existing semantic and shipping gates.",
       "depends_on": [
         "simulation_contract"
       ],
@@ -1307,7 +1319,14 @@
         "shutter",
         "calibration",
         "canonical",
-        "translate"
+        "translate",
+        "schemars",
+        "generated schema",
+        "stock GameDocument",
+        "ten-second challenge",
+        "deadline",
+        "start finish",
+        "countdown objective"
       ],
       "read_first": [
         "src/viewer/game.rs",
@@ -2177,12 +2196,20 @@
     "mcp": {
       "files": [
         "src/viewer/mcp.rs",
-        "tools/mcp_server.py"
+        "tools/mcp_server.py",
+        "docs/SCHEMAS.md",
+        "tests/authoring_schemas.rs",
+        "tools/schemas.py"
       ],
       "checks": [
-        "native MCP stdio server"
+        "native MCP stdio server",
+        "python3 tools/be2.py schemas --check"
       ],
-      "note": "Native Model Context Protocol (MCP) server directly exposing level authoring, inspection, pathing, linting, and simulation tools over stdio JSON-RPC."
+      "note": "Native Model Context Protocol (MCP) server directly exposing level authoring, inspection, pathing, linting, and simulation tools over stdio JSON-RPC. Schemas are generated from opt-in Rust types/constraints; maintain with be2.py schemas --write/--check (docs/SCHEMAS.md). Structural validity retains all existing semantic and shipping gates.",
+      "keywords": [
+        "schemars",
+        "generated schema"
+      ]
     },
     "game_shipping": {
       "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. Package verification is display-independent: strict portable manifest paths, every SHA-256, complete declared source inventory when available, and GameDocument.map closure. Graphical smoke copies only declarations outside the checkout and saves full stdout/stderr; mutable player files are preserved in dist but excluded from smoke.",

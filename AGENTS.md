@@ -69,6 +69,9 @@ Published-source changes also require `python scripts/publish_games.py check`.
 
 Audio authoring: `be2-tools audio describe`, `docs/AUDIO.md`, and `assets/audio/observatory/project.json`.
 Use named rendered bundles with `kit::AudioBank`; edits to audio JSON need rendering, not a Rust rebuild.
+Engine schema maintenance: edit the owning Rust types/constraints, then run
+`python3 tools/be2.py schemas --write` and `schemas --check` (docs/SCHEMAS.md).
+Game authors use committed schemas and existing validators; generation is optional native tooling.
 Stock games bind them through `presentation.audio` (docs/AUDIO.md); render into `assets/audio` for
 packaging. `game-validate` checks configured assets; the headless authority never opens a device.
 Inspect state/errors and check bundles. Measure loops with `audio_report.py --loop`; numeric evidence

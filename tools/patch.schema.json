@@ -1,16 +1,253 @@
 {
- "$schema":"https://json-schema.org/draft/2020-12/schema",
- "title":"BE2 edit transaction v1",
- "type":"array","maxItems":1000,
- "$defs":{
-  "vector":{"type":"array","items":{"type":"number","minimum":-1000,"maximum":1000},"minItems":3,"maxItems":3},
-  "id":{"type":"string","pattern":"^[A-Za-z0-9_/-]+$","minLength":1,"maxLength":100},
-  "ids":{"type":"array","items":{"$ref":"#/$defs/id"}}
- },
- "items":{"oneOf":[
-  {"type":"object","additionalProperties":false,"required":["op","id","label","center","half_extents","color"],"properties":{"op":{"const":"add_box"},"id":{"$ref":"#/$defs/id"},"label":{"type":"string","maxLength":100},"center":{"$ref":"#/$defs/vector"},"half_extents":{"type":"array","items":{"type":"number","exclusiveMinimum":0,"maximum":1000},"minItems":3,"maxItems":3},"color":{"type":"array","items":{"type":"number","minimum":0,"maximum":1},"minItems":3,"maxItems":3},"structural":{"type":"boolean","default":false}}},
-  {"type":"object","additionalProperties":false,"required":["op","id","label","kind","origin"],"properties":{"op":{"const":"add_prop"},"id":{"$ref":"#/$defs/id"},"label":{"type":"string","maxLength":100},"kind":{"enum":["apple","cereal","chair","table","framed-art","framed-botanical","sculpture","vase-plant","bowl","table-lamp","book-stack","candle-trio","potted-cactus","flower-vase","tall-vase","mantel-clock","woven-basket"]},"origin":{"$ref":"#/$defs/vector"}}},
-  {"type":"object","additionalProperties":false,"required":["op","nodes","colliders","entities","delta"],"properties":{"op":{"const":"translate"},"nodes":{"$ref":"#/$defs/ids"},"colliders":{"$ref":"#/$defs/ids"},"entities":{"$ref":"#/$defs/ids"},"delta":{"$ref":"#/$defs/vector"}}},
-  {"type":"object","additionalProperties":false,"required":["op","nodes","colliders","entities"],"properties":{"op":{"const":"remove"},"nodes":{"$ref":"#/$defs/ids"},"colliders":{"$ref":"#/$defs/ids"},"entities":{"$ref":"#/$defs/ids"}}}
- ]}
+  "$defs": {
+    "id": {
+      "maxLength": 100,
+      "minLength": 1,
+      "pattern": "^[A-Za-z0-9_/-]+$",
+      "type": "string"
+    },
+    "ids": {
+      "items": {
+        "$ref": "#/$defs/id"
+      },
+      "type": "array"
+    },
+    "vector": {
+      "items": {
+        "maximum": 1000.0,
+        "minimum": -1000.0,
+        "type": "number"
+      },
+      "maxItems": 3,
+      "minItems": 3,
+      "type": "array"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "items": {
+    "oneOf": [
+      {
+        "additionalProperties": false,
+        "properties": {
+          "center": {
+            "items": {
+              "maximum": 1000.0,
+              "minimum": -1000.0,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "color": {
+            "items": {
+              "maximum": 1.0,
+              "minimum": 0.0,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "half_extents": {
+            "items": {
+              "exclusiveMinimum": 0,
+              "maximum": 1000.0,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "op": {
+            "const": "add_box",
+            "type": "string"
+          },
+          "structural": {
+            "default": false,
+            "description": "Structural boxes have visual geometry and collision but no semantic entity.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "op",
+          "id",
+          "label",
+          "center",
+          "half_extents",
+          "color"
+        ],
+        "type": "object"
+      },
+      {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9_/-]+$",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "cereal",
+              "chair",
+              "table",
+              "apple",
+              "framed-art",
+              "framed-botanical",
+              "sculpture",
+              "vase-plant",
+              "bowl",
+              "table-lamp",
+              "book-stack",
+              "candle-trio",
+              "potted-cactus",
+              "flower-vase",
+              "tall-vase",
+              "mantel-clock",
+              "woven-basket"
+            ],
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "op": {
+            "const": "add_prop",
+            "type": "string"
+          },
+          "origin": {
+            "items": {
+              "maximum": 1000.0,
+              "minimum": -1000.0,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          }
+        },
+        "required": [
+          "op",
+          "id",
+          "label",
+          "kind",
+          "origin"
+        ],
+        "type": "object"
+      },
+      {
+        "additionalProperties": false,
+        "properties": {
+          "colliders": {
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_/-]+$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "delta": {
+            "items": {
+              "maximum": 1000.0,
+              "minimum": -1000.0,
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "entities": {
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_/-]+$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_/-]+$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "op": {
+            "const": "translate",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "nodes",
+          "colliders",
+          "entities",
+          "delta"
+        ],
+        "type": "object"
+      },
+      {
+        "additionalProperties": false,
+        "properties": {
+          "colliders": {
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_/-]+$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "entities": {
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_/-]+$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "nodes": {
+            "items": {
+              "maxLength": 100,
+              "minLength": 1,
+              "pattern": "^[A-Za-z0-9_/-]+$",
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "op": {
+            "const": "remove",
+            "type": "string"
+          }
+        },
+        "required": [
+          "op",
+          "nodes",
+          "colliders",
+          "entities"
+        ],
+        "type": "object"
+      }
+    ]
+  },
+  "maxItems": 1000,
+  "title": "BE2 edit transaction v1",
+  "type": "array"
 }

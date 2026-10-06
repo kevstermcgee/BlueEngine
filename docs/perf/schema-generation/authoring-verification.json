@@ -1,0 +1,399 @@
+[
+  {
+    "label": "validate",
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "game-validate",
+      ".be2-work/authoring-trial/content/game.json"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"content_hash\":\"12ed74b788c40df5\",\"ok\":true,\"state\":{\"active_timers\":0,\"completed\":false,\"counters\":[0],\"enabled\":1,\"fired\":0,\"mover_targets\":0,\"mover_ticks\":[],\"round\":0,\"v\":3,\"z\":0}}\n",
+    "stderr": "",
+    "result": {
+      "content_hash": "12ed74b788c40df5",
+      "ok": true,
+      "state": {
+        "active_timers": 0,
+        "completed": false,
+        "counters": [
+          0
+        ],
+        "enabled": 1,
+        "fired": 0,
+        "mover_targets": 0,
+        "mover_ticks": [],
+        "round": 0,
+        "v": 3,
+        "z": 0
+      }
+    }
+  },
+  {
+    "label": "deadline-boundary",
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "sim",
+      ".be2-work/authoring-trial/content/deadline-boundary.json",
+      ".be2-work/authoring-trial/deadline-boundary.valid.trace.json"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"assertions\":[{\"detail\":\"passed\",\"ok\":true,\"tick\":1},{\"detail\":\"passed\",\"ok\":true,\"tick\":599},{\"detail\":\"passed\",\"ok\":true,\"tick\":600},{\"detail\":\"passed\",\"ok\":true,\"tick\":601}],\"final_checksum\":\"0x79b54f39c0a03d6b\",\"ok\":true,\"players\":[{\"id\":1,\"position\":[-3.0,1.6799999475479126,3.0],\"yaw\":0.0}],\"reachable_targets\":[\"button-a\"],\"scenario\":\"Ten-second deadline boundary probe\",\"ticks\":603}\n",
+    "stderr": "",
+    "result": {
+      "assertions": [
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 599
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 600
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 601
+        }
+      ],
+      "final_checksum": "0x79b54f39c0a03d6b",
+      "ok": true,
+      "players": [
+        {
+          "id": 1,
+          "position": [
+            -3.0,
+            1.6799999475479126,
+            3.0
+          ],
+          "yaw": 0.0
+        }
+      ],
+      "reachable_targets": [
+        "button-a"
+      ],
+      "scenario": "Ten-second deadline boundary probe",
+      "ticks": 603
+    }
+  },
+  {
+    "label": "success",
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "sim",
+      ".be2-work/authoring-trial/content/success.json",
+      ".be2-work/authoring-trial/success.trace.json"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"assertions\":[{\"detail\":\"passed\",\"ok\":true,\"tick\":125},{\"detail\":\"passed\",\"ok\":true,\"tick\":800}],\"final_checksum\":\"0x9a8af3875c1d759f\",\"ok\":true,\"players\":[{\"id\":1,\"position\":[1.5159289836883545,1.6799999475479126,1.3829960823059082],\"yaw\":1.3182429075241089}],\"reachable_targets\":[\"button-a\",\"exit\"],\"scenario\":\"generated, one winning route only (loss, retry, restart and wrong order are not covered): the shortest win (press button-a, press exit)\",\"ticks\":800}\n",
+    "stderr": "",
+    "result": {
+      "assertions": [
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 125
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 800
+        }
+      ],
+      "final_checksum": "0x9a8af3875c1d759f",
+      "ok": true,
+      "players": [
+        {
+          "id": 1,
+          "position": [
+            1.5159289836883545,
+            1.6799999475479126,
+            1.3829960823059082
+          ],
+          "yaw": 1.3182429075241089
+        }
+      ],
+      "reachable_targets": [
+        "button-a",
+        "exit"
+      ],
+      "scenario": "generated, one winning route only (loss, retry, restart and wrong order are not covered): the shortest win (press button-a, press exit)",
+      "ticks": 800
+    }
+  },
+  {
+    "label": "loss-restart-success",
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "sim",
+      ".be2-work/authoring-trial/content/loss-restart-success.json",
+      ".be2-work/authoring-trial/loss-restart-success.trace.json"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"assertions\":[{\"detail\":\"passed\",\"ok\":true,\"tick\":650},{\"detail\":\"passed\",\"ok\":true,\"tick\":651},{\"detail\":\"passed\",\"ok\":true,\"tick\":1250},{\"detail\":\"passed\",\"ok\":true,\"tick\":1251},{\"detail\":\"passed\",\"ok\":true,\"tick\":1300},{\"detail\":\"passed\",\"ok\":true,\"tick\":1301},{\"detail\":\"passed\",\"ok\":true,\"tick\":1301},{\"detail\":\"passed\",\"ok\":true,\"tick\":1323},{\"detail\":\"passed\",\"ok\":true,\"tick\":1426}],\"final_checksum\":\"0x69267268d17f49f6\",\"ok\":true,\"players\":[{\"id\":1,\"position\":[1.5159289836883545,1.6799999475479126,1.3829960823059082],\"yaw\":1.3182429075241089}],\"reachable_targets\":[\"button-a\",\"exit\"],\"scenario\":\"Ten Second Relay: idle, expiry, frozen loss, restart reset, physical success\",\"ticks\":1470}\n",
+    "stderr": "",
+    "result": {
+      "assertions": [
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 650
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 651
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1250
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1251
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1300
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1301
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1301
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1323
+        },
+        {
+          "detail": "passed",
+          "ok": true,
+          "tick": 1426
+        }
+      ],
+      "final_checksum": "0x69267268d17f49f6",
+      "ok": true,
+      "players": [
+        {
+          "id": 1,
+          "position": [
+            1.5159289836883545,
+            1.6799999475479126,
+            1.3829960823059082
+          ],
+          "yaw": 1.3182429075241089
+        }
+      ],
+      "reachable_targets": [
+        "button-a",
+        "exit"
+      ],
+      "scenario": "Ten Second Relay: idle, expiry, frozen loss, restart reset, physical success",
+      "ticks": 1470
+    }
+  },
+  {
+    "label": "replay-success",
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "replay-trace",
+      ".be2-work/authoring-trial/success.trace.json"
+    ],
+    "exit_code": 0,
+    "stdout": "{\n  \"deterministic\": true,\n  \"total_ticks\": 800,\n  \"verified_checkpoints\": 54\n}\n",
+    "stderr": "",
+    "result": {
+      "deterministic": true,
+      "total_ticks": 800,
+      "verified_checkpoints": 54
+    }
+  },
+  {
+    "label": "replay-loss-restart-success",
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "replay-trace",
+      ".be2-work/authoring-trial/loss-restart-success.trace.json"
+    ],
+    "exit_code": 0,
+    "stdout": "{\n  \"deterministic\": true,\n  \"total_ticks\": 1470,\n  \"verified_checkpoints\": 98\n}\n",
+    "stderr": "",
+    "result": {
+      "deterministic": true,
+      "total_ticks": 1470,
+      "verified_checkpoints": 98
+    }
+  },
+  {
+    "label": "lint",
+    "command": [
+      "/home/kevin/BlueEngine/target/itest/be2-tools",
+      "lint",
+      ".be2-work/authoring-trial/content/map.json",
+      "--game=.be2-work/authoring-trial/content/game.json",
+      "--scenario=.be2-work/authoring-trial/content/success.json"
+    ],
+    "exit_code": 0,
+    "stdout": "{\n  \"ok\": true,\n  \"errors\": 0,\n  \"warnings\": 11,\n  \"findings\": [\n    {\n      \"code\": \"overlap\",\n      \"severity\": \"warn\",\n      \"message\": \"Colliders 'collider-14' and 'collider-4' overlap by 0.20x4.00x0.20m\",\n      \"at\": [\n        8.1,\n        2.0,\n        -6.1\n      ],\n      \"ids\": [\n        \"collider-14\",\n        \"collider-4\"\n      ]\n    },\n    {\n      \"code\": \"overlap\",\n      \"severity\": \"warn\",\n      \"message\": \"Colliders 'collider-15' and 'collider-5' overlap by 0.20x4.00x0.20m\",\n      \"at\": [\n        8.1,\n        2.0,\n        6.1\n      ],\n      \"ids\": [\n        \"collider-15\",\n        \"collider-5\"\n      ]\n    },\n    {\n      \"code\": \"overlap\",\n      \"severity\": \"warn\",\n      \"message\": \"Colliders 'collider-22' and 'collider-7' overlap by 0.20x4.00x0.20m\",\n      \"at\": [\n        -8.1,\n        2.0,\n        -6.1\n      ],\n      \"ids\": [\n        \"collider-22\",\n        \"collider-7\"\n      ]\n    },\n    {\n      \"code\": \"overlap\",\n      \"severity\": \"warn\",\n      \"message\": \"Colliders 'collider-23' and 'collider-8' overlap by 0.20x4.00x0.20m\",\n      \"at\": [\n        -8.1,\n        2.0,\n        6.1\n      ],\n      \"ids\": [\n        \"collider-23\",\n        \"collider-8\"\n      ]\n    },\n    {\n      \"code\": \"sunk\",\n      \"severity\": \"warn\",\n      \"message\": \"Entity 'lab-terminal' is buried 0.10m in floor/support\",\n      \"at\": [\n        3.0,\n        -0.099999964,\n        0.0\n      ],\n      \"ids\": [\n        \"lab-terminal\"\n      ]\n    },\n    {\n      \"code\": \"floating\",\n      \"severity\": \"warn\",\n      \"message\": \"Entity 'exit' floats 1.20m above support\",\n      \"at\": [\n        3.0,\n        1.2,\n        1.0\n      ],\n      \"ids\": [\n        \"exit\"\n      ]\n    },\n    {\n      \"code\": \"drop\",\n      \"severity\": \"warn\",\n      \"message\": \"Drop hazard: 1.20m fall at (-19.7, -3.4) without barrier\",\n      \"at\": [\n        -19.707,\n        1.2,\n        -3.3569999\n      ],\n      \"ids\": []\n    },\n    {\n      \"code\": \"drop\",\n      \"severity\": \"warn\",\n      \"message\": \"Drop hazard: 1.20m fall at (-19.7, -3.6) without barrier\",\n      \"at\": [\n        -19.707,\n        1.2,\n        -3.6069999\n      ],\n      \"ids\": []\n    },\n    {\n      \"code\": \"drop\",\n      \"severity\": \"warn\",\n      \"message\": \"Drop hazard: 1.20m fall at (-19.7, -3.9) without barrier\",\n      \"at\": [\n        -19.707,\n        1.2,\n        -3.8569999\n      ],\n      \"ids\": []\n    },\n    {\n      \"code\": \"drop\",\n      \"severity\": \"warn\",\n      \"message\": \"Drop hazard: 1.20m fall at (-19.7, -4.1) without barrier\",\n      \"at\": [\n        -19.707,\n        1.2,\n        -4.107\n      ],\n      \"ids\": []\n    },\n    {\n      \"code\": \"drop\",\n      \"severity\": \"warn\",\n      \"message\": \"Drop hazard: 1.20m fall at (-19.7, -4.4) without barrier\",\n      \"at\": [\n        -19.707,\n        1.2,\n        -4.3570004\n      ],\n      \"ids\": []\n    }\n  ]\n}\n",
+    "stderr": "",
+    "result": {
+      "ok": true,
+      "errors": 0,
+      "warnings": 11,
+      "findings": [
+        {
+          "code": "overlap",
+          "severity": "warn",
+          "message": "Colliders 'collider-14' and 'collider-4' overlap by 0.20x4.00x0.20m",
+          "at": [
+            8.1,
+            2.0,
+            -6.1
+          ],
+          "ids": [
+            "collider-14",
+            "collider-4"
+          ]
+        },
+        {
+          "code": "overlap",
+          "severity": "warn",
+          "message": "Colliders 'collider-15' and 'collider-5' overlap by 0.20x4.00x0.20m",
+          "at": [
+            8.1,
+            2.0,
+            6.1
+          ],
+          "ids": [
+            "collider-15",
+            "collider-5"
+          ]
+        },
+        {
+          "code": "overlap",
+          "severity": "warn",
+          "message": "Colliders 'collider-22' and 'collider-7' overlap by 0.20x4.00x0.20m",
+          "at": [
+            -8.1,
+            2.0,
+            -6.1
+          ],
+          "ids": [
+            "collider-22",
+            "collider-7"
+          ]
+        },
+        {
+          "code": "overlap",
+          "severity": "warn",
+          "message": "Colliders 'collider-23' and 'collider-8' overlap by 0.20x4.00x0.20m",
+          "at": [
+            -8.1,
+            2.0,
+            6.1
+          ],
+          "ids": [
+            "collider-23",
+            "collider-8"
+          ]
+        },
+        {
+          "code": "sunk",
+          "severity": "warn",
+          "message": "Entity 'lab-terminal' is buried 0.10m in floor/support",
+          "at": [
+            3.0,
+            -0.099999964,
+            0.0
+          ],
+          "ids": [
+            "lab-terminal"
+          ]
+        },
+        {
+          "code": "floating",
+          "severity": "warn",
+          "message": "Entity 'exit' floats 1.20m above support",
+          "at": [
+            3.0,
+            1.2,
+            1.0
+          ],
+          "ids": [
+            "exit"
+          ]
+        },
+        {
+          "code": "drop",
+          "severity": "warn",
+          "message": "Drop hazard: 1.20m fall at (-19.7, -3.4) without barrier",
+          "at": [
+            -19.707,
+            1.2,
+            -3.3569999
+          ],
+          "ids": []
+        },
+        {
+          "code": "drop",
+          "severity": "warn",
+          "message": "Drop hazard: 1.20m fall at (-19.7, -3.6) without barrier",
+          "at": [
+            -19.707,
+            1.2,
+            -3.6069999
+          ],
+          "ids": []
+        },
+        {
+          "code": "drop",
+          "severity": "warn",
+          "message": "Drop hazard: 1.20m fall at (-19.7, -3.9) without barrier",
+          "at": [
+            -19.707,
+            1.2,
+            -3.8569999
+          ],
+          "ids": []
+        },
+        {
+          "code": "drop",
+          "severity": "warn",
+          "message": "Drop hazard: 1.20m fall at (-19.7, -4.1) without barrier",
+          "at": [
+            -19.707,
+            1.2,
+            -4.107
+          ],
+          "ids": []
+        },
+        {
+          "code": "drop",
+          "severity": "warn",
+          "message": "Drop hazard: 1.20m fall at (-19.7, -4.4) without barrier",
+          "at": [
+            -19.707,
+            1.2,
+            -4.3570004
+          ],
+          "ids": []
+        }
+      ]
+    }
+  }
+]

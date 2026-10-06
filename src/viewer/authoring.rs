@@ -445,6 +445,11 @@ impl MapDocument {
 }
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(
+    all(feature = "schema-generation", not(target_arch = "wasm32")),
+    derive(schemars::JsonSchema)
+)]
+#[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::edit))]
 pub enum Edit {
     AddBox {
         id: String,
