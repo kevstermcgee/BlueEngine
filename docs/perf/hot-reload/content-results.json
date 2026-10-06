@@ -1,0 +1,214 @@
+{
+  "version": 1,
+  "engine_binary_sha256": "95acc2bc13c6aca2cefb0094ecef021aeba7f6ace06a15bd4489d0566d1a404b",
+  "builds_triggered": 0,
+  "environment": "Linux Xvfb/software OpenGL; warm compiled executable; fresh restart process versus retained watch process",
+  "results": [
+    {
+      "route": "restart",
+      "trial": 1,
+      "edit_to_visible_seconds": 0.4768,
+      "argv": [
+        "/home/kevin/BlueEngine/target/itest/be2",
+        "--game",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/game/game.json",
+        "--mute",
+        "--settings",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/settings.json"
+      ],
+      "pixel": [
+        216,
+        25,
+        30
+      ],
+      "game_sha256": "221ae2ceab9bb3e65d5f425a17d5ac2be939986ea2e128ee54ba955db89a3647"
+    },
+    {
+      "route": "restart",
+      "trial": 2,
+      "edit_to_visible_seconds": 0.1902,
+      "argv": [
+        "/home/kevin/BlueEngine/target/itest/be2",
+        "--game",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/game/game.json",
+        "--mute",
+        "--settings",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/settings.json"
+      ],
+      "pixel": [
+        25,
+        191,
+        38
+      ],
+      "game_sha256": "97afbac3e8ff11da99e0cfc9f9ced8541b1ad3e0d26e56326f93099a0344bcc6"
+    },
+    {
+      "route": "restart",
+      "trial": 3,
+      "edit_to_visible_seconds": 0.195,
+      "argv": [
+        "/home/kevin/BlueEngine/target/itest/be2",
+        "--game",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/game/game.json",
+        "--mute",
+        "--settings",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/settings.json"
+      ],
+      "pixel": [
+        30,
+        51,
+        216
+      ],
+      "game_sha256": "a61af6481edb822c3f3e1afb21e7784faa8eeed113240da8b4eaaec35c4e6151"
+    },
+    {
+      "route": "watch",
+      "trial": 1,
+      "edit_to_visible_seconds": 0.2716,
+      "argv": [
+        "/home/kevin/BlueEngine/target/itest/be2",
+        "--game",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/game/game.json",
+        "--watch",
+        "--mute",
+        "--settings",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/settings.json"
+      ],
+      "pixel": [
+        216,
+        25,
+        30
+      ],
+      "game_sha256": "221ae2ceab9bb3e65d5f425a17d5ac2be939986ea2e128ee54ba955db89a3647"
+    },
+    {
+      "route": "watch",
+      "trial": 2,
+      "edit_to_visible_seconds": 0.2694,
+      "argv": [
+        "/home/kevin/BlueEngine/target/itest/be2",
+        "--game",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/game/game.json",
+        "--watch",
+        "--mute",
+        "--settings",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/settings.json"
+      ],
+      "pixel": [
+        25,
+        191,
+        38
+      ],
+      "game_sha256": "97afbac3e8ff11da99e0cfc9f9ced8541b1ad3e0d26e56326f93099a0344bcc6"
+    },
+    {
+      "route": "watch",
+      "trial": 3,
+      "edit_to_visible_seconds": 0.2917,
+      "argv": [
+        "/home/kevin/BlueEngine/target/itest/be2",
+        "--game",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/game/game.json",
+        "--watch",
+        "--mute",
+        "--settings",
+        "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/settings.json"
+      ],
+      "pixel": [
+        30,
+        51,
+        216
+      ],
+      "game_sha256": "a61af6481edb822c3f3e1afb21e7784faa8eeed113240da8b4eaaec35c4e6151"
+    }
+  ],
+  "events": [
+    {
+      "detail": "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/hot-reload/frames-1791324633021310135/game/game.json",
+      "event": "content_reload",
+      "previous_content_valid": true,
+      "status": "ready"
+    },
+    {
+      "camera_preserved": true,
+      "content_hash": "8c3faf3f7e5d2638",
+      "event": "content_reload",
+      "position_after": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "position_before": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "preparation_seconds": 0.002843887,
+      "status": "passed"
+    },
+    {
+      "camera_preserved": true,
+      "content_hash": "49ba908f03f86ebb",
+      "event": "content_reload",
+      "position_after": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "position_before": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "preparation_seconds": 0.002741901,
+      "status": "passed"
+    },
+    {
+      "camera_preserved": true,
+      "content_hash": "e8b1fc5e19345c4b",
+      "event": "content_reload",
+      "position_after": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "position_before": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "preparation_seconds": 0.002907345,
+      "status": "passed"
+    },
+    {
+      "detail": "Game v1: version=1, name 1..100 bytes, spawns 1..8, counters <=32, interactables/zones <=64 (at least 1 total), movers <=64, timers <=64, rules 1..64",
+      "event": "content_reload",
+      "previous_content_valid": true,
+      "status": "failed"
+    },
+    {
+      "camera_preserved": true,
+      "content_hash": "e8b1fc5e19345c4b",
+      "event": "content_reload",
+      "position_after": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "position_before": [
+        -3.0,
+        1.6799999475479126,
+        3.0
+      ],
+      "preparation_seconds": 0.003701856,
+      "status": "passed"
+    }
+  ],
+  "invalid_kept_old_content": true,
+  "captures_inspected": [
+    "after-2.png",
+    "invalid-keeps-old.png"
+  ],
+  "acceptance": "stopped: median visible-update latency regressed; state preservation has focused evidence, but no whole-task benefit was measured",
+  "source_patch_sha256": "4d31e7e92410645d32cf5ab11b8cd716146bba500577ff23a8afd6a6e8d1f3ff"
+}

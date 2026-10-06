@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "acceptance": "stopped: running output remained unchanged after CLI-reported patches in both Linux configurations",
+  "windows": "not verified",
+  "nightly": "not installed or required to build this stable-toolchain prototype",
+  "dx_receipt": {
+    "version": "0.7.10",
+    "source": "https://github.com/DioxusLabs/dioxus/releases/download/v0.7.10/dx-x86_64-unknown-linux-gnu.tar.gz",
+    "archive_sha256": "4363e4ed2a3f1eb7f4d38d2d59aed59ce43271c44c16b425e92c89a64761fbe7",
+    "download_and_extract_seconds": 8.282127325073816
+  },
+  "argv": [
+    "dx",
+    "serve",
+    "--platform",
+    "linux",
+    "--hot-patch",
+    "--interactive",
+    "false",
+    "--open",
+    "false",
+    "--json-output"
+  ],
+  "normal_config": {
+    "cold_build_seconds": 53.99,
+    "library_edit": [
+      {
+        "edit": 1,
+        "changed_file": "src/lib.rs",
+        "before_tick": 540,
+        "first_new_tick": null,
+        "edit_to_observed_seconds": 30.0863,
+        "observed": false,
+        "state_preserved": null,
+        "reason": "No updated output was observed; preservation across a successfully applied patch is unverified"
+      }
+    ],
+    "tip_control": {
+      "changed_file": "src/main.rs",
+      "observed": false,
+      "edit_to_observed_seconds": 15.058
+    },
+    "cli_reported_patch_ms": [
+      139,
+      129
+    ]
+  },
+  "clean_config": {
+    "environment": {
+      "CARGO_HOME": "private directory with registry/bin symlinks; no config.toml",
+      "RUSTC_WRAPPER": ""
+    },
+    "build_seconds": 27.74,
+    "edits": [
+      {
+        "changed_file": "src/lib.rs",
+        "expected_output": "rule=edit2",
+        "observed": false,
+        "edit_to_observed_seconds": 15.0396,
+        "configuration": "private Cargo home, no sccache/mold overrides"
+      },
+      {
+        "changed_file": "src/main.rs",
+        "expected_output": "CONTROL tick=",
+        "observed": false,
+        "edit_to_observed_seconds": 15.0172,
+        "configuration": "private Cargo home, no sccache/mold overrides"
+      }
+    ],
+    "cli_reported_patch_ms": [
+      264,
+      174
+    ]
+  }
+}

@@ -393,3 +393,7 @@ software path, not as a prediction for players; the first run on real hardware s
 ## Static model authoring (2026-10-06)
 
 [Model import report](MODEL_IMPORT_REPORT.md) records fresh-context procedural/imported-art trials, warm converter freshness and native/browser proof. Agent token telemetry is unavailable; no whole-game completion or whole-engine build-speed claim is made.
+
+## Hot reload acceptance (2026-10-06)
+
+[Hot reload report](HOT_RELOAD_REPORT.md) retains the stopped content/Subsecond experiments. The content prototype regressed the measured visible-update latency; Rust patches did not change running output in two Linux configurations. No hot-reload implementation is shipped.
