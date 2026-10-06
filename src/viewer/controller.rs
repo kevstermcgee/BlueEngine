@@ -135,6 +135,11 @@ pub struct ControllerState {
 pub type KinematicState = ControllerState;
 
 impl Controller {
+    /// Current locomotion dimensions and speeds, also used by physical route planning.
+    pub fn profile(&self) -> ControllerProfile {
+        self.profile
+    }
+
     pub fn network_state(&self) -> ControllerState {
         ControllerState {
             position: self.position,

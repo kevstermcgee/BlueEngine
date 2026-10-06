@@ -1,7 +1,13 @@
 
 [hidden]{display:none!important}
-.star{float:right;min-width:44px;min-height:44px;background:transparent;color:var(--accent);border:1px solid var(--muted);border-radius:6px;font-size:24px;cursor:pointer}
-.star[aria-pressed=true]{color:#ffce62;border-color:#ffce62}
+.card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:12px}
+.card-heading h2{flex:1;min-width:0;margin:0;line-height:1.3}
+.game-title{color:inherit;text-decoration:none}.game-title:hover{text-decoration:underline}
+.star{flex:0 0 44px;width:44px;height:44px;display:grid;place-items:center;padding:8px;background:transparent;color:var(--muted);border:0;border-radius:6px;cursor:pointer}
+.star svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linejoin:round}
+.star[aria-pressed=true]{color:#ffce62}.star[aria-pressed=true] svg{fill:#ffce62}
+.star:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.browser-details{max-width:800px;margin:24px auto;padding:24px;background:var(--surface,#0D2035);border-radius:12px}
 .dl.play{background:#6de0d0;margin-bottom:8px}
 #favorites-status{font-size:.85rem;color:var(--muted)}
 .toolbar select{max-width:100%}

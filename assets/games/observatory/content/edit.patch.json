@@ -1,0 +1,19 @@
+[
+  {
+    "op": "translate",
+    "nodes": [
+      "calibrator"
+    ],
+    "colliders": [
+      "calibrator"
+    ],
+    "entities": [
+      "calibrator"
+    ],
+    "delta": [
+      0,
+      0,
+      0.2
+    ]
+  }
+]

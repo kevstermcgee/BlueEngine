@@ -1,0 +1,190 @@
+{
+  "kind": "actual Windows stock GPU capture, scripted local authority",
+  "command": "be2 --game assets/games/observatory/content/game.json --scenario assets/games/observatory/content/loss-restart-win.json --capture NEW_DIRECTORY",
+  "frames": 1543,
+  "transitions": [
+    {
+      "completed": false,
+      "counters": [
+        20,
+        0,
+        0
+      ],
+      "failed": false,
+      "frame": 0,
+      "position": [
+        -4.0,
+        1.6799999475479126,
+        0.0
+      ],
+      "round": 0,
+      "status": "Battery: 0:20   Calibration: 0 / 3",
+      "tick": 1
+    },
+    {
+      "completed": false,
+      "counters": [
+        0,
+        0,
+        0
+      ],
+      "failed": true,
+      "frame": 1199,
+      "position": [
+        -4.0,
+        1.6799999475479126,
+        0.0
+      ],
+      "round": 0,
+      "status": "Battery depleted. E / R to restart the night watch",
+      "tick": 1200
+    },
+    {
+      "completed": false,
+      "counters": [
+        20,
+        0,
+        0
+      ],
+      "failed": false,
+      "frame": 1200,
+      "position": [
+        -4.0,
+        1.6799999475479126,
+        0.0
+      ],
+      "round": 1,
+      "status": "Battery: 0:20   Calibration: 0 / 3",
+      "tick": 1201
+    },
+    {
+      "completed": true,
+      "counters": [
+        15,
+        3,
+        1
+      ],
+      "failed": false,
+      "frame": 1538,
+      "position": [
+        4.262706756591797,
+        1.6799999475479126,
+        -0.35601502656936646
+      ],
+      "round": 1,
+      "status": "Observation transmitted. Night watch complete! E / R to play again",
+      "tick": 1539
+    }
+  ],
+  "last": {
+    "completed": true,
+    "counters": [
+      15,
+      3,
+      1
+    ],
+    "failed": false,
+    "frame": 1542,
+    "position": [
+      4.264196872711182,
+      1.6799999475479126,
+      -0.3587321639060974
+    ],
+    "round": 1,
+    "status": "Observation transmitted. Night watch complete! E / R to play again",
+    "tick": 1542
+  },
+  "battery_values": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20
+  ],
+  "screenshots": {
+    "world.png": {
+      "bytes": 35965,
+      "sha256": "8efe70e3f60026dce81ee64aae78cf01171e6960dbda6cb63ad65f38039e5cef"
+    },
+    "loss-0.png": {
+      "bytes": 27940,
+      "sha256": "3f63b3f35261c7136c924f85421c06436c52fe467398429d5caec389043c421b"
+    },
+    "reset-1.png": {
+      "bytes": 35965,
+      "sha256": "8efe70e3f60026dce81ee64aae78cf01171e6960dbda6cb63ad65f38039e5cef"
+    },
+    "win-1.png": {
+      "bytes": 35882,
+      "sha256": "ce320cda79fddf9d7dbf143562272b57bebdd35ab015ac00ad97ef7429a4cc39"
+    },
+    "menu.png": {
+      "bytes": 54641,
+      "sha256": "a1895e1ede530bb1cdefece36cef76077bc7a518c1f357eea92445b9fa8d866a"
+    }
+  },
+  "limitations": [
+    "No live hub deployment or real-network rollback evidence",
+    "No live keyboard/controller/fullscreen evidence from scripted capture"
+  ],
+  "headless_verification": {
+    "assertions": [
+      {
+        "detail": "passed",
+        "ok": true,
+        "tick": 1200
+      },
+      {
+        "detail": "passed",
+        "ok": true,
+        "tick": 1201
+      },
+      {
+        "detail": "passed",
+        "ok": true,
+        "tick": 1201
+      },
+      {
+        "detail": "passed",
+        "ok": true,
+        "tick": 1542
+      }
+    ],
+    "final_checksum": "0x2ee88ad4f8858336",
+    "ok": true,
+    "players": [
+      {
+        "id": 1,
+        "position": [
+          4.264196872711182,
+          1.6799999475479126,
+          -0.3587321639060974
+        ],
+        "yaw": 0.5017580389976501
+      }
+    ],
+    "reachable_targets": [
+      "calibrator",
+      "shutter-switch",
+      "uplink"
+    ],
+    "scenario": "Observatory: battery loss, restart, and physical successful run",
+    "ticks": 1542
+  }
+}

@@ -2,7 +2,7 @@
 """Numeric quality report for WAV files: an agent cannot listen to audio, but it can read numbers.
 
     python tools/audio_report.py FILE.wav [FILE.wav ...] [--spectrogram OUT.png] [--json]
-        [--fail-on-issues] [--replace]
+        [--fail-on-issues] [--replace] [--loop]
 
 Standard library only (Python 3.10+).  Reads PCM 8/16/24/32-bit and IEEE float 32/64-bit WAV
 files, plain or WAVE_FORMAT_EXTENSIBLE, mono or multichannel; a data chunk that is truncated or
@@ -25,6 +25,8 @@ relative to full scale (dBFS) and milliseconds:
   a dropout of a few samples counts as one click, and discontinuities that repeat (2 or more
   similar ones within 50 ms, such as square or saw edges) are waveform, not clicks.  Count and
   first positions are reported.  Files under ~200 samples are not scanned;
+  `--loop` checks the wrapped boundary with the same discontinuity detector instead of treating
+  nonzero endpoints as one-shot clicks. The boundary jump and scan availability are reported;
 * spectral centroid, 85% rolloff and dominant frequency in Hz (mono mix, 2048-sample Hann frames,
   hop 1024, at most 600 evenly chosen frames, own radix-2 FFT, DC bin ignored) and the share of
   energy in sub (<60 Hz), bass (60-250), low-mid (250-2k), high-mid (2k-8k) and air (>8k);
@@ -626,7 +628,7 @@ def _fmt_db(v):
     return "-inf" if v == -math.inf else "%.1f" % v
 
 
-def analyze(source, spectrogram=None, replace=False):
+def analyze(source, spectrogram=None, replace=False, loop=False):
     """Analyse a WAV file path (or the dict from parse_wav) and return the report dict.
 
     ``spectrogram`` is an optional output PNG path (written as a new file).
@@ -671,6 +673,14 @@ def analyze(source, spectrogram=None, replace=False):
     mix = _mix_down(chans)
     click_channels = chans if nch <= 2 else [mix]
     events = _merge_events([e for c in click_channels for e in _drop_periodic(_click_events(c), rate)])
+    seam_jump = max(abs(c[0] - c[-1]) for c in chans)
+    seam_events = []
+    pad = min(n, CLICK_BG + CLICK_MAXW + CLICK_GROUP + 32)
+    if loop:
+        for c in chans:  # do not let opposite-polarity stereo hide a discontinuity
+            boundary = c[-pad:] + c[:pad]
+            seam_events.extend((p, j) for p, j in _drop_periodic(_click_block(boundary), rate)
+                               if abs(p - pad) <= CLICK_MAXW)
 
     spectrum = _spectral_summary(mix, rate)
     if spectrogram:
@@ -704,10 +714,12 @@ def analyze(source, spectrogram=None, replace=False):
             )
         if dc_real:
             add("dc offset", "mean %+.4f (%s dBFS), present throughout the file" % (dc_mean, _fmt_db(_db(abs(dc_mean)))))
-        if abs(first) >= EDGE_LIMIT:
+        if not loop and abs(first) >= EDGE_LIMIT:
             add("starts with a click", "first sample %+.3f (%s dBFS) is not near zero (limit %.2f)" % (first, _fmt_db(_db(abs(first))), EDGE_LIMIT))
-        if abs(last) >= EDGE_LIMIT:
+        if not loop and abs(last) >= EDGE_LIMIT:
             add("ends with a click", "last sample %+.3f (%s dBFS) is not near zero (limit %.2f)" % (last, _fmt_db(_db(abs(last))), EDGE_LIMIT))
+        if seam_events:
+            add("loop seam click", "wrapped boundary discontinuity (sample jump %.4f)" % seam_jump)
         if events:
             add(
                 "clicks",
@@ -739,6 +751,8 @@ def analyze(source, spectrogram=None, replace=False):
         "clipped_longest_run": longest_run,
         "first_sample": _r(first, 5),
         "last_sample": _r(last, 5),
+        "loop": {"enabled": loop, "seam_jump": _r(seam_jump, 6),
+                 "scan_available": 2 * pad >= 2 * CLICK_BG + 16, "suspected_click": bool(seam_events) if loop else None},
         "silence": {
             "threshold_dbfs": SILENCE_DBFS,
             "leading_ms": _r(lead_ms, 1),
@@ -1064,6 +1078,9 @@ def _report_lines(rep):
         % (rep["clipped_samples"], rep["clipped_pct"], rep["clipped_longest_run"], CLIP_LEVEL)
     )
     lines.append("  edges      first sample %+.4f | last sample %+.4f" % (rep["first_sample"], rep["last_sample"]))
+    if rep["loop"]["enabled"]:
+        lines.append("  loop seam  jump %.6f | discontinuity scan %s" %
+                     (rep["loop"]["seam_jump"], "available" if rep["loop"]["scan_available"] else "unavailable (too short)"))
     lines.append(
         "  silence    leading %.1f ms | trailing %.1f ms | longest inside %.1f ms (below %.0f dBFS, 10 ms windows)"
         % (sil["leading_ms"], sil["trailing_ms"], sil["longest_internal_ms"], sil["threshold_dbfs"])
@@ -1122,6 +1139,7 @@ def _build_parser():
     parser.add_argument("--json", action="store_true", help="print JSON instead of the readable report")
     parser.add_argument("--fail-on-issues", action="store_true", help="exit 1 when any file has issues")
     parser.add_argument("--replace", action="store_true", help="overwrite the spectrogram PNG if it exists")
+    parser.add_argument("--loop", action="store_true", help="check the wrapped seam instead of one-shot endpoint clicks")
     return parser
 
 
@@ -1143,7 +1161,7 @@ def main(argv=None):
     reports, errors = [], []
     for path in args.files:
         try:
-            reports.append(analyze(path, spectrogram=args.spectrogram, replace=args.replace))
+            reports.append(analyze(path, spectrogram=args.spectrogram, replace=args.replace, loop=args.loop))
         except (WavError, OSError) as exc:
             errors.append({"path": path.replace(os.sep, "/"), "error": str(exc)})
     if args.json:

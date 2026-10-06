@@ -39,9 +39,32 @@ Ignored scratch/build files are not change inputs; do not put shipped inputs the
 `check` without flags retains every existing gate: formatting, rustdoc, tests and
 Clippy in both feature configurations, the headless dependency boundary and native
 authoring integration. It also runs workflow, asset, publishing, game-ship, game-check,
-upgrade and media-tools Python tests.
+upgrade, learning, hub deployment and media-tools Python tests.
 Feature configurations are grouped to avoid repeated binary rebuilds. CI still runs
-the full Linux/Windows matrix, independent of local scope selection.
+the full Linux/Windows matrix, independent of local scope selection. Both use this canonical
+command plan on `itest`: dev assertions with optimized physics/math dependencies. Tests,
+Clippy, rustdoc and native authoring share the profile; `--profile dev` opts out. Native
+authoring always asks Cargo to check freshness before executing its tool.
+The reviewed independent Python batch overlaps the serial Cargo lane. Its fixtures use
+temporary projects; native authoring stays after the headless build. Reports wait for
+all started work, including after failure, and retain failures from either lane.
+`--serial` restores sequential execution for comparison/debugging. A caller-provided
+`BE2_TOOLS` also keeps the batch serial because it may enable native integration.
+
+CI restores compiled dependencies using [rust-cache](https://github.com/Swatinem/rust-cache),
+then executes every gate. It additionally builds shipping default and headless releases.
+Superseded runs on the same ref are cancelled; failures do not cancel the other OS.
+Reports and complete logs are uploaded even on failure. Upgrade tests use full Git history.
+Sandbox packaging shares its target directory with the independently generated game,
+preserving separate project builds while reusing compatible dependency artifacts.
+
+Stage starts and pass/fail timings go to stderr; stdout stays one JSON summary. Reports
+include start offsets, durations, logs and the actual independent lane selection. To measure
+verification without a second full run, use
+`python tools/perf.py record --suite check --note "what changed"`. This executes all local
+full gates once, records total/stage timings only on success, and keeps the check report
+with test counts and logs. It does not include CI-only release/package builds. Compare
+the same host and target/cache condition; a warm local run does not predict cold CI time.
 
 ### Windows type-check (`check --windows`)
 
@@ -66,6 +89,10 @@ key test on Windows. The key reader's table logic is covered on Linux by driving
 (`ClientInput::begin_frame_with_key_source`).
 
 Reports contain the resolved baseline, paths, plan and per-command log/status.
+Engine and generated-game report directories reserve a random suffix atomically; repeated
+wall-clock timestamps cannot collide or overwrite earlier evidence. Use the returned report
+path rather than guessing a timestamp directory. Existing game projects can copy the updated
+`templates/game_check.py` to `scripts/check.py` to adopt this report reliability fix.
 Failure packets include the failed command, observed category, diagnostic/location,
 reproduction argv and full-log path. Complete output streams directly to disk.
 Checks are never cached or accepted from stale receipts. Manual visual/input checks
@@ -249,6 +276,12 @@ Full logs survive failure and timeout; reports include per-command time, log siz
 executed tests and Cargo's reported fresh/built artifact counts. An artifact count
 is not compile time or proof of freshness beyond Cargo's own dependency tracking.
 The runner always invokes Cargo; it never accepts cached validation receipts.
+
+CI runs the full engine and Leo game/package/render matrices concurrently on Linux
+and Windows. The existing `test` check names are final guards requiring both
+matrices to pass, including all headless and release gates. `leo-images` is uploaded
+early for visual iteration while other checks continue; it does not certify the
+revision. See [CI scheduling and evidence](perf/README.md#independent-engine-and-game-ci-lanes).
 
 Profiles, target directories, isolated release packaging and optimized builds are
 unchanged. No profile/cache tuning or new development build option is claimed:

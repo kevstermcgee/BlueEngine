@@ -7,7 +7,7 @@ def validate_project(game):
     if not p.is_file():raise ProjectError('Web target requires game.project.json; create with new-game NAME DIR ENGINE two-d. Existing native games are unchanged.')
     project=json.loads(p.read_text())
     if not isinstance(project,dict):raise ProjectError('game.project.json must contain an object')
-    allowed={'schema_version','id','presentation','targets','networking','input','description','session_minutes','complexity','mobile_controls','runtime'}
+    allowed={'schema_version','id','presentation','targets','networking','input','description','session_minutes','complexity','mobile_controls','runtime','web_build'}
     unknown=set(project)-allowed
     if unknown:raise ProjectError(f"Unknown project fields {sorted(unknown)}; correct spelling before building")
     if project.get('schema_version')!=1:raise ProjectError('Unsupported game.project schema_version; expected 1')
@@ -18,6 +18,14 @@ def validate_project(game):
     mobile=project.get('mobile_controls',{'layout':'dpad','action_label':'Action'})
     if not isinstance(mobile,dict) or set(mobile)-{'layout','action_label'} or mobile.get('layout') not in ('dpad','paddle','tap'):raise ProjectError('mobile_controls needs layout dpad, paddle or tap; optional action_label names the button')
     if mobile.get('action_label','Action') is not None and (not isinstance(mobile.get('action_label','Action'),str) or not 1<=len(mobile.get('action_label','Action'))<=24):raise ProjectError('mobile_controls.action_label must be null (no button) or 1–24 characters')
+    web=project.get('web_build')
+    if web is not None:
+        if not isinstance(web,dict) or set(web)-{'binary','features','identity'}:raise ProjectError('web_build permits only binary, features and identity')
+        if not isinstance(web.get('binary'),str) or not re.fullmatch('[a-z][a-z0-9-]{0,47}',web['binary']):raise ProjectError('web_build.binary must name a declared Cargo binary')
+        features=web.get('features')
+        if not isinstance(features,list) or not features or any(not isinstance(f,str) or not re.fullmatch('[a-z][a-z0-9-]{0,47}',f) for f in features) or len(set(features))!=len(features):raise ProjectError('web_build.features must list unique Cargo features; web builds disable default features')
+        identity=web.get('identity','assets/identity.json')
+        if not isinstance(identity,str) or not re.fullmatch(r'assets/[a-zA-Z0-9_/-]+\.json',identity) or '..' in identity:raise ProjectError('web_build.identity must be a relative JSON file under assets/')
     targets=project.get('targets');network=project.get('networking')
     if not isinstance(targets,list) or not targets or any(not isinstance(t,str) for t in targets) or len(set(targets))!=len(targets) or set(targets)-{'web','linux','windows','macos'}:raise ProjectError('targets must be unique entries from web/linux/windows/macos')
     if network not in ('offline','native-multiplayer'):raise ProjectError('networking must be offline or native-multiplayer; browser networking is not yet supported')

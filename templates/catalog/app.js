@@ -16,7 +16,7 @@
       const presentation=filters[0]?.value||'',distribution=filters[1]?.value||'',network=filters[2]?.value||'';
       const show=(!kind||card.dataset.kind===kind)&&(!q||card.dataset.text.includes(q))&&(!presentation||card.dataset.presentation===presentation)&&(!distribution||card.dataset[distribution]==='true')&&(!network||card.dataset.networking===network);
       card.hidden=!show;if(show)shown++;grid.appendChild(card);
-      const button=card.querySelector('[data-star]');if(button){const starred=stars.has(card.dataset.id);button.textContent=starred?'★':'☆';button.setAttribute('aria-pressed',String(starred));button.setAttribute('aria-label',(starred?'Unstar ':'Star ')+card.dataset.name);}
+      const button=card.querySelector('[data-star]');if(button){const starred=stars.has(card.dataset.id);button.setAttribute('aria-pressed',String(starred));button.setAttribute('aria-label',(starred?'Unstar ':'Star ')+card.dataset.name);}
     }
     empty.hidden=shown>0;
   }

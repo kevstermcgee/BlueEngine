@@ -118,6 +118,21 @@ are engine-owned. No recursion/rough reflection; one extra world render per visi
 
 ## Sound (`devkit::synth`, `kit::SoundBank`)
 
+Endless worlds: `devkit::procedural::{ChunkId, WorldPoint, ChunkCache, DayCycle}`;
+see `docs/PROCEDURAL_WORLDS.md` and `assets/games/leo`. Cache bounded seeded chunks,
+rebase previous/current poses together, save authoritative origin/seed/tick with
+`Snapshot`, and derive sky/audio from `DayCycle::at(tick)`. Custom collision camera:
+`viewer::camera::sweep_boom(anchor, desired, &colliders, radius)?`.
+
+Prefer a named JSON audio project: `be2-tools audio describe`, then `audio validate PROJECT`,
+`audio render PROJECT NEW_BUNDLE`, `audio check NEW_BUNDLE`. Reference: `assets/audio/observatory/project.json`,
+full contracts: `docs/AUDIO.md`. `kit::AudioBank::load(BUNDLE, false, sfx, music).await?`; poll
+`audio.sounds.poll().await` each frame, inspect `state()`/`errors()`, then `audio.play("cue", volume)?`
+on confirmed events and `audio.music(dt, &[("layer", level)])?`. Omitted layers fade to zero.
+Preset variants, imported PCM16 WAV, stereo MIDI scores/ADSR/filter/pan and adaptive music can change
+without a Rust rebuild. `audio_preview` is the native preview example; `audio_report.py --loop` checks
+wrapped seams. Ready means checked assets, not device audibility. Live spatial/pitch voices remain unsupported.
+
 Presets: Click, Select, Back, Blip, Coin, Pickup, PowerUp, Jump, Land, Hit, Thump, Explosion, Zap, Shoot, Whoosh, Error,
 Warning, Success, GameOver, Footstep, PowerDown, Hurt, Chime. Render them off-thread with `Rendered { sfx, stems }`, play
 with `sounds.play(index, volume)`.

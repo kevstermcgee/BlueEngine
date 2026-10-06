@@ -324,6 +324,40 @@ impl MapDocument {
                 if !finite(*delta) {
                     return Err("Invalid translation".into());
                 }
+                // Preserve exact agreement for canonical boxes. Translating center and bounds
+                // independently can round differently (for example 1.0 + 0.2 - 0.3).
+                // Only records that already agree and are selected together qualify; this
+                // must never repair inconsistent hand-authored content implicitly.
+                let mut canonical = BTreeMap::new();
+                for n in &self.scene.nodes {
+                    if !nodes.contains(&n.id)
+                        || !colliders.contains(&n.id)
+                        || !entities.contains(&n.id)
+                        || !matches!(n.shape, Shape::Box)
+                    {
+                        continue;
+                    }
+                    if let (Track::Fixed(center), Track::Fixed(half), Track::Fixed(rotation)) =
+                        (&n.pos, &n.scale, &n.rot)
+                    {
+                        let c = &self.colliders[&n.id];
+                        if *rotation == V::ZERO
+                            && c.min == *center - *half
+                            && c.max == *center + *half
+                            && self.entities.iter().any(|e| {
+                                e.id == n.id && e.bounds.min == c.min && e.bounds.max == c.max
+                            })
+                        {
+                            canonical.insert(
+                                n.id.clone(),
+                                Collider {
+                                    min: (*center + *delta) - *half,
+                                    max: (*center + *delta) + *half,
+                                },
+                            );
+                        }
+                    }
+                }
                 for n in &mut self.scene.nodes {
                     if nodes.contains(&n.id) {
                         if let Track::Fixed(v) = n.pos {
@@ -342,6 +376,14 @@ impl MapDocument {
                         e.bounds.min = e.bounds.min + *delta;
                         e.bounds.max = e.bounds.max + *delta;
                     }
+                }
+                for (id, bounds) in canonical {
+                    self.colliders.insert(id.clone(), bounds.clone());
+                    self.entities
+                        .iter_mut()
+                        .find(|e| e.id == id)
+                        .unwrap()
+                        .bounds = bounds;
                 }
             }
             Edit::Remove {

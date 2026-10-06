@@ -4,7 +4,7 @@
 Rows are appended to docs/perf/metrics.jsonl (one JSON object per line, never rewritten) so a
 later session can compare like with like: same metric, profile, kind and host, across commits.
 
-  python tools/perf.py record [--suite build|test|sim|server|kart|all] [--profile fast|release|itest|dev] [--note TEXT]
+  python tools/perf.py record [--suite check|build|test|sim|server|kart|all] [--profile fast|release|itest|dev] [--note TEXT]
   python tools/perf.py report [--metric NAME]     latest value per series vs the previous one
   python tools/perf.py env                        the host/toolchain block a row would carry
 
@@ -15,7 +15,11 @@ memory, tick time and per-client bandwidth. `all` does not include it (about 3 m
 `--suite kart` runs Spooky Kart's own load test (~/SpookyKart, or $BLUE_KART_DIR): its real server over real
 UDP with 1, 4 and 8 bot clients, one full race each (about 7 minutes in all). `all` does not include it.
 
-Measurements build in a private target directory (BLUE_PERF_TARGET, default
+`--suite check` measures the canonical full verification once, using the current target
+directory just like local development. It records total/stage timings only after all gates pass;
+complete logs and test counts remain in the check report. It does not replace CI release gates.
+
+Build/runtime measurements build in a private target directory (BLUE_PERF_TARGET, default
 ~/.cache/blueengine-perf) so they never disturb your own target/. Incremental rows edit
 src/viewer/lint.rs with a throwaway function and restore the original bytes afterwards.
 """
@@ -89,6 +93,28 @@ def append(rows, note):
 
 def profile_args(profile):
     return ['--release'] if profile == 'release' else ([] if profile == 'dev' else ['--profile', profile])
+
+
+def check_rows(profile):
+    # Leave progress on stderr and preserve the checker's single JSON stdout API.
+    result = subprocess.run([sys.executable, 'tools/be2.py', 'check', '--profile', profile],
+                            cwd=ROOT, text=True, stdout=subprocess.PIPE, check=True)
+    summary = json.loads(result.stdout)
+    report_path = Path(summary['report'])
+    report = json.loads(report_path.read_text(encoding='utf-8'))
+    if (not report.get('ok') or report['plan']['scope'] != 'full'
+            or not report['checks'] or not all(item['ok'] for item in report['checks'])):
+        raise RuntimeError('Performance recording requires a passed full check report.')
+    print(f'Passed full verification: {report_path}', file=sys.stderr)
+    common = {'unit': 's', 'profile': profile, 'kind': 'current_target',
+              'execution': 'overlap_python' if report.get('independent_commands') else 'serial',
+              'target_dir': os.environ.get('CARGO_TARGET_DIR', 'target'),
+              'source': 'be2_full_check'}
+    return [dict(common, metric='check_total', value=report['elapsed_seconds'])] + [
+        dict(common, metric=f'check_stage:{i+1}', value=item['elapsed_seconds'],
+             command=item['command'], tests_executed=item.get('tests_executed'),
+             started_seconds=item.get('started_seconds'))
+        for i, item in enumerate(report['checks'])]
 
 
 def timed(cmd, env):
@@ -267,7 +293,7 @@ def main(argv):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest='cmd', required=True)
     r = sub.add_parser('record')
-    r.add_argument('--suite', choices=['build', 'test', 'sim', 'server', 'kart', 'all'], default='all')
+    r.add_argument('--suite', choices=['check', 'build', 'test', 'sim', 'server', 'kart', 'all'], default='all')
     r.add_argument('--profile', choices=['fast', 'release', 'itest', 'dev'], default=None)
     r.add_argument('--note', default='')
     rp = sub.add_parser('report')
@@ -280,6 +306,10 @@ def main(argv):
         report(args.metric)
     else:
         rows = []
+        if args.suite == 'check':
+            if args.profile not in (None, 'itest', 'dev'):
+                p.error('--suite check requires --profile itest or dev')
+            rows += check_rows(args.profile or 'itest')
         if args.suite in ('build', 'all'):
             rows += build_rows(args.profile if args.profile in ('fast', 'release') else 'fast')
         if args.suite in ('test', 'all'):

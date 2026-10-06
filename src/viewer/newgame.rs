@@ -610,6 +610,7 @@ windows-sys = {{ optional = true, version = "=0.61.2", features = ["Win32_UI_Win
             yaw: spawn.yaw,
         }],
         counters: std::collections::BTreeMap::from([("visits".into(), 0)]),
+        presentation: None,
         interactables: vec![super::game::Interactable {
             entity: "objective".into(),
             enabled: true,
@@ -685,7 +686,13 @@ fn content(file: &str) -> std::path::PathBuf {
 }
 
 #[macroquad::main(window)]
-async fn main() -> vesper3d::Result<()> {
+async fn main() {
+    if let Err(error) = run().await {
+        eprintln!("{}", serde_json::json!({"ok":false,"error":error.to_string()}));
+        std::process::exit(1);
+    }
+}
+async fn run() -> vesper3d::Result<()> {
     let game = GameDocument::load(&content("game.json"))?;
     let mut options = playable::GameOptions::from_args(&std::env::args().collect::<Vec<_>>())?;
     options.keyboard = platform::keyboard();
@@ -724,10 +731,9 @@ async fn main() -> vesper3d::Result<()> {
     let agents_md = format!(
         r#"# {name} - AI Agent Guide
 
-Standalone game; BlueEngine is a path dependency (`vesper3d` in Cargo.toml), and
-`assets/identity.json` records the engine commit it was built against. Read this game's files
-first; do not load engine source or run engine-wide checks for game-only edits. For an unfamiliar
-API run `python tools/be2.py context QUERY` in the engine checkout; missing capability means
+BlueEngine is a path dependency (`vesper3d`); `assets/identity.json` records its revision. Read
+this game's files first; do not load engine source or run engine-wide checks for game-only edits.
+For an unfamiliar API run `python tools/be2.py context QUERY` in the engine checkout; missing capability means
 engine work, not permission to invent an API.
 
 Rules that do not fit counters/interactables/timers (enemies, projectiles, scoring, AI, per-frame
@@ -742,8 +748,12 @@ physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its sim
 - `playable::run_game_with_options` runs authored rules, dynamic props and replay on shared
   authority; `--connect ADDR` uses server state. F5/F9 save and load (engine docs/SAVE_STATE.md;
   never hand-write save files). `run_map` is a static viewer only.
+- Stock audio: `presentation.audio` binds checked bundles in `assets/audio`; see engine docs/AUDIO.md.
 
 ## Running Tests
+- Record friction in the engine: `python tools/learn.py record --game {name} --area AREA --tokens N
+  --note "..." --keywords "future,query,terms"`. Add `--trap` for a silent failure; verify a representative
+  future query with `be2.py context`. Without keywords the record is archive-only. Never copy session logs.
 - Cargo.lock is seeded from the engine's; any Cargo command settles it. Commit it. Never run
   `cargo generate-lockfile` (it drops the pins). Set BE2_TOOLS to a matching be2-tools binary
   (engine `python tools/be2.py build tools` prints its directory).

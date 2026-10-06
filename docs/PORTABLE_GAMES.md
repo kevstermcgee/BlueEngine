@@ -21,6 +21,11 @@ Start flexible (hybrid) when the request leaves dimensionality open; choose a si
 Legacy native games keep their existing paths. Porting one to web means adapting its presentation to the
 portable client; changing metadata does not port its renderer or native UDP/QUIC transport.
 
+Leo (`assets/games/leo`) ports the original Sim/SimState, controller, chunks and kit art.
+Its browser adapter is src/browser.rs; native main.rs stays independent. The optional `web_build`
+project object selects `binary`, `features` (Cargo defaults disabled) and `identity` under assets/.
+Missing binaries/features fail before compiling. Ordinary portable starters need no override.
+
 ## Shared authoring surface
 
 `vesper3d::portable` is the recommended import; existing `two_d` imports remain compatible. Simulation,
@@ -36,6 +41,29 @@ Use full-canvas views for 3D games, smaller views for 3D elements inside a 2D ga
 that simulation use the same dimensionality as presentation. It can use 2D collision for a 3D-looking game.
 The hybrid starter demonstrates a 3D garden and 2D minimap; `games/lantern-grove` is its complete example.
 Native-only world rendering/QUIC/Rapier APIs are not magically browser APIs; unsupported requirements fail.
+
+Existing kit renderers can use `Scene::render_view(layer, rect, callback)`. Its callback receives a
+validated physical viewport including DPI: apply it to all scene and sky cameras, never clear the
+entire framebuffer, and keep rendering read-only. The browser kit shares native geometry/materials
+and shadows, without native workers/networking. Controller, chunks and day clocks are rendering-free.
+Leo renders fewer distant plants in the browser while retaining every authoritative collision chunk.
+
+`Game::drag_look()` opts into canvas dragging/right-stick look. Intent carries accumulated `look`
+radians and `sprint`; look and press edges are consumed once per fixed tick. F toggles fullscreen in
+portable native/browser players. Browser fullscreen runs inside the key gesture, includes controls
+below the canvas and preserves browser shortcuts/text editing. API restrictions produce a notice.
+
+`GameLogic::audio_banks()` declares checked `AudioBankSpec { id, root, music }` loop banks.
+Package their directories in identity.package. `audio_level(bank, layer)` supplies finite 0..1 levels
+from read-only simulation. Checksums/PCM/sample counts are validated before decoding. Independent
+saved Music/Sound toggles are N/M or mobile SELECT. Loops require audio activation, stop during pause
+or focus loss, and fade ordinary transitions. Submission evidence cannot prove human listening.
+Older Sound-only settings retain their value and default Music on. The shared cue bank stays small.
+
+Open-ended games need no artificial win: headless evidence may use outcome `playing`, with positive
+`ticks`, a nonempty `purpose` and the complete state hash. Tests must assert mechanics were exercised.
+The browser still compares that route/hash and separately tests real input, audio, storage and offline
+installation. Losing or empty routes cannot publish.
 
 ## Mobile controls (below the canvas)
 
@@ -100,6 +128,9 @@ Publishing merges verified browser metadata into the main game feed by stable ga
 browser and native versions has one card, both actions. Filters select presentation, browser/download and
 networking; data/native source classification is independent. Existing native download URLs remain intact.
 Star buttons use origin-local storage and always sort favorites ahead of the chosen secondary order.
+Empty stars are outlined; selected stars fill yellow and sit apart from titles. Titles open details
+pages with supported browser-play/install and native downloads. Native version histories stay intact;
+browser-only games use the same details-page path.
 Failed storage writes leave the old persisted favorites intact and explain the session-only change.
 The legacy web/index page redirects to the central feed. A standalone directory publisher uses the same
 feed/favorites UI. The publishing backend owns site integration; gameplay knows nothing about hosting.

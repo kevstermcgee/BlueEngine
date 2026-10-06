@@ -19,6 +19,7 @@
 //! | [`Playback`], [`Timeline`], [`CapturePlan`] | scripted input and screenshot flags for an agent that cannot play |
 //! | [`PerfReport`] | frame-time percentiles for a `--perf` flag |
 //! | [`Rng`] | seeded random numbers, so a seed replays a run |
+//! | [`procedural`] | seeded chunk identity, bounded streaming, precision-safe local coordinates, seamless noise and authoritative day/night phase (Leo) |
 //! | [`MenuNav`], [`MenuStep`] | stick flick / D-pad to discrete menu steps with hysteresis and auto-repeat (no device dependency) |
 //! | [`Bounds`], [`describe_length`], [`HUMAN_HEIGHT`] | metres-scale checks: `bounds.expect_longest("conch", 0.05..=0.30)` fails with the scale factor to apply, so a giant shell is caught without a window |
 //! | [`Juice`], [`Pulse`] | screen shake, hit-stop, FOV kick, flash, landing dip |
@@ -60,6 +61,7 @@
 //! }
 //! assert!((sim.x - 1.0).abs() < 0.03, "one second of walking at 60 ticks/s");
 //! ```
+pub use crate::runtime::audio_project;
 use crate::runtime::clock;
 use crate::runtime::input;
 mod juice;
@@ -70,6 +72,7 @@ mod menu;
 pub mod net_address;
 pub mod path;
 use crate::runtime::playback;
+pub use crate::runtime::procedural;
 use crate::runtime::rng;
 mod save;
 mod scale;
@@ -100,8 +103,8 @@ pub use playback::{
 };
 pub use rng::Rng;
 pub use save::{
-    beside_exe, downloads_dir, load_or_default, sanitize_filename, store_atomic, unique_path,
-    Records, Settings, ShadowQuality,
+    beside_exe, downloads_dir, load_or_default, runtime_assets, sanitize_filename, store_atomic,
+    unique_path, Records, Settings, ShadowQuality,
 };
 pub use scale::{
     describe_length, Bounds, DOOR, EYE_HEIGHT, HUMAN_HEIGHT, ONE_HAND_LONGEST, TABLE_HEIGHT,

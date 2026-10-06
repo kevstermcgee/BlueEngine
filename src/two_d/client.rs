@@ -5,18 +5,24 @@ use crate::runtime::{
     storage::{self, PlatformStorage},
     FixedStepper, InputAccumulator,
 };
-use macroquad::audio::{load_sound_from_bytes, play_sound, PlaySoundParams, Sound};
+use macroquad::audio::{
+    load_sound_from_bytes, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
+};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(default, deny_unknown_fields)]
 struct Settings {
     sound: bool,
+    music: bool,
 }
 impl Default for Settings {
     fn default() -> Self {
-        Self { sound: true }
+        Self {
+            sound: true,
+            music: true,
+        }
     }
 }
 #[derive(Default, Serialize)]
@@ -26,18 +32,36 @@ pub struct AudioEvidence {
     pub enabled: bool,
     pub activated: bool,
 }
+#[derive(Default, Serialize)]
+struct LoopEvidence {
+    loaded: usize,
+    submitted: usize,
+    playing: bool,
+    active_layers: usize,
+}
+struct LoopSound {
+    bank: &'static str,
+    layer: String,
+    music: bool,
+    sound: Sound,
+    volume: f32,
+}
 struct Audio {
     sounds: Vec<Sound>,
     evidence: AudioEvidence,
     muted: bool,
+    loops: Vec<LoopSound>,
+    loop_evidence: LoopEvidence,
 }
 impl Audio {
-    async fn new(muted: bool) -> Result<Self, String> {
+    async fn new<G: Game>(muted: bool) -> Result<Self, String> {
         if muted {
             return Ok(Self {
                 sounds: vec![],
                 evidence: AudioEvidence::default(),
                 muted,
+                loops: vec![],
+                loop_evidence: LoopEvidence::default(),
             });
         }
         use crate::runtime::synth::{self, Preset};
@@ -50,7 +74,57 @@ impl Audio {
                     .map_err(|e| format!("Audio decode failed: {e}"))?,
             );
         }
+        let mut loops = Vec::new();
+        let mut ids = std::collections::BTreeSet::new();
+        for bank in G::audio_banks() {
+            platform::report(
+                &serde_json::json!({"ready":false,"notice":format!("Loading {} audio…",bank.id)})
+                    .to_string(),
+            );
+            if !ids.insert(bank.id) {
+                return Err(format!("Duplicate audio bank ID {}", bank.id));
+            }
+            let bytes = macroquad::file::load_file(&format!("{}/bank.json", bank.root))
+                .await
+                .map_err(|e| {
+                    format!(
+                        "Audio bank {} unavailable: {e}; declare it in the web package",
+                        bank.id
+                    )
+                })?;
+            let metadata = crate::runtime::audio_project::AudioBundle::parse(&bytes)?;
+            if !metadata.effects.is_empty() {
+                return Err(
+                    "Portable loop banks must contain only music/ambience; effects use take_cues"
+                        .into(),
+                );
+            }
+            for (layer, info) in metadata.music {
+                let path = format!("{}/{}", bank.root, info.file);
+                platform::report(&serde_json::json!({"ready":false,"notice":format!("Loading {}/{} audio…",bank.id,layer)}).to_string());
+                let bytes = macroquad::file::load_file(&path)
+                    .await
+                    .map_err(|e| format!("Audio asset {path} unavailable: {e}"))?;
+                crate::runtime::audio_project::AudioBundle::verify_file(&info, &bytes)?;
+                let sound = load_sound_from_bytes(&bytes)
+                    .await
+                    .map_err(|e| format!("Audio asset {path} failed decoding: {e}"))?;
+                loops.push(LoopSound {
+                    bank: bank.id,
+                    layer,
+                    music: bank.music,
+                    sound,
+                    volume: 0.,
+                });
+                next_frame().await;
+            }
+        }
         Ok(Self {
+            loop_evidence: LoopEvidence {
+                loaded: loops.len(),
+                ..Default::default()
+            },
+            loops,
             evidence: AudioEvidence {
                 loaded: 3,
                 ..Default::default()
@@ -58,6 +132,61 @@ impl Audio {
             sounds,
             muted,
         })
+    }
+    fn update<G: Game>(
+        &mut self,
+        game: &G,
+        active: bool,
+        settings: &Settings,
+        dt: f32,
+    ) -> Result<(), String> {
+        let active = active && !self.muted && platform::audio_active();
+        if active && !self.loop_evidence.playing && !self.loops.is_empty() {
+            for track in &self.loops {
+                play_sound(
+                    &track.sound,
+                    PlaySoundParams {
+                        looped: true,
+                        volume: 0.,
+                    },
+                );
+            }
+            self.loop_evidence.submitted += self.loops.len();
+            self.loop_evidence.playing = true;
+        } else if !active && self.loop_evidence.playing {
+            for track in &mut self.loops {
+                stop_sound(&track.sound);
+                track.volume = 0.;
+            }
+            self.loop_evidence.playing = false;
+        }
+        self.loop_evidence.active_layers = 0;
+        for track in &mut self.loops {
+            let level = game.audio_level(track.bank, &track.layer);
+            if !level.is_finite() || !(0. ..=1.).contains(&level) {
+                return Err(format!(
+                    "Audio level {}/{} must be finite 0..1",
+                    track.bank, track.layer
+                ));
+            }
+            let enabled = if track.music {
+                settings.music
+            } else {
+                settings.sound
+            };
+            let target = if active && enabled { level } else { 0. };
+            // Disable immediately; ordinary day/night transitions fade.
+            track.volume = if !enabled {
+                0.
+            } else {
+                track.volume + (target - track.volume) * (dt * 3.).clamp(0., 1.)
+            };
+            set_sound_volume(&track.sound, track.volume);
+            if track.volume > 0.001 {
+                self.loop_evidence.active_layers += 1;
+            }
+        }
+        Ok(())
     }
     fn play(&mut self, cue: usize, enabled: bool) {
         self.evidence.enabled = enabled && !self.muted;
@@ -159,17 +288,25 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     }
     let mut verification_tick = 0;
     let mut paused = false;
-    let mut audio = Audio::new(platform::muted()).await?;
+    let mut audio = Audio::new::<G>(platform::muted()).await?;
     let mut stepper = FixedStepper::new();
     let mut inputs = InputAccumulator::<Intent>::new();
     let mut particles = Particles::new(8);
     let mut renderer = Renderer::default();
     let mut last_tick = 0;
     let mut frame = 0;
+    let mut last_pointer = None;
+    #[cfg(not(target_arch = "wasm32"))]
+    let mut fullscreen = false;
     #[cfg(all(not(target_arch = "wasm32"), feature = "gamepad"))]
     let mut pads = crate::viewer::gamepad::Gamepads::new().ok();
     loop {
         frame += 1;
+        #[cfg(not(target_arch = "wasm32"))]
+        if is_key_pressed(KeyCode::F) {
+            fullscreen = !fullscreen;
+            macroquad::miniquad::window::set_fullscreen(fullscreen);
+        }
         let dt = get_frame_time().clamp(0., 0.1);
         let view = Viewport::fit(800., 450., screen_width().max(1.), screen_height().max(1.));
         let (mx, my) = mouse_position();
@@ -203,6 +340,8 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             action |= pad.2;
             start |= pad.2;
         }
+        #[allow(unused_mut)]
+        let mut look_native = [0.; 2];
         #[cfg(all(not(target_arch = "wasm32"), feature = "gamepad"))]
         if let Some(pads) = pads.as_mut() {
             let pad = pads.poll(true);
@@ -210,7 +349,27 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             y -= (pad.left_stick[1] * 1.5) as i32;
             action |= pad.menu_select();
             start |= pad.menu_select();
+            if G::drag_look() {
+                look_native = [pad.right_stick[0] * dt * 2., pad.right_stick[1] * dt * 2.];
+            }
         }
+        let mut look = [0.; 2];
+        if G::drag_look() && is_mouse_button_down(MouseButton::Left) && pointer.is_some() {
+            if let Some((x, y)) = last_pointer {
+                look = [(mx - x) * 0.003, (y - my) * 0.003];
+            }
+            last_pointer = Some((mx, my));
+        } else {
+            last_pointer = None;
+        }
+        #[cfg(target_arch = "wasm32")]
+        if G::drag_look() {
+            let stick = platform::look_pad();
+            look[0] += stick[0] * dt * 2.;
+            look[1] -= stick[1] * dt * 2.;
+        }
+        look[0] += look_native[0];
+        look[1] += look_native[1];
         if !started && start {
             started = true;
             audio.play(0, settings.sound);
@@ -238,6 +397,16 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Err(e) => notice = e,
             }
         }
+        if is_key_pressed(KeyCode::N) || digital.commands & 64 != 0 {
+            settings.music = !settings.music;
+            notice = match storage::write_settings(&store, &settings) {
+                Ok(()) => format!(
+                    "Music {} — saved",
+                    if settings.music { "on" } else { "off" }
+                ),
+                Err(e) => e,
+            };
+        }
         if is_key_pressed(KeyCode::K) || digital.commands & 16 != 0 {
             notice = match storage::save(&store, &game) {
                 Ok(()) => "Game saved. L resumes it.".into(),
@@ -262,13 +431,25 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 y: y.clamp(-1, 1),
                 pointer,
                 action: false,
+                sprint: is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift),
+                look: [0.; 2],
             }
         } else {
             Intent::default()
         };
-        inputs.feed(intent, u32::from(action), [0.; 2]);
+        inputs.feed(
+            intent,
+            u32::from(action),
+            if focused && started && !paused {
+                look
+            } else {
+                [0.; 2]
+            },
+        );
         let ticks = if verification && started {
-            8
+            // Replay uses the same fixed steps; graphics need not redraw after every eight ticks.
+            // Real-device verification below runs normal timing independently.
+            60
         } else {
             stepper.advance(if focused && started && !paused {
                 dt
@@ -283,6 +464,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             let tick = inputs.take_tick();
             let mut intent = tick.held;
             intent.action = tick.pressed(1);
+            intent.look = tick.look;
             if verification {
                 intent = G::verification_input(verification_tick);
                 verification_tick += 1;
@@ -293,6 +475,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             audio.play(cue, settings.sound);
             particles.burst(Point::new(400, 200), if cue == 1 { PINK } else { GOLD });
         }
+        audio.update(&game, started && !paused && focused, &settings, dt)?;
         autosave_time += dt;
         if persist_progress
             && started
@@ -315,15 +498,17 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         scene.rect(-100, Rect::new(0, 0, 800, 450), INK);
         game.draw(&mut scene);
         particles.update(dt, &mut scene);
-        scene.text(100, G::TITLE, Point::new(24, 30), 26., WHITE);
-        scene.text(100, G::CONTROLS, Point::new(24, 428), 16., WHITE);
-        scene.text(
-            100,
-            "Esc pause · M sound · K save · L load · R restart",
-            Point::new(24, 448),
-            14.,
-            TEAL,
-        );
+        if G::show_hud() {
+            scene.text(100, G::TITLE, Point::new(24, 30), 26., WHITE);
+            scene.text(100, G::CONTROLS, Point::new(24, 428), 16., WHITE);
+            scene.text(
+                100,
+                "Esc pause · M sound · K save · L load · R restart",
+                Point::new(24, 448),
+                14.,
+                TEAL,
+            );
+        }
         if !notice.is_empty() {
             scene.text(101, &notice, Point::new(24, 395), 19., GOLD);
         }
@@ -343,6 +528,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 "TRY AGAIN"
             };
             scene.text(201, title, Point::new(180, 190), 34., GOLD);
+            scene.text(201, game.menu_status(), Point::new(180, 274), 22., WHITE);
             scene.text(
                 201,
                 if !started {
@@ -371,7 +557,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         audio.evidence.enabled = settings.sound && !audio.muted;
         audio.evidence.activated = platform::audio_active();
         if game.tick() != last_tick || frame % 30 == 0 {
-            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"notice":notice,"sound":settings.sound,"audio":audio.evidence});
+            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
             platform::report(&report.to_string());
             last_tick = game.tick();
         }
@@ -475,6 +661,9 @@ mod platform {
                     be2_pad(2) > 0.,
                 )
             }
+        }
+        pub fn look_pad() -> [f32; 2] {
+            unsafe { [be2_pad(3), be2_pad(4)] }
         }
         pub fn touch() -> super::Digital {
             unsafe {

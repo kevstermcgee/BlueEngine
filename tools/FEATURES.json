@@ -1,102 +1,16 @@
 {
-  "format": 1,
   "features": {
-    "change_workflow": {
+    "fps_foundation": {
       "files": [
-        "tools/workflow.py",
-        "tools/be2.py",
-        "tools/test_workflow.py",
-        "templates/game_check.py",
-        "tools/test_game_check.py",
-        "docs/CHANGE_WORKFLOW.md",
-        "tools/contact_sheet.py",
-        "tools/audio_report.py",
-        "tools/test_media_tools.py"
+        "src/viewer/fps.rs"
       ],
       "checks": [
-        "python -m unittest tools.test_workflow tools.test_game_check",
-        "shared_gameplay scaffold integration test",
-        "generated external project content and locked Cargo checks"
+        "fps module tests in both feature configurations",
+        "BlueDM standalone crate tests",
+        "BlueDM two-client UDP smoke",
+        "Cobalt Foundry audit, lint and reachability"
       ],
-      "note": "Build-free bounded context and conservative final Git change plans. Explicit check --iterate reuses indexed suite/evidence paths or Python unittest mappings; --typecheck checks only the engine library. Focused success leaves full verification outstanding. Runner preserves command status and complete logs, distinguishes Cargo compiler diagnostics from plain test failures, rejects empty requested test selections, and records timing/artifact freshness. Generated games retain their separate project checks.",
-      "depends_on": [
-        "native_discovery"
-      ],
-      "keywords": [
-        "context",
-        "impact",
-        "affected",
-        "verification",
-        "AI",
-        "annotations",
-        "windows type-check",
-        "cross compile"
-      ],
-      "constraints": [
-        {
-          "id": "TEST-SELECTION-001",
-          "kind": "AI-WARNING",
-          "text": "Zero executed tests (including all ignored) cannot certify a requested iteration selection. Check indexed suite and exact test names; unknown harness output also fails closed.",
-          "source": "tools/workflow.py",
-          "verify": "python -m unittest tools.test_workflow.RunnerTests"
-        }
-      ]
-    },
-    "map_geometry": {
-      "files": [
-        "src/viewer/house.rs",
-        "src/viewer/maps.rs"
-      ],
-      "checks": [
-        "house traversal tests",
-        "house captures",
-        "headless tests"
-      ],
-      "note": "Blue Test Lab is the default. Procedural maps can be exported; editable JSON maps load via --map."
-    },
-    "map_editing": {
-      "files": [
-        "src/viewer/authoring.rs",
-        "src/bin/be2-tools.rs",
-        "tests/authoring.rs"
-      ],
-      "checks": [
-        "authoring integration tests",
-        "client and headless custom-map smoke"
-      ],
-      "note": "Change both validation and tools documentation for schema changes."
-    },
-    "props": {
-      "files": [
-        "src/viewer/props.rs",
-        "assets/props",
-        "examples/export_props.rs",
-        "src/viewer/props/accessories.rs",
-        "src/viewer/props/decor_library.rs"
-      ],
-      "checks": [
-        "prop budget and collision tests",
-        "captures"
-      ],
-      "note": "Preserve IDs; regenerate JSON exports into a new directory."
-    },
-    "movement": {
-      "files": [
-        "src/viewer/controller.rs",
-        "src/viewer/simulation.rs",
-        "tests/furniture_clearance.rs"
-      ],
-      "checks": [
-        "controller and simulation tests",
-        "route commands",
-        "manual controls",
-        "Feta furniture passages, solid legs/undersides, Scientist exclusion, four-map desks",
-        "dropped-prop overlap recovery for both characters; wall exclusion and stable feet"
-      ],
-      "note": "Keep frame-rate independence and render/headless parity. Controller floor is optional (set_floor(None) for voids), gravity is settable, apply_impulse adds a decaying push for knockback; see docs/CONTROLLERS.md.",
-      "depends_on": [
-        "simulation_contract"
-      ]
+      "note": "Rendering-independent FPS domain: validated catalogs, ten-firearm starter armory, deterministic fixed-tick fire/reload/burst timing, reproducible spread, smooth ADS/FOV, operative archetypes, and authoritative team deathmatch health/scoring/respawns. Games own presentation, hit-shape policy and their transport shell."
     },
     "graphics": {
       "files": [
@@ -113,44 +27,229 @@
         "game_presentation"
       ]
     },
-    "wrench": {
+    "interior_prefabs": {
       "files": [
-        "src/viewer/wrench.rs",
-        "src/viewer/wrench_view.rs",
-        "src/bin/impact_audio/mod.rs"
+        "assets/props/interiors",
+        "tools/place_interior.py",
+        "assets/maps/starters"
       ],
       "checks": [
-        "wrench tests",
-        "--studio --capture-wrench"
+        "native map audits and routes",
+        "23-template bounds and rotated placement checks",
+        "client captures"
       ],
-      "note": "Sound observes confirmed impacts; keep audio out of headless."
+      "note": "Data-only prefab scenes and quarter-turn placement; preserves source and validates with packaged native audit."
     },
-    "interactions": {
+    "prop_physics": {
       "files": [
-        "src/viewer/interaction.rs",
-        "src/viewer/room.rs"
+        "src/viewer/prop_physics.rs",
+        "src/bin/prop_view/mod.rs",
+        "src/viewer/room.rs",
+        "src/bin/blue-engine.rs"
       ],
       "checks": [
-        "interaction tests",
-        "--studio --capture-interactions"
+        "prop_physics tests in both feature configurations",
+        "--studio --capture-physics DIR",
+        "--studio --capture-physics DIR --feta",
+        "live E pickup/drop, pause/resume and both movement key layouts"
       ],
-      "note": "Keep semantic IDs stable. Map document v1 supports inspect actions only."
+      "note": "Runtime catalog-prop extraction; 120 Hz Rapier compound bodies with per-player authoritative ownership. Large furniture/wall art remain fixed. All eligible bodies are allocated up front (no runtime spawn/despawn, no contact events, no joints; a game needing them owns its own rapier world via vesper3d::rapier); lifecycle sleeping is not lazy allocation. Index-based accessors (prop_index bridges from IDs): mass, half extents, centre of mass, throw_for_player (uncapped release), set_floor (movable/removable implicit ground, kept across restores).",
+      "keywords": [
+        "prop",
+        "props",
+        "rigid",
+        "body",
+        "bodies",
+        "spawn",
+        "despawn",
+        "contact",
+        "contacts",
+        "joint",
+        "joints",
+        "mass",
+        "throw",
+        "floor"
+      ],
+      "public_api": [
+        "PropPhysics::prop_index",
+        "PropPhysics::prop_mass",
+        "PropPhysics::prop_half_extents",
+        "PropPhysics::prop_center_of_mass",
+        "PropPhysics::throw_for_player",
+        "PropPhysics::set_floor",
+        "PropPhysics::floor"
+      ],
+      "depends_on": [
+        "simulation_contract"
+      ]
     },
-    "camera_character": {
+    "source_navigator": {
       "files": [
-        "src/viewer/camera.rs",
-        "src/viewer/character.rs",
-        "src/bin/blue-engine.rs",
-        "src/viewer/controller.rs"
+        "src/viewer/symbols.rs"
       ],
       "checks": [
-        "camera tests",
-        "--studio --capture-character",
-        "Q toggle",
-        "--studio --capture-character DIR --feta",
-        "furniture camera clearance and 30/60/144 Hz obstruction-release tests"
+        "source code index, search, and outline"
       ],
-      "note": "Scientist and Feta procedural skins; CharacterKind controls body/collision/speed. Launch selection gates gameplay. Q toggles perspective; reset preserves profile. Feta uses a low centered pitch-independent boom; CameraRig smooths obstruction release and rechecks current-pose collisions."
+      "note": "High-performance Rust source navigator indexing modules, functions, structs, enums, signatures, and cross-references.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_source_code_navigator"
+        }
+      ]
+    },
+    "simulation_contract": {
+      "files": [
+        "src/viewer/simulation.rs",
+        "tests/simulation_flow.rs",
+        "docs/adr/0001-shared-simulation.md",
+        "docs/GLOSSARY.md"
+      ],
+      "checks": [
+        "simulation_flow integration tests in both feature configurations",
+        "library rustdoc with warnings denied in both feature configurations"
+      ],
+      "note": "Concrete rendering-free simulation; held input persists and jump is consumed once. DedicatedServer enforces input ordering and stale-input expiry.",
+      "contract": {
+        "owns": "Concrete fixed-step world and player lifecycle",
+        "inputs": "Movement intentions, explicit ticks",
+        "outputs": "Authoritative player/prop/game state",
+        "may_depend_on": [
+          "controller",
+          "authoring",
+          "physics"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio",
+          "window"
+        ],
+        "performance": "60 Hz; client catch-up capped at eight ticks",
+        "consumers": [
+          "client",
+          "headless",
+          "external games"
+        ]
+      },
+      "constraints": [
+        {
+          "id": "ARCH-HEADLESS-001",
+          "kind": "AI-BOUNDARY",
+          "text": "Rendering-free normal dependency graph excludes graphics, audio and hardware input.",
+          "source": "src/viewer/simulation.rs",
+          "verify": "python tools/check_headless.py"
+        }
+      ],
+      "public_api": [
+        "HeadlessWorld::input",
+        "HeadlessWorld::step",
+        "PlayerStepper",
+        "TICK_SECONDS"
+      ]
+    },
+    "simulation_scenarios": {
+      "files": [
+        "src/viewer/scenario.rs",
+        "docs/BEHAVIORAL_TESTING.md",
+        "assets/games/three-switches/scenario.json",
+        "src/viewer/game_scenario.rs",
+        "tests/scenario_intents.rs",
+        "tests/game_scenario.rs",
+        "tests/game_failure_paths.rs",
+        "src/viewer/pathing.rs",
+        "tests/stock_observatory.rs",
+        "assets/games/observatory/content/win.json",
+        "assets/games/observatory/content/loss-restart-win.json",
+        "assets/games/observatory/content/closed-gate.json",
+        "src/viewer/lint.rs"
+      ],
+      "checks": [
+        "headless simulation scenarios and replay trace verification",
+        "cargo test --locked --no-default-features --test game_failure_paths"
+      ],
+      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025). route:true plans walk_to around current colliders with the active body profile, waits and replans while gates move. wait_ticks:1 executes repeated presses on separate steps after blocking walks. Observatory loss/restart/win and never-opening gate fixtures distinguish abstract wins from physical proof. Stock --scenario --capture renders verified local single-player steps. Game-aware lint MAP --game=GAME --scenario=WIN retains initial static findings and resolves only individually observed authoritative targets; failed, mismatched or spawn-overriding proof is refused.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_deterministic_simulation_and_replay_verification"
+        },
+        {
+          "suite": "scenario_intents",
+          "test": "inputs_without_intents_match_the_original_loop_exactly"
+        },
+        {
+          "suite": "game_scenario",
+          "test": "a_press_that_is_only_right_in_one_phase_of_a_timer_waits_for_that_phase"
+        },
+        {
+          "suite": "stock_observatory",
+          "test": "changing_shutter_collision_and_turning_route_are_executed_before_the_win"
+        },
+        {
+          "suite": "stock_observatory",
+          "test": "overdue_repeated_presses_after_a_blocking_walk_use_separate_executed_steps"
+        }
+      ],
+      "depends_on": [
+        "game_documents"
+      ],
+      "canonical_example": "assets/games/three-switches/scenario.json",
+      "keywords": [
+        "walk_to",
+        "face",
+        "generated scenario",
+        "route",
+        "pathing",
+        "obstacle",
+        "gate",
+        "shutter",
+        "repeated",
+        "wait_ticks",
+        "replan",
+        "game-aware lint",
+        "unreachable",
+        "reachability proof"
+      ]
+    },
+    "closed_path": {
+      "files": [
+        "src/viewer/devkit/path.rs",
+        "docs/CUSTOM_SIM_CHEATSHEET.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib devkit::path"
+      ],
+      "note": "ClosedPath: a smooth closed loop on the ground plane (race track, patrol route, rail) with length, point/tangent at a distance, progress and lateral offset of any position, arc distance with wrap-around; plus yaw helpers (forward, right, yaw_of, wrap_angle) in the engine's convention (yaw 0 faces -Z).",
+      "keywords": [
+        "path",
+        "track",
+        "loop",
+        "spline",
+        "catmull",
+        "lap",
+        "progress",
+        "arc length",
+        "lateral",
+        "racing",
+        "patrol",
+        "waypoint",
+        "yaw",
+        "heading",
+        "bot steering",
+        "wrong way",
+        "face",
+        "facing",
+        "look at",
+        "turn toward",
+        "direction",
+        "yaw_of",
+        "angle",
+        "spawn",
+        "landmark"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
     },
     "multiplayer": {
       "files": [
@@ -321,62 +420,6 @@
         }
       ]
     },
-    "performance_regression_budgets": {
-      "files": [
-        "src/viewer/metrics.rs",
-        "src/bin/be2-tools.rs",
-        "tests/benchmarks.rs"
-      ],
-      "checks": [
-        "cargo test --locked --no-default-features --test benchmarks",
-        "be2-tools bench"
-      ],
-      "note": "Canonical headless measurements are checked against shared absolute service ceilings; tests and the CLI fail nonzero on regression. Thresholds include heterogeneous CI headroom and are not hardware-normalized baselines."
-    },
-    "offline_renderer": {
-      "files": [
-        "src/main.rs",
-        "src/render.rs",
-        "src/output.rs",
-        "src/scene.rs",
-        "src/geometry.rs"
-      ],
-      "checks": [
-        "CLI tests",
-        "offline export"
-      ],
-      "note": "Read ARCHITECTURE.md and AI_REFERENCE.md before changes.",
-      "depends_on": []
-    },
-    "landscaping": {
-      "files": [
-        "src/viewer/landscaping.rs",
-        "src/viewer/house.rs"
-      ],
-      "checks": [
-        "house traversal and hiding-spot tests",
-        "authoring export round trip",
-        "outdoor captures and menu"
-      ],
-      "note": "Reusable static broadleaf, pine, clustered shrub and flower builders. Preserve collision routes; no alpha textures or animation."
-    },
-    "source_free_authoring": {
-      "files": [
-        "tools/author.py",
-        "tools/authoring.json",
-        "tools/AUTHORING.md",
-        "tools/test_author.py"
-      ],
-      "checks": [
-        "python -m unittest discover -s tools -p test_author.py -v",
-        "verify with routes and captures",
-        "explicit baseline comparison"
-      ],
-      "note": "Packaged-native static map authoring; curated metadata and local bounded token search; no engine source reads, embeddings or arbitrary gameplay scripting.",
-      "depends_on": [
-        "map_editing"
-      ]
-    },
     "asset_library": {
       "files": [
         "assets/catalog.json",
@@ -399,109 +442,364 @@
         "asset pack"
       ]
     },
-    "interior_prefabs": {
+    "game_scaffolding": {
       "files": [
-        "assets/props/interiors",
-        "tools/place_interior.py",
-        "assets/maps/starters"
+        "src/viewer/newgame.rs",
+        "templates/custom-sim",
+        "templates/game_ship.py",
+        "templates/game_build.rs"
       ],
       "checks": [
-        "native map audits and routes",
-        "23-template bounds and rotated placement checks",
-        "client captures"
+        "new standalone game project scaffolding"
       ],
-      "note": "Data-only prefab scenes and quarter-turn placement; preserves source and validates with packaged native audit."
-    },
-    "simulation_contract": {
-      "files": [
-        "src/viewer/simulation.rs",
-        "tests/simulation_flow.rs",
-        "docs/adr/0001-shared-simulation.md",
-        "docs/GLOSSARY.md"
-      ],
-      "checks": [
-        "simulation_flow integration tests in both feature configurations",
-        "library rustdoc with warnings denied in both feature configurations"
-      ],
-      "note": "Concrete rendering-free simulation; held input persists and jump is consumed once. DedicatedServer enforces input ordering and stale-input expiry.",
-      "contract": {
-        "owns": "Concrete fixed-step world and player lifecycle",
-        "inputs": "Movement intentions, explicit ticks",
-        "outputs": "Authoritative player/prop/game state",
-        "may_depend_on": [
-          "controller",
-          "authoring",
-          "physics"
-        ],
-        "must_not_depend_on": [
-          "graphics",
-          "audio",
-          "window"
-        ],
-        "performance": "60 Hz; client catch-up capped at eight ticks",
-        "consumers": [
-          "client",
-          "headless",
-          "external games"
-        ]
-      },
-      "constraints": [
-        {
-          "id": "ARCH-HEADLESS-001",
-          "kind": "AI-BOUNDARY",
-          "text": "Rendering-free normal dependency graph excludes graphics, audio and hardware input.",
-          "source": "src/viewer/simulation.rs",
-          "verify": "python tools/check_headless.py"
-        }
-      ],
-      "public_api": [
-        "HeadlessWorld::input",
-        "HeadlessWorld::step",
-        "PlayerStepper",
-        "TICK_SECONDS"
+      "note": "Scaffolds independent game projects with a vesper3d path dependency, the stock starter (blueprint, map, game.json) or the custom-sim starter (pure simulation library + window binary on devkit and kit), a launcher, compact AGENTS.md, identity, icon set, build script, ship tooling and the shared content/project check runner. Cargo.lock is seeded from the engine's (versions match what the engine was tested with; the first Cargo command settles it) and the engine commit is recorded in assets/identity.json. Path dependencies are not revision pins.",
+      "depends_on": [
+        "shared_gameplay",
+        "prototype_api"
       ]
     },
-    "prop_physics": {
+    "native_discovery": {
       "files": [
-        "src/viewer/prop_physics.rs",
-        "src/bin/prop_view/mod.rs",
-        "src/viewer/room.rs",
-        "src/bin/blue-engine.rs"
+        "src/viewer/capabilities.rs",
+        "src/bin/be2-tools.rs",
+        "tools/FEATURES.json",
+        "tests/capabilities.rs",
+        "tests/capacity_limits.rs",
+        "tests/net_test_command.rs"
       ],
       "checks": [
-        "prop_physics tests in both feature configurations",
-        "--studio --capture-physics DIR",
-        "--studio --capture-physics DIR --feta",
-        "live E pickup/drop, pause/resume and both movement key layouts"
+        "cargo test --locked --no-default-features --test capabilities",
+        "cargo test --locked --no-default-features --test capacity_limits --test net_test_command"
       ],
-      "note": "Runtime catalog-prop extraction; 120 Hz Rapier compound bodies with per-player authoritative ownership. Large furniture/wall art remain fixed. All eligible bodies are allocated up front (no runtime spawn/despawn, no contact events, no joints; a game needing them owns its own rapier world via vesper3d::rapier); lifecycle sleeping is not lazy allocation. Index-based accessors (prop_index bridges from IDs): mass, half extents, centre of mass, throw_for_player (uncapped release), set_floor (movable/removable implicit ground, kept across restores).",
+      "note": "describe and bounded search use the CLI command registry and embedded feature index. export-lab creates a validated authoring starter. Evidence names and files must resolve; their tests run in the ordinary CI suite.",
+      "evidence": [
+        {
+          "suite": "capabilities",
+          "test": "discovery_and_parser_share_command_signatures"
+        },
+        {
+          "suite": "capabilities",
+          "test": "feature_paths_and_evidence_resolve_to_suite_tests"
+        }
+      ],
+      "depends_on": []
+    },
+    "wrench": {
+      "files": [
+        "src/viewer/wrench.rs",
+        "src/viewer/wrench_view.rs",
+        "src/bin/impact_audio/mod.rs"
+      ],
+      "checks": [
+        "wrench tests",
+        "--studio --capture-wrench"
+      ],
+      "note": "Sound observes confirmed impacts; keep audio out of headless."
+    },
+    "native_controllers": {
+      "files": [
+        "src/viewer/gamepad.rs",
+        "src/bin/sandbox/input.rs",
+        "src/bin/blue-engine.rs",
+        "docs/CONTROLLERS.md"
+      ],
+      "checks": [
+        "cargo test --locked --lib gamepad",
+        "python tools/check_headless.py",
+        "manual controller hot-plug, focus, keyboard layouts, camera and cursor capture"
+      ],
+      "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds.",
+      "depends_on": [
+        "movement"
+      ],
       "keywords": [
-        "prop",
-        "props",
-        "rigid",
-        "body",
-        "bodies",
-        "spawn",
-        "despawn",
-        "contact",
-        "contacts",
-        "joint",
-        "joints",
-        "mass",
-        "throw",
-        "floor"
+        "gamepad",
+        "controller",
+        "joystick",
+        "analog stick",
+        "trigger",
+        "button",
+        "dead zone"
       ],
-      "public_api": [
-        "PropPhysics::prop_index",
-        "PropPhysics::prop_mass",
-        "PropPhysics::prop_half_extents",
-        "PropPhysics::prop_center_of_mass",
-        "PropPhysics::throw_for_player",
-        "PropPhysics::set_floor",
-        "PropPhysics::floor"
+      "read_first": [
+        "docs/CONTROLLERS.md",
+        "src/viewer/gamepad.rs"
+      ]
+    },
+    "blueprint": {
+      "files": [
+        "src/viewer/blueprint.rs",
+        "src/viewer/spatial.rs"
+      ],
+      "checks": [
+        "blueprint compilation and spatial room graph"
+      ],
+      "note": "Declarative multi-room level compiler generating validated maps with door cutouts, spawns, catalog props, and spatial RoomGraphs.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_blueprint_compiler_and_spatial_graph"
+        }
+      ]
+    },
+    "offline_renderer": {
+      "files": [
+        "src/main.rs",
+        "src/render.rs",
+        "src/output.rs",
+        "src/scene.rs",
+        "src/geometry.rs"
+      ],
+      "checks": [
+        "CLI tests",
+        "offline export"
+      ],
+      "note": "Read ARCHITECTURE.md and AI_REFERENCE.md before changes.",
+      "depends_on": []
+    },
+    "change_workflow": {
+      "files": [
+        "tools/workflow.py",
+        "tools/be2.py",
+        "tools/test_workflow.py",
+        "templates/game_check.py",
+        "tools/test_game_check.py",
+        "docs/CHANGE_WORKFLOW.md",
+        "tools/contact_sheet.py",
+        "tools/audio_report.py",
+        "tools/test_media_tools.py",
+        "tools/check_authoring.py",
+        "tools/perf.py",
+        ".github/workflows/ci.yml",
+        ".github/workflows/sandbox.yml",
+        "docs/perf/README.md"
+      ],
+      "checks": [
+        "python -m unittest tools.test_workflow tools.test_game_check",
+        "shared_gameplay scaffold integration test",
+        "generated external project content and locked Cargo checks"
+      ],
+      "note": "Build-free bounded context and conservative Git change plans. check --iterate selects an indexed suite/exact test or library-only --typecheck; focused success leaves full verification outstanding. check runs the canonical full Linux/Windows CI gates with itest for tests, Clippy, rustdoc and fresh native authoring; CI additionally builds shipping releases and caches compiled dependencies, always executing tests. One reviewed independent Python batch overlaps serial Cargo work; native integration stays ordered. --serial opts out. Reports join started work on failure, retain complete logs/status/diagnostics, reject empty test selections, and record stage start offsets/durations. JSON stdout stays stable; progress goes to stderr. perf.py record --suite check measures one full run without extra rebuilds. Generated games retain their own project checks. CI engine/game matrices run concurrently; early leo-images supports art review, while existing test guards require both matrices to succeed.",
+      "depends_on": [
+        "native_discovery"
+      ],
+      "keywords": [
+        "context",
+        "impact",
+        "affected",
+        "verification",
+        "AI",
+        "annotations",
+        "windows type-check",
+        "cross compile",
+        "slow tests",
+        "CI",
+        "build cache",
+        "verification speed",
+        "check timings"
+      ],
+      "constraints": [
+        {
+          "id": "TEST-SELECTION-001",
+          "kind": "AI-WARNING",
+          "text": "Zero executed tests (including all ignored) cannot certify a requested iteration selection. Check indexed suite and exact test names; unknown harness output also fails closed.",
+          "source": "tools/workflow.py",
+          "verify": "python -m unittest tools.test_workflow.RunnerTests"
+        }
+      ]
+    },
+    "shared_gameplay": {
+      "files": [
+        "src/viewer/game_input.rs",
+        "src/viewer/game_ui.rs",
+        "src/viewer/local_client.rs",
+        "templates/native_focus.rs",
+        "src/viewer/creative.rs",
+        "src/viewer/character_skins.rs",
+        "src/viewer/character.rs",
+        "src/viewer/wrench_view.rs",
+        "src/viewer/newgame.rs",
+        "examples/custom_client.rs",
+        "docs/SHARED_GAMEPLAY.md",
+        "tests/shared_gameplay.rs",
+        "src/viewer/game_session.rs",
+        "src/viewer/playable.rs",
+        "src/viewer/prop_view.rs",
+        "templates/game_runtime_test.rs",
+        "tests/game_runtime.rs"
+      ],
+      "checks": [
+        "cargo test --locked --no-default-features --test game_runtime --test shared_gameplay",
+        "default and headless full check",
+        "generated external Cargo game test/build, release world/win/reset/menu captures"
+      ],
+      "note": "Standard new-game and stock --game consume playable::run_game_with_options: local HeadlessWorld authority without sockets, or server-owned state with shared prediction/interpolation. Authored objectives, timers, movers, dynamic props and win/restart run through the same simulation. Replication carries round identity and mover positions (since protocol 7). Graphics-free GameSession supports scripted clients and tests. MapPlayer/run_map is a static viewer only. Any joined player can restart after completion; existing packet-size limits remain.",
+      "evidence": [
+        {
+          "suite": "game_runtime",
+          "test": "generated_game_runs_rules_physics_pause_and_transactional_restart"
+        },
+        {
+          "suite": "game_runtime",
+          "test": "generated_content_runs_on_separate_headless_process_with_two_scripted_clients"
+        }
       ],
       "depends_on": [
-        "simulation_contract"
+        "simulation_contract",
+        "game_documents",
+        "multiplayer",
+        "game_presentation"
+      ],
+      "read_first": [
+        "src/viewer/game_session.rs",
+        "src/viewer/game_input.rs",
+        "src/viewer/playable.rs",
+        "tests/game_runtime.rs"
+      ],
+      "public_api": [
+        "GameSession::local",
+        "GameSession::advance",
+        "playable::run_game_with_options"
+      ],
+      "keywords": [
+        "restart",
+        "restart_requested",
+        "game over",
+        "key",
+        "keys",
+        "keyboard",
+        "windows",
+        "native key reader",
+        "dead key",
+        "KEY_TABLE",
+        "pressed",
+        "ClientInput"
+      ]
+    },
+    "client_kit": {
+      "note": "Opt-in renderer parts for a game that draws its own world, each independent and without genre logic: View (camera, screen projection), Template/Batch/Tint (small meshes packed per frame into few draw calls), Look/Materials (lit + fog + glow world material, alpha and additive effects, sky; presets daylight/dusk/night), Fx (particles, rings, fireballs, beams, popups, banners), hud (scaled outlined text, panels, bars, vignette, crosshair), SoundBank (off-thread rendered effects and music stems, backend woken during loading, start_music/update_music glides each stem toward a target volume), capture::save_frame (reports the real pixel size). PlanarMirror owns a depth-backed target, off-axis aperture projection, near-plane clipping and reflection UVs. PointLight adds four bounded unshadowed local lights per pass, cleared by set_scene for compatibility. Shadows (ADR 0036): one setting (devkit::ShadowQuality Off/Simple/Full, default Simple, Settings.shadow_quality, --shadows flag, Esc > Settings via GameShell::local_menu_with_options) and one helper, kit::Shadows (begin_frame, blob, cast, apply, draw_decals). Simple is depth-tested contact blobs (Materials::decal with a clip-space depth bias, Batch::blob); Full is one texel-snapped directional shadow map of the key light (packed-depth RGBA8 target, normal-offset bias, 3x3 filter, key light only). examples/shadow_demo.rs is the runnable reference.",
+      "checks": [
+        "cargo test --locked --lib kit",
+        "real-window capture of the custom-sim starter (world, effects, HUD) inspected by eye",
+        "cargo test --locked --lib kit::shadow"
+      ],
+      "files": [
+        "src/viewer/kit/mod.rs",
+        "src/viewer/kit/view.rs",
+        "src/viewer/kit/batch.rs",
+        "src/viewer/kit/look.rs",
+        "src/viewer/kit/fx.rs",
+        "src/viewer/kit/hud.rs",
+        "src/viewer/kit/audio.rs",
+        "src/viewer/kit/capture.rs",
+        "docs/CUSTOM_CLIENT.md",
+        "src/viewer/kit/gizmo.rs",
+        "examples/minimal_game.rs",
+        "src/viewer/kit/mirror.rs",
+        "src/viewer/kit/shadow.rs",
+        "examples/shadow_demo.rs",
+        "docs/adr/0036-shadows-for-kit-games.md"
+      ],
+      "canonical_example": "templates/custom-sim/src/main.rs",
+      "keywords": [
+        "kit",
+        "renderer",
+        "render",
+        "batch",
+        "batching",
+        "mesh",
+        "meshes",
+        "material",
+        "materials",
+        "shader",
+        "lighting",
+        "light",
+        "fog",
+        "sky",
+        "glow",
+        "particles",
+        "particle",
+        "fx",
+        "effects",
+        "hud",
+        "text",
+        "popup",
+        "banner",
+        "vignette",
+        "crosshair",
+        "sound",
+        "audio",
+        "bank",
+        "music",
+        "screenshot",
+        "camera",
+        "gizmo",
+        "bbox",
+        "wireframe",
+        "debug",
+        "scale",
+        "human",
+        "minimal",
+        "example",
+        "window",
+        "mirror",
+        "reflection",
+        "point lights",
+        "shadow",
+        "shadows",
+        "shadow map",
+        "blob",
+        "contact shadow",
+        "decal",
+        "shadow quality",
+        "depth"
+      ],
+      "depends_on": [
+        "game_presentation",
+        "custom_simulation"
+      ],
+      "read_first": [
+        "src/viewer/kit/mod.rs",
+        "templates/custom-sim/src/main.rs"
+      ],
+      "contract": {
+        "owns": "Dynamic batched geometry, materials, effect state, HUD drawing helpers and sound playback for custom renderers",
+        "inputs": "Game state read by the window, a Look, real seconds",
+        "outputs": "Draw calls, screenshots, sound, SoundBank::status rendering/loading failure and playback submission evidence",
+        "may_depend_on": [
+          "game_presentation",
+          "custom_simulation"
+        ],
+        "must_not_depend_on": [
+          "gameplay rules",
+          "genre-specific behavior"
+        ],
+        "performance": "Few draw calls per frame; meshes stay under the default 30000-entry draw-call capacities",
+        "consumers": [
+          "custom-sim starter",
+          "external games with their own renderer"
+        ]
+      },
+      "public_api": [
+        "View",
+        "Template",
+        "Batch",
+        "Tint",
+        "Look",
+        "Materials",
+        "Fx",
+        "SoundBank",
+        "gizmo",
+        "PointLight",
+        "MirrorPlane",
+        "PlanarMirror",
+        "Shadows",
+        "ShadowMap",
+        "ShadowCamera",
+        "ShadowQuality",
+        "AudioStatus",
+        "AudioBank",
+        "AudioState"
       ]
     },
     "weapons": {
@@ -519,17 +817,77 @@
       ],
       "note": "Scientist primary wrench and scroll-selected black pistol with infinite ammo prototype, hitscan raycasts, recoil, muzzle flash, third-person aiming and audio."
     },
-    "fps_foundation": {
+    "two_dimensional": {
       "files": [
-        "src/viewer/fps.rs"
+        "src/viewer/web.rs",
+        "templates/game_project.py",
+        "docs/TWO_D.md",
+        "src/two_d/client.rs",
+        "src/two_d/draw.rs",
+        "src/two_d/mod.rs",
+        "src/runtime/hash.rs",
+        "src/runtime/mod.rs",
+        "src/runtime/storage.rs",
+        "templates/two-d/AGENTS.md",
+        "templates/two-d/Cargo.toml.tmpl",
+        "templates/two-d/lib.rs",
+        "templates/two-d/main.rs",
+        "templates/two-d/web.py",
+        "docs/PORTABLE_GAMES.md",
+        "templates/two-d/world.rs",
+        "tests/portable_storage.rs"
+      ],
+      "read_first": [
+        "docs/PORTABLE_GAMES.md",
+        "templates/two-d/AGENTS.md",
+        "templates/two-d/lib.rs"
       ],
       "checks": [
-        "fps module tests in both feature configurations",
-        "BlueDM standalone crate tests",
-        "BlueDM two-client UDP smoke",
-        "Cobalt Foundry audit, lint and reachability"
+        "cargo test --locked --lib two_d --no-default-features --features two-d",
+        "python -m unittest tools.test_web_games"
       ],
-      "note": "Rendering-independent FPS domain: validated catalogs, ten-firearm starter armory, deterministic fixed-tick fire/reload/burst timing, reproducible spread, smooth ADS/FOV, operative archetypes, and authoritative team deathmatch health/scoring/respawns. Games own presentation, hit-shape policy and their transport shell."
+      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native/browser install. Choose elements by gameplay value; no legacy renderer exploration.",
+      "keywords": [
+        "2d",
+        "2D",
+        "sprite",
+        "arcade",
+        "top-down",
+        "platformer",
+        "cozy",
+        "management",
+        "dimensionality",
+        "game proposal",
+        "hybrid",
+        "3d",
+        "portable",
+        "minimap",
+        "mixed dimensions"
+      ],
+      "canonical_example": "templates/two-d/lib.rs",
+      "depends_on": [],
+      "public_api": [
+        "two_d::GameLogic",
+        "two_d::Intent",
+        "two_d::Rect",
+        "two_d::Body",
+        "two_d::draw::Scene",
+        "two_d::client::run",
+        "portable::draw::World",
+        "portable::draw::Scene::world"
+      ]
+    },
+    "performance_regression_budgets": {
+      "files": [
+        "src/viewer/metrics.rs",
+        "src/bin/be2-tools.rs",
+        "tests/benchmarks.rs"
+      ],
+      "checks": [
+        "cargo test --locked --no-default-features --test benchmarks",
+        "be2-tools bench"
+      ],
+      "note": "Canonical headless measurements are checked against shared absolute service ceilings; tests and the CLI fail nonzero on regression. Thresholds include heterogeneous CI headroom and are not hardware-normalized baselines."
     },
     "arena_shooter_foundation": {
       "files": [
@@ -543,6 +901,73 @@
         "Riftwake graphical capture"
       ],
       "note": "Opt-in, rendering-independent arena FPS layer: validated accelerated ground/air movement, configurable grounded step-up, friction, held-jump momentum chaining, 90-degree camera policy, launch volumes, timed pickups, deterministic projectiles and splash falloff, armor, free-for-all frags and fixed-tick respawns. Existing default movement remains unchanged."
+    },
+    "sandbox": {
+      "files": [
+        "src/bin/blueengine-sandbox.rs",
+        "src/bin/sandbox",
+        "assets/games/blueengine-sandbox",
+        "scripts/build_sandbox_content.py",
+        "scripts/validate_sandbox.py",
+        "scripts/package_sandbox.py",
+        "tests/sandbox.rs"
+      ],
+      "checks": [
+        "cargo test --locked --test sandbox",
+        "python scripts/validate_sandbox.py",
+        "optimized browser/walk/menu captures and live input checks"
+      ],
+      "note": "Local shared-controller workbench: complete registered prop/prefab browser, map selection, static collision inspection, eight selectable characters, per-map creative saves, searchable in-world prop palette, preview/rotate/grid placement, protected deletion and undo, snapshot export and explicit stock-client physics sessions."
+    },
+    "procedural_gen": {
+      "files": [
+        "src/viewer/gen.rs",
+        "src/viewer/devkit/procedural.rs",
+        "docs/PROCEDURAL_WORLDS.md",
+        "tests/procedural_world.rs",
+        "assets/games/leo/src/lib.rs",
+        "assets/games/leo/README.md"
+      ],
+      "checks": [
+        "cargo test --locked --no-default-features --test procedural_world",
+        "procedural scatter and line placement"
+      ],
+      "note": "Deterministic procedural scatter and line placement with ground snapping and collision avoidance. Custom infinite worlds use graphics-free devkit::procedural: seeded integer chunk identity, bounded transactional streaming, precision-safe local coordinates, seamless noise and an authoritative repeating day/night clock. Leo demonstrates fields/forests, a boy, sky transitions, nature audio and exact saves; bounded memory without turning huge global coordinates into floats.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_procedural_scatter_and_line"
+        }
+      ],
+      "read_first": [
+        "docs/PROCEDURAL_WORLDS.md",
+        "src/viewer/devkit/procedural.rs"
+      ],
+      "keywords": [
+        "procedural",
+        "infinite",
+        "endless",
+        "world",
+        "chunks",
+        "streaming",
+        "seed",
+        "forest",
+        "fields",
+        "day",
+        "night",
+        "sunrise",
+        "sunset",
+        "noise",
+        "rebasing"
+      ],
+      "public_api": [
+        "ChunkId",
+        "WorldPoint",
+        "ChunkCache",
+        "field",
+        "DayCycle"
+      ],
+      "canonical_example": "assets/games/leo/src/lib.rs"
     },
     "prototype_api": {
       "files": [
@@ -621,128 +1046,6 @@
         }
       ]
     },
-    "native_discovery": {
-      "files": [
-        "src/viewer/capabilities.rs",
-        "src/bin/be2-tools.rs",
-        "tools/FEATURES.json",
-        "tests/capabilities.rs",
-        "tests/capacity_limits.rs",
-        "tests/net_test_command.rs"
-      ],
-      "checks": [
-        "cargo test --locked --no-default-features --test capabilities",
-        "cargo test --locked --no-default-features --test capacity_limits --test net_test_command"
-      ],
-      "note": "describe and bounded search use the CLI command registry and embedded feature index. export-lab creates a validated authoring starter. Evidence names and files must resolve; their tests run in the ordinary CI suite.",
-      "evidence": [
-        {
-          "suite": "capabilities",
-          "test": "discovery_and_parser_share_command_signatures"
-        },
-        {
-          "suite": "capabilities",
-          "test": "feature_paths_and_evidence_resolve_to_suite_tests"
-        }
-      ],
-      "depends_on": []
-    },
-    "game_documents": {
-      "files": [
-        "src/viewer/game.rs",
-        "src/viewer/profile.rs",
-        "src/viewer/game_example.rs",
-        "src/viewer/game_edit.rs",
-        "src/viewer/game_explore.rs",
-        "tests/game_documents.rs",
-        "tests/game_conditions.rs",
-        "tests/game_edit.rs",
-        "tests/game_explore.rs",
-        "tests/game_box_errors.rs",
-        "tests/mover_riding.rs",
-        "tools/game.schema.json",
-        "docs/GAME_QUICKSTART.md",
-        "docs/adr/0026-movers-carry-players.md"
-      ],
-      "checks": [
-        "game_documents integration tests",
-        "graphical --capture-game smoke"
-      ],
-      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting or physical doors. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries. Movers carry a grounded player standing on them (Controller::ride, ADR 0026).",
-      "depends_on": [
-        "simulation_contract"
-      ],
-      "keywords": [
-        "rule",
-        "door",
-        "objective",
-        "interaction",
-        "counter",
-        "fail",
-        "condition",
-        "modulo",
-        "add-interactable",
-        "game-explore",
-        "winnable",
-        "reachability",
-        "button",
-        "console",
-        "switch",
-        "interactable",
-        "game.json",
-        "map.json",
-        "mover",
-        "moving platform"
-      ],
-      "read_first": [
-        "src/viewer/game.rs",
-        "src/viewer/game_edit.rs",
-        "src/viewer/game_example.rs",
-        "tests/game_documents.rs"
-      ],
-      "canonical_example": "src/viewer/game_example.rs"
-    },
-    "custom_clients": {
-      "files": [
-        "examples/custom_client.rs",
-        "docs/CUSTOM_CLIENT.md",
-        "src/prelude.rs"
-      ],
-      "checks": [
-        "cargo check --locked --example custom_client"
-      ],
-      "note": "Documented application-owned window/render/input boundary over BlueEngine-owned fixed simulation, including the supported Macroquad version for external crates. docs/CUSTOM_CLIENT.md also covers games that own their simulation (custom-sim, devkit, kit).",
-      "depends_on": [
-        "shared_gameplay"
-      ],
-      "canonical_example": "examples/custom_client.rs"
-    },
-    "mcp": {
-      "files": [
-        "src/viewer/mcp.rs",
-        "tools/mcp_server.py"
-      ],
-      "checks": [
-        "native MCP stdio server"
-      ],
-      "note": "Native Model Context Protocol (MCP) server directly exposing level authoring, inspection, pathing, linting, and simulation tools over stdio JSON-RPC."
-    },
-    "blueprint": {
-      "files": [
-        "src/viewer/blueprint.rs",
-        "src/viewer/spatial.rs"
-      ],
-      "checks": [
-        "blueprint compilation and spatial room graph"
-      ],
-      "note": "Declarative multi-room level compiler generating validated maps with door cutouts, spawns, catalog props, and spatial RoomGraphs.",
-      "evidence": [
-        {
-          "suite": "toolchain",
-          "test": "test_blueprint_compiler_and_spatial_graph"
-        }
-      ]
-    },
     "static_lint": {
       "files": [
         "src/viewer/lint.rs",
@@ -769,6 +1072,17 @@
         "floating props"
       ]
     },
+    "interactions": {
+      "files": [
+        "src/viewer/interaction.rs",
+        "src/viewer/room.rs"
+      ],
+      "checks": [
+        "interaction tests",
+        "--studio --capture-interactions"
+      ],
+      "note": "Keep semantic IDs stable. Map document v1 supports inspect actions only."
+    },
     "pathing_and_walk": {
       "files": [
         "src/viewer/pathing.rs"
@@ -790,60 +1104,6 @@
         "spawn to exit"
       ]
     },
-    "procedural_gen": {
-      "files": [
-        "src/viewer/gen.rs"
-      ],
-      "checks": [
-        "procedural scatter and line placement"
-      ],
-      "note": "Deterministic procedural scatter and line placement with ground snapping and collision avoidance.",
-      "evidence": [
-        {
-          "suite": "toolchain",
-          "test": "test_procedural_scatter_and_line"
-        }
-      ]
-    },
-    "simulation_scenarios": {
-      "files": [
-        "src/viewer/scenario.rs",
-        "docs/BEHAVIORAL_TESTING.md",
-        "assets/games/three-switches/scenario.json",
-        "src/viewer/game_scenario.rs",
-        "tests/scenario_intents.rs",
-        "tests/game_scenario.rs",
-        "tests/game_failure_paths.rs"
-      ],
-      "checks": [
-        "headless simulation scenarios and replay trace verification",
-        "cargo test --locked --no-default-features --test game_failure_paths"
-      ],
-      "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025).",
-      "evidence": [
-        {
-          "suite": "toolchain",
-          "test": "test_deterministic_simulation_and_replay_verification"
-        },
-        {
-          "suite": "scenario_intents",
-          "test": "inputs_without_intents_match_the_original_loop_exactly"
-        },
-        {
-          "suite": "game_scenario",
-          "test": "a_press_that_is_only_right_in_one_phase_of_a_timer_waits_for_that_phase"
-        }
-      ],
-      "depends_on": [
-        "game_documents"
-      ],
-      "canonical_example": "assets/games/three-switches/scenario.json",
-      "keywords": [
-        "walk_to",
-        "face",
-        "generated scenario"
-      ]
-    },
     "verification_framework": {
       "files": [
         "src/viewer/verify.rs"
@@ -859,57 +1119,56 @@
         }
       ]
     },
-    "source_navigator": {
+    "map_geometry": {
       "files": [
-        "src/viewer/symbols.rs"
+        "src/viewer/house.rs",
+        "src/viewer/maps.rs"
       ],
       "checks": [
-        "source code index, search, and outline"
+        "house traversal tests",
+        "house captures",
+        "headless tests"
       ],
-      "note": "High-performance Rust source navigator indexing modules, functions, structs, enums, signatures, and cross-references.",
-      "evidence": [
-        {
-          "suite": "toolchain",
-          "test": "test_source_code_navigator"
-        }
-      ]
+      "note": "Blue Test Lab is the default. Procedural maps can be exported; editable JSON maps load via --map."
     },
-    "ui_auditor": {
+    "map_editing": {
       "files": [
-        "src/viewer/ui_check.rs"
+        "src/viewer/authoring.rs",
+        "src/bin/be2-tools.rs",
+        "tests/authoring.rs"
       ],
       "checks": [
-        "headless multi-resolution UI layout audit"
+        "authoring integration tests",
+        "client and headless custom-map smoke"
       ],
-      "note": "Headless 2D UI layout auditor validating all screens across 9 standard resolutions for overlap, text truncation, and responsive pause menu constraints.",
-      "evidence": [
-        {
-          "suite": "toolchain",
-          "test": "test_headless_ui_layout_auditor"
-        }
-      ],
-      "keywords": [
-        "menu layout",
-        "resolutions",
-        "screen sizes",
-        "text truncation"
-      ]
+      "note": "Change both validation and tools documentation for schema changes."
     },
-    "game_scaffolding": {
+    "custom_clients": {
       "files": [
-        "src/viewer/newgame.rs",
-        "templates/custom-sim",
-        "templates/game_ship.py",
-        "templates/game_build.rs"
+        "examples/custom_client.rs",
+        "docs/CUSTOM_CLIENT.md",
+        "src/prelude.rs"
       ],
       "checks": [
-        "new standalone game project scaffolding"
+        "cargo check --locked --example custom_client"
       ],
-      "note": "Scaffolds independent game projects with a vesper3d path dependency, the stock starter (blueprint, map, game.json) or the custom-sim starter (pure simulation library + window binary on devkit and kit), a launcher, compact AGENTS.md, identity, icon set, build script, ship tooling and the shared content/project check runner. Cargo.lock is seeded from the engine's (versions match what the engine was tested with; the first Cargo command settles it) and the engine commit is recorded in assets/identity.json. Path dependencies are not revision pins.",
+      "note": "Documented application-owned window/render/input boundary over BlueEngine-owned fixed simulation, including the supported Macroquad version for external crates. docs/CUSTOM_CLIENT.md also covers games that own their simulation (custom-sim, devkit, kit).",
       "depends_on": [
-        "shared_gameplay",
-        "prototype_api"
-      ]
+        "shared_gameplay"
+      ],
+      "canonical_example": "examples/custom_client.rs"
+    },
+    "landscaping": {
+      "files": [
+        "src/viewer/landscaping.rs",
+        "src/viewer/house.rs"
+      ],
+      "checks": [
+        "house traversal and hiding-spot tests",
+        "authoring export round trip",
+        "outdoor captures and menu"
+      ],
+      "note": "Reusable static broadleaf, pine, clustered shrub and flower builders. Preserve collision routes; no alpha textures or animation."
     },
     "game_upgrade": {
       "files": [
@@ -943,172 +1202,85 @@
         "tools/upgrade.py"
       ]
     },
-    "game_presentation": {
+    "game_documents": {
       "files": [
-        "src/viewer/game_client.rs",
-        "src/viewer/presentation.rs",
-        "docs/GAME_PRESENTATION.md",
-        "src/viewer/game_text.rs",
-        "src/viewer/game_visuals.rs",
-        "assets/ui/LICENSE_LIBERATION"
+        "src/viewer/game.rs",
+        "src/viewer/profile.rs",
+        "src/viewer/game_example.rs",
+        "src/viewer/game_edit.rs",
+        "src/viewer/game_explore.rs",
+        "tests/game_documents.rs",
+        "tests/game_conditions.rs",
+        "tests/game_edit.rs",
+        "tests/game_explore.rs",
+        "tests/game_box_errors.rs",
+        "tests/mover_riding.rs",
+        "tools/game.schema.json",
+        "docs/GAME_QUICKSTART.md",
+        "docs/adr/0026-movers-carry-players.md",
+        "src/viewer/stock_presentation.rs",
+        "assets/games/observatory/author.py",
+        "assets/games/observatory/content/game.json",
+        "assets/games/observatory/README.md",
+        "tests/stock_observatory.rs",
+        "src/viewer/lint.rs"
       ],
       "checks": [
-        "presentation module tests",
-        "BlueDM movement UDP regression",
-        "game still/menu captures and live controls"
+        "game_documents integration tests",
+        "graphical --capture-game smoke"
       ],
-      "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation. GameShell::local_menu_with_audio adds a non-breaking fourth pause-menu entry, Settings (music/sound toggles, a download-music button); local_menu is unchanged.",
+      "note": "GameDocument v1: movement profile, spawns, bounded interaction rules/counters and server-owned objective state (won or lost: complete/fail). Rule conditions are counter comparisons, modulo and all/any/not (ADR 0023). Eligibility and presentation visibility are independent replicated states; hidden entities retain collision. Native game-describe/schema/validate/example; --game on client and headless. No scripting; movers translate authored gates. add-interactable creates a target's map and game records together (dry run unless --write). game-explore searches reachable rule states (winnable, shortest win/loss, dead rules, stuck states) using GameRuntime itself (ADR 0024). game-validate names the missing or mismatched map record of an interactable or mover; game-explore flags once-exhausted retries. Movers carry a grounded player standing on them (Controller::ride, ADR 0026). Optional stock presentation config sets objective/outcome wording, counter labels/visibility/units/clock, RGBA palette and bounded HUD; reads authority only. Canonical translate preserves exact box bounds after fractional edits.",
       "depends_on": [
         "simulation_contract"
       ],
-      "contract": {
-        "owns": "Window, menus, cosmetic rendering and input adaptation",
-        "inputs": "Shared authoritative state and neutral gameplay inputs",
-        "outputs": "Frames and intentions",
-        "may_depend_on": [
-          "simulation_contract"
-        ],
-        "must_not_depend_on": [
-          "a second authoritative gameplay loop"
-        ],
-        "performance": "Cache static geometry; fixed simulation independent of frame rate",
-        "consumers": [
-          "stock client",
-          "generated games"
-        ]
-      },
       "keywords": [
-        "window",
-        "window_config",
-        "draw call",
-        "vertex capacity",
-        "macroquad conf",
-        "game window",
-        "resolution",
-        "pause menu",
-        "settings menu"
-      ],
-      "read_first": [
-        "src/viewer/game_client.rs",
-        "docs/GAME_PRESENTATION.md"
-      ]
-    },
-    "sandbox": {
-      "files": [
-        "src/bin/blueengine-sandbox.rs",
-        "src/bin/sandbox",
-        "assets/games/blueengine-sandbox",
-        "scripts/build_sandbox_content.py",
-        "scripts/validate_sandbox.py",
-        "scripts/package_sandbox.py",
-        "tests/sandbox.rs"
-      ],
-      "checks": [
-        "cargo test --locked --test sandbox",
-        "python scripts/validate_sandbox.py",
-        "optimized browser/walk/menu captures and live input checks"
-      ],
-      "note": "Local shared-controller workbench: complete registered prop/prefab browser, map selection, static collision inspection, eight selectable characters, per-map creative saves, searchable in-world prop palette, preview/rotate/grid placement, protected deletion and undo, snapshot export and explicit stock-client physics sessions."
-    },
-    "native_controllers": {
-      "files": [
-        "src/viewer/gamepad.rs",
-        "src/bin/sandbox/input.rs",
-        "src/bin/blue-engine.rs",
-        "docs/CONTROLLERS.md"
-      ],
-      "checks": [
-        "cargo test --locked --lib gamepad",
-        "python tools/check_headless.py",
-        "manual controller hot-plug, focus, keyboard layouts, camera and cursor capture"
-      ],
-      "note": "Optional native gilrs backend, enabled by client. Analog sticks/triggers, radial dead zone, button edges, device selection, focus gating and stock client gameplay/menu bindings. No hardware dependency in default headless builds.",
-      "depends_on": [
-        "movement"
-      ],
-      "keywords": [
-        "gamepad",
-        "controller",
-        "joystick",
-        "analog stick",
-        "trigger",
+        "rule",
+        "door",
+        "objective",
+        "interaction",
+        "counter",
+        "fail",
+        "condition",
+        "modulo",
+        "add-interactable",
+        "game-explore",
+        "winnable",
+        "reachability",
         "button",
-        "dead zone"
+        "console",
+        "switch",
+        "interactable",
+        "game.json",
+        "map.json",
+        "mover",
+        "moving platform",
+        "stock HUD",
+        "presentation",
+        "battery",
+        "shutter",
+        "calibration",
+        "canonical",
+        "translate"
       ],
       "read_first": [
-        "docs/CONTROLLERS.md",
-        "src/viewer/gamepad.rs"
-      ]
-    },
-    "shared_gameplay": {
-      "files": [
-        "src/viewer/game_input.rs",
-        "src/viewer/game_ui.rs",
-        "src/viewer/local_client.rs",
-        "templates/native_focus.rs",
-        "src/viewer/creative.rs",
-        "src/viewer/character_skins.rs",
-        "src/viewer/character.rs",
-        "src/viewer/wrench_view.rs",
-        "src/viewer/newgame.rs",
-        "examples/custom_client.rs",
-        "docs/SHARED_GAMEPLAY.md",
-        "tests/shared_gameplay.rs",
-        "src/viewer/game_session.rs",
-        "src/viewer/playable.rs",
-        "src/viewer/prop_view.rs",
-        "templates/game_runtime_test.rs",
-        "tests/game_runtime.rs"
+        "src/viewer/game.rs",
+        "src/viewer/game_edit.rs",
+        "src/viewer/game_example.rs",
+        "tests/game_documents.rs"
       ],
-      "checks": [
-        "cargo test --locked --no-default-features --test game_runtime --test shared_gameplay",
-        "default and headless full check",
-        "generated external Cargo game test/build, release world/win/reset/menu captures"
-      ],
-      "note": "Standard new-game and stock --game consume playable::run_game_with_options: local HeadlessWorld authority without sockets, or server-owned state with shared prediction/interpolation. Authored objectives, timers, movers, dynamic props and win/restart run through the same simulation. Replication carries round identity and mover positions (since protocol 7). Graphics-free GameSession supports scripted clients and tests. MapPlayer/run_map is a static viewer only. Any joined player can restart after completion; existing packet-size limits remain.",
-      "evidence": [
-        {
-          "suite": "game_runtime",
-          "test": "generated_game_runs_rules_physics_pause_and_transactional_restart"
-        },
-        {
-          "suite": "game_runtime",
-          "test": "generated_content_runs_on_separate_headless_process_with_two_scripted_clients"
-        }
-      ],
-      "depends_on": [
-        "simulation_contract",
-        "game_documents",
-        "multiplayer",
-        "game_presentation"
-      ],
-      "read_first": [
-        "src/viewer/game_session.rs",
-        "src/viewer/game_input.rs",
-        "src/viewer/playable.rs",
-        "tests/game_runtime.rs"
-      ],
-      "public_api": [
-        "GameSession::local",
-        "GameSession::advance",
-        "playable::run_game_with_options"
-      ],
-      "keywords": [
-        "restart",
-        "restart_requested",
-        "game over",
-        "key",
-        "keys",
-        "keyboard",
-        "windows",
-        "native key reader",
-        "dead key",
-        "KEY_TABLE",
-        "pressed",
-        "ClientInput"
-      ]
+      "canonical_example": "src/viewer/game_example.rs"
     },
     "custom_simulation": {
+      "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files (music/sfx volume and on/off toggles, downloads_dir, unique_path, sanitize_filename), Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio, including AmbientSpec/ambient_loop for seamless background music; `be2-tools ambient-music` generates one from the command line, see docs/AUDIO.md), wall_along_x/wall_along_z (straight walls with doorway gaps) and WaypointGraph (small branching graph, breadth-first path/nearest-node lookup) for a hand-built indoor level and the NPCs that move through it (ADR 0034). kit::Materials::draw_static(&meshes) binds the world material and draws a scene's static geometry in one call, so the two-step version cannot be called in the wrong order (silently renders nothing otherwise). TextField/CharFilter (sanitised typing and paste, caret, hold-to-repeat; ClientInput::feed_text / TextField::feed_frame add the keyboard and Ctrl+V clipboard glue) and resolve_ipv4/ServerChoice (typed server address to an IPv4 SocketAddr with player-facing errors; default server from --connect, server.txt, Settings::last_server, built-in). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
+      "checks": [
+        "cargo test --locked --lib devkit",
+        "python tools/check_headless.py",
+        "generated custom-sim project: cargo test, real-window --capture/--script/--perf run, ship gate",
+        "cargo test --locked --lib devkit::look",
+        "cargo test --locked --lib devkit::scale",
+        "cargo test --locked --lib devkit::menu",
+        "cargo test --locked --lib devkit::text_field devkit::net_address"
+      ],
       "files": [
         "src/viewer/devkit/mod.rs",
         "src/viewer/devkit/clock.rs",
@@ -1137,16 +1309,7 @@
         "src/viewer/devkit/net_address.rs",
         "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md"
       ],
-      "checks": [
-        "cargo test --locked --lib devkit",
-        "python tools/check_headless.py",
-        "generated custom-sim project: cargo test, real-window --capture/--script/--perf run, ship gate",
-        "cargo test --locked --lib devkit::look",
-        "cargo test --locked --lib devkit::scale",
-        "cargo test --locked --lib devkit::menu",
-        "cargo test --locked --lib devkit::text_field devkit::net_address"
-      ],
-      "note": "For games whose rules are Rust, not GameDocument: enemies, projectiles, scoring, AI, waves, per-frame physics. Scaffold with new-game NAME DIR ENGINE_PATH custom-sim. Graphics-free devkit: FrameClock (wall-clock frame length; get_frame_time() is bumpy under vsync), FixedStepper, InputAccumulator (one input per tick, edges once), Simulation + StateHasher + assert_deterministic, Playback/Timeline/CapturePlan/PerfReport for --playback/--script/--capture/--perf, seeded Rng, Juice, atomic Settings/Records files (music/sfx volume and on/off toggles, downloads_dir, unique_path, sanitize_filename), Snapshot (save states: F5/F9, autosave, migrations, all-or-nothing loads), synth (procedural audio, including AmbientSpec/ambient_loop for seamless background music; `be2-tools ambient-music` generates one from the command line, see docs/AUDIO.md), wall_along_x/wall_along_z (straight walls with doorway gaps) and WaypointGraph (small branching graph, breadth-first path/nearest-node lookup) for a hand-built indoor level and the NPCs that move through it (ADR 0034). kit::Materials::draw_static(&meshes) binds the world material and draws a scene's static geometry in one call, so the two-step version cannot be called in the wrong order (silently renders nothing otherwise). TextField/CharFilter (sanitised typing and paste, caret, hold-to-repeat; ClientInput::feed_text / TextField::feed_frame add the keyboard and Ctrl+V clipboard glue) and resolve_ipv4/ServerChoice (typed server address to an IPv4 SocketAddr with player-facing errors; default server from --connect, server.txt, Settings::last_server, built-in). The game owns its single authoritative loop; do not stretch GameDocument into scripting.",
+      "canonical_example": "templates/custom-sim/src/main.rs",
       "keywords": [
         "custom",
         "simulation",
@@ -1223,7 +1386,29 @@
         "server address",
         "resolve",
         "server.txt",
-        "default server"
+        "default server",
+        "script",
+        "scripted",
+        "playback",
+        "screenshots",
+        "frames"
+      ],
+      "constraints": [
+        {
+          "id": "ARCH-DEVKIT-001",
+          "kind": "AI-BOUNDARY",
+          "text": "devkit is graphics-free and always compiled: no macroquad, no audio device, no wall clock inside simulation helpers.",
+          "source": "src/viewer/devkit/mod.rs",
+          "verify": "python tools/check_headless.py"
+        }
+      ],
+      "depends_on": [
+        "movement"
+      ],
+      "read_first": [
+        "docs/CUSTOM_CLIENT.md",
+        "templates/custom-sim/src/lib.rs",
+        "src/viewer/devkit/mod.rs"
       ],
       "contract": {
         "owns": "Frame timing, fixed-step accumulation, per-tick input, replay/capture/perf plumbing, saves, screen feel, synthesised audio",
@@ -1272,205 +1457,439 @@
         "stick_look",
         "request_exit",
         "ShadowQuality"
-      ],
-      "read_first": [
-        "docs/CUSTOM_CLIENT.md",
-        "templates/custom-sim/src/lib.rs",
-        "src/viewer/devkit/mod.rs"
-      ],
-      "canonical_example": "templates/custom-sim/src/main.rs",
-      "depends_on": [
-        "movement"
-      ],
-      "constraints": [
-        {
-          "id": "ARCH-DEVKIT-001",
-          "kind": "AI-BOUNDARY",
-          "text": "devkit is graphics-free and always compiled: no macroquad, no audio device, no wall clock inside simulation helpers.",
-          "source": "src/viewer/devkit/mod.rs",
-          "verify": "python tools/check_headless.py"
-        }
       ]
     },
-    "client_kit": {
+    "dev_tools": {
       "files": [
-        "src/viewer/kit/mod.rs",
-        "src/viewer/kit/view.rs",
-        "src/viewer/kit/batch.rs",
-        "src/viewer/kit/look.rs",
-        "src/viewer/kit/fx.rs",
-        "src/viewer/kit/hud.rs",
-        "src/viewer/kit/audio.rs",
-        "src/viewer/kit/capture.rs",
-        "docs/CUSTOM_CLIENT.md",
-        "src/viewer/kit/gizmo.rs",
-        "examples/minimal_game.rs",
-        "src/viewer/kit/mirror.rs",
-        "src/viewer/kit/shadow.rs",
-        "examples/shadow_demo.rs",
-        "docs/adr/0036-shadows-for-kit-games.md"
+        "tools/xcapture.py",
+        "tools/test_xcapture.py",
+        "docs/HEADLESS_CAPTURE.md",
+        "tools/perf.py",
+        "docs/perf/README.md",
+        "docs/perf/metrics.jsonl",
+        "scripts/publish_games.py",
+        "scripts/test_publish_games.py",
+        "docs/GAMES_PUBLISHING.md"
       ],
       "checks": [
-        "cargo test --locked --lib kit",
-        "real-window capture of the custom-sim starter (world, effects, HUD) inspected by eye",
-        "cargo test --locked --lib kit::shadow"
+        "python -m unittest tools.test_xcapture",
+        "python tools/perf.py report",
+        "python -m unittest scripts.test_publish_games",
+        "python scripts/publish_games.py check"
       ],
-      "note": "Opt-in renderer parts for a game that draws its own world, each independent and without genre logic: View (camera, screen projection), Template/Batch/Tint (small meshes packed per frame into few draw calls), Look/Materials (lit + fog + glow world material, alpha and additive effects, sky; presets daylight/dusk/night), Fx (particles, rings, fireballs, beams, popups, banners), hud (scaled outlined text, panels, bars, vignette, crosshair), SoundBank (off-thread rendered effects and music stems, backend woken during loading, start_music/update_music glides each stem toward a target volume), capture::save_frame (reports the real pixel size). PlanarMirror owns a depth-backed target, off-axis aperture projection, near-plane clipping and reflection UVs. PointLight adds four bounded unshadowed local lights per pass, cleared by set_scene for compatibility. Shadows (ADR 0036): one setting (devkit::ShadowQuality Off/Simple/Full, default Simple, Settings.shadow_quality, --shadows flag, Esc > Settings via GameShell::local_menu_with_options) and one helper, kit::Shadows (begin_frame, blob, cast, apply, draw_decals). Simple is depth-tested contact blobs (Materials::decal with a clip-space depth bias, Batch::blob); Full is one texel-snapped directional shadow map of the key light (packed-depth RGBA8 target, normal-offset bias, 3x3 filter, key light only). examples/shadow_demo.rs is the runnable reference.",
+      "note": "Developer tools outside the engine library: headless screenshots under xvfb (xcapture.py), perf recording (perf.py), publishing a game to BlueEngineGames (publish_games.py). Each file is described in the modules map.",
       "keywords": [
-        "kit",
-        "renderer",
-        "render",
-        "batch",
-        "batching",
-        "mesh",
-        "meshes",
-        "material",
-        "materials",
-        "shader",
-        "lighting",
-        "light",
-        "fog",
-        "sky",
-        "glow",
-        "particles",
-        "particle",
-        "fx",
-        "effects",
-        "hud",
-        "text",
-        "popup",
-        "banner",
-        "vignette",
-        "crosshair",
-        "sound",
-        "audio",
-        "bank",
-        "music",
         "screenshot",
-        "camera",
-        "gizmo",
-        "bbox",
-        "wireframe",
-        "debug",
-        "scale",
-        "human",
-        "minimal",
-        "example",
-        "window",
-        "mirror",
-        "reflection",
-        "point lights",
-        "shadow",
-        "shadows",
-        "shadow map",
-        "blob",
-        "contact shadow",
-        "decal",
-        "shadow quality",
-        "depth"
-      ],
-      "contract": {
-        "owns": "Dynamic batched geometry, materials, effect state, HUD drawing helpers and sound playback for custom renderers",
-        "inputs": "Game state read by the window, a Look, real seconds",
-        "outputs": "Draw calls, screenshots, sound, SoundBank::status rendering/loading failure and playback submission evidence",
-        "may_depend_on": [
-          "game_presentation",
-          "custom_simulation"
-        ],
-        "must_not_depend_on": [
-          "gameplay rules",
-          "genre-specific behavior"
-        ],
-        "performance": "Few draw calls per frame; meshes stay under the default 30000-entry draw-call capacities",
-        "consumers": [
-          "custom-sim starter",
-          "external games with their own renderer"
-        ]
-      },
-      "public_api": [
-        "View",
-        "Template",
-        "Batch",
-        "Tint",
-        "Look",
-        "Materials",
-        "Fx",
-        "SoundBank",
-        "gizmo",
-        "PointLight",
-        "MirrorPlane",
-        "PlanarMirror",
-        "Shadows",
-        "ShadowMap",
-        "ShadowCamera",
-        "ShadowQuality",
-        "AudioStatus"
+        "screenshots",
+        "capture",
+        "headless",
+        "no display",
+        "xvfb",
+        "frames",
+        "software rendering",
+        "see the game",
+        "visual check",
+        "xcapture",
+        "perf",
+        "performance",
+        "benchmark",
+        "timing",
+        "timings",
+        "build time",
+        "test time",
+        "compile time",
+        "record",
+        "regression",
+        "profile",
+        "slow",
+        "speed",
+        "metrics",
+        "publish",
+        "publishing",
+        "release",
+        "games repo",
+        "BlueEngineGames",
+        "manifest",
+        "windows build",
+        "download",
+        "ship a game",
+        "finished game"
       ],
       "read_first": [
-        "src/viewer/kit/mod.rs",
-        "templates/custom-sim/src/main.rs"
+        "docs/HEADLESS_CAPTURE.md"
+      ]
+    },
+    "geometry_kit": {
+      "files": [
+        "src/viewer/kit/shape.rs",
+        "src/viewer/kit/lint.rs",
+        "docs/AI_DEV_FEEDBACK.md"
       ],
-      "canonical_example": "templates/custom-sim/src/main.rs",
+      "checks": [
+        "cargo test --locked --lib kit::shape",
+        "cargo test --locked --lib kit::lint"
+      ],
+      "note": "Procedural modelling for Template (kit::shape: Section/Ring/Sweep, Template::loft, sweep, rounded_box, capsule, rod, mirror_x, smooth_normals, offset_strip/offset_band/offset_path/strip_quads with mitred, curvature-clamped corners so a ribbon cannot fold over itself) and the geometry-defect lint (kit::lint: lint/lint_with/assert_clean/strip_folds/depth_resolution finding zero-area triangles, winding against normals, coplanar overlapping triangles of different parts = z-fighting, folded strips). View::camera_checked / view::depth_ratio_warning guard a far/near ratio over 3000. Lessons: coplanar quads z-fight, never offset per segment normal without a mitre and clamp, mind the depth ratio, fx_alpha/fx_add are never depth-tested.",
+      "keywords": [
+        "loft",
+        "sweep",
+        "rounded box",
+        "capsule",
+        "mirror",
+        "smooth normals",
+        "road",
+        "kerb",
+        "border",
+        "strip",
+        "offset",
+        "z-fighting",
+        "z fight",
+        "flicker",
+        "coplanar",
+        "lint",
+        "geometry",
+        "procedural model",
+        "depth precision",
+        "near far"
+      ],
       "depends_on": [
-        "game_presentation",
         "custom_simulation"
       ]
     },
-    "game_shipping": {
+    "ui_auditor": {
       "files": [
-        "src/viewer/identity.rs",
-        "src/viewer/icon.rs",
-        "templates/game_ship.py",
-        "templates/game_build.rs",
-        "templates/game_check.py",
-        "tools/test_game_ship.py",
-        "tools/test_game_check.py",
-        "docs/GAME_QUICKSTART.md"
+        "src/viewer/ui_check.rs"
       ],
       "checks": [
-        "cargo test --locked --lib identity icon",
-        "python -m unittest tools.test_game_ship tools.test_game_check",
-        "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)"
+        "headless multi-resolution UI layout audit"
       ],
-      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. Package verification is display-independent: strict portable manifest paths, every SHA-256, complete declared source inventory when available, and GameDocument.map closure. Graphical smoke copies only declarations outside the checkout and saves full stdout/stderr; mutable player files are preserved in dist but excluded from smoke.",
+      "note": "Headless 2D UI layout auditor validating all screens across 9 standard resolutions for overlap, text truncation, and responsive pause menu constraints.",
+      "evidence": [
+        {
+          "suite": "toolchain",
+          "test": "test_headless_ui_layout_auditor"
+        }
+      ],
       "keywords": [
-        "ship",
-        "shipping",
-        "package",
-        "packaging",
-        "dist",
-        "shortcut",
-        "desktop",
-        "icon",
-        "ico",
-        "lnk",
-        "identity",
-        "title",
-        "name",
-        "launcher",
-        "installer",
-        "gate",
-        "definition",
-        "done",
-        "deliver",
-        "delivery",
-        "exe",
-        "executable",
-        "release"
+        "menu layout",
+        "resolutions",
+        "screen sizes",
+        "text truncation"
+      ]
+    },
+    "netplay_hub": {
+      "files": [
+        "src/viewer/netplay/cli.rs",
+        "src/viewer/netplay/hub/mod.rs",
+        "src/viewer/netplay/hub/wire.rs",
+        "src/viewer/netplay/hub/legacy.rs",
+        "src/viewer/netplay/hub/limits.rs",
+        "src/viewer/netplay/hub/registry.rs",
+        "src/viewer/netplay/hub/spawn.rs",
+        "src/viewer/netplay/hub/rooms.rs",
+        "src/viewer/netplay/hub/serve.rs",
+        "src/viewer/netplay/hub/deploy.rs",
+        "src/viewer/netplay/hub/client.rs",
+        "src/bin/be2-hub.rs",
+        "src/bin/be2-toy-server.rs",
+        "tests/hub.rs",
+        "deploy/hub/README.md",
+        "deploy/hub/hub.conf.example",
+        "deploy/hub/sources.conf.example",
+        "deploy/hub/update.sh",
+        "tools/hub_deploy.py",
+        "tools/test_hub_deploy.py",
+        "docs/NETPLAY.md",
+        "docs/adr/0037-shared-multi-game-hub.md"
       ],
-      "public_api": [
-        "Identity::parse",
-        "icon::write_icon_set",
-        "icon::IconSpec",
-        "game_client::window_config_with_icon"
+      "checks": [
+        "cargo test --locked --profile itest --test hub",
+        "cargo test --locked --profile itest --no-default-features --lib netplay::",
+        "python -m unittest tools.test_hub_deploy",
+        "python tools/check_headless.py"
       ],
-      "read_first": [
-        "docs/GAME_QUICKSTART.md",
-        "templates/game_ship.py",
-        "src/viewer/identity.rs"
+      "note": "One hub for every netplay game (ADR 0037). netplay::cli::serve::<G>(ServeSpec) is the shared server main (--listen --transport --join-key --auto-start --report-dir --seed, a participants flag, --set ID=VALUE and per-setting flags from NetGame::settings(), --status-lines, --exit-on-stdin-eof, --info, --help). be2-hub lists and creates rooms for every game in its registry file on one UDP port, one server process per room on a shared round-robin port pool, protocol BEHB v1 (list, create with a source-address cookie, ping) plus the legacy DFHB v1 adapter for shipped Deadfall clients, token-bucket and room caps, never-joined (45 s) and empty (120 s) reaping, per-game Public rooms, and 'be2-hub reload GAME' that retires one game's rooms (new Public room first: a replacement that cannot start changes nothing), 'be2-hub verify GAME --server CANDIDATE' (the registry's rules on --info with time and output limits, plus an isolated start that must print STATUS) and 'be2-hub status GAME' (the hub's own view: registry build, whether the Public room process prints STATUS with the expected build; reload's acknowledgement is never readiness). transport = production is refused at load (hub rooms are raw UDP). hub::client is the game side: HubClient, the std-only Online Play Online state machine, local_build::<G>() and default_hub() (blue-engine.duckdns.org:4100). deploy/hub holds the systemd units, portmap (be2-hub ports), ddns and update.sh, whose per-game logic is tools/hub_deploy.py: dependency-aware build identity (game + path-dependency source, manifests, lockfile, toolchain, args, env; no rebuild when nothing relevant changed), staged candidate, verify, atomic promotion with BIN.previous, reload, status-confirmed readiness, a receipt per game whose phase (installing/installed/activated/ready) makes an incomplete activation retryable, and --rollback. Feta, BlueDM and Riftwake have their own netcode and are out of scope. tools/hub_deploy.py resumes incomplete rollback installation/activation/readiness before skipping rejected source, verifies restored SHA-256, and recovers only from a receipt-matching previous artifact; otherwise fails without rebuilding the rejected source.",
+      "keywords": [
+        "hub",
+        "be2-hub",
+        "rooms",
+        "room",
+        "lobby",
+        "play online",
+        "public room",
+        "create room",
+        "registry",
+        "hub.conf",
+        "server main",
+        "serve",
+        "cli",
+        "--info",
+        "--status-lines",
+        "status line",
+        "settings",
+        "setting",
+        "build id",
+        "fingerprint",
+        "cookie",
+        "legacy",
+        "dfhb",
+        "behb",
+        "reload",
+        "port pool",
+        "portmap",
+        "duckdns",
+        "deploy",
+        "systemd",
+        "update.sh",
+        "server.txt",
+        "default hub",
+        "online",
+        "netplay",
+        "multiplayer",
+        "spooky kart",
+        "deadfall",
+        "host",
+        "hosting",
+        "blue-engine.duckdns.org",
+        "rollback",
+        "updater",
+        "recovery",
+        "receipt",
+        "deployment"
       ],
       "depends_on": [
-        "game_scaffolding"
+        "netplay",
+        "multiplayer"
+      ],
+      "read_first": [
+        "docs/NETPLAY.md",
+        "docs/adr/0037-shared-multi-game-hub.md",
+        "src/viewer/netplay/cli.rs",
+        "src/viewer/netplay/hub/mod.rs"
+      ],
+      "canonical_example": "src/bin/be2-toy-server.rs",
+      "public_api": [
+        "cli::serve",
+        "cli::ServeSpec",
+        "cli::Participants",
+        "cli::build_id",
+        "cli::Info",
+        "cli::Status",
+        "NetGame::settings",
+        "NetGame::configure",
+        "SettingSpec",
+        "hub::HubClient",
+        "hub::Online",
+        "hub::local_build",
+        "hub::default_hub",
+        "hub::wire::Request",
+        "hub::legacy"
+      ],
+      "evidence": [
+        {
+          "suite": "hub",
+          "test": "a_room_made_through_the_hub_takes_two_real_players_with_the_settings_chosen_and_reports_them"
+        },
+        {
+          "suite": "hub",
+          "test": "the_hub_binary_answers_both_protocols_reloads_one_game_and_leaves_no_orphans"
+        },
+        {
+          "suite": "hub",
+          "test": "a_retired_room_keeps_its_players_until_they_leave"
+        }
+      ],
+      "contract": {
+        "owns": "Game-agnostic serving of netplay games: the shared server main and its machine formats, the hub protocol, the registry, room processes and ports, abuse limits, the legacy Deadfall protocol adapter, and the game-side hub client",
+        "inputs": "A NetGame (with optional settings) built into a server executable; a registry file naming those executables",
+        "outputs": "A hub that players list and create rooms on, and rooms that are ordinary netplay servers",
+        "may_depend_on": [
+          "netplay",
+          "simulation_contract"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio devices",
+          "a window"
+        ],
+        "performance": "One datagram each way; replies at most 1000 bytes and at most five times the padded request; about 5 MB per idle room process",
+        "consumers": [
+          "custom-sim games with online play",
+          "the box that hosts them"
+        ]
+      }
+    },
+    "netplay": {
+      "files": [
+        "src/viewer/netplay/mod.rs",
+        "src/viewer/netplay/wire.rs",
+        "src/viewer/netplay/server.rs",
+        "src/viewer/netplay/client.rs",
+        "src/viewer/netplay/failure.rs",
+        "src/viewer/netplay/toy.rs",
+        "src/viewer/net/codec.rs",
+        "src/viewer/net/loopback.rs",
+        "src/viewer/net/any.rs",
+        "tests/netplay.rs",
+        "docs/NETPLAY.md",
+        "docs/adr/0022-custom-sim-multiplayer-kit.md"
+      ],
+      "checks": [
+        "cargo test --locked --profile itest --test netplay",
+        "cargo test --locked --lib net::codec net::loopback",
+        "python tools/check_headless.py"
+      ],
+      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. A failed connect is a typed NetClient::failure() (ConnectFailure: Unreachable/VersionMismatch/WrongKey/MatchInProgress/Full/Other) with a player-facing hint(). Extracted from Spooky Kart; toy.rs is the smallest complete game.",
+      "keywords": [
+        "netplay",
+        "multiplayer",
+        "online",
+        "lobby",
+        "server",
+        "client",
+        "prediction",
+        "reconciliation",
+        "interpolation",
+        "snapshot",
+        "input",
+        "bundle",
+        "loss",
+        "latency",
+        "codec",
+        "binary",
+        "wire",
+        "datagram",
+        "loopback",
+        "udp",
+        "quic",
+        "telemetry",
+        "matches",
+        "custom",
+        "simulation",
+        "kart",
+        "racing",
+        "connect",
+        "failure",
+        "unreachable",
+        "rejected"
+      ],
+      "depends_on": [
+        "multiplayer",
+        "custom_simulation"
+      ],
+      "read_first": [
+        "docs/NETPLAY.md",
+        "src/viewer/netplay/toy.rs",
+        "src/viewer/netplay/mod.rs"
+      ],
+      "canonical_example": "src/viewer/netplay/toy.rs",
+      "public_api": [
+        "NetGame",
+        "ClientView",
+        "NetServer",
+        "NetClient",
+        "ServerConfig",
+        "ClientConfig",
+        "Seat",
+        "codec::Writer",
+        "codec::Reader",
+        "loopback::LoopNet",
+        "AnyTransport",
+        "server_transport",
+        "client_transport"
+      ],
+      "evidence": [
+        {
+          "suite": "netplay",
+          "test": "players_join_choose_ready_up_play_and_finish"
+        },
+        {
+          "suite": "netplay",
+          "test": "lobby_choices_survive_heavy_packet_loss"
+        },
+        {
+          "suite": "netplay",
+          "test": "a_laggy_lossy_network_still_produces_a_finished_match"
+        }
+      ],
+      "contract": {
+        "owns": "Lobby, sessions, input streaming, snapshot pacing, event delivery, bot handoff and match statistics for a game",
+        "inputs": "A NetGame implementation and a DatagramTransport",
+        "outputs": "An authoritative match and clients that predict and interpolate",
+        "may_depend_on": [
+          "multiplayer",
+          "simulation_contract"
+        ],
+        "must_not_depend_on": [
+          "graphics",
+          "audio devices",
+          "a window"
+        ],
+        "performance": "One snapshot per client every SNAPSHOT_EVERY ticks, each within 1,200 bytes",
+        "consumers": [
+          "custom-sim games with online play"
+        ]
+      }
+    },
+    "game_presentation": {
+      "files": [
+        "src/viewer/game_client.rs",
+        "src/viewer/presentation.rs",
+        "docs/GAME_PRESENTATION.md",
+        "src/viewer/game_text.rs",
+        "src/viewer/game_visuals.rs",
+        "assets/ui/LICENSE_LIBERATION",
+        "src/viewer/stock_presentation.rs",
+        "src/viewer/playable.rs",
+        "tests/stock_observatory.rs"
+      ],
+      "checks": [
+        "presentation module tests",
+        "BlueDM movement UDP regression",
+        "game still/menu captures and live controls"
+      ],
+      "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation. GameShell::local_menu_with_audio adds a non-breaking fourth pause-menu entry, Settings (music/sound toggles, a download-music button); local_menu is unchanged.",
+      "depends_on": [
+        "simulation_contract"
+      ],
+      "contract": {
+        "owns": "Window, menus, cosmetic rendering and input adaptation; optional stock objective/outcome wording, counter labels/visibility/units/clock, palette and HUD configuration",
+        "inputs": "Shared authoritative state and neutral gameplay inputs",
+        "outputs": "Frames and intentions",
+        "may_depend_on": [
+          "simulation_contract"
+        ],
+        "must_not_depend_on": [
+          "a second authoritative gameplay loop"
+        ],
+        "performance": "Cache static geometry; fixed simulation independent of frame rate",
+        "consumers": [
+          "stock client",
+          "generated games"
+        ]
+      },
+      "keywords": [
+        "window",
+        "window_config",
+        "draw call",
+        "vertex capacity",
+        "macroquad conf",
+        "game window",
+        "resolution",
+        "pause menu",
+        "settings menu",
+        "stock",
+        "HUD",
+        "palette",
+        "counter labels",
+        "clock",
+        "presentation"
+      ],
+      "read_first": [
+        "src/viewer/game_client.rs",
+        "docs/GAME_PRESENTATION.md",
+        "src/viewer/stock_presentation.rs",
+        "src/viewer/playable.rs"
       ]
     },
     "save_state": {
@@ -1586,518 +2005,38 @@
         }
       ]
     },
-    "netplay": {
+    "source_free_authoring": {
       "files": [
-        "src/viewer/netplay/mod.rs",
-        "src/viewer/netplay/wire.rs",
-        "src/viewer/netplay/server.rs",
-        "src/viewer/netplay/client.rs",
-        "src/viewer/netplay/failure.rs",
-        "src/viewer/netplay/toy.rs",
-        "src/viewer/net/codec.rs",
-        "src/viewer/net/loopback.rs",
-        "src/viewer/net/any.rs",
-        "tests/netplay.rs",
-        "docs/NETPLAY.md",
-        "docs/adr/0022-custom-sim-multiplayer-kit.md"
+        "tools/author.py",
+        "tools/authoring.json",
+        "tools/AUTHORING.md",
+        "tools/test_author.py"
       ],
       "checks": [
-        "cargo test --locked --profile itest --test netplay",
-        "cargo test --locked --lib net::codec net::loopback",
-        "python tools/check_headless.py"
+        "python -m unittest discover -s tools -p test_author.py -v",
+        "verify with routes and captures",
+        "explicit baseline comparison"
       ],
-      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. A failed connect is a typed NetClient::failure() (ConnectFailure: Unreachable/VersionMismatch/WrongKey/MatchInProgress/Full/Other) with a player-facing hint(). Extracted from Spooky Kart; toy.rs is the smallest complete game.",
-      "keywords": [
-        "netplay",
-        "multiplayer",
-        "online",
-        "lobby",
-        "server",
-        "client",
-        "prediction",
-        "reconciliation",
-        "interpolation",
-        "snapshot",
-        "input",
-        "bundle",
-        "loss",
-        "latency",
-        "codec",
-        "binary",
-        "wire",
-        "datagram",
-        "loopback",
-        "udp",
-        "quic",
-        "telemetry",
-        "matches",
-        "custom",
-        "simulation",
-        "kart",
-        "racing",
-        "connect",
-        "failure",
-        "unreachable",
-        "rejected"
-      ],
+      "note": "Packaged-native static map authoring; curated metadata and local bounded token search; no engine source reads, embeddings or arbitrary gameplay scripting.",
       "depends_on": [
-        "multiplayer",
-        "custom_simulation"
-      ],
-      "read_first": [
-        "docs/NETPLAY.md",
-        "src/viewer/netplay/toy.rs",
-        "src/viewer/netplay/mod.rs"
-      ],
-      "canonical_example": "src/viewer/netplay/toy.rs",
-      "public_api": [
-        "NetGame",
-        "ClientView",
-        "NetServer",
-        "NetClient",
-        "ServerConfig",
-        "ClientConfig",
-        "Seat",
-        "codec::Writer",
-        "codec::Reader",
-        "loopback::LoopNet",
-        "AnyTransport",
-        "server_transport",
-        "client_transport"
-      ],
-      "evidence": [
-        {
-          "suite": "netplay",
-          "test": "players_join_choose_ready_up_play_and_finish"
-        },
-        {
-          "suite": "netplay",
-          "test": "lobby_choices_survive_heavy_packet_loss"
-        },
-        {
-          "suite": "netplay",
-          "test": "a_laggy_lossy_network_still_produces_a_finished_match"
-        }
-      ],
-      "contract": {
-        "owns": "Lobby, sessions, input streaming, snapshot pacing, event delivery, bot handoff and match statistics for a game",
-        "inputs": "A NetGame implementation and a DatagramTransport",
-        "outputs": "An authoritative match and clients that predict and interpolate",
-        "may_depend_on": [
-          "multiplayer",
-          "simulation_contract"
-        ],
-        "must_not_depend_on": [
-          "graphics",
-          "audio devices",
-          "a window"
-        ],
-        "performance": "One snapshot per client every SNAPSHOT_EVERY ticks, each within 1,200 bytes",
-        "consumers": [
-          "custom-sim games with online play"
-        ]
-      }
-    },
-    "netplay_hub": {
-      "files": [
-        "src/viewer/netplay/cli.rs",
-        "src/viewer/netplay/hub/mod.rs",
-        "src/viewer/netplay/hub/wire.rs",
-        "src/viewer/netplay/hub/legacy.rs",
-        "src/viewer/netplay/hub/limits.rs",
-        "src/viewer/netplay/hub/registry.rs",
-        "src/viewer/netplay/hub/spawn.rs",
-        "src/viewer/netplay/hub/rooms.rs",
-        "src/viewer/netplay/hub/serve.rs",
-        "src/viewer/netplay/hub/deploy.rs",
-        "src/viewer/netplay/hub/client.rs",
-        "src/bin/be2-hub.rs",
-        "src/bin/be2-toy-server.rs",
-        "tests/hub.rs",
-        "deploy/hub/README.md",
-        "deploy/hub/hub.conf.example",
-        "deploy/hub/sources.conf.example",
-        "deploy/hub/update.sh",
-        "tools/hub_deploy.py",
-        "tools/test_hub_deploy.py",
-        "docs/NETPLAY.md",
-        "docs/adr/0037-shared-multi-game-hub.md"
-      ],
-      "checks": [
-        "cargo test --locked --profile itest --test hub",
-        "cargo test --locked --profile itest --no-default-features --lib netplay::",
-        "python -m unittest tools.test_hub_deploy",
-        "python tools/check_headless.py"
-      ],
-      "note": "One hub for every netplay game (ADR 0037). netplay::cli::serve::<G>(ServeSpec) is the shared server main (--listen --transport --join-key --auto-start --report-dir --seed, a participants flag, --set ID=VALUE and per-setting flags from NetGame::settings(), --status-lines, --exit-on-stdin-eof, --info, --help). be2-hub lists and creates rooms for every game in its registry file on one UDP port, one server process per room on a shared round-robin port pool, protocol BEHB v1 (list, create with a source-address cookie, ping) plus the legacy DFHB v1 adapter for shipped Deadfall clients, token-bucket and room caps, never-joined (45 s) and empty (120 s) reaping, per-game Public rooms, and 'be2-hub reload GAME' that retires one game's rooms (new Public room first: a replacement that cannot start changes nothing), 'be2-hub verify GAME --server CANDIDATE' (the registry's rules on --info with time and output limits, plus an isolated start that must print STATUS) and 'be2-hub status GAME' (the hub's own view: registry build, whether the Public room process prints STATUS with the expected build; reload's acknowledgement is never readiness). transport = production is refused at load (hub rooms are raw UDP). hub::client is the game side: HubClient, the std-only Online Play Online state machine, local_build::<G>() and default_hub() (blue-engine.duckdns.org:4100). deploy/hub holds the systemd units, portmap (be2-hub ports), ddns and update.sh, whose per-game logic is tools/hub_deploy.py: dependency-aware build identity (game + path-dependency source, manifests, lockfile, toolchain, args, env; no rebuild when nothing relevant changed), staged candidate, verify, atomic promotion with BIN.previous, reload, status-confirmed readiness, a receipt per game whose phase (installing/installed/activated/ready) makes an incomplete activation retryable, and --rollback. Feta, BlueDM and Riftwake have their own netcode and are out of scope.",
-      "keywords": [
-        "hub",
-        "be2-hub",
-        "rooms",
-        "room",
-        "lobby",
-        "play online",
-        "public room",
-        "create room",
-        "registry",
-        "hub.conf",
-        "server main",
-        "serve",
-        "cli",
-        "--info",
-        "--status-lines",
-        "status line",
-        "settings",
-        "setting",
-        "build id",
-        "fingerprint",
-        "cookie",
-        "legacy",
-        "dfhb",
-        "behb",
-        "reload",
-        "port pool",
-        "portmap",
-        "duckdns",
-        "deploy",
-        "systemd",
-        "update.sh",
-        "server.txt",
-        "default hub",
-        "online",
-        "netplay",
-        "multiplayer",
-        "spooky kart",
-        "deadfall",
-        "host",
-        "hosting",
-        "blue-engine.duckdns.org"
-      ],
-      "depends_on": [
-        "netplay",
-        "multiplayer"
-      ],
-      "read_first": [
-        "docs/NETPLAY.md",
-        "docs/adr/0037-shared-multi-game-hub.md",
-        "src/viewer/netplay/cli.rs",
-        "src/viewer/netplay/hub/mod.rs"
-      ],
-      "canonical_example": "src/bin/be2-toy-server.rs",
-      "public_api": [
-        "cli::serve",
-        "cli::ServeSpec",
-        "cli::Participants",
-        "cli::build_id",
-        "cli::Info",
-        "cli::Status",
-        "NetGame::settings",
-        "NetGame::configure",
-        "SettingSpec",
-        "hub::HubClient",
-        "hub::Online",
-        "hub::local_build",
-        "hub::default_hub",
-        "hub::wire::Request",
-        "hub::legacy"
-      ],
-      "evidence": [
-        {
-          "suite": "hub",
-          "test": "a_room_made_through_the_hub_takes_two_real_players_with_the_settings_chosen_and_reports_them"
-        },
-        {
-          "suite": "hub",
-          "test": "the_hub_binary_answers_both_protocols_reloads_one_game_and_leaves_no_orphans"
-        },
-        {
-          "suite": "hub",
-          "test": "a_retired_room_keeps_its_players_until_they_leave"
-        }
-      ],
-      "contract": {
-        "owns": "Game-agnostic serving of netplay games: the shared server main and its machine formats, the hub protocol, the registry, room processes and ports, abuse limits, the legacy Deadfall protocol adapter, and the game-side hub client",
-        "inputs": "A NetGame (with optional settings) built into a server executable; a registry file naming those executables",
-        "outputs": "A hub that players list and create rooms on, and rooms that are ordinary netplay servers",
-        "may_depend_on": [
-          "netplay",
-          "simulation_contract"
-        ],
-        "must_not_depend_on": [
-          "graphics",
-          "audio devices",
-          "a window"
-        ],
-        "performance": "One datagram each way; replies at most 1000 bytes and at most five times the padded request; about 5 MB per idle room process",
-        "consumers": [
-          "custom-sim games with online play",
-          "the box that hosts them"
-        ]
-      }
-    },
-    "closed_path": {
-      "files": [
-        "src/viewer/devkit/path.rs",
-        "docs/CUSTOM_SIM_CHEATSHEET.md"
-      ],
-      "checks": [
-        "cargo test --locked --lib devkit::path"
-      ],
-      "note": "ClosedPath: a smooth closed loop on the ground plane (race track, patrol route, rail) with length, point/tangent at a distance, progress and lateral offset of any position, arc distance with wrap-around; plus yaw helpers (forward, right, yaw_of, wrap_angle) in the engine's convention (yaw 0 faces -Z).",
-      "keywords": [
-        "path",
-        "track",
-        "loop",
-        "spline",
-        "catmull",
-        "lap",
-        "progress",
-        "arc length",
-        "lateral",
-        "racing",
-        "patrol",
-        "waypoint",
-        "yaw",
-        "heading",
-        "bot steering",
-        "wrong way",
-        "face",
-        "facing",
-        "look at",
-        "turn toward",
-        "direction",
-        "yaw_of",
-        "angle",
-        "spawn",
-        "landmark"
-      ],
-      "depends_on": [
-        "custom_simulation"
+        "map_editing"
       ]
     },
-    "rendering_traps": {
+    "camera_character": {
       "files": [
-        "src/viewer/kit/batch.rs"
+        "src/viewer/camera.rs",
+        "src/viewer/character.rs",
+        "src/bin/blue-engine.rs",
+        "src/viewer/controller.rs"
       ],
       "checks": [
-        "cargo test --locked --lib kit::batch"
+        "camera tests",
+        "--studio --capture-character",
+        "Q toggle",
+        "--studio --capture-character DIR --feta",
+        "furniture camera clearance and 30/60/144 Hz obstruction-release tests"
       ],
-      "note": "Template::quad_facing winds a quad to face a normal whatever the corner order; Template::split and Batch::add split a template over the per-mesh vertex limit (9,000) instead of dropping it; a Template past 65,535 vertices panics instead of wrapping its u16 indices. A world that renders as an empty void was one of these.",
-      "keywords": [
-        "quad",
-        "winding",
-        "culled",
-        "invisible",
-        "vertex limit",
-        "9000",
-        "mesh limit",
-        "template",
-        "split",
-        "empty world",
-        "void"
-      ],
-      "depends_on": [
-        "custom_simulation"
-      ]
-    },
-    "geometry_kit": {
-      "files": [
-        "src/viewer/kit/shape.rs",
-        "src/viewer/kit/lint.rs",
-        "docs/AI_DEV_FEEDBACK.md"
-      ],
-      "checks": [
-        "cargo test --locked --lib kit::shape",
-        "cargo test --locked --lib kit::lint"
-      ],
-      "note": "Procedural modelling for Template (kit::shape: Section/Ring/Sweep, Template::loft, sweep, rounded_box, capsule, rod, mirror_x, smooth_normals, offset_strip/offset_band/offset_path/strip_quads with mitred, curvature-clamped corners so a ribbon cannot fold over itself) and the geometry-defect lint (kit::lint: lint/lint_with/assert_clean/strip_folds/depth_resolution finding zero-area triangles, winding against normals, coplanar overlapping triangles of different parts = z-fighting, folded strips). View::camera_checked / view::depth_ratio_warning guard a far/near ratio over 3000. Lessons: coplanar quads z-fight, never offset per segment normal without a mitre and clamp, mind the depth ratio, fx_alpha/fx_add are never depth-tested.",
-      "keywords": [
-        "loft",
-        "sweep",
-        "rounded box",
-        "capsule",
-        "mirror",
-        "smooth normals",
-        "road",
-        "kerb",
-        "border",
-        "strip",
-        "offset",
-        "z-fighting",
-        "z fight",
-        "flicker",
-        "coplanar",
-        "lint",
-        "geometry",
-        "procedural model",
-        "depth precision",
-        "near far"
-      ],
-      "depends_on": [
-        "custom_simulation"
-      ]
-    },
-    "learning_loop": {
-      "files": [
-        "tools/learn.py",
-        "tools/test_learn.py",
-        "docs/learning/README.md",
-        "docs/learning/ledger.jsonl",
-        "docs/learning/tasks.jsonl",
-        "docs/learning/REPORT.md",
-        "docs/adr/0038-engine-learns-from-development.md"
-      ],
-      "checks": [
-        "python -m unittest tools.test_learn"
-      ],
-      "note": "How the engine learns from the games built on it (ADR 0038): python tools/learn.py record writes a friction entry (cost, workaround, trap, copied code) to docs/learning/ledger.jsonl; dupes finds code the games copied and checks whether the engine already has it; eval scores be2.py context against a task benchmark (recall, packet size); sessions (local only, never committed) aggregates where AI effort went from session logs without storing any content; modules refreshes the per-file summaries context routes by; report writes docs/learning/REPORT.md. be2.py context appends matching ledger traps and \"already solved by\" lines.",
-      "keywords": [
-        "friction",
-        "ledger",
-        "record friction",
-        "retrospective",
-        "lessons learned",
-        "feedback",
-        "promote",
-        "promotion",
-        "duplicated code",
-        "copied code",
-        "token cost",
-        "session logs",
-        "discovery benchmark",
-        "eval",
-        "learning loop",
-        "engine learns",
-        "learn.py",
-        "privacy"
-      ],
-      "read_first": [
-        "docs/learning/README.md",
-        "tools/learn.py"
-      ],
-      "depends_on": [
-        "change_workflow"
-      ]
-    },
-    "dev_tools": {
-      "files": [
-        "tools/xcapture.py",
-        "tools/test_xcapture.py",
-        "docs/HEADLESS_CAPTURE.md",
-        "tools/perf.py",
-        "docs/perf/README.md",
-        "docs/perf/metrics.jsonl",
-        "scripts/publish_games.py",
-        "scripts/test_publish_games.py",
-        "docs/GAMES_PUBLISHING.md"
-      ],
-      "checks": [
-        "python -m unittest tools.test_xcapture",
-        "python tools/perf.py report",
-        "python -m unittest scripts.test_publish_games",
-        "python scripts/publish_games.py check"
-      ],
-      "note": "Developer tools outside the engine library: headless screenshots under xvfb (xcapture.py), perf recording (perf.py), publishing a game to BlueEngineGames (publish_games.py). Each file is described in the modules map.",
-      "keywords": [
-        "screenshot",
-        "screenshots",
-        "capture",
-        "headless",
-        "no display",
-        "xvfb",
-        "frames",
-        "software rendering",
-        "see the game",
-        "visual check",
-        "xcapture",
-        "perf",
-        "performance",
-        "benchmark",
-        "timing",
-        "timings",
-        "build time",
-        "test time",
-        "compile time",
-        "record",
-        "regression",
-        "profile",
-        "slow",
-        "speed",
-        "metrics",
-        "publish",
-        "publishing",
-        "release",
-        "games repo",
-        "BlueEngineGames",
-        "manifest",
-        "windows build",
-        "download",
-        "ship a game",
-        "finished game"
-      ],
-      "read_first": [
-        "docs/HEADLESS_CAPTURE.md"
-      ]
-    },
-    "two_dimensional": {
-      "files": [
-        "src/viewer/web.rs",
-        "templates/game_project.py",
-        "docs/TWO_D.md",
-        "src/two_d/client.rs",
-        "src/two_d/draw.rs",
-        "src/two_d/mod.rs",
-        "src/runtime/hash.rs",
-        "src/runtime/mod.rs",
-        "src/runtime/storage.rs",
-        "templates/two-d/AGENTS.md",
-        "templates/two-d/Cargo.toml.tmpl",
-        "templates/two-d/lib.rs",
-        "templates/two-d/main.rs",
-        "templates/two-d/web.py",
-        "docs/PORTABLE_GAMES.md",
-        "templates/two-d/world.rs",
-        "tests/portable_storage.rs"
-      ],
-      "read_first": [
-        "docs/PORTABLE_GAMES.md",
-        "templates/two-d/AGENTS.md",
-        "templates/two-d/lib.rs"
-      ],
-      "checks": [
-        "cargo test --locked --lib two_d --no-default-features --features two-d",
-        "python -m unittest tools.test_web_games"
-      ],
-      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native/browser install. Choose elements by gameplay value; no legacy renderer exploration.",
-      "keywords": [
-        "2d",
-        "2D",
-        "sprite",
-        "arcade",
-        "top-down",
-        "platformer",
-        "cozy",
-        "management",
-        "dimensionality",
-        "game proposal",
-        "hybrid",
-        "3d",
-        "portable",
-        "minimap",
-        "mixed dimensions"
-      ],
-      "canonical_example": "templates/two-d/lib.rs",
-      "depends_on": [],
-      "public_api": [
-        "two_d::GameLogic",
-        "two_d::Intent",
-        "two_d::Rect",
-        "two_d::Body",
-        "two_d::draw::Scene",
-        "two_d::client::run",
-        "portable::draw::World",
-        "portable::draw::Scene::world"
-      ]
+      "note": "Scientist and Feta procedural skins; CharacterKind controls body/collision/speed. Launch selection gates gameplay. Q toggles perspective; reset preserves profile. Feta uses a low centered pitch-independent boom; CameraRig smooths obstruction release and rechecks current-pose collisions. Custom clients use sweep_boom(anchor, desired, colliders, radius) for sphere clearance without constructing a Room."
     },
     "browser_games": {
       "files": [
@@ -2114,7 +2053,12 @@
         "templates/catalog/app.js",
         "templates/catalog/style.css",
         "templates/catalog/catalog.css",
-        "tools/catalog_smoke.mjs"
+        "tools/catalog_smoke.mjs",
+        "src/viewer/web_kit.rs",
+        "src/runtime/camera_boom.rs",
+        "src/runtime/shadow_quality.rs",
+        "assets/games/leo/game.project.json",
+        "assets/games/leo/src/browser.rs"
       ],
       "read_first": [
         "docs/PORTABLE_GAMES.md",
@@ -2143,218 +2087,529 @@
         "favorites",
         "star",
         "feed",
-        "offline install"
+        "offline install",
+        "Leo",
+        "fullscreen",
+        "music",
+        "existing 3d port"
       ],
       "depends_on": [
         "two_dimensional"
+      ],
+      "public_api": [
+        "AudioBankSpec",
+        "GameLogic::audio_level",
+        "Scene::render_view"
+      ]
+    },
+    "props": {
+      "files": [
+        "src/viewer/props.rs",
+        "assets/props",
+        "examples/export_props.rs",
+        "src/viewer/props/accessories.rs",
+        "src/viewer/props/decor_library.rs"
+      ],
+      "checks": [
+        "prop budget and collision tests",
+        "captures"
+      ],
+      "note": "Preserve IDs; regenerate JSON exports into a new directory."
+    },
+    "mcp": {
+      "files": [
+        "src/viewer/mcp.rs",
+        "tools/mcp_server.py"
+      ],
+      "checks": [
+        "native MCP stdio server"
+      ],
+      "note": "Native Model Context Protocol (MCP) server directly exposing level authoring, inspection, pathing, linting, and simulation tools over stdio JSON-RPC."
+    },
+    "game_shipping": {
+      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. Package verification is display-independent: strict portable manifest paths, every SHA-256, complete declared source inventory when available, and GameDocument.map closure. Graphical smoke copies only declarations outside the checkout and saves full stdout/stderr; mutable player files are preserved in dist but excluded from smoke.",
+      "checks": [
+        "cargo test --locked --lib identity icon",
+        "python -m unittest tools.test_game_ship tools.test_game_check",
+        "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)"
+      ],
+      "files": [
+        "src/viewer/identity.rs",
+        "src/viewer/icon.rs",
+        "templates/game_ship.py",
+        "templates/game_build.rs",
+        "templates/game_check.py",
+        "tools/test_game_ship.py",
+        "tools/test_game_check.py",
+        "docs/GAME_QUICKSTART.md",
+        "src/viewer/devkit/save.rs"
+      ],
+      "keywords": [
+        "ship",
+        "shipping",
+        "package",
+        "packaging",
+        "dist",
+        "shortcut",
+        "desktop",
+        "icon",
+        "ico",
+        "lnk",
+        "identity",
+        "title",
+        "name",
+        "launcher",
+        "installer",
+        "gate",
+        "definition",
+        "done",
+        "deliver",
+        "delivery",
+        "exe",
+        "executable",
+        "release",
+        "missing runtime assets",
+        "isolated package",
+        "source fallback"
+      ],
+      "depends_on": [
+        "game_scaffolding"
+      ],
+      "public_api": [
+        "Identity::parse",
+        "icon::write_icon_set",
+        "icon::IconSpec",
+        "game_client::window_config_with_icon",
+        "devkit::runtime_assets"
+      ],
+      "read_first": [
+        "docs/GAME_QUICKSTART.md",
+        "templates/game_ship.py",
+        "src/viewer/identity.rs"
+      ]
+    },
+    "rendering_traps": {
+      "files": [
+        "src/viewer/kit/batch.rs"
+      ],
+      "checks": [
+        "cargo test --locked --lib kit::batch"
+      ],
+      "note": "Template::quad_facing winds a quad to face a normal whatever the corner order; Template::split and Batch::add split a template over the per-mesh vertex limit (9,000) instead of dropping it; a Template past 65,535 vertices panics instead of wrapping its u16 indices. A world that renders as an empty void was one of these.",
+      "keywords": [
+        "quad",
+        "winding",
+        "culled",
+        "invisible",
+        "vertex limit",
+        "9000",
+        "mesh limit",
+        "template",
+        "split",
+        "empty world",
+        "void"
+      ],
+      "depends_on": [
+        "custom_simulation"
+      ]
+    },
+    "audio_authoring": {
+      "files": [
+        "src/viewer/devkit/audio_project.rs",
+        "src/viewer/kit/audio.rs",
+        "src/viewer/capabilities.rs",
+        "src/bin/be2-tools.rs",
+        "examples/audio_preview.rs",
+        "tests/audio_project.rs",
+        "assets/audio/observatory/project.json",
+        "assets/audio/observatory/README.md",
+        "docs/AUDIO.md",
+        "tools/audio_report.py",
+        "tools/test_media_tools.py",
+        "src/viewer/stock_audio.rs",
+        "tests/stock_audio.rs",
+        "assets/games/observatory/content/audio-bindings.json",
+        "assets/games/observatory/content/game-audio.json",
+        "assets/games/observatory/content/audio-loss-restart-win.json",
+        "assets/games/observatory/content/audio/",
+        "tools/stock_audio_smoke.py",
+        "docs/analysis/stock-audio.md",
+        "assets/games/leo/assets/audio-source/nature.json",
+        "assets/games/leo/assets/audio-source/music.json",
+        "assets/games/leo/AUDIO.md",
+        "tools/leo_smoke.py"
+      ],
+      "read_first": [
+        "docs/AUDIO.md",
+        "assets/audio/observatory/project.json"
+      ],
+      "canonical_example": "examples/audio_preview.rs",
+      "checks": [
+        "cargo test --locked --test audio_project",
+        "cargo test --locked --lib kit::audio",
+        "python -m unittest tools.test_media_tools",
+        "cargo test --locked --test stock_audio"
+      ],
+      "keywords": [
+        "audio",
+        "music",
+        "sound",
+        "synthesis",
+        "synthesizer",
+        "synth",
+        "compose",
+        "composition",
+        "score",
+        "notes",
+        "midi",
+        "stereo",
+        "pan",
+        "pitch",
+        "envelope",
+        "instrument",
+        "filter",
+        "wav",
+        "bank",
+        "cue",
+        "variants",
+        "adaptive",
+        "layers",
+        "loop",
+        "seam",
+        "clipping",
+        "loudness",
+        "spectrogram",
+        "audio preview",
+        "sound effects",
+        "stock audio",
+        "GameDocument audio",
+        "audio pipeline",
+        "gameplay audio",
+        "counter cue",
+        "stock music",
+        "ambience",
+        "birdsong",
+        "crickets",
+        "wind",
+        "crossfade",
+        "loop"
+      ],
+      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream. Imported clips support exact-length adaptive looping ambience with a bounded wrap crossfade, stereo preservation and worst-subset headroom. Leo uses recorded nature and a separate original score, driven by authoritative day/night state; edits need rendering, not a Rust rebuild.",
+      "contract": {
+        "owns": "Data-authored effects and music, crossfaded imported ambience loops, reusable checked PCM bundles, named presentation playback and numeric quality evidence",
+        "inputs": "Versioned AudioProject JSON, seed, optional imported WAV and read-only game events, optional presentation.audio state bindings",
+        "outputs": "PCM16 stereo assets, bank metadata, diagnostics and playback submissions",
+        "may_depend_on": [
+          "custom_simulation",
+          "client_kit"
+        ],
+        "must_not_depend_on": [
+          "gameplay authority",
+          "audio devices in devkit"
+        ],
+        "performance": "Render before shipping; worker reads/checks assets, bounded decoder submissions per poll",
+        "consumers": [
+          "custom clients",
+          "audio authoring agents",
+          "stock GameDocument runner"
+        ]
+      },
+      "public_api": [
+        "AudioProject",
+        "AudioBundle",
+        "AudioBank",
+        "AudioState",
+        "checked_wav",
+        "StockAudio",
+        "AudioCursor",
+        "GameSession::advance_observed"
+      ],
+      "depends_on": [
+        "custom_simulation",
+        "client_kit"
+      ]
+    },
+    "movement": {
+      "files": [
+        "src/viewer/controller.rs",
+        "src/viewer/simulation.rs",
+        "tests/furniture_clearance.rs"
+      ],
+      "checks": [
+        "controller and simulation tests",
+        "route commands",
+        "manual controls",
+        "Feta furniture passages, solid legs/undersides, Scientist exclusion, four-map desks",
+        "dropped-prop overlap recovery for both characters; wall exclusion and stable feet"
+      ],
+      "note": "Keep frame-rate independence and render/headless parity. Controller floor is optional (set_floor(None) for voids), gravity is settable, apply_impulse adds a decaying push for knockback; see docs/CONTROLLERS.md.",
+      "depends_on": [
+        "simulation_contract"
+      ]
+    },
+    "learning_loop": {
+      "files": [
+        "tools/learn.py",
+        "tools/test_learn.py",
+        "docs/learning/README.md",
+        "docs/learning/ledger.jsonl",
+        "docs/learning/tasks.jsonl",
+        "docs/learning/REPORT.md",
+        "docs/adr/0038-engine-learns-from-development.md",
+        "docs/learning/tasks_heldout.jsonl",
+        "docs/learning/tasks_heldout2.jsonl",
+        "docs/learning/tasks_heldout3.jsonl",
+        "docs/learning/eval_floor.json"
+      ],
+      "checks": [
+        "python -m unittest tools.test_learn"
+      ],
+      "note": "How the engine learns from the games built on it (ADR 0038): python tools/learn.py record writes a friction entry (cost, workaround, trap, copied code) to docs/learning/ledger.jsonl; dupes finds code the games copied and checks whether the engine already has it; eval scores be2.py context against a task benchmark (recall, packet size); sessions (local only, never committed) aggregates where AI effort went from session logs without storing any content; modules refreshes the per-file summaries context routes by; report writes docs/learning/REPORT.md. be2.py context appends matching ledger traps and \"already solved by\" lines. record --keywords supplies retrieval terms; missing terms warn archive-only. Promote solved entries in place while retaining history and replace obsolete workaround/hint. All four tuned development fixtures protect aggregate and individual discovery results, without appending evaluation history in tests.",
+      "keywords": [
+        "friction",
+        "ledger",
+        "record friction",
+        "retrospective",
+        "lessons learned",
+        "feedback",
+        "promote",
+        "promotion",
+        "duplicated code",
+        "copied code",
+        "token cost",
+        "session logs",
+        "discovery benchmark",
+        "eval",
+        "learning loop",
+        "engine learns",
+        "learn.py",
+        "privacy"
+      ],
+      "read_first": [
+        "docs/learning/README.md",
+        "tools/learn.py"
+      ],
+      "depends_on": [
+        "change_workflow"
       ]
     }
   },
+  "format": 1,
   "modules": {
+    "docs/adr/0038-engine-learns-from-development.md": "ADR 0038: The engine learns from the games built on it",
+    "src/viewer/netplay/failure.rs": "Why a connection attempt failed, as a type a game can show properly.",
+    "src/viewer/netplay/hub/legacy.rs": "The DFHB version 1 protocol of the Deadfall hub, answered byte for byte as the old hub did.",
+    "templates/game_build.rs": "Embeds the game's icon and version info into its Windows executable, so Explorer, Task Manager and pinned...",
+    "src/viewer/devkit/snapshot.rs": "Save and load a game's own simulation: F5 / F9 quick saves, autosaves and \"continue\" for a game that keeps...",
+    "src/viewer/game_explore.rs": "Static and reachability analysis of a GameDocument, driven by the engine's own rule runtime.",
+    "src/viewer/gen.rs": "Procedural placement generators for BlueEngine: scatter and line.",
+    "src/viewer/net/loopback.rs": "An in-memory datagram network with configurable delay, jitter and loss, for tests.",
+    "docs/adr/0022-custom-sim-multiplayer-kit.md": "ADR 0022: A multiplayer kit for custom simulations, and the fixes Spooky Kart called for",
+    "src/viewer/netplay/wire.rs": "The netplay envelope: fixed messages around game-defined payloads.",
+    "src/viewer/house.rs": "Small, low-poly two-story house.",
+    "src/viewer/game_edit.rs": "Edit a game in place without hand-keeping its records in step.",
+    "src/viewer/gamepad.rs": "Native gamepads without a window/rendering dependency (gamepad feature).",
+    "tools/web_publish.py": "Optional GitHub Pages adapter.",
+    "src/viewer/netplay/mod.rs": "Online play for custom simulations: NetGame::MAX_SEATS sets player join limits; cli::serve supplies the...",
+    "tools/learn.py": "Blue learns from the games built on it (ADR 0038).",
+    "src/viewer/kit/mirror.rs": "One planar reflection pass with an off-axis aperture and an explicit depth buffer.",
+    "src/viewer/netplay/server.rs": "The authoritative server: a lobby, then a match, then results, forever, for any NetGame.",
+    "templates/game_ship.py": "Ship this game: package it, give it its own desktop shortcut, and prove both work.",
+    "tools/be2.py": "BE2 context and canonical local/CI checks with timestamp-safe report directories, stage timings and...",
+    "docs/SHARED_GAMEPLAY.md": "Shared gameplay and presentation",
+    "src/viewer/kit/shadow.rs": "Shadows for kit games: one setting, two tiers, one helper.",
+    "src/viewer/prop_physics.rs": "Loose-prop rigid bodies and shared pickup/drop behavior, independent of graphics.",
+    "src/viewer/kit/mod.rs": "An opt-in client kit for games that draw their own world.",
+    "src/viewer/web.rs": "Browser builds expose shared contracts, not native 3D/UDP/QUIC services.",
+    "src/viewer/devkit/sim.rs": "An optional shape for games that own their simulation, plus the helpers that make it testable.",
+    "docs/adr/0019-lifecycle-and-save-policy.md": "ADR 0019: One lifecycle for custom-simulation windows, and a save policy declared per game",
+    "docs/adr/0018-physics-save-contract.md": "ADR 0018: The save contract a physics-backed simulation can keep",
+    "src/viewer/game_session.rs": "Graphics-free adapter for local authority or a server-owned game mirror.",
+    "src/viewer/verify.rs": "Unified self-verifying maps and games for BlueEngine.",
+    "src/viewer/pathing.rs": "Auto-planned walk tests, A* pathfinding, and blocking obstacle diagnostics.",
+    "src/viewer/devkit/lifecycle.rs": "The lifecycle around a custom simulation's window: run flags in, whole ticks with exactly one input each...",
+    "src/viewer/metrics.rs": "Observability, performance tracking, explainability, and budget validation.",
+    "docs/PORTABLE_GAMES.md": "Browser/native 2D/3D/hybrid authoring, mobile controls, persistence, install, unified feed",
+    "scripts/package_sandbox.py": "Package already-built optimized Windows binaries and sandbox content, without installation.",
+    "src/viewer/landscaping.rs": "Reusable, static low-poly planting.",
+    "tools/stock_audio_smoke.py": "CI-only stock audio playback/capture on an isolated X display and null ALSA sink.",
+    "src/viewer/netplay/hub/client.rs": "The game's side of the hub: ask which rooms exist, make one, work out where the hub lives, and the rules...",
+    "src/viewer/net/any.rs": "One transport type for either engine socket, chosen at run time.",
+    "src/viewer/game_text.rs": "Immutable ASCII atlas: no glyph uploads or texture replacement while drawing a frame.",
+    "src/viewer/interaction.rs": "Semantic actions independent of input devices and rendering.",
+    "templates/two-d/web.py": "Forward to the engine's supported web workflow; no copied deployment logic.",
+    "src/bin/sandbox/input.rs": "One key-edge source on Windows, including accessibility-injected keys.",
+    "tools/assets.py": "BlueEngine's JSON asset catalog API.",
+    "src/viewer/savestate/mod.rs": "Native save states: one framed, versioned, integrity-checked file format that every engine and game...",
+    "src/viewer/devkit/mod.rs": "Building blocks for games that own their simulation.",
+    "src/viewer/kit/batch.rs": "Procedural geometry and per-frame dynamic batching.",
     "docs/AI_DEV_FEEDBACK.md": "Developing Spooky Kart on BlueEngine: feedback from an AI agent",
+    "src/viewer/kit/lint.rs": "A geometry-defect lint for Templates: the mesh bugs a headless test can catch before anyone has to look at...",
+    "src/viewer/netplay/hub/rooms.rs": "The room table: which room servers exist, on which ports, and when they are closed.",
+    "tools/place_interior.py": "Place data-only interior prefabs and validate with the packaged native engine.",
+    "src/viewer/arena.rs": "Rendering-independent building blocks for momentum-driven arena shooters.",
     "docs/AI_QUICKSTART.md": "BlueEngine prototype API",
-    "docs/BEHAVIORAL_TESTING.md": "Behavioral testing without a custom harness",
-    "docs/CHANGE_WORKFLOW.md": "Small context, scoped validation",
-    "docs/CONTROLLERS.md": "Native controllers",
-    "docs/CUSTOM_CLIENT.md": "Custom visible clients and custom simulations",
-    "docs/CUSTOM_SIM_CHEATSHEET.md": "Custom-sim cheat sheet: the game-facing API on one page",
-    "docs/GAMES_PUBLISHING.md": "Publishing to BlueEngineGames",
-    "docs/GAME_PRESENTATION.md": "Game presentation contract",
-    "docs/GAME_QUICKSTART.md": "Playable games and source-free prototypes",
+    "docs/adr/0001-shared-simulation.md": "0001: Shared simulation and optional presentation",
+    "src/viewer/game_client.rs": "Shared, opt-in presentation defaults for standalone games.",
+    "src/viewer/scenario.rs": "Scripted scenario runner and deterministic replay divergence debugger for BlueEngine.",
+    "docs/adr/0014-bounded-replication.md": "ADR 0014: Bounded acknowledged partial-world replication",
+    "src/viewer/control/server.rs": "The server side of management: register, listen on the control socket, answer status and shutdown.",
+    "src/viewer/local_client.rs": "Ready-to-play local static-map client.",
+    "src/viewer/creative.rs": "Rendering-free creative placement and per-map persistence.",
+    "src/viewer/netplay/toy.rs": "The smallest complete NetGame: a footrace along a line.",
+    "src/viewer/lint.rs": "Initial static map lint and individually demonstrated game reachability from verified physical scenarios.",
+    "src/viewer/net.rs": "Low-latency server-authoritative multiplayer networking foundation.",
+    "src/viewer/devkit/clock.rs": "Frame timing for real-time loops: one wall clock, a fixed-step accumulator and a perf report.",
+    "src/viewer/blueprint.rs": "Declarative blueprint compiler for BlueEngine.",
+    "src/two_d/draw.rs": "Macroquad-backed drawing in logical pixels; stable painter layers, no 3D initialization.",
+    "docs/perf/README.md": "Performance data",
+    "src/viewer/devkit/save.rs": "Player settings and records that survive restarts: one small JSON file, atomic, never fatal.",
+    "src/viewer/kit/gizmo.rs": "Debug wireframes for judging scale by eye: bounding boxes, axes and a person-sized silhouette.",
+    "src/viewer/kit/view.rs": "A camera description shared by the renderer, the sky and the HUD.",
     "docs/GLOSSARY.md": "BE2 vocabulary",
     "docs/HEADLESS_CAPTURE.md": "Seeing a game on a machine with no display",
-    "docs/HOSTING.md": "Hosting a dedicated BlueEngine server",
-    "docs/NETPLAY.md": "Netplay: online play for games that own their simulation",
-    "docs/SAVE_STATE.md": "Save states",
-    "docs/SHARED_GAMEPLAY.md": "Shared gameplay and presentation",
-    "docs/TWO_D.md": "2D games \u2192 browser",
+    "src/viewer/netplay/hub/registry.rs": "Which games this hub carries: the config file, the games' --info, and the checks on both.",
+    "tools/leo_smoke.py": "Render Leo and submit its two audio banks only on opted-in remote CI's null sink.",
+    "docs/GAMES_PUBLISHING.md": "Publishing to BlueEngineGames",
     "docs/UPGRADE.md": "Upgrading an external game to a chosen engine revision",
-    "docs/adr/0001-shared-simulation.md": "0001: Shared simulation and optional presentation",
-    "docs/adr/0003-arena-shooter-primitives.md": "ADR 0003: Opt-in arena-shooter primitives",
-    "docs/adr/0014-bounded-replication.md": "ADR 0014: Bounded acknowledged partial-world replication",
-    "docs/adr/0018-physics-save-contract.md": "ADR 0018: The save contract a physics-backed simulation can keep",
-    "docs/adr/0019-lifecycle-and-save-policy.md": "ADR 0019: One lifecycle for custom-simulation windows, and a save policy declared per game",
-    "docs/adr/0020-look-scale-and-dev-loop.md": "ADR 0020: One mouse-look convention, checkable scale, and a dev loop that survives a running game",
-    "docs/adr/0021-stick-look-menu-steps-and-exit.md": "ADR 0021: Stick look in the shared convention, discrete menu steps, and a graceful exit",
-    "docs/adr/0022-custom-sim-multiplayer-kit.md": "ADR 0022: A multiplayer kit for custom simulations, and the fixes Spooky Kart called for",
-    "docs/adr/0026-movers-carry-players.md": "ADR 0026: Movers carry the players standing on them",
-    "docs/adr/0031-be2-ctl-server-manager.md": "ADR 0031: be2-ctl, a small manager for servers on one machine",
-    "docs/adr/0032-game-upgrade-workflow.md": "ADR 0032: A version-aware upgrade workflow for external games",
-    "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md": "ADR 0034: Level geometry and waypoint pathing promoted from Dead Air",
-    "docs/adr/0036-shadows-for-kit-games.md": "ADR 0036: Shadows for kit games: contact blobs and one shadow map, behind one setting",
-    "docs/adr/0037-shared-multi-game-hub.md": "ADR 0037: One hub, one name, every BlueEngine online game",
-    "docs/adr/0038-engine-learns-from-development.md": "ADR 0038: The engine learns from the games built on it",
-    "docs/analysis/external-inspiration-study.md": "External inspiration study",
-    "docs/learning/README.md": "Learning from the games built on Blue",
-    "docs/learning/REPORT.md": "What the engine has learned from the games built on it",
-    "docs/perf/README.md": "Performance data",
-    "scripts/build_sandbox_content.py": "Rebuild the sandbox's deterministic, source-derived content.",
-    "scripts/package_sandbox.py": "Package already-built optimized Windows binaries and sandbox content, without installation.",
-    "scripts/publish_games.py": "Export curated engine-made content into the companion Games repository.",
-    "scripts/validate_sandbox.py": "Native audits and authored traversal routes, with a persistent JSON report.",
-    "src/bin/be2-ctl.rs": "be2-ctl: list, inspect, start, stop and restart BlueEngine game servers on this machine (Unix).",
-    "src/bin/be2-headless.rs": "Headless simulation and authoritative dedicated server for Blue Engine V2.",
-    "src/bin/be2-hub.rs": "be2-hub: one hub for every BlueEngine online game (ADR 0037).",
+    "src/viewer/control/proc.rs": "Looking at and signalling operating-system processes, for the server manager (Unix only).",
+    "src/viewer/devkit/procedural.rs": "Endless-world building blocks: seeded chunk identity, bounded streaming, local coordinates and day time.",
     "src/bin/be2-tools.rs": "Headless authoring commands; JSON output is suitable for agents and automation.",
-    "src/bin/be2-toy-server.rs": "The toy footrace server: the smallest complete use of netplay::cli::serve, and the game server the hub's...",
-    "src/bin/blueengine-sandbox.rs": "BlueEngine's local, reproducible content workbench.",
-    "src/bin/impact_audio/mod.rs": "Client-only sound: observe actual impacts, not input or wind-up animation.",
-    "src/bin/sandbox/input.rs": "One key-edge source on Windows, including accessibility-injected keys.",
-    "src/prelude.rs": "Generated external games consume this supported public surface.",
-    "src/runtime/mod.rs": "Shared rendering-free contracts.",
-    "src/runtime/storage.rs": "Fallible persistence, namespaced per game, with identical native/browser snapshot bytes.",
-    "src/two_d/client.rs": "One recommended offline client: fixed-step input, browser/native storage, audio, HUD and verification.",
-    "src/two_d/draw.rs": "Macroquad-backed drawing in logical pixels; stable painter layers, no 3D initialization.",
-    "src/two_d/mod.rs": "Small 2D facade: integer rules, logical-pixel presentation and shared runtime services.",
-    "src/viewer/arena.rs": "Rendering-independent building blocks for momentum-driven arena shooters.",
-    "src/viewer/authoring.rs": "Portable static map documents and transactional edits.",
-    "src/viewer/blueprint.rs": "Declarative blueprint compiler for BlueEngine.",
-    "src/viewer/builder.rs": "Declarative authoring over the existing validated map contract, without borrowed handles.",
     "src/viewer/camera.rs": "Camera placement is independent of movement; gameplay rays still start at the player.",
-    "src/viewer/capabilities.rs": "Native discovery.",
-    "src/viewer/character.rs": "Procedural Scientist and Feta skins, with distance-driven animation.",
+    "src/viewer/doc_drift.rs": "Strong automated documentation drift protection.",
+    "src/viewer/kit/hud.rs": "2D drawing helpers for heads-up displays: scaled, outlined, centred text, panels, bars, a vignette...",
+    "docs/analysis/external-inspiration-study.md": "External inspiration study",
+    "docs/AUDIO.md": "Audio: generated sound, generated ambient music, and settings that survive a relaunch",
+    "src/viewer/mcp.rs": "Native Model Context Protocol (MCP) server over standard I/O for BlueEngine.",
+    "tools/workflow.py": "Bounded context lookup and conservative validation selection.",
+    "docs/BEHAVIORAL_TESTING.md": "Behavioral testing without a custom harness",
+    "docs/adr/0032-game-upgrade-workflow.md": "ADR 0032: A version-aware upgrade workflow for external games",
+    "src/viewer/builder.rs": "Declarative authoring over the existing validated map contract, without borrowed handles.",
+    "src/viewer/devkit/look.rs": "The one mouse-look convention: which way the camera turns for which way the hand moves.",
+    "src/viewer/icon.rs": "Deterministic, title-seeded application icons for BlueEngine games.",
+    "docs/GAME_PRESENTATION.md": "Game presentation contract",
+    "src/two_d/client.rs": "One recommended offline client: fixed-step input, browser/native storage, audio, HUD and verification.",
+    "src/viewer/devkit/menu.rs": "Discrete menu steps from a D-pad and an analog stick: flick once, hold to repeat.",
+    "src/viewer/newgame.rs": "be2-tools new-game NAME DIR [ENGINE_PATH] [TEMPLATE]: Scaffolds a standalone, green game project.",
+    "src/viewer/stock_audio.rs": "Stock GameDocument audio pipeline: checked bundles, confirmed-state cues, adaptive music and settings.",
+    "tools/author.py": "Source-free BE2 map authoring.",
     "src/viewer/character_skins.rs": "Cosmetic skins sharing the unmodified Scientist controller/hull.",
+    "tools/upgrade.py": "Version-aware upgrade planning and verification for games built on BlueEngine.",
+    "src/bin/be2-hub.rs": "be2-hub: one hub for every BlueEngine online game (ADR 0037).",
+    "docs/CUSTOM_CLIENT.md": "Custom visible clients and custom simulations",
+    "src/viewer/devkit/path.rs": "A closed loop on the ground plane: race tracks, patrol routes, rails, a circular arena edge.",
+    "src/viewer/net/worldwire.rs": "The compact binary form of world updates (Packet::Snapshot and Packet::Delta), protocol 8.",
+    "src/viewer/net/session.rs": "Protocol-independent session management, random credentials, and handshake rate limiting.",
+    "src/viewer/devkit/juice.rs": "\"Game feel\" state: screen shake, hit-stop, FOV kick, screen flash and a landing dip.",
+    "tools/audio_report.py": "Numeric quality report for WAV files: an agent cannot listen to audio, but it can read numbers.",
+    "src/viewer/stock_presentation.rs": "Stock GameDocument HUD wording, counter labels/units and palette; reads authoritative state only.",
+    "src/viewer/playable.rs": "Stock game HUD configuration and rendered --scenario/--capture runs over shared authority.",
+    "docs/adr/0020-look-scale-and-dev-loop.md": "ADR 0020: One mouse-look convention, checkable scale, and a dev loop that survives a running game",
+    "src/viewer/game_ui.rs": "Shared immediate-mode game UI.",
+    "src/runtime/mod.rs": "Shared rendering-free contracts.",
+    "templates/game_check.py": "Validate this game's content and Rust targets; never run the dependency's test suite.",
+    "docs/adr/0036-shadows-for-kit-games.md": "ADR 0036: Shadows for kit games: contact blobs and one shadow map, behind one setting",
+    "docs/learning/README.md": "Learning from the games built on Blue",
+    "src/prelude.rs": "Generated external games consume this supported public surface.",
+    "docs/NETPLAY.md": "Netplay: online play for games that own their simulation",
+    "src/viewer/symbols.rs": "High-performance on-demand Rust source navigator for BlueEngine (be2-tools src).",
+    "src/viewer/net/replication.rs": "Only exact acknowledgement commits represented state; respect active payload limits.",
+    "src/viewer/netplay/hub/spawn.rs": "Starting and watching one room's server process.",
+    "src/viewer/shutdown.rs": "Stop a server from a signal: the first request saves and exits, a second one exits at once.",
+    "src/viewer/weapons.rs": "Local weapon selection and pistol shots, independent of rendering and input APIs.",
+    "docs/PROCEDURAL_WORLDS.md": "Streaming procedural worlds",
+    "tools/check_authoring.py": "Verify native authoring with fresh tools in the shared check profile (itest by default).",
+    "src/viewer/net/codec.rs": "A small binary codec for game protocols: little-endian fields, every read bounds-checked.",
+    "docs/adr/0026-movers-carry-players.md": "ADR 0026: Movers carry the players standing on them",
+    "src/viewer/net/proxy.rs": "High-fidelity network impairment proxy and bad network simulation.",
+    "docs/adr/0037-shared-multi-game-hub.md": "ADR 0037: One hub, one name, every BlueEngine online game",
+    "src/viewer/fps.rs": "Reusable, rendering-independent foundations for authoritative FPS games.",
+    "src/viewer/character.rs": "Procedural Scientist and Feta skins, with distance-driven animation.",
+    "src/viewer/game_example.rs": "Source-free Test Lab recipe: three one-shot switches unlock an exit terminal.",
+    "src/bin/impact_audio/mod.rs": "Client-only sound: observe actual impacts, not input or wind-up animation.",
+    "tools/xcapture.py": "See a game on a machine with no display: run it on a virtual display and save real screenshots.",
+    "docs/CHANGE_WORKFLOW.md": "Small context, scoped validation",
+    "src/viewer/net/transport.rs": "Generic datagram transport abstraction for game networking.",
+    "src/viewer/props/accessories.rs": "Original static design accessories, assembled from native matte primitives.",
+    "src/viewer/reach.rs": "Reachability analysis for BlueEngine maps.",
+    "scripts/publish_games.py": "Export curated engine-made content into the companion Games repository.",
+    "src/viewer/authoring.rs": "Portable static map documents and transactional edits.",
+    "src/viewer/game_visuals.rs": "Reusable, cached world materials and recognizable first-person weapon silhouettes.",
+    "templates/game_runtime_test.rs": "Same public session used by the visible generated client, exercised without graphics.",
+    "src/viewer/devkit/playback.rs": "Scripted playback runs recorded inputs and saves screenshots at chosen capture frames.",
+    "docs/GAME_QUICKSTART.md": "Playable games and source-free prototypes",
+    "src/runtime/storage.rs": "Fallible persistence, namespaced per game, with identical native/browser snapshot bytes.",
+    "src/viewer/netplay/hub/deploy.rs": "What the updater (deploy/hub/update.sh) asks of the hub: check a candidate server before it replaces the...",
+    "src/viewer/netplay/hub/wire.rs": "The hub's datagram protocol, BEHB version 1, and the loopback control protocol BECT.",
+    "scripts/validate_sandbox.py": "Native audits and authored traversal routes, with a persistent JSON report.",
+    "src/viewer/kit/fx.rs": "Visual effects: particles, expanding rings, fireballs, light beams, floating popups and banners.",
+    "src/viewer/ui_check.rs": "Headless 2D UI layout auditor for BlueEngine menus and screens.",
+    "src/bin/be2-toy-server.rs": "The toy footrace server: the smallest complete use of netplay::cli::serve, and the game server the hub's...",
+    "src/viewer/mesh.rs": "Tessellate Vesper's evaluated primitives once, baking visibility with its BVH.",
+    "templates/custom-sim/src/lib.rs": "The game's rules: a pure, deterministic, fixed-step simulation with no window, no sound device and no wall...",
+    "src/viewer/netplay/hub/serve.rs": "The front door: abuse limits and the datagram handler in front of the room table, and the UDP loop.",
+    "src/bin/blueengine-sandbox.rs": "BlueEngine's local, reproducible content workbench.",
+    "src/viewer/devkit/audio_project.rs": "Named audio: checked stereo scores and crossfaded imported ambience loops, rendered before runtime.",
+    "src/viewer/savestate/world.rs": "The engine world's save state: what HeadlessWorld::save_state captures and restore_state accepts.",
+    "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
+    "templates/native_focus.rs": "Application-owned foreground check.",
+    "src/viewer/spans.rs": "A handful of named timing spans and one compact summary, for seeing where a tick goes.",
+    "src/viewer/devkit/scale.rs": "Size checks a headless agent can run: how big is this thing, in metres, next to a person?",
+    "tools/mcp_server.py": "BlueEngine MCP Server launcher.",
+    "docs/adr/0003-arena-shooter-primitives.md": "ADR 0003: Opt-in arena-shooter primitives",
+    "src/viewer/devkit/waypoints.rs": "A small walkable graph (doorway thresholds, room centres, patrol stops) with shortest-path lookup, for an...",
+    "src/viewer/prop_view.rs": "Reuses each prop mesh; rigid transforms update vertices without re-baking the map.",
+    "src/viewer/kit/audio.rs": "Playing generated sound: a bank of effects with variants, and looping music stems that fade with the action.",
+    "src/bin/be2-headless.rs": "Headless simulation and authoritative dedicated server for Blue Engine V2.",
+    "docs/CONTROLLERS.md": "Native controllers",
+    "src/viewer/game_input.rs": "Standard keyboard/mouse + native-controller adapter for standalone clients.",
+    "tools/hub_deploy.py": "Per-game build, validation, promotion and activation for the shared hub (ADR 0037, deploy/hub/update.sh).",
+    "src/viewer/net/clock.rs": "Where the server's notion of \"now\" comes from, so time can be advanced by a test instead of waited for.",
+    "templates/game_dev.py": "Rebuild and run this game without tripping over a copy of it that is still open.",
+    "src/viewer/presentation.rs": "Bounded snapshot presentation, independent of graphics and authoritative physics.",
+    "src/viewer/game.rs": "Small declarative interaction rules shared by local play and the authoritative host.",
+    "src/viewer/net/quic.rs": "Production-ready QUIC / TLS 1.3 datagram transport with pinned certificates.",
+    "src/viewer/devkit/rng.rs": "Tiny deterministic random numbers for simulations, effects and procedural audio.",
+    "src/viewer/wrench.rs": "Frame-rate independent melee timing and closest-surface contact.",
+    "docs/adr/0021-stick-look-menu-steps-and-exit.md": "ADR 0021: Stick look in the shared convention, discrete menu steps, and a graceful exit",
+    "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
     "src/viewer/content.rs": "Versioned content fingerprint for accidental map mismatch detection, not authentication.",
     "src/viewer/control/mod.rs": "Managing running servers: where they register, how they are asked for status and told to stop (Unix only).",
-    "src/viewer/control/proc.rs": "Looking at and signalling operating-system processes, for the server manager (Unix only).",
-    "src/viewer/control/server.rs": "The server side of management: register, listen on the control socket, answer status and shutdown.",
-    "src/viewer/creative.rs": "Rendering-free creative placement and per-map persistence.",
-    "src/viewer/devkit/clock.rs": "Frame timing for real-time loops: one wall clock, a fixed-step accumulator and a perf report.",
-    "src/viewer/devkit/input.rs": "Device frames in, exactly one input per fixed tick out.",
-    "src/viewer/devkit/juice.rs": "\"Game feel\" state: screen shake, hit-stop, FOV kick, screen flash and a landing dip.",
     "src/viewer/devkit/level.rs": "Straight walls with doorway gaps cut out, for a custom-sim game that builds its own indoor level in code...",
-    "src/viewer/devkit/lifecycle.rs": "The lifecycle around a custom simulation's window: run flags in, whole ticks with exactly one input each...",
-    "src/viewer/devkit/look.rs": "The one mouse-look convention: which way the camera turns for which way the hand moves.",
-    "src/viewer/devkit/menu.rs": "Discrete menu steps from a D-pad and an analog stick: flick once, hold to repeat.",
-    "src/viewer/devkit/mod.rs": "Building blocks for games that own their simulation.",
-    "src/viewer/devkit/net_address.rs": "Typed server addresses and the default-server chain, graphics-free.",
-    "src/viewer/devkit/path.rs": "A closed loop on the ground plane: race tracks, patrol routes, rails, a circular arena edge.",
-    "src/viewer/devkit/playback.rs": "Driving a loop without a human: recorded inputs, a tiny cue script and a screenshot schedule.",
-    "src/viewer/devkit/rng.rs": "Tiny deterministic random numbers for simulations, effects and procedural audio.",
-    "src/viewer/devkit/save.rs": "Player settings and records that survive restarts: one small JSON file, atomic, never fatal.",
-    "src/viewer/devkit/scale.rs": "Size checks a headless agent can run: how big is this thing, in metres, next to a person?",
-    "src/viewer/devkit/sim.rs": "An optional shape for games that own their simulation, plus the helpers that make it testable.",
-    "src/viewer/devkit/snapshot.rs": "Save and load a game's own simulation: F5 / F9 quick saves, autosaves and \"continue\" for a game that keeps...",
-    "src/viewer/devkit/synth.rs": "Procedural audio for games that ship no recordings: a small DSP toolkit, a WAV writer and parser, 23...",
-    "src/viewer/devkit/text_field.rs": "A single-line text box that is only logic: typing, pasting, caret movement, hold-to-repeat.",
-    "src/viewer/devkit/waypoints.rs": "A small walkable graph (doorway thresholds, room centres, patrol stops) with shortest-path lookup, for an...",
-    "src/viewer/doc_drift.rs": "Strong automated documentation drift protection.",
-    "src/viewer/fps.rs": "Reusable, rendering-independent foundations for authoritative FPS games.",
-    "src/viewer/game.rs": "Small declarative interaction rules shared by local play and the authoritative host.",
-    "src/viewer/game_client.rs": "Shared, opt-in presentation defaults for standalone games.",
-    "src/viewer/game_edit.rs": "Edit a game in place without hand-keeping its records in step.",
-    "src/viewer/game_example.rs": "Source-free Test Lab recipe: three one-shot switches unlock an exit terminal.",
-    "src/viewer/game_explore.rs": "Static and reachability analysis of a GameDocument, driven by the engine's own rule runtime.",
-    "src/viewer/game_input.rs": "Standard keyboard/mouse + native-controller adapter for standalone clients.",
-    "src/viewer/game_scenario.rs": "Turn game-explore's shortest win into a scenario that plays it: walk to each target, look at it, press it...",
-    "src/viewer/game_session.rs": "Graphics-free adapter for local authority or a server-owned game mirror.",
-    "src/viewer/game_text.rs": "Immutable ASCII atlas: no glyph uploads or texture replacement while drawing a frame.",
-    "src/viewer/game_ui.rs": "Shared immediate-mode game UI.",
-    "src/viewer/game_visuals.rs": "Reusable, cached world materials and recognizable first-person weapon silhouettes.",
-    "src/viewer/gamepad.rs": "Native gamepads without a window/rendering dependency (gamepad feature).",
-    "src/viewer/gen.rs": "Procedural placement generators for BlueEngine: scatter and line.",
-    "src/viewer/house.rs": "Small, low-poly two-story house.",
-    "src/viewer/icon.rs": "Deterministic, title-seeded application icons for BlueEngine games.",
-    "src/viewer/identity.rs": "A shipped game's identity: what it is called, what it says about itself and what it looks like.",
-    "src/viewer/interaction.rs": "Semantic actions independent of input devices and rendering.",
-    "src/viewer/kit/audio.rs": "Playing generated sound: a bank of effects with variants, and looping music stems that fade with the action.",
-    "src/viewer/kit/batch.rs": "Procedural geometry and per-frame dynamic batching.",
-    "src/viewer/kit/capture.rs": "Saving frames as PNG evidence for an agent (or a human) who cannot watch the game run.",
-    "src/viewer/kit/fx.rs": "Visual effects: particles, expanding rings, fireballs, light beams, floating popups and banners.",
-    "src/viewer/kit/gizmo.rs": "Debug wireframes for judging scale by eye: bounding boxes, axes and a person-sized silhouette.",
-    "src/viewer/kit/hud.rs": "2D drawing helpers for heads-up displays: scaled, outlined, centred text, panels, bars, a vignette...",
-    "src/viewer/kit/lint.rs": "A geometry-defect lint for Templates: the mesh bugs a headless test can catch before anyone has to look at...",
-    "src/viewer/kit/look.rs": "Scene lighting and the materials that draw dynamic geometry.",
-    "src/viewer/kit/mirror.rs": "One planar reflection pass with an off-axis aperture and an explicit depth buffer.",
-    "src/viewer/kit/mod.rs": "An opt-in client kit for games that draw their own world.",
-    "src/viewer/kit/shadow.rs": "Shadows for kit games: one setting, two tiers, one helper.",
-    "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves...",
-    "src/viewer/kit/view.rs": "A camera description shared by the renderer, the sky and the HUD.",
-    "src/viewer/landscaping.rs": "Reusable, static low-poly planting.",
-    "src/viewer/lint.rs": "Design-level static analysis (linting) for BlueEngine maps.",
-    "src/viewer/local_client.rs": "Ready-to-play local static-map client.",
-    "src/viewer/maps.rs": "Map selection is independent of graphics; studio remains a regression fixture.",
-    "src/viewer/mcp.rs": "Native Model Context Protocol (MCP) server over standard I/O for BlueEngine.",
-    "src/viewer/mesh.rs": "Tessellate Vesper's evaluated primitives once, baking visibility with its BVH.",
-    "src/viewer/metrics.rs": "Observability, performance tracking, explainability, and budget validation.",
-    "src/viewer/net.rs": "Low-latency server-authoritative multiplayer networking foundation.",
-    "src/viewer/net/any.rs": "One transport type for either engine socket, chosen at run time.",
-    "src/viewer/net/clock.rs": "Where the server's notion of \"now\" comes from, so time can be advanced by a test instead of waited for.",
-    "src/viewer/net/codec.rs": "A small binary codec for game protocols: little-endian fields, every read bounds-checked.",
-    "src/viewer/net/loopback.rs": "An in-memory datagram network with configurable delay, jitter and loss, for tests.",
-    "src/viewer/net/proxy.rs": "High-fidelity network impairment proxy and bad network simulation.",
-    "src/viewer/net/quic.rs": "Production-ready QUIC / TLS 1.3 datagram transport with pinned certificates.",
-    "src/viewer/net/replication.rs": "Only exact acknowledgement commits represented state; respect active payload limits.",
-    "src/viewer/net/session.rs": "Protocol-independent session management, random credentials, and handshake rate limiting.",
-    "src/viewer/net/transport.rs": "Generic datagram transport abstraction for game networking.",
-    "src/viewer/net/worldwire.rs": "The compact binary form of world updates (Packet::Snapshot and Packet::Delta), protocol 8.",
-    "src/viewer/netplay/cli.rs": "One reusable server main for every netplay game: serve.",
-    "src/viewer/netplay/client.rs": "The network client: connect, choose, play, for any NetGame.",
-    "src/viewer/netplay/failure.rs": "Why a connection attempt failed, as a type a game can show properly.",
-    "src/viewer/netplay/hub/client.rs": "The game's side of the hub: ask which rooms exist, make one, work out where the hub lives, and the rules...",
-    "src/viewer/netplay/hub/deploy.rs": "What the updater (deploy/hub/update.sh) asks of the hub: check a candidate server before it replaces the...",
-    "src/viewer/netplay/hub/legacy.rs": "The DFHB version 1 protocol of the Deadfall hub, answered byte for byte as the old hub did.",
-    "src/viewer/netplay/hub/limits.rs": "The hub's abuse limits: token buckets per source, for creating, and over everyone; caps on rooms.",
-    "src/viewer/netplay/hub/mod.rs": "One hub, one name, every BlueEngine online game (ADR 0037).",
-    "src/viewer/netplay/hub/registry.rs": "Which games this hub carries: the config file, the games' --info, and the checks on both.",
-    "src/viewer/netplay/hub/rooms.rs": "The room table: which room servers exist, on which ports, and when they are closed.",
-    "src/viewer/netplay/hub/serve.rs": "The front door: abuse limits and the datagram handler in front of the room table, and the UDP loop.",
-    "src/viewer/netplay/hub/spawn.rs": "Starting and watching one room's server process.",
-    "src/viewer/netplay/hub/wire.rs": "The hub's datagram protocol, BEHB version 1, and the loopback control protocol BECT.",
-    "src/viewer/netplay/mod.rs": "Online play for games that own their simulation: a lobby, matches, results, on any DatagramTransport.",
-    "src/viewer/netplay/server.rs": "The authoritative server: a lobby, then a match, then results, forever, for any NetGame.",
-    "src/viewer/netplay/toy.rs": "The smallest complete NetGame: a footrace along a line.",
-    "src/viewer/netplay/wire.rs": "The netplay envelope: fixed messages around game-defined payloads.",
-    "src/viewer/newgame.rs": "be2-tools new-game NAME DIR [ENGINE_PATH] [TEMPLATE]: Scaffolds a standalone, green game project.",
-    "src/viewer/pathing.rs": "Auto-planned walk tests, A* pathfinding, and blocking obstacle diagnostics.",
-    "src/viewer/playable.rs": "Shared authored-game presentation.",
-    "src/viewer/presentation.rs": "Bounded snapshot presentation, independent of graphics and authoritative physics.",
-    "src/viewer/profile.rs": "Validated, rendering-independent locomotion parameters.",
-    "src/viewer/prop_physics.rs": "Loose-prop rigid bodies and shared pickup/drop behavior, independent of graphics.",
-    "src/viewer/prop_view.rs": "Reuses each prop mesh; rigid transforms update vertices without re-baking the map.",
-    "src/viewer/props.rs": "Simple matte props without decals or overlapping exterior trim.",
-    "src/viewer/props/accessories.rs": "Original static design accessories, assembled from native matte primitives.",
-    "src/viewer/props/decor_library.rs": "Reusable static shelf and tabletop decor.",
-    "src/viewer/reach.rs": "Reachability analysis for BlueEngine maps.",
-    "src/viewer/savestate/mod.rs": "Native save states: one framed, versioned, integrity-checked file format that every engine and game...",
-    "src/viewer/savestate/world.rs": "The engine world's save state: what HeadlessWorld::save_state captures and restore_state accepts.",
-    "src/viewer/scenario.rs": "Scripted scenario runner and deterministic replay divergence debugger for BlueEngine.",
-    "src/viewer/server.rs": "Authoritative dedicated multiplayer server for Blue Engine V2.",
-    "src/viewer/shutdown.rs": "Stop a server from a signal: the first request saves and exits, a second one exits at once.",
     "src/viewer/simulation.rs": "Simulation must remain usable without graphics, audio or a window.",
-    "src/viewer/spans.rs": "A handful of named timing spans and one compact summary, for seeing where a tick goes.",
-    "src/viewer/spatial.rs": "Room / zone graph and spatial partitioning for indoor maps and interest management.",
-    "src/viewer/symbols.rs": "High-performance on-demand Rust source navigator for BlueEngine (be2-tools src).",
-    "src/viewer/ui_check.rs": "Headless 2D UI layout auditor for BlueEngine menus and screens.",
-    "src/viewer/verify.rs": "Unified self-verifying maps and games for BlueEngine.",
-    "src/viewer/weapons.rs": "Local weapon selection and pistol shots, independent of rendering and input APIs.",
-    "src/viewer/web.rs": "Browser builds expose shared contracts, not native 3D/UDP/QUIC services.",
-    "src/viewer/wrench.rs": "Frame-rate independent melee timing and closest-surface contact.",
-    "templates/custom-sim/src/lib.rs": "The game's rules: a pure, deterministic, fixed-step simulation with no window, no sound device and no wall...",
-    "templates/game_build.rs": "Embeds the game's icon and version info into its Windows executable, so Explorer, Task Manager and pinned...",
-    "templates/game_check.py": "Validate this game's content and Rust targets; never run the dependency's test suite.",
-    "templates/game_dev.py": "Rebuild and run this game without tripping over a copy of it that is still open.",
+    "src/viewer/maps.rs": "Map selection is independent of graphics; studio remains a regression fixture.",
+    "src/viewer/devkit/net_address.rs": "Typed server addresses and the default-server chain, graphics-free.",
+    "scripts/build_sandbox_content.py": "Rebuild the sandbox's deterministic, source-derived content.",
+    "src/viewer/devkit/text_field.rs": "A single-line text box that is only logic: typing, pasting, caret movement, hold-to-repeat.",
+    "src/viewer/identity.rs": "A shipped game's identity: what it is called, what it says about itself and what it looks like.",
+    "src/viewer/netplay/cli.rs": "One reusable server main for every netplay game: serve.",
+    "docs/analysis/stock-audio.md": "Stock audio runtime integration",
+    "docs/adr/0031-be2-ctl-server-manager.md": "ADR 0031: be2-ctl, a small manager for servers on one machine",
+    "src/viewer/props/decor_library.rs": "Reusable static shelf and tabletop decor.",
+    "src/viewer/netplay/hub/limits.rs": "The hub's abuse limits: token buckets per source, for creating, and over everyone; caps on rooms.",
+    "src/viewer/profile.rs": "Validated, rendering-independent locomotion parameters.",
+    "src/viewer/kit/capture.rs": "Saving frames as PNG evidence for an agent (or a human) who cannot watch the game run.",
+    "src/viewer/props.rs": "Simple matte props without decals or overlapping exterior trim.",
+    "src/two_d/mod.rs": "Small 2D facade: integer rules, logical-pixel presentation and shared runtime services.",
+    "docs/HOSTING.md": "Hosting a dedicated BlueEngine server",
+    "src/viewer/netplay/hub/mod.rs": "One hub, one name, every BlueEngine online game (ADR 0037).",
+    "src/viewer/devkit/synth.rs": "Procedural audio for games that ship no recordings: a small DSP toolkit, a WAV writer and parser, 23...",
     "templates/game_project.py": "Canonical dimensionality/target requirements; copied into standalone game tooling.",
-    "templates/game_runtime_test.rs": "Same public session used by the visible generated client, exercised without graphics.",
-    "templates/game_ship.py": "Ship this game: package it, give it its own desktop shortcut, and prove both work.",
-    "templates/native_focus.rs": "Application-owned foreground check.",
+    "docs/CUSTOM_SIM_CHEATSHEET.md": "Custom-sim cheat sheet: the game-facing API on one page",
+    "docs/TWO_D.md": "2D games \u2192 browser",
+    "docs/learning/REPORT.md": "What the engine has learned from the games built on it",
+    "src/viewer/capabilities.rs": "Native discovery.",
+    "src/bin/be2-ctl.rs": "be2-ctl: list, inspect, start, stop and restart BlueEngine game servers on this machine (Unix).",
+    "src/viewer/devkit/input.rs": "Device frames in, exactly one input per fixed tick out.",
     "templates/two-d/lib.rs": "Rules and presentation; shared client owns devices, audio, storage and timing.",
-    "templates/two-d/web.py": "Forward to the engine's supported web workflow; no copied deployment logic.",
-    "tools/assets.py": "BlueEngine's JSON asset catalog API.",
-    "tools/audio_report.py": "Numeric quality report for WAV files: an agent cannot listen to audio, but it can read numbers.",
-    "tools/author.py": "Source-free BE2 map authoring.",
-    "tools/be2.py": "BE2 development entry point.",
-    "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
-    "tools/hub_deploy.py": "Per-game build, validation, promotion and activation for the shared hub (ADR 0037, deploy/hub/update.sh).",
-    "tools/learn.py": "Blue learns from the games built on it (ADR 0038).",
-    "tools/mcp_server.py": "BlueEngine MCP Server launcher.",
-    "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
-    "tools/place_interior.py": "Place data-only interior prefabs and validate with the packaged native engine.",
-    "tools/upgrade.py": "Version-aware upgrade planning and verification for games built on BlueEngine.",
+    "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md": "ADR 0034: Level geometry and waypoint pathing promoted from Dead Air",
+    "src/viewer/game_scenario.rs": "Turn game-explore's shortest win into a scenario that plays it: walk to each target, look at it, press it...",
     "tools/web_games.py": "Supported 2D web workflow: propose, build, verify, publish.",
-    "tools/web_publish.py": "Optional GitHub Pages adapter.",
-    "tools/workflow.py": "Bounded context lookup and conservative validation selection.",
-    "tools/xcapture.py": "See a game on a machine with no display: run it on a virtual display and save real screenshots.",
-    "docs/PORTABLE_GAMES.md": "Browser/native 2D/3D/hybrid authoring, mobile controls, persistence, install, unified feed"
+    "src/viewer/server.rs": "Authoritative dedicated multiplayer server for Blue Engine V2.",
+    "src/viewer/kit/look.rs": "Scene lighting and the materials that draw dynamic geometry.",
+    "docs/SAVE_STATE.md": "Save states",
+    "src/viewer/netplay/client.rs": "The network client: connect, choose, play, for any NetGame.",
+    "src/viewer/spatial.rs": "Room / zone graph and spatial partitioning for indoor maps and interest management.",
+    "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves..."
   }
 }

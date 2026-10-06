@@ -610,7 +610,7 @@ class EvalTests(unittest.TestCase):
                     learn.load_tasks(path)
 
     def test_committed_tasks_have_real_expectations(self):
-        tasks = learn.load_tasks(ROOT / 'docs' / 'learning' / 'tasks.jsonl')
+        tasks = [t for name in learn.TASK_FILES for t in learn.load_tasks(ROOT / 'docs' / 'learning' / name)]
         self.assertGreaterEqual(len(tasks), 25)
         features = workflow.index(ROOT)
         for task in tasks:
@@ -625,17 +625,28 @@ class EvalTests(unittest.TestCase):
         if not floor_path.is_file():
             self.skipTest('no floor recorded yet')
         floor = json.loads(floor_path.read_text())
-        tasks = learn.load_tasks(ROOT / 'docs' / 'learning' / 'tasks.jsonl')
 
         def in_process(prompt, k):
             try:
                 return json.dumps(workflow.context(ROOT, prompt, k), separators=(',', ':')) + '\n', None
             except ValueError as error:
                 return '', str(error)
-        _, total = learn.run_eval(tasks, floor['k'], runner=in_process)
-        self.assertGreaterEqual(total['feature_recall'], floor['feature_recall'], 'feature discovery regressed')
-        self.assertGreaterEqual(total['path_recall'], floor['path_recall'], 'file discovery regressed')
-        self.assertEqual(total['errors'], 0)
+        history = (ROOT / 'docs/learning/eval_runs.jsonl').read_bytes()
+        self.assertEqual(set(floor['sets']), set(learn.TASK_FILES))
+        for name in learn.TASK_FILES:
+            with self.subTest(task_set=name):
+                tasks = learn.load_tasks(ROOT / 'docs/learning' / name)
+                expected = floor['sets'][name]
+                rows, total = learn.run_eval(tasks, expected['k'], runner=in_process)
+                for metric in ('feature_recall', 'path_recall', 'full_hits'):
+                    self.assertGreaterEqual(total[metric], expected[metric], f'{name}: {metric} regressed')
+                self.assertEqual(total['errors'], 0)
+                self.assertEqual(set(expected['cases']), {t['id'] for t in tasks})
+                for row in rows:
+                    case = expected['cases'][row['task']]
+                    self.assertFalse(set(case['features']) & set(row['missed_features']), row['task'])
+                    self.assertFalse(set(case['paths']) & set(row['missed_paths']), row['task'])
+        self.assertEqual((ROOT / 'docs/learning/eval_runs.jsonl').read_bytes(), history)
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -698,11 +709,74 @@ class ReportTests(unittest.TestCase):
             self.assertNotIn('local only, never committed', text)
             self.assertIsNone(learn.secret_like(text))
 
+    def test_real_report_cli_scores_all_sets_without_appending_history(self):
+        import subprocess
+        before = (ROOT / 'docs/learning/eval_runs.jsonl').read_bytes()
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / 'report.md'
+            result = subprocess.run([sys.executable, str(ROOT / 'tools/learn.py'), 'report', '--out', str(out)],
+                                    cwd=ROOT, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            report = out.read_text(encoding='utf-8')
+            for name in learn.TASK_FILES:
+                self.assertIn('| ' + name + ' |', report)
+            self.assertIn('development/regression fixtures', report)
+        self.assertEqual((ROOT / 'docs/learning/eval_runs.jsonl').read_bytes(), before)
+
 
 # ---------------------------------------------------------------------------------------------------------------
 # the be2.py context hook (docs/learning/ledger.jsonl -> `learned`)
 # ---------------------------------------------------------------------------------------------------------------
 class ContextHookTests(unittest.TestCase):
+    def test_stock_routing_and_hud_capabilities_and_new_lessons_are_discoverable(self):
+        route = workflow.context(ROOT, 'route around obstacles and repeat a control after walking')
+        packet = json.dumps(route)
+        self.assertIn('simulation_scenarios', packet)
+        self.assertIn('src/viewer/scenario.rs', packet)
+        self.assertIn('wait_ticks:1', ' '.join(route.get('learned', [])))
+        hud = json.dumps(workflow.context(ROOT, 'stock battery countdown HUD palette success wording'))
+        self.assertIn('src/viewer/stock_presentation.rs', hud)
+        recovery = workflow.context(ROOT, 'rollback recovery updater receipt')
+        self.assertIn('restored artifacts resume', ' '.join(recovery.get('learned', [])))
+
+    def test_server_guidance_uses_the_supported_path_without_obsolete_workarounds(self):
+        packet = workflow.context(ROOT, 'limit how many players can join my netplay server')
+        hints = ' '.join(packet.get('learned', []))
+        self.assertIn('netplay::cli::serve', hints)
+        self.assertIn('NetGame::MAX_SEATS', hints)
+        self.assertNotIn('copy an existing', hints.lower())
+        self.assertNotIn('in progress', hints.lower())
+
+    def test_recorded_lesson_is_retrievable_and_missing_keywords_are_explicit(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = self.root_with(tmp, [])
+            ledger = root / 'docs/learning/ledger.jsonl'
+            code, _, err = run_cli('record', '--game', 'observatory', '--area', 'simulation', '--tokens', '0',
+                                  '--note', 'Repeated controls need separate executed ticks after walking finishes.',
+                                  '--trap', 'Wait one executed tick between repeated interactions.',
+                                  '--keywords', 'repeated,control,interaction,tick,walking', '--ledger', str(ledger))
+            self.assertEqual(code, 0, err)
+            hints = workflow.context(root, 'repeat interaction with a control after walking')['learned']
+            self.assertIn('executed tick', ' '.join(hints))
+            code, _, err = run_cli('record', '--game', 'observatory', '--area', 'docs', '--tokens', '0',
+                                  '--note', 'An archival note.', '--ledger', str(ledger))
+            self.assertEqual(code, 0, err)
+            self.assertIn('archive-only', err)
+
+    def test_scripted_screenshot_case_finds_playback(self):
+        packet = workflow.context(ROOT, 'a scripted run that saves screenshots at chosen frames')
+        self.assertIn('custom_simulation', [m['id'] for m in packet['matches']])
+        self.assertIn('src/viewer/devkit/playback.rs', json.dumps(packet))
+
+    def test_streamed_world_and_recorded_ambience_have_actionable_entry_points(self):
+        packet = workflow.context(ROOT, 'infinite procedural world streaming chunks day night cycle')
+        self.assertEqual(packet['matches'][0]['id'], 'procedural_gen')
+        self.assertIn('src/viewer/devkit/procedural.rs', packet['matches'][0]['read_first'])
+        self.assertIn('DayCycle', packet['matches'][0]['public_api'])
+        packet = workflow.context(ROOT, 'recorded birdsong ambience crossfade loop music')
+        self.assertEqual(packet['matches'][0]['id'], 'audio_authoring')
+        self.assertIn('docs/AUDIO.md', packet['matches'][0]['read_first'])
+
     def root_with(self, tmp, entries):
         root = Path(tmp)
         (root / 'tools').mkdir()

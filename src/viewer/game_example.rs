@@ -110,6 +110,7 @@ pub fn documents() -> Result<(GameDocument, MapDocument)> {
         movers: Vec::new(),
         timers: Vec::new(),
         rules,
+        presentation: None,
     };
     game.validate(&map)?;
     Ok((game, map))

@@ -1,29 +1,42 @@
 name: Engine checks
 on: [push, pull_request]
+concurrency:
+  group: engine-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
 jobs:
-  test:
+  engine:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Upgrade regressions inspect real revision ancestry.
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          # Same cache prefix as the former key=engine-checks in job=test.
+          shared-key: engine-checks-test
       - name: Install FFmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress -y
-      - run: cargo fmt --check
-      - run: cargo clippy --all-targets --locked -- -D warnings
-      - run: cargo test --locked
+      # Same gate list and optimized dependency profile as local full verification.
+      # Cache compilation only: every check and every test still executes.
+      - name: Full engine verification
+        run: python tools/be2.py check
       - run: cargo build --release --locked
-
-      - run: cargo test --locked --no-default-features
-      - run: cargo clippy --all-targets --locked --no-default-features -- -D warnings
       - run: cargo build --release --locked --no-default-features --bin be2-headless
 
       - run: cargo rustdoc --locked --lib -- -D warnings
@@ -44,6 +57,25 @@ jobs:
             cargo test --locked --manifest-path games/$game/Cargo.toml --no-default-features
             cargo test --locked --manifest-path games/$game/Cargo.toml
           done
+      - name: Stock audio offscreen verification (Linux)
+        if: runner.os == 'Linux'
+        env:
+          BE2_AUDIO_OFFSCREEN: '1'
+        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/stock_audio_smoke.py target/release/be2 .be2-work/stock-audio
+      - name: Verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: engine-checks-${{ runner.os }}
+          path: .be2-work/check-*/
+          include-hidden-files: true
+      - name: Stock audio rendered evidence
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: stock-audio-offscreen
+          path: .be2-work/stock-audio/
+          include-hidden-files: true
   browser:
     runs-on: ubuntu-latest
     steps:
@@ -65,6 +97,7 @@ jobs:
           for game in lantern-run pocket-breaker orchard-watch lantern-grove; do
             python3 tools/be2.py web build games/$game
           done
+          python3 tools/be2.py web build assets/games/leo
       - name: Reject undeclared runtime dependencies in real browser
         env:
           BE2_BROWSER_FIXTURE: games/lantern-run/dist/web
@@ -74,4 +107,96 @@ jobs:
         with:
           name: browser-evidence
           include-hidden-files: true
-          path: games/*/.blue-check/web/
+          path: |
+            games/*/.blue-check/web/
+            assets/games/leo/.blue-check/web/
+  # Preserve the existing required-check names. A successful engine lane alone must
+  # never certify a revision whose game/package/render lane failed or was skipped.
+  test:
+    if: always()
+    needs: [engine, leo, browser]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Require all engine and game gates
+        shell: bash
+        env:
+          ENGINE_RESULT: ${{ needs.engine.result }}
+          LEO_RESULT: ${{ needs.leo.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: |
+          test "$ENGINE_RESULT" = success
+          test "$LEO_RESULT" = success
+          test "$BROWSER_RESULT" = success
+  # Independent game checks overlap engine verification. Rendered feedback is available
+  # early; the workflow is green only after BOTH matrices finish every existing gate.
+  leo:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: engine-checks-test
+          save-if: false # Engine job owns writes; both restore compatible dependency artifacts.
+      - name: Install native dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+      - name: Build and package Leo
+        shell: bash # Fail on EACH native command on Windows too.
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          cargo fmt --manifest-path assets/games/leo/Cargo.toml --check
+          cargo build --locked --release --manifest-path assets/games/leo/Cargo.toml
+          python assets/games/leo/scripts/ship.py ship --folder .be2-work/leo-launchers --no-build --no-launch --no-smoke
+      - name: Leo offscreen day, save and audio verification (Linux)
+        if: runner.os == 'Linux'
+        env:
+          BE2_AUDIO_OFFSCREEN: '1'
+        run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/leo_smoke.py assets/games/leo/dist/leo .be2-work/leo-capture
+      - name: Early Leo pictures (Linux)
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-images
+          path: |
+            .be2-work/leo-capture/*/shot_*.png
+            .be2-work/leo-capture/*/run.json
+            .be2-work/leo-capture/evidence.json
+            .be2-work/leo-capture/*.log
+          include-hidden-files: true
+      - name: Leo headless and client verification
+        shell: bash
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features
+          cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --all-targets -- -D warnings
+          cargo build --release --locked --bin be2-tools
+          python assets/games/leo/scripts/check.py --ship-folder .be2-work/leo-launchers
+      - name: Leo rendered and packaged evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: leo-${{ runner.os }}
+          path: |
+            .be2-work/leo-capture/
+            .be2-work/leo-launchers/
+            assets/games/leo/.blue-check/
+            assets/games/leo/dist/
+          include-hidden-files: true

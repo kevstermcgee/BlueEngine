@@ -1,0 +1,60 @@
+{
+  "bundle": "audio",
+  "cues": [
+    {
+      "cue": "shutter",
+      "on": {
+        "kind": "counter_changed",
+        "counter": "shutter_cycles"
+      }
+    },
+    {
+      "cue": "step",
+      "on": {
+        "kind": "counter_changed",
+        "counter": "calibration"
+      },
+      "volume": 0.7
+    },
+    {
+      "cue": "battery",
+      "on": {
+        "kind": "counter_at_or_below",
+        "counter": "battery",
+        "value": 5
+      }
+    },
+    {
+      "cue": "success",
+      "on": {
+        "kind": "completed"
+      }
+    },
+    {
+      "cue": "battery",
+      "on": {
+        "kind": "failed"
+      }
+    },
+    {
+      "cue": "shutter",
+      "on": {
+        "kind": "restarted"
+      },
+      "volume": 0.5
+    }
+  ],
+  "music": {
+    "orbit": {
+      "level": 0.65
+    },
+    "signal": {
+      "level": 0.85,
+      "counter": {
+        "name": "calibration",
+        "from": 0,
+        "to": 3
+      }
+    }
+  }
+}

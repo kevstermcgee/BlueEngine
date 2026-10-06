@@ -66,7 +66,7 @@ def integrity(dist):
     if not isinstance(m.get('targets'),list) or 'web' not in m['targets'] or any(t not in ('web','linux','windows','macos') for t in m['targets']):raise WebError('Manifest must declare supported web targets')
     if not isinstance(m.get('input'),list) or not m['input'] or any(i not in ('keyboard','mouse','controller') for i in m['input']):raise WebError('Manifest must declare supported input')
     proof=m.get('verification',{})
-    if not isinstance(proof,dict) or proof.get('outcome')!='won' or not isinstance(proof.get('hash'),str) or not re.fullmatch('[0-9a-f]{16}',proof['hash']):raise WebError('Manifest requires a winning headless verification hash/outcome')
+    validate_proof(proof)
     if m.get('thumbnail')!='thumbnail.png' or m.get('play')!='index.html' or not isinstance(m.get('compatibility'),dict):raise WebError('Manifest thumbnail/play/compatibility contract is invalid')
     files=m.get('file_sha256',{})
     if m.get('runtime_abi')==2:
@@ -86,6 +86,12 @@ def integrity(dist):
     if actual!=set(files)|{'manifest.json'}:raise WebError(f'Undeclared package files: {sorted(actual-set(files)-{"manifest.json"})}')
     if safe_file(dist,'game.wasm').read_bytes()[:8]!=b'\0asm\x01\0\0\0':raise WebError('Invalid WASM header')
     return m
+def validate_proof(proof):
+    if not isinstance(proof,dict) or not isinstance(proof.get('hash'),str) or not re.fullmatch('[0-9a-f]{16}',proof['hash']):raise WebError('Headless verification requires a complete state hash')
+    if proof.get('outcome')=='won':return
+    if proof.get('outcome')=='playing' and type(proof.get('ticks')) is int and 1<=proof['ticks']<=100000 and isinstance(proof.get('purpose'),str) and proof['purpose'].strip():return
+    raise WebError('Verification must win, or explicitly document an open-ended playing route with positive ticks and purpose; losing/empty routes cannot publish')
+
 class QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self,*args):pass
 def browser_verify(dist, evidence):
@@ -126,7 +132,13 @@ def build(game, skip_browser=False):
     if 'web' not in project['targets']:raise WebError('This game does not declare web; edit the proposal/project requirements deliberately before building')
     cargo=tomllib.loads((game/'Cargo.toml').read_text());name=cargo['package']['name']
     if name!=project['id']:raise WebError('game.project id must match Cargo package name')
-    identity=json.loads((game/'assets/identity.json').read_text())
+    web=project.get('web_build');binary=web['binary'] if web else name
+    if web:
+        bins={b['name'] for b in cargo.get('bin',[])}
+        if binary not in bins:raise WebError(f'web_build.binary {binary} is not a declared Cargo binary')
+        missing=set(web['features'])-set(cargo.get('features',{}))
+        if missing:raise WebError(f'web_build.features are not declared in Cargo.toml: {sorted(missing)}')
+    identity=json.loads(safe_file(game,web.get('identity','assets/identity.json') if web else 'assets/identity.json').read_text())
     if not identity.get('title') or not identity.get('controls'):raise WebError('identity.json requires title and controls')
     target=Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'target')).resolve()
     env={**os.environ,'CARGO_TARGET_DIR':str(target),'RUSTC_WRAPPER':'','CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS':'-C link-arg=--allow-undefined'}
@@ -139,8 +151,10 @@ def build(game, skip_browser=False):
     (evidence/'headless.log').write_text(tests)
     if not state.is_file():raise WebError('Tests must export BE2_VERIFY_REPORT using two_d::verify, including expected hash/outcome. Copy the two-d starter verification test.')
     expected=json.loads(state.read_text())
-    if expected.get('outcome')!='won' or not re.fullmatch('[0-9a-f]{16}',expected.get('hash','')):raise WebError('The headless public-input verification route must win and emit its state hash')
-    run(['cargo','build','--offline','--locked','--release','--target','wasm32-unknown-unknown'],cwd=game,env=env)
+    validate_proof(expected)
+    build_args=['cargo','build','--offline','--locked','--release','--target','wasm32-unknown-unknown','--bin',binary]
+    if web:build_args+=['--no-default-features','--features',','.join(web['features'])]
+    run(build_args,cwd=game,env=env)
     metadata=json.loads(run(['cargo','metadata','--offline','--locked','--format-version','1'],cwd=game,env=env))
     macro=next(p for p in metadata['packages'] if p['name']=='macroquad')
     if macro['version']!='0.4.14':raise WebError('Loader pin supports Macroquad 0.4.14 only; update loader compatibility before changing it')
@@ -150,7 +164,7 @@ def build(game, skip_browser=False):
     destination=game/'dist/web';destination.parent.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='web-build-',dir=destination.parent) as stage:
         out=Path(stage)
-        shutil.copy2(target/'wasm32-unknown-unknown/release'/f'{name.replace("-","_")}.wasm',out/'game.wasm') if (target/'wasm32-unknown-unknown/release'/f'{name.replace("-","_")}.wasm').exists() else shutil.copy2(target/'wasm32-unknown-unknown/release'/f'{name}.wasm',out/'game.wasm')
+        shutil.copy2(target/'wasm32-unknown-unknown/release'/f'{binary.replace(chr(45),chr(95))}.wasm' if (target/'wasm32-unknown-unknown/release'/f'{binary.replace(chr(45),chr(95))}.wasm').exists() else target/'wasm32-unknown-unknown/release'/f'{binary}.wasm',out/'game.wasm')
         (out/'loader.js').write_bytes(loader_bytes);shutil.copy2(ROOT/'templates/web/platform.js',out/'platform.js');shutil.copy2(ROOT/'templates/web/mobile.js',out/'mobile.js');shutil.copy2(game/'assets/icon.png',out/'thumbnail.png')
         page=(ROOT/'templates/web/index.html').read_text()
         for key,value in {'title':identity['title'],'description':project['description'],'controls':identity['controls']}.items():page=page.replace('{{'+key+'}}',html.escape(value,quote=True))
@@ -158,11 +172,17 @@ def build(game, skip_browser=False):
         page=page.replace('{{mobile_config}}',json.dumps(mobile).replace('<','\\u003c'))
         (out/'index.html').write_text(page)
         (out/'app.webmanifest').write_text(json.dumps({'id':'./','name':identity['title'],'short_name':identity['title'][:24],'start_url':'./','scope':'./','display':'standalone','background_color':'#07111F','theme_color':'#07111F','icons':[{'src':'thumbnail.png','sizes':'256x256','type':'image/png'}]}))
-        for name in identity.get('package',[]):
-            source=safe_file(game,name)
-            if not source.is_file():raise WebError(f'Web extra asset must be a declared regular file: {name}')
-            if name in ('manifest.json','game.wasm','index.html','loader.js','platform.js','thumbnail.png','mobile.js','service-worker.js','app.webmanifest'):raise WebError(f'Extra asset collides with reserved package file: {name}; place it under assets/')
-            target_file=safe_file(out,name);target_file.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,target_file)
+        for declaration in identity.get('package',[]):
+            source=safe_file(game,declaration)
+            if not source.exists():raise WebError(f'Web extra asset is missing: {declaration}')
+            paths=sorted(source.rglob('*')) if source.is_dir() else [source]
+            for source_file in paths:
+                name=source_file.relative_to(game).as_posix()
+                source_file=safe_file(game,name)
+                if source_file.is_dir():continue
+                if not source_file.is_file():raise WebError(f'Web extra asset must be a regular file: {name}')
+                if name in ('manifest.json','game.wasm','index.html','loader.js','platform.js','thumbnail.png','mobile.js','service-worker.js','app.webmanifest'):raise WebError(f'Extra asset collides with reserved package file: {name}; place it under assets/')
+                target_file=safe_file(out,name);target_file.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source_file,target_file)
         cache_hash=hashlib.sha256(b''.join(p.read_bytes() for p in sorted(out.rglob('*')) if p.is_file())).hexdigest()
         files=[p.relative_to(out).as_posix() for p in sorted(out.rglob('*')) if p.is_file()]+['service-worker.js','manifest.json']
         worker=(ROOT/'templates/web/service-worker.js').read_text().replace('{{cache}}',cache_hash).replace('{{files}}',json.dumps(files))
@@ -203,6 +223,7 @@ def directory_publish(package,destination):
     spec=importlib.util.spec_from_file_location('be2_catalog',ROOT/'templates/catalog/browser_catalog.py')
     feed=importlib.util.module_from_spec(spec);spec.loader.exec_module(feed)
     cards=''.join(feed.card(g,prefix='')['card'] for g in catalog)
+    for game in catalog:feed.write_details(destination,game['id'],game['title'],game['description'],game['presentation'],game['networking'],game,game.get('native_download'),prefix='')
     page=feed.enhance_page((ROOT/'templates/catalog/index.html').read_text().replace('{{cards}}',cards))
     (destination/'index.html').write_text(page)
     for name in ('app.js','style.css','catalog.css'):shutil.copy2(ROOT/'templates/catalog'/name,destination/name)

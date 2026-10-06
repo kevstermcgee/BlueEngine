@@ -1,0 +1,107 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {
+    "battery": [
+      {
+        "file": "sfx-battery-0.wav",
+        "checksum": "31211fa5182ab0a2",
+        "frames": 33075,
+        "peak": 0.28259677,
+        "rms": 0.10503848,
+        "dc": 0.0000050768967,
+        "seam_jump": 0.0
+      }
+    ],
+    "shutter": [
+      {
+        "file": "sfx-shutter-0.wav",
+        "checksum": "580495bcf3af77e6",
+        "frames": 30870,
+        "peak": 0.33,
+        "rms": 0.07287581,
+        "dc": 8.2247595e-9,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "sfx-shutter-1.wav",
+        "checksum": "60445372d5f04f0e",
+        "frames": 30870,
+        "peak": 0.33,
+        "rms": 0.07989818,
+        "dc": 2.737649e-7,
+        "seam_jump": 0.0
+      }
+    ],
+    "step": [
+      {
+        "file": "sfx-step-0.wav",
+        "checksum": "d3ded1b7f0c537f6",
+        "frames": 7056,
+        "peak": 0.15,
+        "rms": 0.030295609,
+        "dc": 0.00034720005,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "sfx-step-1.wav",
+        "checksum": "d8bc6295dc7fe2be",
+        "frames": 7056,
+        "peak": 0.15,
+        "rms": 0.032139406,
+        "dc": 0.0002512643,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "sfx-step-2.wav",
+        "checksum": "d3375c39cbb05776",
+        "frames": 7056,
+        "peak": 0.15,
+        "rms": 0.032247476,
+        "dc": 0.000019748397,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "sfx-step-3.wav",
+        "checksum": "1565a8b506fe7e3a",
+        "frames": 7056,
+        "peak": 0.15,
+        "rms": 0.0304334,
+        "dc": 0.000016112868,
+        "seam_jump": 0.0
+      }
+    ],
+    "success": [
+      {
+        "file": "sfx-success-0.wav",
+        "checksum": "f65f439e2c8374bc",
+        "frames": 55125,
+        "peak": 0.37091023,
+        "rms": 0.061823804,
+        "dc": 0.0000037292905,
+        "seam_jump": 0.0
+      }
+    ]
+  },
+  "music": {
+    "orbit": {
+      "file": "music-orbit.wav",
+      "checksum": "dde9c35dc0ce9ee9",
+      "frames": 235200,
+      "peak": 0.49562013,
+      "rms": 0.094686255,
+      "dc": 3.8550485e-7,
+      "seam_jump": 0.001095064
+    },
+    "signal": {
+      "file": "music-signal.wav",
+      "checksum": "41521c49aa85227f",
+      "frames": 235200,
+      "peak": 0.21171461,
+      "rms": 0.027205799,
+      "dc": 7.671472e-7,
+      "seam_jump": 0.0
+    }
+  },
+  "music_scale": 1.0
+}

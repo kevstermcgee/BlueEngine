@@ -12,6 +12,20 @@ class PackageTests(unittest.TestCase):
         self.manifest={'schema_version':1,'runtime_abi':1,'id':'test-game','presentation':'2d','networking':'offline','title':'Test Garden','description':'Test','targets':['web'],'input':['keyboard'],'engine_revision':'a'*40,'game_revision':'b'*40,'built_at_epoch':1,'compatibility':{},'native_download':None,'thumbnail':'thumbnail.png','play':'index.html','verification':{'hash':'1'*16,'outcome':'won'},'file_sha256':{p.name:web.hashlib.sha256(p.read_bytes()).hexdigest() for p in self.dist.iterdir()}}
         self.stamp()
     def stamp(self):(self.dist/'manifest.json').write_text(json.dumps(self.manifest))
+    def test_open_ended_routes_require_explicit_meaningful_evidence(self):
+        proof={'hash':'1'*16,'outcome':'playing','ticks':1200,'purpose':'walk across streamed chunks'}
+        self.manifest['verification']=proof;self.stamp();web.integrity(self.dist)
+        for bad in [proof|{'ticks':0},proof|{'ticks':True},proof|{'purpose':''},proof|{'outcome':'lost'},proof|{'hash':'bogus'}]:
+            self.manifest['verification']=bad;self.stamp()
+            with self.subTest(bad=bad),self.assertRaises(web.WebError):web.integrity(self.dist)
+    def test_directory_publication_links_titles_to_play_and_download_details(self):
+        out=self.root/'library';self.manifest['native_download']='https://example.test/game.exe';self.stamp()
+        web.directory_publish(self.dist,out)
+        page=(out/'index.html').read_text();details=(out/'games/test-game/index.html').read_text()
+        self.assertIn('class="game-title" href="games/test-game/"',page)
+        self.assertIn('href="../../test-game/index.html"',details)
+        self.assertIn('https://example.test/game.exe',details)
+        self.assertIn('aria-pressed="false"',page);self.assertIn('<svg',page)
     def test_hash_missing_and_source_fallback_are_rejected(self):
         web.integrity(self.dist)
         (self.root/'game.wasm').write_bytes((self.dist/'game.wasm').read_bytes());(self.dist/'game.wasm').unlink()
@@ -42,6 +56,18 @@ class PackageTests(unittest.TestCase):
         self.assertEqual((out/'test-game/private').read_text(),'keep')
 
 class RequirementsTests(unittest.TestCase):
+    def test_explicit_web_binary_features_and_identity_are_validated(self):
+        game=web.ROOT/'assets/games/leo'
+        project=json.loads((game/'game.project.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            for change in [{},{'features':[]},{'features':['client,offline']},{'identity':'../identity.json'},{'binary':'../game'},{'feature':['client']}]:
+                value=project|{'web_build':project['web_build']|change}
+                (root/'game.project.json').write_text(json.dumps(value))
+                if change:
+                    with self.subTest(change=change),self.assertRaisesRegex(web.WebError,'web_build'):web.validate_project(root)
+                else:self.assertEqual(web.validate_project(root)['web_build']['binary'],'leo-browser')
+
     def test_combinations_have_actionable_diagnostics(self):
         project={'schema_version':1,'id':'tiny-station','presentation':'2d','targets':['web','windows'],'networking':'offline','input':['mouse','keyboard'],'description':'Manage a station','session_minutes':10,'complexity':'low'}
         with tempfile.TemporaryDirectory() as directory:
@@ -114,6 +140,8 @@ class UnifiedCatalogTests(unittest.TestCase):
             self.assertIn('data-presentation="hybrid"',merged[0]['card']);self.assertEqual(merged[0]['card'].count('data-star='),1)
             self.assertIn('&lt;Unsafe&gt;',merged[1]['card'])
             self.assertTrue((root/'out/web/catalog.json').is_file())
+            self.assertEqual((root/'out/catalog.css').read_bytes(),(web.ROOT/'templates/catalog/catalog.css').read_bytes())
+            self.assertTrue((root/'out/games/browser-only/index.html').is_file())
 
 
 @unittest.skipUnless(web.os.environ.get('BE2_BROWSER_FIXTURE'), 'Set BE2_BROWSER_FIXTURE to a built web package for real browser negative tests')

@@ -352,6 +352,10 @@ fn run() -> Result<()> {
                 "set_visible":"interactable presentation only; never changes eligibility or collision",
                 "profiles":"one shared validated movement profile; spawns use feet coordinates and round-robin server IDs",
                 "map":"relative child file inside game directory; loaded content participates in fingerprint",
+                "authoring":"add-interactable GAME ID --at=X,Y,Z --write creates matching material/node/collider/entity/game records; apply a translate patch selecting node, collider and entity together to edit without recalculating bounds",
+                "presentation":"optional presentation: objective/success/failure wording, counters {visible,label,units,format:number|clock}, RGBA palette, hud {scale:0.75..1.5,margin:8..48,width:240..900,crosshair}; reads authoritative state, missing preserves defaults",
+                "audio":"optional presentation.audio: bundle child path, cues [{cue,on:{kind:counter_changed|counter_at_or_below|completed|failed|restarted},volume}], music {LAYER:{level,counter:{name,from,to}}}; see docs/AUDIO.md; game-validate checks configured assets, headless authority opens no device",
+                "physical_scenarios":"game-explore GAME --scenario=NEW.json routes around current colliders with the active profile and verifies a win in shared simulation; route:true enables replanning on walk_to; wait_ticks:1 separates repeated presses after blocking walks; be2 --game GAME --scenario SCENARIO --capture NEW_DIR renders the same steps",
                 "unsupported":["recursive events","custom weapon actions","per-player inventory"]
             })
         ),
@@ -361,7 +365,19 @@ fn run() -> Result<()> {
             println!("{}", json!({"ok":true,"directory":arg(1)?}));
         }
         "game-validate" => {
-            let world = vesper3d::viewer::game::GameDocument::load(Path::new(arg(1)?))?.world()?;
+            let loaded = vesper3d::viewer::game::GameDocument::load(Path::new(arg(1)?))?;
+            if let Some(audio) = loaded
+                .document
+                .presentation
+                .as_ref()
+                .and_then(|p| p.audio.as_ref())
+            {
+                let path = audio.bundle_path(None)?;
+                let bank = vesper3d::viewer::devkit::audio_project::AudioBundle::load(&path)?;
+                audio.validate_bank(&bank)?;
+                bank.read_audio(&path)?;
+            }
+            let world = loaded.world()?;
             println!(
                 "{}",
                 json!({"ok":true,"content_hash":format!("{:016x}",world.content_hash),"state":world.game.as_ref().unwrap().state()})
@@ -765,6 +781,40 @@ fn run() -> Result<()> {
                        "signature": format!("{:016x}", signature(&spec)), "files": files})
             );
         }
+        "audio" => {
+            use vesper3d::viewer::devkit::audio_project::{self, AudioBundle, AudioProject};
+            let expected = match arg(1)? {
+                "describe" => 2,
+                "validate" | "check" => 3,
+                "render" => 4,
+                _ => 0,
+            };
+            if a.len() != expected {
+                return Err("Expected audio describe | validate PROJECT | render PROJECT NEW_DIRECTORY | check BUNDLE".into());
+            }
+            let report = match arg(1)? {
+                "describe" => audio_project::describe(),
+                "validate" => {
+                    let project = AudioProject::load(Path::new(arg(2)?))?;
+                    json!({"ok":true,"effects":project.effects.keys().collect::<Vec<_>>(),"has_music":project.music.is_some()})
+                }
+                "render" => {
+                    let path = Path::new(arg(2)?);
+                    let project = AudioProject::load(path)?;
+                    let rendered = project.render(path.parent().unwrap_or(Path::new(".")))?;
+                    rendered.write_new(Path::new(arg(3)?))?;
+                    json!({"ok":true,"directory":arg(3)?,"bank":rendered.manifest})
+                }
+                "check" => {
+                    let root = Path::new(arg(2)?);
+                    let bank = AudioBundle::load(root)?;
+                    bank.read_audio(root)?;
+                    json!({"ok":true,"bank":bank,"evidence":"checksums, PCM format and layer lengths; no device audibility claim"})
+                }
+                _ => return Err("Expected audio describe|validate|render|check".into()),
+            };
+            println!("{}", serde_json::to_string(&report)?);
+        }
         "ambient-music" => {
             use vesper3d::viewer::devkit::synth::{
                 ambient_loop, ambient_spec_for, peak, rms, wav_bytes, AmbientSpec, RATE,
@@ -923,7 +973,29 @@ fn run() -> Result<()> {
         }
         "lint" => {
             let d = MapDocument::load(Path::new(arg(1)?))?;
-            let rep = vesper3d::viewer::lint::lint_map(&d, false, &[]);
+            let (mut game, mut scenario) = (None, None);
+            for flag in &a[2..] {
+                if let Some(path) = flag.strip_prefix("--game=") {
+                    if game.replace(path).is_some() {
+                        return Err("Duplicate --game".into());
+                    }
+                } else if let Some(path) = flag.strip_prefix("--scenario=") {
+                    if scenario.replace(path).is_some() {
+                        return Err("Duplicate --scenario".into());
+                    }
+                } else {
+                    return Err("Use lint MAP [--game=GAME --scenario=SCENARIO]".into());
+                }
+            }
+            let rep = match (game, scenario) {
+                (None, None) => vesper3d::viewer::lint::lint_map(&d, false, &[]),
+                (Some(game), Some(scenario)) => vesper3d::viewer::lint::lint_game(
+                    &d,
+                    &vesper3d::viewer::game::GameDocument::load(Path::new(game))?,
+                    &vesper3d::viewer::scenario::load_scenario(Path::new(scenario))?,
+                )?,
+                _ => return Err("Game-aware lint requires both --game and --scenario".into()),
+            };
             println!("{}", serde_json::to_string_pretty(&rep)?);
             if !rep.ok {
                 std::process::exit(1);
@@ -1013,6 +1085,7 @@ fn run() -> Result<()> {
                     "final_checksum": format!("0x{:016x}", last_chk),
                     "assertions": report.assertions,
                     "players": report.players,
+                    "reachable_targets": report.reachable_targets,
                 })
             );
             if !report.ok {

@@ -30,9 +30,20 @@ try{
  const initial=await evaluate('Array.from(document.querySelectorAll("#grid .card")).map(c=>({id:c.dataset.id,browser:c.dataset.browser,native:c.dataset.native}))');
  if(new Set(initial.map(g=>g.id)).size!==initial.length)throw new Error('Duplicate game IDs in unified feed');
  if(!initial.some(g=>g.browser==='true')||!initial.some(g=>g.native==='true'))throw new Error('Feed must include browser and native games together');
+ const details=await evaluate(`Promise.all(Array.from(document.querySelectorAll('#grid .card')).map(async card=>{
+   const link=card.querySelector('.game-title');if(!link)throw new Error('Missing title link: '+card.dataset.id);
+   const response=await fetch(link.href);if(!response.ok)throw new Error('Missing details page: '+link.href);
+   const page=new DOMParser().parseFromString(await response.text(),'text/html');
+   if(card.dataset.browser==='true'&&!page.querySelector('a.play'))throw new Error('Details missing browser play: '+card.dataset.id);
+   if(card.dataset.native==='true'&&!Array.from(page.querySelectorAll('a.dl')).some(a=>!a.classList.contains('play')))throw new Error('Details missing download: '+card.dataset.id);
+   return {id:card.dataset.id,url:link.href};
+ }))`);
  const chosen=initial.at(-1).id;
+ const styleBefore=await evaluate(`(()=>{const button=document.querySelector('[data-star="${chosen}"]');const title=button.closest('.card-heading').querySelector('h2');return {fill:getComputedStyle(button.querySelector('path')).fill,gap:button.getBoundingClientRect().left-title.getBoundingClientRect().right};})()`);
+ if(styleBefore.fill!=='none'||styleBefore.gap<20)throw new Error('Unselected star is not empty or is too close to title');
  await evaluate(`document.querySelector('[data-star="${chosen}"]').click()`);
  if(await evaluate('document.querySelector("#grid .card").dataset.id')!==chosen)throw new Error('Star did not pin game first');
+ if(await evaluate(`getComputedStyle(document.querySelector('[data-star="${chosen}"] path')).fill`)!=='rgb(255, 206, 98)')throw new Error('Selected star did not become yellow');
  await navigate('Page.reload');
  if(await evaluate(`document.querySelector('[data-star="${chosen}"]').getAttribute('aria-pressed')`)!=='true'||await evaluate('document.querySelector("#grid .card").dataset.id')!==chosen)throw new Error('Favorite did not persist/pin after reload');
  await evaluate('document.getElementById("distribution").value="browser";document.getElementById("distribution").dispatchEvent(new Event("change"))');
@@ -48,7 +59,7 @@ try{
  if(await evaluate('document.documentElement.scrollWidth>innerWidth'))throw new Error('Mobile feed overflows horizontally');
  const screen=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});await writeFile(screenshotPath,Buffer.from(screen.data,'base64'));
  if(errors.length)throw new Error(JSON.stringify(errors));
- const report={ok:true,games:initial.length,browser_games:initial.filter(g=>g.browser==='true').length,native_games:initial.filter(g=>g.native==='true').length,unique_ids:true,favorite_pins:true,favorite_reload:true,failed_write_preserves_value:true,filters:true,mobile_layout:true,errors};
+ const report={ok:true,games:initial.length,browser_games:initial.filter(g=>g.browser==='true').length,native_games:initial.filter(g=>g.native==='true').length,unique_ids:true,detail_pages:details.length,outline_star:true,yellow_selected_star:true,title_star_spacing:true,favorite_pins:true,favorite_reload:true,failed_write_preserves_value:true,filters:true,mobile_layout:true,errors};
  await writeFile(reportPath,JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }catch(e){await writeFile(reportPath,JSON.stringify({ok:false,error:String(e),errors}));process.exitCode=1;console.error(e);}
 finally{clearTimeout(deadline);socket?.close();browser.kill();await new Promise(ok=>setTimeout(ok,300));await rm(profile,{recursive:true,force:true});}

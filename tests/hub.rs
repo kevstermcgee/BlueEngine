@@ -7,7 +7,7 @@ use std::net::{SocketAddr, UdpSocket};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicBool, AtomicU16, Ordering};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 use vesper3d::viewer::net::{client_transport, TransportProfile};
@@ -36,16 +36,25 @@ const HUB_BIN: &str = env!("CARGO_BIN_EXE_be2-hub");
 /// A fresh run of `n + 1` consecutive loopback UDP ports that are free right now (the hub's, then the pool).
 /// Tests in one process get disjoint runs; the bounded search skips ports something else holds.
 fn free_ports(n: u16) -> u16 {
+    const SLOTS: u16 = 79;
+    const STRIDE: u16 = 24;
+    assert!(n < STRIDE);
     static NEXT: AtomicU16 = AtomicU16::new(0);
+    static START: OnceLock<u16> = OnceLock::new();
     // Mix the clock into the start so two test processes started together (several suites on one machine) rarely
     // pick the same run: the pid alone gave only 40 distinct starts.
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0, |d| d.subsec_nanos());
-    let seed = ((std::process::id().wrapping_mul(2_654_435_761) ^ nanos) % 1_900) as u16;
-    for _ in 0..200 {
+    // Pick one rotation for the process, not a new random offset per call: independent
+    // offsets defeated NEXT's disjointness and raced between probe and child startup.
+    let seed = *START.get_or_init(|| {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.subsec_nanos());
+        ((std::process::id().wrapping_mul(2_654_435_761) ^ nanos) % u32::from(SLOTS)) as u16
+    });
+    for _ in 0..SLOTS {
         let step = NEXT.fetch_add(1, Ordering::SeqCst);
-        let base = 25_000 + (seed + step * 24) % 1_900;
+        assert!(step < SLOTS, "exhausted disjoint loopback port slots");
+        let base = 25_000 + ((seed + step) % SLOTS) * STRIDE;
         let held: Vec<_> = (0..=n)
             .filter_map(|i| UdpSocket::bind(("127.0.0.1", base + i)).ok())
             .collect();
@@ -126,6 +135,7 @@ impl TestHub {
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
         let report_dir = dir.join("reports");
+        let (ready, started) = std::sync::mpsc::sync_channel(1);
         let thread = std::thread::spawn(move || {
             let text = std::fs::read_to_string(&conf_path).unwrap();
             let cfg = parse_config(&text, conf_path.parent().unwrap()).unwrap();
@@ -152,8 +162,14 @@ impl TestHub {
                 config_path: Some(conf_path),
             };
             let mut hub = Hub::new(opts, registry, spawner(), Box::new(info));
+            ready.send(()).unwrap();
             hub::serve(&socket, &mut hub, &flag).unwrap();
         });
+        // ProcessInfo starts real executables. Its startup can outlast a short UDP
+        // read timeout on Windows; rate tests must begin after registry initialization.
+        started
+            .recv_timeout(Duration::from_secs(10))
+            .expect("hub initialization");
         TestHub {
             addr: ([127, 0, 0, 1], base).into(),
             pool: base + 1..base + 1 + pool,
@@ -860,7 +876,8 @@ impl HubProcess {
         });
         assert!(
             up && p.child.try_wait().unwrap().is_none(),
-            "be2-hub did not start"
+            "be2-hub did not start on port {base}; exit: {:?}",
+            p.child.try_wait().unwrap()
         );
         p
     }
@@ -1092,25 +1109,17 @@ fn the_hub_binary_refuses_to_start_on_a_taken_port_and_skips_games_that_cannot_r
 
     // A missing server binary and a server whose --info fails are skipped; the good game still runs.
     let base = free_ports(2);
-    let conf = dir.path().join("two.conf");
-    std::fs::write(
-        &conf,
-        format!(
-            "[hub]\nlisten = 127.0.0.1:{base}\npool_size = 2\nreport_dir = {}\n\n\
+    let config = format!(
+        "[hub]\nlisten = 127.0.0.1:{base}\npool_size = 2\nreport_dir = {}\n\n\
              [game toy-footrace]\nserver = {TOY_SERVER}\npublic = on\nauto_start = 0\n\n\
-             [game ghost]\nserver = {}/does-not-exist\n\n[game broken]\nserver = /bin/false\n",
-            dir.path().join("r").display(),
-            dir.path().display()
-        ),
-    )
-    .unwrap();
-    let mut child = Command::new(HUB_BIN)
-        .arg("--config")
-        .arg(&conf)
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
+             [game ghost]\nserver = {}/does-not-exist\n\n[game broken]\nserver = {HUB_BIN}\n",
+        dir.path().join("r").display(),
+        dir.path().display()
+    );
+    // The hub binary is an executable whose --info fails on either OS. Reuse the
+    // readiness/RAII fixture: immediate Windows ICMP errors must not exhaust a
+    // fixed retry count before the new process has initialized, or leak it on panic.
+    let _hub = HubProcess::start_with_config(dir.path(), base, 2, &config, &[]);
     let sock = UdpSocket::bind("127.0.0.1:0").unwrap();
     sock.set_read_timeout(Some(Duration::from_millis(200)))
         .unwrap();
@@ -1146,8 +1155,6 @@ fn the_hub_binary_refuses_to_start_on_a_taken_port_and_skips_games_that_cannot_r
             ..
         }
     ));
-    let _ = child.kill();
-    let _ = child.wait();
 }
 
 #[test]

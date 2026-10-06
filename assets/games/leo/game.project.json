@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "id": "leo",
+  "presentation": "3d",
+  "runtime": "portable",
+  "targets": [
+    "web",
+    "linux",
+    "windows"
+  ],
+  "networking": "offline",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "description": "Wander with Leo through an endless storybook meadow, beneath a sky that always brings another morning.",
+  "session_minutes": 12,
+  "complexity": "medium",
+  "mobile_controls": {
+    "layout": "dpad",
+    "action_label": "Hop"
+  },
+  "web_build": {
+    "binary": "leo-browser",
+    "features": [
+      "portable-client"
+    ],
+    "identity": "assets/browser-identity.json"
+  }
+}

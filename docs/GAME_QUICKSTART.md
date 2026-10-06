@@ -34,6 +34,13 @@ input accumulator, deterministic-replay and capture helpers, saves, screen-feel,
      Where there is no desktop (CI) those checks report `skipped: no desktop`, never a silent pass.
      Linux gets a `.desktop` file, macOS a `.command`. `scripts/blue package` and `scripts/blue shortcut`
      run the halves separately.
+   - Smoke verification runs a fresh temporary copy containing only `ship.json`'s declared
+     payload, from that directory. It checks recorded file hashes before launching and keeps
+     captures under `.blue-check/`; existing player settings and saves in `dist/` stay untouched.
+     This detects undeclared files and working-directory assumptions. It is not an OS sandbox:
+     use `devkit::runtime_assets("assets", Path::new(env!("CARGO_MANIFEST_DIR")))` to disable
+     source-tree fallback whenever `ship.json` or `BLUEENGINE_PACKAGE_ROOT` marks a package.
+     A missing packaged asset must stop startup with the returned error.
 3. You exercised the changed controls and looked at real frames of the shipped program, and you say what
    you did not verify.
 
@@ -83,12 +90,17 @@ Three switches unlock the green exit; press E there to complete the objective.
 Press E again to restart the loaded game; online, any joined player may restart.
 Escape opens the menu; F5 quick-saves and F9 quick-loads (see [save states](SAVE_STATE.md)).
 The committed example is `assets/games/three-switches/game.json`.
+For a small timed puzzle with a shutter, routed movement and repeated calibration, see the
+[Observatory Night Watch authoring recipe](../assets/games/observatory/README.md).
 
 `game.json` references a sibling/child map. Edit movement values in `player_profile`,
 feet coordinates/yaw in `spawn_points`, initial `counters`, `interactables` and `rules`.
 Metres, +Y up, radians, yaw zero faces -Z. One profile per game; spawns cycle by player ID.
 Use native map tools for geometry. Interactable IDs must match static axis-aligned box
 node/collider/entity IDs with equal bounds. Run game-validate after every edit.
+To move a canonical box, use an `apply` patch with `op:"translate"`, selecting its node, collider and entity
+together and supplying one `delta`. The toolkit preserves their exact bounds agreement, including fractional
+translations. Partial selections and inconsistent records still fail game validation.
 
 A rule example:
 ```json

@@ -1,10 +1,170 @@
 # Audio: generated sound, generated ambient music, and settings that survive a relaunch
 
-Every sound a game built on BlueEngine plays is computed, not recorded (`devkit::synth`): an AI agent
+## Normal authoring path: a named audio project
+
+Start with `be2-tools audio describe`, then edit the small reference
+[`project.json`](../assets/audio/observatory/project.json). No Rust source exploration is needed for
+presets, imported clips, authored polyphonic stereo music or adaptive layers:
+
+```sh
+be2-tools audio validate project.json
+be2-tools audio render project.json NEW_BUNDLE_DIRECTORY
+be2-tools audio check NEW_BUNDLE_DIRECTORY
+cargo run --profile fast --example audio_preview -- NEW_BUNDLE_DIRECTORY
+python tools/audio_report.py NEW_BUNDLE_DIRECTORY/preview-mix.wav --loop --fail-on-issues
+```
+
+`validate` checks schema/ranges/resource estimates; `render` also reads and validates imported audio,
+computes the PCM assets and publishes `bank.json` last in an exclusively reserved directory. It fails
+without replacing an existing bundle. `check` rereads every runtime file and verifies PCM format,
+sample counts, checksums and equal music-layer lengths. Keep `project.json` in source control, render
+once before packaging, and ship the whole bundle. Edit audio data and rerender to a new directory;
+the runtime executable needs no rebuild and performs no music synthesis at startup. Bundles are
+versioned data, not an opaque compiled cache. Checksums detect stale/corrupt files; they are not
+cryptographic signatures. Rendering is repeatable on one platform; floating-point DSP does not promise
+identical bytes across operating systems.
+
+The schema is version 1. Unknown fields, invalid names and out-of-range values fail explicitly:
+
+- `effects` maps names to `{gain, source}`. A source is `{kind:"preset", preset:"footstep"}` (all
+  meaningful variants), `{kind:"score", score:...}`, or `{kind:"wav", file:"relative/path.wav"}`.
+  Imported clips must be nonempty, untruncated 44.1 kHz mono/stereo PCM16. Convert other encodings
+  before import; channels are preserved. Import paths cannot be absolute or contain `..`.
+- `music` is optional: `{kind:"generated", bpm, bars, root_midi, minor}` produces `base`, `melodic`,
+  `lead`; `{kind:"ambient", seconds, root_midi, minor, chords, brightness}` produces `ambient`;
+  `{kind:"score", score:...}` produces the score's named layers.
+- Imported looping layers use `{kind:"clips", seconds:24, crossfade_seconds:1,
+  layers:{birds:{file:"dawn.wav", gain:0.45}}}`. Files are project-relative strict
+  44.1-kHz mono/stereo PCM16; stereo is preserved and mono becomes stereo. All
+  outputs have exactly `seconds` worth of frames. Supply at least loop length plus
+  crossfade in each source: the first crossfade span blends the source continuation
+  after the loop end back into its beginning, retaining normal adjacent samples
+  across the wrap. Fade is 0.005..2 seconds and at most half the loop. Loop length
+  is 0.1..180 seconds; 1..16 named layers share the existing stereo-duration budget,
+  safe path rules and worst-subset headroom. Nothing resamples or silently repeats
+  a short input. Leo's `assets/games/leo/assets/audio-source/nature.json` is a
+  recorded-ambience example; its separate `music.json` is an original adaptive score.
+- A score has `bpm` (40–240), `beats`, and `layers`. Each layer has a unique `name`, `gain` (0.001–1),
+  `instrument` and `notes`. Notes use `at` and `beats` in beats, `midi` (12–108), `velocity` (0.001–1),
+  and optional equal-power `pan` (-1 left to +1 right). Notes must fit the score; music release tails
+  wrap, while effect scores retain their complete final release. Chords are simultaneous notes.
+- Instruments default to sine, 8 ms attack, 80 ms decay, 0.6 sustain and 120 ms release. Opt in to
+  triangle, PolyBLEP saw/square, explicit ADSR seconds and `lowpass_hz` (40–20,000). Velocity and gain
+  preserve dynamics; notes are not individually normalized.
+
+The project `headroom` defaults to 0.85 (allowed 0.1–0.95). Effects share attenuation across their
+variants; music uses one attenuation factor based on the sum of absolute layer samples, so *any*
+subset at levels 0–1 stays under the ceiling, even when the full signed mix cancels. Relative layer
+balance survives attenuation. Simultaneous effect voices plus music can still sum beyond that ceiling
+in the legacy playback backend; this is asset headroom, not a final real-time master limiter.
+Each file records peak, RMS, DC and boundary jump. Empty/silent output, nonfinite samples or DC >0.02
+fail rendering. Bounds: 64 effects, 16 score layers, 4096 notes and 600 seconds of note synthesis per
+score, a conservative project budget of 180 stereo-seconds, at most 180 seconds per imported clip,
+64 MiB rendered files. Split large soundscapes into banks instead of disabling bounds.
+
+Runtime integration after creating the window:
+
+```rust,no_run
+use vesper3d::viewer::kit::{AudioBank, AudioState};
+# async fn example() -> Result<(), String> {
+let mut audio = AudioBank::load("assets/audio/bank", false, 0.8, 0.5).await?;
+audio.sounds.poll().await; // each frame: bounded decoder submissions
+if audio.sounds.state() == AudioState::Ready {
+    audio.play("shutter", 1.0)?; // once, after a confirmed gameplay event
+    audio.music(1.0 / 60.0, &[("orbit", 0.65), ("signal", 0.3)])?;
+}
+# Ok(()) }
+```
+
+`play` cycles cue variants and rejects unknown names, invalid volumes and incomplete/failed loads.
+`music` validates the whole named mix before changing it; omitted layers fade to zero. Supply real
+frame seconds. `sounds.sfx_volume`/`music_volume` accept the existing settings' effective levels;
+`sounds.stop_music()` stops loops and resets fades. `sounds.state()` distinguishes Loading, Ready,
+Muted, Empty and Failed; `sounds.errors()` gives worker/file/decoder diagnostics. Muted at startup
+skips asset loading; load again to enable it later, or start unmuted with settings volumes at zero.
+Missing files or checksum mismatches fail the entire worker result before decoder submission.
+Custom-game project checks also run `audio check` for each `assets/audio/*/bank.json`.
+The loop option adds no device or gameplay dependency; existing projects remain valid.
+Existing `SoundBank::start` and its indexed APIs remain supported; `start_checked` adds a fallible
+render closure. Its music-only banks now become ready, and worker failures become explicit.
+
+`audio_report.py --loop` checks the wrapped boundary using its discontinuity detector rather than
+flagging valid nonzero endpoints as one-shot clicks. It reports sample jump and whether the seam scan
+was available (very short files remain unresolved). Internal clicks, clipping, DC, silence and
+approximate loudness still apply. Use `--json` for machine-readable evidence or `--spectrogram OUT.png`
+for inspection. These measurements do not assess composition or perceived quality.
+
+This milestone uses the existing playback backend. Ready means checked assets submitted to its
+decoder, not audible-device acknowledgement. Loop starts are separate backend calls, not a promised
+sample-clock group. Panning and pitch here are authored into PCM; live spatial/distance or per-voice
+pitch control remains unsupported. The headless project renderer never opens an audio device.
+Custom instruments can still use the lower-level `devkit::synth` API below.
+
+BlueEngine can compute a game's sound without recordings (`devkit::synth`): an AI agent
 without a microphone can give a new game a full soundscape — sound effects and now background music —
 in a few calls, and measure what came out (`peak`, `rms`, `spectral_centroid`, ...) instead of listening
 to it. `kit::audio::SoundBank` plays it: sound effects by index, and looping music stems that fade with
 the action (`start_music`/`update_music`).
+
+## Stock GameDocument audio
+
+The stock runner and generated stock games now load checked named bundles. Opt in with
+`presentation.audio` in `game.json`; games without it retain the silent stock defaults:
+
+```json
+{"bundle":"assets/audio", "cues":[
+  {"cue":"shutter", "on":{"kind":"counter_changed","counter":"shutter_cycles"}},
+  {"cue":"battery", "on":{"kind":"counter_at_or_below","counter":"battery","value":5}},
+  {"cue":"success", "on":{"kind":"completed"}},
+  {"cue":"battery", "on":{"kind":"failed"}},
+  {"cue":"shutter", "on":{"kind":"restarted"}, "volume":0.5}
+], "music":{
+  "orbit":{"level":0.65},
+  "signal":{"level":0.85,"counter":{"name":"calibration","from":0,"to":3}}
+}}
+```
+
+`bundle` is a child directory relative to the loaded game document, including symlink confinement;
+launching from another working directory does not change it. Prefer `assets/audio` for generated
+games: their existing packaging includes the assets directory. Render the project there before
+shipping. `game-validate GAME` and generated `scripts/check.py` verify configured names, checksums,
+PCM and layer lengths. `GameDocument::load`/headless authority validate configuration without needing
+audio assets or an audio device. A game constructed in Rust supplies `GameOptions::audio_root`.
+
+Cues have a name, event and optional volume (default 1, finite 0–1). Events are `counter_changed`,
+`counter_at_or_below` (crossing from above, once per crossing), `completed`, `failed` and `restarted`.
+At most 64 bindings. Counter names must be declared; cue/layer names must exist in the checked bank.
+These bindings observe results; they do not add actions or change interaction eligibility.
+Local observation runs after each executed fixed tick, preserving distinct transitions during
+catch-up. Online observation follows received authoritative states: snapshots can omit intervening
+events, so this is not an acknowledged online event stream. No predicted interaction cue is played.
+Joining establishes a baseline. Loading a save rebases it without replaying history; restarting
+plays only the restart binding, rather than cues for counters returning to their defaults.
+
+Music maps up to 16 layer names to a level (default 1). An optional counter scales it linearly:
+`from` means zero, `to` means the configured level, with clamping beyond both endpoints. Descending
+ranges are supported; endpoints must differ and remain within counter limits. Menus fade local music
+toward zero; finished games do too unless `play_when_finished:true`. Loops retain their timeline while
+silent and stop when the runner exits. Music and cues read authoritative state, never duplicate rules.
+
+Esc > Settings exposes Sound/Music toggles, persisted through existing `Settings` storage. A music
+toggle is offered only when layers are configured. This menu offers no export control without an export
+provider. `--settings FILE` selects storage, otherwise `settings.json` beside the executable.
+`--mute` skips asset/device loading for that run and still consumes transitions, avoiding a later cue
+backlog; audio settings controls are hidden for that explicitly muted run. Normal loading checks every asset before gameplay starts; missing/corrupt assets or names
+fail explicitly. Stock scripted runs and newly generated stock entry points exit nonzero on failure.
+Older generated entry points should handle their returned `Result` explicitly for automation.
+
+Use [Observatory's stock audio variant](../assets/games/observatory/README.md#stock-audio) as an end-to-end
+example. `--capture` records audio readiness, submitted cue names and authoritative layer targets in
+`run.json`; it explicitly does not certify physical audibility. Existing JSON needs no migration.
+Rust literals specifying every `StockPresentation`/`GameOptions` field can use `..Default::default()`
+for the new optional configuration. The backend limitations above still apply.
+
+CI verifies the actual stock renderer and playback submissions on Linux with an isolated virtual
+display and a null ALSA sink (`tools/stock_audio_smoke.py`). It checks loss/restart/success, missing-asset
+failure, and explicit muted bypass, retaining captures and `run.json` as artifacts. It never opens a
+window or plays sound on a developer's desktop; Windows default/headless checks remain required.
 
 ## Generating ambient background music
 
@@ -80,8 +240,6 @@ unchanged, so no existing game is forced to adopt it.
 - No MP3 or other lossy encoding: the download is the WAV the engine already generates. A real MP3
   encoder is a new, nontrivial dependency (either a linked codec library for every shipped game, or
   shelling out to a system `ffmpeg` a player is not guaranteed to have); this was deliberately deferred.
-- The stock (`GameDocument`) runtime has no audio pipeline at all yet, generated or otherwise, so there
-  is nothing yet to attach settings or a download button to there. Settings/Records, `beside_exe`,
-  `downloads_dir` and `unique_path` are path-agnostic and ready to use the day it does.
+- Stock audio is opt-in as described above; it has settings toggles but no music export provider yet.
 - `downloads_dir` returns the plain default location on every platform; a Linux user's custom
   `XDG_DOWNLOAD_DIR` in `user-dirs.dirs` is not consulted.

@@ -1226,19 +1226,38 @@ server = bin/spooky-kart-server
     }
 
     impl Scripted {
+        // These fixtures name fictional servers with Unix-rooted paths. Windows config
+        // resolution attaches the config directory's drive to such paths; compare the
+        // same rooted identity in the fake source without changing production resolution.
+        fn fixture_path(path: &Path) -> PathBuf {
+            #[cfg(windows)]
+            if path.has_root() {
+                return path
+                    .components()
+                    .filter(|c| !matches!(c, std::path::Component::Prefix(_)))
+                    .collect();
+            }
+            path.to_path_buf()
+        }
+
         pub fn put(&mut self, path: &str, size: u64, info: Result<Info, String>) {
-            self.files
-                .insert(path.into(), (FileKey { mtime: None, size }, info));
+            self.files.insert(
+                Self::fixture_path(Path::new(path)),
+                (FileKey { mtime: None, size }, info),
+            );
         }
     }
 
     impl InfoSource for Scripted {
         fn key(&mut self, server: &Path) -> Option<FileKey> {
-            self.files.get(server).map(|(k, _)| *k)
+            self.files.get(&Self::fixture_path(server)).map(|(k, _)| *k)
         }
         fn info(&mut self, server: &Path) -> Result<(Info, FileKey), String> {
             self.runs += 1;
-            let (k, i) = self.files.get(server).ok_or("missing")?;
+            let (k, i) = self
+                .files
+                .get(&Self::fixture_path(server))
+                .ok_or("missing")?;
             i.clone().map(|i| (i, *k))
         }
     }

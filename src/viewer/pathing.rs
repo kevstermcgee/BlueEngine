@@ -6,7 +6,7 @@
 
 use super::{
     authoring::MapDocument,
-    controller::{CharacterKind, Collider, Controller, Movement, STANDING_HEIGHT},
+    controller::{CharacterKind, Collider, Controller, Movement},
     reach::{ground_support_at, is_blocked, CELL_SIZE, STEP_HEIGHT},
 };
 use crate::math::V;
@@ -75,15 +75,37 @@ impl PartialOrd for AStarNode {
 }
 
 pub fn plan_route(doc: &MapDocument, from: V, to: V) -> Result<Vec<Waypoint>, String> {
-    let radius = CharacterKind::Scientist.radius() + 0.05; // slightly wider for path clearance
-    let height = STANDING_HEIGHT;
     let colliders: Vec<Collider> = doc.colliders.values().cloned().collect();
+    plan_route_with_profile(
+        &colliders,
+        from,
+        to,
+        super::profile::ControllerProfile::default(),
+    )
+}
 
-    let start_feet =
-        ground_support_at(from.0, from.2, from.1, radius, &colliders).unwrap_or(from.1);
-    let target_feet = ground_support_at(to.0, to.2, to.1, radius, &colliders).unwrap_or(to.1);
+/// Plan against current collision, including moved gates, using the active player's dimensions.
+/// Coordinates are feet positions. This is a route candidate; only shared-simulation execution proves completion.
+pub fn plan_route_with_profile(
+    colliders: &[Collider],
+    from: V,
+    to: V,
+    profile: super::profile::ControllerProfile,
+) -> Result<Vec<Waypoint>, String> {
+    profile.validate().map_err(|e| e.to_string())?;
+    if [from.0, from.1, from.2, to.0, to.1, to.2]
+        .iter()
+        .any(|v| !v.is_finite())
+    {
+        return Err("Route endpoints must be finite".into());
+    }
+    let radius = profile.radius + 0.05;
+    let height = profile.height;
 
-    if is_blocked(from.0, start_feet, from.2, radius, height, &colliders) {
+    let start_feet = ground_support_at(from.0, from.2, from.1, radius, colliders).unwrap_or(from.1);
+    let target_feet = ground_support_at(to.0, to.2, to.1, radius, colliders).unwrap_or(to.1);
+
+    if is_blocked(from.0, start_feet, from.2, radius, height, colliders) {
         return Err("Start position is inside a collider".into());
     }
 
@@ -146,9 +168,9 @@ pub fn plan_route(doc: &MapDocument, from: V, to: V) -> Result<Vec<Waypoint>, St
             let nx = ngx as f32 * CELL_SIZE;
             let nz = ngz as f32 * CELL_SIZE;
 
-            if let Some(n_feet) = ground_support_at(nx, nz, curr_feet, radius, &colliders) {
+            if let Some(n_feet) = ground_support_at(nx, nz, curr_feet, radius, colliders) {
                 if n_feet - curr_feet <= STEP_HEIGHT
-                    && !is_blocked(nx, n_feet, nz, radius, height, &colliders)
+                    && !is_blocked(nx, n_feet, nz, radius, height, colliders)
                 {
                     let n_gy = (n_feet * 10.0).round() as i32;
                     let tentative_g =
@@ -230,7 +252,7 @@ pub fn plan_route(doc: &MapDocument, from: V, to: V) -> Result<Vec<Waypoint>, St
                 let t = s as f32 / steps as f32;
                 let test_pos = a.lerp(b, t);
                 if is_blocked(
-                    test_pos.0, test_pos.1, test_pos.2, radius, height, &colliders,
+                    test_pos.0, test_pos.1, test_pos.2, radius, height, colliders,
                 ) {
                     clear = false;
                     break;

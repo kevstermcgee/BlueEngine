@@ -104,6 +104,18 @@ pub struct Intent {
     pub y: i32,
     pub pointer: Option<Point>,
     pub action: bool,
+    /// Radians accumulated across device frames and consumed once, for optional 3D look.
+    #[serde(default)]
+    pub look: [f32; 2],
+    #[serde(default)]
+    pub sprint: bool,
+}
+/// Checked authored loop bank, shared by native and web presentation.
+pub struct AudioBankSpec {
+    pub id: &'static str,
+    pub root: &'static str,
+    /// Music toggle controls score banks; Sound controls ambience banks and effects.
+    pub music: bool,
 }
 /// A game only owns rules and read-only presentation. The client owns devices, storage and timing.
 pub trait GameLogic: Snapshot<Input = Intent> + Sized {
@@ -119,6 +131,12 @@ pub trait GameLogic: Snapshot<Input = Intent> + Sized {
     /// One meaningful real-device interaction, verified separately from automated replay.
     fn probe_input() -> Intent;
     fn probe_success(&self) -> bool;
+    fn audio_banks() -> &'static [AudioBankSpec] {
+        &[]
+    }
+    fn audio_level(&self, _bank: &str, _layer: &str) -> f32 {
+        0.25
+    }
     /// Presentation events; never feed audio/particles back into authoritative state.
     fn take_cues(&mut self) -> Vec<usize> {
         Vec::new()

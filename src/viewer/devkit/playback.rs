@@ -1,4 +1,4 @@
-//! Driving a loop without a human: recorded inputs, a tiny cue script and a screenshot schedule.
+//! Scripted playback runs recorded inputs and saves screenshots at chosen capture frames.
 //!
 //! An AI agent cannot play the game it builds, so it verifies by running fixed-step scripts and looking
 //! at a few captured frames. The stock runner has this for `GameInput` (`--playback INPUTS.json`,

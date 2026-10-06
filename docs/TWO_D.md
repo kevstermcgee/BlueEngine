@@ -49,7 +49,7 @@ The browser build excludes native 3D/physics/network dependencies. Macroquad pro
 requestAnimationFrame loop. The platform ABI handles focus, storage, audio activation and standard
 gamepad polling. Gameplay has no browser cfgs. Randomness uses the shared seeded RNG, never browser
 entropy. Browser loss of canvas/page focus pauses simulation; native players use Esc to pause. fixed-step catch-up is bounded. Verification accelerates the
-same public inputs at eight ticks/frame and compares the complete state hash with headless native.
+same public inputs at up to 60 ticks/frame and compares the complete state hash with headless native.
 
 Click/Enter starts and activates audio. Only game controls are consumed; Tab and Ctrl/Cmd/Alt shortcuts
 remain browser controls. Standard controllers are normalized; physical controller testing is separate.

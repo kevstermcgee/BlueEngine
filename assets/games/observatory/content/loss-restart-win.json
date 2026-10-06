@@ -1,0 +1,127 @@
+{
+  "name": "Observatory: battery loss, restart, and physical successful run",
+  "game_path": "game.json",
+  "ticks": 1542,
+  "players": [
+    {
+      "id": 1,
+      "spawn": null
+    }
+  ],
+  "inputs": [
+    {
+      "tick": 1201,
+      "player": 1,
+      "restart": true,
+      "wait_ticks": 1
+    },
+    {
+      "tick": 1202,
+      "player": 1,
+      "walk_to": [
+        -3.8320503,
+        -0.2519245
+      ],
+      "route": true
+    },
+    {
+      "tick": 1220,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "shutter-switch"
+    },
+    {
+      "tick": 1221,
+      "player": 1,
+      "walk_to": [
+        3.5183423,
+        0.9661405
+      ],
+      "route": true
+    },
+    {
+      "tick": 1479,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "calibrator"
+    },
+    {
+      "tick": 1480,
+      "player": 1,
+      "walk_to": [
+        3.5123734,
+        1.0077326
+      ],
+      "route": true
+    },
+    {
+      "tick": 1488,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "calibrator"
+    },
+    {
+      "tick": 1489,
+      "player": 1,
+      "walk_to": [
+        3.5132947,
+        1.0007324
+      ],
+      "route": true
+    },
+    {
+      "tick": 1497,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "calibrator"
+    },
+    {
+      "tick": 1498,
+      "player": 1,
+      "walk_to": [
+        4.278549,
+        -0.38489234
+      ],
+      "route": true
+    },
+    {
+      "tick": 1539,
+      "player": 1,
+      "interact": true,
+      "wait_ticks": 1,
+      "face": "uplink"
+    }
+  ],
+  "assertions": [
+    {
+      "tick": 1200,
+      "counter": "battery",
+      "counter_equals": 0,
+      "failed_equals": true,
+      "completed_equals": false
+    },
+    {
+      "tick": 1201,
+      "counter": "calibration",
+      "counter_equals": 0,
+      "failed_equals": false,
+      "completed_equals": false
+    },
+    {
+      "tick": 1201,
+      "counter": "battery",
+      "counter_equals": 20
+    },
+    {
+      "tick": 1542,
+      "counter": "calibration",
+      "counter_equals": 3,
+      "completed_equals": true,
+      "failed_equals": false
+    }
+  ]
+}

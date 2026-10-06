@@ -1,4 +1,4 @@
-//! Shared authored-game presentation. Generated games and `be2 --game` call this
+//! Stock game HUD configuration and rendered --scenario/--capture runs over shared authority. Generated games call this
 //! runner; `local_client::run_map` remains an explicitly static viewer.
 use super::{
     camera::{CameraRig, Perspective},
@@ -33,14 +33,22 @@ pub struct GameOptions {
     pub capture: Option<PathBuf>,
     /// Optional fixed-tick public-input playback for repeatable playable-path checks.
     pub playback: Option<PathBuf>,
+    /// Render a verified single-player scenario through the shared physical driver, without hand-building playback.
+    pub scenario: Option<PathBuf>,
     /// Directory of save slots (F5 quick-saves into it, F9 loads). Default: `saves` next to the executable.
     pub save_dir: Option<PathBuf>,
     /// Resume a saved game at start: a slot name in the save directory (`quick`) or a save file path.
     pub load: Option<String>,
+    /// Constructed games can supply their asset root; loaded documents already carry it.
+    pub audio_root: Option<PathBuf>,
+    /// Optional settings location, otherwise settings.json beside the executable.
+    pub settings_path: Option<PathBuf>,
+    /// Disable stock audio asset/device loading for this run.
+    pub mute: bool,
 }
 impl GameOptions {
     /// Shared stock/generated CLI: --connect, --transport, --auth-key, --character,
-    /// --third-person, --capture, --playback, --save-dir and --load. Content location belongs to the host.
+    /// --third-person, --capture, --scenario, --playback, --save-dir and --load. Content location belongs to the host.
     pub fn from_args(args: &[String]) -> Result<Self> {
         let value = |flag: &str| -> Result<Option<&str>> {
             args.iter()
@@ -83,8 +91,12 @@ impl GameOptions {
             third_person: args.iter().any(|a| a == "--third-person"),
             capture: value("--capture")?.map(PathBuf::from),
             playback: value("--playback")?.map(PathBuf::from),
+            scenario: value("--scenario")?.map(PathBuf::from),
             save_dir: value("--save-dir")?.map(PathBuf::from),
             load: value("--load")?.map(str::to_owned),
+            audio_root: value("--audio-root")?.map(PathBuf::from),
+            settings_path: value("--settings")?.map(PathBuf::from),
+            mute: args.iter().any(|a| a == "--mute"),
         })
     }
 }
@@ -170,6 +182,13 @@ pub async fn run_game_with_options(
         toast.show(note);
     }
     let mut shell = GameShell::new();
+    let mut audio = super::stock_audio::StockSound::load(
+        &mut session,
+        options.audio_root.as_deref(),
+        options.settings_path.as_deref(),
+        options.mute,
+    )
+    .await?;
     let mut input = ClientInput::new();
     let mut perspective = if options.third_person {
         Perspective::Third
@@ -181,6 +200,47 @@ pub async fn run_game_with_options(
         .as_ref()
         .map(|p| -> Result<Vec<GameInput>> { Ok(serde_json::from_slice(&std::fs::read(p)?)?) })
         .transpose()?;
+    let scenario = options
+        .scenario
+        .as_ref()
+        .map(|p| super::scenario::load_scenario(p))
+        .transpose()?;
+    if let Some(script) = &scenario {
+        if playback.is_some() || options.load.is_some() || session.is_online() {
+            return Err("--scenario requires a local game without --playback or --load".into());
+        }
+        if script.players.len() != 1
+            || script.players[0].id != 1
+            || script.players[0].spawn.is_some()
+        {
+            return Err(
+                "Stock rendered scenarios require one player, id 1, with the game's default spawn"
+                    .into(),
+            );
+        }
+        let source = script
+            .game_path
+            .as_ref()
+            .ok_or("Rendered scenario must name its game_path")?;
+        if super::game::GameDocument::load(std::path::Path::new(source))?
+            .world()?
+            .content_hash
+            != session.world().content_hash
+        {
+            return Err("Rendered scenario content differs from --game".into());
+        }
+        let verified = super::scenario::evaluate_scenario(script)?;
+        if !verified.ok {
+            return Err(format!(
+                "Scenario failed physical verification: {:?}",
+                verified.assertions
+            )
+            .into());
+        }
+    }
+    let mut scenario_driver = scenario
+        .as_ref()
+        .map(|s| super::scenario::InputDriver::new(&s.inputs));
     if playback.is_some() && session.is_online() {
         return Err("Playback is local; use scripted network clients for online checks".into());
     }
@@ -189,6 +249,7 @@ pub async fn run_game_with_options(
     }
     let mut frame = 0usize;
     let mut completed = false;
+    let mut failed = false;
     let mut round = 0;
     let mut history = Vec::new();
     loop {
@@ -198,7 +259,7 @@ pub async fn run_game_with_options(
             focused(),
             options.keyboard,
         );
-        if playback.is_none() && options.capture.is_none() {
+        if playback.is_none() && scenario.is_none() && options.capture.is_none() {
             if input.pressed(KeyCode::F5) {
                 toast.show(quick_save(&session, &slots));
             }
@@ -208,20 +269,27 @@ pub async fn run_game_with_options(
                     view.reset_camera();
                 }
                 toast.show(note);
+                if let Some(audio) = &mut audio {
+                    audio
+                        .cursor
+                        .rebase(session.world().game.as_ref().unwrap().state());
+                }
             }
         }
         // Wall-clock interval between frame starts, not macroquad's get_frame_time(), which is
         // stamped after the GL flush and turns one stalled frame into a doubled step plus a repeat.
-        let seconds = if playback.is_some() || options.capture.is_some() {
+        let seconds = if playback.is_some() || scenario.is_some() || options.capture.is_some() {
             1. / 60.
         } else {
             input.frame_seconds()
         };
-        let playback_done = playback.as_ref().is_some_and(|p| frame >= p.len());
-        if playback.is_some() {
+        let playback_done = playback.as_ref().is_some_and(|p| frame >= p.len())
+            || scenario.as_ref().is_some_and(|s| frame as u64 >= s.ticks);
+        let scripted = playback.is_some() || scenario.is_some();
+        if scripted {
             shell.paused = playback_done;
         }
-        if playback_done || (options.capture.is_some() && playback.is_none() && frame >= 30) {
+        if playback_done || (options.capture.is_some() && !scripted && frame >= 30) {
             shell.paused = true;
         }
         let match_over = session
@@ -247,42 +315,130 @@ pub async fn run_game_with_options(
         {
             perspective.toggle();
         }
-        session.advance(
-            intent,
-            seconds,
-            if playback.is_some() {
-                !playback_done
-            } else {
-                shell.playing()
-            },
-        )?;
-        clear_background(Color::new(0.48, 0.67, 0.8, 1.));
+        let mut audio_cues = Vec::new();
+        let was_connected = session.connected();
+        if let Some(driver) = &mut scenario_driver {
+            if !playback_done {
+                session.advance_scenario(driver, frame as u64 + 1)?;
+                if let Some(audio) = &mut audio {
+                    audio_cues.extend(
+                        audio
+                            .cursor
+                            .observe(session.world().game.as_ref().unwrap().state()),
+                    );
+                }
+            }
+        } else {
+            session.advance_observed(
+                intent,
+                seconds,
+                if playback.is_some() {
+                    !playback_done
+                } else {
+                    shell.playing()
+                },
+                |state| {
+                    if let Some(audio) = &mut audio {
+                        if was_connected {
+                            audio_cues.extend(audio.cursor.observe(state));
+                        } else {
+                            audio.cursor.rebase(state);
+                        }
+                    }
+                },
+            )?;
+        }
+        let audio_trace = audio
+            .as_mut()
+            .map(|audio| {
+                audio.update(
+                    session.world().game.as_ref().unwrap().state(),
+                    if scripted {
+                        !playback_done
+                    } else {
+                        shell.playing()
+                    },
+                    input.frame_seconds(),
+                    &audio_cues,
+                    options.capture.is_some(),
+                )
+            })
+            .transpose()?;
+        let default_presentation = super::stock_presentation::StockPresentation::default();
+        let presentation = session
+            .world()
+            .game
+            .as_ref()
+            .unwrap()
+            .document()
+            .presentation
+            .as_ref()
+            .unwrap_or(&default_presentation);
+        let background = presentation.palette.background;
+        clear_background(Color::new(
+            background[0],
+            background[1],
+            background[2],
+            background[3],
+        ));
         view.draw(&session, perspective, seconds);
         let game = session.world().game.as_ref().unwrap();
         let status = if !session.connected() {
             "Connecting...".to_owned()
-        } else if game.state().completed {
-            "Objective complete! E / X / R to play again".to_owned()
-        } else if game.state().failed {
-            "Objective failed! E / X / R to try again".to_owned()
         } else {
-            game.document()
-                .counters
-                .keys()
-                .zip(&game.state().counters)
-                .map(|(name, value)| format!("{name}: {value}"))
-                .collect::<Vec<_>>()
-                .join("   ")
+            presentation.status(game.document(), game.state())
         };
+        let rgba = |c: [f32; 4]| Color::new(c[0], c[1], c[2], c[3]);
+        let (margin, scale) = (presentation.hud.margin, presentation.hud.scale);
+        let size = 21. * scale;
+        let objective = presentation
+            .objective
+            .as_deref()
+            .filter(|_| !game.state().finished());
+        let width = presentation
+            .hud
+            .width
+            .unwrap_or(status.len().max(objective.map_or(0, str::len)) as f32 * 11. * scale + 24.)
+            .min(screen_width() - margin * 2.);
+        let rows = if objective.is_some() { 2. } else { 1. };
         draw_rectangle(
-            12.,
-            12.,
-            (status.len() as f32 * 11. + 24.).min(screen_width() - 24.),
-            35.,
-            Color::new(0.04, 0.08, 0.1, 0.85),
+            margin,
+            margin,
+            width,
+            35. * scale * rows,
+            rgba(presentation.palette.panel),
         );
-        super::game_text::draw_text(&status, 24., 36., 21., WHITE);
-        draw_circle(screen_width() * 0.5, screen_height() * 0.5, 2., WHITE);
+        if let Some(objective) = objective {
+            super::game_text::draw_text(
+                &super::game_ui::fit(objective, width - 24., size),
+                margin + 12.,
+                margin + 24. * scale,
+                size,
+                rgba(presentation.palette.accent),
+            );
+        }
+        let color = if game.state().completed {
+            presentation.palette.success
+        } else if game.state().failed {
+            presentation.palette.failure
+        } else {
+            presentation.palette.text
+        };
+        super::game_text::draw_text(
+            &super::game_ui::fit(&status, width - 24., size),
+            margin + 12.,
+            margin + (24. + (rows - 1.) * 35.) * scale,
+            size,
+            rgba(color),
+        );
+        if presentation.hud.crosshair {
+            draw_circle(
+                screen_width() * 0.5,
+                screen_height() * 0.5,
+                2.,
+                rgba(presentation.palette.text),
+            );
+        }
         if shell.playing()
             && game
                 .target(&session.world().room, session.controller())
@@ -307,7 +463,9 @@ pub async fn run_game_with_options(
             "Save / load: F5 / F9 (local games)",
             "Menu: Esc / Start; confirm: Enter / A",
         ];
-        let quit = if session.is_online() {
+        let quit = if let Some(audio) = &mut audio {
+            audio.menu(&mut shell, &title, &controls, session.is_online())
+        } else if session.is_online() {
             shell.menu(&title, &controls)
         } else {
             shell.local_menu(&title, &controls)
@@ -317,22 +475,30 @@ pub async fn run_game_with_options(
         }
         if let Some(dir) = &options.capture {
             let now_completed = game.state().completed;
+            let now_failed = game.state().failed;
             let now_round = game.state().round;
-            if frame == 10 || (now_completed && !completed) || now_round != round {
+            if frame == 10
+                || (now_completed && !completed)
+                || (now_failed && !failed)
+                || now_round != round
+            {
                 let name = if now_round != round {
                     format!("reset-{now_round}.png")
                 } else if now_completed {
                     format!("win-{now_round}.png")
+                } else if now_failed {
+                    format!("loss-{now_round}.png")
                 } else {
                     "world.png".into()
                 };
                 get_screen_data()
                     .export_png(dir.join(name).to_str().ok_or("Invalid capture path")?);
             }
-            history.push(serde_json::json!({"frame":frame,"tick":session.world().tick,"position":session.controller().position,"completed":now_completed,"round":now_round}));
+            history.push(serde_json::json!({"frame":frame,"tick":session.world().tick,"position":session.controller().position,"completed":now_completed,"failed":now_failed,"round":now_round,"counters":game.state().counters,"status":status,"audio":audio_trace}));
             completed = now_completed;
+            failed = now_failed;
             round = now_round;
-            if playback_done || (playback.is_none() && frame == 40) {
+            if playback_done || (!scripted && frame == 40) {
                 get_screen_data().export_png(
                     dir.join("menu.png")
                         .to_str()

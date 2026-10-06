@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Export curated engine-made content into the companion Games repository."""
+"""Export curated engine-made content into the companion Games repository.
+
+Native projects export source and authored assets, excluding target, dist and
+check-output directories. Player saves and compiler artifacts remain local.
+"""
 
 from __future__ import annotations
 
@@ -107,11 +111,21 @@ def files_under(source: Path):
         return
     if not source.is_dir():
         raise PublishError(f"source does not exist: {source}")
-    for candidate in sorted(source.rglob("*")):
-        if candidate.is_symlink():
-            raise PublishError(f"symlinks are not published: {candidate}")
-        if candidate.is_file():
-            yield candidate, candidate.relative_to(source)
+    for directory, folders, names in os.walk(source, followlinks=False):
+        parent = Path(directory)
+        excluded = {".git", "__pycache__"}
+        if (parent / "Cargo.toml").is_file():
+            excluded.update({"target", "dist", ".blue-check", ".be2-work"})
+        folders[:] = sorted(name for name in folders if name not in excluded)
+        for name in folders:
+            if (parent / name).is_symlink():
+                raise PublishError(f"symlinks are not published: {parent / name}")
+        for name in sorted(names):
+            candidate = parent / name
+            if candidate.is_symlink():
+                raise PublishError(f"symlinks are not published: {candidate}")
+            if candidate.is_file():
+                yield candidate, candidate.relative_to(source)
 
 
 def export_tree(root: Path, staging: Path, manifest: dict, revision: str) -> dict:

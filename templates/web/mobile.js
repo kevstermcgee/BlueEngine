@@ -48,7 +48,7 @@
   const more=document.createElement('details');more.className='digital-more';
   const summary=document.createElement('summary');summary.textContent='SELECT';summary.setAttribute('aria-label','Sound and saved game controls');more.append(summary);
   const menu=document.createElement('div');menu.className='digital-menu';
-  for(const [label,name,bit] of [...(action?[['Restart','restart',4]]:[]),['Sound','sound',8],['Save','save',16],['Load','load',32]])menu.append(button(label,name,()=>{state.commands|=bit;more.open=false;}));
+  for(const [label,name,bit] of [...(action?[['Restart','restart',4]]:[]),['Sound','sound',8],['Music','music',64],['Save','save',16],['Load','load',32]])menu.append(button(label,name,()=>{state.commands|=bit;more.open=false;}));
   more.append(menu);actions.append(more);
   panel.append(actions);
   const point=e=>{

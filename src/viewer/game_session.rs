@@ -58,6 +58,32 @@ pub struct GameSession {
     interact: bool,
 }
 impl GameSession {
+    /// Execute one stock scenario step on the same local authority used by interactive play.
+    /// Intended for rendered scenario evidence; online sessions must use server-owned input paths.
+    pub fn advance_scenario(
+        &mut self,
+        driver: &mut super::scenario::InputDriver,
+        tick: u64,
+    ) -> Result<()> {
+        if self.is_online() {
+            return Err("Scenario playback requires local authority".into());
+        }
+        self.previous = self.controller.clone();
+        let round = self.world.game.as_ref().unwrap().state().round;
+        driver.before_step(&mut self.world, tick);
+        self.world.step();
+        self.controller = self
+            .world
+            .player(1)
+            .ok_or("Scenario removed the local player")?
+            .clone();
+        if self.world.game.as_ref().unwrap().state().round != round {
+            self.previous = self.controller.clone();
+        }
+        self.remainder = 0.;
+        Ok(())
+    }
+
     pub fn local(game: LoadedGame) -> Result<Self> {
         let mut world = game.world()?;
         if !world.join(1) {
@@ -201,8 +227,20 @@ impl GameSession {
         Ok(())
     }
     /// Poll networking even while paused. Bounded catch-up avoids simulating a stall.
-    pub fn advance(&mut self, mut input: GameInput, seconds: f32, playing: bool) -> Result<usize> {
+    pub fn advance(&mut self, input: GameInput, seconds: f32, playing: bool) -> Result<usize> {
+        self.advance_observed(input, seconds, playing, |_| {})
+    }
+    /// Read-only presentation observer after network polling and every executed local tick.
+    /// Catch-up preserves separate transitions; online snapshots cannot recover unreplicated events.
+    pub fn advance_observed(
+        &mut self,
+        mut input: GameInput,
+        seconds: f32,
+        playing: bool,
+        mut observe: impl FnMut(&super::game::GameState),
+    ) -> Result<usize> {
         self.poll()?;
+        observe(self.world.game.as_ref().unwrap().state());
         if !seconds.is_finite() || seconds <= 0. {
             return Ok(0);
         }
@@ -274,6 +312,7 @@ impl GameSession {
                 if self.world.game.as_ref().unwrap().state().round != round {
                     self.previous = self.controller.clone();
                 }
+                observe(self.world.game.as_ref().unwrap().state());
             }
             self.remainder = (self.remainder - STEP).max(0.);
             steps += 1;

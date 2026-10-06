@@ -305,6 +305,16 @@ async fn main() {
                     Err(error) => Err(error),
                 };
             if let Err(error) = result {
+                if args
+                    .iter()
+                    .any(|a| matches!(a.as_str(), "--capture" | "--scenario" | "--playback"))
+                {
+                    eprintln!(
+                        "{}",
+                        serde_json::json!({"ok":false,"error":error.to_string()})
+                    );
+                    std::process::exit(1);
+                }
                 error_screen(&error.to_string()).await;
             }
             return;

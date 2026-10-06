@@ -3,7 +3,6 @@
 compile_error!("Browser games require default-features=false and features=[portable]. Use scripts/blue web build from the portable starter for 2D/3D/hybrid. Legacy native client/offline features are not supported on WASM.");
 #[cfg(not(target_arch = "wasm32"))]
 pub mod geometry;
-#[cfg(not(target_arch = "wasm32"))]
 pub mod math;
 #[cfg(feature = "offline")]
 pub mod output;

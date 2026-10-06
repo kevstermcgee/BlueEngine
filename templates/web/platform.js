@@ -20,6 +20,17 @@ gameCanvas.addEventListener("keydown",activate);
 const keys=new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"]);
 gameCanvas.addEventListener("keydown",e=>{if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&keys.has(e.code))e.preventDefault();});
 gameCanvas.addEventListener("contextmenu",e=>e.preventDefault());
+// Fullscreen must run synchronously inside a trusted gesture, never a later WASM frame.
+const player=document.getElementById('player')||gameCanvas;
+document.addEventListener('keydown',e=>{
+  if(e.target?.closest?.('input,textarea,select,[contenteditable=true]'))return;
+  if(e.code==='KeyF'&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    e.preventDefault();activate();
+    const request=document.fullscreenElement?document.exitFullscreen():player.requestFullscreen?.();
+    if(request)request.catch(error=>{document.getElementById('status').textContent=`Fullscreen unavailable: ${error.message}`;});
+    else document.getElementById('status').textContent='Fullscreen is unavailable in this browser. Try installing the game.';
+  }
+});
 const decode=(ptr,len)=>new TextDecoder().decode(new Uint8Array(wasm_memory.buffer,ptr,len));
 let lastPad=false;
 function be2RegisterPlatform(){
@@ -51,11 +62,12 @@ miniquad_add_plugin({register_plugin:imports=>{
   imports.env.be2_report=(ptr,len)=>{
     if(!be2.keyboardBound && gameCanvas.onkeydown){
       const keyDown=gameCanvas.onkeydown;
-      const controls=new Set(["KeyW","KeyA","KeyS","KeyD","KeyR","KeyM","KeyK","KeyL","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Enter","Space","Escape"]);
+      const controls=new Set(["KeyW","KeyA","KeyS","KeyD","KeyR","KeyM","KeyK","KeyL","KeyN","ShiftLeft","ShiftRight","ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Enter","Space","Escape"]);
       gameCanvas.onkeydown=e=>{if(!e.ctrlKey&&!e.metaKey&&!e.altKey&&controls.has(e.code))keyDown(e);};
       be2.keyboardBound=true;
     }
     Object.assign(be2,JSON.parse(decode(ptr,len)));
+    const music=document.querySelector('[data-control="music"]');if(music)music.hidden=!(be2.music?.loaded>0);
     const play=document.querySelector('[data-control="play"]');
     if(play){const label=!be2.started?'Play':be2.paused?'Resume':'Pause';play.setAttribute('aria-label',label);}
     document.getElementById('status').textContent=be2.notice||(!be2.started?'Start to play. Your progress stays on this device.':'Progress saves automatically on this device.');
@@ -67,6 +79,7 @@ miniquad_add_plugin({register_plugin:imports=>{
   imports.env.be2_pad=axis=>{
     const pad=Array.from(navigator.getGamepads?.()||[]).find(p=>p&&p.mapping==="standard");
     if(!pad)return 0;
+    if(axis===3||axis===4){const v=pad.axes[axis-1]||0;return Math.abs(v)>0.18?v:0;}
     if(axis<2){const v=pad.axes[axis]||0;return Math.abs(v)>0.18?v:0;}
     const down=pad.buttons[0]?.pressed||false,edge=down&&!lastPad;lastPad=down;return edge?1:0;
   };

@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "seed": 1279606607,
+  "headroom": 0.75,
+  "effects": {},
+  "music": {
+    "kind": "clips",
+    "seconds": 24,
+    "crossfade_seconds": 1,
+    "layers": {
+      "birds": {
+        "file": "dawn.wav",
+        "gain": 0.45
+      },
+      "wind": {
+        "file": "wind.wav",
+        "gain": 0.35
+      },
+      "night": {
+        "file": "night.wav",
+        "gain": 0.4
+      },
+      "leaves": {
+        "file": "leaves.wav",
+        "gain": 0.35
+      }
+    }
+  }
+}

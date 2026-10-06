@@ -306,6 +306,28 @@ impl GameShell {
             "MENU  /  LOCAL SESSION PAUSED",
             audio,
             None,
+            true,
+        )
+    }
+    /// Stock audio settings, including online pause status. No export button without an export provider.
+    pub fn menu_with_audio_settings(
+        &mut self,
+        title: &str,
+        controls: &[&str],
+        audio: AudioMenu,
+        online: bool,
+    ) -> MenuOutcome {
+        self.menu_with_status_and_audio(
+            title,
+            controls,
+            if online {
+                "MENU  /  ONLINE MATCH CONTINUES"
+            } else {
+                "MENU  /  LOCAL SESSION PAUSED"
+            },
+            audio,
+            None,
+            false,
         )
     }
     /// [`GameShell::local_menu_with_audio`] for a game that supports shadows (`kit::Shadows`): the Settings
@@ -325,6 +347,7 @@ impl GameShell {
             "MENU  /  LOCAL SESSION PAUSED",
             audio,
             Some(shadows),
+            true,
         )
     }
     fn menu_with_status_and_audio(
@@ -334,6 +357,7 @@ impl GameShell {
         status: &str,
         audio: AudioMenu,
         shadows: Option<super::devkit::ShadowQuality>,
+        allow_download: bool,
     ) -> MenuOutcome {
         let mut outcome = MenuOutcome::default();
         if !self.paused {
@@ -385,7 +409,10 @@ impl GameShell {
                 self.suppress = true;
             }
         } else if self.settings_screen {
-            let rows = settings_rows(audio.has_music, shadows.is_some());
+            let rows: Vec<_> = settings_rows(audio.has_music, shadows.is_some())
+                .into_iter()
+                .filter(|row| allow_download || *row != SettingsRow::Download)
+                .collect();
             self.selection = menu_selection(self.selection, self.actions, rows.len());
             for (i, row_kind) in rows.iter().enumerate() {
                 let label = match row_kind {

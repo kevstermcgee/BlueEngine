@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""BE2 development entry point. Python 3.10+, standard library only. No shell evaluation."""
+"""BE2 context and canonical local/CI checks with timestamp-safe report directories, stage timings and failure logs."""
 import argparse
 import datetime
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -138,30 +139,62 @@ def doctor():
 def check(plan, timeout=None):
     started = time.monotonic()
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
-    directory = WORK / ('check-' + stamp)
-    directory.mkdir(parents=True)
+    WORK.mkdir(parents=True, exist_ok=True)
+    directory = Path(tempfile.mkdtemp(prefix='check-' + stamp + '-', dir=WORK))
     report = {'ok': False, 'plan': plan, 'checks': []}
     env = {**os.environ, **plan['env']} if plan.get('env') else None
+
+    def execute(i, original):
+        cmd = list(original)
+        if (cmd[0] == 'cargo' and cmd[1] in {'test', 'check', 'clippy', 'build', 'rustdoc'}
+                and not any(arg.startswith('--message-format') for arg in cmd)):
+            cmd.insert(cmd.index('--') if '--' in cmd else len(cmd), '--message-format=json')
+        log = directory / f'{i+1}.log'
+        label = f'[{i+1}/{len(plan["commands"])}] ' + ' '.join(map(str, original))
+        print(label, file=sys.stderr, flush=True)
+        item = {'step': i + 1, 'command': cmd, 'log': log.name, 'ok': False,
+                'started_seconds': round(time.monotonic() - started, 3)}
+        report['checks'].append(item)
+        try:
+            item.update(invoke(cmd, log=log, env=env, timeout=timeout, harness=plan.get('test_harness')))
+        except CommandFailure as error:
+            item.update(error.packet)
+            print(f'[{i+1}/{len(plan["commands"])}] FAILED: {error.packet["category"]}; log: {log}',
+                  file=sys.stderr, flush=True)
+            raise
+        item['ok'] = True
+        print(f'[{i+1}/{len(plan["commands"])}] PASS ({item["elapsed_seconds"]:.3f}s)',
+              file=sys.stderr, flush=True)
+
+    # One reviewed independent Python batch overlaps the serial Cargo lane.
+    # Caller-supplied native binaries can opt into integration within that batch;
+    # keep those calls serial to avoid touching a tool while Cargo replaces it.
+    independent = plan.get('independent_commands', []) if not os.environ.get('BE2_TOOLS') else []
+    if len(independent) > 1 or any(i not in range(len(plan['commands'])) for i in independent):
+        raise ValueError('Check plans support at most one valid independent command.')
+    report['independent_commands'] = independent
     try:
-        for i, original in enumerate(plan['commands']):
-            cmd = list(original)
-            if (cmd[0] == 'cargo' and cmd[1] in {'test', 'check', 'clippy', 'build', 'rustdoc'}
-                    and not any(arg.startswith('--message-format') for arg in cmd)):
-                cmd.insert(cmd.index('--') if '--' in cmd else len(cmd), '--message-format=json')
-            log = directory / f'{i+1}.log'
-            item = {'command': cmd, 'log': log.name, 'ok': False}
-            report['checks'].append(item)
-            try:
-                item.update(invoke(cmd, log=log, env=env, timeout=timeout, harness=plan.get('test_harness')))
-            except CommandFailure as error:
-                item.update(error.packet)
-                report['failure'] = error.packet
-                report['exit_code'] = error.exit_code
-                error.reported = True
-                raise
-            item['ok'] = True
+        # Context exit joins in-flight work even on failure; reports are written
+        # only after all started processes have exited, with no detached checks.
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = (pool.submit(execute, independent[0], plan['commands'][independent[0]])
+                      if independent else None)
+            for i, original in enumerate(plan['commands']):
+                if i in independent:
+                    continue
+                if future is not None and future.done():
+                    future.result() # Stop pending gates if the independent lane failed.
+                execute(i, original)
+            if future is not None:
+                future.result()
         report['ok'] = True
+    except CommandFailure as error:
+        report['failure'] = error.packet
+        report['exit_code'] = error.exit_code
+        error.reported = True
+        raise
     finally:
+        report['checks'].sort(key=lambda item: item['step'])
         report['elapsed_seconds'] = round(time.monotonic() - started, 3)
         report['commands_attempted'] = len(report['checks'])
         report['failed_commands'] = sum(not item['ok'] for item in report['checks'])
@@ -239,6 +272,7 @@ def main():
                    help='Type-check cfg(windows) code for x86_64-pc-windows-gnu without a Windows C toolchain; '
                         'not a Windows run (see docs/CHANGE_WORKFLOW.md)')
     c.add_argument('--plan', action='store_true', help='Print the plan without running checks')
+    c.add_argument('--serial', action='store_true', help='Run full gates in sequence (debugging/comparison)')
     c.add_argument('--iterate', metavar='FEATURE', help='Focused iteration only; never final validation')
     c.add_argument('--typecheck', action='store_true', help='Iteration: engine library type-check only')
     c.add_argument('--test', metavar='SUITE[::EXACT_TEST]', help='Iteration: one indexed suite or exact regression')
@@ -308,6 +342,8 @@ def main():
             parser.error('--base requires --changed')
         revision, paths = workflow.changed_paths(ROOT, args.base) if args.changed else (None, None)
         plan = workflow.validation_plan(paths, revision, args.test_profile)
+        if args.serial:
+            plan['independent_commands'] = []
         if paths is not None:
             plan['impact'] = workflow.impact(ROOT, paths)
         if args.plan: print(json.dumps(plan, indent=2))

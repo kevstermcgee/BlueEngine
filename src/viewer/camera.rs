@@ -1,8 +1,5 @@
 //! Camera placement is independent of movement; gameplay rays still start at the player.
-use super::{
-    controller::{Collider, Controller},
-    room::Room,
-};
+use super::{controller::Controller, room::Room};
 use crate::math::{Ray, V};
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Perspective {
@@ -133,33 +130,26 @@ impl View {
         }
     }
 }
-fn entry(ray: Ray, c: &Collider, radius: f32) -> Option<f32> {
-    let mut near = 0_f32;
-    let mut far = f32::INFINITY;
-    for axis in 0..3 {
-        let lo = c.min.axis(axis) - radius;
-        let hi = c.max.axis(axis) + radius;
-        let o = ray.o.axis(axis);
-        let d = ray.d.axis(axis);
-        if d.abs() < 1e-6 {
-            if o < lo || o > hi {
-                return None;
-            }
-        } else {
-            let a = (lo - o) / d;
-            let b = (hi - o) / d;
-            near = near.max(a.min(b));
-            far = far.min(a.max(b));
-            if near > far {
-                return None;
-            }
-        }
-    }
-    (far >= 0.).then_some(near)
-}
+use crate::runtime::camera_boom::entry;
+pub use crate::runtime::camera_boom::sweep_boom;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::viewer::controller::Collider;
+    #[test]
+    fn custom_boom_protects_corners_and_uses_current_collision_state() {
+        let tree = Collider {
+            min: V(0., 0., 0.),
+            max: V(1., 3., 1.),
+        };
+        let anchor = V(-0.1, 1., -2.);
+        let desired = V(-0.1, 1., 2.);
+        let shortened = sweep_boom(anchor, desired, &[tree], 0.18).unwrap();
+        assert!(shortened.2 < -0.18 && shortened.2 > -0.3);
+        assert_eq!(sweep_boom(anchor, desired, &[], 0.18).unwrap(), desired);
+        assert_eq!(sweep_boom(anchor, anchor, &[], 0.18).unwrap(), anchor);
+        assert!(sweep_boom(anchor, desired, &[], f32::NAN).is_err());
+    }
     #[test]
     fn toggle_preserves_player_and_first_person_ray() {
         let room = super::super::room::build().unwrap();

@@ -155,7 +155,9 @@ impl Animation {
         (tick / self.ticks) % self.frames
     }
 }
-enum Shape {
+type RenderView<'a> = Box<dyn FnOnce((i32, i32, i32, i32)) -> Result<(), String> + 'a>;
+enum Shape<'a> {
+    RenderView(Rect, RenderView<'a>),
     World(Rect, World),
     Rect(Rect, Color),
     Circle(Point, f32, Color),
@@ -175,10 +177,22 @@ pub struct Renderer {
     textures: std::collections::BTreeMap<&'static str, (Texture2D, u64)>,
 }
 #[derive(Default)]
-pub struct Scene {
-    items: Vec<(i32, Shape)>,
+pub struct Scene<'a> {
+    items: Vec<(i32, Shape<'a>)>,
 }
-impl Scene {
+impl<'a> Scene<'a> {
+    /// Reuse an existing read-only 3D kit renderer in a logical viewport.
+    /// The callback receives a validated physical viewport and must apply it to its cameras.
+    /// It must not clear the entire framebuffer or mutate simulation. Shared overlays follow normally.
+    pub fn render_view(
+        &mut self,
+        layer: i32,
+        viewport: Rect,
+        render: impl FnOnce((i32, i32, i32, i32)) -> Result<(), String> + 'a,
+    ) {
+        self.items
+            .push((layer, Shape::RenderView(viewport, Box::new(render))));
+    }
     /// Insert a depth-tested 3D scene at this layer, bounded by logical pixels.
     /// Later 2D layers can be maps/HUD; earlier layers can be backgrounds.
     pub fn world(&mut self, layer: i32, viewport: Rect, world: World) {
@@ -242,6 +256,11 @@ impl Scene {
         };
         for (_, shape) in self.items.drain(..) {
             match shape {
+                Shape::RenderView(rect, render) => {
+                    render(view.physical_rect(rect, screen_height(), screen_dpi_scale())?)?;
+                    gl_use_default_material();
+                    set_default_camera();
+                }
                 Shape::World(rect, world) => world.draw(rect, view)?,
                 Shape::Rect(r, c) => {
                     let xy = p(r.x as f32, r.y as f32);
@@ -365,7 +384,17 @@ impl Particles {
     }
 }
 pub trait Game: super::GameLogic {
-    fn draw(&self, scene: &mut Scene);
+    fn draw<'a>(&'a self, scene: &mut Scene<'a>);
+    /// Optional third-person look: drag inside the canvas or use the controller's right stick.
+    fn drag_look() -> bool {
+        false
+    }
+    fn show_hud() -> bool {
+        true
+    }
+    fn menu_status(&self) -> String {
+        String::new()
+    }
 }
 #[cfg(test)]
 mod tests {

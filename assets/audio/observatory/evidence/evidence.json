@@ -1,0 +1,702 @@
+{
+  "project": "assets/audio/observatory/project.json",
+  "project_sha256": "1160f4362ebf444fa8728b69c1af06677422bb95383f434d5738a1a80c6f1273",
+  "platform": "Windows native macroquad backend",
+  "native_events": [
+    {
+      "audibility_verified": false,
+      "effects": [
+        "battery",
+        "shutter",
+        "step",
+        "success"
+      ],
+      "event": "assets_ready",
+      "layers": [
+        "orbit",
+        "signal"
+      ]
+    },
+    {
+      "cue": "battery",
+      "event": "cue_submitted",
+      "ready_frame": 20
+    },
+    {
+      "cue": "shutter",
+      "event": "cue_submitted",
+      "ready_frame": 50
+    },
+    {
+      "cue": "step",
+      "event": "cue_submitted",
+      "ready_frame": 80
+    },
+    {
+      "cue": "success",
+      "event": "cue_submitted",
+      "ready_frame": 110
+    },
+    {
+      "event": "captured",
+      "frames": 180,
+      "height": 600,
+      "width": 960
+    }
+  ],
+  "negative_native": {
+    "exit_code": 1,
+    "success_capture_created": false,
+    "failure": {
+      "error": "audio failed: [\".be2-work/observatory-audio-corrupt\\\\music-signal.wav: The system cannot find the file specified. (os error 2)\"]",
+      "ok": false
+    }
+  },
+  "quality_reports": [
+    {
+      "path": "preview-mix.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 235200,
+      "duration_ms": 5333.333,
+      "peak_dbfs": -6.33,
+      "peak_dbfs_channels": [
+        -6.4,
+        -6.33
+      ],
+      "rms_dbfs": -20.2,
+      "crest_db": 13.87,
+      "loudness_lufs_approx": -18.54,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": 0.0,
+      "dc_offset_channels": [
+        -0.0,
+        0.0
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.12524,
+      "last_sample": 0.12415,
+      "loop": {
+        "enabled": true,
+        "seam_jump": 0.001099,
+        "scan_available": true,
+        "suspected_click": false
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 0.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 229,
+        "centroid_hz": 223.2,
+        "rolloff85_hz": 387.6,
+        "dominant_hz": 111.4,
+        "band_energy_pct": {
+          "sub": 0.0,
+          "bass": 71.58,
+          "low_mid": 28.39,
+          "high_mid": 0.02,
+          "air": 0.0
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-battery-0.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 33075,
+      "duration_ms": 750.0,
+      "peak_dbfs": -10.98,
+      "peak_dbfs_channels": [
+        -10.98,
+        -10.98
+      ],
+      "rms_dbfs": -19.57,
+      "crest_db": 8.6,
+      "loudness_lufs_approx": -17.24,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": -1e-05,
+      "dc_offset_channels": [
+        -1e-05,
+        -1e-05
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 70.0,
+        "longest_internal_ms": 70.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 32,
+        "centroid_hz": 802.9,
+        "rolloff85_hz": 882.9,
+        "dominant_hz": 879.8,
+        "band_energy_pct": {
+          "sub": 0.0,
+          "bass": 0.0,
+          "low_mid": 100.0,
+          "high_mid": 0.0,
+          "air": 0.0
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-shutter-0.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 30870,
+      "duration_ms": 700.0,
+      "peak_dbfs": -9.63,
+      "peak_dbfs_channels": [
+        -9.63,
+        -9.63
+      ],
+      "rms_dbfs": -22.75,
+      "crest_db": 13.12,
+      "loudness_lufs_approx": -17.1,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": 0.0,
+      "dc_offset_channels": [
+        0.0,
+        0.0
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 10.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 30,
+        "centroid_hz": 1857.6,
+        "rolloff85_hz": 2110.3,
+        "dominant_hz": 2095.9,
+        "band_energy_pct": {
+          "sub": 0.0,
+          "bass": 0.39,
+          "low_mid": 38.14,
+          "high_mid": 61.44,
+          "air": 0.03
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-shutter-1.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 30870,
+      "duration_ms": 700.0,
+      "peak_dbfs": -9.63,
+      "peak_dbfs_channels": [
+        -9.63,
+        -9.63
+      ],
+      "rms_dbfs": -21.95,
+      "crest_db": 12.32,
+      "loudness_lufs_approx": -16.08,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": -0.0,
+      "dc_offset_channels": [
+        -0.0,
+        -0.0
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 10.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 30,
+        "centroid_hz": 2049.1,
+        "rolloff85_hz": 2390.2,
+        "dominant_hz": 2364.0,
+        "band_energy_pct": {
+          "sub": 0.0,
+          "bass": 0.01,
+          "low_mid": 37.38,
+          "high_mid": 62.59,
+          "air": 0.03
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-step-0.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 7056,
+      "duration_ms": 160.0,
+      "peak_dbfs": -16.48,
+      "peak_dbfs_channels": [
+        -16.48,
+        -16.48
+      ],
+      "rms_dbfs": -30.37,
+      "crest_db": 13.89,
+      "loudness_lufs_approx": -28.65,
+      "loudness_method": "one block: the file is shorter than 400 ms",
+      "dc_offset": 0.00035,
+      "dc_offset_channels": [
+        0.00035,
+        0.00035
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 20.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 6,
+        "centroid_hz": 136.4,
+        "rolloff85_hz": 150.7,
+        "dominant_hz": 128.0,
+        "band_energy_pct": {
+          "sub": 0.16,
+          "bass": 98.51,
+          "low_mid": 1.23,
+          "high_mid": 0.09,
+          "air": 0.01
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-step-1.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 7056,
+      "duration_ms": 160.0,
+      "peak_dbfs": -16.48,
+      "peak_dbfs_channels": [
+        -16.48,
+        -16.48
+      ],
+      "rms_dbfs": -29.86,
+      "crest_db": 13.38,
+      "loudness_lufs_approx": -28.06,
+      "loudness_method": "one block: the file is shorter than 400 ms",
+      "dc_offset": 0.00025,
+      "dc_offset_channels": [
+        0.00025,
+        0.00025
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 20.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 6,
+        "centroid_hz": 150.2,
+        "rolloff85_hz": 150.7,
+        "dominant_hz": 134.5,
+        "band_energy_pct": {
+          "sub": 0.07,
+          "bass": 98.16,
+          "low_mid": 1.58,
+          "high_mid": 0.18,
+          "air": 0.01
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-step-2.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 7056,
+      "duration_ms": 160.0,
+      "peak_dbfs": -16.48,
+      "peak_dbfs_channels": [
+        -16.48,
+        -16.48
+      ],
+      "rms_dbfs": -29.83,
+      "crest_db": 13.35,
+      "loudness_lufs_approx": -28.22,
+      "loudness_method": "one block: the file is shorter than 400 ms",
+      "dc_offset": -2e-05,
+      "dc_offset_channels": [
+        -2e-05,
+        -2e-05
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 20.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 6,
+        "centroid_hz": 123.6,
+        "rolloff85_hz": 129.2,
+        "dominant_hz": 118.7,
+        "band_energy_pct": {
+          "sub": 0.2,
+          "bass": 98.74,
+          "low_mid": 1.0,
+          "high_mid": 0.06,
+          "air": 0.0
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-step-3.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 7056,
+      "duration_ms": 160.0,
+      "peak_dbfs": -16.48,
+      "peak_dbfs_channels": [
+        -16.48,
+        -16.48
+      ],
+      "rms_dbfs": -30.33,
+      "crest_db": 13.85,
+      "loudness_lufs_approx": -28.48,
+      "loudness_method": "one block: the file is shorter than 400 ms",
+      "dc_offset": -2e-05,
+      "dc_offset_channels": [
+        -2e-05,
+        -2e-05
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 20.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 6,
+        "centroid_hz": 156.6,
+        "rolloff85_hz": 150.7,
+        "dominant_hz": 144.3,
+        "band_energy_pct": {
+          "sub": 0.04,
+          "bass": 98.07,
+          "low_mid": 1.73,
+          "high_mid": 0.16,
+          "air": 0.01
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "sfx-success-0.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 55125,
+      "duration_ms": 1250.0,
+      "peak_dbfs": -8.61,
+      "peak_dbfs_channels": [
+        -8.61,
+        -8.71
+      ],
+      "rms_dbfs": -24.22,
+      "crest_db": 15.6,
+      "loudness_lufs_approx": -22.07,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": 0.0,
+      "dc_offset_channels": [
+        0.0,
+        0.0
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 10.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 53,
+        "centroid_hz": 544.4,
+        "rolloff85_hz": 667.5,
+        "dominant_hz": 659.1,
+        "band_energy_pct": {
+          "sub": 0.0,
+          "bass": 0.0,
+          "low_mid": 100.0,
+          "high_mid": 0.0,
+          "air": 0.0
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    }
+  ],
+  "audibility_verified": false,
+  "limits": [
+    "no subjective listening assessment",
+    "no device audibility acknowledgement",
+    "no sample-clock synchronization evidence",
+    "no live spatial/pitch voice controls"
+  ],
+  "bundle_measurements": {
+    "effects": {
+      "battery": [
+        {
+          "checksum": "31211fa5182ab0a2",
+          "dc": 5.076896741229575e-06,
+          "file": "sfx-battery-0.wav",
+          "frames": 33075,
+          "peak": 0.28259676694869995,
+          "rms": 0.10503847897052765,
+          "seam_jump": 0.0
+        }
+      ],
+      "shutter": [
+        {
+          "checksum": "580495bcf3af77e6",
+          "dc": 8.224759540098603e-09,
+          "file": "sfx-shutter-0.wav",
+          "frames": 30870,
+          "peak": 0.33000001311302185,
+          "rms": 0.07287581264972687,
+          "seam_jump": 0.0
+        },
+        {
+          "checksum": "60445372d5f04f0e",
+          "dc": 2.737648969741713e-07,
+          "file": "sfx-shutter-1.wav",
+          "frames": 30870,
+          "peak": 0.33000001311302185,
+          "rms": 0.0798981785774231,
+          "seam_jump": 0.0
+        }
+      ],
+      "step": [
+        {
+          "checksum": "d3ded1b7f0c537f6",
+          "dc": 0.00034720005351118743,
+          "file": "sfx-step-0.wav",
+          "frames": 7056,
+          "peak": 0.15000000596046448,
+          "rms": 0.030295608565211296,
+          "seam_jump": 0.0
+        },
+        {
+          "checksum": "d8bc6295dc7fe2be",
+          "dc": 0.0002512643113732338,
+          "file": "sfx-step-1.wav",
+          "frames": 7056,
+          "peak": 0.15000000596046448,
+          "rms": 0.032139405608177185,
+          "seam_jump": 0.0
+        },
+        {
+          "checksum": "d3375c39cbb05776",
+          "dc": 1.974839688045904e-05,
+          "file": "sfx-step-2.wav",
+          "frames": 7056,
+          "peak": 0.15000000596046448,
+          "rms": 0.032247476279735565,
+          "seam_jump": 0.0
+        },
+        {
+          "checksum": "1565a8b506fe7e3a",
+          "dc": 1.6112868252093904e-05,
+          "file": "sfx-step-3.wav",
+          "frames": 7056,
+          "peak": 0.15000000596046448,
+          "rms": 0.030433399602770805,
+          "seam_jump": 0.0
+        }
+      ],
+      "success": [
+        {
+          "checksum": "f65f439e2c8374bc",
+          "dc": 3.729290483533987e-06,
+          "file": "sfx-success-0.wav",
+          "frames": 55125,
+          "peak": 0.3709102272987366,
+          "rms": 0.061823803931474686,
+          "seam_jump": 0.0
+        }
+      ]
+    },
+    "music": {
+      "orbit": {
+        "checksum": "dde9c35dc0ce9ee9",
+        "dc": 3.8550484759980463e-07,
+        "file": "music-orbit.wav",
+        "frames": 235200,
+        "peak": 0.49562013149261475,
+        "rms": 0.09468625485897064,
+        "seam_jump": 0.0010950639843940735
+      },
+      "signal": {
+        "checksum": "41521c49aa85227f",
+        "dc": 7.671471848880174e-07,
+        "file": "music-signal.wav",
+        "frames": 235200,
+        "peak": 0.21171461045742035,
+        "rms": 0.027205798774957657,
+        "seam_jump": 0.0
+      }
+    },
+    "music_scale": 1.0,
+    "sample_rate": 44100,
+    "version": 1
+  }
+}

@@ -16,6 +16,24 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ContextTests(unittest.TestCase):
+    def test_stock_audio_pipeline_and_bindings_are_discoverable(self):
+        packet = workflow.context(ROOT, 'stock GameDocument audio pipeline cues and adaptive music')
+        feature = packet['matches'][0]
+        self.assertEqual(feature['id'], 'audio_authoring')
+        self.assertIn('docs/AUDIO.md', feature['read_first'])
+        self.assertIn('StockAudio', feature['public_api'])
+        self.assertIn('AudioCursor', feature['public_api'])
+        self.assertFalse(packet['engine_source_read'])
+
+    def test_named_audio_authoring_is_discoverable_without_source_exploration(self):
+        packet = workflow.context(ROOT, 'compose stereo music score with MIDI notes and preview named sound effects')
+        feature = packet['matches'][0]
+        self.assertEqual(feature['id'], 'audio_authoring')
+        self.assertIn('docs/AUDIO.md', feature['read_first'])
+        self.assertEqual(feature['canonical_example'], 'examples/audio_preview.rs')
+        self.assertIn('AudioBank', feature['public_api'])
+        self.assertFalse(packet['engine_source_read'])
+
     def test_task_packet_and_diagnostic_routing(self):
         packet = workflow.context(ROOT, 'add replicated door state')
         self.assertEqual({item['id'] for item in packet['matches'][:2]},
@@ -175,12 +193,21 @@ class SelectionTests(unittest.TestCase):
         for features in ([], ['--no-default-features']):
             self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', *features], commands)
             self.assertIn(['cargo', 'test', '--locked', *features], workflow.full_commands('dev'))
-            self.assertIn(['cargo', 'clippy', '--all-targets', '--locked', *features,
+            self.assertIn(['cargo', 'clippy', '--all-targets', '--locked', '--profile', 'itest', *features,
                            '--', '-D', 'warnings'], commands)
-            self.assertIn(['cargo', 'rustdoc', '--locked', '--lib', *features,
+            self.assertIn(['cargo', 'rustdoc', '--locked', '--lib', '--profile', 'itest', *features,
                            '--', '-D', 'warnings'], commands)
         for script in ['tools/check_headless.py', 'tools/check_authoring.py']:
             self.assertIn([sys.executable, script], commands)
+        self.assertIn([sys.executable, 'tools/check_authoring.py', '--profile', 'dev'],
+                      workflow.full_commands('dev'))
+        for command in workflow.full_commands('dev'):
+            if command[0] == 'cargo':
+                self.assertNotIn('--profile', command)
+        plan = workflow.validation_plan()
+        self.assertEqual(plan['independent_commands'], [len(commands) - 1])
+        self.assertEqual(commands[-1][1:3], ['-m', 'unittest'])
+        self.assertNotIn('tools.test_author', commands[-1])
 
     def test_iteration_tests_use_the_fast_profile_unless_dev_is_asked_for(self):
         command = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
@@ -253,17 +280,24 @@ class RunnerTests(unittest.TestCase):
         for name in ['be2.py', 'workflow.py', 'upgrade.py']:
             shutil.copyfile(ROOT / 'tools' / name, self.root / 'tools' / name)
 
-    def run_check(self, command, harness=None, timeout=None, later=True):
+    def run_check(self, command, harness=None, timeout=None, later=True, independent=None,
+                  following=None, serial=False, fixed_stamp=False):
         plan = {'scope': 'iteration', 'feature': 'fixture', 'feature_mode': 'headless',
                 'proves': 'Fixture only', 'remaining': 'Full verification remains',
                 'test_harness': harness, 'commands': [command] +
-                ([[sys.executable, '-c', 'print("later-command")']] if later else [])}
+                (following if following is not None else
+                 [[sys.executable, '-c', 'print("later-command")']] if later else []),
+                'independent_commands': independent or []}
         # Drive the real CLI/exit path, replacing only the command plan. Temporary
         # copies keep fixture logs out of the engine checkout and need no Cargo deps.
         script = ('import sys,runpy; sys.path.insert(0,"tools"); import workflow; '
                   'workflow.validation_plan=lambda *args: ' + repr(plan) + '; '
                   'sys.argv=["be2.py","check"]' +
                   ('+["--timeout",' + repr(str(timeout)) + ']' if timeout else '') + '; '
+                  + ('sys.argv += ["--serial"]; ' if serial else '') +
+                  ('import datetime; from unittest.mock import patch; '
+                   'clock=patch.object(datetime,"datetime").start(); '
+                   'clock.now.return_value.strftime.return_value="same-timestamp"; ' if fixed_stamp else '') +
                   'runpy.run_path("tools/be2.py",run_name="__main__")')
         result = subprocess.run([sys.executable, '-c', script], cwd=self.root,
                                 capture_output=True, text=True,
@@ -284,6 +318,75 @@ class RunnerTests(unittest.TestCase):
         self.assertGreater(Path(summary['failure']['log']).stat().st_size, 12000)
         self.assertEqual(summary['failure']['command'], summary['failure']['reproduction'])
         self.assertLess(len(result.stdout), 4000)
+        self.assertIn('[1/2]', result.stderr)
+        self.assertIn('FAILED: command_failure', result.stderr)
+
+    def test_progress_preserves_json_and_stage_timings(self):
+        result, summary, report = self.run_check([sys.executable, '-c', 'print("fixture")'])
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(summary['ok'])
+        self.assertIn('[1/2]', result.stderr)
+        self.assertIn('[2/2]', result.stderr)
+        self.assertEqual(result.stderr.count('PASS ('), 2)
+        self.assertGreaterEqual(report['elapsed_seconds'],
+                                sum(item['elapsed_seconds'] for item in report['checks']) - .002)
+        self.assertTrue(all(item['log_bytes'] > 0 for item in report['checks']))
+
+    def barrier_command(self, own, other, ending='print("done")'):
+        # File barriers prove actual overlap, without timing-speed assertions.
+        return [sys.executable, '-c',
+                'from pathlib import Path; import time; '
+                f'Path({own!r}).touch(); end=time.monotonic()+5; '
+                f'exec("while not Path({other!r}).exists() and time.monotonic()<end: time.sleep(.01)"); '
+                f'assert Path({other!r}).exists(), "other lane did not start"; {ending}']
+
+    def test_independent_lane_overlaps_and_report_waits_for_both(self):
+        first = self.barrier_command('first', 'second')
+        second = self.barrier_command('second', 'first')
+        result, summary, report = self.run_check(first, following=[second], independent=[1])
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(summary['ok'])
+        self.assertEqual(report['independent_commands'], [1])
+        self.assertEqual([item['step'] for item in report['checks']], [1, 2])
+        self.assertTrue(all(item['ok'] for item in report['checks']))
+        self.assertTrue(all('done' in (Path(summary['report']).parent / item['log']).read_text()
+                            for item in report['checks']))
+
+    def test_failure_joins_started_lane_and_does_not_start_pending_gate(self):
+        first = self.barrier_command('first', 'second', 'import sys; sys.exit(7)')
+        second = self.barrier_command('second', 'first', 'Path("joined").touch(); print("done")')
+        pending = [sys.executable, '-c', 'from pathlib import Path; Path("pending").touch()']
+        result, summary, report = self.run_check(first, following=[second, pending], independent=[1])
+        self.assertEqual(result.returncode, 7)
+        self.assertFalse(summary['ok'])
+        self.assertEqual(report['commands_attempted'], 2)
+        self.assertTrue((self.root / 'joined').exists())
+        self.assertFalse((self.root / 'pending').exists())
+
+    def test_independent_failure_cannot_certify_serial_success(self):
+        first = self.barrier_command('first', 'second')
+        second = self.barrier_command('second', 'first', 'import sys; sys.exit(7)')
+        result, summary, report = self.run_check(first, following=[second], independent=[1])
+        self.assertEqual(result.returncode, 7)
+        self.assertFalse(summary['ok'])
+        self.assertEqual(report['failed_commands'], 1)
+
+    def test_serial_opt_out_retains_all_commands(self):
+        result, summary, report = self.run_check([sys.executable, '-c', 'print("first")'],
+                                                independent=[1], serial=True)
+        self.assertEqual(result.returncode, 0)
+        self.assertTrue(summary['ok'])
+        self.assertEqual(report['independent_commands'], [])
+        self.assertEqual(report['commands_attempted'], 2)
+
+    def test_repeated_timestamp_keeps_original_engine_evidence(self):
+        _, first, _ = self.run_check([sys.executable, '-c', 'import sys; print("failure"); sys.exit(7)'],
+                                    fixed_stamp=True)
+        _, second, _ = self.run_check([sys.executable, '-c', 'print("success")'], fixed_stamp=True)
+        self.assertNotEqual(first['report'], second['report'])
+        self.assertFalse(json.loads(Path(first['report']).read_text())['ok'])
+        self.assertTrue(json.loads(Path(second['report']).read_text())['ok'])
+        self.assertEqual((Path(first['report']).parent / '1.log').read_text().strip(), 'failure')
 
     def test_timeout_and_missing_tool_are_distinct_and_keep_logs(self):
         result, summary, _ = self.run_check(

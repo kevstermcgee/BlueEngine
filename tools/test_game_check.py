@@ -57,6 +57,15 @@ class GameCheckTests(unittest.TestCase):
         checks = game_check.commands(self.root, self.native, True)
         self.assertEqual([cmd[1] for cmd in checks], ['audit', 'lint', 'verify', 'game-validate'])
 
+    def test_mover_game_lint_uses_chosen_scenario_without_blanket_exemptions(self):
+        (self.root / 'game.json').write_text(json.dumps({'map':'maps/main.json','movers':[{'id':'gate'}]}))
+        static = game_check.commands(self.root, self.native, True)
+        self.assertEqual(static[1], [str(self.native), 'lint', str((self.root / 'maps/main.json').resolve())])
+        proven = game_check.commands(self.root, self.native, True, ['tests/win.json','tests/lose.json'])
+        self.assertEqual(proven[1][-2:], ['--game=' + str((self.root / 'game.json').resolve()),
+                                        '--scenario=' + str((self.root / 'tests/win.json').resolve())])
+        self.assertEqual([cmd[1] for cmd in proven], ['audit','lint','game-validate','sim','sim'])
+
     def test_failure_preserves_logs_stops_checks_and_reports_false(self):
         def fail(command, **kwargs):
             kwargs['stdout'].write('specific native error\n')
@@ -87,6 +96,26 @@ class GameCheckTests(unittest.TestCase):
         self.assertEqual(self.report()['scope'], 'content')
         self.assertTrue(self.report()['ok'])
         self.assertTrue(self.report()['native_sha256'])
+
+    def test_repeated_timestamp_keeps_both_reports_and_original_failure_log(self):
+        output = io.StringIO()
+        def result(code, text):
+            def invoke(command, **kwargs):
+                kwargs['stdout'].write(text)
+                return subprocess.CompletedProcess(command, code)
+            return invoke
+        with patch.object(game_check.datetime, 'datetime') as clock, contextlib.redirect_stdout(output):
+            clock.now.return_value.strftime.return_value = 'same-timestamp'
+            with patch.object(game_check.subprocess, 'run', side_effect=result(7, 'original failure')):
+                self.assertFalse(game_check.run(self.root, self.native, True))
+            with patch.object(game_check.subprocess, 'run', side_effect=result(0, 'later success')):
+                self.assertTrue(game_check.run(self.root, self.native, True))
+        first, second = [Path(json.loads(line)['report']) for line in output.getvalue().splitlines()]
+        self.assertNotEqual(first, second)
+        self.assertFalse(json.loads(first.read_text())['ok'])
+        self.assertTrue(json.loads(second.read_text())['ok'])
+        self.assertEqual((first.parent / '1.log').read_text(), 'original failure')
+        self.assertEqual((second.parent / '1.log').read_text(), 'later success')
 
 
 class FindToolsTests(unittest.TestCase):
@@ -223,6 +252,14 @@ class ProjectsWithoutGameDocumentTests(RunnerCase):
         (self.root / 'maps/main.json').write_text('{}')
         self.assertEqual(self.names(content_only=True), ['audit', 'lint'])
         self.assertEqual(self.names(), ['audit', 'lint', 'metadata', 'test'])
+
+    def test_custom_named_audio_banks_are_checked_before_cargo(self):
+        bank = self.root / 'assets/audio/nature'
+        bank.mkdir(parents=True)
+        (bank / 'bank.json').write_text('{}')
+        commands = game_check.commands(self.root, self.native)
+        self.assertEqual(commands[0], [str(self.native), 'audio', 'check', str(bank.resolve())])
+        self.assertEqual(commands[1:], [LOCK, TEST])
 
     def test_authored_checks_run_verify_and_game_validate_is_skipped(self):
         (self.root / 'maps').mkdir()
@@ -364,6 +401,15 @@ class ShipGateTests(RunnerCase):
         self.assertEqual(self.report()['ship'], SHIP_FAIL)
         self.assertFalse(self.report()['ok'])
 
+    def test_private_launcher_folder_is_forwarded_without_skipping_ship_verification(self):
+        self.install_ship(SHIP_PASS)
+        folder = self.root / 'private launchers'
+        ok, line, commands = self.run_with_real_ship(ship_folder=folder)
+        self.assertTrue(ok, line)
+        self.assertEqual(line['ship'], 'pass')
+        self.assertEqual(commands[-1][-2:], ['--folder', str(folder.resolve())])
+        self.assertEqual(self.report()['checks'][-1]['name'], 'ship')
+
     def test_the_gate_runs_after_cargo_test_not_before(self):
         self.install_ship(SHIP_PASS)
         _ok, _line, commands = self.run_with_real_ship()
@@ -445,11 +491,11 @@ class ShipGateTests(RunnerCase):
         with patch.object(game_check, 'run', side_effect=lambda *a: calls.append(a) or True), \
                 patch.object(sys, 'argv', ['check.py', '--tools', 'x', '--skip-ship']):
             self.assertEqual(game_check.main(), 0)
-        self.assertEqual(calls[0][2:], (False, [], True))
+        self.assertEqual(calls[0][2:], (False, [], True, None))
         with patch.object(game_check, 'run', side_effect=lambda *a: calls.append(a) or True), \
                 patch.object(sys, 'argv', ['check.py', '--tools', 'x', '--content-only']):
             game_check.main()
-        self.assertEqual(calls[1][2:], (True, [], False))
+        self.assertEqual(calls[1][2:], (True, [], False, None))
 
     def test_manual_text_names_the_evidence_and_what_still_needs_eyes(self):
         self.assertIn('dist/ship.json', game_check.MANUAL)
@@ -465,8 +511,10 @@ GIT = shutil.which('git')
 
 
 def git(directory, *args):
+    # Short-lived fixture repositories must not launch work that races their deletion.
     subprocess.run(['git', '-C', str(directory), '-c', 'user.name=t', '-c', 'user.email=t@example.com',
-                    '-c', 'commit.gpgsign=false', *args], check=True, capture_output=True,
+                    '-c', 'commit.gpgsign=false', '-c', 'maintenance.auto=false', '-c', 'gc.auto=0',
+                    *args], check=True, capture_output=True,
                    creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
 
 

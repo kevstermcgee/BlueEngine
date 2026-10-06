@@ -14,7 +14,7 @@ if(!executable)throw new Error('Browser verification needs Chromium/Chrome on PA
 const browser=spawn(executable,['--headless','--no-sandbox','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
 let socket;
 let errors=[];let requests=[];let browserLog='';
-const timeout=setTimeout(()=>{browser.kill('SIGKILL');console.error('Browser smoke timed out');process.exit(1);},180000);
+const timeout=setTimeout(()=>{browser.kill('SIGKILL');console.error('Browser smoke timed out');process.exit(1);},360000);
 try {
   const endpoint=await new Promise((resolve,reject)=>{
     browser.stderr.on('data',chunk=>{browserLog+=chunk;const match=browserLog.match(/DevTools listening on (ws:\/\/\S+)/);if(match)resolve(match[1]);});
@@ -39,23 +39,28 @@ try {
   const control=async name=>evaluate(`(()=>{const element=document.querySelector('[data-control="${name}"]');const menu=element.closest('details');if(menu)menu.open=true;element.scrollIntoView({block:'center'});const r=element.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,id:1};})()`);
   const evaluate=async expression=>{const result=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(JSON.stringify(result.exceptionDetails));return result.result.value;};
   const wait=async expression=>{for(let i=0;i<900;i++){const result=await evaluate(expression);if(errors.length)throw new Error(errors.join('\n'));if(result)return result;await new Promise(r=>setTimeout(r,100));}throw new Error(`Timeout waiting for ${expression}; state ${JSON.stringify(await evaluate('window.be2'))}; digital ${JSON.stringify(await evaluate('window.be2Touch'))}`);};
-  const key=async (key,code,vk)=>{if(mobile){const names={Enter:'play',Escape:'pause',KeyR:'restart',KeyK:'save',KeyL:'load',KeyM:'sound'};const point=await control(names[code]);await touch('touchStart',[point]);await new Promise(r=>setTimeout(r,100));await touch('touchEnd');return;}await send('Input.dispatchKeyEvent',{type:'keyDown',key,code,windowsVirtualKeyCode:vk});await new Promise(r=>setTimeout(r,100));await send('Input.dispatchKeyEvent',{type:'keyUp',key,code,windowsVirtualKeyCode:vk});};
+  const key=async (key,code,vk)=>{if(mobile){const names={Enter:'play',Escape:'pause',KeyR:'restart',KeyK:'save',KeyL:'load',KeyM:'sound',KeyN:'music'};const point=await control(names[code]);await touch('touchStart',[point]);await new Promise(r=>setTimeout(r,100));await touch('touchEnd');return;}await send('Input.dispatchKeyEvent',{type:'keyDown',key,code,windowsVirtualKeyCode:vk});await new Promise(r=>setTimeout(r,100));await send('Input.dispatchKeyEvent',{type:'keyUp',key,code,windowsVirtualKeyCode:vk});};
   await send('Page.navigate',{url:url+'?verify=1'});
   await writeFile(reportPath,JSON.stringify({ok:false,stage:'waiting for WASM ready',errors}));await wait('window.be2?.ready');
+  if(!mobile){await key('f','KeyF',70);await wait('!!document.fullscreenElement');await key('f','KeyF',70);await wait('!document.fullscreenElement');}
   await key('Enter','Enter',13);
   await wait('be2.started');
+  await writeFile(reportPath,JSON.stringify({ok:false,stage:'checking deterministic replay and audio',errors}));
   const verified=await wait('be2.verified && JSON.parse(JSON.stringify(be2))');
   const metadata=await evaluate('fetch("manifest.json").then(r=>r.json())');
   if(verified.hash!==metadata.verification.hash||verified.outcome!==metadata.verification.outcome)throw new Error(`Browser/native mismatch: ${JSON.stringify(verified)} expected ${JSON.stringify(metadata.verification)}`);
   if(!verified.audio.activated||verified.audio.loaded!==3||verified.audio.submitted<1)throw new Error('No audio activation/decode/play submission evidence: '+JSON.stringify({audio:verified.audio,contexts:await evaluate('be2Audio.contexts.map(c=>c.state)'),activation:await evaluate('({active:navigator.userActivation.isActive,ever:navigator.userActivation.hasBeenActive})')}));
+  if(verified.music?.loaded>0&&!verified.music.playing)throw new Error('Authored music/ambience loaded but never started');
   const audio=await evaluate('({states:be2Audio.contexts.map(c=>c.state),starts:be2Audio.starts})');
   if(!audio.states.length||audio.states.some(s=>s!=='running')||audio.starts<1)throw new Error('Audio buffers never reached a running playback context');
   const screen=await send('Page.captureScreenshot',{format:'png'});await writeFile(screenshotPath,Buffer.from(screen.data,'base64'));
   await key('k','KeyK',75);await wait('be2.notice.includes("saved")');
   const saved=await evaluate('be2.hash');
   await key('m','KeyM',77);await wait('!be2.sound');
-  await send('Page.reload');await writeFile(reportPath,JSON.stringify({ok:false,stage:'waiting for WASM ready',errors}));await wait('window.be2?.ready');
+  if(verified.music?.loaded>0){await key('n','KeyN',78);await wait('!be2.music_on');}
+  await send('Page.reload');await writeFile(reportPath,JSON.stringify({ok:false,stage:'checking save/settings after reload',errors}));await wait('window.be2?.ready');
   if(await evaluate('be2.sound')!==false)throw new Error('Settings did not survive reload');
+  if(verified.music?.loaded>0&&await evaluate('be2.music_on')!==false)throw new Error('Music settings did not survive reload');
   await key('l','KeyL',76);await wait('be2.notice.includes("resumed")');
   if(await evaluate('be2.hash')!==saved)throw new Error('Save did not survive reload exactly');
   await evaluate('window.be2BlockStorage=true');await key('k','KeyK',75);
@@ -63,7 +68,7 @@ try {
   await evaluate('window.be2BlockStorage=false');await key('l','KeyL',76);await wait('be2.notice.includes("resumed")');
   if(await evaluate('be2.hash')!==saved)throw new Error('Blocked write destroyed the previous save');
   // Real controls in normal mode, independent of verification_input.
-  await send('Page.navigate',{url});await writeFile(reportPath,JSON.stringify({ok:false,stage:'waiting for WASM ready',errors}));await wait('window.be2?.ready');await key('Enter','Enter',13);await key('Escape','Escape',27);await wait('be2.paused');
+  await send('Page.navigate',{url});await writeFile(reportPath,JSON.stringify({ok:false,stage:'checking real input in normal play',errors}));await wait('window.be2?.ready');await key('Enter','Enter',13);await key('Escape','Escape',27);await wait('be2.paused');
   await key('r','KeyR',82);await key('Escape','Escape',27);
   const probe=await evaluate('be2.probe');
   let mousePoint;const held=[];
@@ -79,7 +84,9 @@ try {
       if(layout==='paddle'){const start=await control('paddle');await touch('touchStart',[start]);const target=await evaluate(`(()=>{const r=document.querySelector('[data-control=paddle]').getBoundingClientRect();return {x:r.x+8+(r.width-16)*${probe.pointer.x}/799,y:r.y+r.height/2,id:1};})()`);await touch('touchMove',[target]);}else{mobilePoints.push(point);}
     }
     if(mobilePoints.length)await touch('touchStart',mobilePoints);
-    await new Promise(r=>setTimeout(r,150));await touch('touchEnd');
+    // A software renderer may take longer than a short tap to produce a frame.
+    // Hold movement until gameplay observes it, then release the real controls.
+    try {await wait('be2.probe_passed');} finally {await touch('touchEnd');}
   } else {
   if(probe.pointer){
     mousePoint=await evaluate(`(()=>{const r=document.querySelector('canvas').getBoundingClientRect();const scale=Math.min(r.width/800,r.height/450);return {x:r.x+(r.width-800*scale)/2+${probe.pointer.x}*scale,y:r.y+(r.height-450*scale)/2+${probe.pointer.y}*scale};})()`);
@@ -90,11 +97,13 @@ try {
   if(probe.action&&!probe.pointer)held.push(['Space',32]);
   for(const [code,vkey] of held)await send('Input.dispatchKeyEvent',{type:'keyDown',key:code==='Space'?' ':code,code,windowsVirtualKeyCode:vkey});
   if(probe.action&&mousePoint)await send('Input.dispatchMouseEvent',{type:'mousePressed',...mousePoint,button:'left',clickCount:1});
-  await new Promise(r=>setTimeout(r,100));
+  try {await wait('be2.probe_passed');} finally {
   for(const [code,vkey] of held)await send('Input.dispatchKeyEvent',{type:'keyUp',key:code==='Space'?' ':code,code,windowsVirtualKeyCode:vkey});
   if(probe.action&&mousePoint)await send('Input.dispatchMouseEvent',{type:'mouseReleased',...mousePoint,button:'left',clickCount:1});
   }
+  }
   await wait('be2.probe_passed');
+  await writeFile(reportPath,JSON.stringify({ok:false,stage:'real input passed; checking offline installation',errors}));
   const playScreen=await send('Page.captureScreenshot',{format:'png'});await writeFile(screenshotPath.replace(/\.png$/, '-playing.png'),Buffer.from(playScreen.data,'base64'));
   const keyboard=await evaluate(`(()=>{const e=new KeyboardEvent('keydown',{code:'Tab',key:'Tab',cancelable:true});document.querySelector('canvas').dispatchEvent(e);return !e.defaultPrevented;})()`);
   if(!keyboard)throw new Error('Tab navigation was consumed by the game');
@@ -129,7 +138,7 @@ try {
     installation={service_worker:true,offline_reload:true,automatic_progress_resume:true,installability_errors:installability.installabilityErrors};
     await send('Network.emulateNetworkConditions',{offline:false,latency:0,downloadThroughput:-1,uploadThroughput:-1});
   }
-  const report={ok:true,mobile:mobile?mobileLayout:false,installation,verified,native_expected:metadata.verification,audio,persistence:'save and settings survive reload; blocked write fails explicitly and retains save',real_input:{probe,meaningful_result:true,start_pause_restart:true,tab_navigation_preserved:true},canvas,requests,errors,screenshot:screenshotPath,browser:'Chromium CDP/software WebGL; no human listening or physical controller test'};
+  const report={ok:true,mobile:mobile?mobileLayout:false,installation,verified,native_expected:metadata.verification,audio,persistence:'save and settings survive reload; blocked write fails explicitly and retains save',real_input:{probe,meaningful_result:true,start_pause_restart:true,tab_navigation_preserved:true,fullscreen:!mobile},canvas,requests,errors,screenshot:screenshotPath,browser:'Chromium CDP/software WebGL; no human listening or physical controller test'};
   await writeFile(reportPath,JSON.stringify(report,null,2));console.log(JSON.stringify({ok:true,report:reportPath,hash:verified.hash}));
 } catch(error) {await writeFile(reportPath,JSON.stringify({ok:false,error:String(error),errors,requests,browserLog:browserLog.slice(-4000)},null,2));console.error(error);process.exitCode=1;}
 finally {clearTimeout(timeout);socket?.close();browser.kill();await new Promise(r=>setTimeout(r,500));await rm(profile,{recursive:true,force:true});}
