@@ -385,8 +385,8 @@ def module_picks(summaries, feature, query_words, rarity=None):
 def context(root, query, limit=3, level=2):
     if level not in (1, 2, 3):
         raise ValueError('Context level must be 1, 2 or 3')
-    if not query.strip() or len(query) > 100:
-        raise ValueError(f'The query must be 1..100 characters (this one is {len(query)}): shorten it to the '
+    if not query.strip() or len(query) > 500:
+        raise ValueError(f'The query must be 1..500 characters (this one is {len(query)}): shorten it to the '
                          f'few words that name the feature, not the whole task')
     if not 1 <= limit <= 5:
         raise ValueError(f'--limit must be 1..5 (got {limit})')

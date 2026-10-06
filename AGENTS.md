@@ -52,7 +52,8 @@ enemies, projectiles, scoring, AI or per-frame physics use `new-game ... custom-
 done only when it ships with its own icon and desktop shortcut (`scripts/blue ship`; its
 `scripts/check.py` fails until it does). Saving and loading state is engine-owned (docs/SAVE_STATE.md):
 F5/F9 in the stock client, `devkit::Snapshot` for a custom simulation; never hand-write save files. Authoring starts
-with `python tools/author.py describe`; discover assets with
+with `python3 tools/be2.py map describe` in a source checkout (`tools/author.py describe`
+for packaged tools or an explicit `BE2_TOOLS`); discover assets with
 `python tools/assets.py search TEXT`. Retrieve detailed contracts through context;
 see docs/ENGINE_MAINTENANCE.md only for relevant maintenance obligations.
 Custom-sim games: `docs/CUSTOM_SIM_CHEATSHEET.md` is the game-facing API on one page (read it before grepping the
