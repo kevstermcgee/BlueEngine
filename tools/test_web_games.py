@@ -215,6 +215,8 @@ class ReleaseRegressionTests(unittest.TestCase):
         self.assertIn('Hop: Space / A / touch action',help_text)
         self.assertIn('Pause/resume: Escape / Pad button 7 / touch pause / Enter / Start',help_text)
         self.assertNotIn('F5',help_text)
+        self.assertNotIn('touch action',web.control_help(None))
+        self.assertNotIn('None:',web.control_help(None))
 
     @unittest.skipUnless(web.shutil.which('node'), 'Node is required for browser process regression')
     def test_browser_profile_cleanup_waits_for_a_writer_to_exit(self):

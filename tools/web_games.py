@@ -136,8 +136,9 @@ def control_help(action_label='Action'):
         if value.get('touch'):result.append('touch '+value['touch'])
         return result
     movement=', '.join(key(k) for k in c['movement']['keys'])
-    lines=[f'Move: {movement} / left stick / touch movement',f"{action_label}: {key(c['primary']['key'])} / {buttons([c['primary']['button']])[0]} / touch {c['primary']['touch']}",
-           'Look: '+c['look']['mouse']+' / right stick','Run: '+', '.join(key(k) for k in c['sprint']['keys'])]
+    lines=[f'Move: {movement} / left stick / touch movement']
+    if action_label:lines.append(f"{action_label}: {key(c['primary']['key'])} / {buttons([c['primary']['button']])[0]} / touch {c['primary']['touch']}")
+    lines+=['Look: '+c['look']['mouse']+' / right stick','Run: '+', '.join(key(k) for k in c['sprint']['keys'])]
     for name,value in c['commands'].items():
         inputs=bindings(value)
         if name=='pause':inputs+=bindings(c['commands']['start'])[:1]+buttons(c['commands']['start']['buttons'])
