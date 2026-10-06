@@ -1,0 +1,381 @@
+{
+  "benchmark": "AFTER fresh-context game-development trial",
+  "engine_revision": "56a2692c8a196455ac9f888135cb989c64d1cbeb",
+  "engine_tracked_worktree_clean": true,
+  "title": "Lumen Vault",
+  "declared_targets": [
+    "web"
+  ],
+  "started_utc": "2026-10-06T15:48:50+00:00",
+  "ended_utc": "2026-10-06T16:00:24.810713+00:00",
+  "total_wall_s": 694.810713,
+  "corrected_shipping_completed_utc": "2026-10-06T15:58:04.651021+00:00",
+  "elapsed_until_corrected_shipping_s": 554.651021,
+  "behavior": {
+    "artifacts": 5,
+    "exit": "western portal unlocks only with all five collected",
+    "timer_ticks": 1800,
+    "fixed_hz": 60,
+    "timer_seconds": 30,
+    "loss": "deadline expires before final-tick movement",
+    "restart": "shared client creates fresh game; tested after win and loss",
+    "save_load": "engine Snapshot exact frame and shared client manual/automatic storage; no hand-written save files"
+  },
+  "game_tests": {
+    "behavioral_tests": 6,
+    "identity_tests": 1,
+    "final_headless_passed": true,
+    "test_names": [
+      "public_route_collects_five_and_wins_deterministically",
+      "exit_stays_locked_until_all_five_seals",
+      "deadline_loses_and_terminal_state_freezes",
+      "restart_clears_win_loss_timer_position_and_seals",
+      "engine_snapshot_continues_mid_collection_exactly",
+      "pillars_block_public_movement_without_tunneling"
+    ],
+    "public_route_ticks": 461,
+    "terminal_win_tick": 428,
+    "verification": {
+      "hash": "b18c441e3f2e9a36",
+      "outcome": "won"
+    },
+    "snapshot_checkpoint": "collection after 190 public ticks; timeout continuation after 1790 idle ticks"
+  },
+  "quality_assessment": {
+    "assessment": "Clear, coherent indigo archive with brass relics, mint explorer and portal, dark tiled floor, gallery pillars, unobstructed countdown/collection HUD. Objective and locked/unlocked exit readable; corrected shared completion screen is clean.",
+    "inspected_captures": [
+      "browser-playing.png",
+      "browser.png",
+      "mobile-playing.png",
+      "mobile-landscape.png"
+    ],
+    "visual_iteration": "Removed duplicate custom outcome panel after inspecting actual win frame; final package reverified.",
+    "limitations": "Simple single-room collection game. Small in-canvas text on portrait phone is supplemented by browser title/instructions and large touch controls. No physical phone, Safari, hardware controller, speaker listening or sustained GPU-performance certification."
+  },
+  "failed_attempts": [
+    {
+      "kind": "agent setup",
+      "action": "context query 112 characters",
+      "exit_code": 1,
+      "resolution": "shortened query"
+    },
+    {
+      "kind": "agent setup/cache confounder",
+      "action": "initial scaffold without CARGO_TARGET_DIR",
+      "exit_code": 143,
+      "resolution": "Stopped Cargo, retried shared warm target; removed generated ignored target at end. Did not complete this build."
+    },
+    {
+      "kind": "host instrumentation",
+      "action": "/usr/bin/time absent",
+      "exit_code": 1,
+      "resolution": "Python resource.getrusage(RUSAGE_CHILDREN) records CPU and high-water RSS"
+    },
+    {
+      "kind": "agent setup",
+      "action": "author describe without shared target",
+      "exit_code": 1,
+      "resolution": "reran with CARGO_TARGET_DIR"
+    },
+    {
+      "kind": "engine workflow friction",
+      "action": "fresh-game inner loop cargo metadata --no-deps does not settle seeded lock",
+      "exit_code": 101,
+      "resolution": "cargo metadata --offline settled pinned lock; no engine edits"
+    },
+    {
+      "kind": "engine workflow friction",
+      "action": "inner wrapper classifies empty doctest harness as empty selection despite six+one passing tests",
+      "exit_code": 3,
+      "resolution": "direct focused cargo test --lib passed; browser shipping headless also passes all seven tests"
+    }
+  ],
+  "diagnostic_probe_failures": [
+    "tail used nonexistent timestamp wildcard",
+    "rg cargo*.py glob did not exist",
+    "package directory probe occurred before atomic build installation"
+  ],
+  "final_verification": {
+    "shipping_gate": true,
+    "package_integrity": true,
+    "desktop_strict_isolated_browser": true,
+    "mobile_strict_isolated_browser": true,
+    "browser_checks": {
+      "wasm_instantiated": true,
+      "playable": true,
+      "input": true,
+      "save_write": true,
+      "reload_read": true,
+      "audio_initialized": true,
+      "offline_reload": true,
+      "gameplay_scenario": true,
+      "update_recovery": true,
+      "focus_loss": true,
+      "focus_return": true,
+      "controller": true
+    },
+    "mobile_checks": {
+      "wasm_instantiated": true,
+      "playable": true,
+      "input": true,
+      "save_write": true,
+      "reload_read": true,
+      "audio_initialized": true,
+      "offline_reload": true,
+      "gameplay_scenario": true,
+      "update_recovery": true,
+      "focus_loss": true,
+      "focus_return": true
+    },
+    "native_shipping": "not declared; task asks browser package",
+    "external_publication": false,
+    "source_status": {
+      "availability": "local-only",
+      "clean": false,
+      "next": "Commit inputs and configure a public HTTPS origin before publication.",
+      "path": ".",
+      "repository": null,
+      "revision": null
+    }
+  },
+  "artifacts": {
+    "package_id": "9cb9fb6fd8ccccb87838acfc1a39990f78cbc21f6b29061ebc3bcb016210149b",
+    "wasm_sha256": "15a421a3dab716e0db601b4d6f6cacf0d3ddb82b63d02b0000a0fa8b46620e0b",
+    "wasm_bytes": 965073,
+    "total_package_bytes": 1106592,
+    "package_files": 10
+  },
+  "measurement": {
+    "resource_basis": "Each timed stage uses Python resource.getrusage(RUSAGE_CHILDREN); user/system CPU summed across exited descendants, RSS is OS child high-water, not simultaneous machine memory. Unwrapped setup/diagnostic commands lack CPU/RSS telemetry.",
+    "sum_measured_stage_wall_s": 314.98924768413417,
+    "sum_measured_user_cpu_s": 314.097397,
+    "sum_measured_system_cpu_s": 17.444858,
+    "max_measured_child_rss_kib": 1457304,
+    "exec_command_tool_calls": 46,
+    "command_count_basis": "Manual transcript inventory of top-level exec_command shell blocks; excludes polling/view_image tools and nested commands. Timed process command arrays and retained engine logs record actual verification commands.",
+    "files_read": [
+      {
+        "path": "/tmp/be-efficiency-after/AGENTS.md",
+        "mode": "full public guidance/template",
+        "bytes": 7728
+      },
+      {
+        "path": "/tmp/be-efficiency-after/docs/PORTABLE_GAMES.md",
+        "mode": "full public guidance/template",
+        "bytes": 9842
+      },
+      {
+        "path": "/tmp/be-efficiency-after/docs/GAME_QUICKSTART.md",
+        "mode": "full public guidance/template",
+        "bytes": 15059
+      },
+      {
+        "path": "/tmp/be-efficiency-after/docs/BROWSER_WORKFLOW.md",
+        "mode": "full public guidance/template",
+        "bytes": 8030
+      },
+      {
+        "path": "/tmp/be-efficiency-after/docs/TWO_D.md",
+        "mode": "full public guidance/template",
+        "bytes": 7513
+      },
+      {
+        "path": "/tmp/be-efficiency-after/docs/SAVE_STATE.md",
+        "mode": "full public guidance/template",
+        "bytes": 12991
+      },
+      {
+        "path": "/tmp/be-efficiency-after/templates/two-d/AGENTS.md",
+        "mode": "full public guidance/template",
+        "bytes": 2169
+      },
+      {
+        "path": "/tmp/be-efficiency-after/templates/two-d/lib.rs",
+        "mode": "full public guidance/template",
+        "bytes": 4664
+      },
+      {
+        "path": "/tmp/be-efficiency-game-after/AGENTS.md",
+        "mode": "full game project file",
+        "bytes_now": 2171,
+        "note": "Initial read preceded edits; current bytes shown where original-size telemetry unavailable."
+      },
+      {
+        "path": "/tmp/be-efficiency-game-after/game.project.json",
+        "mode": "full game project file",
+        "bytes_now": 459,
+        "note": "Initial read preceded edits; current bytes shown where original-size telemetry unavailable."
+      },
+      {
+        "path": "/tmp/be-efficiency-game-after/assets/identity.json",
+        "mode": "full game project file",
+        "bytes_now": 243,
+        "note": "Initial read preceded edits; current bytes shown where original-size telemetry unavailable."
+      },
+      {
+        "path": "/tmp/be-efficiency-game-after/src/lib.rs",
+        "mode": "full game project file",
+        "bytes_now": 13084,
+        "note": "Initial read preceded edits; current bytes shown where original-size telemetry unavailable."
+      },
+      {
+        "path": "/tmp/be-efficiency-game-after/src/main.rs",
+        "mode": "full game project file",
+        "bytes_now": 756,
+        "note": "Initial read preceded edits; current bytes shown where original-size telemetry unavailable."
+      },
+      {
+        "path": "/tmp/be-efficiency-game-after/scripts/check.py",
+        "mode": "full game project file",
+        "bytes_now": 16190,
+        "note": "Initial read preceded edits; current bytes shown where original-size telemetry unavailable."
+      },
+      {
+        "path": "/tmp/be-efficiency-game-after/Cargo.toml",
+        "mode": "full game project file",
+        "bytes_now": 604,
+        "note": "Initial read preceded edits; current bytes shown where original-size telemetry unavailable."
+      },
+      {
+        "path": "/tmp/be-efficiency-after/src/two_d/client.rs",
+        "mode": "bounded rg only",
+        "purpose": "Confirm shared R restart key; five matched lines, no implementation copied."
+      },
+      {
+        "path": "/tmp/be-efficiency-after/tools/check.py",
+        "mode": "diagnostic rg glob, no matching lines shown",
+        "purpose": "Attempt to locate empty-test failure classification; no source contents used."
+      }
+    ],
+    "full_public_guidance_template_bytes": 67996,
+    "bytes_context_note": "Full guides/template bytes exact. Initial game-file bytes and total tool/context bytes not instrumented; current game sizes shown explicitly. Search and report reads are bounded and not represented as full source reads.",
+    "model_token_usage": null,
+    "model_token_note": "Unavailable in this environment; no token usage invented.",
+    "cache_confounders": [
+      "CARGO_TARGET_DIR=/home/kevin/BlueEngine/target matches BEFORE warm shared dependencies; parent paused overlapping Cargo. Engine source path/revision and new game crate still cause crate rebuilds.",
+      "Brief initial default-target attempt before env correction compiled some dependencies into checkout target; stopped and removed, did not warm shared target.",
+      "Inner retry reported121 fresh Cargo artifacts and5 built. Direct focused follow-up reused build and took0.106s.",
+      "Fresh detached .be2-work initially cold; repeated plans/checks then reuse wrapper metadata. Exact wrapper cache hit telemetry not available.",
+      "Host Rust WASM target, crate archives, Chromium and Node/ws prerequisites already available; no cold-install cost. Browser profiles/package copies isolated each run.",
+      "Final corrected shipping93.382s versus initial133.075s benefits from prior WASM/dependency work and browser/cache/environment warming; not an independent cold comparison."
+    ],
+    "full_guidance_template_files": 8,
+    "full_game_project_files_read": 7,
+    "game_files_current_bytes": 33507,
+    "engine_source_contents_read": [
+      "src/two_d/client.rs (five bounded rg matched lines; restart key only)"
+    ],
+    "stage_measurements": [
+      {
+        "stage": "scaffold",
+        "wall_s": 20.66020206909161,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 26.69786,
+          "system_cpu_s": 1.662062,
+          "maxrss_kib": 1120228
+        }
+      },
+      {
+        "stage": "inner-plan",
+        "wall_s": 0.06962523399852216,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 0.083803,
+          "system_cpu_s": 0.015726999999999998,
+          "maxrss_kib": 21792
+        }
+      },
+      {
+        "stage": "inner",
+        "wall_s": 0.15034795505926013,
+        "exit_code": 101,
+        "resources": {
+          "user_cpu_s": 0.112967,
+          "system_cpu_s": 0.03677,
+          "maxrss_kib": 46536
+        }
+      },
+      {
+        "stage": "settle-lock",
+        "wall_s": 0.1626393070910126,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 0.09242099999999999,
+          "system_cpu_s": 0.037808,
+          "maxrss_kib": 62524
+        }
+      },
+      {
+        "stage": "inner-retry",
+        "wall_s": 66.18597231293097,
+        "exit_code": 3,
+        "resources": {
+          "user_cpu_s": 198.202537,
+          "system_cpu_s": 5.683958,
+          "maxrss_kib": 1457304
+        }
+      },
+      {
+        "stage": "shipping-plan",
+        "wall_s": 0.1155822400469333,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 0.08388699999999999,
+          "system_cpu_s": 0.028096,
+          "maxrss_kib": 21780
+        }
+      },
+      {
+        "stage": "web-prepare",
+        "wall_s": 0.9931878329953179,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 0.27488799999999997,
+          "system_cpu_s": 0.058752,
+          "maxrss_kib": 58972
+        }
+      },
+      {
+        "stage": "focused-behavior",
+        "wall_s": 0.10556638694833964,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 0.068065,
+          "system_cpu_s": 0.038897999999999995,
+          "maxrss_kib": 55708
+        }
+      },
+      {
+        "stage": "final-shipping",
+        "wall_s": 133.07516799401492,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 64.54412,
+          "system_cpu_s": 6.62156,
+          "maxrss_kib": 386744
+        }
+      },
+      {
+        "stage": "final-shipping-corrected",
+        "wall_s": 93.3819646909833,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 23.860281,
+          "system_cpu_s": 3.249138,
+          "maxrss_kib": 265468
+        }
+      },
+      {
+        "stage": "final-inspect",
+        "wall_s": 0.08899166097398847,
+        "exit_code": 0,
+        "resources": {
+          "user_cpu_s": 0.076568,
+          "system_cpu_s": 0.012088999999999999,
+          "maxrss_kib": 26236
+        }
+      }
+    ]
+  }
+}

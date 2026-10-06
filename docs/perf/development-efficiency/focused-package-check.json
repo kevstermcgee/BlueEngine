@@ -1,0 +1,148 @@
+{
+  "ok": true,
+  "plan": {
+    "loop": "inner",
+    "base": null,
+    "changed_paths": [
+      "templates/game_ship.py"
+    ],
+    "impact": {
+      "owners": [
+        "game_scaffolding",
+        "game_shipping"
+      ],
+      "affected": [
+        "game_scaffolding",
+        "game_shipping",
+        "game_upgrade"
+      ],
+      "unmapped": [],
+      "confidence": "partial: declared feature relationships, not a complete Rust dependency graph",
+      "scope_warning": null
+    },
+    "remaining": "Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/browser/package gates.",
+    "required_before_merge": [
+      "python tools/be2.py check",
+      "Linux/Windows CI",
+      "relevant visual, browser, networking and package evidence"
+    ],
+    "graph_confidence": "Declared dependencies; focused evidence is not full-suite certification.",
+    "scope": "focused",
+    "reason": "Whole-library units plus declared consumer suites and tooling checks.",
+    "commands": [
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_ship",
+        "tools.test_game_check"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_upgrade"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "features",
+        "--validate"
+      ]
+    ],
+    "command_harnesses": [
+      "python",
+      "python",
+      null
+    ],
+    "proves": "Executed selected behavioral checks only; final shipping verification remains outstanding.",
+    "requirements": {
+      "unit": false,
+      "integration_suites": [],
+      "networking": "deferred to shipping",
+      "browser": "deferred to shipping",
+      "packaging": "affected game package gate before shipping",
+      "full_suite": "before merge"
+    }
+  },
+  "checks": [
+    {
+      "step": 1,
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_ship",
+        "tools.test_game_check"
+      ],
+      "log": "1.log",
+      "ok": true,
+      "started_seconds": 0.0,
+      "returncode": 0,
+      "log_bytes": 2198,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "tests_executed": 215,
+      "elapsed_seconds": 16.223
+    },
+    {
+      "step": 2,
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_upgrade"
+      ],
+      "log": "2.log",
+      "ok": true,
+      "started_seconds": 16.223,
+      "returncode": 0,
+      "log_bytes": 129,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "tests_executed": 30,
+      "elapsed_seconds": 3.74
+    },
+    {
+      "step": 3,
+      "command": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "features",
+        "--validate"
+      ],
+      "log": "3.log",
+      "ok": true,
+      "started_seconds": 19.963,
+      "returncode": 0,
+      "log_bytes": 43,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 0.065
+    }
+  ],
+  "independent_commands": [],
+  "elapsed_seconds": 20.028,
+  "commands_attempted": 3,
+  "failed_commands": 0,
+  "cargo_artifacts": {
+    "fresh": 0,
+    "built": 0
+  },
+  "resources": {
+    "child_cpu_seconds": 19.98,
+    "max_child_rss_bytes": 170119168,
+    "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+  },
+  "successful_steps": [
+    1,
+    2,
+    3
+  ]
+}

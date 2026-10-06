@@ -1,0 +1,202 @@
+{
+  "benchmark": "BEFORE fresh-context representative game authoring",
+  "engine_revision": "83842f99a5a4df4dd98c3da46fb04f6878815175",
+  "started_at_utc": "2026-10-06T15:03:17+00:00",
+  "finished_at_utc": "2026-10-06T15:13:10.980408+00:00",
+  "total_wall_seconds": 593.98,
+  "status": "incomplete_web_package_gate_blocked",
+  "blocker": "Canonical local web build requires game Git provenance and a public HTTPS origin; scaffold creates neither. After local Git init/commit the second build fails git remote get-url origin. No remote was invented and no external publication occurred.",
+  "context_measurements": {
+    "read_files_count": 22,
+    "full_file_bytes_sum": 224997,
+    "estimated_loaded_file_text_bytes": 114690,
+    "estimated_file_text_tokens": 28672,
+    "method": "UTF-8 bytes/4 heuristic for loaded complete files/ranges. Does not include tool metadata, grep matches, context packets, dialogue or model reasoning. No tokenizer or exact model-context telemetry was available."
+  },
+  "failed_attempts": [
+    {
+      "command": "python tools/be2.py context ...",
+      "reason": "python alias absent",
+      "resolution": "python3"
+    },
+    {
+      "command": "python3 tools/author.py describe",
+      "reason": "native tool not found in checkout default paths",
+      "resolution": "Built matching tools, explicitly set BE2_TOOLS"
+    },
+    {
+      "command": "/usr/bin/time -v ...",
+      "reason": "binary unavailable",
+      "resolution": "Python resource.getrusage wrapper for subsequent major stages"
+    },
+    {
+      "command": "web build first attempt",
+      "reason": "git ls-files exit 128: new scaffold directory not a Git repository",
+      "resolution": "Local init/commit; retained headless/WASM evidence"
+    },
+    {
+      "command": "web build second attempt",
+      "reason": "git remote get-url origin failed; source validator additionally mandates public HTTPS origin",
+      "resolution": "Blocked; no fabricated remote or external publication"
+    },
+    {
+      "command": "git initial source commit",
+      "reason": "Captured generated __pycache__ file",
+      "resolution": "Removed from index, ignored __pycache__, amended before final provenance"
+    },
+    {
+      "command": "native visual review",
+      "reason": "Shared title and controls overlapped custom text",
+      "resolution": "Removed duplicate HUD text; reran final build, capture and project tests"
+    }
+  ],
+  "unavailable_measurements": [
+    "Exact model token/context usage",
+    "Exact discovery/authoring stage wall durations",
+    "Tool-build CPU/RSS (started before resource wrapper)",
+    "Browser frame/heap/WASM memory/startup/storage latencies because browser gate never reached",
+    "Physical phone/GPU/audio performance",
+    "Human audible sound assessment"
+  ],
+  "resource_measurements": "Per-stage Python resource.getrusage(RUSAGE_CHILDREN), CPU delta and maximum descendant RSS in KiB. RSS is not aggregate simultaneous process-tree memory. Some stages overlap/queue on Cargo locks; elapsed times include waits. Existing shared dependency cache reused.",
+  "game": {
+    "title": "Amber Vault",
+    "starter": "two-d",
+    "runtime": "portable",
+    "presentation": "2d",
+    "targets": [
+      "web"
+    ],
+    "features": [
+      "five artifact pickups",
+      "exit wins only with all five",
+      "35 second timer loss",
+      "terminal outcome freezes simulation",
+      "shared restart/pause/save/load/autosave",
+      "unique amber/ink/mint archive art"
+    ],
+    "source_bytes": 6533
+  },
+  "correctness": {
+    "rule_tests": 4,
+    "identity_tests": 1,
+    "tests_failed": 0,
+    "final_project_check_passed": true,
+    "native_ship": "explicitly skipped; project declares web only",
+    "winning_public_input_route": {
+      "right_ticks": 174,
+      "down_ticks": 59,
+      "then_right_ticks": 67,
+      "verify_ticks": 300,
+      "finish_tick": 277,
+      "hash": "240cf3682cde89e9",
+      "outcome": "won"
+    },
+    "save_load": "Snapshot exact resume asserted at tick 190; corrupt wall-overlapping state rejected without mutating current state",
+    "loss": "2100 idle ticks cause lost; further inputs preserve hash; new game resets tick and artifacts",
+    "collision": "10 right inputs against internal wall stop at x196; locked exit does not win; all 5 unlock it",
+    "pickup": "Repeated overlap collects/cues only once",
+    "visual": "Native starting and winning screenshots inspected. Initial custom/shared HUD overlap discovered and corrected; final frame is clear. Browser visuals not inspected.",
+    "real_devices": "No physical keyboard/controller/touch play performed; native verify drives public Intent route."
+  },
+  "verification": {
+    "web_prepare_passed": true,
+    "wasm_compiled": true,
+    "wasm_final_visual_revision": false,
+    "wasm_note": "Retained compiled WASM precedes HUD-only correction; simulation hash unchanged. No final web rebuild after origin blocker.",
+    "wasm_bytes": 1244415,
+    "wasm_sha256": "7db8a1526bbac4945e05090e931f0c81a931237d73b5081fa0dd7e796e7d41c8",
+    "browser_desktop": "not reached",
+    "browser_mobile": "not reached",
+    "package_integrity": "not reached",
+    "offline_storage_audio": "not reached",
+    "web_artifact": "none; staging was removed on provenance failure",
+    "engine_check": "no_changes scope, zero commands; does not certify baseline engine"
+  },
+  "stages": {
+    "final-native-build": {
+      "elapsed_seconds": 2.223,
+      "exit_code": 0,
+      "user_cpu_seconds": 2.804211,
+      "system_cpu_seconds": 0.253804,
+      "max_rss_kib": 353080
+    },
+    "final-native-capture": {
+      "elapsed_seconds": 0.912,
+      "exit_code": 0,
+      "user_cpu_seconds": 2.512117,
+      "system_cpu_seconds": 0.062693,
+      "max_rss_kib": 141868
+    },
+    "final-project-check": {
+      "elapsed_seconds": 3.758,
+      "exit_code": 0,
+      "user_cpu_seconds": 2.0339399999999994,
+      "system_cpu_seconds": 0.40526799999999996,
+      "max_rss_kib": 353080
+    },
+    "initial-native-capture": {
+      "elapsed_seconds": 0.919,
+      "exit_code": 0,
+      "user_cpu_seconds": 2.318193,
+      "system_cpu_seconds": 0.07303499999999999,
+      "max_rss_kib": 140448
+    },
+    "native-build": {
+      "elapsed_seconds": 0.179,
+      "exit_code": 0,
+      "user_cpu_seconds": 0.07493999999999999,
+      "system_cpu_seconds": 0.04733,
+      "max_rss_kib": 59676
+    },
+    "native-capture": {
+      "elapsed_seconds": 2.69,
+      "exit_code": 0,
+      "user_cpu_seconds": 7.040535,
+      "system_cpu_seconds": 0.10806,
+      "max_rss_kib": 140976
+    },
+    "project-check": {
+      "elapsed_seconds": 69.485,
+      "exit_code": 0,
+      "user_cpu_seconds": 211.122174,
+      "system_cpu_seconds": 6.052605,
+      "max_rss_kib": 1509404
+    },
+    "rules": {
+      "elapsed_seconds": 73.743,
+      "exit_code": 0,
+      "user_cpu_seconds": 202.328675,
+      "system_cpu_seconds": 5.188511,
+      "max_rss_kib": 1488164
+    },
+    "web-build": {
+      "elapsed_seconds": 60.605,
+      "exit_code": 1,
+      "user_cpu_seconds": 54.644568,
+      "system_cpu_seconds": 3.658511,
+      "max_rss_kib": 387768
+    },
+    "web-rebuild": {
+      "elapsed_seconds": 34.915,
+      "exit_code": 1,
+      "user_cpu_seconds": 0.916002,
+      "system_cpu_seconds": 0.36791,
+      "max_rss_kib": 109712
+    },
+    "tool-build": {
+      "elapsed_seconds": 118,
+      "precision": "Cargo rounded reported elapsed",
+      "exit_code": 0,
+      "cpu_rss": "unavailable"
+    },
+    "web-prepare": {
+      "elapsed_seconds": 0.233,
+      "exit_code": 0
+    },
+    "npm-install": {
+      "elapsed_seconds": 0.605,
+      "exit_code": 0
+    }
+  }
+}

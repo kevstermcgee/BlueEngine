@@ -1,0 +1,108 @@
+{
+  "experiment": "fresh smaller-agent baseline trial",
+  "baseline_revision": "83842f99a5a4df4dd98c3da46fb04f6878815175",
+  "workspace": "/tmp/be-efficiency-before",
+  "started_utc": "2026-10-06 15:52:17 UTC",
+  "ended_utc": "2026-10-06 15:54:53 UTC",
+  "wall_seconds": 156,
+  "objective": "Create stock Three Switches starter; exit opens after any two switches; retain all three physical switch interactables; execute one two-switch winning scenario and one one-switch locked-exit scenario.",
+  "result": "success",
+  "game_directory": "/tmp/be-small-before-clean",
+  "artifacts": [
+    {
+      "path": "/tmp/be-small-before-clean/game.json",
+      "bytes": 3342
+    },
+    {
+      "path": "/tmp/be-small-before-clean/map.json",
+      "bytes": 52647
+    },
+    {
+      "path": "/tmp/be-small-before-clean/two-switch-win.json",
+      "bytes": 1345
+    },
+    {
+      "path": "/tmp/be-small-before-clean/one-switch-exit-stays-locked.json",
+      "bytes": 975
+    }
+  ],
+  "checks": [
+    {
+      "command": "be2-tools game-validate /tmp/be-small-before-clean/game.json",
+      "result": "passed; ok true; content_hash a3f1afb36d2b9c87"
+    },
+    {
+      "command": "be2-tools game-explore /tmp/be-small-before-clean/game.json --scenario=/tmp/be-small-before-clean/two-switch-win.json",
+      "result": "passed; winnable; shortest route presses button-a, button-b, exit; generated scenario physically verified true; 156 ticks"
+    },
+    {
+      "command": "be2-tools sim /tmp/be-small-before-clean/two-switch-win.json",
+      "result": "passed; all 3 assertions: switches == 2, completed true, button-c enabled true; 156 ticks; checksum 0x402d96c23611798d"
+    },
+    {
+      "command": "be2-tools sim /tmp/be-small-before-clean/one-switch-exit-stays-locked.json",
+      "result": "passed; all 3 assertions: switches == 1, exit enabled false, completed false and failed false; 200 ticks; exit absent from reachable_targets"
+    }
+  ],
+  "physical_interactables": "Starter game.json retains button-a, button-b, button-c, and exit. Both scenarios ran the native sim command against the real authored map/game. Winning route uses two of the three switches; button-c remains enabled at completion.",
+  "files_read_or_loaded": [
+    {
+      "path": "/tmp/be-efficiency-before/AGENTS.md",
+      "nominal_file_bytes": 6683,
+      "access": "fully read first"
+    },
+    {
+      "path": "/tmp/be-efficiency-before/docs/GAME_QUICKSTART.md",
+      "nominal_file_bytes": 15059,
+      "access": "fully read"
+    },
+    {
+      "path": "/tmp/be-efficiency-before/docs/PORTABLE_GAMES.md",
+      "nominal_file_bytes": 9842,
+      "access": "fully read"
+    },
+    {
+      "path": "/tmp/be-efficiency-before/docs/BEHAVIORAL_TESTING.md",
+      "nominal_file_bytes": 8439,
+      "access": "fully read"
+    },
+    {
+      "path": "/tmp/be-efficiency-before/src/viewer/scenario.rs",
+      "nominal_file_bytes": 28723,
+      "access": "symbol navigation only; struct Assertion lines 67-89 surfaced; exact response bytes unavailable"
+    },
+    {
+      "path": "/tmp/be-small-before-clean/game.json",
+      "nominal_file_bytes": 3342,
+      "access": "opened in full via cat and repeatedly loaded by validate/explore/sim"
+    },
+    {
+      "path": "/tmp/be-small-before-clean/map.json",
+      "nominal_file_bytes": 52647,
+      "access": "cat opened file; tool response truncated; repeatedly loaded by native game validation/exploration/sim"
+    },
+    {
+      "path": "/tmp/be-small-before-clean/two-switch-win.json",
+      "nominal_file_bytes": 1345,
+      "access": "opened via cat; loaded by native sim"
+    },
+    {
+      "path": "/tmp/be-small-before-clean/one-switch-exit-stays-locked.json",
+      "nominal_file_bytes": 975,
+      "access": "loaded by native sim"
+    }
+  ],
+  "builds": [],
+  "tests": [],
+  "cargo_used": false,
+  "token_counts": null,
+  "failures_and_friction": [
+    "python alias unavailable; python3 worked.",
+    "Initial full-task context query exceeded the 100-character limit; short feature query succeeded.",
+    "author.py required the provided binary through BE2_TOOLS.",
+    "Direct binary --help and sim --help were not valid help invocations; describe metadata supplied command inventory and src outline/show supplied assertion shape.",
+    "cat of the 52,647-byte map exceeded response budget and was truncated; command did read the whole file and native tools validated/executed it."
+  ],
+  "source_policy": "Only baseline AGENTS.md, selected baseline docs, and targeted baseline scenario.rs symbol navigation were inspected. No /home/kevin/BlueEngine repository files or other trial metrics inspected; prebuilt binary used as authorized.",
+  "notes": "No engine changes/publication, Cargo/builds, tests, custom Rust, or browser work. Token usage unavailable."
+}

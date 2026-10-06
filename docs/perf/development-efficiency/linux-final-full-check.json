@@ -1,0 +1,325 @@
+{
+  "measurement_revision": "7c147ff91c7406400accad2cb4faaf18efef7007",
+  "ok": true,
+  "commands": 32,
+  "wall_seconds": 697.824,
+  "tests_executed": 2940,
+  "cargo_artifacts": {
+    "fresh": 3309,
+    "built": 370
+  },
+  "resources": {
+    "child_cpu_seconds": 730.032,
+    "max_child_rss_bytes": 2812006400,
+    "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+  },
+  "cache_conditions": "Shared target with existing compiled artifacts; recent source/profile builds. Two isolated generated game targets removed. Point-in-time PSI indicated high I/O pressure. Not a matched baseline.",
+  "stages": [
+    {
+      "step": 1,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 1.669
+    },
+    {
+      "step": 2,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 172,
+        "built": 1
+      },
+      "elapsed_seconds": 12.264
+    },
+    {
+      "step": 3,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 181,
+        "built": 81
+      },
+      "tests_executed": 982,
+      "elapsed_seconds": 159.692
+    },
+    {
+      "step": 4,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 181,
+        "built": 81
+      },
+      "elapsed_seconds": 12.693
+    },
+    {
+      "step": 5,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 121,
+        "built": 1
+      },
+      "elapsed_seconds": 9.991
+    },
+    {
+      "step": 6,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 133,
+        "built": 68
+      },
+      "tests_executed": 830,
+      "elapsed_seconds": 180.321
+    },
+    {
+      "step": 7,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 130,
+        "built": 71
+      },
+      "elapsed_seconds": 11.303
+    },
+    {
+      "step": 8,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 0.115
+    },
+    {
+      "step": 9,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 122,
+        "built": 6
+      },
+      "tests_executed": 9,
+      "elapsed_seconds": 11.17
+    },
+    {
+      "step": 10,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 170,
+        "built": 8
+      },
+      "tests_executed": 9,
+      "elapsed_seconds": 13.472
+    },
+    {
+      "step": 11,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 164,
+        "built": 1
+      },
+      "tests_executed": 479,
+      "elapsed_seconds": 32.23
+    },
+    {
+      "step": 12,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 155,
+        "built": 1
+      },
+      "elapsed_seconds": 6.135
+    },
+    {
+      "step": 13,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 155,
+        "built": 1
+      },
+      "elapsed_seconds": 21.76
+    },
+    {
+      "step": 14,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 0.116
+    },
+    {
+      "step": 15,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 123,
+        "built": 3
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 3.687
+    },
+    {
+      "step": 16,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 170,
+        "built": 6
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 16.77
+    },
+    {
+      "step": 17,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 0.065
+    },
+    {
+      "step": 18,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 123,
+        "built": 3
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 2.087
+    },
+    {
+      "step": 19,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 171,
+        "built": 5
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 70.195
+    },
+    {
+      "step": 20,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 0.115
+    },
+    {
+      "step": 21,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 123,
+        "built": 3
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 1.492
+    },
+    {
+      "step": 22,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 171,
+        "built": 5
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 6.906
+    },
+    {
+      "step": 23,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 2.477
+    },
+    {
+      "step": 24,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 123,
+        "built": 3
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 22.908
+    },
+    {
+      "step": 25,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 171,
+        "built": 5
+      },
+      "tests_executed": 3,
+      "elapsed_seconds": 14.967
+    },
+    {
+      "step": 26,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 12.316
+    },
+    {
+      "step": 27,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 123,
+        "built": 4
+      },
+      "tests_executed": 7,
+      "elapsed_seconds": 2.08
+    },
+    {
+      "step": 28,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 171,
+        "built": 6
+      },
+      "tests_executed": 9,
+      "elapsed_seconds": 3.64
+    },
+    {
+      "step": 29,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 156,
+        "built": 7
+      },
+      "tests_executed": 9,
+      "elapsed_seconds": 33.734
+    },
+    {
+      "step": 30,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 0.165
+    },
+    {
+      "step": 31,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "tests_executed": 53,
+      "elapsed_seconds": 28.928
+    },
+    {
+      "step": 32,
+      "ok": true,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "tests_executed": 529,
+      "elapsed_seconds": 109.114
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "browser_only": {
+    "ok": true,
+    "seconds": 34.024673153064214,
+    "child_cpu_seconds": 5.017721,
+    "max_child_rss_bytes": 241491968,
+    "scope": "visual_preview",
+    "shipping_verified": false,
+    "checks": {
+      "wasm_instantiated": true,
+      "playable": true,
+      "input": false,
+      "save_write": false,
+      "reload_read": false,
+      "audio_initialized": true,
+      "offline_reload": false,
+      "gameplay_scenario": true,
+      "update_recovery": false
+    },
+    "playing_outcome": "playing"
+  },
+  "preview_build": {
+    "wall_seconds": 59.29295356001239,
+    "child_cpu_seconds": 67.340228,
+    "max_child_rss_bytes": 837550080,
+    "previous_shipping_artifact_preserved": true,
+    "publication_rejected": true,
+    "ok": true,
+    "scope": "visual_preview",
+    "shipping_verified": false
+  },
+  "strict_shipping_build": {
+    "wall_seconds": 88.78007925499696,
+    "child_cpu_seconds": 11.966748,
+    "max_child_rss_bytes": 239214592,
+    "ok": true
+  },
+  "methodology": "Same game and verification hash. Browser-only preview excludes builder overhead; full preview included first game compilation. Shipping build used warm compiler outputs. No passing tests cached."
+}

@@ -1,0 +1,563 @@
+{
+  "status": "VERIFIED",
+  "game": "Lumen Vault",
+  "engine_revision": "9283d2021f783a8b72edb14e7e53d0a9133a6a8c",
+  "engine_clean": true,
+  "fresh_context": true,
+  "parent_source_or_benchmark_results_read": false,
+  "cache_condition": {
+    "CARGO_TARGET_DIR": "/home/kevin/BlueEngine/target",
+    "dependencies_and_compiled_cache_allowed": true,
+    "engine_source_read_only_from_designated_checkout": true
+  },
+  "start_utc": "2026-10-06T16:01:06Z",
+  "verified_utc": "2026-10-06T16:12:03.170055+00:00",
+  "elapsed_to_verified_seconds": 657.1702661514282,
+  "start_precision_seconds": 1,
+  "declared_targets": [
+    "web"
+  ],
+  "external_publication": false,
+  "public_source_reproduction": false,
+  "behavior": {
+    "artifact_pickups": 5,
+    "exit_locked_until_all_collected": true,
+    "deadline_ticks": 2400,
+    "fixed_hz": 60,
+    "timeout_loss": true,
+    "restart": true,
+    "engine_owned_snapshot_save_load": true,
+    "complete_state_hash": "19addd68c68fc41e",
+    "verification_inputs": 755,
+    "winning_tick": 747
+  },
+  "behavioral_tests": {
+    "rules_tests_passed": 6,
+    "identity_test_passed": 1,
+    "cases": [
+      "public movement winning route + deterministic replay",
+      "four relics cannot unlock exit and repeated overlap never duplicates pickup",
+      "movement collision against pillars and boundaries + swept collision",
+      "timeout boundary, terminal-state freeze and pristine restart",
+      "engine exact-continuation snapshots through pickup/win and through timeout/loss",
+      "invalid restores leave running simulation unchanged"
+    ]
+  },
+  "workflow_defects_rechecked": {
+    "fresh_metadata_lock_setup": "passed",
+    "fresh_rust_project_test_harness": "passed",
+    "engine_dependency_suite": "not run; engine unchanged, parent already ran full suite"
+  },
+  "shipping": {
+    "full_final_declared_shipping_wrapper_passed": true,
+    "isolated_desktop": {
+      "wasm_instantiated": true,
+      "playable": true,
+      "input": true,
+      "save_write": true,
+      "reload_read": true,
+      "audio_initialized": true,
+      "offline_reload": true,
+      "gameplay_scenario": true,
+      "update_recovery": true,
+      "focus_loss": true,
+      "focus_return": true,
+      "controller": true
+    },
+    "isolated_real_touch_portrait_landscape": {
+      "wasm_instantiated": true,
+      "playable": true,
+      "input": true,
+      "save_write": true,
+      "reload_read": true,
+      "audio_initialized": true,
+      "offline_reload": true,
+      "gameplay_scenario": true,
+      "update_recovery": true,
+      "focus_loss": true,
+      "focus_return": true
+    },
+    "desktop_controller": {
+      "movement": true,
+      "primary_action": true,
+      "pause_resume": true,
+      "start_pause": true,
+      "physical": false
+    },
+    "desktop_audio": {
+      "states": [
+        "running",
+        "running"
+      ],
+      "starts": 8
+    },
+    "touch_audio": {
+      "states": [
+        "running",
+        "running"
+      ],
+      "starts": 6
+    },
+    "desktop_installation": {
+      "service_worker": true,
+      "offline_reload": true,
+      "automatic_progress_resume": true,
+      "installability_errors": [],
+      "upgrade": {
+        "incomplete_update_retains_old_version": true,
+        "retry_activates": true,
+        "cache_replaced": true,
+        "save_preserved": true,
+        "offline_after_upgrade": true
+      }
+    },
+    "touch_installation": {
+      "service_worker": true,
+      "offline_reload": true,
+      "automatic_progress_resume": true,
+      "installability_errors": [],
+      "upgrade": {
+        "incomplete_update_retains_old_version": true,
+        "retry_activates": true,
+        "cache_replaced": true,
+        "save_preserved": true,
+        "offline_after_upgrade": true
+      }
+    },
+    "desktop_persistence": "save and settings survive reload; blocked write fails explicitly and retains save",
+    "touch_layout": {
+      "below": true,
+      "overflow": false,
+      "layout": "dpad"
+    },
+    "package_inspect_passed": true,
+    "package_id": "8871a038b1f66b234f87d8a645ae5537dda886f62d4392dd2994193289c238c4",
+    "package_bytes": 1108342,
+    "package_files": 10,
+    "wasm_bytes": 966690,
+    "source_availability": "local-only"
+  },
+  "visual_review": {
+    "passed": true,
+    "style": "midnight slate, copper vault architecture, teal luminous relics, engraved chambers and lantern-bearing explorer",
+    "frames": [
+      "/tmp/be-efficiency-game-final/.blue-check/web/browser-playing.png",
+      "/tmp/be-efficiency-game-final/.blue-check/web/browser.png",
+      "/tmp/be-efficiency-game-final/.blue-check/web/mobile-playing.png",
+      "/tmp/be-efficiency-game-final/.blue-check/web/mobile-landscape.png"
+    ],
+    "observations": "Final gate labels are above their arches; ASCII controls and status text render clearly; HUD and menus remain separate; portrait/landscape controls stay below the canvas without horizontal overflow; victory frame shows five relics and open gate.",
+    "quality_iterations": [
+      "Moved sealed/open label above gate arch after desktop capture review",
+      "Replaced unsupported game-owned separator glyph after touch capture review"
+    ]
+  },
+  "measurements": {
+    "stages": [
+      {
+        "stage": "context-contract",
+        "wall_seconds": 0.100341796875,
+        "cpu_user_seconds": 0.07646399999999999,
+        "cpu_system_seconds": 0.019115999999999998,
+        "max_rss_kib": 22704,
+        "exit_code": 0
+      },
+      {
+        "stage": "scaffold",
+        "wall_seconds": 18.31605815887451,
+        "cpu_user_seconds": 26.501859,
+        "cpu_system_seconds": 1.650436,
+        "max_rss_kib": 1086316,
+        "exit_code": 0
+      },
+      {
+        "stage": "author-describe",
+        "wall_seconds": 0.07925200462341309,
+        "cpu_user_seconds": 0.053954999999999996,
+        "cpu_system_seconds": 0.025113,
+        "max_rss_kib": 57300,
+        "exit_code": 0
+      },
+      {
+        "stage": "inner",
+        "wall_seconds": 0.05592203140258789,
+        "cpu_user_seconds": 0.035535,
+        "cpu_system_seconds": 0.019740999999999998,
+        "max_rss_kib": 20736,
+        "exit_code": 1
+      },
+      {
+        "stage": "shipping-plan",
+        "wall_seconds": 0.0795145034790039,
+        "cpu_user_seconds": 0.074667,
+        "cpu_system_seconds": 0.004148,
+        "max_rss_kib": 21768,
+        "exit_code": 0
+      },
+      {
+        "stage": "inner-fixed",
+        "wall_seconds": 64.80351114273071,
+        "cpu_user_seconds": 199.450602,
+        "cpu_system_seconds": 5.693951,
+        "max_rss_kib": 1473636,
+        "exit_code": 0
+      },
+      {
+        "stage": "web-prepare",
+        "wall_seconds": 0.23442435264587402,
+        "cpu_user_seconds": 0.186643,
+        "cpu_system_seconds": 0.048345,
+        "max_rss_kib": 59316,
+        "exit_code": 0
+      },
+      {
+        "stage": "shipping",
+        "wall_seconds": 108.54864144325256,
+        "cpu_user_seconds": 64.678799,
+        "cpu_system_seconds": 6.0793420000000005,
+        "max_rss_kib": 378108,
+        "exit_code": 0
+      },
+      {
+        "stage": "shipping-final",
+        "wall_seconds": 83.91621494293213,
+        "cpu_user_seconds": 21.242972,
+        "cpu_system_seconds": 2.960241,
+        "max_rss_kib": 240436,
+        "exit_code": 0
+      },
+      {
+        "stage": "shipping-final-ascii",
+        "wall_seconds": 90.01387667655945,
+        "cpu_user_seconds": 22.711046,
+        "cpu_system_seconds": 3.163725,
+        "max_rss_kib": 233564,
+        "exit_code": 0
+      },
+      {
+        "stage": "inspect",
+        "wall_seconds": 0.08873605728149414,
+        "cpu_user_seconds": 0.064169,
+        "cpu_system_seconds": 0.024062999999999998,
+        "max_rss_kib": 26368,
+        "exit_code": 0
+      },
+      {
+        "stage": "engine-clean",
+        "wall_seconds": 0.004053354263305664,
+        "cpu_user_seconds": 0.0,
+        "cpu_system_seconds": 0.004389,
+        "max_rss_kib": 11640,
+        "exit_code": 0
+      }
+    ],
+    "wrapper_reports": {
+      "inner": {
+        "ok": true,
+        "elapsed_seconds": 64.732,
+        "commands_attempted": 2,
+        "failed_commands": 0,
+        "cargo_artifacts": {
+          "fresh": 121,
+          "built": 5
+        },
+        "resources": {
+          "child_cpu_seconds": 205.055,
+          "max_child_rss_bytes": 1509003264,
+          "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+        }
+      },
+      "shipping_initial": {
+        "ok": true,
+        "elapsed_seconds": 108.48,
+        "commands_attempted": 1,
+        "failed_commands": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "resources": {
+          "child_cpu_seconds": 70.689,
+          "max_child_rss_bytes": 387182592,
+          "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+        }
+      },
+      "shipping_label": {
+        "ok": true,
+        "elapsed_seconds": 83.847,
+        "commands_attempted": 1,
+        "failed_commands": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "resources": {
+          "child_cpu_seconds": 24.134,
+          "max_child_rss_bytes": 246206464,
+          "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+        }
+      },
+      "shipping_final": {
+        "ok": true,
+        "elapsed_seconds": 89.94,
+        "commands_attempted": 1,
+        "failed_commands": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "resources": {
+          "child_cpu_seconds": 25.801,
+          "max_child_rss_bytes": 239169536,
+          "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+        }
+      }
+    },
+    "desktop_browser_performance": {
+      "navigation_to_ready_roundtrip_ms": 26407.935588,
+      "startup_ms": 25089.800000071526,
+      "time_to_playable_ms": 26332.600000023842,
+      "wasm_instantiation_ms": 0.8000000715255737,
+      "save_ms": 729.678611000003,
+      "load_ms": 839.3688989999973,
+      "sample_ms": 2006.400000023842,
+      "frames": 87,
+      "fps": 43.361244018623495,
+      "frame_p50_ms": 16.700000000000273,
+      "frame_p95_ms": 33.40000000000009,
+      "frame_max_ms": 50,
+      "wasm_memory_bytes": 11862016,
+      "js_heap_bytes": 1950789,
+      "game_performance": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 11.5,
+        "step_max_ms": 0.19999992847442627
+      },
+      "replay_work": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 54.800000071525574,
+        "step_max_ms": 1.5
+      },
+      "environment": "Headless Chromium SwiftShader on this Linux host; latency includes CDP/report polling",
+      "hardware_coverage": []
+    },
+    "touch_browser_performance": {
+      "navigation_to_ready_roundtrip_ms": 22800.04877,
+      "startup_ms": 21430.399999976158,
+      "time_to_playable_ms": 22690.299999952316,
+      "wasm_instantiation_ms": 1.7000000476837158,
+      "save_ms": 687.6787460000014,
+      "load_ms": 739.2744870000024,
+      "sample_ms": 2001.2999999761578,
+      "frames": 82,
+      "fps": 40.97336731173582,
+      "frame_p50_ms": 16.799999999999727,
+      "frame_p95_ms": 33.40000000000009,
+      "frame_max_ms": 50,
+      "wasm_memory_bytes": 6488064,
+      "js_heap_bytes": 2033009,
+      "game_performance": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 4.200000047683716,
+        "step_max_ms": 0.10000002384185791
+      },
+      "replay_work": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 16.100000023841858,
+        "step_max_ms": 0.3999999761581421
+      },
+      "environment": "Headless Chromium SwiftShader on this Linux host; latency includes CDP/report polling",
+      "hardware_coverage": []
+    },
+    "resource_basis": "Python resource.getrusage(RUSAGE_CHILDREN) wrapper CPU totals and max child RSS in KiB; engine report resource counters retained separately. High-water RSS is not simultaneous whole-machine memory. Initial exploratory/read-only commands were not separately resource-metered.",
+    "command_groups_to_verified": 28,
+    "command_groups_basis": "Top-level exec_command batches, excluding write_stdin polls and view_image-only calls. Multiple independent operations within one shell batch count as one group.",
+    "write_stdin_poll_calls_to_verified": 15,
+    "build_workflow_invocations": 4,
+    "build_workflow_breakdown": {
+      "recommended_scaffold_with_shared_itest_tool_build": 1,
+      "full_web_shipping_builds": 3
+    },
+    "game_cargo_test_runs": 4,
+    "failed_attempts": [
+      {
+        "command": "context 115-char query",
+        "reason": "query exceeds 100 chars"
+      },
+      {
+        "command": "/usr/bin/time -v scaffold",
+        "reason": "/usr/bin/time unavailable"
+      },
+      {
+        "command": "author.py describe without BE2_TOOLS",
+        "reason": "tool discovery did not find shared target itest binary; explicitly set matching BE2_TOOLS"
+      },
+      {
+        "command": "inner initial project validation",
+        "reason": "author added touch to input; schema supports keyboard/mouse/controller, touch declared via mobile_controls; corrected"
+      }
+    ],
+    "failed_attempt_count": 4,
+    "engine_issues": []
+  },
+  "reading": {
+    "scope": "Agent context/inspection exposure, excluding compiler/tool-internal I/O and full-file string replacements used to edit already-authored game source. Matching rg lines are counted by shown source-line bytes, not by nominal whole-file size.",
+    "opened_files": {
+      "/tmp/be-efficiency-final/AGENTS.md": {
+        "nominal_bytes": 7728,
+        "bytes_read": 7728
+      },
+      "/tmp/be-efficiency-final/docs/PORTABLE_GAMES.md": {
+        "nominal_bytes": 9842,
+        "bytes_read": 9842
+      },
+      "/tmp/be-efficiency-final/docs/GAME_QUICKSTART.md": {
+        "nominal_bytes": 15059,
+        "bytes_read": 15059
+      },
+      "/tmp/be-efficiency-final/docs/BROWSER_WORKFLOW.md": {
+        "nominal_bytes": 8030,
+        "bytes_read": 8030
+      },
+      "/tmp/be-efficiency-final/docs/TWO_D.md": {
+        "nominal_bytes": 7947,
+        "bytes_read": 7947
+      },
+      "/tmp/be-efficiency-final/docs/SAVE_STATE.md": {
+        "nominal_bytes": 12991,
+        "bytes_read": 12991
+      },
+      "/tmp/be-efficiency-game-final/AGENTS.md": {
+        "nominal_bytes": 2421,
+        "bytes_read": 2421
+      },
+      "/tmp/be-efficiency-game-final/game.project.json": {
+        "nominal_bytes": 437,
+        "bytes_read": 437
+      },
+      "/tmp/be-efficiency-game-final/src/lib.rs": {
+        "nominal_bytes": 4672,
+        "bytes_read": 4672
+      },
+      "/tmp/be-efficiency-game-final/Cargo.toml": {
+        "nominal_bytes": 604,
+        "bytes_read": 604
+      },
+      "/tmp/be-efficiency-game-final/src/main.rs": {
+        "nominal_bytes": 687,
+        "bytes_read": 687
+      },
+      "/tmp/be-efficiency-game-final/assets/identity.json": {
+        "nominal_bytes": 205,
+        "bytes_read": 205
+      },
+      "/tmp/be-efficiency-game-final/scripts/check.py": {
+        "nominal_bytes": 16190,
+        "bytes_read": 16190
+      },
+      "/tmp/be-efficiency-final/src/two_d/draw.rs": {
+        "nominal_bytes": 15041,
+        "bytes_read": 1274,
+        "read_mode": "rg matching lines only"
+      },
+      "/tmp/be-efficiency-final/src/two_d/mod.rs": {
+        "nominal_bytes": 6385,
+        "bytes_read": 518,
+        "read_mode": "rg matching lines only"
+      },
+      "/tmp/be-efficiency-game-final/.blue-check/web/native-state.json": {
+        "nominal_bytes": 43,
+        "bytes_read": 43
+      },
+      "/tmp/be-efficiency-final/.be2-work/check-20261006T160631800441Z-lyo41vzb/1.log": {
+        "nominal_bytes": 0,
+        "bytes_read": 0
+      },
+      "/tmp/be-efficiency-game-final/.blue-check/web/browser.json": {
+        "nominal_bytes": 9392,
+        "bytes_read": 9392
+      },
+      "/tmp/be-efficiency-game-final/.blue-check/web/browser-playing.png": {
+        "nominal_bytes": 48047,
+        "bytes_read": 96106,
+        "read_mode": "image viewed"
+      },
+      "/tmp/be-efficiency-game-final/.blue-check/web/mobile-playing.png": {
+        "nominal_bytes": 137678,
+        "bytes_read": 275365,
+        "read_mode": "image viewed"
+      },
+      "/tmp/be-efficiency-game-final/.blue-check/web/mobile-landscape.png": {
+        "nominal_bytes": 146091,
+        "bytes_read": 291896,
+        "read_mode": "image viewed"
+      },
+      "/tmp/be-efficiency-game-final/.blue-check/web/headless.log": {
+        "nominal_bytes": 813,
+        "bytes_read": 813
+      },
+      "/tmp/be-efficiency-game-final/.blue-check/web/browser.png": {
+        "nominal_bytes": 54546,
+        "bytes_read": 54546,
+        "read_mode": "image viewed"
+      }
+    },
+    "recorded_source_document_bytes_exposed": 88605,
+    "nominal_source_document_sizes_sum": 108239,
+    "recorded_all_inspection_bytes_exposed": 816766,
+    "unmetered_artifact_reads": [
+      "Initial mobile report summary parse and final desktop/mobile summary parses were not individually recorded as context-exposed bytes; nominal artifact sizes and full raw reports are retained in the result.",
+      "web inspect command produced a full manifest; JSON was emitted by tooling rather than read as a source-context file."
+    ],
+    "exact_model_tokens": null,
+    "model_token_note": "Exact model token usage unavailable; no estimate presented as exact."
+  },
+  "limitations": [
+    "Chromium software WebGL only; touch emulation and synthetic standard controller, no actual phone/tablet/Safari or physical controller",
+    "Chromium output muted; Web Audio buffers/context/submissions proven, no human listening or speaker quality verification",
+    "Native desktop targets were not declared or shipped; requested acceptance is the isolated portable browser package",
+    "Verified static package is local-only; publication additionally requires committed public source and clean source reproduction"
+  ],
+  "friction": [
+    {
+      "area": "workflow",
+      "note": "Context query rejected at115 characters; shortened to feature keywords."
+    },
+    {
+      "area": "host tooling",
+      "note": "/usr/bin/time absent; used Python subprocess/resource wrapper."
+    },
+    {
+      "area": "tool discovery",
+      "note": "author.py describe did not find shared target itest binary until matching BE2_TOOLS was set."
+    },
+    {
+      "area": "project schema",
+      "note": "Touch belongs in mobile_controls, not input enum; corrected authoring error."
+    },
+    {
+      "area": "presentation",
+      "note": "Capture inspection caught an occluded gate label and an unsupported separator glyph; corrected and repeated full shipping."
+    }
+  ]
+}

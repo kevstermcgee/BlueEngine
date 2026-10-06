@@ -1,0 +1,26 @@
+{
+  "revision": "708347b5bfb0f914aed475460b89077be5abbfc1",
+  "graphs": {
+    "headless": {
+      "normal_packages": 97,
+      "has_macroquad": false,
+      "has_rapier": true,
+      "has_quinn": true
+    },
+    "default": {
+      "normal_packages": 137,
+      "has_macroquad": true,
+      "has_rapier": true,
+      "has_quinn": true
+    },
+    "browser": {
+      "normal_packages": 40,
+      "has_macroquad": true,
+      "has_rapier": false,
+      "has_quinn": false
+    }
+  },
+  "cpu": "",
+  "logical_cores": 4,
+  "note": "cargo tree normal edges, no compilation; expensive source modules still share the be2 library. No architectural split attempted without edit-build measurements."
+}

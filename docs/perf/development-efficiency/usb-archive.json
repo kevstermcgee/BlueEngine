@@ -1,0 +1,8 @@
+{
+  "source": "/home/kevin/BlueEngine/target/x86_64-pc-windows-gnu",
+  "archive": "/mnt/blueengine-usb/blueengine-artifacts/windows-gnu-target-20261006.tar",
+  "verified_by": "tar --compare before removal",
+  "bytes": 1319895040,
+  "seconds": 26.274,
+  "active_native_cache_moved": false
+}

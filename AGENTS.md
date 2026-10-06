@@ -77,9 +77,12 @@ DONE WHEN requested behavior works, focused behavioral evidence and affected che
 pass, and public docs reflect changed public contracts. STOP. Do not refactor nearby
 code, add speculative abstractions or expand scope. Tasks may override this default.
 
-Build speed: iterate with `cargo build --profile fast`, not `--release`. `be2.py check` runs tests on the `itest`
-profile for tests, Clippy, rustdoc and native authoring, locally and in CI (same assertions);
-`--profile dev` restores the plain profile. CI caches compiled dependencies, always executes checks,
+Build speed: iterate engine code with `cargo build --profile fast`, not `--release`. Engine `be2.py check` uses the `itest`
+profile for tests, Clippy, rustdoc and native authoring, locally and in CI (same assertions).
+Standalone `check --game` retains that game's Cargo profiles and shared target directory;
+its development build may need separate artifacts from the engine's `itest` build.
+For engine verification, `--profile dev` restores the plain profile.
+CI caches compiled dependencies, always executes checks,
 and retains both platform/feature modes plus shipping release builds.
 The independent Python batch overlaps serial Cargo work; native integration remains ordered.
 `--serial` provides a comparison/debugging path, and reports join all started work on failure.

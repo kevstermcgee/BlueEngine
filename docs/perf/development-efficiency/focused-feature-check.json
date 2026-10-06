@@ -1,0 +1,123 @@
+{
+  "ok": true,
+  "plan": {
+    "loop": "inner",
+    "base": null,
+    "changed_paths": [
+      "src/viewer/devkit/path.rs"
+    ],
+    "impact": {
+      "owners": [
+        "closed_path"
+      ],
+      "affected": [
+        "closed_path"
+      ],
+      "unmapped": [],
+      "confidence": "partial: declared feature relationships, not a complete Rust dependency graph",
+      "scope_warning": null
+    },
+    "remaining": "Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/browser/package gates.",
+    "required_before_merge": [
+      "python tools/be2.py check",
+      "Linux/Windows CI",
+      "relevant visual, browser, networking and package evidence"
+    ],
+    "graph_confidence": "Declared dependencies; focused evidence is not full-suite certification.",
+    "scope": "focused",
+    "reason": "Whole-library units plus declared consumer suites and tooling checks.",
+    "commands": [
+      [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--lib",
+        "--message-format=json"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "features",
+        "--validate"
+      ]
+    ],
+    "command_harnesses": [
+      "rust",
+      null
+    ],
+    "proves": "Executed selected behavioral checks only; final shipping verification remains outstanding.",
+    "requirements": {
+      "unit": true,
+      "integration_suites": [],
+      "networking": "deferred to shipping",
+      "browser": "deferred to shipping",
+      "packaging": "deferred to shipping",
+      "full_suite": "before merge"
+    }
+  },
+  "checks": [
+    {
+      "step": 1,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--lib",
+        "--message-format=json"
+      ],
+      "log": "1.log",
+      "ok": true,
+      "started_seconds": 0.0,
+      "returncode": 0,
+      "log_bytes": 150204,
+      "cargo_artifacts": {
+        "fresh": 130,
+        "built": 1
+      },
+      "tests_executed": 477,
+      "elapsed_seconds": 27.742
+    },
+    {
+      "step": 2,
+      "command": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "features",
+        "--validate"
+      ],
+      "log": "2.log",
+      "ok": true,
+      "started_seconds": 27.743,
+      "returncode": 0,
+      "log_bytes": 43,
+      "cargo_artifacts": {
+        "fresh": 0,
+        "built": 0
+      },
+      "elapsed_seconds": 0.069
+    }
+  ],
+  "independent_commands": [],
+  "elapsed_seconds": 27.812,
+  "commands_attempted": 2,
+  "failed_commands": 0,
+  "cargo_artifacts": {
+    "fresh": 130,
+    "built": 1
+  },
+  "resources": {
+    "child_cpu_seconds": 68.213,
+    "max_child_rss_bytes": 855416832,
+    "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+  },
+  "successful_steps": [
+    1,
+    2
+  ]
+}

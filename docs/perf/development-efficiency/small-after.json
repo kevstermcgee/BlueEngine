@@ -1,0 +1,145 @@
+{
+  "benchmark": "fresh smaller-agent AFTER",
+  "engine_checkout": "/tmp/be-efficiency-after",
+  "engine_revision": "56a2692c8a196455ac9f888135cb989c64d1cbeb",
+  "output_game": "/tmp/be-small-after",
+  "started_utc": "2026-10-06T15:49:03.618589+00:00",
+  "ended_utc": "2026-10-06T15:50:32.014084+00:00",
+  "elapsed_seconds": 88.395495,
+  "token_counts": "unavailable; not estimated",
+  "engine_modified": false,
+  "external_publication": false,
+  "attempts": {
+    "total_recorded_failures": 4,
+    "details": [
+      "context query exceeded query-length limit",
+      "author.py rejected game-example because command is native-only",
+      "game-explore --help returned no such file",
+      "sim --help returned no such file"
+    ],
+    "recoveries": [
+      "shortened context query and confirmed relevant docs",
+      "used documented native game-example CLI with provided binary",
+      "read documented game-explore and sim signatures via game-describe/docs"
+    ]
+  },
+  "files_inspected_bytes": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 7728,
+      "note": "read in full; repository instructions"
+    },
+    {
+      "path": "docs/GAME_QUICKSTART.md",
+      "bytes": 15059,
+      "note": "read in full"
+    },
+    {
+      "path": "docs/SHARED_GAMEPLAY.md",
+      "bytes": 11327,
+      "note": "read in full"
+    },
+    {
+      "path": "tools/AUTHORING.md",
+      "bytes": 7232,
+      "note": "read in full"
+    },
+    {
+      "path": "docs/BEHAVIORAL_TESTING.md",
+      "bytes": null,
+      "note": "read lines 1-260; byte size not separately measured"
+    },
+    {
+      "path": "assets/games/three-switches/game.json",
+      "bytes": 3341,
+      "note": "read as canonical stock example"
+    },
+    {
+      "path": "assets/games/three-switches/scenario.json",
+      "bytes": null,
+      "note": "read; size not separately measured"
+    },
+    {
+      "path": "/tmp/be-small-after/game.json",
+      "bytes": 3344,
+      "note": "authored and re-read for final checks"
+    },
+    {
+      "path": "/tmp/be-small-after/map.json",
+      "bytes": 52647,
+      "note": "generated and file-listed; contents not opened"
+    }
+  ],
+  "timing_note": "Total elapsed uses captured UTC timestamps. Precise process wall times were measured for final validation/sim commands; earlier calls were recorded at functions.exec/tool-call granularity, not per nested shell command.",
+  "validation_evidence": [
+    {
+      "command": "be2-tools game-validate /tmp/be-small-after/game.json",
+      "wall_seconds": 0.0079,
+      "returncode": 0,
+      "ok": true
+    },
+    {
+      "command": "be2-tools sim /tmp/be-small-after/two-switch-win.json",
+      "wall_seconds": 0.0245,
+      "returncode": 0,
+      "ok": true,
+      "ticks": 156,
+      "assertions": "completed=true; failed=false",
+      "reachable_targets": [
+        "button-a",
+        "button-b",
+        "button-c",
+        "exit"
+      ],
+      "final_player_position": [
+        1.5296037,
+        1.68,
+        1.3400069
+      ]
+    },
+    {
+      "command": "be2-tools sim /tmp/be-small-after/one-switch-exit-blocked.json",
+      "wall_seconds": 0.0218,
+      "returncode": 0,
+      "ok": true,
+      "ticks": 128,
+      "assertions": "switches=1; exit enabled=false; completed=false",
+      "reachable_targets": [
+        "button-a",
+        "button-b",
+        "button-c"
+      ],
+      "final_player_position": [
+        1.5229452,
+        1.68,
+        1.3746985
+      ]
+    },
+    {
+      "physical_switch_interactables": 3,
+      "initial_exit_enabled": false,
+      "unlock_condition": {
+        "counter": "switches",
+        "at_least": 2
+      }
+    }
+  ],
+  "outputs": [
+    {
+      "path": "/tmp/be-small-after/game.json",
+      "bytes": 3344
+    },
+    {
+      "path": "/tmp/be-small-after/map.json",
+      "bytes": 52647
+    },
+    {
+      "path": "/tmp/be-small-after/two-switch-win.json",
+      "bytes": 1192
+    },
+    {
+      "path": "/tmp/be-small-after/one-switch-exit-blocked.json",
+      "bytes": 904
+    }
+  ]
+}
