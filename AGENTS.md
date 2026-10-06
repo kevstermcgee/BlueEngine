@@ -43,6 +43,8 @@ source before publication; a receipt must confirm source retrieval AND deployed 
 Local web build/verify works before Git/origin setup; artifacts cannot publish until
 committed public source retrieval and clean reproduction pass. Scaffolding/authoring uses
 `python3 tools/be2.py map ...` with fresh shared itest tooling; release builds are for shipping.
+For visual iteration run `web preview GAME` and inspect all captures in `.blue-check/web-preview`
+before the final shipping check. Preview preserves `dist/web` and cannot certify shipping.
 
 Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
 (docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use the stock starter;

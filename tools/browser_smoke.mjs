@@ -7,8 +7,8 @@ import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 const require=createRequire(import.meta.url);
 const WebSocket=require('ws');
-const [url,reportPath,screenshotPath,mode]=process.argv.slice(2);
-const mobile=mode==='--mobile';
+const [url,reportPath,screenshotPath,...modes]=process.argv.slice(2);
+const mobile=modes.includes('--mobile'),preview=modes.includes('--preview');
 const profile=await mkdtemp(join(tmpdir(),'be2-browser-'));
 const executable=process.env.BE2_CHROMIUM||['chromium','chromium-browser','google-chrome','google-chrome-stable'].find(name=>spawnSync(name,['--version']).status===0);
 if(!executable)throw new Error('Browser verification needs Chromium/Chrome on PATH or BE2_CHROMIUM=/path/to/chrome');
@@ -64,6 +64,41 @@ try {
   if(!audio.states.length||audio.states.some(s=>s!=='running')||audio.starts<1)throw new Error('Audio buffers never reached a running playback context');
   checks.audio_initialized=true;
   const screen=await send('Page.captureScreenshot',{format:'png'});await writeFile(screenshotPath,Buffer.from(screen.data,'base64'));
+  if(preview){
+    // Reuse real instantiation/replay and isolated profiles, but do not manufacture
+    // shipping evidence for storage, controls, offline installation or update recovery.
+    stage='visual preview';
+    const capture=async path=>{
+      await evaluate('window.scrollTo(0,0)');
+      const size=await evaluate('({width:document.documentElement.clientWidth,height:document.documentElement.scrollHeight})');
+      const shot=await send('Page.captureScreenshot',{format:'png',captureBeyondViewport:true,clip:{x:0,y:0,...size,scale:1}});
+      await writeFile(path,Buffer.from(shot.data,'base64'));
+    };
+    const layout=async(width,height)=>{
+      await send('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:2,mobile:true});
+      await send('Emulation.setTouchEmulationEnabled',{enabled:true,maxTouchPoints:5});
+      await new Promise(r=>setTimeout(r,300));
+    };
+    if(metadata.runtime_abi===2){
+      await layout(390,844);await capture(screenshotPath.replace(/\.png$/, '-portrait.png'));
+      await layout(844,390);await capture(screenshotPath.replace(/\.png$/, '-landscape-outcome.png'));
+      if(mobile)await layout(390,844);
+      else {await send('Emulation.clearDeviceMetricsOverride');await send('Emulation.setTouchEmulationEnabled',{enabled:false});}
+    }
+    await send('Page.navigate',{url});await wait('window.be2?.ready');await key('Enter','Enter',13);
+    // Verification can autosave a terminal state. Restart before the playing capture.
+    await key('Escape','Escape',27);await wait('be2.paused');await key('r','KeyR',82);
+    await key('Escape','Escape',27);await wait('!be2.paused && be2.accepted_input.step_ticks>0');
+    await capture(screenshotPath.replace(/\.png$/, '-playing.png'));
+    if(metadata.runtime_abi===2){
+      await layout(390,844);await capture(screenshotPath.replace(/\.png$/, '-portrait-playing.png'));
+      await layout(844,390);
+      await capture(screenshotPath.replace(/\.png$/, '-landscape.png'));
+    }
+    const report={ok:true,scope:'visual_preview',shipping_verified:false,checks,verified,native_expected:metadata.verification,errors,screenshot:screenshotPath,playing_outcome:await evaluate('be2.outcome'),
+      remaining:'Inspect captures; complete web build/verify is required before shipping.'};
+    await writeFile(reportPath,JSON.stringify(report,null,2));console.log(JSON.stringify({ok:true,scope:report.scope,report:reportPath,shipping_verified:false}));
+  }else{
   t=clock();await key('k','KeyK',75);await wait('be2.notice.includes("saved")');timings.save_ms=clock()-t;checks.save_write=true;
   const saved=await evaluate('be2.hash');
   await key('m','KeyM',77);await wait('!be2.sound');
@@ -207,5 +242,6 @@ try {
   }
   const report={ok:true,checks,performance:{...timings,...render,replay_work:verified.performance,environment:"Headless Chromium SwiftShader on this Linux host; latency includes CDP/report polling",hardware_coverage:[]},controller,mobile:mobile?mobileLayout:false,installation,verified,native_expected:metadata.verification,audio,persistence:'save and settings survive reload; blocked write fails explicitly and retains save',real_input:{probe,meaningful_result:true,start_pause_restart:true,tab_navigation_preserved:true,fullscreen:!mobile},canvas,requests,errors,screenshot:screenshotPath,browser:'Chromium CDP/software WebGL; no human listening or physical controller test'};
   await writeFile(reportPath,JSON.stringify(report,null,2));console.log(JSON.stringify({ok:true,report:reportPath,hash:verified.hash}));
+  }
 } catch(error) {await writeFile(reportPath,JSON.stringify({ok:false,stage,checks,performance:timings,error:String(error),errors,requests,browserLog:browserLog.slice(-4000)},null,2));console.error(error);process.exitCode=1;}
 finally {clearTimeout(timeout);await cleanupBrowser(browser,profile,socket);}

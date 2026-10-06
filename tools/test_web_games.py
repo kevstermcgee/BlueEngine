@@ -8,6 +8,20 @@ from tools import web_games as web
 
 
 class LocalDevelopmentSourceTests(unittest.TestCase):
+    def test_ignored_scratch_inputs_are_hashed_and_interpreter_cache_is_not(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory);release.git(['init'],root)
+            (root/'.gitignore').write_text('scratch/\n')
+            game=root/'scratch/game';(game/'src').mkdir(parents=True)
+            source=game/'src/lib.rs';source.write_text('before')
+            initial=web.source_hash(game)
+            source.write_text('after');changed=web.source_hash(game)
+            self.assertNotEqual(initial,changed)
+            cache=game/'scripts/__pycache__';cache.mkdir(parents=True)
+            (cache/'project.pyc').write_bytes(b'generated')
+            self.assertEqual(changed,web.source_hash(game))
+            source.unlink();self.assertNotEqual(changed,web.source_hash(game))
+
     def test_unversioned_game_hashes_current_inputs_and_cannot_publish(self):
         from tools import web_release as release
         with tempfile.TemporaryDirectory() as directory:
@@ -209,6 +223,31 @@ class UnifiedCatalogTests(unittest.TestCase):
 
 @unittest.skipUnless(web.os.environ.get('BE2_BROWSER_FIXTURE'), 'Set BE2_BROWSER_FIXTURE to a built web package for real browser negative tests')
 class BrowserDependencyTests(unittest.TestCase):
+    def test_preview_captures_orientations_and_cannot_certify_shipping(self):
+        package=Path(web.os.environ['BE2_BROWSER_FIXTURE'])
+        original=(package/'manifest.json').read_bytes()
+        with tempfile.TemporaryDirectory() as folder:
+            evidence=Path(folder)
+            game=package.parent.parent
+            if (game/'Cargo.toml').is_file():
+                result=web.visual_preview(game)
+                self.assertEqual(Path(result['package']),game/'.blue-check/web-preview/package')
+                self.assertFalse(result['shipping_verified'])
+                evidence=Path(result['evidence']);report=result['preview']
+                with self.assertRaisesRegex(web.WebError,'browser evidence'):
+                    web.publication_gate(Path(result['package']))
+            else:report=web.browser_verify(package,evidence,preview=True)
+            self.assertTrue(report['ok'])
+            self.assertEqual(report['scope'],'visual_preview')
+            self.assertFalse(report['shipping_verified'])
+            self.assertFalse(report['checks']['input'])
+            self.assertFalse(report['checks']['offline_reload'])
+            self.assertEqual(report['playing_outcome'],'playing')
+            for name in ('browser.png','browser-playing.png','browser-portrait.png',
+                         'browser-portrait-playing.png','browser-landscape.png','browser-landscape-outcome.png'):
+                self.assertGreater((evidence/name).stat().st_size,500,name)
+        self.assertEqual((package/'manifest.json').read_bytes(),original)
+
     def test_checkout_asset_cannot_satisfy_undeclared_runtime_request(self):
         with tempfile.TemporaryDirectory() as folder:
             root=Path(folder);package=root/'web'
@@ -368,6 +407,13 @@ class WasmReproducibilityTests(unittest.TestCase):
                 self.assertEqual(result.returncode,0,result.stderr)
 
 class PublicationGateTests(PackageTests):
+    def test_visual_preview_cannot_replace_shipping_evidence(self):
+        partial={'wasm_instantiated':True,'playable':True,'gameplay_scenario':True,'audio_initialized':True}
+        self.manifest['browser_verification']=web.verification_summary({'checks':partial,'mobile':{'checks':partial}})
+        self.stamp()
+        with self.assertRaisesRegex(web.WebError,'complete desktop browser evidence'):
+            web.publication_gate(self.dist)
+
     def test_failed_provenance_cannot_write_or_replace_deployment(self):
         target=self.root/'library'
         with patch.object(release,'retrieve_sources',side_effect=release.ReleaseError('Source retrieval failed')):

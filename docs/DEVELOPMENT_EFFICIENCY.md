@@ -52,6 +52,12 @@ Local web build/verify works before Git/origin setup and produces an isolated ve
 package. Publication still requires committed exact public source, anonymous retrieval,
 empty-target reproduction and deployed file/manifest receipts. A local artifact does not
 claim a URL or public-source reproducibility.
+For presentation iteration use `web preview GAME`: it compiles current inputs, runs
+game tests, captures playing/outcome frames at desktop/portrait/landscape sizes and stores
+them in `.blue-check/web-preview`. It preserves `dist/web`. Inspect all captures and fix
+visuals before the final `web build`/game shipping check. Preview uses one isolated browser
+profile for visual layouts; it does not certify real controls, storage, offline/update
+recovery or independent touch behavior. The shipping gate still exercises those fully.
 
 Check failures retain complete logs, compiler spans, test assertions and successful stages.
 The recovery packet names the smallest observed location, likely failure category and next

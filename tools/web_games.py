@@ -39,12 +39,15 @@ def source_hash(folder):
     except WebError:
         # A local scaffold needs neither Git initialization nor a hosting account.
         names=[]
-        for name in inputs:
-            path=folder/name
-            names.extend(p.relative_to(folder).as_posix() for p in (path.rglob('*') if path.is_dir() else [path])
-                         if p.is_file() and '__pycache__' not in p.parts and p.suffix not in ('.pyc','.pyo'))
+    # Actual inputs still matter inside an ignored scratch project in a Git checkout.
+    # Tracked files remain included; ignore only untracked Python interpreter outputs.
+    for name in inputs:
+        path=safe_file(folder,name)
+        names.extend(p.relative_to(folder).as_posix() for p in (path.rglob('*') if path.is_dir() else [path])
+                     if p.is_file() and '__pycache__' not in p.parts and p.suffix not in ('.pyc','.pyo'))
     for name in sorted(set(n for n in names if n)):
-        digest.update(name.encode());digest.update(safe_file(folder,name).read_bytes())
+        path=safe_file(folder,name)
+        if path.is_file():digest.update(name.encode());digest.update(path.read_bytes())
     return digest.hexdigest()
 
 def git_revision(folder):
@@ -198,7 +201,7 @@ def publication_gate(package):
     manifest['reproducibility']={'clean_checkout':True,'empty_target':True,'package_hashes_match':True,'compared_fields':reproduced['compared_fields']}
     write_manifest(package,manifest)
     return source|{'clean_reproduction':reproduced}
-def browser_verify(dist, evidence):
+def browser_verify(dist, evidence, *, preview=False):
     manifest=integrity(dist);evidence.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='be2-web-isolated-') as folder:
         isolated=Path(folder)
@@ -208,11 +211,11 @@ def browser_verify(dist, evidence):
         server=http.server.ThreadingHTTPServer(('127.0.0.1',0),handler)
         thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
         try:
-            run(['node',ROOT/'tools/browser_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'browser.json',evidence/'browser.png'])
+            run(['node',ROOT/'tools/browser_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'browser.json',evidence/'browser.png',*(['--preview'] if preview else [])])
         finally:server.shutdown();server.server_close();thread.join()
     report=json.loads((evidence/'browser.json').read_text(encoding='utf-8'))
     if not report['ok']:raise WebError('Browser smoke failed; inspect browser.json')
-    if manifest.get('runtime_abi')==2:
+    if manifest.get('runtime_abi')==2 and not preview:
         # Separate profile and real touch events: desktop keyboard evidence cannot stand in for mobile.
         with tempfile.TemporaryDirectory(prefix='be2-mobile-isolated-') as folder:
             isolated=Path(folder)
@@ -220,7 +223,7 @@ def browser_verify(dist, evidence):
                 path=safe_file(isolated,name);path.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(safe_file(dist,name),path)
             server=http.server.ThreadingHTTPServer(('127.0.0.1',0),functools.partial(VerificationHandler,directory=str(isolated)))
             thread=threading.Thread(target=server.serve_forever,daemon=True);thread.start()
-            try:run(['node',ROOT/'tools/browser_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'mobile.json',evidence/'mobile.png','--mobile'])
+            try:run(['node',ROOT/'tools/browser_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'mobile.json',evidence/'mobile.png','--mobile',*(['--preview'] if preview else [])])
             finally:server.shutdown();server.server_close();thread.join()
         report['mobile']=json.loads((evidence/'mobile.json').read_text(encoding='utf-8'))
     return report
@@ -231,7 +234,7 @@ def catalog_verify(site,evidence):
     try:run(['node',ROOT/'tools/catalog_smoke.mjs',f'http://127.0.0.1:{server.server_port}/',evidence/'catalog.json',evidence/'catalog.png'])
     finally:server.shutdown();server.server_close();thread.join()
     return json.loads((evidence/'catalog.json').read_text(encoding='utf-8'))
-def build(game, skip_browser=False):
+def build(game, skip_browser=False, *, preview=False):
     start=time.monotonic();project=validate_project(game)
     if (game/'Cargo.toml').is_symlink():raise WebError('Game Cargo.toml cannot be a symlink')
     if 'web' not in project['targets']:raise WebError('This game does not declare web; edit the proposal/project requirements deliberately before building')
@@ -251,7 +254,7 @@ def build(game, skip_browser=False):
     env={**os.environ,'CARGO_TARGET_DIR':str(target),'RUSTC_WRAPPER':'','RUSTC_WORKSPACE_WRAPPER':''}
     env.pop('CARGO_ENCODED_RUSTFLAGS',None)
     env.pop('RUSTFLAGS',None)
-    evidence=game/'.blue-check/web';evidence.mkdir(parents=True,exist_ok=True)
+    evidence=game/('.blue-check/web-preview' if preview else '.blue-check/web');evidence.mkdir(parents=True,exist_ok=True)
     # All inputs, including dependency resolution, must be committed before release.
     run(['cargo','metadata','--offline','--locked','--format-version','1'],cwd=game,env=env)
     env['BE2_VERIFY_REPORT']=str(evidence/'native-state.json')
@@ -274,7 +277,7 @@ def build(game, skip_browser=False):
     mini=next(p for p in metadata['packages'] if p['name']=='miniquad')
     sound=next(p for p in metadata['packages'] if p['name']=='quad-snd')
     loader_bytes=(Path(mini['manifest_path']).parent/'js/gl.js').read_bytes()+b'\n(function(){\n'+(Path(sound['manifest_path']).parent/'js/audio.js').read_bytes()+b'\n})();\n'
-    destination=game/'dist/web';destination.parent.mkdir(exist_ok=True)
+    destination=evidence/'package' if preview else game/'dist/web';destination.parent.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='web-build-',dir=destination.parent) as stage:
         out=Path(stage)
         compiled=wasm_target/'wasm32-unknown-unknown/release'/f'{binary}.wasm'
@@ -317,6 +320,15 @@ def build(game, skip_browser=False):
             if backup.exists():backup.rename(destination)
             raise
     return {'ok':True,'package':str(destination),'browser':not skip_browser,'seconds':round(time.monotonic()-start,3),'manifest':manifest,'evidence':str(evidence),'sizes':release.sizes(destination,manifest)}
+def visual_preview(game):
+    start=time.monotonic()
+    result=build(game,skip_browser=True,preview=True)
+    evidence=Path(result['evidence'])
+    report=browser_verify(Path(result['package']),evidence,preview=True)
+    return {**result,'scope':'visual_preview','shipping_verified':False,
+            'seconds':round(time.monotonic()-start,3),'preview':report,
+            'screenshots':[str(p) for p in sorted(evidence.glob('*.png'))],
+            'remaining':'Inspect playing/outcome/portrait/landscape captures; run web build for complete shipping verification.'}
 def directory_publish(package,destination):
     source_proof=publication_gate(package);manifest=integrity(package);destination.mkdir(parents=True,exist_ok=True)
     slot=safe_file(destination,manifest['id'])
@@ -342,7 +354,7 @@ def directory_publish(package,destination):
     for name in ('app.js','style.css','catalog.css'):shutil.copy2(ROOT/'templates/catalog'/name,destination/name)
     return {'source_retrieval':source_proof,'package_id':manifest['package_id'],'backend':'directory','deployed':str(slot),'url':None,'catalog':str(destination/'catalog.json'),'remaining_external_step':'Serve this directory through your static host; each game is under /GAME_ID/. No external URL has been created.'}
 def main(argv=None):
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['build','verify','publish','propose','inspect','serve','capabilities','reproduce','prepare']);p.add_argument('game',nargs='?',default='.');p.add_argument('--port',type=int,default=8000);p.add_argument('--out');p.add_argument('--also',action='append',default=[],help='Publish additional game paths together to GitHub Pages');p.add_argument('--skip-browser',action='store_true',help='Build only: explicitly unverified, cannot publish');p.add_argument('--backend',choices=['directory','github-pages'],default='directory');p.add_argument('--destination');p.add_argument('--repository');args=p.parse_args(argv)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('command',choices=['build','preview','verify','publish','propose','inspect','serve','capabilities','reproduce','prepare']);p.add_argument('game',nargs='?',default='.');p.add_argument('--port',type=int,default=8000);p.add_argument('--out');p.add_argument('--also',action='append',default=[],help='Publish additional game paths together to GitHub Pages');p.add_argument('--skip-browser',action='store_true',help='Build only: explicitly unverified, cannot publish');p.add_argument('--backend',choices=['directory','github-pages'],default='directory');p.add_argument('--destination');p.add_argument('--repository');args=p.parse_args(argv)
     try:
         if args.command=='capabilities':result=capabilities()
         elif args.command=='reproduce':
@@ -364,6 +376,7 @@ def main(argv=None):
                 run(['rustup','target','add','wasm32-unknown-unknown'])
                 run(['cargo','fetch','--locked'],cwd=game)
                 result={'ok':True,'next':'web build '+str(game),'capabilities':capabilities()}
+            elif args.command=='preview':result=visual_preview(game)
             elif args.command=='verify':
                 manifest=integrity(package);evidence=game/'.blue-check/web' if game!=package else package.parent/('.blue-check-'+package.name)/'web';report=browser_verify(package,evidence)
                 manifest['browser_verification']=verification_summary(report);manifest['measurements']={'desktop':report['performance'],'touch_emulation':report['mobile']['performance'],'physical_devices':[]};write_manifest(package,manifest)

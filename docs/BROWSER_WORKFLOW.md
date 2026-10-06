@@ -10,6 +10,7 @@ simulation on web and native. Start here; no Leo source exploration is required.
 npm ci --ignore-scripts --prefix tools
 python3 tools/be2.py web capabilities
 python3 tools/be2.py web prepare games/lantern-run  # wasm target + locked dependency fetch
+python3 tools/be2.py web preview games/lantern-run  # inner visual loop; inspect captures before shipping
 python3 tools/be2.py web build games/lantern-run    # native rules, WASM, isolated desktop + touch gates
 python3 tools/be2.py web inspect games/lantern-run  # exact source, hashes, capabilities, byte counts
 python3 tools/be2.py web serve games/lantern-run    # localhost:8000; Ctrl-C stops
@@ -23,6 +24,12 @@ verification artifacts are separate in `GAME/.blue-check/web`. `inspect`, `verif
 `reproduce` also accept a package directory directly. The directory publisher (`--backend directory
 --destination DIR`) creates a deployment-ready catalog and receipt; it does not claim an external URL.
 The GitHub Pages adapter requires the existing BlueEngineGames `site/build.py` and Pages workflow.
+Visual preview uses the same builder and browser script, with a separate package and six
+desktop/portrait/landscape playing/outcome captures in `GAME/.blue-check/web-preview`.
+It preserves the previous `dist/web`, reports `shipping_verified: false`, and cannot
+satisfy publication. Inspect all captures and correct labels/layout before the complete
+shipping gate. Preview does not exercise independent touch input, saves, offline/update
+recovery or installation; `web build`/`web verify` still require all of those.
 A successful publication receipt includes source retrieval, package ID, deployment commit/run and
 remote manifest/file hash verification. A push alone is not successful publication.
 

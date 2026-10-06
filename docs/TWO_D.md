@@ -6,10 +6,10 @@ Read this page, your game AGENTS, `game.project.json` and `src/lib.rs`. No 3D re
 
 ```sh
 python3 tools/be2.py web propose "Tiny Station"  # editable proposal, no creation/publishing
-python3 tools/author.py describe
-be2-tools new-game lantern-run ../lantern-run ../BlueEngine two-d
+python3 tools/be2.py map new-game lantern-run ../lantern-run ../BlueEngine two-d
 cd ../lantern-run
 cargo test --no-default-features
+scripts/blue web preview                       # inspect all visual captures; no shipping certification
 scripts/blue web build                         # tests → WASM → clean package → real browser
 scripts/blue publish --backend directory --destination /tmp/game-library
 scripts/blue publish --backend github-pages --repository OWNER/BlueEngineGames
@@ -51,6 +51,9 @@ Supply game-specific text through `Game::menu_status()`; avoid a duplicate termi
 under that overlay. `Game::show_hud()` controls title/control labels, while a custom client
 remains available for a different presentation. Shared keys are R restart, K save, L load,
 Esc pause and M sound; these do not need game-owned key handlers.
+Inspect contrast, glyphs and both orientations in the preview captures before final
+packaging. The built-in bitmap font covers ordinary ASCII; custom text/art remains
+available through the drawing APIs and custom clients.
 The starter already uses `runtime::assert_deterministic`, `snapshot::assert_resumes_exactly`,
 `two_d::verify` for a public-input route, collision and loss assertions. Extend them
 with timer, pickup, locked-exit and restart cases. The client/browser gate covers
