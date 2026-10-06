@@ -33,9 +33,12 @@ class SpringboardTests(unittest.TestCase):
         self.git('init')
         self.git('add', '.')
         self.git('-c', 'user.name=Fixture', '-c', 'user.email=fixture@example.test', 'commit', '-m', 'fixture')
-        self.env = patch.dict(os.environ, {'CARGO_TARGET_DIR': str(self.root / 'target'), 'BE2_TOOLS': ''})
+        self.env = patch.dict(os.environ, {'CARGO_TARGET_DIR': str(self.root / 'target')})
         self.env.start()
         self.addCleanup(self.env.stop)
+        # Windows removes empty variables from the spawned process environment.
+        # Unset the override in both processes instead of hashing '' versus None.
+        os.environ.pop('BE2_TOOLS', None)
 
     def git(self, *args):
         return subprocess.run(['git', *args], cwd=self.root, check=True, capture_output=True, text=True).stdout.strip()
@@ -84,7 +87,17 @@ class SpringboardTests(unittest.TestCase):
                                 **workflow.console_options())
         self.assertTrue(result.stdout, result.stderr)
         summary = json.loads(result.stdout)
-        return result, json.loads(Path(summary['report']).read_text()), summary
+        report = json.loads(Path(summary['report']).read_text())
+        if not mutate:
+            binding = report['task_evidence']
+            current = task_inputs.capture(self.root, game)
+            differences = {key: {'before': binding['before'].get(key), 'after': binding['after'].get(key),
+                                 'current': current.get(key)} for key in current
+                           if binding['before'].get(key) != binding['after'].get(key)
+                           or binding['after'].get(key) != current.get(key)}
+            self.assertTrue(binding['stable_sources'], json.dumps(differences, sort_keys=True))
+            self.assertEqual(binding['after'], current, json.dumps(differences, sort_keys=True))
+        return result, report, summary
 
     def test_start_without_binaries_is_build_free_and_explicit(self):
         calls = []

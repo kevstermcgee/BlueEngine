@@ -92,6 +92,14 @@ regression and the real browser boundary/preview fixture (all three tests passed
 aggregate guards, not additional test failures. The in-progress full run was interrupted to
 fix these before repeating final verification; its partial evidence remains a failure.
 
+The replacement Windows run caught a new test-fixture portability issue: an empty
+`BE2_TOOLS` value existed in the parent Python environment but was removed from the
+spawned Windows process. The strict input binding correctly treated these environments
+as different. The fixture now unsets the override in both processes and directly checks
+before/after/current identity agreement, with diagnostic differences on failure. No
+verification identity was relaxed. An isolated Windows diagnostic branch tested this
+without replacing main's full CI gates.
+
 The subsequent full run caught the analogous generated stock-guide 3,000-byte guard.
 Startup guidance was consolidated with its existing context instructions; the original guide
 bound and verification/architecture rules remain intact. Both size regressions were checked
@@ -111,6 +119,15 @@ preexisting metrics. Its report retains every command, test count, elapsed time,
 there is no extra benchmark build. Final execution results and paths are reported with delivery.
 Windows CI/release gates remain required; a Linux run does not certify Windows execution. Full gates
 retain fixed-step/headless, networking, public compatibility, both feature modes and native authoring.
+
+The initial completed local full gate passed 32 commands and 2,960 executed test cases
+in 779.871 s (921.513 child CPU seconds; 2,926,788,608 bytes maximum child RSS,
+not simultaneous whole-machine peak). The strict sample-game shipping gate passed in
+83.655 s. It required one unchanged retry after an intermittent audio-activation failure;
+the earlier failure remains recorded and no audio check was skipped or weakened. Final
+post-fixture verification and CI results are reported with delivery. The separate games
+publishing workflow still lacks a Windows download definition for `lantern-grove`, a
+catalog failure also observed before this work; exporter tests pass.
 
 ## Short packet example
 
