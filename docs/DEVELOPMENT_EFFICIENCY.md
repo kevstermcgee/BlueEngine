@@ -21,6 +21,9 @@ Shipping is the default. Unknown inputs, build manifests/CI/index boundaries, un
 content scenarios and missing behavioral evidence fall back to the full suite.
 The partial feature graph never authorizes narrowing shipping gates. Browser/network/package
 requirements remain visible even when deferred during iteration.
+Standalone game commands need Python 3.11+. A fresh scaffold registers its new package
+in the seeded lock once with Cargo metadata, then executes locked tests. Existing game
+locks are never refreshed automatically; publication still requires committed inputs.
 
 Native authoring uses `be2.py map ...`: Cargo checks freshness in the same headless
 `itest` output used by authoring integration. No release/LTO build is needed to scaffold

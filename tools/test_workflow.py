@@ -180,6 +180,19 @@ class AutomaticLoopTests(unittest.TestCase):
             (root / 'tools/FEATURES.json').write_bytes((ROOT / 'tools/FEATURES.json').read_bytes())
             self.assertFalse(workflow.validate_index(root)['ok'])
 
+    def test_scaffold_registers_its_root_once_before_locked_tests(self):
+        with tempfile.TemporaryDirectory() as directory:
+            game = Path(directory)
+            shutil.copyfile(ROOT / 'games/lantern-run/game.project.json', game / 'game.project.json')
+            (game / 'Cargo.toml').write_text('[package]\nname="new-root"\nversion="0.1.0"\n')
+            first = workflow.game_plan(ROOT, game)
+            self.assertEqual(first['commands'][0][1], 'metadata')
+            self.assertIn('--locked', first['commands'][1])
+            (game / 'Cargo.lock').write_text('[[package]]\nname="new-root"\nversion="0.1.0"\n')
+            ready = workflow.game_plan(ROOT, game)
+            self.assertEqual(len(ready['commands']), 1)
+            self.assertEqual(ready['commands'][0][1], 'test')
+
     def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertIn('run: python tools/be2.py check', ci)

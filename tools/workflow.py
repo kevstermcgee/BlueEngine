@@ -231,6 +231,15 @@ def game_plan(root, game, loop='inner'):
         raise ValueError('Game Cargo.toml missing; scaffold with be2.py map new-game first')
     project = module.validate_project(game)
     commands, harnesses = [], []
+    # A scaffold seeds the engine lock; Cargo must register the new root package
+    # once before locked iteration/shipping can work. Existing game locks stay locked.
+    import tomllib
+    manifest = tomllib.loads((game / 'Cargo.toml').read_text(encoding='utf-8'))
+    lock = game / 'Cargo.lock'
+    locked = tomllib.loads(lock.read_text(encoding='utf-8')) if lock.is_file() else {}
+    if not any(p.get('name') == manifest['package']['name'] for p in locked.get('package', [])):
+        commands.append(['cargo', 'metadata', '--format-version', '1', '--no-deps',
+                         '--manifest-path', str(game / 'Cargo.toml')]); harnesses.append(None)
     if loop != 'shipping':
         command = ['cargo', 'test', '--locked', '--manifest-path', str(game / 'Cargo.toml'),
                    '--no-default-features', '--message-format=json']
