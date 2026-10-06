@@ -64,7 +64,7 @@ Game-specific movement/action descriptions still belong to the game and its mean
 Each report includes startup/time-to-playable, save/load round-trip latency, WASM linear memory,
 Chromium JS heap when available, sampled RAF frame times/FPS and game step/draw/streaming timings.
 Leo marks origin changes for chunk generation measurements; no wall clock enters its simulation.
-CDP/report polling contributes to latencies. SwiftShader results characterize this test host, not a
+Chromium uses `--mute-audio`; API submission is measured with silent output. CDP/report polling contributes to latencies. SwiftShader results characterize this test host, not a
 phone or GPU. Audio initialization/submission proves API execution, not audible or pleasing playback.
 
 Runtime audio banks include bank.json and its referenced layers/effects, with credits. Preview mixes,

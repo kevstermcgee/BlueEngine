@@ -11,7 +11,7 @@ const mobile=mode==='--mobile';
 const profile=await mkdtemp(join(tmpdir(),'be2-browser-'));
 const executable=process.env.BE2_CHROMIUM||['chromium','chromium-browser','google-chrome','google-chrome-stable'].find(name=>spawnSync(name,['--version']).status===0);
 if(!executable)throw new Error('Browser verification needs Chromium/Chrome on PATH or BE2_CHROMIUM=/path/to/chrome');
-const browser=spawn(executable,['--headless','--no-sandbox','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
+const browser=spawn(executable,['--headless','--mute-audio','--no-sandbox','--enable-unsafe-swiftshader','--use-gl=angle','--use-angle=swiftshader','--remote-debugging-port=0',`--user-data-dir=${profile}`,'about:blank'],{stdio:['ignore','ignore','pipe']});
 let socket;
 let errors=[];let requests=[];let browserLog='';
 const checks={wasm_instantiated:false,playable:false,input:false,save_write:false,reload_read:false,audio_initialized:false,offline_reload:false,gameplay_scenario:false,update_recovery:false};
