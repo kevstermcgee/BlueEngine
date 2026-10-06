@@ -1,5 +1,8 @@
 # {{title}} - AI Agent Guide
 
+To start or resume work, use `python3 tools/be2.py start "<task>" --project GAME_DIR`
+in the engine checkout (`python` on Windows); `next`/`resume TASK_ID` refreshes the packet.
+
 A game with its own simulation on BlueEngine (path dependency `vesper3d`, see Cargo.toml). Read this
 file and `src/lib.rs`. Missing engine capability is engine work, not permission to invent an API: in the
 engine checkout run `python tools/be2.py context "<need>"`, and read docs/CUSTOM_CLIENT.md (the kit and

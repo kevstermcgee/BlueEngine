@@ -1,9 +1,10 @@
 //! `be2-tools new-game NAME DIR [ENGINE_PATH] [TEMPLATE]`: Scaffolds a standalone, green game project.
 //!
 //! The generated project does not copy or fork the engine; it uses `vesper3d` as a
-//! dependency. Two starters exist:
+//! dependency. Portable 2D/3D/hybrid starters share browser/native clients; the CLI defaults
+//! to portable. The original native starters remain available explicitly:
 //!
-//! * `stock` (default): a declarative blueprint, pre-compiled map, `game.json` and the shared
+//! * `stock` (legacy library default): a declarative blueprint, pre-compiled map, `game.json` and the shared
 //!   playable runner. For games whose rules fit counters, interactables, timers and triggers.
 //! * `custom-sim`: a pure simulation library plus a window binary that uses the engine's devkit and
 //!   kit. For games with enemies, projectiles, scoring, AI or per-frame physics.
@@ -40,7 +41,7 @@ pub enum Template {
 }
 
 impl Template {
-    /// The command-line name: `stock` or `custom-sim`.
+    /// The command-line name from the starter catalog.
     pub fn name(self) -> &'static str {
         match self {
             Self::Stock => "stock",
@@ -57,6 +58,16 @@ impl Template {
             Self::TwoD | Self::ThreeD | Self::Hybrid | Self::Portable
         )
     }
+    /// CLI default from the same build-free catalog used by the Python springboard.
+    /// The public library default remains stock for compatibility.
+    pub fn cli_default() -> Self {
+        Self::parse(
+            starter_catalog()["cli_default"]
+                .as_str()
+                .expect("starter default"),
+        )
+        .expect("valid starter default")
+    }
     /// Parse a command-line name.
     pub fn parse(text: &str) -> Option<Self> {
         match text {
@@ -69,6 +80,12 @@ impl Template {
             _ => None,
         }
     }
+}
+
+/// Authoritative starter metadata for discovery without compiling a tool binary.
+pub fn starter_catalog() -> serde_json::Value {
+    serde_json::from_str(include_str!("../../templates/starters.json"))
+        .expect("validated starter catalog")
 }
 
 /// Scaffold the default (`stock`) starter. See [`scaffold_new_game_with`].
@@ -496,7 +513,7 @@ fn scaffold_two_d(project: &Project, template: Template) -> Result<Identity> {
             format!("{}{}{}", &original[..start], draw, &original[end..]),
         )?;
     }
-    project.write("game.project.json",serde_json::to_string_pretty(&serde_json::json!({"schema_version":1,"id":project.name,"presentation":presentation,"runtime":"portable","mobile_controls":{"layout":"dpad","action_label":null},"targets":["web","linux","windows"],"networking":"offline","input":["keyboard","mouse","controller"],"description":identity.tagline,"session_minutes":1,"complexity":"low"}))?)?;
+    project.write("game.project.json",serde_json::to_string_pretty(&serde_json::json!({"schema_version":1,"id":project.name,"presentation":presentation,"runtime":"portable","mobile_controls":{"layout":"dpad","action_label":null},"targets":starter_catalog()["starters"][template.name()]["default_targets"],"networking":"offline","input":["keyboard","mouse","controller"],"description":identity.tagline,"session_minutes":1,"complexity":"low"}))?)?;
     Ok(identity)
 }
 
@@ -733,8 +750,8 @@ async fn run() -> vesper3d::Result<()> {
 
 BlueEngine is a path dependency (`vesper3d`); `assets/identity.json` records its revision. Read
 this game's files first; do not load engine source or run engine-wide checks for game-only edits.
-For an unfamiliar API run `python tools/be2.py context QUERY` in the engine checkout; missing capability means
-engine work, not permission to invent an API.
+Start in the engine checkout: `python3 tools/be2.py start "<task>" --project GAME_DIR`
+(`python` on Windows); `next`/`resume TASK_ID` refreshes context. Missing capability needs engine work; never invent APIs.
 
 Rules that do not fit counters/interactables/timers (enemies, projectiles, scoring, AI, per-frame
 physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its simulation
@@ -791,6 +808,9 @@ mod tests {
 
     #[test]
     fn templates_have_names_and_parse_back() {
+        let catalog = starter_catalog();
+        assert_eq!(catalog["schema_version"], 1);
+        assert_eq!(catalog["starters"].as_object().unwrap().len(), 6);
         for t in [
             Template::Stock,
             Template::CustomSim,
@@ -800,9 +820,23 @@ mod tests {
             Template::Portable,
         ] {
             assert_eq!(Template::parse(t.name()), Some(t));
+            let metadata = &catalog["starters"][t.name()];
+            assert_eq!(metadata["runtime"] == "portable", t.is_portable());
+            assert!(Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join(metadata["guide"].as_str().unwrap())
+                .is_file());
+            if t.is_portable() {
+                assert_eq!(metadata["networking"], serde_json::json!(["offline"]));
+                assert_eq!(
+                    metadata["default_targets"],
+                    serde_json::json!(["web", "linux", "windows"])
+                );
+            }
         }
         assert_eq!(Template::parse("racing"), None);
         assert_eq!(Template::default(), Template::Stock);
+        assert_eq!(Template::default().name(), catalog["library_default"]);
+        assert_eq!(Template::cli_default(), Template::Portable);
     }
 
     #[test]

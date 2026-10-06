@@ -22,6 +22,28 @@ class LocalDevelopmentSourceTests(unittest.TestCase):
             self.assertEqual(changed,web.source_hash(game))
             source.unlink();self.assertNotEqual(changed,web.source_hash(game))
 
+    def test_relative_build_uses_absolute_native_report_with_existing_parent(self):
+        from contextlib import chdir
+        with tempfile.TemporaryDirectory() as directory:
+            game=Path(directory)/'game';(game/'assets').mkdir(parents=True)
+            (game/'Cargo.toml').write_text('[package]\nname="fixture-game"\n')
+            (game/'assets/identity.json').write_text(json.dumps({'title':'Fixture','controls':'Move'}))
+            (game/'game.project.json').write_text(json.dumps({'schema_version':1,'id':'fixture-game',
+                'presentation':'2d','runtime':'portable','targets':['web'],'networking':'offline',
+                'input':['keyboard'],'description':'Fixture','session_minutes':1,'complexity':'low'}))
+            def observe(args,cwd=None,env=None):
+                self.assertEqual(cwd,game.resolve())
+                if args[:2]==['cargo','test']:
+                    report=Path(env['BE2_VERIFY_REPORT'])
+                    self.assertTrue(report.is_absolute())
+                    self.assertEqual(report,game.resolve()/'.blue-check/web-preview/native-state.json')
+                    self.assertTrue(report.parent.is_dir())
+                    raise RuntimeError('native-report observed; no build executed')
+                return '{}'
+            with chdir(game.parent),patch.object(web,'run',side_effect=observe), \
+                    self.assertRaisesRegex(RuntimeError,'native-report observed'):
+                web.build(Path('game'),preview=True)
+
     def test_unversioned_game_hashes_current_inputs_and_cannot_publish(self):
         from tools import web_release as release
         with tempfile.TemporaryDirectory() as directory:
@@ -224,7 +246,7 @@ class UnifiedCatalogTests(unittest.TestCase):
 @unittest.skipUnless(web.os.environ.get('BE2_BROWSER_FIXTURE'), 'Set BE2_BROWSER_FIXTURE to a built web package for real browser negative tests')
 class BrowserDependencyTests(unittest.TestCase):
     def test_preview_captures_orientations_and_cannot_certify_shipping(self):
-        package=Path(web.os.environ['BE2_BROWSER_FIXTURE'])
+        package=Path(web.os.environ['BE2_BROWSER_FIXTURE']).resolve()
         original=(package/'manifest.json').read_bytes()
         with tempfile.TemporaryDirectory() as folder:
             evidence=Path(folder)

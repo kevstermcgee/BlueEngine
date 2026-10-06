@@ -457,7 +457,7 @@ class RunnerTests(unittest.TestCase):
         with patch.dict(check.__globals__, {'ROOT': self.root, 'WORK': self.root / '.be2-work', 'invoke': invoke}), \
                 patch.dict(os.environ, {'CARGO_TARGET_DIR': ''}):
             check(plan)
-        self.assertEqual(seen[0][1]['CARGO_TARGET_DIR'], str(self.root / 'target'))
+        self.assertEqual(seen[0][1]['CARGO_TARGET_DIR'], str((self.root / 'target').resolve()))
         self.assertEqual(seen[0][1]['CARGO_TARGET_DIR'], seen[1][1]['CARGO_TARGET_DIR'])
         self.assertIsNone(seen[2][1])
 

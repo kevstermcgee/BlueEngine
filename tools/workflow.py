@@ -556,7 +556,7 @@ def full_commands(test_profile='itest'):
          'tools.test_assets', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
-         'tools.test_hub_deploy','tools.test_web_games'],
+         'tools.test_hub_deploy','tools.test_web_games','tools.test_springboard'],
     ]
 
 

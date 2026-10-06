@@ -1,6 +1,8 @@
 # One game: mobile browser, installed browser app, native desktop
 
-For commands, release requirements and evidence read [BROWSER_WORKFLOW.md](BROWSER_WORKFLOW.md) first.
+Start with `python3 tools/be2.py start "<game objective>" --kind new-game --target web`
+in the engine checkout; [AI_SPRINGBOARD.md](AI_SPRINGBOARD.md) selects explicit starters
+without compiling. For release requirements read [BROWSER_WORKFLOW.md](BROWSER_WORKFLOW.md).
 
 Read this, the game's AGENTS.md, game.project.json and src/lib.rs. Use `portable` for new projects
 unless the user explicitly needs the legacy native world/netplay renderer. The CLI defaults to portable;

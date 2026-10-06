@@ -1,5 +1,9 @@
 # BE2 agent editing toolkit
 
+Source checkout entry: `python3 tools/be2.py start "<objective>"`; see
+[AI_SPRINGBOARD.md](../docs/AI_SPRINGBOARD.md). `next`/`resume TASK_ID` refresh observed
+evidence without running checks. These operations need Python 3.11+, no compiled binaries.
+
 For source-free content authoring, start with `python tools/author.py describe` and [AUTHORING.md](AUTHORING.md). This compact JSON interface uses packaged binaries and adds bounded discovery, asset IDs, parameterized recipes and persistent regression reports without Cargo or engine source reads. The development runner below remains available for engine maintenance/builds.
 
 Full engine verification is `python tools/be2.py check`, shared with Linux/Windows CI.
@@ -24,9 +28,9 @@ complete browser gate; `web reproduce GAME` proves a clean public-source rebuild
 Run from the repository root:
 
 ```sh
-python tools/be2.py doctor
-python tools/be2.py context movement
-python tools/be2.py map help
+python tools/be2.py start "Fix engine movement" --kind engine --compact
+# Execute its recommended action separately; discovery does not compile or install.
+python tools/be2.py next TASK_ID --compact
 ```
 
 `context` selects records from tools/FEATURES.json; its evidence is not an exhaustive

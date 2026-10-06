@@ -1,10 +1,14 @@
 # Playable games and source-free prototypes
 
+Start in the engine checkout with `python3 tools/be2.py start "<game task>" --compact`.
+The packet selects an explicit starter. Portable/browser games follow [the portable guide](PORTABLE_GAMES.md);
+the stock and custom-simulation native workflows below retain their desktop ship gate.
+
 ## Pick the starter first
 
 | The game's rules | Starter |
 |---|---|
-| fit counters, interactables, timers, triggers and movers (find things, press switches, open doors, timed objectives) | **stock**: `be2-tools new-game my-game ../my-game` |
+| fit counters, interactables, timers, triggers and movers (find things, press switches, open doors, timed objectives) | **stock**: `be2-tools new-game my-game ../my-game ../BlueEngine stock` |
 | want browser + local install, mobile, 2D/3D/hybrid | **portable** (default): `be2-tools new-game my-game ../my-game ../BlueEngine portable` — read [PORTABLE_GAMES.md](PORTABLE_GAMES.md) |
 | want a 2D offline browser/native game | **two-d**: `be2-tools new-game my-game ../my-game ../BlueEngine two-d` — read [TWO_D.md](TWO_D.md) |
 | need enemies, projectiles, scoring, AI, waves, procedural content or per-frame physics: anything `GameDocument` cannot express | **custom-sim**: `be2-tools new-game my-game ../my-game ../BlueEngine custom-sim` |
@@ -16,7 +20,7 @@ input accumulator, deterministic-replay and capture helpers, saves, screen-feel,
 `kit` (batched dynamic meshes, materials, effects, HUD, sound); see [custom clients](CUSTOM_CLIENT.md) and
 "Custom loops" in [shared gameplay](SHARED_GAMEPLAY.md). Both starters ship the same way.
 
-## Definition of done (every game made with BlueEngine)
+## Definition of done (stock and custom-simulation native games)
 
 1. `python scripts/check.py` passes on the final files. Its last stage is the **ship gate**, so it fails
    until step 2 is done (`--skip-ship` runs everything else while iterating; `--content-only` needs no Cargo).
@@ -61,7 +65,7 @@ simulation, graphical frames and shipped-package evidence are separate checks.
 ## The stock starter
 
 ```sh
-be2-tools new-game my-game ../my-game
+be2-tools new-game my-game ../my-game ../BlueEngine stock
 cargo run --release --manifest-path ../my-game/Cargo.toml
 cargo test --manifest-path ../my-game/Cargo.toml --no-default-features
 ```

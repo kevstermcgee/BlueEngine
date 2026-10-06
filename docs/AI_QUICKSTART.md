@@ -1,4 +1,6 @@
 # BlueEngine prototype API
+Start a task with `python3 tools/be2.py start "<objective>"` in the engine checkout;
+[AI_SPRINGBOARD.md](AI_SPRINGBOARD.md) routes public context and current evidence without a build.
 `use vesper3d::prelude::*;` Metres, +Y up; yaw 0 faces -Z; angles radians.
 Boxes: center/half extents. `structural_box` omits semantic reachability. Props: bottom origin; catalog physics rules.
 `build()->Result<MapDocument>`; `world()->Result<HeadlessWorld>`.

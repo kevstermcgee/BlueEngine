@@ -110,6 +110,7 @@ pub fn describe() -> Result<Value> {
         .ok_or("Invalid feature index")?
         .keys()
         .collect();
+    let starters = super::newgame::starter_catalog();
     Ok(json!({
         "ok": true, "engine": "BlueEngine", "version": env!("CARGO_PKG_VERSION"),
         "protocol_version": super::net::PROTOCOL_VERSION, "map_schema_version": 1, "game_schema_version": 1,
@@ -117,6 +118,10 @@ pub fn describe() -> Result<Value> {
         "default_map": "Blue Test Lab",
         "commands": COMMANDS.iter().map(|(name, args)| json!({"name":name,"arguments":args})).collect::<Vec<_>>(),
         "features": names,
+        "starters": {
+            "catalog": "templates/starters.json",
+            "cli_default": starters["cli_default"], "library_default": starters["library_default"]
+        },
         "limits": {
             "packet_bytes": super::net::MAX_PACKET_BYTES,
             "players": super::simulation::DEFAULT_MAX_PLAYERS,
@@ -124,9 +129,9 @@ pub fn describe() -> Result<Value> {
             "map_bytes": super::game::MAX_MAP_BYTES, "patch_operations": 1000, "search_results": 10
         },
         "runtime_support": runtime_support(),
-        "start": ["be2-tools export-lab NEW.json", "be2-tools catalog", "be2-tools search multiplayer", "docs/AI_QUICKSTART.md", "python tools/be2.py context FEATURE --compact (engine checkout; no build)"],
+        "start": ["python3 tools/be2.py start TASK --compact", "be2-tools search TOPIC", "docs/AI_QUICKSTART.md"],
         "unsupported": ["arbitrary gameplay scripts", "runtime mesh import"],
-        "metadata": "Curated feature index; commands/arities use the native CLI registry."
+        "metadata": "Native commands; curated feature index."
     }))
 }
 

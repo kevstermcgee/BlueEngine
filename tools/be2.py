@@ -152,13 +152,17 @@ def doctor():
         raise RuntimeError('Rust toolchain is missing; see tools/README.md')
 
 
-def check(plan, timeout=None):
+def check(plan, timeout=None, task=None):
     started = time.monotonic()
     usage_before = resource.getrusage(resource.RUSAGE_CHILDREN) if resource else None
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     WORK.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix='check-' + stamp + '-', dir=WORK))
     report = {'ok': False, 'plan': plan, 'checks': []}
+    binding = None
+    if task:
+        import springboard
+        binding = springboard.bind_check(ROOT, task, plan)
     env = {**os.environ, **plan['env']} if plan.get('env') else None
     report['target_directory'] = str(target_directory())
 
@@ -233,6 +237,13 @@ def check(plan, timeout=None):
                                    'max_child_rss_bytes': int(usage.ru_maxrss * (1 if sys.platform == 'darwin' else 1024)),
                                    'rss_basis': 'OS child high-water mark; not simultaneous whole-machine memory'}
         report['successful_steps'] = [item['step'] for item in report['checks'] if item['ok']]
+        if binding:
+            try:
+                springboard.finish_check(ROOT, binding, plan, report, directory / 'report.json')
+            except (OSError, ValueError, KeyError) as error:
+                # Identity/state failures must never hide completed checks or their failure logs.
+                report['task_evidence'] = {'task': task, 'stable_sources': False, 'error': str(error)}
+                print('Task evidence unverified: ' + str(error), file=sys.stderr)
         (directory / 'report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
         summary = {'report': str(directory / 'report.json'), 'ok': report['ok'],
                    'scope': plan['scope'], 'seconds': report['elapsed_seconds'],
@@ -305,6 +316,26 @@ def package(destination):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='command', required=True)
+    for command in ('start', 'next', 'resume'):
+        s = sub.add_parser(command, help='Build-free task routing/progress around canonical tools')
+        s.add_argument('--json', action='store_true', help='Versioned structured packet')
+        s.add_argument('--compact', action='store_true', help='Compact JSON packet')
+        s.add_argument('--detail', action='store_true', help='JSON including ownership, complete evidence and identity')
+        if command == 'start':
+            s.add_argument('objective')
+            s.add_argument('--kind', choices=['new-game', 'change-game', 'engine', 'diagnose', 'upgrade'])
+            s.add_argument('--project', '--game', dest='project')
+            s.add_argument('--target', action='append', default=[], help='Requested platform; repeatable')
+            s.add_argument('--template', help='Explicit name from templates/starters.json')
+            s.add_argument('--networking', choices=['offline', 'native-multiplayer'])
+            s.add_argument('--name', help='Explicit portable game ID')
+            s.add_argument('--path', action='append', default=[], help='Engine-relative change scope; repeatable')
+            s.add_argument('--constraint', action='append', default=[])
+            s.add_argument('--no-save', action='store_true', help='Read-only packet; no task metadata')
+        else:
+            s.add_argument('task', help='ID from start, in this engine checkout')
+            s.add_argument('--note', help='Context only; never passing evidence')
+            s.add_argument('--no-save', action='store_true', help='Refresh without modifying task metadata')
     sub.add_parser('doctor')
     c = sub.add_parser('check')
     c.add_argument('--changed', action='store_true', help='Select checks from the complete Git diff')
@@ -312,6 +343,7 @@ def main():
                    help='Automatic change checks; shipping remains the default')
     c.add_argument('--path', action='append', default=[], help='Explicit path to check (repeatable; inner/integration only)')
     c.add_argument('--game', help='Standalone game project; reuse its tests/browser/package gates, excluding dependency tests')
+    c.add_argument('--task', help='Bind observed check report to a springboard task/current inputs')
     c.add_argument('--base', default='HEAD', help='Compare current files against this commit (default HEAD)')
     c.add_argument('--windows', action='store_true',
                    help='Type-check cfg(windows) code for x86_64-pc-windows-gnu without a Windows C toolchain; '
@@ -362,7 +394,18 @@ def main():
     uv.add_argument('--out', help='Write the full JSON result here (never written without this flag)')
     uv.add_argument('--json', action='store_true', help='Print the full JSON result instead of the human summary')
     args = parser.parse_args()
-    if args.command in ('web', 'publish'):
+    if args.command in ('start', 'next', 'resume'):
+        import springboard
+        if args.command == 'start':
+            packet = springboard.start(ROOT, args.objective, kind=args.kind, project=args.project,
+                                       targets=args.target, template=args.template, networking=args.networking,
+                                       paths=args.path, name=args.name, constraints=args.constraint,
+                                       detail=args.detail, persist=not args.no_save)
+        else:
+            packet = springboard.resume(ROOT, args.task, args.note, args.detail, persist=not args.no_save)
+        print(json.dumps(packet, separators=(',', ':')) if args.compact else
+              json.dumps(packet, indent=2) if args.json or args.detail else springboard.readable(packet))
+    elif args.command in ('web', 'publish'):
         from web_games import main as web_main
         raise SystemExit(web_main((['publish'] if args.command == 'publish' else []) + args.arguments))
     elif args.command == 'doctor': doctor()
@@ -374,7 +417,7 @@ def main():
                 parser.error('--windows is its own check; do not combine it with --iterate/--changed/--base/--typecheck/--test/--feature-mode')
             plan = workflow.windows_plan()
             if args.plan: print(json.dumps(plan, indent=2))
-            else: check(plan, args.timeout)
+            else: check(plan, args.timeout, args.task)
             return
         if args.iterate:
             if args.changed or args.path or args.game or args.loop != 'shipping' or args.base != 'HEAD':
@@ -383,7 +426,7 @@ def main():
                                            test=args.test, feature_mode=args.feature_mode or 'default',
                                            test_profile=args.test_profile)
             if args.plan: print(json.dumps(plan, indent=2))
-            else: check(plan, args.timeout)
+            else: check(plan, args.timeout, args.task)
             return
         if args.typecheck or args.test or args.feature_mode:
             parser.error('--typecheck, --test and --feature-mode require --iterate')
@@ -392,7 +435,7 @@ def main():
                 parser.error('--game checks that project only; do not combine with engine diff/path selections')
             plan = workflow.game_plan(ROOT, args.game, args.loop)
             if args.plan: print(json.dumps(plan, indent=2))
-            else: check(plan, args.timeout)
+            else: check(plan, args.timeout, args.task)
             return
         if not args.changed and args.base != 'HEAD':
             parser.error('--base requires --changed')
@@ -410,7 +453,7 @@ def main():
         if paths is not None:
             plan['impact'] = workflow.impact(ROOT, paths)
         if args.plan: print(json.dumps(plan, indent=2))
-        else: check(plan, args.timeout)
+        else: check(plan, args.timeout, args.task)
     elif args.command == 'context':
         started = time.monotonic()
         packet = workflow.context(ROOT, args.query, args.limit, args.level)

@@ -1,5 +1,8 @@
 # {{title}}
 
+To start or resume work, use `python3 tools/be2.py start "<task>" --project GAME_DIR`
+in the engine checkout (`python` on Windows); `next`/`resume TASK_ID` refreshes the packet.
+
 Read this file, src/lib.rs and game.project.json. For a rule change, update the tests in lib.rs.
 main.rs is platform glue; use shared Scene/World composition; do not explore the legacy renderer. Engine docs/PORTABLE_GAMES.md is the platform/composition reference; docs/TWO_D.md covers primitives.
 

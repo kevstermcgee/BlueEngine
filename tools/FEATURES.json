@@ -447,7 +447,8 @@
         "src/viewer/newgame.rs",
         "templates/custom-sim",
         "templates/game_ship.py",
-        "templates/game_build.rs"
+        "templates/game_build.rs",
+        "templates/starters.json"
       ],
       "checks": [
         "new standalone game project scaffolding"
@@ -575,14 +576,18 @@
         "docs/perf/README.md",
         "tools/dev_bench.py",
         "tools/development_tasks.json",
-        "docs/DEVELOPMENT_EFFICIENCY.md"
+        "docs/DEVELOPMENT_EFFICIENCY.md",
+        "tools/springboard.py",
+        "tools/task_inputs.py",
+        "tools/test_springboard.py",
+        "docs/AI_SPRINGBOARD.md"
       ],
       "checks": [
-        "python -m unittest tools.test_workflow tools.test_game_check",
+        "python -m unittest tools.test_workflow tools.test_game_check tools.test_springboard",
         "shared_gameplay scaffold integration test",
         "generated external project content and locked Cargo checks"
       ],
-      "note": "Build-free bounded context and conservative Git change plans. check --iterate selects an indexed suite/exact test or library-only --typecheck; focused success leaves full verification outstanding. check runs the canonical full Linux/Windows CI gates with itest for tests, Clippy, rustdoc and fresh native authoring; CI additionally builds shipping releases and caches compiled dependencies, always executing tests. One reviewed independent Python batch overlaps serial Cargo work; native integration stays ordered. --serial opts out. Reports join started work on failure, retain complete logs/status/diagnostics, reject empty test selections, and record stage start offsets/durations. JSON stdout stays stable; progress goes to stderr. perf.py record --suite check measures one full run without extra rebuilds. Generated games retain their own project checks. CI engine/game matrices run concurrently; early leo-images supports art review, while existing test guards require both matrices to succeed. Automatic check --changed --loop inner/integration selects whole-library units, declared transitive consumer suites and indexed Python checks; unknown/build-boundary inputs fail closed. Shipping remains the default. check --game reuses standalone project gates. context levels 1/2/3 expose guides, contracts and derived ownership; features --validate checks paths/edges/suites. dev_bench measures seven representative tool paths and one optional verification run; fresh-agent task evidence is separate. map authoring shares fresh headless itest outputs.",
+      "note": "Build-free bounded context and conservative Git change plans. check --iterate selects an indexed suite/exact test or library-only --typecheck; focused success leaves full verification outstanding. check runs the canonical full Linux/Windows CI gates with itest for tests, Clippy, rustdoc and fresh native authoring; CI additionally builds shipping releases and caches compiled dependencies, always executing tests. One reviewed independent Python batch overlaps serial Cargo work; native integration stays ordered. --serial opts out. Reports join started work on failure, retain complete logs/status/diagnostics, reject empty test selections, and record stage start offsets/durations. JSON stdout stays stable; progress goes to stderr. perf.py record --suite check measures one full run without extra rebuilds. Generated games retain their own project checks. CI engine/game matrices run concurrently; early leo-images supports art review, while existing test guards require both matrices to succeed. Automatic check --changed --loop inner/integration selects whole-library units, declared transitive consumer suites and indexed Python checks; unknown/build-boundary inputs fail closed. Shipping remains the default. check --game reuses standalone project gates. context levels 1/2/3 expose guides, contracts and derived ownership; features --validate checks paths/edges/suites. dev_bench measures seven representative tool paths and one optional verification run; fresh-agent task evidence is separate. map authoring shares fresh headless itest outputs. start/next/resume provide build-free task routing and content-bound observed check evidence; notes never certify checks.",
       "depends_on": [
         "native_discovery"
       ],
@@ -599,7 +604,12 @@
         "CI",
         "build cache",
         "verification speed",
-        "check timings"
+        "check timings",
+        "springboard",
+        "start task",
+        "next step",
+        "resume task",
+        "readiness"
       ],
       "constraints": [
         {
@@ -611,9 +621,8 @@
         }
       ],
       "read_first": [
-        "docs/DEVELOPMENT_EFFICIENCY.md",
-        "tools/workflow.py",
-        "tools/be2.py"
+        "docs/AI_SPRINGBOARD.md",
+        "docs/CHANGE_WORKFLOW.md"
       ]
     },
     "shared_gameplay": {

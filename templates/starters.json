@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "cli_default": "portable",
+  "library_default": "stock",
+  "starters": {
+    "portable": {
+      "runtime": "portable",
+      "presentation": "hybrid",
+      "targets": [
+        "web",
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "networking": [
+        "offline"
+      ],
+      "guide": "docs/PORTABLE_GAMES.md",
+      "feature": "two_dimensional",
+      "default_targets": [
+        "web",
+        "linux",
+        "windows"
+      ]
+    },
+    "two-d": {
+      "runtime": "portable",
+      "presentation": "2d",
+      "targets": [
+        "web",
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "networking": [
+        "offline"
+      ],
+      "guide": "docs/TWO_D.md",
+      "feature": "two_dimensional",
+      "default_targets": [
+        "web",
+        "linux",
+        "windows"
+      ]
+    },
+    "three-d": {
+      "runtime": "portable",
+      "presentation": "3d",
+      "targets": [
+        "web",
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "networking": [
+        "offline"
+      ],
+      "guide": "docs/PORTABLE_GAMES.md",
+      "feature": "two_dimensional",
+      "default_targets": [
+        "web",
+        "linux",
+        "windows"
+      ]
+    },
+    "hybrid": {
+      "runtime": "portable",
+      "presentation": "hybrid",
+      "targets": [
+        "web",
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "networking": [
+        "offline"
+      ],
+      "guide": "docs/PORTABLE_GAMES.md",
+      "feature": "two_dimensional",
+      "default_targets": [
+        "web",
+        "linux",
+        "windows"
+      ]
+    },
+    "stock": {
+      "runtime": "game-document",
+      "presentation": "native-3d",
+      "targets": [
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "networking": [
+        "offline",
+        "native-multiplayer"
+      ],
+      "guide": "docs/GAME_QUICKSTART.md",
+      "feature": "game_documents"
+    },
+    "custom-sim": {
+      "runtime": "custom-simulation",
+      "presentation": "native-custom",
+      "targets": [
+        "linux",
+        "windows",
+        "macos"
+      ],
+      "networking": [
+        "offline",
+        "native-multiplayer"
+      ],
+      "guide": "docs/CUSTOM_SIM_CHEATSHEET.md",
+      "feature": "custom_simulation"
+    }
+  }
+}

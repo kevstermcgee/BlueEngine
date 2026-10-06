@@ -749,7 +749,7 @@ fn run() -> Result<()> {
                     }
                     (engine, None) => (engine, None),
                 };
-            let template = template.unwrap_or(Template::Portable);
+            let template = template.unwrap_or_else(Template::cli_default);
             scaffold_new_game_with(name, Path::new(dir), engine, template)?;
             println!(
                 "{}",

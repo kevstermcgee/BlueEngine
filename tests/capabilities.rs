@@ -15,6 +15,15 @@ fn discovery_and_parser_share_command_signatures() {
     assert!(output.status.success());
     let doc: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(doc["commands"].as_array().unwrap().len(), COMMANDS.len());
+    let starters = vesper3d::viewer::newgame::starter_catalog();
+    assert_eq!(doc["starters"]["cli_default"], starters["cli_default"]);
+    assert_eq!(
+        doc["starters"]["library_default"],
+        starters["library_default"]
+    );
+    assert!(std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join(doc["starters"]["catalog"].as_str().unwrap())
+        .is_file());
     for (name, sig) in COMMANDS {
         let max_args = sig.split_whitespace().count();
         let extras: Vec<&str> = (0..=max_args).map(|_| "extra").collect();

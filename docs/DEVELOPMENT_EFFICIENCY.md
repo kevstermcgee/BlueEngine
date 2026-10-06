@@ -1,6 +1,9 @@
 # Time to a correct change
 
-Start with `python3 tools/be2.py context "task words" --level 1 --compact`.
+Start with `python3 tools/be2.py start "task words" --compact`; see
+[AI_SPRINGBOARD.md](AI_SPRINGBOARD.md) for kind/project/target selection and resumable
+observed evidence. It reuses `context "task words" --level 1 --compact`, which remains
+available directly.
 Use Python's `python` command on Windows. Level 1 names public guides, examples and
 iteration commands; level 2 supplies contracts; level 3 supplies the implementation,
 interfaces, configuration, tests and consumers derived from the same feature index.

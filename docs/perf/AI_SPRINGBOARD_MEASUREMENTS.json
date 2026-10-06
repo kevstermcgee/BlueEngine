@@ -1,0 +1,106 @@
+{
+  "schema_version": 1,
+  "caveat": "Each sample uses a fresh Python process. Cold binary target has no compiled authoring executable; OS/toolchain/dependency caches were already warm. No cold full build or fresh-model trial was measured. Instrumentation captures the complete subprocess invocation list.",
+  "results": [
+    {
+      "operation": "start",
+      "condition": "cold-binary-target",
+      "sample": 1,
+      "wall_seconds": 0.41971151297912,
+      "seconds_in_cli": 0.3387545009609312,
+      "output_bytes": 5074,
+      "command_count": 7,
+      "builds_triggered": 0,
+      "executable_present": false
+    },
+    {
+      "operation": "start",
+      "condition": "cold-binary-target",
+      "sample": 2,
+      "wall_seconds": 0.4258602230111137,
+      "seconds_in_cli": 0.3462820230051875,
+      "output_bytes": 5074,
+      "command_count": 7,
+      "builds_triggered": 0,
+      "executable_present": false
+    },
+    {
+      "operation": "start",
+      "condition": "cold-binary-target",
+      "sample": 3,
+      "wall_seconds": 0.4254725619684905,
+      "seconds_in_cli": 0.3448911909945309,
+      "output_bytes": 5074,
+      "command_count": 7,
+      "builds_triggered": 0,
+      "executable_present": false
+    },
+    {
+      "operation": "start",
+      "condition": "warm-binary-target",
+      "sample": 1,
+      "wall_seconds": 0.4535881810588762,
+      "seconds_in_cli": 0.3741171419387683,
+      "output_bytes": 5145,
+      "command_count": 7,
+      "builds_triggered": 0,
+      "executable_present": true
+    },
+    {
+      "operation": "start",
+      "condition": "warm-binary-target",
+      "sample": 2,
+      "wall_seconds": 0.438457750948146,
+      "seconds_in_cli": 0.35879417799878865,
+      "output_bytes": 5145,
+      "command_count": 7,
+      "builds_triggered": 0,
+      "executable_present": true
+    },
+    {
+      "operation": "start",
+      "condition": "warm-binary-target",
+      "sample": 3,
+      "wall_seconds": 0.44759560003876686,
+      "seconds_in_cli": 0.36819865903817117,
+      "output_bytes": 5145,
+      "command_count": 7,
+      "builds_triggered": 0,
+      "executable_present": true
+    },
+    {
+      "operation": "next",
+      "condition": "warm-binary-target",
+      "wall_seconds": 0.46951285609975457,
+      "seconds_in_cli": 0.3900609469274059,
+      "output_bytes": 7704,
+      "command_count": 9,
+      "builds_triggered": 0,
+      "executable_present": true,
+      "metadata_changed": false
+    },
+    {
+      "operation": "resume",
+      "condition": "warm-binary-target",
+      "wall_seconds": 0.45808949402999133,
+      "seconds_in_cli": 0.3778100280323997,
+      "output_bytes": 7704,
+      "command_count": 9,
+      "builds_triggered": 0,
+      "executable_present": true,
+      "metadata_changed": false
+    }
+  ],
+  "engine_base_revision": "bd5cb054328932584d455a148ac48034773de508",
+  "review_baseline": "83842f99a5a4df4dd98c3da46fb04f6878815175",
+  "exercise": {
+    "game": "springboard-relics",
+    "template": "two-d",
+    "targets": [
+      "web"
+    ],
+    "engine_task": "read-only resume option",
+    "interruption": "inner passed; asset identity edited; resume became unverified and retained previous pass",
+    "fresh_agent_trials": false
+  }
+}

@@ -1,8 +1,13 @@
 # Working on BlueEngine
 
 Use `python3` on Unix (`python` on Windows). First run
-`python3 tools/be2.py context "<task>" --level 1 --compact` in this checkout.
-It needs only Python and the feature index, no build. Read the packet's selected
+`python3 tools/be2.py start "<task>" --compact` in this checkout. Add `--kind`,
+`--project`/`--target` or engine `--path` when needed; see docs/AI_SPRINGBOARD.md.
+It reuses context, reads current inputs and probes readiness without building/installing.
+Run `next TASK_ID` or `resume TASK_ID` to refresh progress; `check ... --task TASK_ID`
+binds observed checks to current content. Notes never certify checks.
+Direct `context "<task>" --level 1 --compact` remains available without a build.
+Read the packet's selected
 paths, not the whole repository. Exact feature IDs or diagnostic IDs narrow lookup;
 low confidence means inspect/narrow before editing, never invent an API.
 Use `context FEATURE --level 2` for contracts and `--level 3` for implementation ownership.

@@ -24,19 +24,20 @@ def digest(path):
     return hashlib.sha256(Path(path).read_bytes()).hexdigest()
 
 
-def native_binary():
+def native_binary(root=None):
+    root = Path(root) if root is not None else ROOT
     explicit = os.environ.get('BE2_TOOLS')
     if explicit:
         return Path(explicit)
     name = 'be2-tools.exe' if os.name == 'nt' else 'be2-tools'
-    packaged = ROOT / 'bin' / name
+    packaged = root / 'bin' / name
     if packaged.is_file():
         return packaged
     # Source-checkout workflow: be2.py build tools deliberately uses an isolated target directory.
     # A fresh agent should not have to copy the result into a release package just to discover APIs.
-    base = Path(os.environ.get('CARGO_TARGET_DIR') or ROOT / 'target')
+    base = Path(os.environ.get('CARGO_TARGET_DIR') or root / 'target')
     if not base.is_absolute():
-        base = ROOT / base
+        base = root / base
     for profile in ('itest', 'be2-tools/release', 'fast', 'release', 'debug'):
         candidate = base / profile / name
         if candidate.is_file():

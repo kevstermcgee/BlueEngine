@@ -31,12 +31,11 @@ def run(args, cwd=None, env=None):
     result=subprocess.run([str(a) for a in args],cwd=cwd,env=env,capture_output=True,text=True)
     if result.returncode: raise WebError(f"Command failed ({result.returncode}): {' '.join(map(str,args))}\n{result.stderr[-5000:]}\n{result.stdout[-1000:]}")
     return result.stdout
-def source_hash(folder):
+def source_hash(folder, inputs=('src','assets','scripts','build.rs','AUDIO.md','Cargo.toml','Cargo.lock','game.project.json')):
     digest=hashlib.sha256()
-    inputs=('src','assets','scripts','build.rs','AUDIO.md','Cargo.toml','Cargo.lock','game.project.json')
     try:
         names=run(['git','ls-files','--cached','--others','--exclude-standard','-z','--',*inputs],cwd=folder).split('\0')
-    except WebError:
+    except (WebError, OSError):
         # A local scaffold needs neither Git initialization nor a hosting account.
         names=[]
     # Actual inputs still matter inside an ignored scratch project in a Git checkout.
@@ -235,6 +234,7 @@ def catalog_verify(site,evidence):
     finally:server.shutdown();server.server_close();thread.join()
     return json.loads((evidence/'catalog.json').read_text(encoding='utf-8'))
 def build(game, skip_browser=False, *, preview=False):
+    game=Path(game).resolve()
     start=time.monotonic();project=validate_project(game)
     if (game/'Cargo.toml').is_symlink():raise WebError('Game Cargo.toml cannot be a symlink')
     if 'web' not in project['targets']:raise WebError('This game does not declare web; edit the proposal/project requirements deliberately before building')
