@@ -389,3 +389,7 @@ clearing and filling a 2048x2048 colour plus depth target; under llvmpipe that i
 a small fraction. Not measured: any real GPU, the Intel N97's own GPU, Windows, a scene with thousands of casters,
 the effect of the 9-tap lookup on a real shader core. Treat the Full figure as an upper bound on this machine's
 software path, not as a prediction for players; the first run on real hardware should add rows here.
+
+## Static model authoring (2026-10-06)
+
+[Model import report](MODEL_IMPORT_REPORT.md) records fresh-context procedural/imported-art trials, warm converter freshness and native/browser proof. Agent token telemetry is unavailable; no whole-game completion or whole-engine build-speed claim is made.

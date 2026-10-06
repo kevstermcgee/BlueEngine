@@ -1,0 +1,508 @@
+{
+  "version": 1,
+  "baseline_engine_revision": "ca2799fa7c4b34d52ec5580c9a3935c00d306865",
+  "task": "Fixed furnished room: table, four inward-facing chairs and square floor lamp; author only the furniture function through the selected public interface.",
+  "scope": "Fresh-context source-authoring trials. Compilation and renders are separate coordinator evidence. Timing starts at first clock observation after AGENTS read; no total game-completion claim.",
+  "tokens": {
+    "status": "unavailable",
+    "reason": "Session token telemetry is not exposed."
+  },
+  "trials": [
+    {
+      "case": "before-1",
+      "elapsed_seconds": 120.356991,
+      "authored_bytes": 3171,
+      "source_sha256": "29f7255170b40f2e0fb67c531dac757fd8030ff1c8dde28eacd017981bc3c82a",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/PORTABLE_GAMES.md",
+        "src/two_d/draw.rs"
+      ],
+      "selected_commands": [
+        "cat AGENTS.md",
+        "python3 tools/be2.py context \"portable 3D furnished scene procedural furniture meshes\" --compact",
+        "cat docs/PORTABLE_GAMES.md",
+        "rg --files src/portable",
+        "rg --files src | rg '(^|/)(two_d|portable)|draw.rs$'",
+        "rg -n 'pub (struct|fn)|pub use|fn cube|fn mesh|struct Vertex|struct Mesh' src/two_d/draw.rs",
+        "sed -n '1,65p' src/two_d/draw.rs"
+      ],
+      "engine_source_inspected": true,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "",
+      "replay_source": "docs/perf/model-import/cases/before-1.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "before-2",
+      "elapsed_seconds": 86.0,
+      "authored_bytes": 2962,
+      "source_sha256": "611b43cb18fc5377670a12fc8b86c88c5042a521eca428bf47a65d69a655279f",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/PORTABLE_GAMES.md",
+        "templates/two-d/lib.rs",
+        "src/two_d/draw.rs"
+      ],
+      "selected_commands": [
+        "cat AGENTS.md",
+        "python3 tools/be2.py context \"portable 3D furnished scene procedural furniture meshes\" --compact",
+        "rg -n \"World|box3|cuboid|mesh|portable\" docs/PORTABLE_GAMES.md templates/two-d/lib.rs src/portable/draw.rs",
+        "sed -n '35,56p' docs/PORTABLE_GAMES.md",
+        "rg --files src | rg \"two_d|portable\"",
+        "rg -n \"pub struct World|pub fn cube|pub fn mesh|pub struct Mesh|pub struct Vertex|impl World|pub fn sphere\" src/two_d/draw.rs",
+        "sed -n '1,92p' src/two_d/draw.rs"
+      ],
+      "engine_source_inspected": true,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "",
+      "replay_source": "docs/perf/model-import/cases/before-2.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "before-3",
+      "elapsed_seconds": 137.693108,
+      "authored_bytes": 2461,
+      "source_sha256": "20217e15c4043857049f71ce2cee21907f429d8a5c56a68004b89ce01b376f32",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/PORTABLE_GAMES.md:matching lines and 35-50",
+        "src/two_d/draw.rs:public symbol matches and 1-80"
+      ],
+      "selected_commands": [
+        "cat AGENTS.md",
+        "python3 tools/be2.py context \"portable 3D furnished scene procedural furniture meshes\" --compact",
+        "rg -n 'World|cuboid|box|cylinder|mesh|three|3D' docs/PORTABLE_GAMES.md",
+        "rg --files src/portable",
+        "sed -n '35,50p' docs/PORTABLE_GAMES.md",
+        "rg --files src | rg 'portable|draw\\.rs$'",
+        "rg -n '^pub struct World|^impl World|pub fn (cube|sphere|mesh)|pub struct Mesh|pub struct Vertex|WorldPrimitive' src/two_d/draw.rs",
+        "sed -n '1,80p' src/two_d/draw.rs"
+      ],
+      "engine_source_inspected": true,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "",
+      "replay_source": "docs/perf/model-import/cases/before-3.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "after-1",
+      "elapsed_seconds": 111.923,
+      "authored_bytes": 2226,
+      "source_sha256": "9292c3dda61cdb3899173847363a9cace5bf1776fd39c3ad08be8140da994835",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/PORTABLE_GAMES.md",
+        "docs/MODEL_IMPORT.md",
+        "assets/README.md",
+        "docs/TWO_D.md",
+        "assets/models/cc0/chair/model.json",
+        "assets/models/cc0/table/model.json",
+        "assets/models/cc0/floor-lamp/model.json"
+      ],
+      "selected_commands": [],
+      "engine_source_inspected": false,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "Initial after cohort discovered missing facing metadata and context ranking; refined final cohort uses documented +Z facing and compact catalog output.",
+      "replay_source": "docs/perf/model-import/cases/after-1.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "after-2",
+      "elapsed_seconds": 93.581883,
+      "authored_bytes": 2239,
+      "source_sha256": "73252b3f75c4982fa68c363f20752f566144d9f7baef97055176d49863a19155",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/PORTABLE_GAMES.md",
+        "docs/TWO_D.md",
+        "docs/AI_SPRINGBOARD.md",
+        "docs/MODEL_IMPORT.md",
+        "assets/props/interiors/catalog.json",
+        "assets/models/cc0/chair/model.json",
+        "assets/models/cc0/table/model.json",
+        "assets/models/cc0/floor-lamp/model.json"
+      ],
+      "selected_commands": [],
+      "engine_source_inspected": false,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "Initial after cohort discovered missing facing metadata and context ranking; refined final cohort uses documented +Z facing and compact catalog output.",
+      "replay_source": "docs/perf/model-import/cases/after-2.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "after-3",
+      "elapsed_seconds": 101.750124,
+      "authored_bytes": 2514,
+      "source_sha256": "4d58f74b7aa62eb0d6e82a603e7a8e11090fcbd70ca56b6c7afeb61537f60f24",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/PORTABLE_GAMES.md",
+        "docs/MODEL_IMPORT.md",
+        "assets/README.md",
+        "assets/catalog.json and registered packs",
+        "assets/models/cc0/chair/model.json",
+        "assets/models/cc0/table/model.json",
+        "assets/models/cc0/floor-lamp/model.json"
+      ],
+      "selected_commands": [],
+      "engine_source_inspected": false,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "Initial after cohort discovered missing facing metadata and context ranking; refined final cohort uses documented +Z facing and compact catalog output.",
+      "replay_source": "docs/perf/model-import/cases/after-3.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "final-1",
+      "elapsed_seconds": 53,
+      "authored_bytes": 2474,
+      "source_sha256": "c746ad39ba19b1429e8fade7d6cbaea400310aabf7c1560f86ab0f15eef082b0",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/MODEL_IMPORT.md",
+        "assets/README.md"
+      ],
+      "selected_commands": [
+        "cat AGENTS.md",
+        "python3 tools/be2.py context \"portable 3D furnished scene imported furniture meshes\" --compact",
+        "cat docs/MODEL_IMPORT.md",
+        "cat assets/README.md",
+        "python3 tools/assets.py search furniture --compact",
+        "python3 tools/assets.py show cc0/furniture/table",
+        "python3 tools/assets.py show cc0/furniture/chair",
+        "python3 tools/assets.py show cc0/furniture/floor-lamp"
+      ],
+      "engine_source_inspected": false,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "",
+      "replay_source": "docs/perf/model-import/cases/final-1.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "final-2",
+      "elapsed_seconds": 81.972694,
+      "authored_bytes": 2325,
+      "source_sha256": "7be7f5f8fe373cffee4d7bbdaf234f31e3bef469a077b535f92311fdc29157f1",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/MODEL_IMPORT.md",
+        "assets/README.md",
+        "assets catalog metadata"
+      ],
+      "selected_commands": [
+        "python3 tools/be2.py start \"portable 3D furnished scene imported furniture meshes\" --compact",
+        "python3 tools/be2.py context \"portable 3D furnished scene imported furniture meshes\" --compact",
+        "cat docs/MODEL_IMPORT.md",
+        "cat assets/README.md",
+        "python3 tools/assets.py search \"furniture\" --compact",
+        "python3 tools/assets.py show cc0/furniture/table",
+        "python3 tools/assets.py show cc0/furniture/chair",
+        "python3 tools/assets.py show cc0/furniture/floor-lamp"
+      ],
+      "engine_source_inspected": false,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "",
+      "replay_source": "docs/perf/model-import/cases/final-2.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    },
+    {
+      "case": "final-3",
+      "elapsed_seconds": 92.650347,
+      "authored_bytes": 2340,
+      "source_sha256": "3e6f32669bd91417a1a46ddd094b0248da67d55d1ebe3d087ca8888973131a56",
+      "direct_files_inspected": [
+        "AGENTS.md",
+        "docs/MODEL_IMPORT.md",
+        "assets/README.md"
+      ],
+      "selected_commands": [
+        "cat AGENTS.md",
+        "python3 tools/be2.py context \"portable 3D furnished scene imported furniture meshes\" --compact",
+        "cat docs/MODEL_IMPORT.md",
+        "cat assets/README.md",
+        "python3 tools/assets.py search furniture --compact",
+        "python3 tools/assets.py show cc0/furniture/table",
+        "python3 tools/assets.py show cc0/furniture/chair",
+        "python3 tools/assets.py show cc0/furniture/floor-lamp"
+      ],
+      "engine_source_inspected": false,
+      "agent_builds": 0,
+      "agent_tests": 0,
+      "passing_evidence": "none; coordinator validation is separate",
+      "notes": "",
+      "replay_source": "docs/perf/model-import/cases/final-3.rs",
+      "replay_portabilization": "Absolute art embedding paths replaced by relative paths; replay source formatting may differ. Original authored bytes and hash remain the measurement."
+    }
+  ],
+  "before": {
+    "n": 3,
+    "median_authoring_seconds": 120.356991,
+    "median_authored_bytes": 2962,
+    "engine_source_inspected_trials": 3
+  },
+  "after": {
+    "n": 3,
+    "median_authoring_seconds": 101.750124,
+    "median_authored_bytes": 2239,
+    "engine_source_inspected_trials": 0
+  },
+  "final": {
+    "n": 3,
+    "median_authoring_seconds": 81.972694,
+    "median_authored_bytes": 2340,
+    "engine_source_inspected_trials": 0
+  },
+  "limitations": [
+    "Three samples per cohort; no confidence interval or general game-completion extrapolation.",
+    "Procedural and imported props have the same requested layout and bounded silhouettes, but are not pixel-identical geometry.",
+    "Initial after cohort required more direct files despite shorter authoring times; retained rather than hidden.",
+    "Commands in diaries are agent-recorded; no claim of exhaustive command accounting.",
+    "Source bytes are not model tokens."
+  ],
+  "warm_imports": [
+    {
+      "argv": [
+        "python3",
+        "tools/assets.py",
+        "import-model",
+        "tests/fixtures/models/chair.glb",
+        "--output",
+        "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/1",
+        "--id",
+        "chair",
+        "--pack-id",
+        "cc0/benchmark",
+        "--source-url",
+        "https://kenney.nl/assets/furniture-kit",
+        "--attribution",
+        "Kenney, Furniture Kit 2.0, CC0-1.0",
+        "--tag",
+        "furniture",
+        "--scale",
+        "2.5",
+        "--repair-degenerate",
+        "--forward",
+        "+z"
+      ],
+      "cwd": "REPOSITORY_ROOT",
+      "environment": "warm shared compiler artifacts on USB; independent output pack",
+      "seconds": 0.18564239598345011,
+      "exit_code": 0,
+      "result": {
+        "api_version": 1,
+        "ok": true,
+        "pack": "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/1/pack.json",
+        "asset": "cc0/benchmark/chair",
+        "bytes": 43695,
+        "triangles": 162,
+        "chunks": 1,
+        "warnings": [
+          "Explicit zero-area repair: removed 8 of 170 triangles; full kit::lint rerun. Original triangle IDs: [32, 33, 122, 128, 150, 151, 162, 163]"
+        ],
+        "build": {
+          "seconds": 0.11501072801183909,
+          "fresh": 164,
+          "built": 0,
+          "profile": "itest",
+          "features": [
+            "model-import"
+          ]
+        },
+        "conversion_seconds": 0.004412824055179954,
+        "next": [
+          "python3",
+          "tools/assets.py",
+          "--include",
+          "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/1/pack.json",
+          "search",
+          "chair"
+        ]
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/assets.py",
+        "import-model",
+        "tests/fixtures/models/chair.glb",
+        "--output",
+        "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/2",
+        "--id",
+        "chair",
+        "--pack-id",
+        "cc0/benchmark",
+        "--source-url",
+        "https://kenney.nl/assets/furniture-kit",
+        "--attribution",
+        "Kenney, Furniture Kit 2.0, CC0-1.0",
+        "--tag",
+        "furniture",
+        "--scale",
+        "2.5",
+        "--repair-degenerate",
+        "--forward",
+        "+z"
+      ],
+      "cwd": "REPOSITORY_ROOT",
+      "environment": "warm shared compiler artifacts on USB; independent output pack",
+      "seconds": 0.17022235202603042,
+      "exit_code": 0,
+      "result": {
+        "api_version": 1,
+        "ok": true,
+        "pack": "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/2/pack.json",
+        "asset": "cc0/benchmark/chair",
+        "bytes": 43695,
+        "triangles": 162,
+        "chunks": 1,
+        "warnings": [
+          "Explicit zero-area repair: removed 8 of 170 triangles; full kit::lint rerun. Original triangle IDs: [32, 33, 122, 128, 150, 151, 162, 163]"
+        ],
+        "build": {
+          "seconds": 0.11129315395373851,
+          "fresh": 164,
+          "built": 0,
+          "profile": "itest",
+          "features": [
+            "model-import"
+          ]
+        },
+        "conversion_seconds": 0.004270911915227771,
+        "next": [
+          "python3",
+          "tools/assets.py",
+          "--include",
+          "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/2/pack.json",
+          "search",
+          "chair"
+        ]
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/assets.py",
+        "import-model",
+        "tests/fixtures/models/chair.glb",
+        "--output",
+        "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/3",
+        "--id",
+        "chair",
+        "--pack-id",
+        "cc0/benchmark",
+        "--source-url",
+        "https://kenney.nl/assets/furniture-kit",
+        "--attribution",
+        "Kenney, Furniture Kit 2.0, CC0-1.0",
+        "--tag",
+        "furniture",
+        "--scale",
+        "2.5",
+        "--repair-degenerate",
+        "--forward",
+        "+z"
+      ],
+      "cwd": "REPOSITORY_ROOT",
+      "environment": "warm shared compiler artifacts on USB; independent output pack",
+      "seconds": 0.1718333390308544,
+      "exit_code": 0,
+      "result": {
+        "api_version": 1,
+        "ok": true,
+        "pack": "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/3/pack.json",
+        "asset": "cc0/benchmark/chair",
+        "bytes": 43695,
+        "triangles": 162,
+        "chunks": 1,
+        "warnings": [
+          "Explicit zero-area repair: removed 8 of 170 triangles; full kit::lint rerun. Original triangle IDs: [32, 33, 122, 128, 150, 151, 162, 163]"
+        ],
+        "build": {
+          "seconds": 0.11174250999465585,
+          "fresh": 164,
+          "built": 0,
+          "profile": "itest",
+          "features": [
+            "model-import"
+          ]
+        },
+        "conversion_seconds": 0.0044462550431489944,
+        "next": [
+          "python3",
+          "tools/assets.py",
+          "--include",
+          "REPOSITORY_ROOT/.be2-work/model-import-warm-swx6c_hl/3/pack.json",
+          "search",
+          "chair"
+        ]
+      },
+      "stderr": ""
+    }
+  ],
+  "replay_lint_fixes": [
+    "Three procedural color literals changed to bit-identical f32 spellings (verified with struct.pack).",
+    "One imported trial thread-local RefCell initializer made const; geometry and state unchanged."
+  ],
+  "replay_verification": {
+    "build": {
+      "argv": [
+        "cargo",
+        "build",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "portable",
+        "--example",
+        "model_import_compare",
+        "--example",
+        "imported_room"
+      ],
+      "exit_code": 0,
+      "cargo_seconds": 11.46
+    },
+    "clippy": {
+      "argv": [
+        "cargo",
+        "clippy",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "model-import,portable",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "exit_code": 0,
+      "cargo_seconds": 5.52
+    },
+    "renders": {
+      "cases": 9,
+      "all_exit_codes": 0,
+      "details": "render-results.json",
+      "manual_review": "All before/initial-after captures match already reviewed images byte-for-byte; all three final captures inspected. Tables, four chairs and lamps are legible. Different lamp silhouettes and chair yaw mean these are not pixel-identical props."
+    }
+  }
+}

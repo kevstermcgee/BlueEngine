@@ -1,0 +1,155 @@
+[
+  {
+    "case": "before-1",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "before-1",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/before-1.png"
+    ],
+    "seconds": 0.22167537396308035,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/before-1.png",
+    "image_sha256": "a014f4e778fee2f12a6ca6087bc95d44a64e8600beff3e35b14309b386e2ec53"
+  },
+  {
+    "case": "before-2",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "before-2",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/before-2.png"
+    ],
+    "seconds": 0.19654244696721435,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/before-2.png",
+    "image_sha256": "1b9284d2e249a18e02379a3eeca3e1b463816b668d48d1749c1a6b795f215f1a"
+  },
+  {
+    "case": "before-3",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "before-3",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/before-3.png"
+    ],
+    "seconds": 0.1935039220843464,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/before-3.png",
+    "image_sha256": "c6cddd4515b43fb3cc7dd4a1c356ea519c09910970b80a2eb886b7c26f1ce3a3"
+  },
+  {
+    "case": "after-1",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "after-1",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/after-1.png"
+    ],
+    "seconds": 0.20115349406842142,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/after-1.png",
+    "image_sha256": "ad8ad64eb5a2c557d9607302c4571a0440664e01db58ebd0b57cc3ad1a3178b5"
+  },
+  {
+    "case": "after-2",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "after-2",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/after-2.png"
+    ],
+    "seconds": 0.19718543998897076,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/after-2.png",
+    "image_sha256": "ad8ad64eb5a2c557d9607302c4571a0440664e01db58ebd0b57cc3ad1a3178b5"
+  },
+  {
+    "case": "after-3",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "after-3",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/after-3.png"
+    ],
+    "seconds": 0.2083816908998415,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/after-3.png",
+    "image_sha256": "ad8ad64eb5a2c557d9607302c4571a0440664e01db58ebd0b57cc3ad1a3178b5"
+  },
+  {
+    "case": "final-1",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "final-1",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/final-1.png"
+    ],
+    "seconds": 0.20809460594318807,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/final-1.png",
+    "image_sha256": "ad8ad64eb5a2c557d9607302c4571a0440664e01db58ebd0b57cc3ad1a3178b5"
+  },
+  {
+    "case": "final-2",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "final-2",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/final-2.png"
+    ],
+    "seconds": 0.20116220694035292,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/final-2.png",
+    "image_sha256": "ad8ad64eb5a2c557d9607302c4571a0440664e01db58ebd0b57cc3ad1a3178b5"
+  },
+  {
+    "case": "final-3",
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 960x640x24",
+      "/home/kevin/BlueEngine/target/itest/examples/model_import_compare",
+      "final-3",
+      "/mnt/blueengine-usb/blueengine-developer-tools/docs/perf/model-import/captures/final-3.png"
+    ],
+    "seconds": 0.20219486602582037,
+    "exit_code": 0,
+    "stderr": "",
+    "image": "docs/perf/model-import/captures/final-3.png",
+    "image_sha256": "6d45bd6585f0781857977ecc8d34aa2dadc25e5b0da8f71fc3d36c9166239c5f"
+  }
+]

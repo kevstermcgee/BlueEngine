@@ -426,20 +426,50 @@
         "assets/asset-pack.schema.json",
         "assets/README.md",
         "tools/assets.py",
-        "tools/test_assets.py"
+        "tools/test_assets.py",
+        "src/asset_model.rs",
+        "src/model_import.rs",
+        "src/bin/be2-model-import.rs",
+        "tools/model_import.py",
+        "tools/fetch_models.py",
+        "tools/test_model_import.py",
+        "docs/MODEL_IMPORT.md",
+        "assets/model-sources.json"
       ],
       "checks": [
         "python tools/assets.py validate",
-        "python -m unittest tools.test_assets -v"
+        "python -m unittest tools.test_assets -v",
+        "python -m unittest tools.test_model_import -v",
+        "cargo test --locked --no-default-features --features model-import --lib model_import"
       ],
-      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import.",
+      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import. Static glTF: read docs/MODEL_IMPORT.md; assets.py import-model writes CC0 packs and precomputed box metadata. Games embed preprocessed art in native/browser via asset_model::draw::Model; servers read only ColliderMetadata. Import-only dependencies are feature gated.",
       "depends_on": [],
       "keywords": [
         "asset",
         "prefab",
         "prop catalog",
         "search assets",
-        "asset pack"
+        "asset pack",
+        "glTF",
+        "model import",
+        "CC0",
+        "textured mesh",
+        "imported furniture meshes",
+        "static models",
+        "imported assets",
+        "furniture",
+        "textured props",
+        "portable 3D model"
+      ],
+      "read_first": [
+        "docs/MODEL_IMPORT.md",
+        "assets/README.md"
+      ],
+      "public_api": [
+        "asset_model::draw::Model",
+        "asset_model::ColliderMetadata",
+        "tools/assets.py import-model",
+        "tools/assets.py search --compact"
       ]
     },
     "game_scaffolding": {

@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "argv": [
+    "python3",
+    "tools/be2.py",
+    "web",
+    "build",
+    ".be2-work/games/cc0-room"
+  ],
+  "exit_code": 0,
+  "seconds": 106.167,
+  "package_id": "ca4027b23e67d9f599fad5389d87189499dffe223837f60cee7dd7cc6255a72d",
+  "wasm_sha256": "d5ae4e9d61d460d7c7372c08b0341c11f5f760165b17a083fa06149fcf95b8e7",
+  "game_source_sha256": "565112e1dd0e9695a84b3d9794b274cc9f17227a3e341c7cefb49b9f7fe02604",
+  "source_revision": "ca2799fa7c4b34d52ec5580c9a3935c00d306865",
+  "source_clean": false,
+  "browser_verification": {
+    "compiled": true,
+    "desktop": {
+      "audio_initialized": true,
+      "controller": true,
+      "focus_loss": true,
+      "focus_return": true,
+      "gameplay_scenario": true,
+      "input": true,
+      "offline_reload": true,
+      "playable": true,
+      "reload_read": true,
+      "save_write": true,
+      "update_recovery": true,
+      "wasm_instantiated": true
+    },
+    "environment": "Chromium CDP/software WebGL; emulated touch and synthetic controller",
+    "mobile": {
+      "audio_initialized": true,
+      "focus_loss": true,
+      "focus_return": true,
+      "gameplay_scenario": true,
+      "input": true,
+      "offline_reload": true,
+      "playable": true,
+      "reload_read": true,
+      "save_write": true,
+      "update_recovery": true,
+      "wasm_instantiated": true
+    },
+    "package_valid": true,
+    "physical_device_tested": false
+  },
+  "verification": {
+    "hash": "d6a3ec4a1e7d653e",
+    "outcome": "won"
+  },
+  "measurements": {
+    "desktop": {
+      "environment": "Headless Chromium SwiftShader on this Linux host; latency includes CDP/report polling",
+      "fps": 54.94505494570929,
+      "frame_max_ms": 33.40000000000009,
+      "frame_p50_ms": 16.699999999999818,
+      "frame_p95_ms": 33.30000000000018,
+      "frames": 110,
+      "game_performance": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 14.900000095367432,
+        "step_max_ms": 0.10000002384185791
+      },
+      "hardware_coverage": [],
+      "js_heap_bytes": 2191197,
+      "load_ms": 534.4516949999997,
+      "navigation_to_ready_roundtrip_ms": 26330.30074,
+      "replay_work": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 14.600000023841858,
+        "step_max_ms": 0.20000004768371582
+      },
+      "sample_ms": 2001.999999976158,
+      "save_ms": 214.02288000000044,
+      "startup_ms": 25237.399999976158,
+      "time_to_playable_ms": 26310.600000023842,
+      "wasm_instantiation_ms": 0.5,
+      "wasm_memory_bytes": 11993088
+    },
+    "physical_devices": [],
+    "touch_emulation": {
+      "environment": "Headless Chromium SwiftShader on this Linux host; latency includes CDP/report polling",
+      "fps": 55.10325655347189,
+      "frame_max_ms": 33.40000000000009,
+      "frame_p50_ms": 16.699999999999818,
+      "frame_p95_ms": 33.30000000000018,
+      "frames": 111,
+      "game_performance": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 4.399999976158142,
+        "step_max_ms": 0.10000002384185791
+      },
+      "hardware_coverage": [],
+      "js_heap_bytes": 2062334,
+      "load_ms": 510.1701179999982,
+      "navigation_to_ready_roundtrip_ms": 26300.100092,
+      "replay_work": {
+        "chunk_render_frames": 0,
+        "chunk_render_max_ms": 0,
+        "chunk_render_stalls_over_50ms": 0,
+        "chunk_stalls_over_50ms": 0,
+        "chunk_update_max_ms": 0,
+        "chunk_updates": 0,
+        "draw_max_ms": 10.799999952316284,
+        "step_max_ms": 0.2999999523162842
+      },
+      "sample_ms": 2014.3999999761581,
+      "save_ms": 705.9618090000004,
+      "startup_ms": 25276.300000071526,
+      "time_to_playable_ms": 26266.100000023842,
+      "wasm_instantiation_ms": 0.40000009536743164,
+      "wasm_memory_bytes": 6619136
+    }
+  },
+  "publication": "not attempted; proof game is local, ignored source",
+  "visual_review": "Desktop and emulated-touch playing captures inspected; imported furniture and colored texture visible."
+}

@@ -26,6 +26,7 @@ offline = ["dep:png", "dep:ctrlc"]
 presentation = ["dep:macroquad"]
 two-d = ["dep:macroquad"]
 portable = ["two-d"]
+model-import = ["presentation", "dep:gltf", "dep:base64", "dep:image"]
 client = ["presentation", "gamepad", "dep:windows-sys"]
 gamepad = ["dep:gilrs"]
 
@@ -50,6 +51,11 @@ name = "be2-tools"
 path = "src/bin/be2-tools.rs"
 
 [[bin]]
+name = "be2-model-import"
+path = "src/bin/be2-model-import.rs"
+required-features = ["model-import"]
+
+[[bin]]
 name = "blueengine-sandbox"
 path = "src/bin/blueengine-sandbox.rs"
 required-features = ["client"]
@@ -70,6 +76,10 @@ required-features = ["client"]
 name = "audio_preview"
 required-features = ["presentation"]
 
+[[example]]
+name = "imported_room"
+required-features = ["portable"]
+
 [dependencies]
 serde = { version = "=1.0.219", features = ["derive"] }
 serde_json = "=1.0.140"
@@ -77,6 +87,9 @@ png = { version = "=0.17.16", optional = true }
 ctrlc = { version = "=3.4.5", optional = true }
 macroquad = { version = "=0.4.14", default-features = false, features = ["audio"], optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+gltf = { version = "=1.4.1", default-features = false, features = ["utils", "names", "KHR_materials_unlit"], optional = true }
+base64 = { version = "=0.22.1", optional = true }
+image = { version = "=0.24.9", default-features = false, features = ["png", "jpeg"], optional = true }
 gilrs = { version = "=0.11.2", optional = true }
 rapier3d = { version = "=0.26.1", features = ["enhanced-determinism"] }
 getrandom = "0.3.4"
@@ -111,3 +124,8 @@ debug = false
 
 [dev-dependencies]
 rcgen = "0.14"
+
+[[example]]
+name = "model_import_compare"
+path = "docs/perf/model-import/compare.rs"
+required-features = ["portable"]

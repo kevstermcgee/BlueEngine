@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "pack": {
+    "id": "cc0/furniture",
+    "name": "CC0 small model fixtures",
+    "version": "0.1.0",
+    "description": "Small reviewed Kenney furniture and an authored textured test cube; full packs remain external.",
+    "scope": "shared",
+    "license": "CC0-1.0"
+  },
+  "assets": [
+    {
+      "id": "chair",
+      "label": "Chair",
+      "description": "Imported static CC0 prop; base-color presentation and precomputed box collider.",
+      "type": "mesh",
+      "source": {
+        "path": "chair/model.json",
+        "format": "blue-static-model-v1",
+        "method": "imported",
+        "attribution": "Kenney, Furniture Kit 2.0, CC0-1.0",
+        "source_url": "https://kenney.nl/assets/furniture-kit",
+        "sha256": "d088290039e43e11c03ccf88cb495c882bf500097c158c91f7bc8753672cbdf3",
+        "original_sha256": "c8a11eec93e89e31250ba91afc1b8d56c3bec7ae86640fd1239f595ff4180883"
+      },
+      "taxonomy": {
+        "categories": [
+          "imported"
+        ],
+        "tags": [
+          "chair",
+          "furniture"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.25,
+          0.5874999761581421,
+          0.25
+        ],
+        "bounds_min": [
+          -0.25,
+          0.0,
+          -0.25
+        ],
+        "bounds_max": [
+          0.25,
+          1.1749999523162842,
+          0.25
+        ],
+        "triangle_count": 162,
+        "forward": "+z"
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "aabb",
+        "metadata": "chair/collider.json"
+      },
+      "lifecycle": {
+        "status": "candidate"
+      }
+    },
+    {
+      "id": "table",
+      "label": "Table",
+      "description": "Imported static CC0 prop; base-color presentation and precomputed box collider.",
+      "type": "mesh",
+      "source": {
+        "path": "table/model.json",
+        "format": "blue-static-model-v1",
+        "method": "imported",
+        "attribution": "Kenney, Furniture Kit 2.0, CC0-1.0",
+        "source_url": "https://kenney.nl/assets/furniture-kit",
+        "sha256": "f9acca5edb285be0baa72b0f07d3fd81a8388970b9928fa81a48e67f8f8b97cf",
+        "original_sha256": "ff1a94498d023957f4bc3ff6f55a7a82977d336dbf01a573b3364f03afe5ff61"
+      },
+      "taxonomy": {
+        "categories": [
+          "imported"
+        ],
+        "tags": [
+          "furniture",
+          "table"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          1.051859974861145,
+          0.4084174633026123,
+          0.5592166781425476
+        ],
+        "bounds_min": [
+          -1.051859974861145,
+          0.0,
+          -0.5592166781425476
+        ],
+        "bounds_max": [
+          1.051859974861145,
+          0.8168349266052246,
+          0.5592166781425476
+        ],
+        "triangle_count": 110
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "aabb",
+        "metadata": "table/collider.json"
+      },
+      "lifecycle": {
+        "status": "candidate"
+      }
+    },
+    {
+      "id": "floor-lamp",
+      "label": "Floor Lamp",
+      "description": "Imported static CC0 prop; base-color presentation and precomputed box collider.",
+      "type": "mesh",
+      "source": {
+        "path": "floor-lamp/model.json",
+        "format": "blue-static-model-v1",
+        "method": "imported",
+        "attribution": "Kenney, Furniture Kit 2.0, CC0-1.0",
+        "source_url": "https://kenney.nl/assets/furniture-kit",
+        "sha256": "241151a017d73ae0909131a1da2302f1521489d3cf788f3c5b5441a1f38bd72d",
+        "original_sha256": "6466993748d8e184de9ec5b6b0af613867c50c0ce320d1898b1db9e4c27c2561"
+      },
+      "taxonomy": {
+        "categories": [
+          "imported"
+        ],
+        "tags": [
+          "floor-light",
+          "furniture"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.15000000596046448,
+          1.0750000476837158,
+          0.15000000596046448
+        ],
+        "bounds_min": [
+          -0.15000000596046448,
+          0.0,
+          -0.15000000596046448
+        ],
+        "bounds_max": [
+          0.15000000596046448,
+          2.1500000953674316,
+          0.15000000596046448
+        ],
+        "triangle_count": 60
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "aabb",
+        "metadata": "floor-lamp/collider.json"
+      },
+      "lifecycle": {
+        "status": "candidate"
+      }
+    },
+    {
+      "id": "textured-cube",
+      "label": "Textured Cube",
+      "description": "Imported static CC0 prop; base-color presentation and precomputed box collider.",
+      "type": "mesh",
+      "source": {
+        "path": "textured-cube/model.json",
+        "format": "blue-static-model-v1",
+        "method": "imported",
+        "attribution": "BlueEngine contributors, test cube, CC0-1.0",
+        "source_url": "https://github.com/kevstermcgee/BlueEngine",
+        "sha256": "24e706651439da8de3583c0094f4ee24bca86624ee6e1315c180048f2eeb9b0c",
+        "original_sha256": "3bd4faac21b1e889b770db11162e8fa8837440bc5130213c206f1b871a5af692"
+      },
+      "taxonomy": {
+        "categories": [
+          "imported"
+        ],
+        "tags": [
+          "texture"
+        ],
+        "aliases": []
+      },
+      "geometry": {
+        "units": "meters",
+        "origin": "bottom-center",
+        "half_extents": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "bounds_min": [
+          -0.5,
+          0.0,
+          -0.5
+        ],
+        "bounds_max": [
+          0.5,
+          1.0,
+          0.5
+        ],
+        "triangle_count": 12
+      },
+      "physics": {
+        "mobility": "static",
+        "collision": "aabb",
+        "metadata": "textured-cube/collider.json"
+      },
+      "lifecycle": {
+        "status": "candidate"
+      }
+    }
+  ]
+}

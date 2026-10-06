@@ -4,95 +4,296 @@
   "title": "BlueEngine Asset Pack",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema_version", "pack", "assets"],
+  "required": [
+    "schema_version",
+    "pack",
+    "assets"
+  ],
   "properties": {
-    "$schema": { "type": "string" },
-    "schema_version": { "const": 1 },
+    "$schema": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 1
+    },
     "pack": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "name", "version", "scope", "license"],
+      "required": [
+        "id",
+        "name",
+        "version",
+        "scope",
+        "license"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "name": { "type": "string", "minLength": 1, "maxLength": 100 },
-        "version": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
-        "description": { "type": "string", "maxLength": 500 },
-        "scope": { "enum": ["game-local", "shared"] },
-        "license": { "type": "string", "minLength": 1, "maxLength": 100 }
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "scope": {
+          "enum": [
+            "game-local",
+            "shared"
+          ]
+        },
+        "license": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        }
       }
     },
     "assets": {
       "type": "array",
-      "items": { "$ref": "#/$defs/asset" }
+      "items": {
+        "$ref": "#/$defs/asset"
+      }
     }
   },
   "$defs": {
-    "id": { "type": "string", "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$", "maxLength": 100 },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(?:[._/-][a-z0-9]+)*$",
+      "maxLength": 100
+    },
     "vec3": {
       "type": "array",
-      "prefixItems": [{ "type": "number" }, { "type": "number" }, { "type": "number" }],
+      "prefixItems": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        },
+        {
+          "type": "number"
+        }
+      ],
       "items": false
     },
     "asset": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["id", "label", "description", "type", "source", "taxonomy", "geometry", "physics", "lifecycle"],
+      "required": [
+        "id",
+        "label",
+        "description",
+        "type",
+        "source",
+        "taxonomy",
+        "geometry",
+        "physics",
+        "lifecycle"
+      ],
       "properties": {
-        "id": { "$ref": "#/$defs/id" },
-        "label": { "type": "string", "minLength": 1, "maxLength": 100 },
-        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
-        "type": { "enum": ["prefab", "mesh", "material", "texture", "audio", "animation"] },
+        "id": {
+          "$ref": "#/$defs/id"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "type": {
+          "enum": [
+            "prefab",
+            "mesh",
+            "material",
+            "texture",
+            "audio",
+            "animation"
+          ]
+        },
         "source": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["path", "format", "method"],
+          "required": [
+            "path",
+            "format",
+            "method"
+          ],
           "properties": {
-            "path": { "type": "string", "minLength": 1 },
-            "format": { "type": "string", "minLength": 1 },
-            "method": { "enum": ["reused", "modified", "generated", "imported"] },
-            "derived_from": { "$ref": "#/$defs/id" },
-            "attribution": { "type": "string", "maxLength": 500 },
-            "source_url": { "type": "string", "format": "uri" }
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "format": {
+              "type": "string",
+              "minLength": 1
+            },
+            "method": {
+              "enum": [
+                "reused",
+                "modified",
+                "generated",
+                "imported"
+              ]
+            },
+            "derived_from": {
+              "$ref": "#/$defs/id"
+            },
+            "attribution": {
+              "type": "string",
+              "maxLength": 500
+            },
+            "source_url": {
+              "type": "string",
+              "format": "uri"
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            },
+            "original_sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
           }
         },
         "taxonomy": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["categories", "tags", "aliases"],
+          "required": [
+            "categories",
+            "tags",
+            "aliases"
+          ],
           "properties": {
-            "categories": { "type": "array", "items": { "$ref": "#/$defs/id" }, "minItems": 1 },
-            "tags": { "type": "array", "items": { "$ref": "#/$defs/id" } },
-            "aliases": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            "categories": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              },
+              "minItems": 1
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/id"
+              }
+            },
+            "aliases": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           }
         },
         "geometry": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["units", "origin", "half_extents"],
+          "required": [
+            "units",
+            "origin",
+            "half_extents"
+          ],
           "properties": {
-            "units": { "const": "meters" },
-            "origin": { "enum": ["bottom-center", "center", "custom"] },
-            "half_extents": { "$ref": "#/$defs/vec3" },
-            "forward": { "enum": ["+x", "-x", "+z", "-z"] }
+            "units": {
+              "const": "meters"
+            },
+            "origin": {
+              "enum": [
+                "bottom-center",
+                "center",
+                "custom"
+              ]
+            },
+            "half_extents": {
+              "$ref": "#/$defs/vec3"
+            },
+            "forward": {
+              "enum": [
+                "+x",
+                "-x",
+                "+z",
+                "-z"
+              ]
+            },
+            "bounds_min": {
+              "$ref": "#/$defs/vec3"
+            },
+            "bounds_max": {
+              "$ref": "#/$defs/vec3"
+            },
+            "triangle_count": {
+              "type": "integer",
+              "minimum": 1
+            }
           }
         },
         "physics": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["mobility", "collision"],
+          "required": [
+            "mobility",
+            "collision"
+          ],
           "properties": {
-            "mobility": { "enum": ["static", "dynamic", "runtime-policy", "none"] },
-            "collision": { "enum": ["aabb", "compound", "conservative-bounds", "mesh", "none"] }
+            "mobility": {
+              "enum": [
+                "static",
+                "dynamic",
+                "runtime-policy",
+                "none"
+              ]
+            },
+            "collision": {
+              "enum": [
+                "aabb",
+                "compound",
+                "conservative-bounds",
+                "mesh",
+                "none"
+              ]
+            },
+            "metadata": {
+              "type": "string",
+              "minLength": 1
+            }
           }
         },
         "lifecycle": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["status"],
+          "required": [
+            "status"
+          ],
           "properties": {
-            "status": { "enum": ["experimental", "candidate", "stable", "deprecated"] },
-            "promoted_from": { "$ref": "#/$defs/id" },
-            "notes": { "type": "string", "maxLength": 500 }
+            "status": {
+              "enum": [
+                "experimental",
+                "candidate",
+                "stable",
+                "deprecated"
+              ]
+            },
+            "promoted_from": {
+              "$ref": "#/$defs/id"
+            },
+            "notes": {
+              "type": "string",
+              "maxLength": 500
+            }
           }
         }
       }

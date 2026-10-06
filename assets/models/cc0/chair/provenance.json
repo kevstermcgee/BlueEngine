@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "license": "CC0-1.0",
+  "source_url": "https://kenney.nl/assets/furniture-kit",
+  "attribution": "Kenney, Furniture Kit 2.0, CC0-1.0",
+  "original_sha256": "c8a11eec93e89e31250ba91afc1b8d56c3bec7ae86640fd1239f595ff4180883",
+  "model_sha256": "d088290039e43e11c03ccf88cb495c882bf500097c158c91f7bc8753672cbdf3",
+  "scale": 2.5,
+  "warnings": [
+    "Explicit zero-area repair: removed 8 of 170 triangles; full kit::lint rerun. Original triangle IDs: [32, 33, 122, 128, 150, 151, 162, 163]"
+  ]
+}

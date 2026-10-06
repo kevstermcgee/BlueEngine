@@ -539,6 +539,10 @@ def full_commands(test_profile='itest'):
         ['cargo','clippy','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
         ['cargo','rustdoc','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
     ])
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'model-import', '--lib', 'model_import'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'model-import,portable', '--all-targets', '--', '-D', 'warnings'],
+    ])
     for game in ('lantern-run','pocket-breaker','orchard-watch','lantern-grove'):
         manifest=f'games/{game}/Cargo.toml'
         commands.extend([['cargo','fmt','--manifest-path',manifest,'--check'],
@@ -553,7 +557,7 @@ def full_commands(test_profile='itest'):
         [sys.executable, 'tools/check_headless.py'],
         [sys.executable, 'tools/check_authoring.py', *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
-         'tools.test_assets', 'scripts.test_publish_games',
+         'tools.test_assets', 'tools.test_model_import', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
          'tools.test_hub_deploy','tools.test_web_games','tools.test_springboard'],

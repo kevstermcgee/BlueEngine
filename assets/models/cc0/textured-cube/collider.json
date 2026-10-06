@@ -1,0 +1,26 @@
+{
+  "bounds_max": [
+    0.5,
+    1.0,
+    0.5
+  ],
+  "bounds_min": [
+    -0.5,
+    0.0,
+    -0.5
+  ],
+  "center": [
+    0.0,
+    0.5,
+    0.0
+  ],
+  "chunk_count": 1,
+  "collision": "box",
+  "half_extents": [
+    0.5,
+    0.5,
+    0.5
+  ],
+  "triangle_count": 12,
+  "version": 1
+}

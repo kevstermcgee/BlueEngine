@@ -4,10 +4,18 @@
   "name": "BlueEngine Core Asset Library",
   "description": "Curated, reusable assets shipped with BlueEngine. The catalog is an index over real source assets, not a second asset store.",
   "policy": {
-    "selection_order": ["reuse", "modify", "generate", "import"],
+    "selection_order": [
+      "reuse",
+      "modify",
+      "generate",
+      "import"
+    ],
     "default_scope": "game-local",
     "promotion_rule": "Promote an asset only after it has been reused by more than one game or provides a broadly useful primitive.",
-    "required_provenance": ["method", "license"],
+    "required_provenance": [
+      "method",
+      "license"
+    ],
     "principle": "Grow the shared vocabulary from proven game work; do not predict a giant universal library."
   },
   "packs": [
@@ -28,6 +36,15 @@
       "scope": "shared",
       "stability": "stable",
       "license": "MIT"
+    },
+    {
+      "id": "cc0/furniture",
+      "name": "CC0 small model fixtures",
+      "scope": "shared",
+      "license": "CC0-1.0",
+      "stability": "candidate",
+      "adapter": "asset-pack-v1",
+      "source": "assets/models/cc0/pack.json"
     }
   ]
 }

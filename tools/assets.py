@@ -168,6 +168,24 @@ def validate_external_manifest(path, data):
         resolved = (base / source["path"]).resolve()
         require(resolved == base or base in resolved.parents, f"{prefix}.source.path escapes its pack")
         require(resolved.is_file(), f"{prefix}.source.path does not exist: {source['path']}")
+        if source.get("format") == "blue-static-model-v1":
+            import hashlib
+            require(pack["license"] == "CC0-1.0", f"{prefix}: imported model packs must be CC0-1.0")
+            require(source.get("sha256") == hashlib.sha256(resolved.read_bytes()).hexdigest(),
+                    f"{prefix}: imported model hash mismatch; reimport, do not edit generated art")
+            metadata_path = physics_path = asset.get("physics", {}).get("metadata")
+            require(isinstance(metadata_path, str) and metadata_path and not Path(metadata_path).is_absolute(), f"{prefix}: collider metadata path required")
+            metadata = (base / physics_path).resolve()
+            require(base in metadata.parents and metadata.is_file(), f"{prefix}: collider metadata missing/escapes pack")
+            c = read(metadata)
+            require(c.get("version") == 1 and c.get("collision") == "box", f"{prefix}: unsupported collider")
+            for key in ("bounds_min", "bounds_max", "half_extents", "triangle_count"):
+                require(c.get(key) == asset["geometry"].get(key), f"{prefix}: catalog/collider disagree: {key}")
+            bounds = [c.get(key) for key in ("bounds_min", "bounds_max", "center", "half_extents")]
+            require(all(isinstance(v, list) and len(v) == 3 and all(isinstance(x, (int,float)) and math.isfinite(x) for x in v) for v in bounds), f"{prefix}: invalid bounds")
+            low, high, center, half = bounds
+            require(all(low[i] <= high[i] and half[i] > 0 and abs(center[i]-(low[i]+high[i])/2) < 1e-5 and half[i]+1e-5 >= (high[i]-low[i])/2 for i in range(3)), f"{prefix}: collider does not cover rendered bounds")
+            require(isinstance(c.get("triangle_count"), int) and c["triangle_count"] > 0 and isinstance(c.get("chunk_count"),int) and c["chunk_count"] > 0, f"{prefix}: empty imported mesh")
         if source["method"] == "imported":
             require(source.get("attribution") and source.get("source_url"),
                     f"{prefix}: imported assets require attribution and source_url")
@@ -215,7 +233,12 @@ def load_catalog(includes=()):
         source = ROOT / pack["source"]
         require(source.is_file(), f"Missing pack source: {pack['source']}")
         packs.append(pack)
-        records.extend(adapters[pack["adapter"]](pack, source))
+        if pack["adapter"] == "asset-pack-v1":
+            _, extra = adapt_external(source)
+            require(all(item["pack"] == pack["id"] for item in extra), "Registry/manifest pack IDs differ")
+            records.extend(extra)
+        else:
+            records.extend(adapters[pack["adapter"]](pack, source))
     for include in includes:
         pack, extra = adapt_external(Path(include))
         require(all(existing["id"] != pack["id"] for existing in packs), f"Duplicate pack ID: {pack['id']}")
@@ -346,7 +369,7 @@ def main():
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("describe")
     listing = commands.add_parser("list"); add_filters(listing)
-    finding = commands.add_parser("search"); finding.add_argument("query"); finding.add_argument("--limit", type=int, default=10); add_filters(finding)
+    finding = commands.add_parser("search"); finding.add_argument("query"); finding.add_argument("--limit", type=int, default=10); finding.add_argument("--compact", action="store_true"); add_filters(finding)
     showing = commands.add_parser("show"); showing.add_argument("id")
     commands.add_parser("validate")
     schema = commands.add_parser("schema"); schema.add_argument("kind", choices=["pack"])
@@ -354,7 +377,28 @@ def main():
     initialize.add_argument("path", type=Path); initialize.add_argument("--id", required=True); initialize.add_argument("--name", required=True); initialize.add_argument("--license", default="Proprietary")
     promote = commands.add_parser("promote")
     promote.add_argument("manifest", type=Path); promote.add_argument("asset"); promote.add_argument("output", type=Path)
+    importing = commands.add_parser("import-model", help="CC0 static glTF/GLB to a new bounded asset pack")
+    importing.add_argument("source", type=Path)
+    importing.add_argument("--output", type=Path, required=True)
+    importing.add_argument("--id", required=True)
+    importing.add_argument("--pack-id", required=True)
+    importing.add_argument("--license", default="CC0-1.0")
+    importing.add_argument("--source-url", required=True)
+    importing.add_argument("--attribution", required=True)
+    importing.add_argument("--tag", dest="tags", action="append", required=True)
+    importing.add_argument("--scale", type=float, default=1.0)
+    importing.add_argument("--forward", choices=["+x", "-x", "+z", "-z"], help="reviewed model facing direction; omit if unknown")
+    importing.add_argument("--repair-degenerate", action="store_true", help="explicitly remove only lint-reported zero-area triangles; record repair and rerun full lint")
+    fetching = commands.add_parser("fetch-models", help="checksum-pinned small CC0 furniture selection")
+    fetching.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
+
+    if args.command == "import-model":
+        from model_import import import_model
+        return import_model(args)
+    if args.command == "fetch-models":
+        from fetch_models import fetch
+        return fetch(args.output)
 
     if args.command == "schema":
         return {"schema": read(ROOT / "assets" / "asset-pack.schema.json")}
@@ -370,7 +414,7 @@ def main():
             "policy": registry["policy"],
             "counts": {"packs": len(packs), "assets": len(records)},
             "packs": [{key: pack[key] for key in ("id", "name", "scope") if key in pack} for pack in packs],
-            "commands": ["describe", "list", "search", "show", "validate", "schema", "init-pack", "promote"],
+            "commands": ["describe", "list", "search", "show", "validate", "schema", "init-pack", "promote", "import-model", "fetch-models"],
             "id_contract": "PACK/LOCAL_ID; unqualified IDs and aliases must resolve uniquely",
         }
     if args.command == "list":
@@ -380,6 +424,10 @@ def main():
         require(1 <= args.limit <= 50, "limit must be 1..50")
         matches, total = search(records, args.query, args.limit, pack=args.pack, tag=args.tag,
                                 asset_type=args.asset_type, status=args.status)
+        if args.compact:
+            matches = [{"id": m["id"], "label": m["label"], "type": m["type"],
+                        "source": m["source"]["path"], "half_extents": m["geometry"]["half_extents"],
+                        "license": m["provenance"]["license"], "forward": m["geometry"].get("forward")} for m in matches]
         return {"matches": matches, "returned": len(matches), "total": total, "method": "local weighted metadata search"}
     if args.command == "show":
         return {"asset": resolve(records, args.id)}

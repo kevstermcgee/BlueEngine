@@ -64,7 +64,8 @@ class AssetCatalogTests(unittest.TestCase):
 
     def test_describe_validate_and_schema(self):
         description = self.call("describe")
-        self.assertEqual(description["counts"], {"packs": 2, "assets": 70})
+        self.assertEqual(description["counts"], {"packs": 3, "assets": 74})
+        self.assertEqual(self.call("list", "--pack", "cc0/furniture")["count"], 4)
         self.assertTrue(self.call("validate")["valid"])
         self.assertEqual(
             self.call("schema", "pack")["schema"]["title"],
@@ -72,6 +73,10 @@ class AssetCatalogTests(unittest.TestCase):
         )
 
     def test_search_filters_and_resolution(self):
+        compact = self.call("search", "furniture", "--compact", "--limit", 3)
+        self.assertEqual(compact["matches"][0]["id"], "cc0/furniture/chair")
+        self.assertEqual(compact["matches"][0]["forward"], "+z")
+        self.assertIsInstance(compact["matches"][0]["source"], str)
         search = self.call("search", "small desk lamp", "--limit", 3)
         self.assertEqual(search["matches"][0]["id"], "core/native/table_lamp_1")
         filtered = self.call(

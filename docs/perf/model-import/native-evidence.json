@@ -1,0 +1,105 @@
+{
+  "version": 1,
+  "project_check": {
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 1280x720x24",
+      "python3",
+      ".be2-work/games/cc0-room/scripts/check.py"
+    ],
+    "exit_code": 0,
+    "ok": true,
+    "elapsed_seconds": 2.028,
+    "checks": [
+      {
+        "name": "lock",
+        "command": [
+          "cargo",
+          "metadata",
+          "--format-version",
+          "1",
+          "--quiet"
+        ],
+        "log": "1.log",
+        "ok": true
+      },
+      {
+        "name": "test",
+        "command": [
+          "cargo",
+          "test",
+          "--locked"
+        ],
+        "log": "2.log",
+        "ok": true
+      },
+      {
+        "name": "ship",
+        "command": [
+          "/usr/bin/python3",
+          "/mnt/blueengine-usb/blueengine-developer-tools/.be2-work/games/cc0-room/scripts/ship.py",
+          "verify",
+          "--json"
+        ],
+        "log": "3.log",
+        "ok": true
+      }
+    ],
+    "skipped_at_project_check": [
+      "ship.exe-resources: Windows executables only (platform is linux)",
+      "ship.launch: not requested (pass --launch)",
+      "ship.smoke: not requested (pass --smoke)"
+    ]
+  },
+  "shipping": {
+    "argv": [
+      "python3",
+      ".be2-work/games/cc0-room/scripts/ship.py",
+      "ship"
+    ],
+    "exit_code": 0,
+    "release_build_seconds": 33.4,
+    "binary_bytes": 4018712,
+    "exe_sha256": "fc83072121e77b7413e4e17a8a8751840fd863644d9e25c442b4f5c04e2a2a0f",
+    "package_file_sha256": {
+      "cc0-room": "fc83072121e77b7413e4e17a8a8751840fd863644d9e25c442b4f5c04e2a2a0f",
+      "cc0-room.ico": "ec26a79e34dcd88b125dd924b14287c4dc7ceae4e97d7424afa6e1556afce344",
+      "cc0-room.png": "b0d0b4ddac5ef7119cb9d862c693b0360aeb823ae2af5c339b8a88120b01d396"
+    }
+  },
+  "smoke": {
+    "argv": [
+      "xvfb-run",
+      "-a",
+      "-s",
+      "-screen 0 1280x720x24",
+      "python3",
+      ".be2-work/games/cc0-room/scripts/ship.py",
+      "verify",
+      "--launch",
+      "--smoke"
+    ],
+    "exit_code": 0,
+    "isolated_declared_files": true,
+    "verified": {
+      "at": "2026-10-06T21:36:11Z",
+      "launch": null,
+      "launch_at": null,
+      "smoke": true,
+      "smoke_at": "2026-10-06T21:36:11Z"
+    },
+    "capture_sha256": "2ac3981d00ae9f930f2bc10dc79e8c2d7a780ad9efbd082fc3d7ff57da8dd013",
+    "capture_dimensions": [
+      960,
+      540
+    ],
+    "visually_inspected": true
+  },
+  "not_verified": [
+    "Windows executable resources/shortcut launch (Linux host)",
+    "physical audio audibility",
+    "publication"
+  ]
+}

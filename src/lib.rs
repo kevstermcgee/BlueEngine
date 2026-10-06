@@ -1,4 +1,7 @@
 #![deny(unsafe_code)]
+pub mod asset_model;
+#[cfg(all(feature = "model-import", not(target_arch = "wasm32")))]
+pub mod model_import;
 #[cfg(all(target_arch = "wasm32", any(feature = "client", feature = "offline")))]
 compile_error!("Browser games require default-features=false and features=[portable]. Use scripts/blue web build from the portable starter for 2D/3D/hybrid. Legacy native client/offline features are not supported on WASM.");
 #[cfg(not(target_arch = "wasm32"))]

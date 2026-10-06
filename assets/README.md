@@ -5,6 +5,11 @@ content. The working order is **Reuse → Modify → Generate → Import**. Star
 `python tools/assets.py search TEXT`, use a game-local pack for specialized work,
 and promote only assets that prove useful beyond one game.
 
+Static CC0 glTF/GLB import is available through `assets.py import-model`; see
+[the model import guide](../docs/MODEL_IMPORT.md) for native/browser use, collider-only
+headless metadata, explicit geometry repair and checksum fetching of small external packs.
+Start with `python3 tools/assets.py search furniture --compact` for a small art packet.
+
 `assets/catalog.json` registers the shared packs. `tools/assets.py` adapts the
 existing native prop and interior-prefab sources into one normalized JSON contract,
 so geometry remains in its established project location and metadata does not fork
