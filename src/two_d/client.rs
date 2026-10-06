@@ -303,6 +303,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut chunk_stalls = 0_u64;
     let mut movement_ticks = 0_u64;
     let mut action_ticks = 0_u64;
+    let mut step_ticks = 0_u64;
     #[cfg(not(target_arch = "wasm32"))]
     let mut fullscreen = false;
     #[cfg(all(not(target_arch = "wasm32"), feature = "gamepad"))]
@@ -484,6 +485,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 intent = G::verification_input(verification_tick);
                 verification_tick += 1;
             }
+            step_ticks += 1;
             movement_ticks += u64::from(intent.x != 0 || intent.y != 0);
             action_ticks += u64::from(intent.action);
             let marker = game.streaming_marker();
@@ -585,7 +587,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         audio.evidence.enabled = settings.sound && !audio.muted;
         audio.evidence.activated = platform::audio_active();
         if game.tick() != last_tick || frame % 30 == 0 {
-            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
+            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"step_ticks":step_ticks,"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
             platform::report(&report.to_string());
             last_tick = game.tick();
         }

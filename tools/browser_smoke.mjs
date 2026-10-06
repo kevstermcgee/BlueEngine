@@ -116,10 +116,10 @@ try {
   // Losing focus freezes authority and releases held controls. Returning must permit real input again.
   if(!mobile)await send('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
   await evaluate('document.querySelector("canvas").blur()');await wait('be2.focused===false');
-  const unfocusedTick=await evaluate('be2.tick');await new Promise(r=>setTimeout(r,400));
-  if(await evaluate('be2.tick')!==unfocusedTick)throw new Error('Authority advanced after focus loss');
+  const unfocusedTick=await evaluate('be2.accepted_input.step_ticks');await new Promise(r=>setTimeout(r,400));
+  if(await evaluate('be2.accepted_input.step_ticks')!==unfocusedTick)throw new Error('Authority advanced after focus loss');
   await evaluate('document.querySelector("canvas").focus()');await wait('be2.focused===true');
-  await wait('be2.tick>'+unfocusedTick);
+  await wait('be2.accepted_input.step_ticks>'+unfocusedTick);
   if(!mobile){const movement=await evaluate('be2.accepted_input.movement_ticks');await new Promise(r=>setTimeout(r,400));if(await evaluate('be2.accepted_input.movement_ticks')!==movement)throw new Error('Held keys leaked across focus loss');}
   await evaluate('window.dispatchEvent(new Event("blur"))');await wait('be2.focused===false');
   await evaluate('window.dispatchEvent(new Event("focus"))');await wait('be2.focused===true');checks.focus_loss=true;checks.focus_return=true;
@@ -132,13 +132,15 @@ try {
       count=await evaluate(`(()=>{testPad.buttons[${index}]={pressed:false,value:0};return testPadReads;})()`);await wait('testPadReads>'+count);
     };
     const padProbe=await evaluate('be2.probe');
+    const movementBefore=await evaluate("be2.accepted_input.movement_ticks");
     await evaluate(`testPad.axes=[${padProbe.x||(padProbe.pointer?1:0)},${padProbe.y||0},0,0]`);
+    await wait("be2.accepted_input.movement_ticks>"+movementBefore);
     const actionBefore=await evaluate("be2.accepted_input.action_ticks");
     await pressPad(metadata.controls.primary.button);await wait("be2.accepted_input.action_ticks>"+actionBefore);
     await wait('be2.probe_passed');await evaluate('testPad.axes=[0,0,0,0]');
     await pressPad(metadata.controls.commands.pause.buttons[0]);await wait('be2.paused');
-    const tick=await evaluate('be2.tick');await new Promise(r=>setTimeout(r,400));if(await evaluate('be2.tick')!==tick)throw new Error('Controller pause did not freeze authority');
-    await pressPad(metadata.controls.commands.pause.buttons[0]);await wait('!be2.paused');await wait('be2.tick>'+tick);
+    const tick=await evaluate('be2.accepted_input.step_ticks');await new Promise(r=>setTimeout(r,400));if(await evaluate('be2.accepted_input.step_ticks')!==tick)throw new Error('Controller pause did not freeze authority');
+    await pressPad(metadata.controls.commands.pause.buttons[0]);await wait('!be2.paused');await wait('be2.accepted_input.step_ticks>'+tick);
     await pressPad(metadata.controls.commands.start.buttons[0]);await wait('be2.paused');await pressPad(metadata.controls.commands.start.buttons[0]);await wait('!be2.paused');
     controller={movement:true,primary_action:true,pause_resume:true,start_pause:true,physical:false};checks.controller=true;
   }
