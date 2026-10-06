@@ -243,11 +243,11 @@ def game_plan(root, game, loop='inner'):
     if loop != 'shipping':
         command = ['cargo', 'test', '--locked', '--manifest-path', str(game / 'Cargo.toml'),
                    '--no-default-features', '--message-format=json']
-        commands.append(command); harnesses.append('rust')
+        commands.append(command); harnesses.append('rust_project')
         if loop == 'integration':
             commands += [['cargo', 'fmt', '--manifest-path', str(game / 'Cargo.toml'), '--check'],
                          [arg for arg in command if arg != '--no-default-features']]
-            harnesses += [None, 'rust']
+            harnesses += [None, 'rust_project']
     else:
         if 'web' in project['targets']:
             commands.append([sys.executable, 'tools/be2.py', 'web', 'build', str(game)]); harnesses.append(None)
@@ -712,8 +712,11 @@ def command_evidence(log, returncode, harness=None):
             result['location'] = location
     elif harness:
         # AI-WARNING TEST-SELECTION-001: A zero-exit harness with no executed tests is not regression evidence.
-        counts = summaries if harness == 'rust' else ([] if python_tests is None else [python_tests - python_skips])
-        if not counts or any(count == 0 for count in counts):
+        counts = summaries if harness in ('rust', 'rust_project') else ([] if python_tests is None else [python_tests - python_skips])
+        # Whole-project Cargo runs include legitimate empty bin/doctest harnesses.
+        # Explicitly selected suites/exact regressions still must each execute tests.
+        empty = sum(counts) == 0 if harness == 'rust_project' else any(count == 0 for count in counts)
+        if not counts or empty:
             result.update(category='empty_test_selection' if counts else 'missing_test_evidence',
                           code='TEST-SELECTION-001',
                           diagnostics=['Requested tests did not prove a nonempty executed selection; inspect names and full log.'])

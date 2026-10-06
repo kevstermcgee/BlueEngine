@@ -162,6 +162,7 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertEqual(len(inner['commands']), 1)
         self.assertIn(str(game / 'Cargo.toml'), inner['commands'][0])
         self.assertIn('--no-default-features', inner['commands'][0])
+        self.assertEqual(inner['command_harnesses'], ['rust_project'])
         ship = workflow.game_plan(ROOT, game, 'shipping')
         self.assertIn([sys.executable, 'tools/be2.py', 'web', 'build', str(game)], ship['commands'])
         self.assertNotIn(['cargo', 'test', '--locked', '--profile', 'itest'], ship['commands'])
@@ -574,6 +575,17 @@ class RunnerTests(unittest.TestCase):
         self.assertTrue(summary['ok'])
         self.assertEqual(summary['scope'], 'iteration')
         self.assertTrue(summary['remaining'])
+
+        # A full project includes empty docs/bin harnesses alongside real tests.
+        result, summary, report = self.run_check(
+            ['cargo', 'test', '--offline', '--message-format=json'], 'rust_project', later=False)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(report['checks'][0]['tests_executed'], 1)
+        source.write_text('pub fn no_tests() {}\n')
+        result, summary, _ = self.run_check(
+            ['cargo', 'test', '--offline', '--message-format=json'], 'rust_project', later=False)
+        self.assertEqual(result.returncode, 3)
+        self.assertEqual(summary['failure']['category'], 'empty_test_selection')
 
 
 class ConsoleTests(unittest.TestCase):
