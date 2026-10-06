@@ -6,6 +6,40 @@ from unittest.mock import patch
 from tools import web_release as release
 from tools import web_games as web
 
+
+class LocalDevelopmentSourceTests(unittest.TestCase):
+    def test_unversioned_game_hashes_current_inputs_and_cannot_publish(self):
+        from tools import web_release as release
+        with tempfile.TemporaryDirectory() as directory:
+            game = Path(directory); (game / 'src').mkdir()
+            (game / 'Cargo.toml').write_text('[package]')
+            source = game / 'src/lib.rs'; source.write_text('before')
+            initial = web.source_hash(game)
+            source.write_text('after')
+            self.assertNotEqual(initial, web.source_hash(game))
+            value = release.source(game, ['src', 'Cargo.toml'])
+            self.assertEqual(value['availability'], 'local-only')
+            self.assertIsNone(value['repository'])
+            with self.assertRaises(release.ReleaseError):
+                release.validate_source(value)
+
+    def test_committed_local_game_and_credential_origin_remain_unpublishable(self):
+        from tools import web_release as release
+        with tempfile.TemporaryDirectory() as directory:
+            game = Path(directory)
+            release.git(['init'], game)
+            (game / 'Cargo.toml').write_text('[package]')
+            release.git(['add', '.'], game)
+            release.git(['-c', 'user.name=Test', '-c', 'user.email=test@example.test', 'commit', '-m', 'fixture'], game)
+            for remote in (None, 'https://user:secret@example.test/game.git'):
+                if remote:
+                    release.git(['remote', 'add', 'origin', remote], game)
+                value = release.source(game, ['Cargo.toml'])
+                self.assertTrue(value['clean'])
+                self.assertEqual(value['availability'], 'local-only')
+                self.assertNotIn('secret', json.dumps(value))
+                with self.assertRaises(release.ReleaseError): release.validate_source(value)
+
 class PackageTests(unittest.TestCase):
     def setUp(self):
         self.temp=tempfile.TemporaryDirectory();self.addCleanup(self.temp.cleanup);self.root=Path(self.temp.name);self.dist=self.root/'web';self.dist.mkdir()

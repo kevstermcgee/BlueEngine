@@ -1,5 +1,6 @@
 """Bounded context lookup and conservative validation selection. No Cargo discovery."""
 import json
+import importlib.util
 import math
 from pathlib import Path
 import re
@@ -94,6 +95,165 @@ def impact(root, paths):
                               if len(paths) > 10 else
                               'Crosses simulation/network/presentation: consider a shared lower layer.'
                               if {'simulation_contract', 'multiplayer', 'game_presentation'} <= affected else None)}
+
+
+def feature_suites(feature):
+    return sorted({item['suite'] for item in feature.get('evidence', [])} |
+                  {path[6:-3] for path in feature['files'] if re.fullmatch(r'tests/[\w-]+\.rs', path)})
+
+
+def feature_map(root, name, features=None):
+    """Derive roles from the existing index; never create a second ownership registry."""
+    features = index(root) if features is None else features
+    if name not in features:
+        raise ValueError('Unknown feature ID; use context to find an indexed feature')
+    feature = features[name]
+    return {'feature': name, 'implementation': [p for p in feature['files'] if p.startswith(('src/', 'tools/', 'scripts/'))],
+            'interface': feature.get('public_api', []), 'guides': feature.get('read_first', []),
+            'configuration': [p for p in feature['files'] if p.endswith(('.json', '.toml', '.tmpl'))],
+            'tests': feature_suites(feature), 'checks': feature['checks'],
+            'examples': [p for p in feature['files'] if p.startswith(('examples/', 'templates/', 'assets/'))],
+            'depends_on': feature.get('depends_on', []),
+            'used_by': sorted(k for k, v in features.items() if name in v.get('depends_on', [])),
+            'extension_point': feature.get('canonical_example') or (feature.get('read_first') or feature['files'])[0],
+            'ownership': 'Declared discovery relationships; final verification does not rely on completeness.'}
+
+
+def validate_index(root):
+    features = index(root)
+    errors = []
+    for name, feature in features.items():
+        for path in set(feature['files'] + feature.get('read_first', []) +
+                        ([feature['canonical_example']] if feature.get('canonical_example') else [])):
+            if not (root / path).exists():
+                errors.append({'feature': name, 'path': path, 'error': 'missing indexed path'})
+        for dependency in feature.get('depends_on', []):
+            if dependency not in features:
+                errors.append({'feature': name, 'dependency': dependency, 'error': 'unknown dependency'})
+        for suite in feature_suites(feature):
+            if not re.fullmatch(r'[\w-]+', suite) or not (root / 'tests' / (suite + '.rs')).is_file():
+                errors.append({'feature': name, 'suite': suite, 'error': 'missing integration suite'})
+    return {'ok': not errors, 'features': len(features), 'errors': errors}
+
+
+def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
+    """Automatic iteration evidence, never permission to omit the shipping gates.
+
+    Unit tests cover the whole selected library; integration suites cover declared
+    owners and transitive consumers. Missing ownership/evidence fails closed.
+    """
+    if loop not in ('inner', 'integration', 'shipping'):
+        raise ValueError('Unknown development loop')
+    if loop == 'shipping':
+        return validation_plan(paths, base, test_profile)
+    paths = sorted(set(paths))
+    affected = impact(root, paths)
+    features = index(root)
+    suites = sorted({suite for name in affected['affected'] for suite in feature_suites(features[name])})
+    invalid = [s for s in suites if not re.fullmatch(r'[\w-]+', s) or not (root / 'tests' / (s + '.rs')).is_file()]
+    boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json') or
+                p.startswith('.github/') or p.endswith('build.rs')]
+    fallback = sorted(set(affected['unmapped'] + boundary + invalid))
+    common = {'loop': loop, 'base': base, 'changed_paths': paths, 'impact': affected,
+              'remaining': 'Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/browser/package gates.',
+              'required_before_merge': ['python tools/be2.py check', 'Linux/Windows CI',
+                                        'relevant visual, browser, networking and package evidence'],
+              'graph_confidence': 'Declared dependencies; focused evidence is not full-suite certification.'}
+    if fallback:
+        return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
+                'fallback_paths': fallback, 'reason': 'Unknown ownership or build/verification boundary: full checks required.',
+                'commands': full_commands(test_profile)}
+    commands, harnesses = [], []
+
+    def add(command, harness=None):
+        if command not in commands:
+            commands.append(command)
+            harnesses.append(harness)
+
+    native = any(p.startswith(('src/', 'tests/')) and p.endswith('.rs') for p in paths)
+    native = native or any(p.startswith('templates/') and p.endswith(('.rs', '.tmpl')) for p in paths)
+    if native:
+        portable = bool({'two_dimensional', 'browser_games'} & set(affected['affected']))
+        presentation = portable or bool({'graphics', 'game_presentation', 'client_kit', 'native_controllers',
+                                         'offline_renderer', 'sandbox'} & set(affected['owners']))
+        modes = ([[] , ['--no-default-features']] if loop == 'integration' else
+                 ([['--no-default-features', '--features', 'two-d']] if portable else
+                  [[]] if presentation else [['--no-default-features']]))
+        for flags in modes:
+            add(['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, '--lib',
+                 *[arg for suite in suites for arg in ('--test', suite)], '--message-format=json'], 'rust')
+        if loop == 'integration' and portable:
+            add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
+                 '--features', 'two-d', '--lib', '--message-format=json'], 'rust')
+        if loop == 'integration':
+            add([sys.executable, 'tools/check_headless.py'])
+    for name in affected['affected']:
+        for check in features[name]['checks']:
+            match = re.fullmatch(r'python -m unittest ((?:[\w]+\.[\w.]+)(?: [\w]+\.[\w.]+)*)', check)
+            if match:
+                add([sys.executable, '-m', 'unittest', *match[1].split()], 'python')
+    if paths:
+        add([sys.executable, 'tools/be2.py', 'features', '--validate'])
+    # Existing reviewed Python checks also include non-test validation (asset closure/publication).
+    reviewed = validation_plan(paths, base, test_profile)
+    if reviewed['scope'] not in ('full', 'no_changes'):
+        for command in reviewed['commands']:
+            add(command, 'python' if command[1:3] == ['-m', 'unittest'] else None)
+    if paths and not native and len(commands) == 1 and not all(p.endswith('.md') for p in paths):
+        return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
+                'reason': 'Ownership is known but executable behavioral evidence is missing: full checks required.',
+                'commands': full_commands(test_profile), 'fallback_paths': paths}
+    content = any(p.startswith('assets/') for p in paths)
+    if content and not native:
+        # Content can encode mechanics/assets; the incomplete index cannot infer an exercised route.
+        return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
+                'reason': 'Content requires authored scenario/asset closure evidence; no automatic route is declared.',
+                'commands': full_commands(test_profile), 'fallback_paths': paths}
+    return {**common, 'scope': 'focused', 'reason': 'Whole-library units plus declared consumer suites and tooling checks.',
+            'commands': commands, 'command_harnesses': harnesses,
+            'proves': 'Executed selected behavioral checks only; final shipping verification remains outstanding.',
+            'requirements': {'unit': native, 'integration_suites': suites,
+                             'networking': 'selected suites' if {'multiplayer', 'netplay', 'netplay_hub'} & set(affected['affected']) else 'deferred to shipping',
+                             'browser': 'real browser gate on affected games before shipping' if {'two_dimensional', 'browser_games'} & set(affected['affected']) else 'deferred to shipping',
+                             'packaging': 'affected game package gate before shipping' if {'game_shipping', 'browser_games'} & set(affected['affected']) else 'deferred to shipping',
+                             'full_suite': 'before merge'}}
+
+
+def game_plan(root, game, loop='inner'):
+    """Reuse standalone project gates; never run the dependency's engine tests for a game edit."""
+    if loop not in ('inner', 'integration', 'shipping'):
+        raise ValueError('Unknown development loop')
+    spec = importlib.util.spec_from_file_location('game_project', root / 'templates/game_project.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    game = Path(game).resolve()
+    if not (game / 'Cargo.toml').is_file():
+        raise ValueError('Game Cargo.toml missing; scaffold with be2.py map new-game first')
+    project = module.validate_project(game)
+    commands, harnesses = [], []
+    if loop != 'shipping':
+        command = ['cargo', 'test', '--locked', '--manifest-path', str(game / 'Cargo.toml'),
+                   '--no-default-features', '--message-format=json']
+        commands.append(command); harnesses.append('rust')
+        if loop == 'integration':
+            commands += [['cargo', 'fmt', '--manifest-path', str(game / 'Cargo.toml'), '--check'],
+                         [arg for arg in command if arg != '--no-default-features']]
+            harnesses += [None, 'rust']
+    else:
+        if 'web' in project['targets']:
+            commands.append([sys.executable, 'tools/be2.py', 'web', 'build', str(game)]); harnesses.append(None)
+        if set(project['targets']) - {'web'}:
+            script = game / 'scripts/check.py'
+            if not script.is_file():
+                raise ValueError('Native shipping requires the game scripts/check.py; refresh generated tooling')
+            commands.append([sys.executable, str(script)]); harnesses.append(None)
+    return {'scope': 'game_shipping' if loop == 'shipping' else 'focused', 'loop': loop,
+            'game': str(game), 'commands': commands, 'command_harnesses': harnesses,
+            'proves': 'Game checks in selected loop only; engine dependency tests are excluded.',
+            'remaining': ('Declared game gates on this host; other declared native platforms still need their own evidence.'
+                          if loop == 'shipping' else 'Run check --game GAME --loop shipping; engine source edits also require engine check --changed.'),
+            'requirements': {'browser': 'web' in project['targets'], 'native_packaging': sorted(set(project['targets']) - {'web'}),
+                             'networking': project['networking'], 'engine_suite': 'required only when engine inputs change'}}
 
 
 # Words that say nothing about which feature a task needs (kept narrow: "game", "custom" and "kit" do).
@@ -213,7 +373,9 @@ def module_picks(summaries, feature, query_words, rarity=None):
     return [path for *_, path in sorted(picks)]
 
 
-def context(root, query, limit=3):
+def context(root, query, limit=3, level=2):
+    if level not in (1, 2, 3):
+        raise ValueError('Context level must be 1, 2 or 3')
     if not query.strip() or len(query) > 100:
         raise ValueError(f'The query must be 1..100 characters (this one is {len(query)}): shorten it to the '
                          f'few words that name the feature, not the whole task')
@@ -299,6 +461,25 @@ def context(root, query, limit=3):
     if learned:
         # From docs/learning/ledger.jsonl (ADR 0038): traps other games hit and what already solves them.
         packet['learned'] = learned
+    if level == 1:
+        packet = {key: packet[key] for key in ('query', 'confidence', 'matches', 'no_match')}
+        for item in matches:
+            feature = features[item['id']]
+            # Prefer the maintained public guide over implementation for authoring.
+            guides = [p for p in feature.get('read_first', []) if p.endswith('.md')]
+            if not guides:
+                guides = [p for p in feature['files'] if p.endswith('.md') and '/adr/' not in p]
+            item['read_first'] = (guides or item['read_first'])[:2]
+            for key in list(item):
+                if key not in ('id', 'read_first', 'public_api', 'iterate', 'canonical_example'):
+                    del item[key]
+        packet['next'] = 'Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.'
+        if learned:
+            packet['learned'] = learned
+    elif level == 3:
+        for item in matches:
+            item['map'] = feature_map(root, item['id'], features)
+    packet['level'] = level
     return packet
 
 
@@ -528,6 +709,28 @@ def command_evidence(log, returncode, harness=None):
                           code='TEST-SELECTION-001',
                           diagnostics=['Requested tests did not prove a nonempty executed selection; inspect names and full log.'])
     return result
+
+
+def recovery(packet):
+    """A bounded next step alongside the complete retained log; no guessed repair."""
+    category = packet['category']
+    location = packet.get('location')
+    if not location:
+        location = next((d.get('location') for d in packet.get('diagnostics', [])
+                         if isinstance(d, dict) and d.get('location')), None)
+    hints = {
+        'compiler': 'The compiler rejected the selected target; inspect the primary span and diagnostic notes.',
+        'test_failure': 'A behavioral assertion failed; inspect the named test and assertion location.',
+        'empty_test_selection': 'The selection ran no tests; correct the indexed suite/exact test name.',
+        'missing_test_evidence': 'The harness produced no recognized executed-test summary; inspect the full log.',
+        'missing_tool': 'A required executable is absent; doctor identifies installed prerequisites.',
+        'timeout': 'The command exceeded its limit and its process tree was terminated; inspect the last log stage.',
+    }
+    return {'likely_reason': hints.get(category, 'The selected command failed; inspect its retained output.'),
+            'inspect': location or packet.get('log'),
+            'next_command': ([sys.executable, 'tools/be2.py', 'doctor'] if category == 'missing_tool' else
+                             packet.get('reproduction', packet.get('command'))),
+            'previous_work': 'Completed outputs and successful stage reports are retained; only the failed selection is unverified.'}
 
 
 def validation_plan(paths=None, base=None, test_profile='itest'):

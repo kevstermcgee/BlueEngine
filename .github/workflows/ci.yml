@@ -39,24 +39,9 @@ jobs:
       - run: cargo build --release --locked
       - run: cargo build --release --locked --no-default-features --bin be2-headless
 
-      - run: cargo rustdoc --locked --lib -- -D warnings
-      - run: cargo rustdoc --locked --lib --no-default-features -- -D warnings
-      - run: python tools/check_headless.py
-      - run: python tools/check_authoring.py
-      - run: cargo fmt --manifest-path games/signal-garden/Cargo.toml --check
-      - run: cargo test --locked --manifest-path games/signal-garden/Cargo.toml --no-default-features
-      - run: cargo test --locked --manifest-path games/signal-garden/Cargo.toml
-      - run: python -m unittest tools.test_workflow tools.test_assets scripts.test_publish_games tools.test_game_check tools.test_game_ship tools.test_media_tools tools.test_xcapture tools.test_hub_deploy tools.test_web_games
-      - run: cargo test --locked --no-default-features --features two-d --lib
-      - run: cargo clippy --locked --no-default-features --features two-d --lib -- -D warnings
-      - name: Check maintained 2D games (native and headless)
-        shell: bash
-        run: |
-          for game in lantern-run pocket-breaker orchard-watch lantern-grove; do
-            cargo fmt --manifest-path games/$game/Cargo.toml --check
-            cargo test --locked --manifest-path games/$game/Cargo.toml --no-default-features
-            cargo test --locked --manifest-path games/$game/Cargo.toml
-          done
+      # Rustdoc, headless boundaries, authoring, Python and maintained-game gates
+      # already ran in the canonical checker above. Repeating them changed Cargo
+      # profiles and duplicated tests; retain shipping builds and real audio below.
       - name: Stock audio offscreen verification (Linux)
         if: runner.os == 'Linux'
         env:

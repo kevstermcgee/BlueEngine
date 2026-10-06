@@ -21,6 +21,13 @@ scripts/blue publish --backend directory --destination /path/to/library
 scripts/blue ship                     # native desktop distribution
 ```
 
+From the engine checkout, `python3 tools/be2.py check --game GAME_DIR --loop inner`
+records focused test evidence without engine dependency tests. Use `--loop integration`
+for native presentation compilation and `--loop shipping` for declared final targets.
+Local web packages need no Git origin; publication still requires committed public source
+and clean reproduction. The shared client already draws title/controls at (24,30)/(24,428)
+and notices at (24,395); reserve those HUD areas (logical 800×450).
+
 Web builds require rustup target add wasm32-unknown-unknown, Node, ws and Chromium.
 Publishing to a directory produces a deployment-ready library, not an external URL.
 Never claim cargo build proves browser playback or that audio counters prove a listener heard sound.

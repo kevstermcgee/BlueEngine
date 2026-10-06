@@ -572,14 +572,17 @@
         "tools/perf.py",
         ".github/workflows/ci.yml",
         ".github/workflows/sandbox.yml",
-        "docs/perf/README.md"
+        "docs/perf/README.md",
+        "tools/dev_bench.py",
+        "tools/development_tasks.json",
+        "docs/DEVELOPMENT_EFFICIENCY.md"
       ],
       "checks": [
         "python -m unittest tools.test_workflow tools.test_game_check",
         "shared_gameplay scaffold integration test",
         "generated external project content and locked Cargo checks"
       ],
-      "note": "Build-free bounded context and conservative Git change plans. check --iterate selects an indexed suite/exact test or library-only --typecheck; focused success leaves full verification outstanding. check runs the canonical full Linux/Windows CI gates with itest for tests, Clippy, rustdoc and fresh native authoring; CI additionally builds shipping releases and caches compiled dependencies, always executing tests. One reviewed independent Python batch overlaps serial Cargo work; native integration stays ordered. --serial opts out. Reports join started work on failure, retain complete logs/status/diagnostics, reject empty test selections, and record stage start offsets/durations. JSON stdout stays stable; progress goes to stderr. perf.py record --suite check measures one full run without extra rebuilds. Generated games retain their own project checks. CI engine/game matrices run concurrently; early leo-images supports art review, while existing test guards require both matrices to succeed.",
+      "note": "Build-free bounded context and conservative Git change plans. check --iterate selects an indexed suite/exact test or library-only --typecheck; focused success leaves full verification outstanding. check runs the canonical full Linux/Windows CI gates with itest for tests, Clippy, rustdoc and fresh native authoring; CI additionally builds shipping releases and caches compiled dependencies, always executing tests. One reviewed independent Python batch overlaps serial Cargo work; native integration stays ordered. --serial opts out. Reports join started work on failure, retain complete logs/status/diagnostics, reject empty test selections, and record stage start offsets/durations. JSON stdout stays stable; progress goes to stderr. perf.py record --suite check measures one full run without extra rebuilds. Generated games retain their own project checks. CI engine/game matrices run concurrently; early leo-images supports art review, while existing test guards require both matrices to succeed. Automatic check --changed --loop inner/integration selects whole-library units, declared transitive consumer suites and indexed Python checks; unknown/build-boundary inputs fail closed. Shipping remains the default. check --game reuses standalone project gates. context levels 1/2/3 expose guides, contracts and derived ownership; features --validate checks paths/edges/suites. dev_bench measures seven representative tool paths and one optional verification run; fresh-agent task evidence is separate. map authoring shares fresh headless itest outputs.",
       "depends_on": [
         "native_discovery"
       ],
@@ -606,6 +609,11 @@
           "source": "tools/workflow.py",
           "verify": "python -m unittest tools.test_workflow.RunnerTests"
         }
+      ],
+      "read_first": [
+        "docs/DEVELOPMENT_EFFICIENCY.md",
+        "tools/workflow.py",
+        "tools/be2.py"
       ]
     },
     "shared_gameplay": {
@@ -2073,7 +2081,7 @@
         "python -m unittest tools.test_web_games",
         "isolated real Chromium WASM playthrough and persistence smoke"
       ],
-      "note": "Portable offline 2D/3D/hybrid web/native authoring. Per-game dpad/paddle/tap controls below canvas on mobile, autosave/settings, offline browser installation, isolated desktop AND mobile touch/audio/storage/offline gates. Shared catalog joins native/browser by ID; persistent stars pin favorites. Build/publish remain separate. Canonical web prepare/build/verify/inspect/serve/reproduce/publish/capabilities. Public exact-commit source retrieval is mandatory before publication. Individual browser stage and update recovery evidence; runtime bank closure excludes previews.",
+      "note": "Portable offline 2D/3D/hybrid web/native authoring. Per-game dpad/paddle/tap controls below canvas on mobile, autosave/settings, offline browser installation, isolated desktop AND mobile touch/audio/storage/offline gates. Shared catalog joins native/browser by ID; persistent stars pin favorites. Build/publish remain separate. Canonical web prepare/build/verify/inspect/serve/reproduce/publish/capabilities. Public exact-commit source retrieval is mandatory before publication. Individual browser stage and update recovery evidence; runtime bank closure excludes previews. Local build/verify works before Git/origin setup; only publication requires committed public source retrieval and empty-target reproduction.",
       "keywords": [
         "web",
         "wasm",

@@ -23,17 +23,34 @@ def git(args, cwd):
 
 
 def source(folder, inputs):
-    """Record the actual checkout; a content hash cannot substitute for retrievable Git source."""
-    root = Path(git(['rev-parse', '--show-toplevel'], folder))
-    revision = git(['rev-parse', 'HEAD'], root)
-    repo = git(['remote', 'get-url', 'origin'], root)
-    if repo.startswith('git@github.com:'):
-        repo = 'https://github.com/' + repo.split(':', 1)[1]
-    validate_source({'repository': repo, 'revision': revision, 'path': '.'})
+    """Record local provenance now; validate retrievable source at publication."""
+    folder = Path(folder).resolve()
+    try:
+        root = Path(git(['rev-parse', '--show-toplevel'], folder))
+        revision = git(['rev-parse', 'HEAD'], root)
+    except ReleaseError:
+        return {'repository': None, 'revision': None, 'path': '.', 'clean': False,
+                'availability': 'local-only', 'next': 'Commit inputs and configure a public HTTPS origin before publication.'}
+    try:
+        repo = git(['remote', 'get-url', 'origin'], root)
+    except ReleaseError:
+        repo = None
     paths = [str((folder / p).relative_to(root)) for p in inputs]
     dirty = git(['status', '--porcelain', '--untracked-files=all', '--', *paths], root)
-    return {'repository': repo, 'revision': revision, 'path': folder.relative_to(root).as_posix(),
-            'clean': not dirty, 'dirty_paths': dirty.splitlines()}
+    value = {'repository': repo, 'revision': revision, 'path': folder.relative_to(root).as_posix(),
+             'clean': not dirty, 'dirty_paths': dirty.splitlines()}
+    if repo is None:
+        return value | {'availability': 'local-only', 'next': 'Configure a public HTTPS origin before publication.'}
+    if repo.startswith('git@github.com:'):
+        repo = 'https://github.com/' + repo.split(':', 1)[1]
+    value['repository'] = repo
+    try:
+        validate_source(value)
+    except ReleaseError:
+        # Never put credentials or arbitrary local repository paths into a distributable manifest.
+        value['repository'] = None
+        value.update(availability='local-only', next='Configure a public HTTPS origin without credentials before publication.')
+    return value
 
 
 def validate_source(value):

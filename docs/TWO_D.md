@@ -43,6 +43,14 @@ Rules/tests live in lib.rs. Presentation is its `#[cfg(feature="client")]` imple
 cue is 0 pickup, 1 damage, 2 success; shared generated WAVs load asynchronously. New genres may need
 a custom sound bank later. This milestone intentionally has no editor or genre framework.
 
+The shared client overlays the title at logical (24,30), controls at (24,428), and
+transient save/error notices at (24,395), on layers 100/101 of the 800×450 canvas.
+Reserve those areas in your HUD; avoid drawing another title or controls over them.
+The starter already uses `runtime::assert_deterministic`, `snapshot::assert_resumes_exactly`,
+`two_d::verify` for a public-input route, collision and loss assertions. Extend them
+with timer, pickup, locked-exit and restart cases. The client/browser gate covers
+pause, storage, audio and mobile controls.
+
 ## Browser/platform contract
 
 The browser build excludes native 3D/physics/network dependencies. Macroquad provides WebGL and its

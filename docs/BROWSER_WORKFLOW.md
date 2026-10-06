@@ -27,11 +27,19 @@ A successful publication receipt includes source retrieval, package ID, deployme
 remote manifest/file hash verification. A push alone is not successful publication.
 
 Create games with `be2-tools new-game NAME DIR ENGINE portable`, or select `two-d`, `hybrid` or
-`three-d` for examples. Run `python3 tools/be2.py build tools` to obtain be2-tools if needed.
+`three-d` for examples. Use `python3 tools/be2.py map new-game NAME DIR ENGINE two-d`
+to build fresh shared itest tooling and scaffold in one command. Release tooling is for distribution.
 Set `game.project.json` presentation/targets/mobile controls deliberately. The same browser commands
 handle all three presentations. See [PORTABLE_GAMES.md](PORTABLE_GAMES.md) for composition and
 [GAME_QUICKSTART.md](GAME_QUICKSTART.md) for starter selection. Existing games' `scripts/blue`
 forwards to these engine commands.
+
+Local `web build` and `web verify` work for a new folder before Git initialization or
+origin configuration. Current inputs receive a content hash; the package records local-only
+source status when public provenance is unavailable. This does not authorize publication:
+commit inputs, configure a public HTTPS origin, and pass the existing anonymous exact-commit
+retrieval plus clean empty-target reproduction gates before `web publish`. Credentials and
+local repository paths never appear as repository URLs in a distributable manifest.
 
 ## Release requirements
 

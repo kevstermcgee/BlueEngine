@@ -45,6 +45,11 @@ The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headles
 | `python tools/be2.py doctor` | Read-only local toolchain and Git report |
 | `python tools/be2.py features` | Machine-readable feature/file/check index |
 | `python tools/be2.py context QUERY --limit 3` | Small feature packet from the index; no build or source reads |
+| `python3 tools/be2.py context QUERY --level 1 --compact` | Commands/public guides first; level 2 contracts, level 3 implementation map |
+| `python3 tools/be2.py features --feature ID` / `--validate` | Derived subsystem map / build-free index drift check |
+| `python3 tools/be2.py check --changed --loop inner` | Automatic library/consumer/tool checks; unknown inputs fail closed; shipping remains outstanding |
+| `python3 tools/be2.py check --changed --loop integration` | Broader feature configurations and subsystem evidence before full shipping verification |
+| `python3 tools/be2.py check --game DIR --loop inner` | Project tests only; integration adds presentation tests, shipping runs declared browser/native gates |
 | `python tools/be2.py check --changed --plan` | Read-only plan over staged, unstaged and untracked changes |
 | `python tools/be2.py check --changed --base REV` | Execute reviewed scopes or conservatively fall back to full checks |
 | `python tools/be2.py check` | Formatting, both test configurations, both Clippy configurations; persistent logs and JSON result |
@@ -60,7 +65,7 @@ The runner respects CARGO_HOME and CARGO_TARGET_DIR. It isolates client, headles
 | `python3 tools/hub_deploy.py identity ROOT BIN [cargo args]` | Build identity `deploy/hub/update.sh` uses to decide whether a game's server needs rebuilding (stdlib; `cargo metadata --locked --offline`, no build, no network); `update.sh` is the operator entry point, see `deploy/hub/README.md` |
 | `python3 tools/learn.py record ...` | Append one friction entry (cost, workaround, trap, copied code) to `docs/learning/ledger.jsonl`; see `docs/learning/README.md` |
 | `python3 tools/learn.py dupes` / `eval` / `report` | Code the games copied (and whether the engine has it); score `context` against the task benchmark; one-page report. `sessions` aggregates local session logs (structure only, git-ignored output) |
-| `python tools/be2.py map ...` | Builds and invokes `be2-tools` with the arguments below |
+| `python tools/be2.py map ...` | Builds fresh headless `itest` tools in the shared target and invokes them; release packaging stays isolated |
 
 `package` includes current Git-tracked working files plus newly built binaries. Add intended new source files to Git first. It records dirty status; it does not imply tests ran or commit your edits. Run `check` before packaging. It never updates the user's desktop shortcut or installed binaries automatically.
 

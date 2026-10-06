@@ -368,7 +368,7 @@ class VerificationIsTruthfulTests(unittest.TestCase):
         script=fixture.root/'scripts/web.py'
         script.write_text("import json\nprint(json.dumps({'ok':True,'browser':True}))\n")
         result=upgrade.verify(fixture.root,ROOT)
-        self.assertTrue(result['ok']);self.assertEqual(result['command'][1],str(script))
+        self.assertTrue(result['ok']);self.assertTrue(Path(result['command'][1]).samefile(script))
         self.assertIn('web',result['verification_target'])
         script.write_text("import json,sys\nprint(json.dumps({'ok':False,'browser':False}))\nsys.exit(1)\n")
         self.assertFalse(upgrade.verify(fixture.root,ROOT)['ok'])

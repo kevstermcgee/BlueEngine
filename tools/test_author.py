@@ -25,6 +25,9 @@ class NativeDiscoveryTests(unittest.TestCase):
             self.assertEqual(author.native_binary(), built)
             author.os.environ['CARGO_TARGET_DIR'] = 'target'
             self.assertEqual(author.native_binary(), built)
+            shared = Path(temp) / 'target/itest' / name
+            shared.parent.mkdir(parents=True); shared.touch()
+            self.assertEqual(author.native_binary(), shared)
             author.os.environ['BE2_TOOLS'] = str(Path(temp) / 'missing')
             self.assertEqual(author.native_binary(), Path(temp) / 'missing')
 

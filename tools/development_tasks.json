@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "scope": "Tool/context/verification microbenchmark. Does not measure implementation or judge game quality.",
+  "tasks": [
+    {"id": "gameplay", "query": "game_documents", "path": "src/viewer/game.rs", "scenario": "Change a stock gameplay condition; game-only edits use check --game instead."},
+    {"id": "asset", "query": "asset_library", "path": "tools/assets.py", "scenario": "Change asset discovery or validation; content still requires its authored asset/scenario gate."},
+    {"id": "feature", "query": "custom_simulation", "path": "src/viewer/devkit/path.rs", "scenario": "Extend reusable path behavior and its unit tests."},
+    {"id": "network", "query": "multiplayer", "path": "src/viewer/net/replication.rs", "scenario": "Change replication behavior and prove dependent netplay/hub scenarios."},
+    {"id": "starter", "query": "two_dimensional", "path": "templates/two-d/lib.rs", "scenario": "Extend a portable starter; fresh-agent trial measures creating a game."},
+    {"id": "package", "query": "game_shipping", "path": "templates/game_ship.py", "scenario": "Modify isolated package verification without rebuilding renderer code."},
+    {"id": "upgrade", "query": "game_upgrade", "path": "tools/upgrade.py", "scenario": "Update revision/migration verification; game gates must run fresh."}
+  ],
+  "agent_trial": {
+    "task": "Create a polished portable 2D game from the recommended starter: five artifacts, locked exit, timer loss, restart, save/load, distinct visual treatment. Assert win/loss/collision/save continuation, inspect frames, build and fully verify the local browser package; do not publish externally.",
+    "measure": ["wall_seconds", "files_read", "loaded_bytes", "commands", "failed_attempts", "build_attempts", "tests_passed", "package_verified", "browser_desktop", "browser_mobile", "visual_review", "CPU_seconds", "max_child_RSS"],
+    "rules": "Fresh checkout/context, same model/task/quality rubric. Report warmed caches and unsupported telemetry; a blocked baseline cannot support an end-to-end speedup percentage. Never skip final gates or fabricate public source origins."
+  }
+}

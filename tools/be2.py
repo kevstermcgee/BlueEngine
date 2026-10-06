@@ -14,6 +14,10 @@ import sys
 import tempfile
 import time
 import zipfile
+try:
+    import resource
+except ImportError:  # Windows does not expose POSIX child usage.
+    resource = None
 
 import upgrade
 import workflow
@@ -72,6 +76,7 @@ def invoke(args, *, env=None, log=None, capture=False, timeout=None, harness=Non
                         log_bytes=Path(log).stat().st_size)
         if 'category' in evidence:
             evidence.update(command=args, reproduction=args, log=str(log))
+            evidence['recovery'] = workflow.recovery(evidence)
             raise CommandFailure(evidence, exit_code)
         return evidence
     print('+ ' + ' '.join(map(str, args)), file=sys.stderr)
@@ -112,7 +117,11 @@ def build(kind):
 
 
 def tool(args):
-    binary = build('tools') / ('be2-tools' + SUFFIX)
+    # Share fresh headless authoring output with check_authoring; Cargo owns invalidation.
+    # Isolated release builds remain the distribution/packaging path.
+    invoke(['cargo', 'build', '--locked', '--profile', 'itest', '--no-default-features', '--bin', 'be2-tools'])
+    target = Path(os.environ.get('CARGO_TARGET_DIR') or ROOT / 'target').resolve()
+    binary = target / 'itest' / ('be2-tools' + SUFFIX)
     invoke([binary, *args])
 
 
@@ -138,6 +147,7 @@ def doctor():
 
 def check(plan, timeout=None):
     started = time.monotonic()
+    usage_before = resource.getrusage(resource.RUSAGE_CHILDREN) if resource else None
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     WORK.mkdir(parents=True, exist_ok=True)
     directory = Path(tempfile.mkdtemp(prefix='check-' + stamp + '-', dir=WORK))
@@ -156,7 +166,8 @@ def check(plan, timeout=None):
                 'started_seconds': round(time.monotonic() - started, 3)}
         report['checks'].append(item)
         try:
-            item.update(invoke(cmd, log=log, env=env, timeout=timeout, harness=plan.get('test_harness')))
+            harness = (plan['command_harnesses'][i] if 'command_harnesses' in plan else plan.get('test_harness'))
+            item.update(invoke(cmd, log=log, env=env, timeout=timeout, harness=harness))
         except CommandFailure as error:
             item.update(error.packet)
             print(f'[{i+1}/{len(plan["commands"])}] FAILED: {error.packet["category"]}; log: {log}',
@@ -198,10 +209,25 @@ def check(plan, timeout=None):
         report['elapsed_seconds'] = round(time.monotonic() - started, 3)
         report['commands_attempted'] = len(report['checks'])
         report['failed_commands'] = sum(not item['ok'] for item in report['checks'])
+        report['cargo_artifacts'] = {key: sum(item.get('cargo_artifacts', {}).get(key, 0) for item in report['checks'])
+                                     for key in ('fresh', 'built')}
+        if resource:
+            usage = resource.getrusage(resource.RUSAGE_CHILDREN)
+            report['resources'] = {'child_cpu_seconds': round(usage.ru_utime + usage.ru_stime -
+                                                             usage_before.ru_utime - usage_before.ru_stime, 3),
+                                   'max_child_rss_bytes': int(usage.ru_maxrss * (1 if sys.platform == 'darwin' else 1024)),
+                                   'rss_basis': 'OS child high-water mark; not simultaneous whole-machine memory'}
+        report['successful_steps'] = [item['step'] for item in report['checks'] if item['ok']]
         (directory / 'report.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
         summary = {'report': str(directory / 'report.json'), 'ok': report['ok'],
                    'scope': plan['scope'], 'seconds': report['elapsed_seconds'],
                    'commands': report['commands_attempted']}
+        summary['cargo_artifacts'] = report['cargo_artifacts']
+        if 'resources' in report:
+            summary['resources'] = report['resources']
+        if plan['scope'] in ('focused', 'game_shipping'):
+            summary.update(loop=plan['loop'], proves=plan['proves'] if report['ok'] else None,
+                           remaining=plan['remaining'], tests_executed=sum(item.get('tests_executed', 0) for item in report['checks']))
         if plan['scope'] == 'iteration':
             summary.update(feature=plan['feature'], feature_mode=plan['feature_mode'],
                            proves=plan['proves'] if report['ok'] else None, remaining=plan['remaining'])
@@ -267,6 +293,10 @@ def main():
     sub.add_parser('doctor')
     c = sub.add_parser('check')
     c.add_argument('--changed', action='store_true', help='Select checks from the complete Git diff')
+    c.add_argument('--loop', choices=['inner', 'integration', 'shipping'], default='shipping',
+                   help='Automatic change checks; shipping remains the default')
+    c.add_argument('--path', action='append', default=[], help='Explicit path to check (repeatable; inner/integration only)')
+    c.add_argument('--game', help='Standalone game project; reuse its tests/browser/package gates, excluding dependency tests')
     c.add_argument('--base', default='HEAD', help='Compare current files against this commit (default HEAD)')
     c.add_argument('--windows', action='store_true',
                    help='Type-check cfg(windows) code for x86_64-pc-windows-gnu without a Windows C toolchain; '
@@ -285,11 +315,15 @@ def main():
     c.add_argument('query'); c.add_argument('--limit', type=int, default=3)
     c.add_argument('--compact', action='store_true', help='Compact JSON; same bounded packet')
     c.add_argument('--record', action='store_true', help='Save packet size/timing locally for workflow measurement')
+    c.add_argument('--level', type=int, choices=[1, 2, 3], default=2,
+                   help='1: commands/guides; 2: contracts; 3: ownership/implementation map')
     b = sub.add_parser('build'); b.add_argument('kind', choices=['client', 'headless', 'tools', 'all'])
     c = sub.add_parser('capture'); c.add_argument('destination'); c.add_argument('--map')
     p = sub.add_parser('package'); p.add_argument('destination')
     t = sub.add_parser('map'); t.add_argument('arguments', nargs=argparse.REMAINDER)
-    sub.add_parser('features')
+    f = sub.add_parser('features')
+    f.add_argument('--feature', help='Derived implementation/interface/schema/test/example map for one feature')
+    f.add_argument('--validate', action='store_true', help='Check indexed paths, dependency edges and test suites without a build')
     web = sub.add_parser('web', help='Portable browser build/verify/inspect/serve/publish/reproduce/capabilities'); web.add_argument('arguments', nargs=argparse.REMAINDER)
     pub = sub.add_parser('publish', help='Test/build/verify source and publish a portable browser game'); pub.add_argument('arguments', nargs=argparse.REMAINDER)
     u = sub.add_parser('upgrade', help='Plan and verify moving an external game to a chosen engine revision')
@@ -321,14 +355,14 @@ def main():
         if args.timeout is not None and (not 0 < args.timeout < float('inf')):
             parser.error('--timeout must be a finite positive number')
         if args.windows:
-            if args.iterate or args.changed or args.base != 'HEAD' or args.typecheck or args.test or args.feature_mode:
+            if args.iterate or args.changed or args.path or args.game or args.loop != 'shipping' or args.base != 'HEAD' or args.typecheck or args.test or args.feature_mode:
                 parser.error('--windows is its own check; do not combine it with --iterate/--changed/--base/--typecheck/--test/--feature-mode')
             plan = workflow.windows_plan()
             if args.plan: print(json.dumps(plan, indent=2))
             else: check(plan, args.timeout)
             return
         if args.iterate:
-            if args.changed or args.base != 'HEAD':
+            if args.changed or args.path or args.game or args.loop != 'shipping' or args.base != 'HEAD':
                 parser.error('--iterate cannot replace --changed or --base final checks')
             plan = workflow.iteration_plan(ROOT, args.iterate, typecheck=args.typecheck,
                                            test=args.test, feature_mode=args.feature_mode or 'default',
@@ -338,10 +372,24 @@ def main():
             return
         if args.typecheck or args.test or args.feature_mode:
             parser.error('--typecheck, --test and --feature-mode require --iterate')
+        if args.game:
+            if args.changed or args.path or args.base != 'HEAD':
+                parser.error('--game checks that project only; do not combine with engine diff/path selections')
+            plan = workflow.game_plan(ROOT, args.game, args.loop)
+            if args.plan: print(json.dumps(plan, indent=2))
+            else: check(plan, args.timeout)
+            return
         if not args.changed and args.base != 'HEAD':
             parser.error('--base requires --changed')
+        if args.path and (args.changed or args.loop == 'shipping'):
+            parser.error('--path is an explicit inner/integration selection; use --changed for final shipping checks')
+        if args.loop != 'shipping' and not (args.changed or args.path):
+            parser.error('Automatic inner/integration checks require --changed or --path')
         revision, paths = workflow.changed_paths(ROOT, args.base) if args.changed else (None, None)
-        plan = workflow.validation_plan(paths, revision, args.test_profile)
+        if args.path:
+            paths = args.path
+        plan = (workflow.validation_plan(paths, revision, args.test_profile) if args.loop == 'shipping' else
+                workflow.change_plan(ROOT, paths, revision, loop=args.loop, test_profile=args.test_profile))
         if args.serial:
             plan['independent_commands'] = []
         if paths is not None:
@@ -350,7 +398,7 @@ def main():
         else: check(plan, args.timeout)
     elif args.command == 'context':
         started = time.monotonic()
-        packet = workflow.context(ROOT, args.query, args.limit)
+        packet = workflow.context(ROOT, args.query, args.limit, args.level)
         output = json.dumps(packet, separators=(',', ':')) if args.compact else json.dumps(packet, indent=2)
         if args.record:
             WORK.mkdir(exist_ok=True)
@@ -366,7 +414,16 @@ def main():
     elif args.command == 'capture': capture(args.destination, args.map)
     elif args.command == 'package': package(args.destination)
     elif args.command == 'map': tool(args.arguments)
-    elif args.command == 'features': print((ROOT / 'tools/FEATURES.json').read_text(encoding='utf-8'))
+    elif args.command == 'features':
+        if args.validate:
+            result = workflow.validate_index(ROOT)
+            print(json.dumps(result))
+            if not result['ok']:
+                sys.exit(1)
+        elif args.feature:
+            print(json.dumps(workflow.feature_map(ROOT, args.feature), indent=2))
+        else:
+            print((ROOT / 'tools/FEATURES.json').read_text(encoding='utf-8'))
     elif args.command == 'upgrade':
         if args.upgrade_command == 'plan':
             packet = upgrade.plan(args.game, ROOT, args.to, engine_checkout=args.engine_checkout,

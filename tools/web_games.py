@@ -33,8 +33,17 @@ def run(args, cwd=None, env=None):
     return result.stdout
 def source_hash(folder):
     digest=hashlib.sha256()
-    names=run(['git','ls-files','-z','--','src','assets','scripts','build.rs','AUDIO.md','Cargo.toml','Cargo.lock','game.project.json'],cwd=folder).split('\0')
-    for name in sorted(n for n in names if n):
+    inputs=('src','assets','scripts','build.rs','AUDIO.md','Cargo.toml','Cargo.lock','game.project.json')
+    try:
+        names=run(['git','ls-files','--cached','--others','--exclude-standard','-z','--',*inputs],cwd=folder).split('\0')
+    except WebError:
+        # A local scaffold needs neither Git initialization nor a hosting account.
+        names=[]
+        for name in inputs:
+            path=folder/name
+            names.extend(p.relative_to(folder).as_posix() for p in (path.rglob('*') if path.is_dir() else [path])
+                         if p.is_file() and '__pycache__' not in p.parts and p.suffix not in ('.pyc','.pyo'))
+    for name in sorted(set(n for n in names if n)):
         digest.update(name.encode());digest.update(safe_file(folder,name).read_bytes())
     return digest.hexdigest()
 

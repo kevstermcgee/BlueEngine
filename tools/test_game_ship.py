@@ -2843,7 +2843,9 @@ class CompiledGameTests(unittest.TestCase):
     def test_smoke_passes_a_folder_that_does_not_exist_yet(self):
         # the stand-in refuses an existing folder (exit 9) exactly like the stock runner
         self.assertEqual(self.smoke()['status'], 'pass')
-        folders = sorted((self.root / '.blue-check').glob('smoke-*'))
+        # Failed launches can retain a smoke-*.log without creating a capture folder.
+        # Count the folders this check promises to prune, preserving failure logs.
+        folders = sorted(p for p in (self.root / '.blue-check').glob('smoke-*') if p.is_dir())
         self.assertTrue(folders)
         self.assertLessEqual(len(folders), 2)  # old evidence is pruned
 
@@ -2972,6 +2974,19 @@ class InfoTests(TempTestCase):
 
 
 class RobustnessTests(TempTestCase):
+    def test_pruning_capture_folders_preserves_logs_from_failed_launches(self):
+        scratch = self.tmp / '.blue-check'; scratch.mkdir()
+        for number in range(4):
+            name = f'smoke-20261006T12000000000{number}'
+            (scratch / name).mkdir()
+            (scratch / (name + '.log')).write_text('completed capture')
+        failed = scratch / 'smoke-20261006T120000000004.log'
+        failed.write_text('failed before creating capture directory')
+        game_ship.prune_smoke_folders(scratch, keep=1)
+        self.assertEqual(len([p for p in scratch.glob('smoke-*') if p.is_dir()]), 1)
+        self.assertEqual(len(list(scratch.glob('smoke-*.log'))), 2)
+        self.assertEqual(failed.read_text(), 'failed before creating capture directory')
+
     def test_a_broken_check_does_not_stop_the_others(self):
         root = make_game(self.tmp / 'game')
         project = fake_dist(root, 'linux')

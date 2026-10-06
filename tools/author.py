@@ -37,7 +37,7 @@ def native_binary():
     base = Path(os.environ.get('CARGO_TARGET_DIR') or ROOT / 'target')
     if not base.is_absolute():
         base = ROOT / base
-    for profile in ('be2-tools/release', 'fast', 'release', 'debug'):
+    for profile in ('itest', 'be2-tools/release', 'fast', 'release', 'debug'):
         candidate = base / profile / name
         if candidate.is_file():
             return candidate
@@ -47,7 +47,8 @@ def native_binary():
 def native(args, timeout=60):
     binary = native_binary()
     if not binary.is_file():
-        raise ValueError('Native tool missing. Run python tools/be2.py build tools in the engine checkout, '
+        raise ValueError('Native tool missing. Run python3 tools/be2.py map help in the engine checkout '
+                         '(python on Windows), '
                          'or set BE2_TOOLS to the matching be2-tools binary.')
     run = subprocess.run([str(binary), *map(str, args)], capture_output=True,
                          text=True, timeout=timeout, cwd=ROOT)

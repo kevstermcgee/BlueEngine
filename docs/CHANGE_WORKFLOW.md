@@ -13,13 +13,29 @@ Historical architecture is no longer mandatory startup context for a game edit.
 
 ## Engine checks
 
+For the common inner loop, use `python3 tools/be2.py check --changed --loop inner --plan`,
+then remove `--plan` to execute. The existing feature index selects whole-library unit
+tests and integration suites from every declared transitive consumer. Python tooling
+uses indexed tests and reviewed validators without Cargo. Unknown paths, build manifests,
+CI/index changes, undeclared content routes or missing behavioral evidence require full
+checks. `--path FILE` is an explicit iteration-only selection; it cannot certify a whole diff.
+`--loop integration` covers default/headless configurations and portable units where relevant.
+Browser, package and real-device obligations appear separately in the JSON requirements.
+The graph remains partial: neither loop can replace shipping/CI.
+
+For a standalone game, `check --game DIR --loop inner` runs its own headless tests.
+Integration adds formatting/presentation tests; shipping runs its declared browser and
+native package gates. Native cross-platform evidence still requires those hosts. Changed
+engine inputs require engine verification separately. Existing `--iterate`, exact-test and
+type-check commands remain available for a specific regression.
+
 `python tools/be2.py check --changed --plan` prints the actual command plan without
 executing checks. `check --changed` executes it with persistent logs. Diff selection
 includes staged, unstaged, deleted, renamed (both paths) and untracked non-ignored
 files. HEAD is the default baseline; for committed work use `--base REV`, where REV
 is the reviewed starting commit, not the new tip. Invalid refs/Git failures fail closed.
 
-Only these independent Python changes have reviewed narrower scopes:
+Shipping is the default. Only these independent Python changes narrow shipping scopes:
 
 | Files (implementation and matching test) | Required checks |
 |---|---|

@@ -1,12 +1,20 @@
 # Working on BlueEngine
 
-First run `python tools/be2.py context "<task>" --compact` in this checkout.
+Use `python3` on Unix (`python` on Windows). First run
+`python3 tools/be2.py context "<task>" --level 1 --compact` in this checkout.
 It needs only Python and the feature index, no build. Read the packet's selected
 paths, not the whole repository. Exact feature IDs or diagnostic IDs narrow lookup;
 low confidence means inspect/narrow before editing, never invent an API.
+Use `context FEATURE --level 2` for contracts and `--level 3` for implementation ownership.
 Use `be2-tools src find/outline/show` for deeper symbol navigation when needed.
 
-For an iteration check, use the packet's `iterate` plan; select an indexed suite,
+For automatic iteration use `python3 tools/be2.py check --changed --loop inner --plan`,
+then execute without `--plan`. It tests library units, declared consumer suites and
+relevant tooling; unknown/build-boundary inputs fall back to full checks. Use
+`--loop integration` when the feature is complete. For a standalone game use
+`check --game DIR --loop inner`, then `--loop shipping` for its declared browser/package gates.
+Engine dependency tests are required when engine inputs change, not after every game rule edit.
+For a single regression, use the packet's `iterate` plan; select an indexed suite,
 `--test SUITE::exact_test`, or `--typecheck` (library only). Choose one useful check,
 not all three. Iteration success is not final verification.
 
@@ -16,7 +24,8 @@ features, uncertainty and the verification commands. Then run
 use `--base REV` for committed work. Only reviewed independent Python scopes narrow
 validation. Rust, manifests, content, docs, validation infrastructure and unknown
 paths automatically require full checks. `check` always runs the full suite.
-Feature test suggestions are for iteration; a plan is not passing evidence.
+Automatic inner/integration plans and feature test suggestions are for iteration;
+a plan is not passing evidence. Shipping remains the default; never merge on inner evidence alone.
 Keep full Linux/Windows CI. Inspect visuals/controls manually when they change.
 
 Never violate:
@@ -31,6 +40,9 @@ Browser front door: read docs/BROWSER_WORKFLOW.md. Use `python3 tools/be2.py web
 `web prepare GAME`, `web build GAME`, `web verify GAME`, `web inspect GAME`, `web serve GAME`,
 `web reproduce GAME` and `web publish GAME`. Portable 2D/hybrid/3D share these commands. Commit/push
 source before publication; a receipt must confirm source retrieval AND deployed manifest/files.
+Local web build/verify works before Git/origin setup; artifacts cannot publish until
+committed public source retrieval and clean reproduction pass. Scaffolding/authoring uses
+`python3 tools/be2.py map ...` with fresh shared itest tooling; release builds are for shipping.
 
 Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
 (docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use the stock starter;

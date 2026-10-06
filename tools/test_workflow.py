@@ -111,6 +111,87 @@ class ContextTests(unittest.TestCase):
             self.assertTrue(workflow.context(root, 'shared_gameplay')['matches'])
 
 
+class AutomaticLoopTests(unittest.TestCase):
+    def test_reproducible_microbenchmark_has_seven_tasks_and_no_builds_by_default(self):
+        from tools import dev_bench
+        result = dev_bench.measure(ROOT)
+        self.assertEqual(len(result['rows']), 7)
+        self.assertTrue(all(row['total_task_seconds'] is None for row in result['rows']))
+        self.assertTrue(all('verification_seconds' not in row for row in result['rows']))
+        self.assertTrue(all(row['context_level'] == 1 for row in result['rows']))
+
+    def test_transitive_consumers_and_library_units_are_selected(self):
+        plan = workflow.change_plan(ROOT, ['src/viewer/net/replication.rs'])
+        self.assertEqual(plan['scope'], 'focused')
+        command = plan['commands'][0]
+        for arg in ('--lib', '--no-default-features', 'replication_budget', 'hub', 'netplay', 'shared_gameplay'):
+            self.assertIn(arg, command)
+        self.assertNotIn('audio_project', command)
+        self.assertEqual(plan['requirements']['full_suite'], 'before merge')
+        self.assertEqual(len(plan['commands']), len(plan['command_harnesses']))
+
+    def test_integration_covers_both_feature_modes_and_portable_mode(self):
+        plan = workflow.change_plan(ROOT, ['src/two_d/mod.rs'], loop='integration')
+        rust = [c for c in plan['commands'] if c[:2] == ['cargo', 'test']]
+        self.assertEqual(len(rust), 3)
+        self.assertNotIn('--no-default-features', rust[0])
+        self.assertIn('--no-default-features', rust[1])
+        self.assertIn('two-d', rust[2])
+        self.assertIn('browser', plan['requirements'])
+
+    def test_unknown_build_and_content_inputs_fail_closed(self):
+        for path in ('src/new.rs', 'Cargo.toml', 'tools/FEATURES.json', '.github/workflows/ci.yml',
+                     'assets/games/observatory/content/game.json', 'tools/place_interior.py'):
+            plan = workflow.change_plan(ROOT, [path])
+            self.assertEqual(plan['scope'], 'full', path)
+            self.assertEqual(plan['commands'], workflow.full_commands())
+        mixed = workflow.change_plan(ROOT, ['tools/assets.py', 'unknown.py'])
+        self.assertEqual(mixed['scope'], 'full')
+        self.assertEqual(workflow.change_plan(ROOT, [])['commands'], [])
+
+    def test_shipping_selection_is_unchanged_and_python_needs_no_cargo(self):
+        self.assertEqual(workflow.change_plan(ROOT, ['tools/assets.py'], loop='shipping'),
+                         workflow.validation_plan(['tools/assets.py']))
+        plan = workflow.change_plan(ROOT, ['tools/assets.py'])
+        self.assertFalse(any(c[0] == 'cargo' for c in plan['commands']))
+        self.assertIn([sys.executable, 'tools/assets.py', 'validate'], plan['commands'])
+
+    def test_game_checks_use_own_gates_and_never_the_engine_suite(self):
+        game = ROOT / 'games/lantern-run'
+        inner = workflow.game_plan(ROOT, game)
+        self.assertEqual(len(inner['commands']), 1)
+        self.assertIn(str(game / 'Cargo.toml'), inner['commands'][0])
+        self.assertIn('--no-default-features', inner['commands'][0])
+        ship = workflow.game_plan(ROOT, game, 'shipping')
+        self.assertIn([sys.executable, 'tools/be2.py', 'web', 'build', str(game)], ship['commands'])
+        self.assertNotIn(['cargo', 'test', '--locked', '--profile', 'itest'], ship['commands'])
+
+    def test_progressive_context_and_index_validation(self):
+        small = workflow.context(ROOT, 'two_dimensional', level=1)
+        full = workflow.context(ROOT, 'two_dimensional')
+        self.assertLess(len(json.dumps(small)), len(json.dumps(full)))
+        self.assertTrue(all(p.endswith('.md') for p in small['matches'][0]['read_first']))
+        detailed = workflow.context(ROOT, 'two_dimensional', level=3)['matches'][0]['map']
+        self.assertIn('src/two_d/mod.rs', detailed['implementation'])
+        self.assertIn('portable_storage', detailed['tests'])
+        self.assertTrue(workflow.validate_index(ROOT)['ok'])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory); (root / 'tools').mkdir()
+            (root / 'tools/FEATURES.json').write_bytes((ROOT / 'tools/FEATURES.json').read_bytes())
+            self.assertFalse(workflow.validate_index(root)['ok'])
+
+    def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        self.assertIn('run: python tools/be2.py check', ci)
+        for gate in ('cargo build --release --locked', 'needs: [engine, leo, browser]',
+                     'Stock audio offscreen verification', 'Strict browser target linting',
+                     'Reproduce public browser sources'):
+            self.assertIn(gate, ci)
+        # Both platform and native/headless/portable checks remain in full_commands.
+        self.assertIn('os: [ubuntu-latest, windows-latest]', ci)
+        self.assertEqual(ci.count('run: python tools/be2.py check'), 1)
+
+
 class DiskTests(unittest.TestCase):
     def test_low_space_warns_with_the_variables_that_move_cargo(self):
         usage = lambda path: SimpleNamespace(free=3e9 if 'small' in Path(path).parts else 900e9)
