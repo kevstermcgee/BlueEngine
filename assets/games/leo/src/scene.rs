@@ -164,6 +164,11 @@ fn plant(kind: usize) -> Template {
     }
     t
 }
+impl Default for Scene {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 impl Scene {
     pub fn new() -> Self {
         let mut dome = Template::new();

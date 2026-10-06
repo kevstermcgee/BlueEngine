@@ -1,7 +1,8 @@
 // Real Chromium/CDP verification, with ws as the only Node dependency. No gameplay implementation here.
 import {createRequire} from 'node:module';
 import {spawn,spawnSync} from 'node:child_process';
-import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,readFile,writeFile} from 'node:fs/promises';
+import {cleanupBrowser} from './browser_process.mjs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 const require=createRequire(import.meta.url);
@@ -207,4 +208,4 @@ try {
   const report={ok:true,checks,performance:{...timings,...render,replay_work:verified.performance,environment:"Headless Chromium SwiftShader on this Linux host; latency includes CDP/report polling",hardware_coverage:[]},controller,mobile:mobile?mobileLayout:false,installation,verified,native_expected:metadata.verification,audio,persistence:'save and settings survive reload; blocked write fails explicitly and retains save',real_input:{probe,meaningful_result:true,start_pause_restart:true,tab_navigation_preserved:true,fullscreen:!mobile},canvas,requests,errors,screenshot:screenshotPath,browser:'Chromium CDP/software WebGL; no human listening or physical controller test'};
   await writeFile(reportPath,JSON.stringify(report,null,2));console.log(JSON.stringify({ok:true,report:reportPath,hash:verified.hash}));
 } catch(error) {await writeFile(reportPath,JSON.stringify({ok:false,stage,checks,performance:timings,error:String(error),errors,requests,browserLog:browserLog.slice(-4000)},null,2));console.error(error);process.exitCode=1;}
-finally {clearTimeout(timeout);socket?.close();browser.kill();await new Promise(r=>setTimeout(r,500));await rm(profile,{recursive:true,force:true});}
+finally {clearTimeout(timeout);await cleanupBrowser(browser,profile,socket);}

@@ -1,6 +1,9 @@
 //! The game's identity is one file (`assets/identity.json`); its window title, game document and icon
 //! assets must agree, so the window, the desktop shortcut and the exe's version info can never drift.
 //! Placeholder titles are not rejected here (`scripts/check.py` does that at the ship gate).
+// Native file/shortcut identity remains tested in both native feature modes. Browser identity
+// uses its manifest/package gates; WASM has neither this filesystem nor GameDocument loader.
+#![cfg(not(target_arch = "wasm32"))]
 use vesper3d::viewer::{game::GameDocument, identity::Identity};
 
 fn root(file: &str) -> std::path::PathBuf {

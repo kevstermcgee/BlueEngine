@@ -1,7 +1,8 @@
 // Exercise the shipped unified feed, favorites and filters in actual Chromium.
 import {createRequire} from 'node:module';
 import {spawn,spawnSync} from 'node:child_process';
-import {mkdtemp,writeFile,rm} from 'node:fs/promises';
+import {mkdtemp,writeFile} from 'node:fs/promises';
+import {cleanupBrowser} from './browser_process.mjs';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 const WebSocket=createRequire(import.meta.url)('ws');
@@ -62,4 +63,4 @@ try{
  const report={ok:true,games:initial.length,browser_games:initial.filter(g=>g.browser==='true').length,native_games:initial.filter(g=>g.native==='true').length,unique_ids:true,detail_pages:details.length,outline_star:true,yellow_selected_star:true,title_star_spacing:true,favorite_pins:true,favorite_reload:true,failed_write_preserves_value:true,filters:true,mobile_layout:true,errors};
  await writeFile(reportPath,JSON.stringify(report,null,2));console.log(JSON.stringify(report));
 }catch(e){await writeFile(reportPath,JSON.stringify({ok:false,error:String(e),errors}));process.exitCode=1;console.error(e);}
-finally{clearTimeout(deadline);socket?.close();browser.kill();await new Promise(ok=>setTimeout(ok,300));await rm(profile,{recursive:true,force:true});}
+finally{clearTimeout(deadline);await cleanupBrowser(browser,profile,socket);}

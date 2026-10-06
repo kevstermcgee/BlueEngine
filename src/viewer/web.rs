@@ -6,10 +6,15 @@ pub mod identity;
 pub mod kit;
 pub mod profile;
 pub mod savestate;
+#[path = "devkit/scale.rs"]
+mod scale;
 pub mod camera {
     pub use crate::runtime::camera_boom::sweep_boom;
 }
 pub mod devkit {
+    pub use super::scale::{
+        describe_length, Bounds, DOOR, EYE_HEIGHT, HUMAN_HEIGHT, ONE_HAND_LONGEST, TABLE_HEIGHT,
+    };
     pub use crate::runtime::shadow_quality::ShadowQuality;
 
     pub use crate::runtime::clock::TICK;

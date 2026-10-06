@@ -100,6 +100,10 @@ jobs:
           done
           python3 tools/be2.py web prepare assets/games/leo
           python3 tools/be2.py web build assets/games/leo
+      - name: Strict browser target linting and test compilation
+        run: |
+          cargo clippy --locked --target wasm32-unknown-unknown --no-default-features --features portable,presentation --lib -- -D warnings
+          cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --target wasm32-unknown-unknown --no-default-features --features portable-client --all-targets -- -D warnings
       - name: Reproduce public browser sources with empty Cargo targets
         if: github.event_name == 'push'
         run: |

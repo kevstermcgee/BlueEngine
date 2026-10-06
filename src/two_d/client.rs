@@ -207,7 +207,7 @@ impl Audio {
 }
 pub fn config(title: &str) -> macroquad::conf::Conf {
     #[allow(unused_mut)]
-    let mut size = (960, 540);
+    let mut size = (960_u32, 540_u32);
     #[cfg(not(target_arch = "wasm32"))]
     {
         let args: Vec<_> = std::env::args().collect();
@@ -329,25 +329,29 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             pointer = Some(point);
         }
         #[allow(unused_mut)]
+        #[cfg(not(target_arch = "wasm32"))]
         let mut x = i32::from(is_key_down(KeyCode::D) || is_key_down(KeyCode::Right))
-            - i32::from(is_key_down(KeyCode::A) || is_key_down(KeyCode::Left));
+            - i32::from(is_key_down(KeyCode::A) || is_key_down(KeyCode::Left))
+            + digital.x;
         #[allow(unused_mut)]
+        #[cfg(not(target_arch = "wasm32"))]
         let mut y = i32::from(is_key_down(KeyCode::S) || is_key_down(KeyCode::Down))
-            - i32::from(is_key_down(KeyCode::W) || is_key_down(KeyCode::Up));
+            - i32::from(is_key_down(KeyCode::W) || is_key_down(KeyCode::Up))
+            + digital.y;
+        #[cfg(target_arch = "wasm32")]
+        let (mut x, mut y) = {
+            let keyboard = platform::keyboard_movement();
+            (keyboard.0 + digital.x, keyboard.1 + digital.y)
+        };
         #[allow(unused_mut)]
         let mut action = platform::primary_key() || is_mouse_button_pressed(MouseButton::Left);
         #[allow(unused_mut)]
         let mut start =
             platform::command_key(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left);
-        x += digital.x;
-        y += digital.y;
         action |= digital.action;
         start |= digital.commands & 1 != 0;
         #[cfg(target_arch = "wasm32")]
         {
-            let keyboard = platform::keyboard_movement();
-            x = keyboard.0 + digital.x;
-            y = keyboard.1 + digital.y;
             let pad = platform::pad();
             x += pad.0;
             y += pad.1;

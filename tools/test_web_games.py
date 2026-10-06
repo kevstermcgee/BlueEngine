@@ -204,6 +204,23 @@ class BrowserDependencyTests(unittest.TestCase):
 
 
 class ReleaseRegressionTests(unittest.TestCase):
+    @unittest.skipUnless(web.shutil.which('node'), 'Node is required for browser process regression')
+    def test_browser_profile_cleanup_waits_for_a_writer_to_exit(self):
+        import subprocess
+        with tempfile.TemporaryDirectory() as folder:
+            profile=Path(folder)/'profile';profile.mkdir()
+            script='''import {spawn} from 'node:child_process';
+import {existsSync} from 'node:fs';
+import {cleanupBrowser} from MODULE;
+const profile=PROFILE;
+const browser=spawn(process.execPath,['-e',`const fs=require('node:fs');process.on('SIGTERM',()=>{});setInterval(()=>fs.writeFileSync(process.argv[1]+'/state','writing'),20);console.log('ready');`,profile]);
+await new Promise(resolve=>browser.stdout.once('data',resolve));
+await cleanupBrowser(browser,profile);
+if(existsSync(profile)||(browser.exitCode===null&&browser.signalCode===null))process.exit(1);
+'''.replace('MODULE',json.dumps((web.ROOT/'tools/browser_process.mjs').as_uri())).replace('PROFILE',json.dumps(str(profile)))
+            result=subprocess.run(['node','--input-type=module','-e',script],capture_output=True,text=True,timeout=15)
+            self.assertEqual(result.returncode,0,result.stderr)
+
     def test_source_timeout_is_a_release_failure(self):
         import subprocess
         with patch.object(release.subprocess,'run',side_effect=subprocess.TimeoutExpired(['git','fetch'],600)):
