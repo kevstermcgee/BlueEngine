@@ -43,9 +43,14 @@ Rules/tests live in lib.rs. Presentation is its `#[cfg(feature="client")]` imple
 cue is 0 pickup, 1 damage, 2 success; shared generated WAVs load asynchronously. New genres may need
 a custom sound bank later. This milestone intentionally has no editor or genre framework.
 
-The shared client overlays the title at logical (24,30), controls at (24,428), and
+The shared client overlays the title at logical (24,30), controls at (24,428)/(24,448), and
 transient save/error notices at (24,395), on layers 100/101 of the 800×450 canvas.
 Reserve those areas in your HUD; avoid drawing another title or controls over them.
+It also owns start/pause/win/loss panels at (145,135), size 510×180, layers 200/201.
+Supply game-specific text through `Game::menu_status()`; avoid a duplicate terminal panel
+under that overlay. `Game::show_hud()` controls title/control labels, while a custom client
+remains available for a different presentation. Shared keys are R restart, K save, L load,
+Esc pause and M sound; these do not need game-owned key handlers.
 The starter already uses `runtime::assert_deterministic`, `snapshot::assert_resumes_exactly`,
 `two_d::verify` for a public-input route, collision and loss assertions. Extend them
 with timer, pickup, locked-exit and restart cases. The client/browser gate covers

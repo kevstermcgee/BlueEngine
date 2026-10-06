@@ -27,6 +27,9 @@ for native presentation compilation and `--loop shipping` for declared final tar
 Local web packages need no Git origin; publication still requires committed public source
 and clean reproduction. The shared client already draws title/controls at (24,30)/(24,428)
 and notices at (24,395); reserve those HUD areas (logical 800×450).
+It owns start/pause/win/loss panels in (145,135,510,180); customize `menu_status()`
+instead of drawing an overlapping terminal panel. R restarts, K saves, L loads,
+Esc pauses and M toggles sound. Use a custom client when the game needs different UI.
 
 Web builds require rustup target add wasm32-unknown-unknown, Node, ws and Chromium.
 Publishing to a directory produces a deployment-ready library, not an external URL.
