@@ -66,7 +66,6 @@
   "commands": {
     "start": {
       "label": "Play",
-      "help": "Enter / A / Start / touch START",
       "key": "Enter",
       "buttons": [
         9
@@ -76,7 +75,6 @@
     },
     "pause": {
       "label": "Pause/resume",
-      "help": "Esc / B / Start / touch B",
       "key": "Escape",
       "buttons": [
         1
@@ -86,7 +84,6 @@
     },
     "restart": {
       "label": "Restart",
-      "help": "R / touch Restart",
       "key": "KeyR",
       "buttons": [],
       "bit": 4,
@@ -94,7 +91,6 @@
     },
     "sound": {
       "label": "Sound",
-      "help": "M / touch SELECT",
       "key": "KeyM",
       "buttons": [],
       "bit": 8,
@@ -102,7 +98,6 @@
     },
     "save": {
       "label": "Save",
-      "help": "K / touch SELECT",
       "key": "KeyK",
       "buttons": [],
       "bit": 16,
@@ -110,7 +105,6 @@
     },
     "load": {
       "label": "Load",
-      "help": "L / touch SELECT",
       "key": "KeyL",
       "buttons": [],
       "bit": 32,
@@ -118,7 +112,6 @@
     },
     "music": {
       "label": "Music",
-      "help": "N / touch SELECT",
       "key": "KeyN",
       "buttons": [],
       "bit": 64,
@@ -126,7 +119,6 @@
     },
     "fullscreen": {
       "label": "Fullscreen",
-      "help": "F (desktop gesture)",
       "key": "KeyF",
       "buttons": [],
       "bit": 0

@@ -125,9 +125,24 @@ def capabilities():
 def control_contract():
     return json.loads((ROOT/'templates/web/controls.json').read_text(encoding='utf-8'))
 
-def control_help():
+def control_help(action_label='Action'):
     c=control_contract()
-    return ' · '.join(f"{v['label']}: {v['help']}" for v in c['commands'].values())
+    def key(value):return value.removeprefix('Key').replace('Arrow','').replace('ShiftLeft','Left Shift').replace('ShiftRight','Right Shift')
+    def buttons(values):
+        names={0:'A',1:'B',9:'Start'}
+        return [names.get(n,f'Pad button {n}') for n in values]
+    def bindings(value):
+        result=([key(value['key'])] if value.get('key') else [])+buttons(value.get('buttons',[]))
+        if value.get('touch'):result.append('touch '+value['touch'])
+        return result
+    movement=', '.join(key(k) for k in c['movement']['keys'])
+    lines=[f'Move: {movement} / left stick / touch movement',f"{action_label}: {key(c['primary']['key'])} / {buttons([c['primary']['button']])[0]} / touch {c['primary']['touch']}",
+           'Look: '+c['look']['mouse']+' / right stick','Run: '+', '.join(key(k) for k in c['sprint']['keys'])]
+    for name,value in c['commands'].items():
+        inputs=bindings(value)
+        if name=='pause':inputs+=bindings(c['commands']['start'])[:1]+buttons(c['commands']['start']['buttons'])
+        lines.append(value['label']+': '+' / '.join(inputs))
+    return ' · '.join(lines)
 
 def write_manifest(out,manifest):
     (out/'manifest.json').write_text(json.dumps(manifest,indent=2,sort_keys=True)+'\n', encoding='utf-8', newline='\n')
@@ -257,8 +272,8 @@ def build(game, skip_browser=False):
         (out/'game.wasm').write_bytes(release.runtime_wasm(compiled.read_bytes()))
         (out/'loader.js').write_bytes(loader_bytes);shutil.copy2(ROOT/'templates/web/platform.js',out/'platform.js');shutil.copy2(ROOT/'templates/web/mobile.js',out/'mobile.js');shutil.copy2(game/'assets/icon.png',out/'thumbnail.png')
         page=(ROOT/'templates/web/index.html').read_text(encoding='utf-8')
-        for key,value in {'title':identity['title'],'description':project['description'],'controls':identity['controls']+' · '+control_help()}.items():page=page.replace('{{'+key+'}}',html.escape(value,quote=True))
         mobile=project.get('mobile_controls',{'layout':'dpad','action_label':'Action'})
+        for key,value in {'title':identity['title'],'description':project['description'],'controls':control_help(mobile['action_label'])}.items():page=page.replace('{{'+key+'}}',html.escape(value,quote=True))
         page=page.replace('{{control_config}}',json.dumps(control_contract()).replace('<','\\u003c'))
         page=page.replace('{{mobile_config}}',json.dumps(mobile).replace('<','\\u003c'))
         (out/'index.html').write_text(page, encoding='utf-8', newline='\n')

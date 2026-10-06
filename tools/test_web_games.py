@@ -204,6 +204,18 @@ class BrowserDependencyTests(unittest.TestCase):
 
 
 class ReleaseRegressionTests(unittest.TestCase):
+    def test_control_help_tracks_adapter_bindings_instead_of_native_help(self):
+        contract=web.control_contract()
+        contract['commands']['save']['key']='KeyJ'
+        contract['commands']['save']['help']='F5 (stale native help)'
+        contract['commands']['pause']['buttons']=[7]
+        with patch.object(web,'control_contract',return_value=contract):help_text=web.control_help('Hop')
+        self.assertIn('Save: J / touch save',help_text)
+        self.assertIn('Pad button 7',help_text)
+        self.assertIn('Hop: Space / A / touch action',help_text)
+        self.assertIn('Pause/resume: Escape / Pad button 7 / touch pause / Enter / Start',help_text)
+        self.assertNotIn('F5',help_text)
+
     @unittest.skipUnless(web.shutil.which('node'), 'Node is required for browser process regression')
     def test_browser_profile_cleanup_waits_for_a_writer_to_exit(self):
         import subprocess
