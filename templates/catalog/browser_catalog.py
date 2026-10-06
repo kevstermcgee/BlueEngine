@@ -21,6 +21,8 @@ def write_details(out,slug,title,description,presentation,network,web=None,nativ
     if file.is_file():
         page=file.read_text()
         page=re.sub(r'<!-- browser-details -->.*?<!-- /browser-details -->','',page,flags=re.S)
+        if 'href="../../catalog.css"' not in page:
+            page=page.replace('</head>','<link rel="stylesheet" href="../../catalog.css"></head>',1)
     else:
         thumbnail='../../'+prefix+web['thumbnail'] if web else ''
         image=f'<img class="thumb" src="{esc(thumbnail)}" alt="">' if thumbnail else ''
@@ -29,7 +31,8 @@ def write_details(out,slug,title,description,presentation,network,web=None,nativ
     if web:
         controls=' + '.join(web.get('input',[]))
         actions=f'<!-- browser-details --><section class="browser-details"><h2>Play in your browser</h2>{info}<p>{esc(web["description"])}</p><p>Controls: {esc(controls)}. Mobile controls appear below the game. Press F for fullscreen on desktop.</p><a class="dl play" href="../../{esc(prefix+web["play"])}">Play in browser</a><p>Install from the browser to play offline after the first complete load. Progress stays on this device and browser; it is independent of native saves.</p></section><!-- /browser-details -->'
-        page=page.replace('</main>',actions+'</main>',1)
+        # Keep both ways to play above the native release-history table.
+        page=page.replace('</section>','</section>'+actions,1) if '</section>' in page else page.replace('</main>',actions+'</main>',1)
     file.write_text(page)
 def card(game,prefix="web/"):
     slug=game['id'];title=game['title'];description=game['description'];presentation=game['presentation'];network=game['networking']

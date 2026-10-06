@@ -125,6 +125,22 @@ class PortableRequirementsTests(unittest.TestCase):
                 with self.assertRaisesRegex(web.WebError,'mobile_controls'):web.validate_project(root)
 
 class UnifiedCatalogTests(unittest.TestCase):
+    def test_details_keep_play_and_download_above_history(self):
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('catalog',web.ROOT/'templates/catalog/browser_catalog.py')
+        catalog=importlib.util.module_from_spec(spec);spec.loader.exec_module(catalog)
+        with tempfile.TemporaryDirectory() as folder:
+            root=Path(folder);directory=root/'games/shared';directory.mkdir(parents=True)
+            page=directory/'index.html'
+            page.write_text('<head></head><main><section class="game-summary"><a class="dl" href="installer.exe">Download</a></section><section><h2>Versions</h2></section></main>')
+            item={'description':'Shared game','play':'shared/index.html','input':['keyboard']}
+            catalog.write_details(root,'shared','Shared','Shared game','3d','offline',item)
+            first=page.read_text();catalog.write_details(root,'shared','Shared','Shared game','3d','offline',item)
+            self.assertEqual(first,page.read_text())
+            self.assertLess(first.index('Play in browser'),first.index('Versions'))
+            self.assertIn('installer.exe',first)
+            self.assertIn('href="../../catalog.css"',first)
+
     def test_browser_and_native_join_by_id_and_preserve_downloads(self):
         import importlib.util
         spec=importlib.util.spec_from_file_location('catalog',web.ROOT/'templates/catalog/browser_catalog.py')
