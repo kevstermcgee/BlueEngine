@@ -61,6 +61,8 @@ def reproduce(package, output=None):
                   'dependency_archives': 'Cargo cache allowed; all binaries compiled afresh'}
         (output / 'result.json').write_text(json.dumps(result, indent=2) + '\n', encoding='utf-8', newline='\n')
         if differences:
+            shutil.copy2(game / 'dist/web/game.wasm', output / 'reproduced.wasm')
+            shutil.copy2(game / 'dist/web/manifest.json', output / 'reproduced-manifest.json')
             raise release.ReleaseError(f'Clean reproduction differs; inspect {output / "result.json"}')
         return result
 

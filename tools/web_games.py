@@ -147,6 +147,7 @@ def release_contract(game,manifest):
                          'dependency_policy':'committed Cargo.lock; cargo fetch --locked, then offline locked builds',
                          'rustc':run(['rustc','--version']).strip(),'cargo':run(['cargo','--version']).strip(),
                          'target':'wasm32-unknown-unknown','profile':'release','path_remapping':'Cargo home=/cargo, engine=/blueengine, game=/game',
+                         'compiler_namespace':'canonical package roots, version, features and codegen settings v1','runtime_wasm_removed_custom_sections':['name'],
                          'game_lock_sha256':hashlib.sha256((game/'Cargo.lock').read_bytes()).hexdigest(),
                          'source_date_epoch':manifest['built_at_epoch'],'engine_relative_to_game':os.path.relpath(ROOT,game)}}
 
@@ -238,7 +239,8 @@ def build(game, skip_browser=False):
     build_args=['cargo','build','--offline','--locked','--release','--target','wasm32-unknown-unknown','--bin',binary]
     if web:build_args+=['--no-default-features','--features',','.join(web['features'])]
     # Cargo splits plain RUSTFLAGS on whitespace; encoded arguments preserve paths containing spaces.
-    run(build_args,cwd=game,env={**env,'CARGO_ENCODED_RUSTFLAGS':'\x1f'.join(wasm_flags)})
+    wrapper,wasm_target=release.compiler_wrapper(ROOT,target,run)
+    run(build_args,cwd=game,env={**env,'CARGO_ENCODED_RUSTFLAGS':'\x1f'.join(wasm_flags),'CARGO_TARGET_DIR':str(wasm_target),'RUSTC_WRAPPER':str(wrapper),'BE2_WASM_ENGINE_ROOT':str(ROOT),'BE2_WASM_GAME_ROOT':str(game),'BE2_WASM_CARGO_HOME':str(cargo_home)})
     metadata=json.loads(run(['cargo','metadata','--offline','--locked','--format-version','1'],cwd=game,env=env))
     engine=next(p for p in metadata['packages'] if p['name']=='be2')
     if Path(engine['manifest_path']).resolve()!=ROOT/'Cargo.toml':raise WebError('Build must use this workflow engine checkout; invoke the dependency engine tools/be2.py')
@@ -250,7 +252,9 @@ def build(game, skip_browser=False):
     destination=game/'dist/web';destination.parent.mkdir(exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='web-build-',dir=destination.parent) as stage:
         out=Path(stage)
-        shutil.copy2(target/'wasm32-unknown-unknown/release'/f'{binary.replace(chr(45),chr(95))}.wasm' if (target/'wasm32-unknown-unknown/release'/f'{binary.replace(chr(45),chr(95))}.wasm').exists() else target/'wasm32-unknown-unknown/release'/f'{binary}.wasm',out/'game.wasm')
+        compiled=wasm_target/'wasm32-unknown-unknown/release'/f'{binary}.wasm'
+        shutil.copy2(compiled,evidence/'game.debug.wasm')
+        (out/'game.wasm').write_bytes(release.runtime_wasm(compiled.read_bytes()))
         (out/'loader.js').write_bytes(loader_bytes);shutil.copy2(ROOT/'templates/web/platform.js',out/'platform.js');shutil.copy2(ROOT/'templates/web/mobile.js',out/'mobile.js');shutil.copy2(game/'assets/icon.png',out/'thumbnail.png')
         page=(ROOT/'templates/web/index.html').read_text(encoding='utf-8')
         for key,value in {'title':identity['title'],'description':project['description'],'controls':identity['controls']+' · '+control_help()}.items():page=page.replace('{{'+key+'}}',html.escape(value,quote=True))

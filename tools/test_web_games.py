@@ -269,6 +269,46 @@ if(existsSync(profile)||(browser.exitCode===null&&browser.signalCode===null))pro
             (bank/'bank.json').write_text(json.dumps({'music':{'escape':{'file':'../../../../private'}}}))
             with self.assertRaises(web.WebError):release.runtime_files(root,['assets/audio'],web.safe_file)
 
+class WasmReproducibilityTests(unittest.TestCase):
+    def test_debug_name_removal_preserves_runtime_and_other_custom_sections(self):
+        header=b'\0asm\x01\0\0\0'
+        def custom(name,payload):
+            content=bytes([len(name)])+name+payload
+            return b'\0'+bytes([len(content)])+content
+        code=b'\x01\x01\0'
+        retained=custom(b'producers',b'compiler')+code+custom(b'target_features',b'features')
+        self.assertEqual(release.runtime_wasm(header+custom(b'name',b'debug')+retained),header+retained)
+        for bad in (b'bad',header+b'\0\x80',header+b'\0\x02\x04x',header+b'\x01\x03x',header+b'\0\xff\xff\xff\xff\x10'):
+            with self.subTest(data=bad),self.assertRaises(release.ReleaseError):release.runtime_wasm(bad)
+
+    @unittest.skipUnless(web.shutil.which('rustc') and web.shutil.which('cargo'), 'Rust compiler is required')
+    def test_relocated_path_dependencies_produce_identical_executable_wasm(self):
+        import os,subprocess
+        installed=subprocess.run(['rustup','target','list','--installed'],capture_output=True,text=True,check=True).stdout
+        if 'wasm32-unknown-unknown' not in installed:self.skipTest('Install wasm32-unknown-unknown to run the browser compiler regression')
+        def run(args):return subprocess.run([str(a) for a in args],capture_output=True,text=True,check=True).stdout
+        with tempfile.TemporaryDirectory(prefix='be2 relocated sources ') as folder:
+            base=Path(folder);outputs=[]
+            for name in ('checkout one','checkout two'):
+                root=base/name;game=root/'game';dep=root/'engine';game.mkdir(parents=True);dep.mkdir()
+                (dep/'Cargo.toml').write_text('[package]\nname="fixture-engine"\nversion="0.1.0"\nedition="2021"\n[lib]\npath="lib.rs"\n')
+                (dep/'lib.rs').write_text('pub fn value()->u32 {21}\n')
+                (game/'Cargo.toml').write_text('[package]\nname="fixture-game"\nversion="0.1.0"\nedition="2021"\n[lib]\npath="lib.rs"\ncrate-type=["cdylib"]\n[dependencies]\nfixture-engine={path="../engine"}\n')
+                (game/'lib.rs').write_text('#[no_mangle] pub extern "C" fn answer()->u32 {fixture_engine::value()*2}\n')
+                wrapper,target=release.compiler_wrapper(web.ROOT,root/'target',run)
+                cargo_home=Path(os.environ.get('CARGO_HOME',Path.home()/'.cargo'))
+                flags=[f'--remap-path-prefix={root}=/blueengine',f'--remap-path-prefix={game}=/game',f'--remap-path-prefix={cargo_home}=/cargo']
+                env={**os.environ,'RUSTC_WRAPPER':str(wrapper),'RUSTC_WORKSPACE_WRAPPER':'','RUSTFLAGS':'','CARGO_ENCODED_RUSTFLAGS':'\x1f'.join(flags),'CARGO_TARGET_DIR':str(target),'BE2_WASM_ENGINE_ROOT':str(root),'BE2_WASM_GAME_ROOT':str(game),'BE2_WASM_CARGO_HOME':str(cargo_home)}
+                subprocess.run(['cargo','generate-lockfile','--offline'],cwd=game,env=env,capture_output=True,check=True)
+                result=subprocess.run(['cargo','build','--offline','--locked','--release','--target','wasm32-unknown-unknown'],cwd=game,env=env,capture_output=True,text=True)
+                self.assertEqual(result.returncode,0,result.stderr)
+                outputs.append(release.runtime_wasm((target/'wasm32-unknown-unknown/release/fixture_game.wasm').read_bytes()))
+            self.assertEqual(outputs[0],outputs[1])
+            if web.shutil.which('node'):
+                binary=base/'runtime.wasm';binary.write_bytes(outputs[0])
+                result=subprocess.run(['node','-e',"WebAssembly.instantiate(require('fs').readFileSync(process.argv[1])).then(x=>{if(x.instance.exports.answer()!==42)process.exit(1)})",str(binary)],capture_output=True,text=True)
+                self.assertEqual(result.returncode,0,result.stderr)
+
 class PublicationGateTests(PackageTests):
     def test_failed_provenance_cannot_write_or_replace_deployment(self):
         target=self.root/'library'

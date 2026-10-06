@@ -103,6 +103,52 @@ def package_id(hashes):
     return hashlib.sha256(json.dumps(content, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
 
 
+def runtime_wasm(data):
+    """Remove the non-executable name/debug section; preserve every other section byte-for-byte."""
+    if data[:8] != b'\0asm\x01\0\0\0':
+        raise ReleaseError('Invalid WASM header')
+    def unsigned(offset):
+        value = 0
+        for shift in range(0, 35, 7):
+            if offset >= len(data):
+                raise ReleaseError('Truncated WASM section length')
+            byte = data[offset];offset += 1
+            value |= (byte & 127) << shift
+            if byte < 128:
+                if value > 0xffffffff:
+                    raise ReleaseError('Invalid WASM section length')
+                return value, offset
+        raise ReleaseError('Invalid WASM section length')
+    output = bytearray(data[:8]);offset = 8
+    while offset < len(data):
+        start = offset;section = data[offset]
+        length, payload = unsigned(offset + 1);end = payload + length
+        if end > len(data):
+            raise ReleaseError('Truncated WASM section')
+        name = b''
+        if section == 0:
+            size, text = unsigned(payload)
+            if text + size > end:
+                raise ReleaseError('Truncated WASM custom section name')
+            name = data[text:text + size]
+        if section != 0 or name != b'name':
+            output.extend(data[start:end])
+        offset = end
+    return bytes(output)
+
+
+def compiler_wrapper(root, target, run):
+    """Compile the tiny std-only wrapper from source; partition caches by its exact implementation."""
+    source = root / 'tools/web_rustc.rs'
+    digest = hashlib.sha256(source.read_bytes()).hexdigest()[:16]
+    version = hashlib.sha256(run(['rustc','--version']).encode()).hexdigest()[:16]
+    tools = target / 'be2-web-tools' / (digest + '-' + version);tools.mkdir(parents=True, exist_ok=True)
+    wrapper = tools / ('web-rustc.exe' if os.name == 'nt' else 'web-rustc')
+    if not wrapper.is_file():
+        run(['rustc','--edition=2021','-D','warnings','-C','opt-level=1',source,'-o',wrapper])
+    return wrapper, target / ('be2-web-' + digest)
+
+
 def runtime_files(game, declarations, safe_file):
     """An AudioBank directory means bank.json + referenced PCM, never preview mixes/reports/scores."""
     selected = set()

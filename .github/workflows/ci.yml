@@ -102,6 +102,8 @@ jobs:
           python3 tools/be2.py web build assets/games/leo
       - name: Strict browser target linting and test compilation
         run: |
+          rustfmt --check --edition 2021 tools/web_rustc.rs
+          python3 -m unittest tools.test_web_games.WasmReproducibilityTests
           cargo clippy --locked --target wasm32-unknown-unknown --no-default-features --features portable,presentation --lib -- -D warnings
           cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --target wasm32-unknown-unknown --no-default-features --features portable-client --all-targets -- -D warnings
       - name: Reproduce public browser sources with empty Cargo targets

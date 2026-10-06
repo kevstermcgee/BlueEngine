@@ -50,6 +50,8 @@ fetches dependencies with Cargo.lock, runs the documented build/gates and compar
 package ID, source hashes, provenance, compatibility, headless proof and browser stage results.
 Dependency archives may be reused; compiled outputs may not. Use the recorded Rust toolchain for
 byte-identical WASM. Browser timing/log/screenshot evidence is deliberately outside runtime packages.
+The workflow normalizes Cargo's checkout-dependent compiler identities and removes the WASM debug
+name section from runtime. Full debug WASM stays in `.blue-check/web/game.debug.wasm` for diagnosis.
 
 ## What the evidence means
 
