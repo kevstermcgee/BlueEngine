@@ -45,7 +45,7 @@ Create games with `be2-tools new-game NAME DIR ENGINE portable`, or select `two-
 to build fresh shared itest tooling and scaffold in one command. Release tooling is for distribution.
 Set `game.project.json` presentation/targets/mobile controls deliberately. The same browser commands
 handle all three presentations. See [PORTABLE_GAMES.md](PORTABLE_GAMES.md) for composition and
-[GAME_QUICKSTART.md](GAME_QUICKSTART.md) for starter selection. Existing games' `scripts/blue`
+[GAME_QUICKSTART.md](../../GAME_QUICKSTART.md) for starter selection. Existing games' `scripts/blue`
 forwards to these engine commands.
 
 Local `web build` and `web verify` work for a new folder before Git initialization or

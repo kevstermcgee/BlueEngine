@@ -1,7 +1,7 @@
 # Portable games: native Windows distribution, flexible presentation
 
 Start with `python3 tools/be2.py start "<game objective>" --kind new-game --target windows`
-in the engine checkout; [AI_SPRINGBOARD.md](AI_SPRINGBOARD.md) selects explicit starters
+in the engine checkout; [AI_SPRINGBOARD.md](../../AI_SPRINGBOARD.md) selects explicit starters
 without compiling. BlueEngine games ship native Windows x64 EXE installers only; the BlueEngineGames
 website has no browser play. The portable runtime supports 2D, 3D and hybrid native
 games without choosing web distribution. Optional browser APIs below remain technical
