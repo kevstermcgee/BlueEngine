@@ -22,3 +22,7 @@ python scripts/check.py
 the isolated native payload. BlueEngineGames' Windows release workflow wraps that
 payload in the per-game EXE installer. Optional web-target metadata is retained for
 engine regression tests; it does not authorize browser publication.
+
+For package-only delivery use `python scripts/ship.py ship --no-install`; it keeps the
+isolated smoke and never accesses the desktop. Plain `ship` additionally installs and
+verifies this game's shortcut. Other applications' icon similarity cannot fail shipping.

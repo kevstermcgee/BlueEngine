@@ -81,3 +81,7 @@ Use new capture directories. `--expect won|lost|playing` makes an unexpected out
 Inspect world, outcome, settings and small-window frames. Package integrity needs no display;
 launch/capture smoke needs one or Xvfb. Smoke runs only declared files in a temporary folder,
 excluding local saves/settings/stale assets, and preserves its log in `.blue-check/`.
+
+For package-only delivery use `python scripts/ship.py ship --no-install`; it keeps the
+isolated smoke and never accesses the desktop. Plain `ship` additionally installs and
+verifies this game's shortcut. Other applications' icon similarity cannot fail shipping.

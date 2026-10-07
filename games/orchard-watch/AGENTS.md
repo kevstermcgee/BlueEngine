@@ -24,3 +24,7 @@ python scripts/check.py               # full game verification including shippin
 Web builds require rustup target add wasm32-unknown-unknown, Node, ws and Chromium.
 Publishing to a directory produces a deployment-ready library, not an external URL.
 Never claim cargo build proves browser playback or that audio counters prove a listener heard sound.
+
+For package-only delivery use `python scripts/ship.py ship --no-install`; it keeps the
+isolated smoke and never accesses the desktop. Plain `ship` additionally installs and
+verifies this game's shortcut. Other applications' icon similarity cannot fail shipping.

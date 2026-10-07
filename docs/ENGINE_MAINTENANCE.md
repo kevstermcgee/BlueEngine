@@ -76,7 +76,10 @@ originally `scripts/test_lab.ico`. Preserve the artwork; do not regenerate, repl
 or redesign it as part of routine engine/game work. See assets/branding/README.md.
 
 That is the *engine's* identity (its own clients and the sandbox). A game made with the engine ships
-its own: a unique title, tagline, icon and desktop shortcut created by `scripts/ship.py` (see
+its own title, tagline, icon and verified package created by `scripts/ship.py`.
+Use `ship --no-install` for package and isolated smoke without desktop access; plain `ship`
+adds a requested desktop shortcut and verifies its wiring/icon. Desktop-wide similarity is
+optional advisory only (see
 docs/GAME_QUICKSTART.md, Definition of done). The gate rejects the engine logo as a game's icon, and
 `be2-tools icon TITLE DIRECTORY` generates a title-seeded starter icon so a game with no art is still distinct.
 Runtime modules for such games live in `viewer::devkit` (graphics-free) and `viewer::kit`

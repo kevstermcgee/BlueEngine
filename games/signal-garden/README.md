@@ -19,3 +19,7 @@ runtime libraries. Speaker output must still be checked by a listener.
 
 From source, see AGENTS.md for the short context and command list. `scripts/blue ship` creates
 `dist/` and the game's desktop shortcut. Distribute the files declared by `dist/ship.json`.
+
+For package-only delivery use `python scripts/ship.py ship --no-install`; it keeps the
+isolated smoke and never accesses the desktop. Plain `ship` additionally installs and
+verifies this game's shortcut. Other applications' icon similarity cannot fail shipping.
