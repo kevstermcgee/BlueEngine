@@ -37,8 +37,8 @@ Portable built-in collision is 2D; custom native simulation, Rapier and NetGame/
 
 Existing kit renderers can use `Scene::render_view(layer, rect, callback)`. Its callback receives a
 validated physical viewport including DPI: apply it to all scene and sky cameras, never clear the
-entire framebuffer, and keep rendering read-only. The native kit shares native geometry/materials
-and shadows, without native workers/networking. Controller, chunks and day clocks are rendering-free.
+entire framebuffer, and keep rendering read-only. Native kit geometry/materials/shadows
+and the existing native worker/network APIs remain available. Controller, chunks and day clocks are rendering-free.
 Leo retains its optional native portable presentation with the same authoritative state.
 
 `Game::drag_look()` opts into canvas dragging/right-stick look. Intent carries accumulated `look`

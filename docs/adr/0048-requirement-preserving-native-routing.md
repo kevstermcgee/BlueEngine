@@ -15,8 +15,9 @@ Custom simulation supports advanced native physics/netplay; a requested custom 2
 client not scaffolded by the sample is a workflow gap, not an engine capability removal.
 
 Creation defaults to Windows across the executable/JSON catalog and coordinator.
-Existing Linux/macOS development targets remain available explicitly. No browser
-fallback or gameplay simplification. A generated sample is not the requested completed game.
+Existing Linux/macOS development targets remain available explicitly. Native target validation follows runtime ownership: portable remains offline-only, while
+a custom legacy-native 2D NetGame/ClientView is not forbidden solely by dimensionality.
+No browser fallback or gameplay simplification. A generated sample is not the requested completed game.
 
 Acceptance: Windows 2D + enemies/projectiles/scoring/AI selects two-d with the original
 requirements; explicit stock conflicts and 2D native multiplayer return actionable gaps.

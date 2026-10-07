@@ -37,5 +37,4 @@ def native_target(game,platform_name):
     if not (Path(game)/'game.project.json').exists(): return None # legacy native projects
     project=validate_project(Path(game))
     if platform_name not in project['targets']: raise ProjectError(f"Target {platform_name} is not declared; targets are {project['targets']}. Edit game.project.json deliberately; no fallback.")
-    if project['presentation']=='2d' and project['networking']!='offline': raise ProjectError('The portable client supports offline only; use NetGame/ClientView with a custom native presentation for multiplayer.')
     return project

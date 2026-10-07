@@ -57,6 +57,12 @@ class BrowserRetirementTests(unittest.TestCase):
                         validate(game)
             write(base | {'runtime': 'legacy-native', 'presentation': '3d', 'networking': 'native-multiplayer'})
             self.assertEqual(validate(game)['networking'], 'native-multiplayer')
+            # A custom NetGame/ClientView may render in 2D. Runtime ownership,
+            # not dimensionality, determines the portable client's offline constraint.
+            write(base | {'runtime': 'legacy-native', 'presentation': '2d', 'networking': 'native-multiplayer'})
+            native = workflow.project_module(ROOT).native_target(game, 'windows')
+            self.assertEqual(native['presentation'], '2d')
+            self.assertEqual(native['networking'], 'native-multiplayer')
 
     def test_supported_games_have_native_target_and_full_native_shipping_gate(self):
         for name in ('lantern-run', 'pocket-breaker', 'orchard-watch', 'lantern-grove'):
