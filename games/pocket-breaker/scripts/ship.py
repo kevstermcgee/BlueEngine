@@ -2764,7 +2764,7 @@ class Verifier:
         for path, sizes in ((self.dist_exe(), (32, 256)), (self.project.dist_ico, (32, 256))):
             if path.is_file():
                 wanted.append((str(path), sizes))
-        lnk = self.launcher_path() if self.want_shortcut or self.icon_similarity else None
+        lnk = self.launcher_path() if self.want_shortcut else None
         if lnk is not None and lnk.is_file():
             wanted.append((str(lnk), (32, 256)))
         try:
@@ -2973,6 +2973,11 @@ class Verifier:
             return SKIP, 'a .command launcher carries no icon to compare'
         if not self.native_windows:
             return SKIP, 'shell icon rendering needs a Windows host'
+        if not self.want_shortcut:
+            # The advisory's own shortcut is optional too: render it only after the
+            # mandatory executable/resource checks have completed.
+            self.prefetch_shell()
+            self._shell.update(self._render_batch([(str(path), (32,))]))
         ours = make_signature(*self.render(path, 32))
         # Advisory rendering runs after required own-resource checks, so unrelated shell
         # errors cannot poison their cached evidence. Keep the optional work bounded/batched.

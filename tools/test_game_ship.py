@@ -2797,6 +2797,20 @@ class CompiledGameTests(unittest.TestCase):
         self.assertEqual(self.statuses(report)['exe-resources'], 'pass')
         self.assertEqual(self.statuses(report)['shortcut-file'], 'skip')
 
+    def test_advisory_own_shortcut_failure_cannot_poison_required_resources(self):
+        render = game_ship.shell_render
+        def fail_shortcut(paths, sizes=(32,)):
+            if str(self.lnk) in map(str, paths):
+                raise game_ship.ShipError('optional shortcut shell unavailable')
+            return render(paths, sizes)
+        with mock.patch.object(game_ship, 'desktop_folders', return_value={'user': self.folder, 'common': None}), \
+             mock.patch.object(game_ship, 'shell_render', side_effect=fail_shortcut):
+            code, report, _ = call_main(self.root, 'verify', '--json', '--icon-similarity', env=self.env)
+        self.assertEqual(code, 0, report)
+        self.assertEqual(self.statuses(report)['exe-resources'], 'pass')
+        self.assertEqual(self.statuses(report)['shortcut-file'], 'skip')
+        self.assertEqual(self.statuses(report)['shortcut-unique'], 'warn')
+
     def test_the_exe_must_carry_the_title(self):
         with self.set_identity(title='Another Name'):
             check = check_by_name(self.verify()[1], 'exe-resources')
