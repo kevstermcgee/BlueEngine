@@ -1,0 +1,66 @@
+name: Native Windows shipping verification
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [verify/native-windows-shipping]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-shipping-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lantern-run:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: engine-checks-test
+          save-if: false
+      - name: Build fresh native authoring tool
+        run: cargo build --locked --profile itest --no-default-features --bin be2-tools
+      - name: Check, package and smoke-test Lantern Run without installation
+        shell: pwsh
+        env:
+          BE2_TOOLS: ${{ github.workspace }}/target/itest/be2-tools.exe
+        run: |
+          $packet = python tools/be2.py start "Verify native Windows shipping for Lantern Run" --kind change-game --project games/lantern-run --compact | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $packet | ConvertTo-Json -Depth 100 | Set-Content .be2-work/windows-shipping-task.json
+          python tools/be2.py check --game games/lantern-run --loop shipping --task $packet.task
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tools/be2.py resume $packet.task --compact
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Package for hands-on Windows testing
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanternRun-Windows-test-package
+          path: games/lantern-run/dist/
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Shipping reports and captures
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: LanternRun-Windows-shipping-evidence
+          path: |
+            .be2-work/check-*/
+            .be2-work/tasks/
+            .be2-work/windows-shipping-task.json
+            games/lantern-run/.blue-check/
+          include-hidden-files: true
+          retention-days: 14
