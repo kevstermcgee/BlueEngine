@@ -24,6 +24,11 @@ the engine's bounded, texel-snapped shadow map, with contact-shadow fallback on
 devices unable to create the map. The starfield and warm horizon fade continuously.
 
 WASD or the left stick moves; Shift runs; Space hops; mouse or right stick looks.
+Every normal launch starts in first person at Leo's eye level, including after
+resuming a save. Walking and hopping interpolate between simulation ticks; mouse
+and stick look respond on each rendered frame. Leo still casts a shadow, but his
+head does not obscure the first-person view. Static scenery batches are reused
+until visible chunks, flower detail, world seed or render origin changes.
 Esc opens the menu, including Controls and Settings. Music starts enabled; its
 toggle is independent of nature sounds. M also toggles music. F5/F9 save/load a
 quick slot. An engine-owned rotating autosave preserves days and position every
@@ -32,7 +37,7 @@ A paused menu stops the authoritative clock.
 
 The world streams a bounded 7×7 grid of deterministic 32-metre chunks, with
 integer origin rebasing to preserve local movement precision. Trees block movement
-and protect the third-person camera. Chunks return unchanged when revisited.
+and protect the optional portrait capture camera. Chunks return unchanged when revisited.
 See [engine contracts](https://github.com/kevstermcgee/BlueEngine/blob/main/docs/PROCEDURAL_WORLDS.md)
 and [audio credits](AUDIO.md). Cargo.toml's `vesper3d` path locates the matching local
 engine checkout; build its native tools with `cargo build --profile fast --bin be2-tools`.

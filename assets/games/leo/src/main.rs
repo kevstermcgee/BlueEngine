@@ -225,7 +225,15 @@ async fn main() {
                 .unwrap_or_else(|e| fail(e));
             submissions += 1;
         }
-        scene.draw(&sim, life.alpha(), &materials, &mut shadows, portrait).unwrap_or_else(|e| fail(e));
+        let view = scene
+            .draw(
+                &sim,
+                life.alpha(),
+                &materials,
+                &mut shadows,
+                scene::ViewOptions { pending_look: life.pending_look(), portrait },
+            )
+            .unwrap_or_else(|e| fail(e));
         let ui = hud::ui_scale();
         let phase = sim.time().phase;
         if !notice.is_empty() {
@@ -255,7 +263,7 @@ async fn main() {
                 fail(e);
             }
             life.captured(&path, result);
-            evidence.push(serde_json::json!({"frame":life.frame(),"tick":sim.tick,"days":sim.time().days,"phase":phase,"origin":sim.origin,"local":sim.point().local,"chunks":sim.chunks.chunks().len(),"hash":format!("{:016x}",sim.state_hash()),"paused":shell.paused,"music_on":settings.music_on,"music_volume":settings.music_level(),"audio_ready":banks.is_some(),"audio_submissions":submissions}));
+            evidence.push(serde_json::json!({"frame":life.frame(),"tick":sim.tick,"days":sim.time().days,"phase":phase,"origin":sim.origin,"local":sim.point().local,"chunks":sim.chunks.chunks().len(),"hash":format!("{:016x}",sim.state_hash()),"paused":shell.paused,"music_on":settings.music_on,"music_volume":settings.music_level(),"audio_ready":banks.is_some(),"audio_submissions":submissions,"first_person":!portrait,"camera_eye":[view.eye.x,view.eye.y,view.eye.z],"player_eye":[sim.player.position.0,sim.player.position.1,sim.player.position.2],"world_rebuilds":scene.world_rebuilds()}));
         }
         if outcome.quit || game_client::exit_requested() || life.end_frame(dt) {
             break;

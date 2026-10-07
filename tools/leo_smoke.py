@@ -47,6 +47,9 @@ def main():
     assert report["shadows"] == "full", "capture must exercise the engine shadow map"
     assert report["gameplay_day_overlay"] is False
     assert all(row["audio_ready"] and row["chunks"] == 49 for row in rows)
+    assert all(row["first_person"] for row in rows), "normal launches must use first person"
+    assert all(sum((a - b) ** 2 for a, b in zip(row["camera_eye"], row["player_eye"])) < 0.04 for row in rows), "camera must follow interpolated eye position, without a third-person boom"
+    assert next(r for r in rows if r["frame"] == 340)["world_rebuilds"] == next(r for r in rows if r["frame"] == 498)["world_rebuilds"], "stationary frames must reuse static meadow batches"
     assert rows[-1]["days"] >= 2 and rows[-1]["paused"]
     assert not next(r for r in rows if r["frame"] == 65)["music_on"]
     assert next(r for r in rows if r["frame"] == 85)["music_on"]
@@ -57,12 +60,13 @@ def main():
         assert (capture / f"shot_{row['frame']:05d}.png").stat().st_size > 1000
     # Resume the saved day/position through the same load operation as F9, then show the menu.
     saved = next(r for r in rows if r["frame"] == 340)
-    resumed, resumed_dir = run("resume", "menu@0", "0", 1, extra=["--load", "quick", "--portrait"])
+    resumed, resumed_dir = run("resume", "menu@0", "0", 1, extra=["--load", "quick"])
     assert resumed.returncode == 0, resumed.stderr
     restored = json.loads((resumed_dir / "run.json").read_text())["state"][0]
     # Save occurs before the frame's executed movement step, so its exact clock precedes this frame's capture.
     assert restored["tick"] == saved["tick"] - 1 and restored["days"] == saved["days"]
     assert restored["origin"] == saved["origin"] and restored["paused"]
+    assert restored["first_person"], "loading a save must retain first-person presentation"
     assert json.loads((output / "settings.json").read_text())["music_on"] is True
     portrait, portrait_dir = run("portrait", "", "55", 56, extra=["--mute", "--portrait"])
     assert portrait.returncode == 0, portrait.stderr
@@ -78,7 +82,7 @@ def main():
     assert json.loads((muted_dir / "run.json").read_text())["audio_submissions"] == 0
     evidence = {"ok": True, "platform": "Linux CI / virtual display / software GL / null ALSA", "frames": 503,
                 "days": rows[-1]["days"], "audio_submissions": report["audio_submissions"],
-                "save_resume": True, "music_toggle_persisted": True, "negative_exit": negative.returncode,
+                "save_resume": True, "first_person": True, "world_rebuilds": rows[-1]["world_rebuilds"], "music_toggle_persisted": True, "negative_exit": negative.returncode,
                 "shadows": report["shadows"], "day_count_in_menu_only": True,
                 "portrait": "portrait/shot_00055.png", "audibility_verified": False}
     (output / "evidence.json").write_text(json.dumps(evidence, indent=2) + "\n")
