@@ -1,7 +1,7 @@
-//! Prickle Putt: nine-hole hedgehog mini-golf for two people passing one controller.
+//! Prickle Putt: nine-hole hedgehog mini-golf.
 //!
-//! Prickle and Bramble curl up and get flung around hedge-walled greens. Aim with the stick, press
-//! once to start the power meter, press again to fling. Every hole, the controller changes hands.
+//! Prickle curls up and gets flung around hedge-walled greens. Aim with the stick, press once to start
+//! the power meter, press again to fling. Beat par, earn a medal, and chase your best score on every hole.
 //! Rules are integer-only and rendering-free; the shared client owns devices, audio, saves and timing.
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
@@ -13,9 +13,8 @@ pub const HOLES: usize = 9;
 pub const SUB: i32 = 64;
 /// Ball radius in logical pixels.
 pub const BALL: i32 = 12;
-/// A hole is scored at this many strokes if the ball is still out.
+/// The most strokes a hole can take; the next one is scored as a pick-up.
 pub const STROKE_CAP: u8 = 7;
-pub const NAMES: [&str; 2] = ["Prickle", "Bramble"];
 
 const QUARTER: [i32; 65] = [
     0, 101, 201, 301, 401, 501, 601, 700, 799, 897, 995, 1092, 1189, 1285, 1380, 1474, 1567, 1660,
@@ -137,37 +136,36 @@ pub fn par_total() -> u32 {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Phase {
-    /// Title card: pick who tees off, read the records.
+    /// Title card with the records.
     Intro,
-    /// "Pass the controller": waits for the next player's press.
-    Handoff,
     Aim,
     Power,
     Rolling,
     /// Sink animation.
     Holed,
-    /// Hole result card for the player who just finished.
+    /// Hole result card.
     HoleDone,
-    /// Round over: totals, winner, records.
+    /// Round over: total, medal, records.
     Results,
 }
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Records {
     pub rounds: u32,
-    pub wins: [u32; 2],
-    /// Best completed round per hedgehog; 0 means none yet.
-    pub best_round: [u32; 2],
-    pub aces: [u32; 2],
+    /// Best completed round in strokes; 0 means none yet.
+    pub best_round: u32,
+    pub aces: u32,
+    /// Fewest strokes ever taken on each hole; 0 means not holed yet.
+    pub best_hole: [u8; HOLES],
+    /// Gold, silver and bronze medals earned.
+    pub medals: [u32; 3],
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct State {
     pub tick: u32,
     pub phase: Phase,
     pub timer: u32,
-    pub first: u8,
-    pub player: u8,
     pub hole: u8,
-    pub strokes: [[u8; HOLES]; 2],
+    pub strokes: [u8; HOLES],
     pub x: i32,
     pub y: i32,
     pub vx: i32,
@@ -180,6 +178,11 @@ pub struct State {
     pub roll: i32,
     pub rest: u32,
     pub splash: u32,
+    /// Ticks left on the "Hole N, par P" banner.
+    pub banner: u32,
+    /// Medal for the finished round: 0 gold, 1 silver, 2 bronze, 3 none.
+    pub medal: u8,
+    pub new_best: bool,
     pub records: Records,
 }
 pub struct Putt {
@@ -191,10 +194,23 @@ impl Putt {
         layout(self.state.hole as usize)
     }
     pub fn strokes_now(&self) -> u8 {
-        self.state.strokes[self.state.player as usize][self.state.hole as usize]
+        self.state.strokes[self.state.hole as usize]
     }
-    pub fn total(&self, player: usize) -> u32 {
-        self.state.strokes[player].iter().map(|&s| s as u32).sum()
+    pub fn total(&self) -> u32 {
+        self.state.strokes.iter().map(|&s| s as u32).sum()
+    }
+    /// 0 gold (at or under par), 1 silver (within 6), 2 bronze (within 12), 3 none.
+    pub fn medal_for(total: u32) -> u8 {
+        let par = par_total();
+        if total <= par {
+            0
+        } else if total <= par + 6 {
+            1
+        } else if total <= par + 12 {
+            2
+        } else {
+            3
+        }
     }
     pub fn speed(&self) -> i32 {
         isqrt(self.state.vx as i64 * self.state.vx as i64 + self.state.vy as i64 * self.state.vy as i64) as i32
@@ -210,9 +226,10 @@ impl Putt {
         self.state.roll = 0;
         self.state.rest = 0;
     }
-    fn begin_hole_for(&mut self, player: u8) {
-        self.state.player = player;
-        self.state.phase = Phase::Handoff;
+    fn begin_hole(&mut self) {
+        self.state.phase = Phase::Aim;
+        self.state.hold = 0;
+        self.state.banner = 150;
         self.place_at_tee();
     }
     fn ball_rect(x: i32, y: i32) -> Rect {
@@ -239,43 +256,49 @@ impl Putt {
         }
     }
     fn finish_hole(&mut self, holed: bool) {
-        let p = self.state.player as usize;
         let h = self.state.hole as usize;
         if !holed {
-            self.state.strokes[p][h] = STROKE_CAP + 1;
+            self.state.strokes[h] = STROKE_CAP + 1;
         }
-        if self.state.strokes[p][h] == 1 {
-            self.state.records.aces[p] += 1;
+        let strokes = self.state.strokes[h];
+        let r = &mut self.state.records;
+        if holed && (r.best_hole[h] == 0 || strokes < r.best_hole[h]) {
+            r.best_hole[h] = strokes;
+        }
+        if holed && strokes == 1 {
+            r.aces += 1;
         }
         self.state.phase = Phase::HoleDone;
         self.state.timer = 0;
     }
     fn after_hole_done(&mut self) {
-        if self.state.player == self.state.first {
-            self.begin_hole_for(1 - self.state.first);
-        } else if (self.state.hole as usize) + 1 < HOLES {
+        if (self.state.hole as usize) + 1 < HOLES {
             self.state.hole += 1;
-            self.begin_hole_for(self.state.first);
+            self.begin_hole();
         } else {
-            let totals = [self.total(0), self.total(1)];
+            let total = self.total();
+            let medal = Self::medal_for(total);
             let r = &mut self.state.records;
             r.rounds += 1;
-            for p in 0..2 {
-                if r.best_round[p] == 0 || totals[p] < r.best_round[p] {
-                    r.best_round[p] = totals[p];
-                }
+            let improved = r.best_round == 0 || total < r.best_round;
+            if improved {
+                r.best_round = total;
             }
-            if totals[0] != totals[1] {
-                r.wins[usize::from(totals[1] < totals[0])] += 1;
+            if medal < 3 {
+                r.medals[medal as usize] += 1;
             }
+            self.state.medal = medal;
+            self.state.new_best = improved;
             self.state.phase = Phase::Results;
             self.state.timer = 0;
         }
     }
     fn new_round(&mut self) {
-        self.state.strokes = [[0; HOLES]; 2];
+        self.state.strokes = [0; HOLES];
         self.state.hole = 0;
-        self.begin_hole_for(self.state.first);
+        self.state.medal = 3;
+        self.state.new_best = false;
+        self.begin_hole();
     }
     fn step_rolling(&mut self) {
         let l = layout(self.state.hole as usize);
@@ -329,10 +352,9 @@ impl Putt {
             s.vx = 0;
             s.vy = 0;
             s.splash = 40;
-            let p = s.player as usize;
             let h = s.hole as usize;
-            s.strokes[p][h] = s.strokes[p][h].saturating_add(1);
-            let capped = s.strokes[p][h] >= STROKE_CAP;
+            s.strokes[h] = s.strokes[h].saturating_add(1);
+            let capped = s.strokes[h] >= STROKE_CAP;
             self.cues.push(1);
             if capped {
                 self.finish_hole(false);
@@ -360,7 +382,7 @@ impl Putt {
                 s.vx = 0;
                 s.vy = 0;
                 s.rest = 0;
-                let capped = s.strokes[s.player as usize][s.hole as usize] >= STROKE_CAP;
+                let capped = s.strokes[s.hole as usize] >= STROKE_CAP;
                 if capped {
                     self.finish_hole(false);
                 } else {
@@ -376,7 +398,7 @@ impl Putt {
 impl GameLogic for Putt {
     const ID: &'static str = "prickle-putt";
     const TITLE: &'static str = "Prickle Putt";
-    const CONTROLS: &'static str = "Stick/arrows aim · Space/A: start meter, then fling · Pass after each hole";
+    const CONTROLS: &'static str = "Stick/arrows aim · Space/A: start the meter, then fling";
     const VERIFY_TICKS: u32 = 900;
     fn new(_: u64) -> Self {
         let mut game = Self {
@@ -384,10 +406,8 @@ impl GameLogic for Putt {
                 tick: 0,
                 phase: Phase::Intro,
                 timer: 0,
-                first: 0,
-                player: 0,
                 hole: 0,
-                strokes: [[0; HOLES]; 2],
+                strokes: [0; HOLES],
                 x: 0,
                 y: 0,
                 vx: 0,
@@ -400,6 +420,9 @@ impl GameLogic for Putt {
                 roll: 0,
                 rest: 0,
                 splash: 0,
+                banner: 0,
+                medal: 3,
+                new_best: false,
                 records: Records::default(),
             },
             cues: vec![],
@@ -411,7 +434,7 @@ impl GameLogic for Putt {
         Intent { x: 1, action: true, ..Default::default() }
     }
     fn probe_success(&self) -> bool {
-        self.state.first != 0 || self.state.phase != Phase::Intro
+        self.state.phase != Phase::Intro
     }
     fn tick(&self) -> u32 {
         self.state.tick
@@ -420,12 +443,11 @@ impl GameLogic for Putt {
         "playing"
     }
     fn verification_input(tick: u32) -> Intent {
-        // Pick Bramble to tee off, confirm the handoff, start the meter, fling, then keep
-        // pressing so the route crosses handoffs, rolls and hole cards.
-        let press = matches!(tick, 5 | 30 | 60 | 85) || (tick > 120 && tick % 150 == 0);
+        // Start the round, open the power meter, fling, then keep pressing so the route crosses
+        // rolls, hole cards and the next hole's banner.
+        let press = matches!(tick, 5 | 30 | 60) || (tick > 120 && tick % 150 == 0);
         Intent {
-            x: i32::from((5..20).contains(&tick)),
-            y: i32::from((300..330).contains(&tick)),
+            x: i32::from((70..90).contains(&tick)),
             action: press,
             ..Default::default()
         }
@@ -438,10 +460,7 @@ impl GameLogic for Putt {
     }
     fn audio_level(&self, _bank: &str, layer: &str) -> f32 {
         let rolling = self.state.phase == Phase::Rolling;
-        let between = matches!(
-            self.state.phase,
-            Phase::Intro | Phase::Handoff | Phase::HoleDone | Phase::Results
-        );
+        let between = matches!(self.state.phase, Phase::Intro | Phase::HoleDone | Phase::Results);
         match layer {
             "meadow" => 0.6,
             "stroll" => if between { 0.2 } else { 0.5 },
@@ -464,20 +483,11 @@ impl Simulation for Putt {
     fn step(&mut self, i: &Intent) {
         self.state.tick += 1;
         self.state.splash = self.state.splash.saturating_sub(1);
+        self.state.banner = self.state.banner.saturating_sub(1);
         match self.state.phase {
             Phase::Intro => {
-                if i.x != 0 {
-                    self.state.first = u8::from(i.x > 0);
-                }
                 if i.action {
                     self.new_round();
-                    self.cues.push(0);
-                }
-            }
-            Phase::Handoff => {
-                if i.action {
-                    self.state.phase = Phase::Aim;
-                    self.state.hold = 0;
                     self.cues.push(0);
                 }
             }
@@ -514,9 +524,8 @@ impl Simulation for Putt {
                     s.vx = (speed as i64 * cos256(s.aim) as i64 / 4096) as i32;
                     s.vy = (speed as i64 * sin256(s.aim) as i64 / 4096) as i32;
                     s.last = (s.x, s.y);
-                    let p = s.player as usize;
                     let h = s.hole as usize;
-                    s.strokes[p][h] = s.strokes[p][h].saturating_add(1);
+                    s.strokes[h] = s.strokes[h].saturating_add(1);
                     s.phase = Phase::Rolling;
                     s.rest = 0;
                     self.cues.push(0);
@@ -538,7 +547,6 @@ impl Simulation for Putt {
             Phase::Results => {
                 self.state.timer += 1;
                 if i.action && self.state.timer > 30 {
-                    self.state.first = 1 - self.state.first;
                     self.new_round();
                     self.cues.push(0);
                 }
@@ -557,11 +565,10 @@ impl Snapshot for Putt {
     }
     fn restore(&mut self, state: State) -> Result<(), String> {
         if state.hole as usize >= HOLES
-            || state.player > 1
-            || state.first > 1
             || !(0..256).contains(&state.aim)
             || !(0..=100).contains(&state.power)
-            || state.strokes.iter().flatten().any(|&s| s > STROKE_CAP + 1)
+            || state.strokes.iter().any(|&s| s > STROKE_CAP + 1)
+            || state.medal > 3
             || state.x < FIELD.x * SUB
             || state.x > (FIELD.x + FIELD.w) * SUB
             || state.y < FIELD.y * SUB
@@ -577,14 +584,12 @@ impl Snapshot for Putt {
 #[cfg(feature = "client")]
 const PRICKLE_PNG: &[u8] = include_bytes!("../assets/sprites/prickle.png");
 #[cfg(feature = "client")]
-const BRAMBLE_PNG: &[u8] = include_bytes!("../assets/sprites/bramble.png");
-#[cfg(feature = "client")]
 impl draw::Game for Putt {
     fn show_hud() -> bool {
         false
     }
     fn menu_status(&self) -> String {
-        format!("Hole {} of {}  ·  Prickle {}  Bramble {}", self.state.hole + 1, HOLES, self.total(0), self.total(1))
+        format!("Hole {} of {}  ·  {} strokes", self.state.hole + 1, HOLES, self.total())
     }
     fn draw(&self, s: &mut draw::Scene) {
         use draw::*;
@@ -597,10 +602,8 @@ impl draw::Game for Putt {
         let sand = Color::new(0.87, 0.78, 0.52, 1.);
         let water = Color::new(0.24, 0.52, 0.86, 1.);
         let water2 = Color::new(0.42, 0.68, 0.95, 1.);
-        let tints = [Color::new(0.45, 0.65, 1., 1.), Color::new(1., 0.6, 0.3, 1.)];
-        let sprite = |p: usize| -> (&'static str, &'static [u8]) {
-            if p == 0 { ("prickle", PRICKLE_PNG) } else { ("bramble", BRAMBLE_PNG) }
-        };
+        let medal_colors = [GOLD, Color::new(0.82, 0.85, 0.9, 1.), Color::new(0.8, 0.5, 0.3, 1.)];
+        let medal_names = ["GOLD", "SILVER", "BRONZE"];
         for i in 0..20 {
             s.rect(-10, Rect::new(i * 40, 0, 40, 450), if i % 2 == 0 { grass } else { grass2 });
         }
@@ -640,11 +643,10 @@ impl draw::Game for Putt {
         if playing_ball {
             let sink = if st.phase == Phase::Holed { (50 - st.timer.min(50)) as f32 / 50. } else { 1. };
             let size = 30. * sink;
-            let (id, png) = sprite(st.player as usize);
             s.sprite_png(
                 8,
-                id,
-                png,
+                "prickle",
+                PRICKLE_PNG,
                 Transform {
                     position: [st.x as f32 / SUB as f32 - size / 2., st.y as f32 / SUB as f32 - size / 2.],
                     rotation: st.roll as f32 / 180.,
@@ -671,68 +673,69 @@ impl draw::Game for Putt {
                 s.text(22, "Aim, then press to swing", Point::new(300, 416), 16., WHITE);
             }
         }
-        s.text(20, format!("Hole {}  ·  Par {}", st.hole + 1, l.par), Point::new(330, 30), 22., GOLD);
-        for p in 0..2 {
-            let x = 520 + p as i32 * 130;
-            let active = playing_ball && st.player as usize == p;
-            s.text(20, format!("{} {}", NAMES[p], self.total(p)), Point::new(x, 30), 20., if active { tints[p] } else { WHITE });
-            if active {
-                s.rect(19, Rect::new(x - 4, 36, 100, 3), tints[p]);
+        if !matches!(st.phase, Phase::Intro | Phase::Results) {
+            s.text(20, format!("Hole {}  ·  Par {}", st.hole + 1, l.par), Point::new(40, 30), 22., GOLD);
+            let strokes = self.strokes_now() + u8::from(matches!(st.phase, Phase::Aim | Phase::Power));
+            s.text(20, format!("Stroke {}", strokes), Point::new(40, 52), 16., WHITE);
+            let done = st.hole as usize + usize::from(matches!(st.phase, Phase::Holed | Phase::HoleDone));
+            let par_done: i32 = (0..done).map(|h| layout(h).par as i32).sum();
+            let taken: i32 = st.strokes[..done].iter().map(|&v| v as i32).sum();
+            let diff = taken - par_done;
+            let label = if done == 0 { "no holes finished".to_string() } else if diff == 0 { "level par".to_string() } else if diff > 0 { format!("+{} over par", diff) } else { format!("{} under par", -diff) };
+            s.text(20, format!("Total {}  ({})", self.total(), label), Point::new(560, 30), 20., WHITE);
+            let best = st.records.best_hole[st.hole as usize];
+            if best > 0 {
+                s.text(20, format!("Your best on this hole: {}", best), Point::new(560, 52), 16., TEAL);
             }
+        }
+        if st.banner > 0 && st.phase == Phase::Aim {
+            let a = (st.banner as f32 / 40.).min(1.);
+            s.text(25, format!("HOLE {}", st.hole + 1), Point::new(330, 150), 40., Color::new(1., 1., 1., a));
+            s.text(25, format!("Par {}", l.par), Point::new(370, 180), 24., Color::new(1., 0.72, 0.25, a));
         }
         let dim = Color::new(0.02, 0.05, 0.04, 0.72);
         match st.phase {
             Phase::Intro => {
                 s.rect(30, Rect::new(60, 60, 680, 330), dim);
                 s.text(31, "PRICKLE PUTT", Point::new(260, 110), 44., GOLD);
-                s.text(31, "Nine holes. One controller. Pass it after every hole.", Point::new(170, 140), 20., WHITE);
-                s.text(31, "Who tees off first?  (left / right, then press)", Point::new(220, 175), 18., TEAL);
-                for p in 0..2usize {
-                    let x = 230 + p as i32 * 250;
-                    let chosen = st.first as usize == p;
-                    if chosen {
-                        s.rect(31, Rect::new(x - 20, 190, 140, 150), Color::new(1., 1., 1., 0.12));
-                    }
-                    let (id, png) = sprite(p);
-                    s.sprite_png(32, id, png, Transform { position: [x as f32 + 2., 198.], ..Default::default() }, [96., 96.], WHITE);
-                    s.text(32, NAMES[p], Point::new(x + 10, 322), 22., if chosen { tints[p] } else { WHITE });
-                }
+                s.text(31, "Fling the hedgehog. Sink the putt. Beat par on nine holes.", Point::new(150, 142), 20., WHITE);
+                s.sprite_png(32, "prickle", PRICKLE_PNG, Transform { position: [352., 160.], ..Default::default() }, [96., 96.], WHITE);
+                s.text(31, "Press to tee off", Point::new(330, 290), 20., TEAL);
                 let r = &st.records;
-                s.text(31, format!("Rounds {}   Wins {}-{}   Best {} / {}   Aces {} / {}", r.rounds, r.wins[0], r.wins[1], r.best_round[0], r.best_round[1], r.aces[0], r.aces[1]), Point::new(150, 370), 17., TEAL);
-            }
-            Phase::Handoff => {
-                s.rect(30, Rect::new(160, 120, 480, 200), dim);
-                let p = st.player as usize;
-                s.text(31, format!("Pass the controller to {}", NAMES[p]), Point::new(200, 170), 26., tints[p]);
-                s.text(31, format!("Hole {}, par {}. Press when ready.", st.hole + 1, l.par), Point::new(200, 210), 20., WHITE);
-                if st.hole > 0 || st.player != st.first {
-                    s.text(31, format!("Prickle {}  ·  Bramble {}", self.total(0), self.total(1)), Point::new(200, 250), 20., GOLD);
-                }
-                s.text(31, "Stick aims · press once for the meter, again to fling", Point::new(200, 290), 16., TEAL);
+                let best = if r.best_round == 0 { "-".to_string() } else { r.best_round.to_string() };
+                s.text(31, format!("Rounds {}   Best round {} (par {})   Hole-in-ones {}", r.rounds, best, par_total(), r.aces), Point::new(150, 330), 17., TEAL);
+                s.text(31, format!("Medals: gold {}  silver {}  bronze {}", r.medals[0], r.medals[1], r.medals[2]), Point::new(240, 358), 17., GOLD);
             }
             Phase::HoleDone => {
                 s.rect(30, Rect::new(160, 120, 480, 200), dim);
-                let p = st.player as usize;
-                let strokes = st.strokes[p][st.hole as usize];
+                let strokes = st.strokes[st.hole as usize];
                 s.text(31, Self::verdict(strokes, l.par), Point::new(200, 175), 34., GOLD);
-                let shown = if strokes > STROKE_CAP { format!("{} (cap)", strokes) } else { strokes.to_string() };
-                s.text(31, format!("{} finished hole {} in {}", NAMES[p], st.hole + 1, shown), Point::new(200, 215), 20., WHITE);
-                s.text(31, format!("Prickle {}  ·  Bramble {}", self.total(0), self.total(1)), Point::new(200, 250), 20., tints[p]);
+                let shown = if strokes > STROKE_CAP { format!("{} (picked up)", strokes) } else { strokes.to_string() };
+                s.text(31, format!("Hole {} in {}  ·  par {}", st.hole + 1, shown, l.par), Point::new(200, 215), 20., WHITE);
+                let best = st.records.best_hole[st.hole as usize];
+                if best > 0 && best == strokes && strokes <= STROKE_CAP {
+                    s.text(31, "Your best on this hole!", Point::new(200, 250), 18., PINK);
+                }
                 s.text(31, "Press to continue", Point::new(200, 290), 16., TEAL);
             }
             Phase::Results => {
-                s.rect(30, Rect::new(100, 80, 600, 300), dim);
-                let t = [self.total(0), self.total(1)];
-                let title = if t[0] == t[1] { "A TIE!".to_string() } else { format!("{} WINS!", NAMES[usize::from(t[1] < t[0])]) };
-                s.text(31, title, Point::new(140, 130), 36., GOLD);
-                s.text(31, format!("Prickle {}   Bramble {}   (par {})", t[0], t[1], par_total()), Point::new(140, 170), 22., WHITE);
-                for p in 0..2 {
-                    let row: Vec<String> = st.strokes[p].iter().map(|v| v.to_string()).collect();
-                    s.text(31, format!("{:<8} {}", NAMES[p], row.join("  ")), Point::new(140, 210 + p as i32 * 28), 18., tints[p]);
+                s.rect(100, Rect::new(100, 80, 600, 300), dim);
+                let t = self.total();
+                s.text(101, "ROUND COMPLETE", Point::new(140, 125), 34., GOLD);
+                s.text(101, format!("{} strokes  (par {})", t, par_total()), Point::new(140, 168), 24., WHITE);
+                if st.medal < 3 {
+                    s.text(101, format!("{} MEDAL!", medal_names[st.medal as usize]), Point::new(140, 205), 26., medal_colors[st.medal as usize]);
+                } else {
+                    s.text(101, "No medal yet. Within 12 of par earns bronze.", Point::new(140, 205), 18., WHITE);
                 }
-                let r = &st.records;
-                s.text(31, format!("Wins {}-{}   Best rounds {} / {}", r.wins[0], r.wins[1], r.best_round[0], r.best_round[1]), Point::new(140, 290), 18., TEAL);
-                s.text(31, "Press for a new round (the other hedgehog tees off first)", Point::new(140, 340), 16., WHITE);
+                if st.new_best {
+                    s.text(101, "NEW BEST ROUND!", Point::new(140, 238), 22., PINK);
+                }
+                let row: Vec<String> = st.strokes.iter().map(|v| v.to_string()).collect();
+                s.text(101, format!("Holes  {}", row.join("  ")), Point::new(140, 280), 18., TEAL);
+                let pars: Vec<String> = (0..HOLES).map(|h| layout(h).par.to_string()).collect();
+                s.text(101, format!("Par    {}", pars.join("  ")), Point::new(140, 304), 18., WHITE);
+                s.text(101, "Press to play again", Point::new(140, 345), 16., WHITE);
             }
             _ => {}
         }
@@ -745,8 +748,6 @@ mod tests {
         Intent { action: true, ..Default::default() }
     }
     fn start_hole(g: &mut Putt) {
-        g.step(&press());
-        assert_eq!(g.state.phase, Phase::Handoff);
         g.step(&press());
         assert_eq!(g.state.phase, Phase::Aim);
     }
@@ -777,13 +778,13 @@ mod tests {
         for i in &inputs {
             g.step(i);
         }
-        assert_eq!(g.state.first, 1, "the route picks Bramble to tee off");
-        assert!(g.total(1) >= 1, "the route flings at least once");
+        assert_ne!(g.state.phase, Phase::Intro, "the route starts the round");
+        assert!(g.total() >= 1, "the route flings at least once");
         if let Ok(path) = std::env::var("BE2_VERIFY_REPORT") {
             std::fs::write(
                 path,
                 serde_json::json!({"hash":format!("{hash:016x}"),"outcome":outcome,"ticks":Putt::VERIFY_TICKS,
-                    "purpose":"Open-ended hot-seat golf: picks the first player, confirms the handoff, flings with the meter and continues through hole cards"}).to_string(),
+                    "purpose":"Open-ended mini-golf: starts the round, opens the power meter, flings and continues through hole cards"}).to_string(),
             )
             .unwrap();
         }
@@ -815,6 +816,7 @@ mod tests {
             g.step(&Intent::default());
         }
         assert_eq!(g.state.phase, Phase::HoleDone);
+        assert!(g.state.records.best_hole[0] >= 1, "the first hole's best is recorded");
     }
     #[test]
     fn walls_reflect_and_bumpers_speed_the_ball_up() {
@@ -866,26 +868,15 @@ mod tests {
         settle(&mut dune);
         assert!(dune.state.x < grass.state.x, "sand stops the ball sooner");
     }
-    #[test]
-    fn cap_ends_a_hole_and_records_survive_rounds_and_restart() {
-        let mut g = Putt::new(7);
-        start_hole(&mut g);
-        for _ in 0..STROKE_CAP {
-            assert_eq!(g.state.phase, Phase::Aim);
-            fling(&mut g, 64, 1);
-            settle(&mut g);
-        }
-        assert_eq!(g.state.phase, Phase::HoleDone);
-        assert_eq!(g.state.strokes[0][0], STROKE_CAP + 1);
-        // Bramble now plays; sink every hole for both by teleporting next to the cup and tapping it in.
+    /// Sink every remaining hole with a tap from beside the cup.
+    fn tap_in_everything(g: &mut Putt) {
         let mut guard = 0;
         while g.state.phase != Phase::Results && guard < 60 {
             guard += 1;
             for _ in 0..25 {
                 g.step(&Intent::default());
             }
-            g.step(&press());
-            if g.state.phase == Phase::Handoff {
+            if g.state.phase == Phase::HoleDone {
                 g.step(&press());
             }
             if g.state.phase != Phase::Aim {
@@ -894,20 +885,48 @@ mod tests {
             let l = g.layout();
             g.state.x = (l.cup.0 - 20) * SUB;
             g.state.y = l.cup.1 * SUB;
-            fling(&mut g, 0, 0);
-            settle(&mut g);
+            fling(g, 0, 0);
+            settle(g);
             for _ in 0..60 {
                 g.step(&Intent::default());
             }
         }
+    }
+    #[test]
+    fn cap_ends_a_hole_and_a_round_earns_a_medal_and_records() {
+        let mut g = Putt::new(7);
+        start_hole(&mut g);
+        for _ in 0..STROKE_CAP {
+            assert_eq!(g.state.phase, Phase::Aim);
+            fling(&mut g, 64, 1);
+            settle(&mut g);
+        }
+        assert_eq!(g.state.phase, Phase::HoleDone);
+        assert_eq!(g.state.strokes[0], STROKE_CAP + 1, "seven strokes and you pick up");
+        assert_eq!(g.state.records.best_hole[0], 0, "a pick-up is not a best");
+        tap_in_everything(&mut g);
         assert_eq!(g.state.phase, Phase::Results, "a whole round plays out");
         assert_eq!(g.state.records.rounds, 1);
-        assert!(g.state.records.best_round[0] > 0 && g.state.records.best_round[1] > 0);
+        assert!(g.state.records.best_round > 0 && g.state.new_best);
+        assert!(g.state.records.best_hole[1..].iter().all(|&b| b >= 1));
+        assert!(g.state.records.aces >= 1, "tapping in from the cup edge on a fresh hole can be an ace");
         let records = g.state.records.clone();
         g.restart();
         assert_eq!(g.state.phase, Phase::Intro);
-        assert_eq!(g.state.records, records, "restart keeps the scoreboard");
-        assert_eq!(g.total(0) + g.total(1), 0);
+        assert_eq!(g.state.records, records, "restart keeps the records");
+        assert_eq!(g.total(), 0);
+        g.step(&press());
+        assert_eq!(g.state.hole, 0);
+        assert!(g.state.banner > 0, "each hole opens with a banner");
+    }
+    #[test]
+    fn medals_follow_par() {
+        let par = par_total();
+        assert_eq!(par, 32);
+        assert_eq!(Putt::medal_for(par), 0);
+        assert_eq!(Putt::medal_for(par + 6), 1);
+        assert_eq!(Putt::medal_for(par + 12), 2);
+        assert_eq!(Putt::medal_for(par + 13), 3);
     }
     #[test]
     fn saves_reject_nonsense_and_the_probe_is_meaningful() {
@@ -919,7 +938,7 @@ mod tests {
         far.x = 0;
         assert!(g.restore(far).is_err());
         assert!(!g.probe_success());
-        g.step(&Intent { x: 1, ..Default::default() });
+        g.step(&Putt::probe_input());
         assert!(g.probe_success());
         assert_eq!(Putt::verdict(1, 3), "HOLE IN ONE!");
         assert_eq!(Putt::verdict(2, 3), "BIRDIE!");

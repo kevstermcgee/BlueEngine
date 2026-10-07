@@ -1,6 +1,6 @@
 {
   "title": "Prickle Putt",
-  "tagline": "Two hedgehogs, nine hedge-walled greens, one controller to pass.",
+  "tagline": "Prickle the hedgehog curls up and gets flung around nine hedge-walled greens.",
   "controls": "Stick/arrows aim; Space or A starts the meter then flings; N music, M sound, K save, L load, R restart",
   "engine_revision": "28a8c4d2e6d8",
   "package": [

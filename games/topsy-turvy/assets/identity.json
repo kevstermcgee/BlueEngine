@@ -1,6 +1,6 @@
 {
   "title": "Topsy-Turvy",
-  "tagline": "Two bats, one cave, one button: flip gravity, shave the spikes, go deeper.",
+  "tagline": "Dusk the bat flips gravity through a cave, shaving spikes to build heat and go deeper.",
   "controls": "A/Space flips gravity; UP = ceiling, DOWN = floor; N music, M sound, K save, L load, R restart",
   "engine_revision": "28a8c4d2e6d8",
   "package": [

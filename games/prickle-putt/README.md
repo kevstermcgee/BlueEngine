@@ -1,6 +1,6 @@
 # Prickle Putt
 
-A 2D hot-seat game for two people sharing one controller. Prickle and Bramble are two hedgehogs who curl into balls and get flung around nine hedge-walled greens. Aim with the stick, press once to start the swing meter and again to fling. Water costs a stroke, sand drags, mushrooms bounce. The controller changes hands after every hole; the scoreboard, best rounds and hole-in-ones are kept between sessions.
+A single-player 2D game. Prickle the hedgehog curls into a ball and gets flung around nine hedge-walled greens. Aim with the stick, press once to start the swing meter and again to fling. Water costs a stroke, sand drags, mushrooms bounce. Beat par for a medal and chase your best on every hole; best round, best per hole, hole-in-ones and medals are kept between sessions.
 
 Stick/arrows aim, Space or A starts the meter then flings, N music, M sound, K save, L load, R restart (records survive restart).
 

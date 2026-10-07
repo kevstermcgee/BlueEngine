@@ -1,6 +1,6 @@
 {
   "complexity": "low",
-  "description": "Two pufferfish, one reef, one controller: puff up, squeeze through, pop the walls.",
+  "description": "Pip the pufferfish puffs up, squeezes through the reef and pops the bubble walls.",
   "id": "puff-pop",
   "input": [
     "keyboard",

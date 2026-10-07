@@ -1,7 +1,7 @@
 {
   "title": "Puff Pop",
-  "tagline": "Two pufferfish, one reef, one controller: puff up, squeeze through, pop the walls.",
-  "controls": "Hold UP (stick or D-pad) to puff and float, release to sink, DOWN to squeeze; A/Space confirms; N music, M sound, K save, L load",
+  "tagline": "Pip the pufferfish puffs up, squeezes through the reef and pops the bubble walls.",
+  "controls": "Hold UP (stick or D-pad) to puff and float, release to sink, DOWN to squeeze; N music, M sound, K save, L load, R restart",
   "engine_revision": "28a8c4d2e6d8",
   "package": [
     "assets/audio"

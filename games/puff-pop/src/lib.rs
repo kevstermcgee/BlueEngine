@@ -1,18 +1,16 @@
-//! Puff Pop: two pufferfish take turns diving through a reef.
+//! Puff Pop: Pip the pufferfish dives through an endless reef.
 //!
 //! Hold up (stick, D-pad, W or the arrow key) to inflate and float; let go to sink; hold down to
 //! squeeze small. Thread the coral gaps, grab pearls in a chain and pop the bubble walls while fully
-//! puffed. Three dives each, then the controller passes. Integer rules, rendering-free.
+//! puffed. Three hearts per dive; beat your best and earn hats. Integer rules, rendering-free.
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use vesper3d::runtime::snapshot;
 use vesper3d::two_d::*;
 
-pub const DIVES: usize = 3;
-pub const NAMES: [&str; 2] = ["Pip", "Poppy"];
 pub const TOP: i32 = 52;
 pub const FLOOR: i32 = 398;
-pub const PLAYER_X: i32 = 200;
+pub const FISH_X: i32 = 200;
 pub const HEARTS: i32 = 3;
 /// Lifetime pearls needed for each hat tier.
 pub const HAT_TIERS: [u32; 4] = [40, 150, 400, 900];
@@ -66,28 +64,23 @@ pub struct Obj {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Phase {
     Intro,
-    Handoff,
     Dive,
     Sunk,
-    Results,
 }
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Records {
-    pub matches: u32,
-    pub wins: [u32; 2],
-    pub best_dive: [u32; 2],
-    pub best_chain: [u32; 2],
+    pub dives: u32,
+    pub best_dive: u32,
+    pub best_chain: u32,
     /// Pearls collected over every dive; unlocks the hats.
-    pub pearls: [u32; 2],
+    pub pearls: u32,
+    pub walls_popped: u32,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct State {
     pub tick: u32,
     pub phase: Phase,
     pub timer: u32,
-    pub first: u8,
-    pub dive: u8,
-    pub scores: [[u32; DIVES]; 2],
     pub dist16: i32,
     pub ys: i32,
     pub vys: i32,
@@ -103,6 +96,7 @@ pub struct State {
     pub last_cy: i32,
     pub objs: Vec<Obj>,
     pub unlocked: bool,
+    pub new_best: bool,
     pub popped: u32,
     pub records: Records,
 }
@@ -115,9 +109,6 @@ pub fn hat_tier(pearls: u32) -> usize {
     HAT_TIERS.iter().filter(|&&t| pearls >= t).count()
 }
 impl Puff {
-    pub fn player(&self) -> usize {
-        (self.state.first as usize + self.state.dive as usize) % 2
-    }
     pub fn dist(&self) -> i32 {
         self.state.dist16 >> 4
     }
@@ -129,9 +120,6 @@ impl Puff {
     }
     pub fn score(&self) -> u32 {
         (self.dist().max(0) as u32) / 20 + self.state.points
-    }
-    pub fn total(&self, p: usize) -> u32 {
-        self.state.scores[p].iter().sum()
     }
     pub fn multiplier(&self) -> u32 {
         (1 + self.state.chain / 4).min(8)
@@ -162,8 +150,10 @@ impl Puff {
         s.objs.clear();
         s.unlocked = false;
         s.popped = 0;
-        s.rng = 0xC0FFEE ^ (u64::from(s.dive) * 7919) ^ (u64::from(s.records.matches) << 20) ^ u64::from(s.tick);
-        s.phase = Phase::Handoff;
+        s.rng = 0xC0FFEE ^ (u64::from(s.records.dives) * 7919) ^ u64::from(s.tick);
+        s.phase = Phase::Dive;
+        s.timer = 0;
+        s.new_best = false;
         self.generate();
     }
     fn push(&mut self, kind: Kind, x: i32, y: i32, w: i32, h: i32, phase: i32) {
@@ -171,7 +161,7 @@ impl Puff {
     }
     /// Lay out the next 420-pixel stretch of reef. Every pattern leaves a flyable path.
     fn generate(&mut self) {
-        while self.state.gen_x < self.dist() + PLAYER_X + 1500 {
+        while self.state.gen_x < self.dist() + FISH_X + 1500 {
             let x0 = self.state.gen_x;
             let dist = x0;
             let mut rng = self.state.rng;
@@ -241,7 +231,7 @@ impl Puff {
             self.state.gen_x += 420;
         }
         let d = self.dist();
-        self.state.objs.retain(|o| o.x + o.w + 100 > d + PLAYER_X - 400);
+        self.state.objs.retain(|o| o.x + o.w + 100 > d + FISH_X - 400);
     }
     fn hit(&mut self) {
         let s = &mut self.state;
@@ -255,37 +245,17 @@ impl Puff {
         }
     }
     fn finish_dive(&mut self) {
-        let p = self.player();
-        let d = self.state.dive as usize;
         let score = self.score();
-        let before = hat_tier(self.state.records.pearls[p]);
+        let before = hat_tier(self.state.records.pearls);
         let s = &mut self.state;
-        s.scores[p][d / 2] = score;
         let r = &mut s.records;
-        r.best_dive[p] = r.best_dive[p].max(score);
-        r.best_chain[p] = r.best_chain[p].max(s.best_chain);
-        r.pearls[p] += s.pearls;
-        s.unlocked = hat_tier(r.pearls[p]) > before;
-    }
-    fn after_result(&mut self) {
-        if (self.state.dive as usize) + 1 < DIVES * 2 {
-            self.state.dive += 1;
-            self.start_dive();
-        } else {
-            let t = [self.total(0), self.total(1)];
-            let r = &mut self.state.records;
-            r.matches += 1;
-            if t[0] != t[1] {
-                r.wins[usize::from(t[1] > t[0])] += 1;
-            }
-            self.state.phase = Phase::Results;
-            self.state.timer = 0;
-        }
-    }
-    fn new_match(&mut self) {
-        self.state.scores = [[0; DIVES]; 2];
-        self.state.dive = 0;
-        self.start_dive();
+        r.dives += 1;
+        s.new_best = score > r.best_dive;
+        r.best_dive = r.best_dive.max(score);
+        r.best_chain = r.best_chain.max(s.best_chain);
+        r.pearls += s.pearls;
+        r.walls_popped += s.popped;
+        s.unlocked = hat_tier(r.pearls) > before;
     }
     fn step_dive(&mut self, i: &Intent) {
         let up = i.y < 0;
@@ -320,7 +290,7 @@ impl Puff {
         self.state.dist16 += speed;
         self.generate();
         let d = self.dist();
-        let px = d + PLAYER_X;
+        let px = d + FISH_X;
         let py = self.y();
         let rad = self.radius() * 85 / 100;
         let puff = self.state.puff;
@@ -412,7 +382,7 @@ impl Puff {
             s.hearts += 1;
         }
         if hit {
-            self.last_event = Point::new(PLAYER_X, py);
+            self.last_event = Point::new(FISH_X, py);
             self.hit();
         }
     }
@@ -420,7 +390,7 @@ impl Puff {
 impl GameLogic for Puff {
     const ID: &'static str = "puff-pop";
     const TITLE: &'static str = "Puff Pop";
-    const CONTROLS: &'static str = "Hold UP to puff and float · release to sink · DOWN squeezes small · A/Space confirms";
+    const CONTROLS: &'static str = "Hold UP to puff and float · release to sink · DOWN squeezes small";
     const VERIFY_TICKS: u32 = 1200;
     fn new(_: u64) -> Self {
         Self {
@@ -428,9 +398,6 @@ impl GameLogic for Puff {
                 tick: 0,
                 phase: Phase::Intro,
                 timer: 0,
-                first: 0,
-                dive: 0,
-                scores: [[0; DIVES]; 2],
                 dist16: 0,
                 ys: 220 << 8,
                 vys: 0,
@@ -446,18 +413,19 @@ impl GameLogic for Puff {
                 last_cy: 220,
                 objs: vec![],
                 unlocked: false,
+                new_best: false,
                 popped: 0,
                 records: Records::default(),
             },
             cues: vec![],
-            last_event: Point::new(PLAYER_X, 220),
+            last_event: Point::new(FISH_X, 220),
         }
     }
     fn probe_input() -> Intent {
         Intent { x: 1, action: true, ..Default::default() }
     }
     fn probe_success(&self) -> bool {
-        self.state.first != 0 || self.state.phase != Phase::Intro
+        self.state.phase != Phase::Intro
     }
     fn tick(&self) -> u32 {
         self.state.tick
@@ -466,14 +434,13 @@ impl GameLogic for Puff {
         "playing"
     }
     fn verification_input(tick: u32) -> Intent {
-        // Pick Poppy to dive first, confirm, then pulse "up" in a gentle rhythm so the dive crosses
-        // pearls and obstacles; later presses move through the result cards.
-        let press = matches!(tick, 6 | 30 | 60);
-        let pulse = tick > 70 && (tick / 38) % 2 == 0;
+        // Start the dive, then pulse "up" in a gentle rhythm so the dive crosses pearls and obstacles;
+        // later presses move through the result card into the next dive.
+        let press = tick == 6 || (tick > 600 && tick % 90 == 0);
+        let pulse = tick > 20 && (tick / 38) % 2 == 0;
         Intent {
-            x: i32::from((3..12).contains(&tick)),
-            y: if pulse { -1 } else { i32::from(tick > 70 && tick % 19 < 4) },
-            action: press || (tick > 600 && tick % 90 == 0),
+            y: if pulse { -1 } else { i32::from(tick > 20 && tick % 19 < 4) },
+            action: press,
             ..Default::default()
         }
     }
@@ -512,19 +479,8 @@ impl Simulation for Puff {
         self.state.tick += 1;
         match self.state.phase {
             Phase::Intro => {
-                if i.x != 0 {
-                    self.state.first = u8::from(i.x > 0);
-                }
                 if i.action {
-                    self.new_match();
-                    self.cues.push(0);
-                }
-            }
-            Phase::Handoff => {
-                self.state.timer += 1;
-                if i.action {
-                    self.state.phase = Phase::Dive;
-                    self.state.timer = 0;
+                    self.start_dive();
                     self.cues.push(0);
                 }
             }
@@ -536,14 +492,7 @@ impl Simulation for Puff {
                 }
                 self.state.ys = (self.state.ys + 600).min((FLOOR - 14) << 8);
                 if i.action && self.state.timer > 40 {
-                    self.after_result();
-                }
-            }
-            Phase::Results => {
-                self.state.timer += 1;
-                if i.action && self.state.timer > 30 {
-                    self.state.first = 1 - self.state.first;
-                    self.new_match();
+                    self.start_dive();
                     self.cues.push(0);
                 }
             }
@@ -560,9 +509,7 @@ impl Snapshot for Puff {
         self.state.clone()
     }
     fn restore(&mut self, state: State) -> Result<(), String> {
-        if state.first > 1
-            || state.dive as usize >= DIVES * 2
-            || !(0..=100).contains(&state.puff)
+        if !(0..=100).contains(&state.puff)
             || !(0..=HEARTS).contains(&state.hearts)
             || state.objs.len() > 400
             || state.ys < 0
@@ -578,16 +525,13 @@ impl Snapshot for Puff {
 #[cfg(feature = "client")]
 const PIP_PNG: &[u8] = include_bytes!("../assets/sprites/pip.png");
 #[cfg(feature = "client")]
-const POPPY_PNG: &[u8] = include_bytes!("../assets/sprites/poppy.png");
-#[cfg(feature = "client")]
 const PEARL_PNG: &[u8] = include_bytes!("../assets/sprites/pearl.png");
 #[cfg(feature = "client")]
 impl Puff {
-    fn draw_fish(&self, s: &mut draw::Scene, who: usize, cx: i32, cy: i32, puff: i32, tilt: f32, layer: i32) {
+    fn draw_fish(&self, s: &mut draw::Scene, cx: i32, cy: i32, puff: i32, tilt: f32, layer: i32) {
         use draw::*;
         let r = 13 + puff * 13 / 100;
         let size = (r * 2) as f32 * 1.3;
-        let (id, png) = if who == 0 { ("pip", PIP_PNG) } else { ("poppy", POPPY_PNG) };
         if puff > 55 {
             // Spikes pop out as the fish swells.
             let len = ((puff - 55) / 6 + 2) as i32;
@@ -601,10 +545,9 @@ impl Puff {
                 s.rect(layer - 1, Rect::new(x0 - 1, y0 - 1, x1 - x0 + 3, y1 - y0 + 3), Color::new(1., 0.86, 0.4, 1.));
             }
         }
-        s.sprite_png(layer, id, png, Transform { position: [cx as f32 - size / 2., cy as f32 - size / 2.], rotation: tilt, ..Default::default() }, [size, size], WHITE);
-        let tier = hat_tier(self.state.records.pearls[who]);
+        s.sprite_png(layer, "pip", PIP_PNG, Transform { position: [cx as f32 - size / 2., cy as f32 - size / 2.], rotation: tilt, ..Default::default() }, [size, size], WHITE);
         let top = cy - r - 2;
-        match tier {
+        match hat_tier(self.state.records.pearls) {
             1 => {
                 s.rect(layer + 1, Rect::new(cx - 9, top - 6, 18, 7), WHITE);
                 s.rect(layer + 1, Rect::new(cx - 9, top, 18, 3), Color::new(0.2, 0.35, 0.8, 1.));
@@ -635,14 +578,12 @@ impl draw::Game for Puff {
         false
     }
     fn menu_status(&self) -> String {
-        format!("Dive {} of {}  ·  Pip {}  Poppy {}", self.state.dive + 1, DIVES * 2, self.total(0), self.total(1))
+        format!("Dive {}  ·  best {}", self.state.records.dives + 1, self.state.records.best_dive)
     }
     fn draw(&self, s: &mut draw::Scene) {
         use draw::*;
         let st = &self.state;
         let d = self.dist();
-        let tints = [Color::new(0.4, 0.9, 0.85, 1.), Color::new(1., 0.6, 0.78, 1.)];
-        // Water: depth bands, drifting light shafts, parallax seaweed and bubbles.
         for k in 0..9 {
             let t = k as f32 / 8.;
             s.rect(-30, Rect::new(0, k * 51, 800, 52), Color::new(0.14 - 0.08 * t, 0.52 - 0.30 * t, 0.78 - 0.36 * t, 1.));
@@ -676,8 +617,7 @@ impl draw::Game for Puff {
                     s.sprite_png(5, "pearl", PEARL_PNG, Transform { position: [x as f32, (o.y - 8 + bob) as f32], ..Default::default() }, [16., 16.], WHITE);
                 }
                 Kind::Coral => {
-                    let c = Color::new(0.93, 0.45, 0.45, 1.);
-                    s.rect(3, Rect::new(x, o.y, o.w, o.h), c);
+                    s.rect(3, Rect::new(x, o.y, o.w, o.h), Color::new(0.93, 0.45, 0.45, 1.));
                     s.rect(4, Rect::new(x, o.y, 8, o.h), Color::new(1., 0.65, 0.6, 1.));
                     let lip = if o.y <= TOP { o.y + o.h - 10 } else { o.y };
                     s.rect(4, Rect::new(x - 8, lip, o.w + 16, 10), Color::new(0.82, 0.32, 0.38, 1.));
@@ -709,35 +649,31 @@ impl draw::Game for Puff {
                         s.circle(4, Point::new(x + o.w / 2, o.y + 18 + k * 36), 17., Color::new(0.85, 0.97, 1., 0.55));
                         s.circle(5, Point::new(x + o.w / 2 - 6, o.y + 12 + k * 36), 4., WHITE);
                     }
-                    if x < 520 && x > PLAYER_X {
+                    if x < 520 && x > FISH_X {
                         s.text(20, "POP! (puff full)", Point::new(x - 40, 70), 16., Color::new(1., 1., 1., 0.9));
                     }
                 }
             }
         }
-        // The fish.
-        let showing = matches!(st.phase, Phase::Handoff | Phase::Dive | Phase::Sunk);
-        if showing {
+        if st.phase != Phase::Intro {
             let blink = st.inv > 0 && (st.inv / 4) % 2 == 0;
             if !blink {
                 let tilt = (st.vys as f32 / 256.) * 0.08;
-                let who = self.player();
-                let flip = st.phase == Phase::Sunk;
-                self.draw_fish(s, who, PLAYER_X, self.y(), st.puff, if flip { 2.8 } else { tilt }, 10);
+                self.draw_fish(s, FISH_X, self.y(), st.puff, if st.phase == Phase::Sunk { 2.8 } else { tilt }, 10);
             }
-            // HUD.
-            let who = self.player();
-            s.text(20, format!("{}  score {}", NAMES[who], self.score()), Point::new(300, 30), 22., tints[who]);
+            s.text(20, format!("score {}", self.score()), Point::new(330, 30), 24., Color::new(0.4, 0.9, 0.85, 1.));
             for h in 0..HEARTS {
-                s.circle(20, Point::new(620 + h * 26, 24), 9., if h < st.hearts { PINK } else { Color::new(1., 1., 1., 0.18) });
+                s.circle(20, Point::new(700 + h * 26, 24), 9., if h < st.hearts { PINK } else { Color::new(1., 1., 1., 0.18) });
             }
-            let mult = self.multiplier();
-            s.text(20, format!("chain {}  x{}", st.chain, mult), Point::new(300, 52), 16., GOLD);
-            s.rect(20, Rect::new(24, 52, 100, 8), Color::new(0., 0., 0., 0.4));
-            s.rect(21, Rect::new(25, 53, st.puff.min(100) * 98 / 100, 6), if st.puff >= 80 { PINK } else { TEAL });
-            s.text(20, "puff", Point::new(130, 61), 12., WHITE);
+            s.text(20, format!("chain {}  x{}   best {}", st.chain, self.multiplier(), st.records.best_dive), Point::new(330, 52), 16., GOLD);
+            s.rect(20, Rect::new(24, 20, 100, 8), Color::new(0., 0., 0., 0.4));
+            s.rect(21, Rect::new(25, 21, st.puff.min(100) * 98 / 100, 6), if st.puff >= 80 { PINK } else { TEAL });
+            s.text(20, "puff", Point::new(130, 29), 12., WHITE);
             if st.phase == Phase::Dive && st.chain >= 4 {
-                s.text(20, format!("{} IN A ROW!", st.chain), Point::new(PLAYER_X - 40, self.y() - 48), 18., GOLD);
+                s.text(20, format!("{} IN A ROW!", st.chain), Point::new(FISH_X - 40, self.y() - 48), 18., GOLD);
+            }
+            if st.phase == Phase::Dive && d < 180 {
+                s.text(25, "Hold UP to puff and float", Point::new(300, 400), 18., Color::new(1., 1., 1., 0.85));
             }
         }
         let dim = Color::new(0.02, 0.07, 0.14, 0.78);
@@ -745,52 +681,29 @@ impl draw::Game for Puff {
             Phase::Intro => {
                 s.rect(30, Rect::new(70, 60, 660, 340), dim);
                 s.text(31, "PUFF POP", Point::new(290, 112), 46., GOLD);
-                s.text(31, "Hold UP to puff and float. Let go to sink.", Point::new(210, 146), 20., WHITE);
-                s.text(31, "Pop bubble walls while fully puffed. Keep the chain alive!", Point::new(160, 172), 18., TEAL);
-                s.text(31, "Who dives first?  (left / right, then press)", Point::new(220, 204), 18., TEAL);
-                for p in 0..2usize {
-                    let x = 260 + p as i32 * 260;
-                    if st.first as usize == p {
-                        s.rect(31, Rect::new(x - 50, 215, 120, 120), Color::new(1., 1., 1., 0.12));
-                    }
-                    self.draw_fish(s, p, x + 10, 270, if st.first as usize == p { 70 } else { 20 }, 0., 32);
-                    s.text(32, NAMES[p], Point::new(x - 20, 330), 22., if st.first as usize == p { tints[p] } else { WHITE });
-                }
+                s.text(31, "Hold UP to puff and float. Let go to sink. DOWN squeezes small.", Point::new(130, 146), 19., WHITE);
+                s.text(31, "Grab pearls in a chain. Pop bubble walls while fully puffed.", Point::new(150, 172), 18., TEAL);
+                self.draw_fish(s, 400, 240, 60, 0., 32);
+                s.text(31, "Press to dive", Point::new(335, 300), 20., TEAL);
                 let r = &st.records;
-                s.text(31, format!("Matches {}  Wins {}-{}  Best dive {} / {}  Best chain {} / {}", r.matches, r.wins[0], r.wins[1], r.best_dive[0], r.best_dive[1], r.best_chain[0], r.best_chain[1]), Point::new(100, 360), 16., TEAL);
-                s.text(31, format!("Pearls {} / {}  ·  hats: {} / {}", r.pearls[0], r.pearls[1], HAT_NAMES[hat_tier(r.pearls[0])], HAT_NAMES[hat_tier(r.pearls[1])]), Point::new(100, 384), 16., GOLD);
-            }
-            Phase::Handoff => {
-                s.rect(30, Rect::new(150, 110, 500, 210), dim);
-                let p = self.player();
-                s.text(31, format!("Pass the controller to {}", NAMES[p]), Point::new(190, 160), 26., tints[p]);
-                s.text(31, format!("Dive {} of {}.  Press when ready.", st.dive + 1, DIVES * 2), Point::new(190, 200), 20., WHITE);
-                s.text(31, format!("Pip {}  ·  Poppy {}", self.total(0), self.total(1)), Point::new(190, 240), 20., GOLD);
-                s.text(31, "Three hearts. Hold UP to puff, DOWN to squeeze.", Point::new(190, 290), 16., TEAL);
+                s.text(31, format!("Dives {}   Best {}   Best chain {}   Walls popped {}", r.dives, r.best_dive, r.best_chain, r.walls_popped), Point::new(130, 340), 17., TEAL);
+                let next = HAT_TIERS.iter().find(|&&t| r.pearls < t).map(|t| format!("  ·  next hat at {} pearls", t)).unwrap_or_default();
+                s.text(31, format!("Pearls {}  ·  hat: {}{}", r.pearls, HAT_NAMES[hat_tier(r.pearls)], next), Point::new(130, 366), 17., GOLD);
             }
             Phase::Sunk if st.timer > 20 => {
                 s.rect(30, Rect::new(150, 100, 500, 240), dim);
-                let p = self.player();
                 s.text(31, "POPPED!", Point::new(190, 150), 34., GOLD);
-                s.text(31, format!("{} scored {}", NAMES[p], self.score()), Point::new(190, 190), 24., tints[p]);
+                s.text(31, format!("Score {}", self.score()), Point::new(190, 190), 26., Color::new(0.4, 0.9, 0.85, 1.));
                 s.text(31, format!("Pearls {}  ·  best chain {}  ·  walls popped {}", st.pearls, st.best_chain, st.popped), Point::new(190, 224), 17., WHITE);
+                if st.new_best {
+                    s.text(31, "NEW BEST DIVE!", Point::new(190, 258), 22., PINK);
+                } else {
+                    s.text(31, format!("Best {}", st.records.best_dive), Point::new(190, 258), 18., TEAL);
+                }
                 if st.unlocked {
-                    s.text(31, format!("NEW HAT: {}!", HAT_NAMES[hat_tier(st.records.pearls[p])]), Point::new(190, 260), 22., PINK);
+                    s.text(31, format!("NEW HAT: {}!", HAT_NAMES[hat_tier(st.records.pearls)]), Point::new(190, 288), 20., PINK);
                 }
-                s.text(31, "Press to continue", Point::new(190, 310), 16., TEAL);
-            }
-            Phase::Results => {
-                s.rect(30, Rect::new(90, 70, 620, 320), dim);
-                let t = [self.total(0), self.total(1)];
-                let title = if t[0] == t[1] { "A TIE!".to_string() } else { format!("{} WINS!", NAMES[usize::from(t[1] > t[0])]) };
-                s.text(31, title, Point::new(140, 125), 38., GOLD);
-                for p in 0..2usize {
-                    let row: Vec<String> = st.scores[p].iter().map(|v| v.to_string()).collect();
-                    s.text(31, format!("{:<6} {:>6}   ({})", NAMES[p], t[p], row.join(" + ")), Point::new(140, 175 + p as i32 * 32), 22., tints[p]);
-                }
-                let r = &st.records;
-                s.text(31, format!("Wins {}-{}   Best dive {} / {}   Hats {} / {}", r.wins[0], r.wins[1], r.best_dive[0], r.best_dive[1], HAT_NAMES[hat_tier(r.pearls[0])], HAT_NAMES[hat_tier(r.pearls[1])]), Point::new(140, 260), 17., TEAL);
-                s.text(31, "Press for a rematch (the other fish dives first)", Point::new(140, 340), 16., WHITE);
+                s.text(31, "Press to dive again", Point::new(190, 320), 16., TEAL);
             }
             _ => {}
         }
@@ -807,13 +720,11 @@ mod tests {
     }
     fn begin(g: &mut Puff) {
         g.step(&press());
-        assert_eq!(g.state.phase, Phase::Handoff);
-        g.step(&press());
         assert_eq!(g.state.phase, Phase::Dive);
     }
     /// Greedy pilot: chase the next pearl, puff up for walls. Proves every pattern is flyable.
     fn pilot(g: &Puff) -> Intent {
-        let px = g.dist() + PLAYER_X;
+        let px = g.dist() + FISH_X;
         let wall = g.state.objs.iter().find(|o| o.alive && o.kind == Kind::Wall && o.x + o.w > px - 30 && o.x - px < 170);
         if wall.is_some() {
             return up();
@@ -849,13 +760,12 @@ mod tests {
             g.step(i);
             flew = flew.max(g.dist());
         }
-        assert_eq!(g.state.first, 1, "the route picks Poppy to dive first");
         assert!(flew > 600, "the route actually dives and scrolls the reef");
         if let Ok(path) = std::env::var("BE2_VERIFY_REPORT") {
             std::fs::write(
                 path,
                 serde_json::json!({"hash":format!("{hash:016x}"),"outcome":outcome,"ticks":Puff::VERIFY_TICKS,
-                    "purpose":"Hot-seat dive: picks Poppy, confirms the handoff, pulses the inflate control through pearls and coral until the dive ends"}).to_string(),
+                    "purpose":"Dives from the title card and pulses the inflate control through pearls and coral until the dive ends"}).to_string(),
             )
             .unwrap();
         }
@@ -889,7 +799,7 @@ mod tests {
         let mut g = Puff::new(7);
         begin(&mut g);
         g.state.objs.clear();
-        let px = g.dist() + PLAYER_X;
+        let px = g.dist() + FISH_X;
         let y = g.y();
         for k in 0..5 {
             g.push(Kind::Pearl, px - 8 + k * 3, y, 16, 16, 0);
@@ -902,19 +812,17 @@ mod tests {
         let mut small = Puff::new(7);
         begin(&mut small);
         small.state.objs.clear();
-        let px = small.dist() + PLAYER_X;
+        let px = small.dist() + FISH_X;
         small.push(Kind::Wall, px + 10, TOP - 10, 36, 400, 0);
-        let mut hits = 0;
         for _ in 0..12 {
             small.step(&Intent::default());
-            hits = HEARTS - small.state.hearts;
         }
-        assert_eq!(hits, 1, "an unpuffed fish bumps the wall and loses a heart");
+        assert_eq!(HEARTS - small.state.hearts, 1, "an unpuffed fish bumps the wall and loses a heart");
         let mut big = Puff::new(7);
         begin(&mut big);
         big.state.objs.clear();
         big.state.puff = 90;
-        let px = big.dist() + PLAYER_X;
+        let px = big.dist() + FISH_X;
         big.push(Kind::Wall, px + 10, TOP - 10, 36, 400, 0);
         for _ in 0..12 {
             big.step(&up());
@@ -929,58 +837,54 @@ mod tests {
         begin(&mut g);
         g.state.objs.clear();
         g.state.chain = 6;
-        let px = g.dist() + PLAYER_X;
+        let px = g.dist() + FISH_X;
         g.push(Kind::Pearl, px - 100, 100, 16, 16, 0);
         g.step(&Intent::default());
         assert_eq!(g.state.chain, 0, "a pearl left behind ends the chain");
         g.state.chain = 6;
-        g.push(Kind::Urchin, g.dist() + PLAYER_X, g.y(), 36, 36, 0);
+        g.push(Kind::Urchin, g.dist() + FISH_X, g.y(), 36, 36, 0);
         g.step(&Intent::default());
         assert_eq!(g.state.hearts, HEARTS - 1);
         assert_eq!(g.state.chain, 0);
         assert!(g.state.inv > 0);
     }
-    #[test]
-    fn three_hits_end_the_dive_and_a_match_records_progress() {
-        let mut g = Puff::new(7);
-        begin(&mut g);
+    fn sink(g: &mut Puff) {
         for _ in 0..HEARTS {
             g.state.inv = 0;
             g.state.objs.clear();
-            let (x, y) = (g.dist() + PLAYER_X, g.y());
+            let (x, y) = (g.dist() + FISH_X, g.y());
             g.push(Kind::Urchin, x, y, 36, 36, 0);
             g.step(&Intent::default());
         }
         assert_eq!(g.state.phase, Phase::Sunk);
+    }
+    #[test]
+    fn dives_record_bests_and_pearls_unlock_hats_that_survive_restart() {
+        let mut g = Puff::new(7);
+        begin(&mut g);
+        sink(&mut g);
         g.state.pearls = 45;
         g.state.points = 500;
         g.step(&Intent::default());
-        assert_eq!(g.state.records.pearls[g.player()], 45);
+        assert_eq!(g.state.records.dives, 1);
+        assert_eq!(g.state.records.pearls, 45);
         assert!(g.state.unlocked, "45 lifetime pearls earn the first hat");
-        assert!(g.state.records.best_dive[g.player()] >= 500);
-        // Finish the whole match with instant sinks.
-        let mut guard = 0;
-        while g.state.phase != Phase::Results && guard < 20 {
-            guard += 1;
-            for _ in 0..50 {
-                g.step(&Intent::default());
-            }
-            g.step(&press());
-            if g.state.phase == Phase::Handoff {
-                g.step(&press());
-                g.state.hearts = 1;
-                g.state.inv = 0;
-                g.state.objs.clear();
-                let (x, y) = (g.dist() + PLAYER_X, g.y());
-                g.push(Kind::Urchin, x, y, 36, 36, 0);
-                g.step(&Intent::default());
-            }
+        assert!(g.state.new_best && g.state.records.best_dive >= 500);
+        for _ in 0..50 {
+            g.step(&Intent::default());
         }
-        assert_eq!(g.state.phase, Phase::Results);
-        assert_eq!(g.state.records.matches, 1);
+        g.step(&press());
+        assert_eq!(g.state.phase, Phase::Dive, "one press starts the next dive");
+        assert_eq!(g.state.hearts, HEARTS);
+        assert_eq!(g.state.points, 0);
+        sink(&mut g);
+        g.step(&Intent::default());
+        assert!(!g.state.new_best, "a worse dive is not a new best");
+        assert_eq!(g.state.records.dives, 2);
         let records = g.state.records.clone();
         g.restart();
         assert_eq!(g.state.records, records, "restart keeps records and hats");
+        assert_eq!(g.state.phase, Phase::Intro);
         assert_eq!(hat_tier(45), 1);
         assert_eq!(hat_tier(900), 4);
     }
@@ -992,7 +896,6 @@ mod tests {
                 g.step(&Intent::default());
             }
             begin(&mut g);
-            g.state.hearts = HEARTS;
             let mut early_hits = 0;
             for _ in 0..4200 {
                 let before = g.state.hearts;
@@ -1015,11 +918,8 @@ mod tests {
         let mut bad = g.capture();
         bad.puff = 400;
         assert!(g.restore(bad).is_err());
-        let mut bad = g.capture();
-        bad.dive = 9;
-        assert!(g.restore(bad).is_err());
         assert!(!g.probe_success());
-        g.step(&Intent { x: 1, ..Default::default() });
+        g.step(&Puff::probe_input());
         assert!(g.probe_success());
     }
 }

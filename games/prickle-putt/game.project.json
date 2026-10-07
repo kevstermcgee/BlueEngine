@@ -1,6 +1,6 @@
 {
   "complexity": "low",
-  "description": "Two hedgehogs, nine hedge-walled greens, one controller to pass.",
+  "description": "Prickle the hedgehog curls up and gets flung around nine hedge-walled greens.",
   "id": "prickle-putt",
   "input": [
     "keyboard",

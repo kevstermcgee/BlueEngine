@@ -1,6 +1,6 @@
 {
   "complexity": "low",
-  "description": "Two bats, one cave, one button: flip gravity, shave the spikes, go deeper.",
+  "description": "Dusk the bat flips gravity through a cave, shaving spikes to build heat and go deeper.",
   "id": "topsy-turvy",
   "input": [
     "keyboard",

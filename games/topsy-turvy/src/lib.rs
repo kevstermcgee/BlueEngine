@@ -1,16 +1,14 @@
-//! Topsy-Turvy: two bats race a cave, flipping gravity to dodge spikes.
+//! Topsy-Turvy: Dusk the bat races through a cave, flipping gravity to dodge spikes.
 //!
 //! The bat runs on its own. Press the action button to flip between floor and ceiling, or press up or
-//! down to pick a side. One hit ends the run. Flipping right in front of a spike is a "close shave" and
-//! builds the heat multiplier. Three runs each, the best run counts, and the controller passes after
-//! every run. Integer rules, rendering-free.
+//! down to pick a side. One hit ends the run, and one press starts the next. Flipping right in front of
+//! a spike is a "close shave" and builds the heat multiplier. Go deeper through four caves.
+//! Integer rules, rendering-free.
 use serde::{Deserialize, Serialize};
 #[cfg(test)]
 use vesper3d::runtime::snapshot;
 use vesper3d::two_d::*;
 
-pub const RUNS: usize = 3;
-pub const NAMES: [&str; 2] = ["Dusk", "Dawn"];
 pub const CEILING: i32 = 70;
 pub const FLOOR: i32 = 380;
 pub const BAT: i32 = 20;
@@ -85,30 +83,24 @@ impl Obj {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Phase {
     Intro,
-    Handoff,
     Run,
     Crashed,
-    Results,
 }
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Records {
-    pub matches: u32,
-    pub wins: [u32; 2],
-    pub best_run: [u32; 2],
-    pub best_distance: [u32; 2],
-    pub gems: [u32; 2],
-    pub shaves: [u32; 2],
-    /// Deepest biome reached, 0-based, over all runs by that bat.
-    pub deepest: [u32; 2],
+    pub runs: u32,
+    pub best_run: u32,
+    pub best_distance: u32,
+    pub gems: u32,
+    pub shaves: u32,
+    /// Deepest biome reached, 0-based.
+    pub deepest: u32,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct State {
     pub tick: u32,
     pub phase: Phase,
     pub timer: u32,
-    pub first: u8,
-    pub run: u8,
-    pub scores: [[u32; RUNS]; 2],
     pub dist16: i32,
     pub ys: i32,
     pub vys: i32,
@@ -122,6 +114,7 @@ pub struct State {
     pub points: u32,
     pub banner: u32,
     pub new_biome: bool,
+    pub new_best: bool,
     pub rng: u64,
     pub gen_x: i32,
     pub objs: Vec<Obj>,
@@ -133,9 +126,6 @@ pub struct Turvy {
     last_event: Point,
 }
 impl Turvy {
-    pub fn player(&self) -> usize {
-        (self.state.first as usize + self.state.run as usize) % 2
-    }
     pub fn dist(&self) -> i32 {
         self.state.dist16 >> 4
     }
@@ -147,9 +137,6 @@ impl Turvy {
     }
     pub fn score(&self) -> u32 {
         (self.dist().max(0) as u32) / 10 + self.state.points
-    }
-    pub fn total(&self, p: usize) -> u32 {
-        self.state.scores[p].iter().copied().max().unwrap_or(0)
     }
     pub fn multiplier(&self) -> u32 {
         1 + self.state.heat as u32
@@ -179,9 +166,10 @@ impl Turvy {
         s.new_biome = false;
         s.gen_x = 760;
         s.objs.clear();
-        s.rng = 0xBA7_5EED ^ (u64::from(s.run) * 104729) ^ (u64::from(s.records.matches) << 24) ^ u64::from(s.tick);
-        s.phase = Phase::Handoff;
+        s.rng = 0xBA7_5EED ^ (u64::from(s.records.runs) * 104729) ^ u64::from(s.tick);
+        s.phase = Phase::Run;
         s.timer = 0;
+        s.new_best = false;
         self.generate();
     }
     fn push(&mut self, kind: Kind, x: i32, y: i32, w: i32, h: i32) {
@@ -255,39 +243,18 @@ impl Turvy {
         self.last_event = Point::new(BAT_X + BAT / 2, self.y() + BAT / 2);
     }
     fn finish_run(&mut self) {
-        let p = self.player();
-        let slot = self.state.run as usize / 2;
         let score = self.score();
         let dist = self.dist().max(0) as u32;
         let deepest = (dist as i32 / BIOME_LENGTH) as u32;
         let s = &mut self.state;
-        s.scores[p][slot] = score;
         let r = &mut s.records;
-        r.best_run[p] = r.best_run[p].max(score);
-        r.best_distance[p] = r.best_distance[p].max(dist);
-        r.gems[p] += s.gems;
-        r.shaves[p] += s.shaves;
-        r.deepest[p] = r.deepest[p].max(deepest);
-    }
-    fn after_crash(&mut self) {
-        if (self.state.run as usize) + 1 < RUNS * 2 {
-            self.state.run += 1;
-            self.start_run();
-        } else {
-            let t = [self.total(0), self.total(1)];
-            let r = &mut self.state.records;
-            r.matches += 1;
-            if t[0] != t[1] {
-                r.wins[usize::from(t[1] > t[0])] += 1;
-            }
-            self.state.phase = Phase::Results;
-            self.state.timer = 0;
-        }
-    }
-    fn new_match(&mut self) {
-        self.state.scores = [[0; RUNS]; 2];
-        self.state.run = 0;
-        self.start_run();
+        r.runs += 1;
+        s.new_best = score > r.best_run;
+        r.best_run = r.best_run.max(score);
+        r.best_distance = r.best_distance.max(dist);
+        r.gems += s.gems;
+        r.shaves += s.shaves;
+        r.deepest = r.deepest.max(deepest);
     }
     fn step_run(&mut self, i: &Intent) {
         let old_side = self.state.side;
@@ -400,7 +367,7 @@ impl Turvy {
 impl GameLogic for Turvy {
     const ID: &'static str = "topsy-turvy";
     const TITLE: &'static str = "Topsy-Turvy";
-    const CONTROLS: &'static str = "A/Space flips gravity · UP = ceiling, DOWN = floor · Flip right at a spike for a close shave";
+    const CONTROLS: &'static str = "A/Space flips gravity · UP = ceiling, DOWN = floor";
     const VERIFY_TICKS: u32 = 900;
     fn new(_: u64) -> Self {
         Self {
@@ -408,9 +375,6 @@ impl GameLogic for Turvy {
                 tick: 0,
                 phase: Phase::Intro,
                 timer: 0,
-                first: 0,
-                run: 0,
-                scores: [[0; RUNS]; 2],
                 dist16: 0,
                 ys: (FLOOR - BAT) << 8,
                 vys: 0,
@@ -423,6 +387,7 @@ impl GameLogic for Turvy {
                 points: 0,
                 banner: 0,
                 new_biome: false,
+                new_best: false,
                 rng: 1,
                 gen_x: 760,
                 objs: vec![],
@@ -436,7 +401,7 @@ impl GameLogic for Turvy {
         Intent { x: 1, action: true, ..Default::default() }
     }
     fn probe_success(&self) -> bool {
-        self.state.first != 0 || self.state.phase != Phase::Intro
+        self.state.phase != Phase::Intro
     }
     fn tick(&self) -> u32 {
         self.state.tick
@@ -445,12 +410,11 @@ impl GameLogic for Turvy {
         "playing"
     }
     fn verification_input(tick: u32) -> Intent {
-        // Pick Dawn to run first, confirm, then flip on a rhythm that crosses the first gem column
-        // and a spike row; later presses clear the crash cards.
+        // Start the run, then flip on a rhythm that crosses the first gem column and a spike row;
+        // later presses clear the crash card and start the next run.
         let flips = [190, 260, 330, 520, 600];
         Intent {
-            x: i32::from((3..12).contains(&tick)),
-            action: matches!(tick, 6 | 30) || flips.contains(&tick) || (tick > 700 && tick % 80 == 0),
+            action: tick == 6 || flips.contains(&tick) || (tick > 700 && tick % 80 == 0),
             ..Default::default()
         }
     }
@@ -488,19 +452,8 @@ impl Simulation for Turvy {
         self.state.tick += 1;
         match self.state.phase {
             Phase::Intro => {
-                if i.x != 0 {
-                    self.state.first = u8::from(i.x > 0);
-                }
                 if i.action {
-                    self.new_match();
-                    self.cues.push(0);
-                }
-            }
-            Phase::Handoff => {
-                self.state.timer += 1;
-                if i.action && self.state.timer > 10 {
-                    self.state.phase = Phase::Run;
-                    self.state.timer = 0;
+                    self.start_run();
                     self.cues.push(0);
                 }
             }
@@ -510,15 +463,8 @@ impl Simulation for Turvy {
                 if self.state.timer == 1 {
                     self.finish_run();
                 }
-                if i.action && self.state.timer > 40 {
-                    self.after_crash();
-                }
-            }
-            Phase::Results => {
-                self.state.timer += 1;
-                if i.action && self.state.timer > 30 {
-                    self.state.first = 1 - self.state.first;
-                    self.new_match();
+                if i.action && self.state.timer > 25 {
+                    self.start_run();
                     self.cues.push(0);
                 }
             }
@@ -535,9 +481,7 @@ impl Snapshot for Turvy {
         self.state.clone()
     }
     fn restore(&mut self, state: State) -> Result<(), String> {
-        if state.first > 1
-            || state.run as usize >= RUNS * 2
-            || !(-1..=1).contains(&state.side)
+        if !(-1..=1).contains(&state.side)
             || state.side == 0
             || !(0..=5).contains(&state.heat)
             || state.objs.len() > 400
@@ -554,15 +498,12 @@ impl Snapshot for Turvy {
 #[cfg(feature = "client")]
 const DUSK_PNG: &[u8] = include_bytes!("../assets/sprites/dusk.png");
 #[cfg(feature = "client")]
-const DAWN_PNG: &[u8] = include_bytes!("../assets/sprites/dawn.png");
-#[cfg(feature = "client")]
 const GEM_PNG: &[u8] = include_bytes!("../assets/sprites/gem.png");
 #[cfg(feature = "client")]
 impl Turvy {
-    fn bat(&self, s: &mut draw::Scene, who: usize, cx: i32, cy: i32, size: f32, turn: f32, layer: i32) {
+    fn bat(&self, s: &mut draw::Scene, cx: i32, cy: i32, size: f32, turn: f32, layer: i32) {
         use draw::*;
-        let (id, png) = if who == 0 { ("dusk", DUSK_PNG) } else { ("dawn", DAWN_PNG) };
-        s.sprite_png(layer, id, png, Transform { position: [cx as f32 - size / 2., cy as f32 - size / 2.], rotation: turn, ..Default::default() }, [size, size], WHITE);
+        s.sprite_png(layer, "dusk", DUSK_PNG, Transform { position: [cx as f32 - size / 2., cy as f32 - size / 2.], rotation: turn, ..Default::default() }, [size, size], WHITE);
     }
 }
 #[cfg(feature = "client")]
@@ -571,13 +512,12 @@ impl draw::Game for Turvy {
         false
     }
     fn menu_status(&self) -> String {
-        format!("Run {} of {}  ·  Dusk {}  Dawn {}", self.state.run + 1, RUNS * 2, self.total(0), self.total(1))
+        format!("Run {}  ·  best {}", self.state.records.runs + 1, self.state.records.best_run)
     }
     fn draw(&self, s: &mut draw::Scene) {
         use draw::*;
         let st = &self.state;
         let d = self.dist();
-        let tints = [Color::new(0.7, 0.55, 1., 1.), Color::new(1., 0.7, 0.5, 1.)];
         let biome = Self::biome(d);
         let (bg, rock, glow) = match biome {
             0 => (Color::new(0.07, 0.07, 0.17, 1.), Color::new(0.20, 0.18, 0.36, 1.), Color::new(0.45, 0.65, 1., 1.)),
@@ -586,7 +526,6 @@ impl draw::Game for Turvy {
             _ => (Color::new(0.03, 0.03, 0.10, 1.), Color::new(0.12, 0.12, 0.30, 1.), Color::new(1., 0.95, 0.6, 1.)),
         };
         s.rect(-30, Rect::new(0, 0, 800, 450), bg);
-        // Parallax rocks and glowing motes.
         for k in 0..9 {
             let x = k * 120 - (d / 4) % 120;
             let h = 20 + ((k * 53) % 4) * 14;
@@ -594,11 +533,10 @@ impl draw::Game for Turvy {
             s.rect(-25, Rect::new(x + 50, FLOOR, 30, h), Color::new(rock.r * 0.7, rock.g * 0.7, rock.b * 0.7, 1.));
         }
         for k in 0..16 {
-            let mx = (k * 97 + 300 - (d / 2 + st.tick as i32 / 2)) .rem_euclid(840) - 20;
+            let mx = (k * 97 + 300 - (d / 2 + st.tick as i32 / 2)).rem_euclid(840) - 20;
             let my = 100 + ((k * 61) % 7) * 36 + sin256(st.tick as i32 * 2 + k * 31) * 6 / 4096;
             s.circle(-20, Point::new(mx, my), 2., Color::new(glow.r, glow.g, glow.b, 0.35));
         }
-        // Cave walls: ceiling and floor bands with glowing edges.
         s.rect(-4, Rect::new(0, CEILING - 3, 800, 2), glow);
         s.rect(-4, Rect::new(0, FLOOR + 1, 800, 2), glow);
         for o in st.objs.iter().filter(|o| o.alive) {
@@ -627,29 +565,29 @@ impl draw::Game for Turvy {
                 }
             }
         }
-        let showing = matches!(st.phase, Phase::Handoff | Phase::Run | Phase::Crashed);
-        if showing {
-            let who = self.player();
+        if st.phase != Phase::Intro {
             let cy = self.y() + BAT / 2;
             let span = (FLOOR - BAT - CEILING).max(1);
             let frac = ((self.y() - CEILING) * 100 / span).clamp(0, 100);
-            // Bat hangs from the ceiling, so it is upside down on the floor.
+            // The bat hangs from the ceiling, so its feet point at whichever surface it is on.
             let turn = std::f32::consts::PI * (1. - frac as f32 / 100.) + if st.phase == Phase::Crashed { st.timer as f32 * 0.4 } else { 0. };
-            // Speed lines and a heat trail.
             if st.phase == Phase::Run {
                 for k in 1..=(2 + st.heat) {
                     s.rect(4, Rect::new(BAT_X - k * 16 - 6, cy - 2 + (k % 2) * 6, 12, 3), Color::new(glow.r, glow.g, glow.b, 0.5 - k as f32 * 0.07));
                 }
             }
-            self.bat(s, who, BAT_X + BAT / 2, cy, 34., turn, 10);
-            s.text(20, format!("{}  score {}", NAMES[who], self.score()), Point::new(300, 30), 22., tints[who]);
-            s.text(20, format!("heat x{}   gems {}   shaves {}", self.multiplier(), st.gems, st.shaves), Point::new(300, 54), 15., GOLD);
-            s.text(20, format!("{}  {}m", BIOME_NAMES[biome], d / 10), Point::new(560, 54), 15., glow);
-            s.rect(20, Rect::new(24, 52, 100, 8), Color::new(0., 0., 0., 0.4));
-            s.rect(21, Rect::new(25, 53, st.heat * 98 / 5, 6), PINK);
-            s.text(20, "heat", Point::new(130, 61), 12., WHITE);
+            self.bat(s, BAT_X + BAT / 2, cy, 34., turn, 10);
+            s.text(20, format!("score {}", self.score()), Point::new(330, 30), 24., Color::new(0.8, 0.65, 1., 1.));
+            s.text(20, format!("heat x{}   gems {}   shaves {}   best {}", self.multiplier(), st.gems, st.shaves, st.records.best_run), Point::new(250, 54), 15., GOLD);
+            s.text(20, format!("{}  {}m", BIOME_NAMES[biome], d / 10), Point::new(590, 30), 15., glow);
+            s.rect(20, Rect::new(24, 20, 100, 8), Color::new(0., 0., 0., 0.4));
+            s.rect(21, Rect::new(25, 21, st.heat * 98 / 5, 6), PINK);
+            s.text(20, "heat", Point::new(130, 29), 12., WHITE);
             if st.banner > 0 {
                 s.text(22, format!("ENTERING {}", BIOME_NAMES[biome].to_uppercase()), Point::new(220, 200), 30., Color::new(glow.r, glow.g, glow.b, (st.banner as f32 / 60.).min(1.)));
+            }
+            if st.phase == Phase::Run && d < 220 {
+                s.text(25, "Press to flip gravity", Point::new(310, 230), 18., Color::new(1., 1., 1., 0.8));
             }
         }
         let dim = Color::new(0.02, 0.02, 0.08, 0.8);
@@ -657,52 +595,25 @@ impl draw::Game for Turvy {
             Phase::Intro => {
                 s.rect(30, Rect::new(70, 60, 660, 340), dim);
                 s.text(31, "TOPSY-TURVY", Point::new(250, 112), 46., GOLD);
-                s.text(31, "Press to flip gravity. One hit and it's over.", Point::new(210, 146), 20., WHITE);
-                s.text(31, "Flip right in front of a spike for a CLOSE SHAVE.", Point::new(200, 172), 18., TEAL);
-                s.text(31, "Who runs first?  (left / right, then press)", Point::new(220, 204), 18., TEAL);
-                for p in 0..2usize {
-                    let x = 250 + p as i32 * 260;
-                    if st.first as usize == p {
-                        s.rect(31, Rect::new(x - 40, 215, 120, 120), Color::new(1., 1., 1., 0.12));
-                    }
-                    self.bat(s, p, x + 20, 268, 80., 0., 32);
-                    s.text(32, NAMES[p], Point::new(x - 6, 330), 22., if st.first as usize == p { tints[p] } else { WHITE });
-                }
+                s.text(31, "Press to flip gravity. One hit and the run is over.", Point::new(190, 146), 20., WHITE);
+                s.text(31, "Flip right in front of a spike for a CLOSE SHAVE and build heat.", Point::new(150, 172), 18., TEAL);
+                self.bat(s, 400, 235, 84., 0., 32);
+                s.text(31, "Press to run", Point::new(340, 300), 20., TEAL);
                 let r = &st.records;
-                s.text(31, format!("Matches {}  Wins {}-{}  Best run {} / {}  Furthest {}m / {}m", r.matches, r.wins[0], r.wins[1], r.best_run[0], r.best_run[1], r.best_distance[0] / 10, r.best_distance[1] / 10), Point::new(90, 362), 16., TEAL);
-                s.text(31, format!("Gems {} / {}  ·  Shaves {} / {}  ·  Deepest: {} / {}", r.gems[0], r.gems[1], r.shaves[0], r.shaves[1], BIOME_NAMES[r.deepest[0] as usize % 4], BIOME_NAMES[r.deepest[1] as usize % 4]), Point::new(90, 386), 16., GOLD);
+                s.text(31, format!("Runs {}   Best run {}   Furthest {}m   Gems {}   Shaves {}", r.runs, r.best_run, r.best_distance / 10, r.gems, r.shaves), Point::new(110, 340), 16., TEAL);
+                s.text(31, format!("Deepest cave: {}   ·   A new cave every {}m", BIOME_NAMES[r.deepest as usize % 4], BIOME_LENGTH / 10), Point::new(150, 366), 16., GOLD);
             }
-            Phase::Handoff => {
-                s.rect(30, Rect::new(150, 110, 500, 210), dim);
-                let p = self.player();
-                s.text(31, format!("Pass the controller to {}", NAMES[p]), Point::new(190, 160), 26., tints[p]);
-                s.text(31, format!("Run {} of {}.  Press to launch.", st.run + 1, RUNS * 2), Point::new(190, 200), 20., WHITE);
-                s.text(31, format!("Dusk {}  ·  Dawn {}  (best run counts)", self.total(0), self.total(1)), Point::new(190, 240), 20., GOLD);
-                s.text(31, "A flips, or UP for the ceiling and DOWN for the floor.", Point::new(190, 290), 16., TEAL);
-            }
-            Phase::Crashed if st.timer > 20 => {
+            Phase::Crashed if st.timer > 15 => {
                 s.rect(30, Rect::new(150, 100, 500, 240), dim);
-                let p = self.player();
                 s.text(31, "SPLAT!", Point::new(190, 150), 34., GOLD);
-                s.text(31, format!("{} scored {}  ({}m)", NAMES[p], self.score(), self.dist() / 10), Point::new(190, 190), 24., tints[p]);
+                s.text(31, format!("Score {}  ({}m)", self.score(), self.dist() / 10), Point::new(190, 190), 26., Color::new(0.8, 0.65, 1., 1.));
                 s.text(31, format!("Gems {}  ·  close shaves {}  ·  flips {}", st.gems, st.shaves, st.flips), Point::new(190, 224), 17., WHITE);
-                if self.score() >= st.records.best_run[p] && self.score() > 0 {
-                    s.text(31, "NEW PERSONAL BEST!", Point::new(190, 262), 22., PINK);
+                if st.new_best {
+                    s.text(31, "NEW BEST RUN!", Point::new(190, 262), 22., PINK);
+                } else {
+                    s.text(31, format!("Best {}", st.records.best_run), Point::new(190, 262), 18., TEAL);
                 }
-                s.text(31, "Press to continue", Point::new(190, 310), 16., TEAL);
-            }
-            Phase::Results => {
-                s.rect(30, Rect::new(90, 70, 620, 320), dim);
-                let t = [self.total(0), self.total(1)];
-                let title = if t[0] == t[1] { "A TIE!".to_string() } else { format!("{} WINS!", NAMES[usize::from(t[1] > t[0])]) };
-                s.text(31, title, Point::new(140, 125), 38., GOLD);
-                for p in 0..2usize {
-                    let row: Vec<String> = st.scores[p].iter().map(|v| v.to_string()).collect();
-                    s.text(31, format!("{:<6} best {:>5}   ({})", NAMES[p], t[p], row.join(" / ")), Point::new(140, 175 + p as i32 * 32), 22., tints[p]);
-                }
-                let r = &st.records;
-                s.text(31, format!("Wins {}-{}   Furthest {}m / {}m", r.wins[0], r.wins[1], r.best_distance[0] / 10, r.best_distance[1] / 10), Point::new(140, 262), 17., TEAL);
-                s.text(31, "Press for a rematch (the other bat runs first)", Point::new(140, 340), 16., WHITE);
+                s.text(31, "Press to run again", Point::new(190, 310), 16., TEAL);
             }
             _ => {}
         }
@@ -716,17 +627,12 @@ mod tests {
     }
     fn begin(g: &mut Turvy) {
         g.step(&press());
-        assert_eq!(g.state.phase, Phase::Handoff);
-        for _ in 0..12 {
-            g.step(&Intent::default());
-        }
-        g.step(&press());
         assert_eq!(g.state.phase, Phase::Run);
     }
-    /// Flip when a hazard on our surface is within a flip's distance.
     fn isqrt(v: i64) -> i64 {
         (v as f64).sqrt() as i64
     }
+    /// Flip when a hazard on our surface is within a flip's distance.
     fn pilot(g: &Turvy) -> Intent {
         if !g.grounded() {
             return Intent::default();
@@ -760,13 +666,12 @@ mod tests {
             far = far.max(g.dist());
             flips = flips.max(g.state.flips);
         }
-        assert_eq!(g.state.first, 1, "the route picks Dawn to run first");
         assert!(far > 800 && flips >= 2, "the route actually runs and flips (far {far}, flips {flips})");
         if let Ok(path) = std::env::var("BE2_VERIFY_REPORT") {
             std::fs::write(
                 path,
                 serde_json::json!({"hash":format!("{hash:016x}"),"outcome":outcome,"ticks":Turvy::VERIFY_TICKS,
-                    "purpose":"Hot-seat cave run: picks Dawn, launches, flips gravity across a gem column and spike rows until a crash card appears"}).to_string(),
+                    "purpose":"Cave run: starts from the title card, flips gravity across a gem column and spike rows until a crash card appears"}).to_string(),
             )
             .unwrap();
         }
@@ -846,37 +751,35 @@ mod tests {
         assert_eq!(g.state.gems, 1);
         assert_eq!(g.state.points, 30, "10 points times heat multiplier 3");
     }
+    fn crash_now(g: &mut Turvy) {
+        g.state.objs.clear();
+        g.state.gen_x = 100_000;
+        let x = g.dist() + BAT_X + 6;
+        g.spikes(true, x, 3);
+        for _ in 0..10 {
+            g.step(&Intent::default());
+        }
+        assert_eq!(g.state.phase, Phase::Crashed);
+    }
     #[test]
-    fn a_match_keeps_each_bats_best_run_and_records_survive_restart() {
+    fn runs_record_bests_and_restart_keeps_them() {
         let mut g = Turvy::new(7);
         begin(&mut g);
-        let mut guard = 0;
-        while g.state.phase != Phase::Results && guard < 20 {
-            guard += 1;
-            // Crash immediately with a score that grows with the run number.
-            g.state.objs.clear();
-            g.state.gen_x = 100_000;
-            g.state.points = 100 * (u32::from(g.state.run) + 1);
-            let x = g.dist() + BAT_X + 6;
-            g.spikes(true, x, 3);
-            for _ in 0..10 {
-                g.step(&Intent::default());
-            }
-            for _ in 0..50 {
-                g.step(&Intent::default());
-            }
-            g.step(&press());
-            if g.state.phase == Phase::Handoff {
-                for _ in 0..12 {
-                    g.step(&Intent::default());
-                }
-                g.step(&press());
-            }
+        g.state.points = 300;
+        crash_now(&mut g);
+        for _ in 0..30 {
+            g.step(&Intent::default());
         }
-        assert_eq!(g.state.phase, Phase::Results);
-        assert_eq!(g.state.records.matches, 1);
-        assert!(g.total(0) > 0 && g.total(1) > 0);
-        assert_eq!(g.total(0), *g.state.scores[0].iter().max().unwrap(), "the best of three counts");
+        assert_eq!(g.state.records.runs, 1);
+        assert!(g.state.new_best && g.state.records.best_run >= 300);
+        g.step(&press());
+        assert_eq!(g.state.phase, Phase::Run, "one press starts the next run");
+        assert_eq!(g.state.points, 0);
+        crash_now(&mut g);
+        g.step(&Intent::default());
+        assert!(!g.state.new_best, "a worse run is not a new best");
+        assert_eq!(g.state.records.runs, 2);
+        assert!(g.state.records.best_run >= 300);
         let records = g.state.records.clone();
         g.restart();
         assert_eq!(g.state.records, records);
@@ -890,11 +793,9 @@ mod tests {
                 g.step(&Intent::default());
             }
             begin(&mut g);
-            let mut gems = 0;
             for _ in 0..6000 {
                 let i = pilot(&g);
                 g.step(&i);
-                gems = gems.max(g.state.gems);
                 assert_eq!(g.state.phase, Phase::Run, "seed {seed}: crashed at {}m ({} flips)", g.dist() / 10, g.state.flips);
             }
             assert!(g.dist() > 6000, "seed {seed}: ran only {}", g.dist());
@@ -907,11 +808,8 @@ mod tests {
         let mut bad = g.capture();
         bad.side = 0;
         assert!(g.restore(bad).is_err());
-        let mut bad = g.capture();
-        bad.run = 9;
-        assert!(g.restore(bad).is_err());
         assert!(!g.probe_success());
-        g.step(&Intent { x: 1, ..Default::default() });
+        g.step(&Turvy::probe_input());
         assert!(g.probe_success());
         assert_eq!(Turvy::biome(0), 0);
         assert_eq!(Turvy::biome(BIOME_LENGTH * 2), 2);
