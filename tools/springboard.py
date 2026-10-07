@@ -149,7 +149,7 @@ def select(root, task, kind, project, targets, template, networking):
         if declarative and starter['runtime'] == 'portable':
             gaps.append({'kind': 'unsupported_combination', 'detail': 'Portable GameLogic is a typed Rust extension; it does not implement GameDocument authoring. Both requested requirements are retained.',
                          'extension': 'docs/GAME_QUICKSTART.md', 'next': 'Clarify the authoring contract or request an engine extension without changing presentation.'})
-        if presentation and template == 'custom-sim':
+        if presentation in ('2d', 'hybrid') and template == 'custom-sim':
             gaps.append({'kind': 'workflow_not_coordinated', 'detail': 'Custom-sim supports custom presentation, but its sample is 3D. This coordinator does not scaffold the requested ' + presentation + ' custom client.',
                          'extension': 'docs/NETPLAY.md' if network != 'offline' else 'docs/CUSTOM_SIM_CHEATSHEET.md',
                          'next': 'Use NetGame/ClientView or the typed simulation API with an explicit ' + presentation + ' client; do not present the stock sample as the requested game.'})

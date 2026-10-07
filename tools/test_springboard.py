@@ -369,6 +369,11 @@ class SpringboardTests(unittest.TestCase):
         self.assertEqual(network['workflow']['networking'], 'native-multiplayer')
         self.assertEqual(network['next_action']['kind'], 'clarify')
         self.assertIn('custom client', ' '.join(network['blockers']))
+        native_3d = self.start('Create a 3D multiplayer game with Rapier physics', kind='new-game', targets=['windows'])
+        self.assertEqual(native_3d['workflow']['template'], 'custom-sim')
+        self.assertEqual(native_3d['workflow']['requested']['presentation'], '3d')
+        self.assertFalse(native_3d['workflow']['gaps'])
+        self.assertEqual(native_3d['next_action']['argv'][-1], 'custom-sim')
 
     def test_retired_browser_requests_and_engine_prose_do_not_select_web(self):
         engine = self.start('Retire browser tooling and fix evidence for web assets', kind='engine')
