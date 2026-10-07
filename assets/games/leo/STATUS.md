@@ -45,3 +45,35 @@ scripted fixed-step time, not measured hardware performance. Hardware audibility
 subjective listening, real device controls and target-PC frame pacing remain
 unverified. Flat ground and juvenile stylized plants are deliberate bounds; this
 is not a terrain editor or ecosystem simulation. No live server was deployed.
+
+## First-person and scenery reuse
+
+Refinement source `ae96c0b` starts normal native and portable play at Leo's eye
+position, including a resumed save. The native camera adds Lifecycle's pending
+look between fixed ticks; rendering never mutates the authoritative simulation.
+The boy remains in the shadow pass and in explicit portrait captures.
+Six focused scene tests passed, including first-person save/resume, interpolated
+walking/hopping, immediate look without double consumption, and batch invalidation.
+
+The [packaged Linux capture](https://github.com/kevstermcgee/BlueEngine/actions/runs/37663513445)
+passed 503 frames, crossed a chunk origin, completed two days, resumed the exact
+save, and submitted both audio banks to null ALSA. All captured state hashes
+matched the pre-change run. Daylight, night at the chunk boundary, a later day and
+the portrait were inspected. Static meadow batches rebuilt 16 times in 503 frames
+and remained unchanged during stationary frames; their seed/origin/detail keys
+avoid stale geometry after loading or rebasing.
+
+The same scripted portrait workload produced a byte-identical PNG before and
+after this change. Its reported own-work median changed from 65.32 ms in
+[the baseline run](https://github.com/kevstermcgee/BlueEngine/actions/runs/37660916388)
+to 56.98 ms in the refinement run. These are separate hosted Linux software-GL
+runs, not a controlled same-machine benchmark or target-PC frame-rate evidence.
+The printed 60 fps is scripted time. Real mouse/gamepad feel and target-PC frame
+pacing still require hands-on play; no local game window was opened.
+
+The full local canonical check passed all 39 commands, with build/test concurrency
+bounded and low process priority. An initial Unix registry fixture failed with
+Text file busy; its exact isolated rerun and the complete retry passed, and the
+failed report was retained. Full Linux/Windows engine checks and Windows sandbox
+validation also passed on the refinement implementation commit. Local verification
+timings are recorded in docs/perf; they are not gameplay frame-rate measurements.
