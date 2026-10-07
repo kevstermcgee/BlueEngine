@@ -10,7 +10,7 @@ full input identity, observed probes and report history. Essential constraints s
 
 ```sh
 python3 tools/be2.py start "Create a small 2D collect-four game" \
-  --kind new-game --project ../relic-room --template two-d --target web --compact
+  --kind new-game --project ../relic-room --template two-d --target windows --compact
 python3 tools/be2.py start "Fix path sampling in the engine" \
   --kind engine --path src/viewer/devkit/path.rs --compact
 python3 tools/be2.py next TASK_ID --compact
@@ -32,7 +32,9 @@ directory shown in the packet; publication still needs its own committed public 
 `templates/starters.json` is embedded in the native tool and read by this coordinator.
 The CLI default is **portable**, the original library default remains **stock**;
 always name the intended starter. Declarative native GameDocument, native custom
-simulation/netplay and portable browser rules remain distinct. Browser UDP/QUIC/native
+simulation/netplay and portable rules remain distinct. BlueEngineGames distributes native
+Windows EXE installers; optional browser compatibility requires a separate destination.
+Browser UDP/QUIC/native
 Rapier/world APIs are unsupported combinations, with engineering routes shown. Headless
 engine APIs exist even though this coordinator does not scaffold a headless application.
 
