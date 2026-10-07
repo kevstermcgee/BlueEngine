@@ -51,8 +51,10 @@ pub mod content;
 mod landscaping;
 
 pub mod arena;
+pub mod combat;
 pub mod fps;
 pub mod prop_physics;
+pub mod stock_demo;
 pub mod weapons;
 
 pub mod lifecycle;

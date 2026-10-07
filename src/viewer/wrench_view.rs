@@ -1,4 +1,5 @@
-use crate::viewer::wrench::Wrench;
+//! Stock demo weapon presentation, retained for character/sandbox and public compatibility.
+use crate::viewer::stock_demo::wrench::Wrench;
 use macroquad::prelude::*;
 
 // A small dedicated depth buffer keeps the held tool out of room geometry.
@@ -89,7 +90,7 @@ impl View {
         let shift = vec3(0.40 - 0.24 * swing, -0.40 + 0.06 * swing, -0.90);
         self.draw_pose(rotation, shift, false);
     }
-    pub fn draw_pistol(&mut self, pistol: &crate::viewer::weapons::Pistol) {
+    pub fn draw_pistol(&mut self, pistol: &crate::viewer::stock_demo::weapons::Pistol) {
         self.draw_pose(
             Quat::from_rotation_x(pistol.recoil() * 0.22),
             vec3(

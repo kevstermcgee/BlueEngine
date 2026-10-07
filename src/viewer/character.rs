@@ -2,7 +2,7 @@
 use super::wrench_view::{box_part, swing_amount, View};
 use crate::viewer::{
     controller::{CharacterKind, Controller},
-    wrench::Wrench,
+    stock_demo::wrench::Wrench,
 };
 use macroquad::prelude::*;
 #[derive(Default)]

@@ -114,7 +114,9 @@ def build(kind):
     env, target = environment(kind)
     args = ['cargo', 'build', '--release', '--locked']
     if kind == 'client':
-        args += ['--bin', 'be2', '--bin', 'vesper3d']
+        args += ['--bin', 'be2']
+    elif kind == 'cinematic':
+        args += ['--no-default-features', '--features', 'offline', '--bin', 'vesper3d']
     else:
         args += ['--no-default-features', '--bin', 'be2-headless' if kind == 'headless' else 'be2-tools']
     invoke(args, env=env)
@@ -296,7 +298,7 @@ def package(destination):
             raise RuntimeError(f'Package refuses symlink: {rel}')
         if path.is_file() and not rel.startswith('bin/'):
             members['be2/' + rel] = path
-    for folder, name, output in [(client, 'be2', 'BE2'), (client, 'vesper3d', 'vesper3d'),
+    for folder, name, output in [(client, 'be2', 'BE2'),
                                  (headless, 'be2-headless', 'be2-headless'), (tooling, 'be2-tools', 'be2-tools')]:
         members['be2/bin/' + output + SUFFIX] = folder / (name + SUFFIX)
     hashes = {name: hashlib.sha256(path.read_bytes()).hexdigest() for name, path in members.items()}
@@ -364,7 +366,7 @@ def main():
     c.add_argument('--record', action='store_true', help='Save packet size/timing locally for workflow measurement')
     c.add_argument('--level', type=int, choices=[1, 2, 3], default=2,
                    help='1: commands/guides; 2: contracts; 3: ownership/implementation map')
-    b = sub.add_parser('build'); b.add_argument('kind', choices=['client', 'headless', 'tools', 'all'])
+    b = sub.add_parser('build'); b.add_argument('kind', choices=['client', 'headless', 'tools', 'cinematic', 'all'])
     c = sub.add_parser('capture'); c.add_argument('destination'); c.add_argument('--map')
     p = sub.add_parser('package'); p.add_argument('destination')
     t = sub.add_parser('map'); t.add_argument('arguments', nargs=argparse.REMAINDER)

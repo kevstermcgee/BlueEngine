@@ -1558,7 +1558,7 @@ class VerifyBase(TempTestCase):
 
     def verify(self, *extra, plat=None):
         code, report, err = call_main(self.root, 'verify', '--folder', str(self.folder), '--platform', plat or self.plat,
-                                      '--json', *extra)
+                                      '--json', '--icon-similarity', *extra)
         return code, report
 
     def statuses(self, report):
@@ -1574,8 +1574,49 @@ class VerifyBase(TempTestCase):
             self.assertIn(fragment, check['detail'])
         return report
 
+    def assert_advisory(self, name, fragment):
+        code, report = self.verify()
+        self.assertEqual(code, 0, report)
+        self.assertTrue(report['ok'])
+        check = check_by_name(report, name)
+        self.assertEqual(check['status'], 'warn', check)
+        self.assertIn(fragment, check['detail'])
+        return report
+
     def write_asset(self, name, data):
         (self.root / 'assets' / name).write_bytes(data)
+
+
+class PackageDeliveryTests(VerifyBase):
+    def test_package_verification_never_reads_desktop(self):
+        with mock.patch.object(game_ship, 'desktop_folders', side_effect=AssertionError('desktop access')), \
+             mock.patch.object(game_ship.Verifier, 'other_shortcuts', side_effect=AssertionError('scan')):
+            code, report, _ = call_main(self.root, 'verify', '--json')
+        self.assertEqual(code, 0, report)
+        self.assertEqual(self.statuses(report)['shortcut-file'], 'skip')
+        self.assertEqual(self.statuses(report)['shortcut-unique'], 'skip')
+
+    def test_installation_verifies_own_shortcut_without_comparing_other_icons(self):
+        with mock.patch.object(game_ship.Verifier, 'other_shortcuts', side_effect=AssertionError('scan')):
+            code, report, _ = call_main(self.root, 'verify', '--json', '--folder', str(self.folder))
+        self.assertEqual(code, 0, report)
+        self.assertEqual(self.statuses(report)['shortcut-file'], 'pass')
+        self.assertEqual(self.statuses(report)['shortcut-icon'], 'pass')
+        self.assertEqual(self.statuses(report)['shortcut-unique'], 'skip')
+
+    def test_failed_advisory_is_a_warning_not_a_package_failure(self):
+        with mock.patch.object(game_ship.Verifier, 'check_shortcut_unique', side_effect=game_ship.ShipError('shell unavailable')):
+            code, report, _ = call_main(self.root, 'verify', '--json', '--icon-similarity')
+        self.assertEqual(code, 0, report)
+        self.assertEqual(self.statuses(report)['shortcut-unique'], 'warn')
+
+    def test_no_install_ship_does_not_create_a_shortcut(self):
+        with mock.patch.object(game_ship, 'cmd_package', return_value={'ok': True}), \
+             mock.patch.object(game_ship, 'cmd_shortcut', side_effect=AssertionError('install')), \
+             mock.patch.object(game_ship, 'desktop_folders', side_effect=AssertionError('desktop access')):
+            report = game_ship.cmd_ship(self.project, no_install=True, no_smoke=True)
+        self.assertTrue(report['ok'], report)
+        self.assertEqual(report['shortcut']['skipped'], '--no-install')
 
 
 class VerifyPassTests(VerifyBase):
@@ -1653,7 +1694,7 @@ class VerifyPassTests(VerifyBase):
 
     def test_no_desktop_is_skipped_explicitly_and_listed(self):
         with mock.patch.object(game_ship, 'desktop_folders', return_value={'user': None, 'common': None}):
-            code, report, _err = call_main(self.root, 'verify', '--platform', 'linux', '--json')
+            code, report, _err = call_main(self.root, 'verify', '--platform', 'linux', '--json', '--check-shortcut', '--icon-similarity')
         self.assertEqual(code, 0, report)
         for name in ('shortcut-file', 'shortcut-icon', 'shortcut-unique'):
             check = check_by_name(report, name)
@@ -2090,21 +2131,21 @@ class VerifyLinuxLauncherTests(VerifyBase):
         same.write_bytes(icon_set(1)['icon.png'])
         write_desktop(self.folder / 'Another Game.desktop', Type='Application', Name='Another Game', Exec='/bin/true',
                       Icon=same)
-        self.assert_fails('shortcut-unique', 'too similar to "Another Game"')
+        self.assert_advisory('shortcut-unique', 'too similar to "Another Game"')
 
     def test_a_near_duplicate_icon_is_too_similar(self):
         near = self.tmp / 'near.png'
         near.write_bytes(icon_set(1, shift=10)['icon.png'])
         write_desktop(self.folder / 'Lookalike.desktop', Type='Application', Name='Lookalike', Exec='/bin/true', Icon=near)
-        report = self.assert_fails('shortcut-unique', 'too similar to "Lookalike"')
+        report = self.assert_advisory('shortcut-unique', 'too similar to "Lookalike"')
         self.assertIn('--variant N --replace', check_by_name(report, 'shortcut-unique')['detail'])
-        self.assertIn('--variant N --replace', report['next'])
+        self.assertEqual(report['next'], '')
 
     def test_another_launcher_with_our_name_is_a_clash(self):
         sub = self.folder / 'games'
         sub.mkdir()
         (sub / 'Copy.desktop').write_text('[Desktop Entry]\nType=Application\nName=Zephyr Quest\nExec=/bin/true\n', encoding='utf-8')
-        self.assert_fails('shortcut-unique', 'also called "Zephyr Quest"')
+        self.assert_advisory('shortcut-unique', 'also called "Zephyr Quest"')
 
     def test_launchers_without_usable_icons_say_nothing_about_looks(self):
         (self.folder / 'Themed.desktop').write_text(
@@ -2426,7 +2467,7 @@ class WindowsVerifyTests(TempTestCase):
         self.lnk = self.folder / 'Zephyr Quest.lnk'
 
     def verify(self, *extra):
-        code, report, _err = call_main(self.root, 'verify', '--folder', str(self.folder), '--json', *extra, env=self.env)
+        code, report, _err = call_main(self.root, 'verify', '--folder', str(self.folder), '--json', '--icon-similarity', *extra, env=self.env)
         return code, report
 
     def statuses(self, report):
@@ -2557,7 +2598,7 @@ class WindowsVerifyTests(TempTestCase):
         self.make_other('Lookalike', icon_set(1)['icon.ico'])
         report = self.verify()[1]
         check = check_by_name(report, 'shortcut-unique')
-        self.assertEqual(check['status'], 'fail')
+        self.assertEqual(check['status'], 'warn')
         self.assertIn('too similar to "Lookalike"', check['detail'])
         self.assertIn('shape 0.00', check['detail'])
         self.assertIn('--variant N --replace', check['detail'])
@@ -2567,7 +2608,7 @@ class WindowsVerifyTests(TempTestCase):
             with self.subTest(label):
                 path = self.make_other('Near Copy', icon_set(1, shift=shift)['icon.ico'])
                 check = check_by_name(self.verify()[1], 'shortcut-unique')
-                self.assertEqual(check['status'], 'fail', check)
+                self.assertEqual(check['status'], 'warn', check)
                 self.assertIn('too similar to "Near Copy"', check['detail'])
                 path.unlink()
 
@@ -2585,7 +2626,7 @@ class WindowsVerifyTests(TempTestCase):
     def test_another_shortcut_with_our_title_is_a_clash(self):
         self.make_other('Zephyr Quest', icon_set(4)['icon.ico'], folder=self.folder / 'games')
         check = check_by_name(self.verify()[1], 'shortcut-unique')
-        self.assertEqual(check['status'], 'fail')
+        self.assertEqual(check['status'], 'warn')
         self.assertIn('also called "Zephyr Quest"', check['detail'])
 
     def test_the_scan_goes_two_folders_deep_no_further(self):
@@ -2593,7 +2634,7 @@ class WindowsVerifyTests(TempTestCase):
         self.make_other('Lookalike', icon_set(1)['icon.ico'], folder=deep)
         self.assertEqual(check_by_name(self.verify()[1], 'shortcut-unique')['status'], 'pass')
         (deep / 'Lookalike.lnk').replace(self.folder / 'a' / 'b' / 'Lookalike.lnk')
-        self.assertEqual(check_by_name(self.verify()[1], 'shortcut-unique')['status'], 'fail')
+        self.assertEqual(check_by_name(self.verify()[1], 'shortcut-unique')['status'], 'warn')
 
     def test_broken_shortcuts_are_skipped_not_fatal(self):
         (self.folder / 'Corrupt.lnk').write_bytes(b'not a shortcut at all')
@@ -2682,7 +2723,7 @@ class CompiledGameTests(unittest.TestCase):
         assert not is_running(f'{cls.stem}.exe'), 'a test game process was left behind'
 
     def verify(self, *extra):
-        code, report, _err = call_main(self.root, 'verify', '--folder', str(self.folder), '--json', *extra, env=self.env)
+        code, report, _err = call_main(self.root, 'verify', '--folder', str(self.folder), '--json', '--icon-similarity', *extra, env=self.env)
         return code, report
 
     def statuses(self, report):

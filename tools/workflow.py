@@ -539,7 +539,7 @@ def full_commands(test_profile='itest'):
     # Group feature modes to avoid repeatedly rebuilding the same binary with a
     # different feature set. Keep every pre-existing engine gate.
     commands = [['cargo', 'fmt', '--check']]
-    for features in ([], ['--no-default-features']):
+    for features in ([], ['--no-default-features'], ['--no-default-features', '--features', 'offline']):
         commands.extend([
             ['cargo', 'rustdoc', '--locked', '--lib', *profile_flags(test_profile), *features, '--', '-D', 'warnings'],
             ['cargo', 'test', '--locked', *profile_flags(test_profile), *features],

@@ -1,3 +1,7 @@
+> Legacy cinematic scene reference, not the game-authoring entry point.
+> Start games with [GAME_QUICKSTART](docs/GAME_QUICKSTART.md) and `be2.py start`.
+> The explicit cinematic tool is `python3 tools/be2.py build cinematic` (Cargo `offline`).
+
 # Vesper3D — AI reference
 
 Create one JSON scene, validate it, render a contact sheet, then an MP4.

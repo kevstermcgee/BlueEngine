@@ -156,9 +156,9 @@ def parse_json_output(text):
 
 
 def ship_stage(root, report, directory, index, ship_folder=None):
-    """Run `scripts/ship.py verify --json`; the game is not done until its shortcut and package verify."""
+    """Verify the package and isolated smoke; installation is checked only when requested."""
     ship = root / 'scripts/ship.py'
-    command = [sys.executable, str(ship), 'verify', '--json']
+    command = [sys.executable, str(ship), 'verify', '--json', '--smoke']
     if ship_folder is not None:
         command.extend(['--folder', str(Path(ship_folder).resolve())])
     log = directory / f'{index + 1}.log'
@@ -279,8 +279,21 @@ def main():
     parser.add_argument('--scenario', action='append', default=[], help='Additional behavioral scenario')
     parser.add_argument('--skip-ship', action='store_true',
                         help='Full check without the ship gate (shortcut, package and icon verification)')
-    parser.add_argument('--ship-folder', help='Verify the launcher in this private folder instead of the desktop')
+    parser.add_argument('--ship-folder', help='Also verify requested installation in this private folder')
     args = parser.parse_args()
+    root = Path(__file__).resolve().parents[1]
+    if (root / 'game.project.json').exists():
+        import importlib.util
+        helper = root / 'scripts/project.py'
+        if not helper.is_file():
+            parser.error('game.project.json needs scripts/project.py; refresh generated project tooling')
+        spec = importlib.util.spec_from_file_location('game_requirements', helper)
+        requirements = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(requirements)
+        try:
+            requirements.validate_project(root)
+        except (ValueError, OSError) as error:
+            parser.error(str(error))
     if not args.tools:
         parser.error('No be2-tools found. Build one in the engine checkout, then rerun (it is found there '
                      'automatically): cargo build --profile fast --no-default-features --bin be2-tools '

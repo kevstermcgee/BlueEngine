@@ -1,3 +1,19 @@
+# Archived multiplayer prototype — not a starter
+
+Retained source and presentation history for published consumers. Its development UDP
+handshake, lobby and coordination predate shared Netplay; do not copy them for new games.
+Use [Netplay](../../NETPLAY.md): `NetGame`, `ClientView`, and `netplay::cli::serve`.
+The smallest complete example is `src/viewer/netplay/toy.rs` with
+`src/bin/be2-toy-server.rs`; its process-level coverage remains supported.
+
+The publisher still exports this archive to `prototypes/multiplayer-game` and explicitly
+preserves that path if the export is later removed. Exported history is not independently
+owned: the publisher otherwise deletes unchanged previously exported files.
+
+The historical instructions below describe the prototype, not current engine guidance.
+
+---
+
 # BlueEngine Multiplayer Game Template
 
 A starter template for building authoritative multiplayer prototypes with BlueEngine.
@@ -67,7 +83,7 @@ cargo run -- --connect 127.0.0.1:4000 --key my-secret-join-key
 Do not expose this template server directly to an untrusted network. For the engine's
 production QUIC/TLS path, use `be2-headless` and `be2` with `--transport production`;
 add matching `--auth-key` values when client authentication is required, as described in
-[`docs/HOSTING.md`](../../docs/HOSTING.md).
+[`docs/HOSTING.md`](../../HOSTING.md).
 
 ---
 

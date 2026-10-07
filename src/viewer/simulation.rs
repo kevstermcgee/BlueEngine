@@ -343,59 +343,39 @@ impl HeadlessWorld {
             player.interact = false;
         }
     }
-    /// Authoritatively fire a pistol shot for a player.
-    /// Resolves closest hit among static room geometry and dynamic props to prevent firing through walls.
-    pub fn fire_pistol(&mut self, id: u64) -> Option<crate::math::V> {
-        let player = self.players.get(&id)?;
-        let ray = player.controller.ray();
-        if !ray.o.finite() || !ray.d.finite() {
+    /// Resolve an authoritative, occluded prop attack using game-owned range/impulse policy.
+    /// Static geometry blocks props behind it. Optional release is applied before the impulse.
+    /// Invalid policy/aim or an unknown player makes no change.
+    pub fn attack_props(
+        &mut self,
+        id: u64,
+        range: f32,
+        impulse: f32,
+        release_held: bool,
+    ) -> Option<crate::math::V> {
+        if !range.is_finite() || range <= 0.0 || !impulse.is_finite() || impulse < 0.0 {
             return None;
         }
-
-        let max_range = crate::viewer::weapons::PISTOL_RANGE;
-        let static_hit = self.room.world.hit(ray, max_range, false);
-        let max_prop_dist = static_hit.as_ref().map(|h| h.t).unwrap_or(max_range);
-
-        let mut hit_prop = None;
-        if let Some(ref mut physics) = self.prop_physics {
-            if let Some((i, d)) = physics.hit_prop(ray, max_prop_dist) {
-                hit_prop = Some((i, d));
-            }
-            if let Some((i, d)) = hit_prop {
-                physics.apply_impulse(i, ray.d.norm() * 6.0);
-                return Some(ray.o + ray.d.norm() * d);
-            }
+        let ray = self.players.get(&id)?.controller.ray();
+        if !ray.o.finite() || !ray.d.finite() || ray.d.length() < 0.001 {
+            return None;
         }
-
-        static_hit.map(|h| h.p)
-    }
-
-    /// Authoritatively swing a wrench for a player.
-    /// Resolves closest hit among static room geometry and dynamic props within reach.
-    pub fn fire_wrench(&mut self, id: u64) -> Option<crate::math::V> {
-        let player = self.players.get(&id)?;
-        let ray = player.controller.ray();
-        let reach = crate::viewer::wrench::REACH;
-
-        let static_hit = self.room.world.hit(ray, reach, false);
-        let max_prop_dist = static_hit.as_ref().map(|h| h.t).unwrap_or(reach);
-
-        let mut hit_prop = None;
-        if let Some(ref mut physics) = self.prop_physics {
+        let static_hit = self.room.world.hit(ray, range, false);
+        let max_prop_dist = static_hit.as_ref().map(|h| h.t).unwrap_or(range);
+        if let Some(physics) = self.prop_physics.as_mut() {
             if let Some((i, d)) = physics.hit_prop(ray, max_prop_dist) {
-                hit_prop = Some((i, d));
-            }
-            if let Some((i, d)) = hit_prop {
-                if let Some(holder) = physics.holder_of(i) {
-                    physics.drop_for_player(holder);
+                if release_held {
+                    if let Some(holder) = physics.holder_of(i) {
+                        physics.drop_for_player(holder);
+                    }
                 }
-                physics.apply_impulse(i, ray.d.norm() * 12.0);
+                physics.apply_impulse(i, ray.d.norm() * impulse);
                 return Some(ray.o + ray.d.norm() * d);
             }
         }
-
         static_hit.map(|h| h.p)
     }
+
     /// Borrow current authoritative controller state, or return `None` for an unknown ID.
     pub fn player(&self, id: u64) -> Option<&Controller> {
         self.players.get(&id).map(|p| &p.controller)

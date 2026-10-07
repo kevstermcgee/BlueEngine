@@ -26,9 +26,11 @@ use vesper3d::{
         prop_physics::PropPhysics,
         server::DedicatedServer,
         simulation::PlayerStepper,
+        stock_demo::{
+            weapons::{Loadout, Weapon},
+            wrench::Wrench,
+        },
         test_lab::{SPAWN_PLAYER_1, SPAWN_PLAYER_2},
-        weapons::{Loadout, Weapon},
-        wrench::Wrench,
     },
 };
 

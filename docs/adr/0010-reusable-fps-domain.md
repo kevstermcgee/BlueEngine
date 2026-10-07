@@ -21,7 +21,10 @@ four presentation-neutral operative archetypes, and an authoritative team-deathm
 state machine. Games still own maps, animation/meshes, networking messages, hit-shape
 policy and HUD/presentation.
 
-The older `viewer::weapons` pistol/wrench demo remains compatible. It is not the API
+The older `viewer::weapons` and `viewer::wrench` paths re-export `viewer::stock_demo` policy.
+Stock be2/server, character rendering, sandbox and external published consumers retain compatibility.
+Shared attack timing is `viewer::combat`; `HeadlessWorld::attack_props` resolves geometry/prop impulses
+without owning a weapon range or balance. The old fire_pistol/fire_wrench methods are narrow stock-protocol adapters. It is not the API
 for new multiplayer FPS projects.
 
 ## Consequences

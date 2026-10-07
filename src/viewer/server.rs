@@ -674,11 +674,13 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                             }
 
                             if frame.fire_pistol && session.pistol_cooldown <= 0.0 {
-                                session.pistol_cooldown = crate::viewer::weapons::SHOT_INTERVAL;
+                                session.pistol_cooldown =
+                                    crate::viewer::stock_demo::weapons::SHOT_INTERVAL;
                                 should_fire_pistol = true;
                             }
                             if frame.fire_wrench && session.wrench_cooldown <= 0.0 {
-                                session.wrench_cooldown = crate::viewer::wrench::SWING_TIME;
+                                session.wrench_cooldown =
+                                    crate::viewer::stock_demo::wrench::SWING_TIME;
                                 should_fire_wrench = true;
                             }
                         }
@@ -752,11 +754,13 @@ impl<T: DatagramTransport> DedicatedServer<T> {
                             let edges = session.action_tracker.update(&frame.counters);
                             frame.movement.jump = edges.jump;
                             if edges.secondary && session.wrench_cooldown <= 0.0 {
-                                session.wrench_cooldown = crate::viewer::wrench::SWING_TIME;
+                                session.wrench_cooldown =
+                                    crate::viewer::stock_demo::wrench::SWING_TIME;
                                 should_fire_wrench = true;
                             }
                             if edges.primary && session.pistol_cooldown <= 0.0 {
-                                session.pistol_cooldown = crate::viewer::weapons::SHOT_INTERVAL;
+                                session.pistol_cooldown =
+                                    crate::viewer::stock_demo::weapons::SHOT_INTERVAL;
                                 should_fire_pistol = true;
                             }
                             if edges.interact {

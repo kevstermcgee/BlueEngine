@@ -27,7 +27,8 @@
     "games/dead-air",
     "games/prop-hunt",
     "games/slapstick",
-    "games/feta"
+    "games/feta",
+    "prototypes/multiplayer-game"
   ],
   "collections": {
     "games": [
@@ -302,7 +303,7 @@
         "destination": "rust-api"
       },
       {
-        "source": "templates/multiplayer-game",
+        "source": "docs/archive/multiplayer-game",
         "destination": "multiplayer-game"
       }
     ],

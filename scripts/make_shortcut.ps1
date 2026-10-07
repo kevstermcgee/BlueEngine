@@ -1,24 +1,24 @@
 # Creates a BlueEngine Desktop shortcut with the official project icon.
-# Build first:  cargo build --release --bin be2      Then:  powershell -File scripts\make_shortcut.ps1
+# Build first:  cargo build --release --bin blueengine-sandbox      Then:  powershell -File scripts\make_shortcut.ps1
 $repo = Split-Path -Parent $PSScriptRoot
-$exe = Join-Path $repo "target\release\be2.exe"
+$exe = Join-Path $repo "target\release\blueengine-sandbox.exe"
 if (-not (Test-Path $exe)) {
-    $exe = Join-Path $repo "bin\BEA.exe"
+    $exe = Join-Path $repo "bin\blueengine-sandbox.exe"
 }
 if (-not (Test-Path $exe)) {
-    throw "Build first: cargo build --release --bin be2 ($exe is missing)"
+    throw "Build first: cargo build --release --bin blueengine-sandbox ($exe is missing)"
 }
 
 $desktop = [Environment]::GetFolderPath("Desktop")
-$lnk = Join-Path $desktop "BlueEngine.lnk"
+$lnk = Join-Path $desktop "BlueEngineSandbox.lnk"
 
 $ws = New-Object -ComObject WScript.Shell
 $s = $ws.CreateShortcut($lnk)
 $s.TargetPath = $exe
-$s.Arguments = ""  # Bare launch opens Blue Test Lab by default
+$s.Arguments = ""  # Bare launch opens the sandbox workbench
 $s.WorkingDirectory = $repo
 $s.IconLocation = (Join-Path $repo "assets\branding\blueengine.ico") + ",0"
-$s.Description = "BlueEngine - Test Lab (WASD walk, mouse look, E pick up props, click attack, wheel switches weapon)"
+$s.Description = "BlueEngine Sandbox - maps, asset inspection, characters and creative authoring"
 $s.Save()
 
 Write-Output "Created shortcut: $lnk"

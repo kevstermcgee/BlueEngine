@@ -54,3 +54,6 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0042: Hot reload acceptance and stopped experiments](0042-hot-reload-acceptance.md)
 - [0043: Scoped mutation diagnostics and stopped coordinator](0043-scoped-mutation-diagnostics.md)
 - [0044: Generate authoring schemas from opt-in Rust types](0044-generated-authoring-schemas.md)
+
+- [0045: Windows-only game distribution](0045-windows-only-game-distribution.md)
+- [0046: Canonical native development and delivery paths](0046-canonical-native-development-paths.md)

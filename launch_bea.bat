@@ -1,18 +1,29 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-echo ========================================================
-echo   Launching Blue Engine Antigravity (BEA)...
-echo ========================================================
-if "%~1"=="" (
-    start "" powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%~dp0BEA_Launcher.ps1"
-    exit /b 0
+rem Compatibility: bare BEA opens the supported workbench. Old stock-client args are preserved.
+if not "%~1"=="" goto stock
+if exist "blueengine-sandbox.exe" (
+    "blueengine-sandbox.exe"
+    exit /b
 )
-
-if exist "bin\BEA.exe" (
-    start "" "bin\BEA.exe" %*
-) else if exist "target\release\be2.exe" (
-    start "" "target\release\be2.exe" %*
-) else (
-    cargo run --release --bin be2 -- %*
+if exist "bin\blueengine-sandbox.exe" (
+    "bin\blueengine-sandbox.exe"
+    exit /b
 )
+cargo run --profile fast --bin blueengine-sandbox --
+exit /b
+:stock
+if exist "be2.exe" (
+    "be2.exe" %*
+    exit /b
+)
+if exist "bin\BE2.exe" (
+    "bin\BE2.exe" %*
+    exit /b
+)
+if exist "target\release\be2.exe" (
+    "target\release\be2.exe" %*
+    exit /b
+)
+cargo run --profile fast --bin be2 -- %*

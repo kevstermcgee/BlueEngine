@@ -382,8 +382,8 @@ class ShipGateTests(RunnerCase):
         report = self.report()
         self.assertEqual(report['ship'], SHIP_PASS)  # the parsed verify JSON, not a summary
         self.assertEqual(report['checks'][-1]['name'], 'ship')  # the last stage
-        self.assertEqual(commands[-1], [sys.executable, str(self.root / 'scripts/ship.py'), 'verify', '--json'])
-        self.assertEqual(self.marker.read_text(), 'verify --json')
+        self.assertEqual(commands[-1], [sys.executable, str(self.root / 'scripts/ship.py'), 'verify', '--json', '--smoke'])
+        self.assertEqual(self.marker.read_text(), 'verify --json --smoke')
         self.assertIn('ship.shortcut-file: no desktop', report['skipped'])
         self.assertIn('ship.launch: not requested (pass --launch)', report['skipped'])
         self.assertEqual(report['warnings'], ['ship.package: dist/x.exe is older than the release build'])

@@ -11,7 +11,7 @@ on:
       - assets/maps/starters/**
       - examples/**
       - previews/**
-      - templates/multiplayer-game/**
+      - docs/archive/multiplayer-game/**
       - games-publish.json
       - scripts/publish_games.py
       - src/**

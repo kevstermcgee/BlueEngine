@@ -1837,6 +1837,71 @@ fn test_weapon_occlusion_and_wall_blocking() {
 }
 
 #[test]
+fn stock_attack_adapter_matches_game_owned_policy_and_rejects_invalid_inputs() {
+    use vesper3d::viewer::{simulation::HeadlessWorld, stock_demo};
+    let mut stock = HeadlessWorld::new().unwrap();
+    let mut custom = HeadlessWorld::new().unwrap();
+    stock.join(1);
+    custom.join(1);
+    assert_eq!(
+        stock.fire_pistol(1),
+        custom.attack_props(1, stock_demo::weapons::PISTOL_RANGE, 6.0, false)
+    );
+    assert_eq!(stock.checksum(), custom.checksum());
+    assert_eq!(
+        stock.fire_wrench(1),
+        custom.attack_props(1, stock_demo::wrench::REACH, 12.0, true)
+    );
+    assert_eq!(stock.checksum(), custom.checksum());
+    let before = custom.checksum();
+    for (range, impulse) in [
+        (f32::NAN, 6.0),
+        (40.0, f32::INFINITY),
+        (-1.0, 6.0),
+        (40.0, -1.0),
+    ] {
+        assert_eq!(custom.attack_props(1, range, impulse, true), None);
+    }
+    assert_eq!(custom.attack_props(999, 40.0, 6.0, true), None);
+    assert_eq!(before, custom.checksum());
+}
+
+#[test]
+fn stock_melee_releases_another_players_prop_while_pistol_preserves_ownership() {
+    use vesper3d::{math::V, viewer::simulation::HeadlessWorld};
+    let mut world = HeadlessWorld::new().unwrap();
+    world.join(1);
+    world.join(2);
+    let target = world
+        .prop_physics
+        .as_ref()
+        .unwrap()
+        .prop_position(0)
+        .unwrap();
+    let player = world.player_mut(1).unwrap();
+    player.position = target + V(-1.0, 0.0, 0.0);
+    player.yaw = std::f32::consts::FRAC_PI_2;
+    player.pitch = 0.0;
+    world
+        .prop_physics
+        .as_mut()
+        .unwrap()
+        .set_held_for_player(2, 0);
+    assert!(world.fire_pistol(1).is_some());
+    assert_eq!(world.prop_physics.as_ref().unwrap().holder_of(0), Some(2));
+    assert!(world.fire_wrench(1).is_some());
+    let physics = world.prop_physics.as_ref().unwrap();
+    assert_eq!(physics.holder_of(0), None);
+    assert_eq!(physics.held_for_player(2), None);
+    assert!(physics.prop_linear_velocity(0).unwrap().length() > 0.0);
+    world.leave(2);
+    assert_eq!(
+        world.prop_physics.as_ref().unwrap().held_for_player(2),
+        None
+    );
+}
+
+#[test]
 fn test_delta_recovery_under_packet_loss_reordering_and_jitter() {
     use std::collections::VecDeque;
     use vesper3d::viewer::{

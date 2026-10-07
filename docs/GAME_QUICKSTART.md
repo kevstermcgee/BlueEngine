@@ -3,7 +3,7 @@
 Start in the engine checkout with `python3 tools/be2.py start "<game task>" --kind new-game --target windows --compact`.
 The packet selects an explicit starter. BlueEngine game distribution is Windows x64 EXE only. Portable native games follow
 [the portable guide](PORTABLE_GAMES.md);
-the stock and custom-simulation native workflows below retain their desktop ship gate.
+the stock and custom-simulation native workflows below retain their package and isolated smoke gate.
 
 ## Pick the starter first
 
@@ -13,6 +13,9 @@ the stock and custom-simulation native workflows below retain their desktop ship
 | want shared services with 2D/3D/hybrid presentation | **portable** (default): `be2-tools new-game my-game ../my-game ../BlueEngine portable` — read [PORTABLE_GAMES.md](PORTABLE_GAMES.md) |
 | want a 2D offline native game | **two-d**: `be2-tools new-game my-game ../my-game ../BlueEngine two-d` — read [TWO_D.md](TWO_D.md) |
 | need enemies, projectiles, scoring, AI, waves, procedural content or per-frame physics: anything `GameDocument` cannot express | **custom-sim**: `be2-tools new-game my-game ../my-game ../BlueEngine custom-sim` |
+
+For multiplayer, use the **custom-sim** project plus the tiny `ToyGame`/`ToyView` and
+`be2-toy-server` assembly in [NETPLAY.md](NETPLAY.md). The old multiplayer template is archived.
 
 `GameDocument` deliberately has no scripting, so do not stretch it to fit an action game. A custom-sim
 game keeps its rules in a pure, seeded, fixed-step Rust library (the contract the engine asks of its own
@@ -31,14 +34,13 @@ input accumulator, deterministic-replay and capture helpers, saves, screen-feel,
    - The scaffold generated a title-seeded icon set (`assets/icon.ico`, `icon_{16,32,64}.rgba`, `icon.png`).
      Draw your own if you like, or regenerate with `be2-tools icon TITLE assets --replace` (add a number,
      `be2-tools icon TITLE assets 3 --replace`, for a different design when it resembles another shortcut).
-   - `scripts/blue ship` builds a release package in `dist/` (exe, icon, content), creates
-     `<Desktop>/<Title>.lnk` targeting `dist/`, never `target/`, with the tagline and controls as its tooltip,
-     and verifies it: the shortcut's target, start-in and icon, an icon that is distinct from every other
-     shortcut on that desktop, the exe's embedded icon and version info, and (with a display) the window
-     title and window icon read back from a launch through the shortcut plus a smoke capture.
-     Where there is no desktop (CI) those checks report `skipped: no desktop`, never a silent pass.
-     Linux gets a `.desktop` file, macOS a `.command`. `scripts/blue package` and `scripts/blue shortcut`
-     run the halves separately.
+   - `scripts/blue ship --no-install` builds the release package in `dist/`, verifies hashes,
+     complete assets and Windows executable resources, then runs the isolated package smoke.
+     No desktop is inspected or modified. `scripts/blue ship` additionally installs a convenient
+     shortcut targeting `dist/` and checks its target, start-in and icon; on Windows it checks
+     the launched window. `verify --folder DIR` or `--check-shortcut` requests installation checks.
+     `verify --icon-similarity` is an optional advisory and never a shipping failure.
+     Linux gets a `.desktop` file, macOS a `.command`; unavailable checks remain explicit skips.
    - Smoke verification runs a fresh temporary copy containing only `ship.json`'s declared
      payload, from that directory. It checks recorded file hashes before launching and keeps
      captures under `.blue-check/`; existing player settings and saves in `dist/` stay untouched.

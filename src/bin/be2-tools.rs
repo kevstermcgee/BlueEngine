@@ -616,6 +616,8 @@ fn run() -> Result<()> {
 
             let mut proxy = vesper3d::viewer::net::UdpProxyServer::bind(listen, upstream, config)?;
             let local_addr = proxy.local_addr()?;
+            let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+            vesper3d::viewer::shutdown::install(stop.clone())?;
             println!(
                 "{}",
                 json!({
@@ -627,15 +629,8 @@ fn run() -> Result<()> {
                 })
             );
 
-            let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-            #[cfg(feature = "offline")]
-            {
-                let s_clone = stop.clone();
-                let _ = ctrlc::set_handler(move || {
-                    s_clone.store(true, std::sync::atomic::Ordering::Relaxed);
-                });
-            }
             proxy.run(stop)?;
+            vesper3d::viewer::shutdown::finished();
         }
         "ui-check" => {
             let rep = vesper3d::viewer::ui_check::audit_all_screens();

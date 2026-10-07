@@ -2,7 +2,11 @@
   "features": {
     "fps_foundation": {
       "files": [
-        "src/viewer/fps.rs"
+        "src/viewer/fps.rs",
+        "src/viewer/combat.rs",
+        "src/viewer/stock_demo/mod.rs",
+        "src/viewer/stock_demo/weapons.rs",
+        "src/viewer/stock_demo/wrench.rs"
       ],
       "checks": [
         "fps module tests in both feature configurations",
@@ -10,7 +14,7 @@
         "BlueDM two-client UDP smoke",
         "Cobalt Foundry audit, lint and reachability"
       ],
-      "note": "Rendering-independent FPS domain: validated catalogs, ten-firearm starter armory, deterministic fixed-tick fire/reload/burst timing, reproducible spread, smooth ADS/FOV, operative archetypes, and authoritative team deathmatch health/scoring/respawns. Games own presentation, hit-shape policy and their transport shell."
+      "note": "Rendering-independent FPS domain: validated catalogs, ten-firearm starter armory, deterministic fixed-tick fire/reload/burst timing, reproducible spread, smooth ADS/FOV, operative archetypes, and authoritative team deathmatch health/scoring/respawns. Games own presentation, hit-shape policy and their transport shell. Stock demo compatibility lives in viewer::stock_demo; fixed-tick helpers live in viewer::combat. HeadlessWorld resolves geometry/prop impulses using game-owned policy; new games use fps, not stock weapon adapters."
     },
     "graphics": {
       "files": [
@@ -299,7 +303,7 @@
         "cargo test --locked --no-default-features --test replication_budget --test replication_sockets",
         "cargo test --locked --no-default-features --test server_ctl"
       ],
-      "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 8 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials. GameState includes restart round and authoritative mover tick positions; sequenced commands from old rounds are discarded. Bounded partial-world replication retains one acknowledged baseline and one retryable packet per peer, respects active payload limits, rotates fair/priority records and peers, and exposes queue/delivery counters. Supports 1024 relevant records with individually budgeted records; replication and resync are bound to sessions (since protocol 7). See HOSTING.md for limits and RTT tradeoffs. Server capacity is configurable (with_max_players, --max-players); replication sizes candidates by arithmetic and prepares peers on several threads (with_network_threads, --network-threads) with identical bytes at any thread count (ADR 0027). Replication prioritises nearby records and measures freshness (mean_wait); the server takes time from a Clock so timeouts/reconnect are testable without sleeping; viewer::spans + be2-headless --profile report where a tick goes (ADR 0028). World updates (Snapshot/Delta) are a compact exact binary form, protocol 8, about 5x smaller per player record (ADR 0029). be2-headless stops cleanly on SIGINT/SIGTERM/SIGHUP (final autosave, exit 0; a second signal forces exit 130) without the ctrlc crate (ADR 0030).",
+      "note": "Stock protocol and shared transport/replication support remain for existing clients and hosts. New custom multiplayer games start with netplay (NetGame, ClientView, netplay::cli::serve), not the archived template.",
       "evidence": [
         {
           "suite": "multiplayer_transport",
@@ -591,7 +595,7 @@
         "CLI tests",
         "offline export"
       ],
-      "note": "Read ARCHITECTURE.md and AI_REFERENCE.md before changes.",
+      "note": "Optional cinematic exporter, separate from native offline gameplay. Explicit: python3 tools/be2.py build cinematic (Cargo offline feature). Defaults and packages omit vesper3d executable; shared scene/geometry/math and public library remain compatible.",
       "depends_on": []
     },
     "change_workflow": {
@@ -862,13 +866,16 @@
         "src/viewer/character.rs",
         "src/bin/impact_audio/mod.rs",
         "assets/audio/pistol-shot.wav",
-        "src/bin/blue-engine.rs"
+        "src/bin/blue-engine.rs",
+        "src/viewer/stock_demo/weapons.rs",
+        "src/viewer/stock_demo/wrench.rs",
+        "src/viewer/stock_demo/mod.rs"
       ],
       "checks": [
         "weapons tests",
         "--studio --capture-pistol"
       ],
-      "note": "Scientist primary wrench and scroll-selected black pistol with infinite ammo prototype, hitscan raycasts, recoil, muzzle flash, third-person aiming and audio."
+      "note": "Stock Scientist/Feta compatibility adapter, not a new-game weapon API. Implementation and balance live in viewer::stock_demo; new projects use viewer::fps and game-owned definitions. Fixed-tick cooldown/melee helpers are viewer::combat. Public legacy modules remain re-exports for stock/client/server/character and published consumers."
     },
     "two_dimensional": {
       "files": [
@@ -1805,7 +1812,7 @@
         "cargo test --locked --lib net::codec net::loopback",
         "python tools/check_headless.py"
       ],
-      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. A failed connect is a typed NetClient::failure() (ConnectFailure: Unreachable/VersionMismatch/WrongKey/MatchInProgress/Full/Other) with a player-facing hint(). Extracted from Spooky Kart; toy.rs is the smallest complete game.",
+      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. A failed connect is a typed NetClient::failure() (ConnectFailure: Unreachable/VersionMismatch/WrongKey/MatchInProgress/Full/Other) with a player-facing hint(). Extracted from Spooky Kart; toy.rs is the smallest complete game. New multiplayer starting point: src/viewer/netplay/toy.rs (NetGame + ClientView), src/bin/be2-toy-server.rs (netplay::cli::serve). Old multiplayer template is archived, not recommended.",
       "keywords": [
         "netplay",
         "multiplayer",
@@ -2212,7 +2219,7 @@
       ]
     },
     "game_shipping": {
-      "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, a desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, checking distinctness from every other desktop shortcut, and launching through it. scripts/check.py ends with this ship gate; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. Package verification is display-independent: strict portable manifest paths, every SHA-256, complete declared source inventory when available, and GameDocument.map closure. Graphical smoke copies only declarations outside the checkout and saves full stdout/stderr; mutable player files are preserved in dist but excluded from smoke.",
+      "note": "Package integrity, own title/icon/resources and isolated declared-file smoke are mandatory. verify --json --smoke never inspects the desktop by default. ship creates and verifies a shortcut unless --no-install; --folder or --check-shortcut requests installation verification. verify --icon-similarity is optional advisory only; unrelated applications cannot fail shipping. Refresh known generated scripts; preserve game-specific customizations.",
       "checks": [
         "cargo test --locked --lib identity icon",
         "python -m unittest tools.test_game_ship tools.test_game_check",
@@ -2601,7 +2608,7 @@
     "src/viewer/net/replication.rs": "Only exact acknowledgement commits represented state; respect active payload limits.",
     "src/viewer/netplay/hub/spawn.rs": "Starting and watching one room's server process.",
     "src/viewer/shutdown.rs": "Stop a server from a signal: the first request saves and exits, a second one exits at once.",
-    "src/viewer/weapons.rs": "Local weapon selection and pistol shots, independent of rendering and input APIs.",
+    "src/viewer/weapons.rs": "Compatibility re-exports for stock demo weapons and shared attack timing.",
     "docs/PROCEDURAL_WORLDS.md": "Streaming procedural worlds",
     "tools/check_authoring.py": "Verify native authoring with fresh tools in the shared check profile (itest by default).",
     "src/viewer/net/codec.rs": "A small binary codec for game protocols: little-endian fields, every read bounds-checked.",
@@ -2655,7 +2662,7 @@
     "src/viewer/game.rs": "Small declarative interaction rules shared by local play and the authoritative host.",
     "src/viewer/net/quic.rs": "Production-ready QUIC / TLS 1.3 datagram transport with pinned certificates.",
     "src/viewer/devkit/rng.rs": "Tiny deterministic random numbers for simulations, effects and procedural audio.",
-    "src/viewer/wrench.rs": "Frame-rate independent melee timing and closest-surface contact.",
+    "src/viewer/wrench.rs": "Compatibility re-exports for stock demo melee.",
     "docs/adr/0021-stick-look-menu-steps-and-exit.md": "ADR 0021: Stick look in the shared convention, discrete menu steps, and a graceful exit",
     "tools/perf.py": "Record and compare BlueEngine build/test/runtime performance.",
     "src/viewer/content.rs": "Versioned content fingerprint for accidental map mismatch detection, not authentication.",
@@ -2696,6 +2703,8 @@
     "src/viewer/netplay/client.rs": "The network client: connect, choose, play, for any NetGame.",
     "src/viewer/spatial.rs": "Room / zone graph and spatial partitioning for indoor maps and interest management.",
     "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves...",
-    "docs/BROWSER_WORKFLOW.md": "Browser 2D/hybrid/3D: create/build/test/publish/reproduce/upgrade commands, capabilities and evidence."
+    "docs/BROWSER_WORKFLOW.md": "Browser 2D/hybrid/3D: create/build/test/publish/reproduce/upgrade commands, capabilities and evidence.",
+    "src/viewer/combat.rs": "Shared deterministic attack timing; game-owned weapon policy.",
+    "src/viewer/stock_demo/mod.rs": "Stock Scientist/Feta protocol compatibility and balance; new games use fps/Netplay."
   }
 }

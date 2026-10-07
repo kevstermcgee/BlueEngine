@@ -2357,13 +2357,16 @@ def stage_smoke_package(project, destination, exe_name):
 class Verifier:
     """Runs every check even after a failure and collects a JSON-able report."""
 
-    def __init__(self, project, folder=None, platform_name=None, launch=False, smoke=False, skip_package=False):
+    def __init__(self, project, folder=None, platform_name=None, launch=False, smoke=False, skip_package=False,
+                 check_shortcut=False, icon_similarity=False):
         self.project = project
         self.folder = Path(folder).resolve() if folder else None
         self.plat = platform_name or project.platform
         self.want_launch = launch
         self.want_smoke = smoke
         self.skip_package = skip_package
+        self.want_shortcut = bool(check_shortcut or folder or launch)
+        self.icon_similarity = icon_similarity
         self.checks = []
         self.skipped = []
         self._ico = None  # (bytes, frames) once icon.ico parsed
@@ -2421,9 +2424,11 @@ class Verifier:
         self.run_check('wiring', self.check_wiring)
         self.run_check('package', self.check_package)
         self.run_check('exe-resources', self.check_exe_resources)
-        self.run_check('shortcut-file', self.check_shortcut_file)
-        self.run_check('shortcut-icon', self.check_shortcut_icon)
-        self.run_check('shortcut-unique', self.check_shortcut_unique)
+        for name, check in [('shortcut-file', self.check_shortcut_file),
+                            ('shortcut-icon', self.check_shortcut_icon)]:
+            self.run_check(name, check if self.want_shortcut else
+                           lambda: (SKIP, 'desktop installation not requested (pass --check-shortcut or --folder)'))
+        self.run_check('shortcut-unique', self.advisory_similarity)
         self.run_check('launch', self.check_launch)
         self.run_check('smoke', self.check_smoke)
         failed = [c for c in self.checks if c['status'] == FAIL]
@@ -2435,6 +2440,15 @@ class Verifier:
             report['next'] = NEXT_STEPS.get(failed[0]['name'], 'python scripts/ship.py ship').format(title=title)
         self.record_stamp()
         return report
+
+    def advisory_similarity(self):
+        if not self.icon_similarity:
+            return SKIP, 'optional advisory not requested (pass --icon-similarity)'
+        try:
+            status, detail = self.check_shortcut_unique()
+        except Exception as error:  # Advisory failures cannot certify or reject a package.
+            return WARN, f'icon similarity unavailable: {type(error).__name__}: {error}'
+        return (WARN if status == FAIL else status), detail
 
     def record_stamp(self):
         """Write the `verified` block of dist/ship.json: launch/smoke are true/false when they ran in
@@ -2750,10 +2764,10 @@ class Verifier:
         for path, sizes in ((self.dist_exe(), (32, 256)), (self.project.dist_ico, (32, 256))):
             if path.is_file():
                 wanted.append((str(path), sizes))
-        lnk = self.launcher_path()
+        lnk = self.launcher_path() if self.want_shortcut or self.icon_similarity else None
         if lnk is not None and lnk.is_file():
             wanted.append((str(lnk), (32, 256)))
-        if self.desktop() is not None or self.folder:
+        if self.icon_similarity:
             wanted.extend((str(p), (32,)) for p in self.other_shortcuts() if lnk is None or norm_path(p) != norm_path(lnk))
         try:
             self._shell = self._render_batch(wanted)
@@ -3172,8 +3186,8 @@ def base64_logo():
 
 
 def cmd_verify(project, folder=None, platform_name=None, launch=False, smoke=False, skip_package=False, quiet=False,
-               launch_reason=None, smoke_reason=None):
-    verifier = Verifier(project, folder, platform_name, launch, smoke, skip_package)
+               launch_reason=None, smoke_reason=None, check_shortcut=False, icon_similarity=False):
+    verifier = Verifier(project, folder, platform_name, launch, smoke, skip_package, check_shortcut, icon_similarity)
     verifier.launch_reason, verifier.smoke_reason = launch_reason, smoke_reason
     report = verifier.run()
     if not quiet:
@@ -3183,14 +3197,17 @@ def cmd_verify(project, folder=None, platform_name=None, launch=False, smoke=Fal
     return report
 
 
-def cmd_ship(project, folder=None, force=False, no_build=False, no_launch=False, no_smoke=False, platform_name=None):
+def cmd_ship(project, folder=None, force=False, no_build=False, no_launch=False, no_smoke=False, platform_name=None,
+             no_install=False):
     """package, shortcut, then verify with the launch and smoke checks."""
     result = {'ok': False, 'command': 'ship'}
     result['package'] = cmd_package(project, no_build)
-    result['shortcut'] = cmd_shortcut(project, folder, force, platform_name)
-    report = cmd_verify(project, folder, platform_name, launch=not no_launch, smoke=not no_smoke,
-                        launch_reason='--no-launch' if no_launch else None,
-                        smoke_reason='--no-smoke' if no_smoke else None)
+    result['shortcut'] = ({'ok': True, 'skipped': '--no-install'} if no_install else
+                          cmd_shortcut(project, folder, force, platform_name))
+    report = cmd_verify(project, None if no_install else folder, platform_name,
+                        launch=not (no_launch or no_install), smoke=not no_smoke,
+                        launch_reason='--no-install' if no_install else '--no-launch' if no_launch else None,
+                        smoke_reason='--no-smoke' if no_smoke else None, check_shortcut=not no_install)
     result['verify'] = report
     result['ok'] = bool(report['ok'])
     return result
@@ -3284,12 +3301,15 @@ def build_parser():
     verify.add_argument('--skip-package', action='store_true', help='do not fail when dist/ has not been built yet')
     verify.add_argument('--platform', choices=platforms, help='check the launcher of another platform in --folder')
     verify.add_argument('--json', action='store_true', help='print only the JSON (no summary lines on stderr)')
+    verify.add_argument('--check-shortcut', action='store_true', help='verify requested desktop installation')
+    verify.add_argument('--icon-similarity', action='store_true', help='advisory comparison with other launcher icons')
     ship = sub.add_parser('ship', help='package, create the shortcut and verify with launch and smoke')
     ship.add_argument('--folder', help='put the launcher here instead of the OS desktop')
     ship.add_argument('--force', action='store_true', help='replace a same-named launcher of another program')
     ship.add_argument('--no-build', action='store_true', help='package the existing release build')
     ship.add_argument('--no-launch', action='store_true', help='skip the launch check')
     ship.add_argument('--no-smoke', action='store_true', help='skip the smoke run')
+    ship.add_argument('--no-install', action='store_true', help='verify package and isolated smoke without desktop access')
     return parser
 
 
@@ -3321,9 +3341,10 @@ def main(argv=None, root=None):
             result = cmd_shortcut(project, args.folder, args.force, args.platform)
         elif args.command == 'verify':
             result = cmd_verify(project, args.folder, args.platform, args.launch, args.smoke, args.skip_package,
-                                quiet=args.json)
+                                quiet=args.json, check_shortcut=args.check_shortcut, icon_similarity=args.icon_similarity)
         else:
-            result = cmd_ship(project, args.folder, args.force, args.no_build, args.no_launch, args.no_smoke)
+            result = cmd_ship(project, args.folder, args.force, args.no_build, args.no_launch, args.no_smoke,
+                              no_install=args.no_install)
         emit(result)
         return 0 if result.get('ok') else 1
     except ShipError as error:

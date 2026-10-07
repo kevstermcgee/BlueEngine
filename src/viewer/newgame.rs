@@ -781,9 +781,10 @@ physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its sim
 
 ## Definition of done (every game made with BlueEngine)
 1. `python scripts/check.py` passes on final files; it ends with the ship gate.
-2. The game ships with its own icon and desktop shortcut: set real title/tagline/controls in
+2. The game ships with its own title/icon and verified package: set real title/tagline/controls in
    `assets/identity.json`, regenerate the icon if the title changed (`be2-tools icon TITLE assets
-   --replace`), run `scripts/blue ship` (package in dist/, shortcut named after the game, verified).
+   --replace`), run `scripts/blue ship --no-install` (package and isolated smoke, no desktop access).
+   Use `scripts/blue ship` when desktop installation is requested; its own shortcut is verified.
 3. You exercised changed controls and looked at real frames; state what you did not verify.
 "#
     );

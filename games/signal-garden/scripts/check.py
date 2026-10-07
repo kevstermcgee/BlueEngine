@@ -10,6 +10,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 
 MANUAL = ('Inspect world/menu captures and exercise changed controls: no automated check can see or play the '
@@ -55,7 +56,12 @@ def commands(root, native, content_only=False, scenarios=()):
         maps = dict.fromkeys([main_map] if main_map.is_file() else [])
     checks = []
     for path in maps:
-        checks.extend([[str(native), 'audit', str(path)], [str(native), 'lint', str(path)]])
+        lint = [str(native), 'lint', str(path)]
+        # A chosen verified scenario can prove later reachability through authored movers.
+        # Without such evidence retain static errors; never exempt all moving gates.
+        if document is not None and document.get('movers') and scenarios and path == map_path:
+            lint.extend(['--game=' + str(game.resolve()), '--scenario=' + str((root / scenarios[0]).resolve())])
+        checks.extend([[str(native), 'audit', str(path)], lint])
         # Run authored expectations when present. Without a checks block use the
         # native lint contract, not verify's implicit ten-warning policy (the
         # shipped two-room blueprint has advisory shared-wall warnings).
@@ -63,6 +69,10 @@ def commands(root, native, content_only=False, scenarios=()):
             checks.append([str(native), 'verify', str(path)])
     if document is not None:
         checks.append([str(native), 'game-validate', str(game)])
+    else:
+        # Custom clients use the documented named-bundle directory convention.
+        for bank in sorted((root / 'assets/audio').glob('*/bank.json')):
+            checks.append([str(native), 'audio', 'check', str(bank.parent.resolve())])
     checks.extend([str(native), 'sim', str((root / scenario).resolve())] for scenario in scenarios)
     if not content_only:
         # A scaffold seeds Cargo.lock from the engine's own lock (the versions the engine was tested with).
@@ -145,10 +155,12 @@ def parse_json_output(text):
     return None
 
 
-def ship_stage(root, report, directory, index):
-    """Run `scripts/ship.py verify --json`; the game is not done until its shortcut and package verify."""
+def ship_stage(root, report, directory, index, ship_folder=None):
+    """Verify the package and isolated smoke; installation is checked only when requested."""
     ship = root / 'scripts/ship.py'
-    command = [sys.executable, str(ship), 'verify', '--json']
+    command = [sys.executable, str(ship), 'verify', '--json', '--smoke']
+    if ship_folder is not None:
+        command.extend(['--folder', str(Path(ship_folder).resolve())])
     log = directory / f'{index + 1}.log'
     item = {'name': 'ship', 'command': command, 'log': log.name, 'ok': False}
     report['checks'].append(item)
@@ -177,10 +189,13 @@ def ship_stage(root, report, directory, index):
     raise ValueError(f'ship gate: {verdict.get("error") or "verify failed"} (exit {result.returncode}). {fix}')
 
 
-def run(root, native, content_only=False, scenarios=(), skip_ship=False):
+def run(root, native, content_only=False, scenarios=(), skip_ship=False, ship_folder=None):
     stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
-    directory = root / '.blue-check' / stamp
-    directory.mkdir(parents=True)
+    reports = root / '.blue-check'
+    reports.mkdir(parents=True, exist_ok=True)
+    # Wall-clock resolution can repeat, especially on Windows. Reserve atomically
+    # so rapid/concurrent checks never collide or overwrite earlier evidence.
+    directory = Path(tempfile.mkdtemp(prefix=stamp + '-', dir=reports))
     report = {'ok': False, 'scope': 'content' if content_only else 'project',
               'checks': [], 'warnings': [], 'skipped': [], 'manual': MANUAL}
     # The ship stage runs last; until it does, the report says why it did not (or could not) run.
@@ -216,7 +231,7 @@ def run(root, native, content_only=False, scenarios=(), skip_ship=False):
                 raise ValueError(f'Command failed ({result.returncode}); see {log}')
         if gate:
             report['skipped'].remove(f'ship: {report["ship"]}')
-            ship_stage(root, report, directory, len(plan))
+            ship_stage(root, report, directory, len(plan), ship_folder)
         report['ok'] = True
     except (OSError, ValueError, KeyError, subprocess.SubprocessError) as error:
         report['error'] = str(error)
@@ -264,13 +279,27 @@ def main():
     parser.add_argument('--scenario', action='append', default=[], help='Additional behavioral scenario')
     parser.add_argument('--skip-ship', action='store_true',
                         help='Full check without the ship gate (shortcut, package and icon verification)')
+    parser.add_argument('--ship-folder', help='Also verify requested installation in this private folder')
     args = parser.parse_args()
+    root = Path(__file__).resolve().parents[1]
+    if (root / 'game.project.json').exists():
+        import importlib.util
+        helper = root / 'scripts/project.py'
+        if not helper.is_file():
+            parser.error('game.project.json needs scripts/project.py; refresh generated project tooling')
+        spec = importlib.util.spec_from_file_location('game_requirements', helper)
+        requirements = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(requirements)
+        try:
+            requirements.validate_project(root)
+        except (ValueError, OSError) as error:
+            parser.error(str(error))
     if not args.tools:
         parser.error('No be2-tools found. Build one in the engine checkout, then rerun (it is found there '
                      'automatically): cargo build --profile fast --no-default-features --bin be2-tools '
                      '(or python tools/be2.py build tools). Or set BE2_TOOLS to its path.')
     return 0 if run(Path(__file__).resolve().parents[1], args.tools,
-                    args.content_only, args.scenario, args.skip_ship) else 1
+                    args.content_only, args.scenario, args.skip_ship, args.ship_folder) else 1
 
 
 if __name__ == '__main__':

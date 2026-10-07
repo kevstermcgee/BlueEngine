@@ -57,11 +57,12 @@ committed public source retrieval and clean reproduction pass. Scaffolding/autho
 For visual iteration run `web preview GAME` and inspect all captures in `.blue-check/web-preview`
 before the final shipping check. Preview preserves `dist/web` and cannot certify shipping.
 
-Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md, select Windows distribution and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
-(docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use the stock starter;
-enemies, projectiles, scoring, AI or per-frame physics use `new-game ... custom-sim`. A native game is
-done only when it ships with its own icon and desktop shortcut (`scripts/blue ship`; its
-`scripts/check.py` fails until it does). Saving and loading state is engine-owned (docs/SAVE_STATE.md):
+Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md, select Windows distribution and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. Native game completion requires the game's own title/icon, executable resources, complete package and
+isolated packaged-game smoke. `scripts/check.py` verifies those without desktop access; `scripts/blue ship --no-install`
+packages and smoke-tests without installation. When installation is requested, `scripts/blue ship` creates a
+shortcut and checks its target and icon. Desktop-wide icon similarity is optional advisory only.
+Pick the starter by the rules (docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use stock;
+enemies, projectiles, scoring, AI or per-frame physics use `new-game ... custom-sim`. Saving and loading state is engine-owned (docs/SAVE_STATE.md):
 F5/F9 in the stock client, `devkit::Snapshot` for a custom simulation; never hand-write save files. Authoring starts
 with `python3 tools/be2.py map describe` in a source checkout (`tools/author.py describe`
 for packaged tools or an explicit `BE2_TOOLS`); discover assets with

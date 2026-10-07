@@ -75,6 +75,10 @@ independent Python fixtures retain their own targets.
 | `python tools/be2.py map ...` | Builds fresh headless `itest` tools in the shared target and invokes them; release packaging stays isolated |
 | `python3 tools/be2.py schemas --write` / `--check` | Regenerate Rust-owned authoring schemas / check exact output and fixtures; `--plan` is build-free. See [SCHEMAS.md](../docs/SCHEMAS.md) |
 
+Default client builds and packages omit the cinematic `vesper3d` executable.
+Use `python3 tools/be2.py build cinematic` explicitly for scene export; `offline` is its historical
+Cargo feature name, not a requirement for playing games without a connection.
+
 `package` includes current Git-tracked working files plus newly built binaries. Add intended new source files to Git first. It records dirty status; it does not imply tests ran or commit your edits. Run `check` before packaging. It never updates the user's desktop shortcut or installed binaries automatically.
 
 A distributed Windows copy also includes `bin/be2-tools.exe`, which needs neither Python nor Cargo. `be2-tools help` lists the native commands. Native operations return JSON reports/errors and nonzero exit codes on failure. `help` is plain text; inspect prints a full JSON document. Export commands write files.

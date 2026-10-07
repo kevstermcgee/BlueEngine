@@ -25,6 +25,15 @@ time; times out a dead server. What to draw and how to predict is your `ClientVi
 Works on any `DatagramTransport`: raw UDP, the engine's QUIC/TLS (`net::server_transport`,
 `net::client_transport`, see `docs/HOSTING.md`), or the in-memory `net::loopback::LoopNet` used in tests.
 
+## Starting point
+
+Use `src/viewer/netplay/toy.rs` (`ToyGame` and `ToyView`) and
+`src/bin/be2-toy-server.rs` (`netplay::cli::serve`) as the smallest complete assembly.
+`cargo run --no-default-features --bin be2-toy-server -- --info` describes its shared
+server configuration; `cargo test --no-default-features --test netplay` validates
+lobby, match, loss, reconnect and process behavior. Retired prototype code is in
+`docs/archive/multiplayer-game`; its old handshake is not a supported starter.
+
 ## What you write
 
 1. `impl NetGame for MyGame` (`src/viewer/netplay/toy.rs` is a complete, tiny example):

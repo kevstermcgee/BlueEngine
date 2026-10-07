@@ -15,6 +15,51 @@ from tools import workflow
 ROOT = Path(__file__).resolve().parents[1]
 
 
+class BuildDeliveryTests(unittest.TestCase):
+    def namespace(self):
+        with patch.dict(sys.modules, workflow=workflow), patch('sys.path', [str(ROOT / 'tools'), *sys.path]):
+            return runpy.run_path(str(ROOT / 'tools/be2.py'))
+
+    def test_client_and_explicit_cinematic_commands(self):
+        ns = self.namespace()
+        calls = []
+        ns['build'].__globals__['invoke'] = lambda args, **kwargs: calls.append(args)
+        ns['build']('client')
+        self.assertEqual(calls[-1], ['cargo', 'build', '--release', '--locked', '--bin', 'be2'])
+        ns['build']('cinematic')
+        self.assertEqual(calls[-1], ['cargo', 'build', '--release', '--locked', '--no-default-features',
+                                   '--features', 'offline', '--bin', 'vesper3d'])
+
+    def test_default_package_excludes_even_a_stale_cinematic_executable(self):
+        import zipfile
+        ns = self.namespace()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for kind, names in [('client', ['be2', 'vesper3d']), ('headless', ['be2-headless']), ('tools', ['be2-tools'])]:
+                folder = root / kind
+                folder.mkdir()
+                for name in names:
+                    (folder / (name + ns['SUFFIX'])).write_bytes(b'fixture')
+            globals_ = ns['package'].__globals__
+            globals_['ROOT'] = root
+            globals_['build'] = lambda kind: root / kind
+            globals_['invoke'] = lambda argv, **kwargs: 'a' * 40 if argv[1] == 'rev-parse' else ''
+            archive = root / 'engine.zip'
+            ns['package'](archive)
+            with zipfile.ZipFile(archive) as payload:
+                names = payload.namelist()
+            self.assertIn('be2/bin/BE2' + ns['SUFFIX'], names)
+            self.assertFalse(any('vesper3d' in name for name in names), names)
+
+    def test_defaults_exclude_cinematic_but_keep_public_library(self):
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
+        self.assertEqual(manifest['features']['default'], ['client'])
+        self.assertEqual(manifest['lib']['name'], 'vesper3d')
+        cinematic = next(item for item in manifest['bin'] if item['name'] == 'vesper3d')
+        self.assertEqual(cinematic['required-features'], ['offline'])
+
+
 class ContextTests(unittest.TestCase):
     def test_stock_audio_pipeline_and_bindings_are_discoverable(self):
         packet = workflow.context(ROOT, 'stock GameDocument audio pipeline cues and adaptive music')

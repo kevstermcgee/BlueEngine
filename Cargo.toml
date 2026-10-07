@@ -21,7 +21,8 @@ path = "src/bin/blue-engine.rs"
 required-features = ["client"]
 
 [features]
-default = ["client", "offline"]
+default = ["client"]
+# Historical name: cinematic scene export, unrelated to offline gameplay.
 offline = ["dep:png", "dep:ctrlc"]
 presentation = ["dep:macroquad"]
 two-d = ["dep:macroquad"]
