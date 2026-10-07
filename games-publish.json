@@ -53,39 +53,39 @@
       },
       {
         "source": "games/signal-garden/Cargo.toml",
-        "destination": "signal-garden/Cargo.toml"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/Cargo.lock",
-        "destination": "signal-garden/Cargo.lock"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/build.rs",
-        "destination": "signal-garden/build.rs"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/AGENTS.md",
-        "destination": "signal-garden/AGENTS.md"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/CLAUDE.md",
-        "destination": "signal-garden/CLAUDE.md"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/README.md",
-        "destination": "signal-garden/README.md"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/STATUS.md",
-        "destination": "signal-garden/STATUS.md"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/rustfmt.toml",
-        "destination": "signal-garden/rustfmt.toml"
+        "destination": "signal-garden"
       },
       {
         "source": "games/signal-garden/.gitignore",
-        "destination": "signal-garden/.gitignore"
+        "destination": "signal-garden"
       },
       {
         "source": "games/lantern-run/src",
@@ -105,39 +105,39 @@
       },
       {
         "source": "games/lantern-run/Cargo.toml",
-        "destination": "lantern-run/Cargo.toml"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/Cargo.lock",
-        "destination": "lantern-run/Cargo.lock"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/build.rs",
-        "destination": "lantern-run/build.rs"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/AGENTS.md",
-        "destination": "lantern-run/AGENTS.md"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/CLAUDE.md",
-        "destination": "lantern-run/CLAUDE.md"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/README.md",
-        "destination": "lantern-run/README.md"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/STATUS.md",
-        "destination": "lantern-run/STATUS.md"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/game.project.json",
-        "destination": "lantern-run/game.project.json"
+        "destination": "lantern-run"
       },
       {
         "source": "games/lantern-run/.gitignore",
-        "destination": "lantern-run/.gitignore"
+        "destination": "lantern-run"
       },
       {
         "source": "games/pocket-breaker/src",
@@ -157,39 +157,39 @@
       },
       {
         "source": "games/pocket-breaker/Cargo.toml",
-        "destination": "pocket-breaker/Cargo.toml"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/Cargo.lock",
-        "destination": "pocket-breaker/Cargo.lock"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/build.rs",
-        "destination": "pocket-breaker/build.rs"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/AGENTS.md",
-        "destination": "pocket-breaker/AGENTS.md"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/CLAUDE.md",
-        "destination": "pocket-breaker/CLAUDE.md"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/README.md",
-        "destination": "pocket-breaker/README.md"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/STATUS.md",
-        "destination": "pocket-breaker/STATUS.md"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/game.project.json",
-        "destination": "pocket-breaker/game.project.json"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/pocket-breaker/.gitignore",
-        "destination": "pocket-breaker/.gitignore"
+        "destination": "pocket-breaker"
       },
       {
         "source": "games/orchard-watch/src",
@@ -209,39 +209,39 @@
       },
       {
         "source": "games/orchard-watch/Cargo.toml",
-        "destination": "orchard-watch/Cargo.toml"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/Cargo.lock",
-        "destination": "orchard-watch/Cargo.lock"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/build.rs",
-        "destination": "orchard-watch/build.rs"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/AGENTS.md",
-        "destination": "orchard-watch/AGENTS.md"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/CLAUDE.md",
-        "destination": "orchard-watch/CLAUDE.md"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/README.md",
-        "destination": "orchard-watch/README.md"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/STATUS.md",
-        "destination": "orchard-watch/STATUS.md"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/game.project.json",
-        "destination": "orchard-watch/game.project.json"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/orchard-watch/.gitignore",
-        "destination": "orchard-watch/.gitignore"
+        "destination": "orchard-watch"
       },
       {
         "source": "games/lantern-grove/src",
@@ -261,39 +261,39 @@
       },
       {
         "source": "games/lantern-grove/Cargo.toml",
-        "destination": "lantern-grove/Cargo.toml"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/Cargo.lock",
-        "destination": "lantern-grove/Cargo.lock"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/build.rs",
-        "destination": "lantern-grove/build.rs"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/AGENTS.md",
-        "destination": "lantern-grove/AGENTS.md"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/CLAUDE.md",
-        "destination": "lantern-grove/CLAUDE.md"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/README.md",
-        "destination": "lantern-grove/README.md"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/STATUS.md",
-        "destination": "lantern-grove/STATUS.md"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/game.project.json",
-        "destination": "lantern-grove/game.project.json"
+        "destination": "lantern-grove"
       },
       {
         "source": "games/lantern-grove/.gitignore",
-        "destination": "lantern-grove/.gitignore"
+        "destination": "lantern-grove"
       }
     ],
     "prototypes": [

@@ -1,4 +1,9 @@
-# Browser games: the shortest supported path
+# Optional browser engine capability
+
+BlueEngineGames is Windows EXE download-only; web publication there is rejected.
+These commands preserve optional engine/browser verification and third-party hosting
+capability. They are not required to distribute BlueEngine games. For the normal
+Windows workflow use [PORTABLE_GAMES.md](PORTABLE_GAMES.md) and native shipping.
 
 Run commands from the engine checkout. JSON goes to stdout; failures are nonzero.
 Use the portable runtime for 2D, hybrid and 3D games. The renderer reads the same fixed-step
@@ -16,14 +21,16 @@ python3 tools/be2.py web inspect games/lantern-run  # exact source, hashes, capa
 python3 tools/be2.py web serve games/lantern-run    # localhost:8000; Ctrl-C stops
 python3 tools/be2.py web verify games/lantern-run   # fresh browser evidence for existing package
 python3 tools/be2.py web reproduce games/lantern-run # public source, empty target, compare package
-python3 tools/be2.py web publish games/lantern-run --backend github-pages --repository OWNER/BlueEngineGames
+python3 tools/be2.py web publish games/lantern-run --backend github-pages --repository OWNER/BrowserLibrary
 ```
 
 For Leo replace `games/lantern-run` with `assets/games/leo`. Build outputs are in `GAME/dist/web`;
 verification artifacts are separate in `GAME/.blue-check/web`. `inspect`, `verify`, `serve` and
 `reproduce` also accept a package directory directly. The directory publisher (`--backend directory
 --destination DIR`) creates a deployment-ready catalog and receipt; it does not claim an external URL.
-The GitHub Pages adapter requires the existing BlueEngineGames `site/build.py` and Pages workflow.
+The optional GitHub Pages adapter requires a separate library using the legacy
+`site/build.py` and Pages workflow contract. It refuses the Windows-only
+BlueEngineGames site and any native-only catalog.
 Visual preview uses the same builder and browser script, with a separate package and six
 desktop/portrait/landscape playing/outcome captures in `GAME/.blue-check/web-preview`.
 It preserves the previous `dist/web`, reports `shipping_verified: false`, and cannot

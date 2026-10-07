@@ -1,7 +1,8 @@
 # Playable games and source-free prototypes
 
-Start in the engine checkout with `python3 tools/be2.py start "<game task>" --compact`.
-The packet selects an explicit starter. Portable/browser games follow [the portable guide](PORTABLE_GAMES.md);
+Start in the engine checkout with `python3 tools/be2.py start "<game task>" --kind new-game --target windows --compact`.
+The packet selects an explicit starter. BlueEngine game distribution is Windows x64 EXE only. Portable native games follow
+[the portable guide](PORTABLE_GAMES.md);
 the stock and custom-simulation native workflows below retain their desktop ship gate.
 
 ## Pick the starter first
@@ -9,8 +10,8 @@ the stock and custom-simulation native workflows below retain their desktop ship
 | The game's rules | Starter |
 |---|---|
 | fit counters, interactables, timers, triggers and movers (find things, press switches, open doors, timed objectives) | **stock**: `be2-tools new-game my-game ../my-game ../BlueEngine stock` |
-| want browser + local install, mobile, 2D/3D/hybrid | **portable** (default): `be2-tools new-game my-game ../my-game ../BlueEngine portable` — read [PORTABLE_GAMES.md](PORTABLE_GAMES.md) |
-| want a 2D offline browser/native game | **two-d**: `be2-tools new-game my-game ../my-game ../BlueEngine two-d` — read [TWO_D.md](TWO_D.md) |
+| want shared services with 2D/3D/hybrid presentation | **portable** (default): `be2-tools new-game my-game ../my-game ../BlueEngine portable` — read [PORTABLE_GAMES.md](PORTABLE_GAMES.md) |
+| want a 2D offline native game | **two-d**: `be2-tools new-game my-game ../my-game ../BlueEngine two-d` — read [TWO_D.md](TWO_D.md) |
 | need enemies, projectiles, scoring, AI, waves, procedural content or per-frame physics: anything `GameDocument` cannot express | **custom-sim**: `be2-tools new-game my-game ../my-game ../BlueEngine custom-sim` |
 
 `GameDocument` deliberately has no scripting, so do not stretch it to fit an action game. A custom-sim

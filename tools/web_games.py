@@ -386,6 +386,9 @@ def main(argv=None):
                     if args.skip_browser:raise WebError('Publish always requires a fresh browser check; --skip-browser is build-only')
                     if args.backend=='directory' and not args.destination:raise WebError('Directory publishing needs --destination /path/to/static-library')
                     if args.backend=='github-pages' and not args.repository:raise WebError('GitHub Pages publishing needs --repository OWNER/REPO')
+                    if args.backend=='github-pages':
+                        from tools.web_publish import validate_repository
+                        validate_repository(args.repository)
                 result=build(game,args.skip_browser)
                 if args.command=='publish':
                     if args.backend=='directory':result['publication']=directory_publish(game/'dist/web',Path(args.destination).resolve())

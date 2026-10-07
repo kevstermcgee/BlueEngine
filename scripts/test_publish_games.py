@@ -71,6 +71,18 @@ class PublishGamesTests(unittest.TestCase):
 
     # -- ownership ------------------------------------------------------------------------------------
 
+    def test_maintained_native_projects_export_real_build_files(self):
+        # The manifest's destination is a directory even for a single source file.
+        # Checking the production manifest catches Cargo.toml/Cargo.toml exports.
+        root = Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp)
+            publish_games.export_tree(root, output, publish_games.load_manifest(root), 'test')
+            for slug in ('signal-garden', 'lantern-run', 'pocket-breaker', 'orchard-watch', 'lantern-grove'):
+                for name in ('Cargo.toml', 'Cargo.lock', 'build.rs', 'game.project.json' if slug != 'signal-garden' else 'README.md', 'scripts/ship.py'):
+                    with self.subTest(game=slug, file=name):
+                        self.assertTrue((output / 'games' / slug / name).is_file())
+
     def test_native_build_outputs_and_player_files_never_become_published_source(self):
         with tempfile.TemporaryDirectory() as temp:
             root, output = self.setup_repos(temp)

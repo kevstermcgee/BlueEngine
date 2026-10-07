@@ -1,8 +1,11 @@
-# One game: mobile browser, installed browser app, native desktop
+# Portable games: native Windows distribution, flexible presentation
 
-Start with `python3 tools/be2.py start "<game objective>" --kind new-game --target web`
+Start with `python3 tools/be2.py start "<game objective>" --kind new-game --target windows`
 in the engine checkout; [AI_SPRINGBOARD.md](AI_SPRINGBOARD.md) selects explicit starters
-without compiling. For release requirements read [BROWSER_WORKFLOW.md](BROWSER_WORKFLOW.md).
+without compiling. BlueEngine games ship native Windows x64 EXE installers only; the BlueEngineGames
+website has no browser play. The portable runtime supports 2D, 3D and hybrid native
+games without choosing web distribution. Optional browser APIs below remain technical
+capabilities for other destinations, not a BlueEngine publishing requirement.
 
 Read this, the game's AGENTS.md, game.project.json and src/lib.rs. Use `portable` for new projects
 unless the user explicitly needs the legacy native world/netplay renderer. The CLI defaults to portable;
@@ -13,9 +16,9 @@ be2-tools new-game my-game ../my-game ../BlueEngine portable
 # Optional visual examples: two-d / three-d / hybrid. Same runtime and services.
 cd ../my-game
 cargo test --no-default-features
-scripts/blue web build               # headless + desktop AND mobile browser + offline install
-scripts/blue ship                    # native executable + shortcut + isolated package smoke
-scripts/blue publish --backend github-pages --repository OWNER/BlueEngineGames
+python scripts/ship.py ship          # on Windows: EXE + shortcut + isolated package smoke
+python scripts/check.py              # full game check including the ship gate
+# Public EXE installers: BlueEngineGames DISTRIBUTION.md and Windows release workflow.
 ```
 
 The game chooses tools by value to gameplay, not by distribution. `presentation` is `2d`, `3d` or
@@ -126,7 +129,10 @@ The browser gate checks installability and actually disables networking before r
 progress; successful cargo compilation is not installation evidence. No guarantee of permanent browser
 storage is possible; storage quota/privacy/eviction are platform constraints with explicit diagnostics.
 
-## One catalog
+## Optional browser catalog (separate from BlueEngineGames)
+
+The following shared feed is the generic browser-hosting template. BlueEngineGames
+uses its native EXE release feed instead and has no web-play pages or payloads.
 
 Publishing merges verified browser metadata into the main game feed by stable game ID. A game with both
 browser and native versions has one card, both actions. Filters select presentation, browser/download and

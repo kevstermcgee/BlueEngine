@@ -178,6 +178,27 @@ class RequirementsTests(unittest.TestCase):
             with self.assertRaisesRegex(game_ship.ConfigError,'not declared'):game_ship.load_project(game,'windows')
 
 class PublisherBoundaryTests(unittest.TestCase):
+    def test_windows_only_library_refuses_web_publication_before_any_command(self):
+        import contextlib
+        import io
+        from tools.web_publish import publish, integrate_catalog
+        def unexpected(*args, **kwargs):
+            self.fail('Windows-only refusal must precede commands, integrity checks and writes')
+        with self.assertRaisesRegex(ValueError, 'Windows EXE installers only'):
+            publish(Path('unbuilt'), 'KevsterMcGee/BlueEngineGames', unexpected, unexpected, unexpected)
+        stderr = io.StringIO()
+        with patch.object(web, 'build', side_effect=unexpected), contextlib.redirect_stderr(stderr):
+            self.assertEqual(web.main(['publish', 'unbuilt-game', '--backend', 'github-pages', '--repository', 'kevstermcgee/BlueEngineGames']), 1)
+        self.assertIn('Windows EXE installers only', json.loads(stderr.getvalue())['error'])
+        with tempfile.TemporaryDirectory() as folder:
+            builder = Path(folder) / 'build.py'
+            builder.write_text('native download builder')
+            (builder.parent / 'native_catalog.py').touch()
+            with self.assertRaisesRegex(ValueError, 'Windows-only'):
+                integrate_catalog(builder)
+            self.assertEqual(builder.read_text(), 'native download builder')
+            self.assertFalse((builder.parent / 'browser_catalog.py').exists())
+
     def test_catalog_adapter_preserves_native_cards_and_is_idempotent(self):
         from tools.web_publish import integrate_catalog
         with tempfile.TemporaryDirectory() as folder:

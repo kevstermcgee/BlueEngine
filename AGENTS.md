@@ -33,6 +33,12 @@ Automatic inner/integration plans and feature test suggestions are for iteration
 a plan is not passing evidence. Shipping remains the default; never merge on inner evidence alone.
 Keep full Linux/Windows CI. Inspect visuals/controls manually when they change.
 
+Distribution policy: BlueEngine games ship as **native Windows x64 EXE installers only**.
+Use `start "<game task>" --kind new-game --target windows`, then the native
+`python scripts/ship.py ship` gate on Windows. BlueEngineGames is a download-only
+site; do not publish browser games there. Optional browser targets remain engine
+compatibility/verification capabilities, not authorization for public web play.
+
 Never violate:
 - Authoritative simulation is shared, fixed-step and rendering-free. Clients send
   intentions; presentation must not duplicate gameplay authority.
@@ -41,7 +47,7 @@ Never violate:
 - Preserve completed outputs on failure; never shell-interpolate scene values.
 - Preserve official assets/branding artwork. No plugin/service installation needed.
 
-Browser front door: read docs/BROWSER_WORKFLOW.md. Use `python3 tools/be2.py web capabilities`,
+Optional engine browser capability (separate destinations only): read docs/BROWSER_WORKFLOW.md. Use `python3 tools/be2.py web capabilities`,
 `web prepare GAME`, `web build GAME`, `web verify GAME`, `web inspect GAME`, `web serve GAME`,
 `web reproduce GAME` and `web publish GAME`. Portable 2D/hybrid/3D share these commands. Commit/push
 source before publication; a receipt must confirm source retrieval AND deployed manifest/files.
@@ -51,7 +57,7 @@ committed public source retrieval and clean reproduction pass. Scaffolding/autho
 For visual iteration run `web preview GAME` and inspect all captures in `.blue-check/web-preview`
 before the final shipping check. Preview preserves `dist/web` and cannot certify shipping.
 
-Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
+Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md, select Windows distribution and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. A web game is done when the isolated browser/package gate passes and a deployment receipt or publication-ready artifact exists; native targets retain their desktop ship gate. Pick the starter by the rules
 (docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use the stock starter;
 enemies, projectiles, scoring, AI or per-frame physics use `new-game ... custom-sim`. A native game is
 done only when it ships with its own icon and desktop shortcut (`scripts/blue ship`; its

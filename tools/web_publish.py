@@ -1,7 +1,8 @@
 """Optional GitHub Pages adapter. Engine/runtime never depends on a hosting provider.
 
-The supported central library has site/build.py and a Pages workflow. All publication edits
-occur in an isolated checkout; existing download cards, game sources and release artifacts stay intact.
+Separate browser libraries use site/build.py and a Pages workflow. BlueEngineGames is
+Windows-only and excluded. All publication edits occur in an isolated checkout; existing
+download cards, game sources and release artifacts stay intact.
 """
 import hashlib
 import json
@@ -10,9 +11,14 @@ import tempfile
 import time
 import urllib.request
 
+def validate_repository(repository):
+    if not repository or repository.count('/')!=1:raise ValueError('GitHub Pages publish needs --repository OWNER/REPO')
+    if repository.casefold() == 'kevstermcgee/blueenginegames':
+        raise ValueError('BlueEngineGames distributes native Windows EXE installers only. Run python scripts/ship.py ship and use its Windows release workflow; optional browser artifacts must use a separate destination.')
+
 def publish(package,repository,run,integrity,directory_publish):
     WebError = ValueError
-    if not repository or repository.count('/')!=1:raise WebError('GitHub Pages publish needs --repository OWNER/REPO')
+    validate_repository(repository)
     permissions=json.loads(run(['gh','api',f'repos/{repository}']))
     if not permissions.get('permissions',{}).get('push'):raise WebError('GitHub connection lacks push permission for this library. Use --backend directory for a publication-ready artifact.')
     pages=json.loads(run(['gh','api',f'repos/{repository}/pages']))
@@ -80,6 +86,8 @@ def publish(package,repository,run,integrity,directory_publish):
         return {'source_retrieval':source_proof,'backend':'github-pages','url':confirmed[0]['url'] if len(confirmed)==1 else None,'games':confirmed,'repository':repository,'deployment_commit':commit if changed else None,'library_commit':commit,'already_current':not changed,'run':deployment,'remote_manifest_verified':True,'remote_files_verified':True,'catalog_verified':catalog_proof}
 
 def integrate_catalog(builder):
+    if (builder.parent / 'native_catalog.py').is_file():
+        raise ValueError('This is a Windows-only download site. Do not add browser games; use a separate browser destination.')
     source=builder.read_text(encoding='utf-8');marker='# BlueEngine unified catalog (static publisher contract v2)'
     anchor='    (out / "index.html").write_text(page)'
     sort_anchor='    games.sort(key=lambda g: g["name"])'
