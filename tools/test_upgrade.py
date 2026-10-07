@@ -361,18 +361,22 @@ if __name__ == '__main__':
 
 
 class VerificationIsTruthfulTests(unittest.TestCase):
-    def test_2d_upgrade_uses_fresh_browser_gate_not_a_native_only_success(self):
-        fixture=CustomSimFixture(check_script=FAKE_CHECK_OK)
+    def test_retired_browser_upgrade_never_runs_or_certifies_web(self):
+        fixture = CustomSimFixture(check_script=FAKE_CHECK_OK)
         self.addCleanup(fixture.close)
-        (fixture.root/'game.project.json').write_text(json.dumps({'presentation':'2d','networking':'offline','targets':['web']}))
-        script=fixture.root/'scripts/web.py'
-        script.write_text("import json\nprint(json.dumps({'ok':True,'browser':True}))\n")
-        result=upgrade.verify(fixture.root,ROOT)
-        self.assertTrue(result['ok']);self.assertTrue(Path(result['command'][1]).samefile(script))
-        self.assertIn('web',result['verification_target'])
-        script.write_text("import json,sys\nprint(json.dumps({'ok':False,'browser':False}))\nsys.exit(1)\n")
-        self.assertFalse(upgrade.verify(fixture.root,ROOT)['ok'])
-        self.assertFalse(upgrade.verify(fixture.root,ROOT,content_only=True)['ok'])
+        project = fixture.root / 'game.project.json'
+        project.write_text(json.dumps({'presentation': '2d', 'networking': 'offline', 'targets': ['web']}))
+        script = fixture.root / 'scripts/web.py'
+        script.write_text('raise RuntimeError("must never run retired workflow")')
+        result = upgrade.verify(fixture.root, ROOT)
+        self.assertFalse(result['ok'])
+        self.assertIn('retired', result['reason'])
+        self.assertNotIn('command', result)
+        self.assertFalse(upgrade.verify(fixture.root, ROOT, content_only=True)['ok'])
+        project.write_text(json.dumps({'presentation': '2d', 'networking': 'offline', 'targets': ['windows']}))
+        result = upgrade.verify(fixture.root, ROOT)
+        self.assertTrue(result['ok'])
+        self.assertTrue(Path(result['command'][1]).samefile(fixture.root / 'scripts/check.py'))
 
     def test_unavailable_when_no_check_script(self):
         fixture = CustomSimFixture(check_script=None)

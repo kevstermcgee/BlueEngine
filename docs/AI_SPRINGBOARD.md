@@ -33,16 +33,15 @@ directory shown in the packet; publication still needs its own committed public 
 The CLI default is **portable**, the original library default remains **stock**;
 always name the intended starter. Declarative native GameDocument, native custom
 simulation/netplay and portable rules remain distinct. BlueEngineGames distributes native
-Windows EXE installers; optional browser compatibility requires a separate destination.
-Browser UDP/QUIC/native
-Rapier/world APIs are unsupported combinations, with engineering routes shown. Headless
+Windows EXE installers; browser gameplay is retired. Requested web targets stay explicit blockers; no native fallback is guessed.
+Windows routing respects explicit 2D/3D/hybrid before mechanics and OS. Portable game-owned
+Rust rules can implement enemies/projectiles/scoring; conflicting stock/GameDocument or native
+physics/networking requirements need an explicit engineering route. Headless
 engine APIs exist even though this coordinator does not scaffold a headless application.
 
-Tool presence is not target readiness. Rust version/toolchain, installed wasm standard
-library, host C linker, Node/ws, Chromium and relevant presentation headers are checked
+Tool presence is not target readiness. Rust version/toolchain, host C linker and relevant native presentation headers are checked
 without compilation. Dependency-cache availability and real build success remain
-unverified. Another OS's packaging/runtime gate cannot pass on this host. Setup commands
-such as `web prepare` are recommendations to run explicitly, never automatic discovery.
+unverified. Another OS's packaging/runtime gate cannot pass on this host. Retired browser tooling is never probed or installed.
 
 ## Observe checks, do not certify notes
 
@@ -57,11 +56,11 @@ python3 tools/be2.py check --game ../relic-room --loop shipping --task TASK_ID
 
 `next` and `resume` recompute progress from current files and observed reports, without
 rerunning a command. Reports record current engine source content, game source/assets/
-configuration using the existing browser hash, lock, environment/configuration identity,
+configuration/tests/examples/benches/root scripts using native content identity, lock, environment/configuration identity,
 tool/executable identity and package output identity. Before/after source changes during
 a check invalidate evidence. The existing first-use metadata step may legitimately update
 only the game lock before locked tests. An engine Git commit alone cannot preserve evidence.
-Binary/package replacement, changed source/assets/configuration or missing logs invalidate
+Binary/package replacement, changed source/assets/configuration/tests (including executed test files), or missing logs invalidate
 prior passes. Full logs/failure records remain in their original check directories.
 
 Planned checks and passed, failed, skipped or unverified evidence are distinct. Schema
@@ -75,5 +74,9 @@ clients, shaders, physics and networking remain available directly.
 
 A current shipping report proves its recorded machine scope. Objective review, changed
 visuals/controls, other declared platforms, Linux/Windows engine CI, physical-device/audio
-limits and public-source/deployment obligations remain explicit. The coordinator does not
+limits and native package/delivery obligations remain explicit. The coordinator does not
 mark the overall creative task complete merely because tests passed.
+
+Input identity version 2 invalidates legacy reports conservatively. Native helpers do not
+import browser release code. The first-use Cargo.lock exception excludes only that lock;
+changes to any tested file during metadata/check execution still invalidate the result.

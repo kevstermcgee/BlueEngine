@@ -13,11 +13,10 @@ and K/L save/load. Mobile: D-pad wanders, A hops, B pauses; drag the game to loo
 sound/music/save/load below the game. Progress resumes on this device; Install app/Add to Home Screen
 supports offline play after the first complete load. Browser and native saves remain independent.
 
-`scripts/blue web build` verifies the isolated static package. `scripts/blue publish --backend
-github-pages --repository OWNER/BlueEngineGames` deploys it. game.project.json explicitly selects the
-browser binary/features, preserving the native client. Browser presentation uses contact shadows
-and shorter decorative view distance to bound mobile memory/work; all 49 authoritative chunks remain.
-Physical-phone performance and hardware audibility require separate testing.
+The alternate presentation is now a native-only optional `leo-portable` executable:
+`cargo run --no-default-features --features portable-client --bin leo-portable`.
+Historical browser-named source modules retain the same Sim/SimState and saves.
+Browser/WASM builds and publication are retired; see the engine migration guide.
 
 Leo has a soft smile, rounded proportions and swept chestnut hair. He travels
 without a backpack. Trees and the boy cast directional sun/moon shadows using

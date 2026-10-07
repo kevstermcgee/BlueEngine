@@ -20,7 +20,7 @@ path = "src/main.rs"
 required-features = ["client"]
 
 [[bin]]
-name = "leo-browser"
+name = "leo-portable"
 path = "src/browser_main.rs"
 required-features = ["portable-client"]
 

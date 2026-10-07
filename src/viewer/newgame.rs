@@ -1,7 +1,7 @@
 //! `be2-tools new-game NAME DIR [ENGINE_PATH] [TEMPLATE]`: Scaffolds a standalone, green game project.
 //!
 //! The generated project does not copy or fork the engine; it uses `vesper3d` as a
-//! dependency. Portable 2D/3D/hybrid starters share browser/native clients; the CLI defaults
+//! dependency. Portable 2D/3D/hybrid starters share native clients; the CLI defaults
 //! to portable. The original native starters remain available explicitly:
 //!
 //! * `stock` (legacy library default): a declarative blueprint, pre-compiled map, `game.json` and the shared
@@ -30,11 +30,11 @@ pub enum Template {
     Stock,
     /// A game that owns its simulation: pure library + window binary (devkit and kit).
     CustomSim,
-    /// Offline 2D game with the shared browser/native client.
+    /// Offline 2D game with the shared native client.
     TwoD,
     /// Browser/native 3D presentation, with the same rules and services.
     ThreeD,
-    /// Composable 2D + 3D browser/native presentation.
+    /// Composable 2D + 3D native presentation.
     Hybrid,
     /// Recommended flexible starter; equivalent to hybrid.
     Portable,
@@ -145,10 +145,6 @@ pub fn scaffold_new_game_with(
     write_shipping_files(&project, identity, template)?;
     write_scripts(&project)?;
     if template.is_portable() {
-        project.write(
-            "scripts/web.py",
-            include_str!("../../templates/two-d/web.py"),
-        )?;
         project.write(
             "scripts/project.py",
             include_str!("../../templates/game_project.py"),
@@ -321,8 +317,7 @@ fi
 
 cmd="${1:-help}"
 case "$cmd" in
-  web) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py "$@" ;;
-  publish) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py publish "$@" ;;
+  web|publish) echo "Browser gameplay is retired; use scripts/blue ship on Windows. See engine docs/BROWSER_WORKFLOW.md." >&2; exit 2 ;;
   check)
     shift
     "$PY" scripts/check.py "$@"
@@ -350,7 +345,7 @@ case "$cmd" in
     "$PY" scripts/ship.py ship "$@"
     ;;
   *)
-    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship|web|publish}"
+    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship}"
     ;;
 esac
 "#;
@@ -370,16 +365,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 switch ($cmd) {
-    "web" {
-        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the portable starter." }
-        python scripts/web.py @CheckArgs
-        exit $LASTEXITCODE
-    }
-    "publish" {
-        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the portable starter." }
-        python scripts/web.py publish @CheckArgs
-        exit $LASTEXITCODE
-    }
+    { $_ -in "web", "publish" } { throw "Browser gameplay is retired; use scripts/blue ship on Windows. See engine docs/BROWSER_WORKFLOW.md." }
     "check" {
         python scripts/check.py @CheckArgs
         exit $LASTEXITCODE
@@ -409,7 +395,7 @@ switch ($cmd) {
         exit $LASTEXITCODE
     }
     default {
-        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|dev|play|package|shortcut|ship|web|publish}"
+        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|dev|play|package|shortcut|ship}"
     }
 }
 "#;
@@ -480,7 +466,7 @@ fn scaffold_two_d(project: &Project, template: Template) -> Result<Identity> {
         ("src/lib.rs",include_str!("../../templates/two-d/lib.rs")),
         ("AGENTS.md",include_str!("../../templates/two-d/AGENTS.md")),
         ("README.md","# {{title}}\nCollect the four lanterns, avoid the pink patrol and reach the teal exit.\nWASD/arrows move. Click/Enter starts. K saves, L resumes, M toggles sound, R restarts.\n"),
-        ("STATUS.md","2D browser/native starter. Verify and inspect real captures before shipping.\n"),
+        ("STATUS.md","2D native starter. Verify and inspect real captures before shipping.\n"),
     ] { project.write(path,fill(template,&values))?; }
     let presentation = match template {
         Template::TwoD => "2d",
@@ -827,10 +813,7 @@ mod tests {
                 .is_file());
             if t.is_portable() {
                 assert_eq!(metadata["networking"], serde_json::json!(["offline"]));
-                assert_eq!(
-                    metadata["default_targets"],
-                    serde_json::json!(["web", "linux", "windows"])
-                );
+                assert_eq!(metadata["default_targets"], serde_json::json!(["windows"]));
             }
         }
         assert_eq!(Template::parse("racing"), None);

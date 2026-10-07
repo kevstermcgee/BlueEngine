@@ -517,24 +517,19 @@ def verify(game_root, engine_root, *, skip_ship=False, content_only=False, scena
         'tool_binary': {'path': str(tool_path), 'sha256': sha256_of(tool_path)} if tool_path else None}
     runtime = classify_runtime(game_root)
     requirements = runtime['evidence'].get('game.project.json', {})
-    if runtime['kind'] == 'two_d' and 'web' in requirements.get('targets', []):
-        web_script = game_root / 'scripts/web.py'
-        if content_only or scenarios or not web_script.is_file():
-            result.update(ok=False, reason='2D/browser upgrade verification needs scripts/web.py and a full web build; content-only/3D scenarios cannot prove this target.')
-            return result
-        args = [sys.executable, str(web_script), 'build']
-        result['verification_target'] = 'web (native desktop gate is separate)'
-    else:
-        if not tool_path:
-            result.update(ok=False, reason='No be2-tools binary found; scripts/check.py cannot run native checks.')
-            return result
-        args = [sys.executable, str(script), '--tools', str(tool_path)]
-        if content_only:
-            args.append('--content-only')
-        if skip_ship:
-            args.append('--skip-ship')
-        for scenario in scenarios:
-            args += ['--scenario', scenario]
+    if 'web' in requirements.get('targets', []) or requirements.get('web_build'):
+        result.update(ok=False, reason='Browser gameplay target is retired. Select native targets/executable deliberately; see docs/BROWSER_WORKFLOW.md. No browser command was run.')
+        return result
+    if not tool_path:
+        result.update(ok=False, reason='No be2-tools binary found; scripts/check.py cannot run native checks.')
+        return result
+    args = [sys.executable, str(script), '--tools', str(tool_path)]
+    if content_only:
+        args.append('--content-only')
+    if skip_ship:
+        args.append('--skip-ship')
+    for scenario in scenarios:
+        args += ['--scenario', scenario]
     started = time.monotonic()
     try:
         completed = subprocess.run(args, cwd=game_root, capture_output=True, text=True, encoding='utf-8',

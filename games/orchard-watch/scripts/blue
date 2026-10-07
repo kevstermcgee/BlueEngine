@@ -10,8 +10,7 @@ fi
 
 cmd="${1:-help}"
 case "$cmd" in
-  web) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the two-d starter." >&2; exit 1; }; "$PY" scripts/web.py "$@" ;;
-  publish) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the two-d starter." >&2; exit 1; }; "$PY" scripts/web.py publish "$@" ;;
+  web|publish) echo "Browser gameplay is retired; use scripts/blue ship on Windows. See engine docs/BROWSER_WORKFLOW.md." >&2; exit 2 ;;
   check)
     shift
     "$PY" scripts/check.py "$@"
@@ -39,6 +38,6 @@ case "$cmd" in
     "$PY" scripts/ship.py ship "$@"
     ;;
   *)
-    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship|web|publish}"
+    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship}"
     ;;
 esac

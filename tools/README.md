@@ -19,9 +19,8 @@ and `be2-tools search TEXT` remain available; `export-lab NEW.json` exports the 
 Engine maintainers follow AGENTS.md and the matching subsystem contract. This toolkit
 uses no AI service or plugins; Python runners require 3.10+ and the standard library.
 
-Browser games (2D/hybrid/3D): start with [BROWSER_WORKFLOW.md](../docs/BROWSER_WORKFLOW.md).
-`python3 tools/be2.py web capabilities` reports supported requirements; `web build GAME` runs the
-complete browser gate; `web reproduce GAME` proves a clean public-source rebuild.
+Browser gameplay/WASM is retired; see [migration guidance](../docs/BROWSER_WORKFLOW.md).
+Native helpers require no Node/ws, Chromium or WASM target.
 
 ## First five minutes
 
@@ -56,7 +55,7 @@ independent Python fixtures retain their own targets.
 | `python3 tools/be2.py features --feature ID` / `--validate` | Derived subsystem map / build-free index drift check |
 | `python3 tools/be2.py check --changed --loop inner` | Automatic library/consumer/tool checks; unknown inputs fail closed; shipping remains outstanding |
 | `python3 tools/be2.py check --changed --loop integration` | Broader feature configurations and subsystem evidence before full shipping verification |
-| `python3 tools/be2.py check --game DIR --loop inner` | Project tests only; integration adds presentation tests, shipping runs declared browser/native gates |
+| `python3 tools/be2.py check --game DIR --loop inner` | Project tests only; integration adds presentation tests, shipping runs declared native gates |
 | `python tools/be2.py check --changed --plan` | Read-only plan over staged, unstaged and untracked changes |
 | `python tools/be2.py check --changed --base REV` | Execute reviewed scopes or conservatively fall back to full checks |
 | `python tools/be2.py check` | Formatting, both test configurations, both Clippy configurations; persistent logs and JSON result |

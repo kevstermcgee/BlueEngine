@@ -24,8 +24,7 @@ Browser, package and real-device obligations appear separately in the JSON requi
 The graph remains partial: neither loop can replace shipping/CI.
 
 For a standalone game, `check --game DIR --loop inner` runs its own headless tests.
-Integration adds formatting/presentation tests; shipping runs its declared browser and
-native package gates. Native cross-platform evidence still requires those hosts. Changed
+Integration adds formatting/presentation tests; shipping runs its declared native package gates. Native cross-platform evidence still requires those hosts. Changed
 engine inputs require engine verification separately. Existing `--iterate`, exact-test and
 type-check commands remain available for a specific regression.
 

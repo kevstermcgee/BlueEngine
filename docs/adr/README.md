@@ -57,3 +57,7 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 
 - [0045: Windows-only game distribution](0045-windows-only-game-distribution.md)
 - [0046: Canonical native development and delivery paths](0046-canonical-native-development-paths.md)
+
+- [0047: Task evidence binds every project input](0047-task-evidence-input-freshness.md)
+- [0048: Requirement-preserving native starter routing](0048-requirement-preserving-native-routing.md)
+- [0049: Retire browser gameplay, preserve native composition](0049-retire-browser-gameplay.md)

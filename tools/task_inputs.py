@@ -1,7 +1,7 @@
 """Stateless input identity and read-only probes for canonical task/check reports.
 
-No test-result cache. Game identity reuses the browser builder's source hash; engine
-identity hashes current indexed/nonignored files, not just the Git commit.
+No test-result cache. Game identity includes all project inputs (including tests and
+Cargo target sources); engine identity hashes indexed/nonignored files, not just Git.
 """
 import hashlib
 import json
@@ -11,9 +11,9 @@ import shutil
 import subprocess
 
 try:
-    from . import author, workflow, web_games
+    from . import author, workflow
 except ImportError:
-    import author, workflow, web_games
+    import author, workflow
 
 
 def probe(argv, root, calls=None):
@@ -63,6 +63,35 @@ def engine_identity(root, calls=None):
     return {'sha256': digest.hexdigest(), 'files': count}
 
 
+def game_source_hash(game, *, without_lock=False):
+    """Content identity independent of retired browser tooling and Git initialization.
+
+    Include tracked files even when subsequently ignored/deleted, plus local inputs
+    in scratch games. Exclude only conventional generated outputs, never tests,
+    examples, benches, root-level scripts or Cargo configuration. Hash path + content
+    so deletion/rename and symlink changes invalidate evidence too.
+    """
+    game = Path(game).resolve()
+    inventory = probe(['git', 'ls-files', '--cached', '--others', '--exclude-standard', '-z', '--', '.'], game)
+    names = set(filter(None, inventory['output'].split('\0'))) if inventory['ok'] else set()
+    outputs = {'.git', 'target', 'dist', '.blue-check', '.be2-work', '__pycache__'}
+    for folder, directories, files in os.walk(game):
+        directories[:] = sorted(d for d in directories if d not in outputs)
+        for name in files:
+            if not name.endswith(('.pyc', '.pyo')):
+                names.add((Path(folder) / name).relative_to(game).as_posix())
+    digest = hashlib.sha256()
+    for name in sorted(names):
+        if without_lock and name == 'Cargo.lock':
+            continue
+        path = game / name
+        digest.update(name.encode('utf-8'))
+        if path.is_symlink():
+            digest.update(os.readlink(path).encode('utf-8'))
+        digest.update((file_hash(path) or 'missing').encode('ascii'))
+    return digest.hexdigest()
+
+
 def capture(root, game=None, calls=None):
     root = Path(root).resolve()
     compiler = probe(['rustc', '--version', '--verbose'], root, calls)
@@ -70,7 +99,7 @@ def capture(root, game=None, calls=None):
     cargo = probe(['cargo', '--version'], root, calls)
     env_names = ('RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CARGO_BUILD_TARGET', 'CARGO_TARGET_DIR',
                  'BE2_TOOLS', 'RUSTUP_TOOLCHAIN', 'CC', 'AR')
-    result = {'schema_version': 1, 'engine': engine_identity(root, calls),
+    result = {'schema_version': 2, 'engine': engine_identity(root, calls),
               'tools': {'python': executable(Path(os.sys.executable)),
                         'authoring': executable(author.native_binary(root)),
                         'compiler': compiler, 'sysroot': sysroot, 'cargo': cargo},
@@ -82,9 +111,8 @@ def capture(root, game=None, calls=None):
     result['configuration'] = {str(p): file_hash(p) for p in (cargo_home / 'config', cargo_home / 'config.toml')}
     if game and (Path(game) / 'Cargo.toml').is_file():
         game = Path(game)
-        result['game'] = {'sha256': web_games.source_hash(game),
-                          'without_lock': web_games.source_hash(game, ('src', 'assets', 'scripts', 'build.rs',
-                                                                      'AUDIO.md', 'Cargo.toml', 'game.project.json')),
+        result['game'] = {'sha256': game_source_hash(game),
+                          'without_lock': game_source_hash(game, without_lock=True),
                           'lock': file_hash(game / 'Cargo.lock')}
         result['configuration'].update({str(p): file_hash(p) for p in (game / '.cargo/config', game / '.cargo/config.toml')})
         # Output identity prevents a replaced binary/config/package from retaining a prior pass.

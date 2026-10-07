@@ -17,7 +17,7 @@ For automatic iteration use `python3 tools/be2.py check --changed --loop inner -
 then execute without `--plan`. It tests library units, declared consumer suites and
 relevant tooling; unknown/build-boundary inputs fall back to full checks. Use
 `--loop integration` when the feature is complete. For a standalone game use
-`check --game DIR --loop inner`, then `--loop shipping` for its declared browser/package gates.
+`check --game DIR --loop inner`, then `--loop shipping` for its declared native/package gates.
 Engine dependency tests are required when engine inputs change, not after every game rule edit.
 For a single regression, use the packet's `iterate` plan; select an indexed suite,
 `--test SUITE::exact_test`, or `--typecheck` (library only). Choose one useful check,
@@ -36,8 +36,7 @@ Keep full Linux/Windows CI. Inspect visuals/controls manually when they change.
 Distribution policy: BlueEngine games ship as **native Windows x64 EXE installers only**.
 Use `start "<game task>" --kind new-game --target windows`, then the native
 `python scripts/ship.py ship` gate on Windows. BlueEngineGames is a download-only
-site; do not publish browser games there. Optional browser targets remain engine
-compatibility/verification capabilities, not authorization for public web play.
+site; do not publish browser games there. Browser gameplay/WASM is retired; see docs/BROWSER_WORKFLOW.md for migration.
 
 Never violate:
 - Authoritative simulation is shared, fixed-step and rendering-free. Clients send
@@ -47,17 +46,10 @@ Never violate:
 - Preserve completed outputs on failure; never shell-interpolate scene values.
 - Preserve official assets/branding artwork. No plugin/service installation needed.
 
-Optional engine browser capability (separate destinations only): read docs/BROWSER_WORKFLOW.md. Use `python3 tools/be2.py web capabilities`,
-`web prepare GAME`, `web build GAME`, `web verify GAME`, `web inspect GAME`, `web serve GAME`,
-`web reproduce GAME` and `web publish GAME`. Portable 2D/hybrid/3D share these commands. Commit/push
-source before publication; a receipt must confirm source retrieval AND deployed manifest/files.
-Local web build/verify works before Git/origin setup; artifacts cannot publish until
-committed public source retrieval and clean reproduction pass. Scaffolding/authoring uses
-`python3 tools/be2.py map ...` with fresh shared itest tooling; release builds are for shipping.
-For visual iteration run `web preview GAME` and inspect all captures in `.blue-check/web-preview`
-before the final shipping check. Preview preserves `dist/web` and cannot certify shipping.
+Scaffolding/authoring uses `python3 tools/be2.py map ...` with fresh shared itest tooling;
+release builds are for shipping. Browser commands return retirement diagnostics without building.
 
-Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md, select Windows distribution and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. Native game completion requires the game's own title/icon, executable resources, complete package and
+Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md, select Windows distribution and choose portable (flexible), two-d, three-d or hybrid; use the shared native client and explicit game.project.json requirements. Native game completion requires the game's own title/icon, executable resources, complete package and
 isolated packaged-game smoke. `scripts/check.py` checks content, code and package integrity/resources
 without desktop access; `scripts/blue ship --no-install`
 packages and smoke-tests without installation. When installation is requested, `scripts/blue ship` creates a

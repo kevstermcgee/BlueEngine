@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Forward to the engine's supported web workflow; no copied deployment logic."""
+"""Forward to the engine's retired-command diagnostic; never builds or deploys."""
 import subprocess,sys,tomllib
 from pathlib import Path
 game=Path(__file__).resolve().parent.parent

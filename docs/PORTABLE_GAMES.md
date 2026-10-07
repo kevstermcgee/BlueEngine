@@ -1,37 +1,23 @@
-# Portable games: native Windows distribution, flexible presentation
+# Native portable games: Windows EXE delivery, flexible presentation
 
-Start with `python3 tools/be2.py start "<game objective>" --kind new-game --target windows`
-in the engine checkout; [AI_SPRINGBOARD.md](AI_SPRINGBOARD.md) selects explicit starters
-without compiling. BlueEngine games ship native Windows x64 EXE installers only; the BlueEngineGames
-website has no browser play. The portable runtime supports 2D, 3D and hybrid native
-games without choosing web distribution. Optional browser APIs below remain technical
-capabilities for other destinations, not a BlueEngine publishing requirement.
-
-Read this, the game's AGENTS.md, game.project.json and src/lib.rs. Use `portable` for new projects
-unless the user explicitly needs the legacy native world/netplay renderer. The CLI defaults to portable;
-explicit `stock`/`custom-sim` and the legacy scaffolding library default remain compatible.
+Start in the engine checkout:
 
 ```sh
-be2-tools new-game my-game ../my-game ../BlueEngine portable
-# Optional visual examples: two-d / three-d / hybrid. Same runtime and services.
-cd ../my-game
-cargo test --no-default-features
-python scripts/ship.py ship          # on Windows: EXE + shortcut + isolated package smoke
-python scripts/check.py              # full game check including the ship gate
-# Public EXE installers: BlueEngineGames DISTRIBUTION.md and Windows release workflow.
+python3 tools/be2.py start "Create a 2D game with enemies and scoring" --kind new-game --target windows --compact
+python3 tools/be2.py map new-game my-game ../my-game ../BlueEngine two-d
 ```
 
-The game chooses tools by value to gameplay, not by distribution. `presentation` is `2d`, `3d` or
-`hybrid`; it describes the game for the catalog, not a restriction on drawing APIs. `runtime: portable`
-supports all three on web/Linux/Windows/macOS. Targets remain explicit: never silently substitute one.
-Start flexible (hybrid) when the request leaves dimensionality open; choose a simpler mode when sufficient.
-Legacy native games keep their existing paths. Porting one to web means adapting its presentation to the
-portable client; changing metadata does not port its renderer or native UDP/QUIC transport.
+The packet selects an explicit starter from templates/starters.json. Windows is the
+creation default; existing Linux/macOS development targets remain supported. Choose
+`two-d`, `three-d`, `hybrid` or flexible `portable` by presentation, not by OS.
+Portable GameLogic supports game-owned enemy, projectile and scoring rules in Rust.
+GameDocument authoring belongs to `stock`; native custom physics/netplay belongs to
+`custom-sim`. Requested combinations outside a starter's support remain explicit
+blockers with an engineering route; never silently drop 2D or gameplay requirements.
 
-Leo (`assets/games/leo`) ports the original Sim/SimState, controller, chunks and kit art.
-Its browser adapter is src/browser.rs; native main.rs stays independent. The optional `web_build`
-project object selects `binary`, `features` (Cargo defaults disabled) and `identity` under assets/.
-Missing binaries/features fail before compiling. Ordinary portable starters need no override.
+Browser gameplay is retired (docs/BROWSER_WORKFLOW.md). The name portable describes
+reusable native composition, not web shipping. Use the game's AGENTS.md, src/lib.rs
+and game.project.json; preserve public two_d imports and stable Snapshot identifiers.
 
 ## Shared authoring surface
 
@@ -47,100 +33,53 @@ places the 3D view in logical pixels; later 2D layers can be a minimap, health b
 Use full-canvas views for 3D games, smaller views for 3D elements inside a 2D game. There is no requirement
 that simulation use the same dimensionality as presentation. It can use 2D collision for a 3D-looking game.
 The hybrid starter demonstrates a 3D garden and 2D minimap; `games/lantern-grove` is its complete example.
-Native-only world rendering/QUIC/Rapier APIs are not magically browser APIs; unsupported requirements fail.
+Portable built-in collision is 2D; custom native simulation, Rapier and NetGame/ClientView remain available for advanced physics or networking.
 
 Existing kit renderers can use `Scene::render_view(layer, rect, callback)`. Its callback receives a
 validated physical viewport including DPI: apply it to all scene and sky cameras, never clear the
-entire framebuffer, and keep rendering read-only. The browser kit shares native geometry/materials
+entire framebuffer, and keep rendering read-only. The native kit shares native geometry/materials
 and shadows, without native workers/networking. Controller, chunks and day clocks are rendering-free.
-Leo renders fewer distant plants in the browser while retaining every authoritative collision chunk.
+Leo retains its optional native portable presentation with the same authoritative state.
 
 `Game::drag_look()` opts into canvas dragging/right-stick look. Intent carries accumulated `look`
 radians and `sprint`; look and press edges are consumed once per fixed tick. F toggles fullscreen in
-portable native/browser players. Browser fullscreen runs inside the key gesture, includes controls
-below the canvas and preserves browser shortcuts/text editing. API restrictions produce a notice.
+portable native players. Unsupported device operations produce an explicit notice.
 
 `GameLogic::audio_banks()` declares checked `AudioBankSpec { id, root, music }` loop banks.
 Package their directories in identity.package. `audio_level(bank, layer)` supplies finite 0..1 levels
 from read-only simulation. Checksums/PCM/sample counts are validated before decoding. Independent
-saved Music/Sound toggles are N/M or mobile SELECT. Loops require audio activation, stop during pause
+saved Music/Sound toggles are N/M. Loops require audio activation, stop during pause
 or focus loss, and fade ordinary transitions. Submission evidence cannot prove human listening.
 Older Sound-only settings retain their value and default Music on. The shared cue bank stays small.
 
 Open-ended games need no artificial win: headless evidence may use outcome `playing`, with positive
 `ticks`, a nonempty `purpose` and the complete state hash. Tests must assert mechanics were exercised.
-The browser still compares that route/hash and separately tests real input, audio, storage and offline
-installation. Losing or empty routes cannot publish.
+Native tests and captures exercise that public-input route; input, audio, storage and packaged launch
+remain separate evidence. Empty routes cannot certify exercised gameplay.
 
-## Mobile controls (below the canvas)
 
-In game.project.json choose:
+## Native lifecycle, input and storage
 
-```json
-{
-"runtime": "portable",
-"presentation": "hybrid",
-"targets": ["web", "linux", "windows"],
-"mobile_controls": {"layout": "dpad", "action_label": "Action"}
-}
+The shared client owns fixed-step input, focus/pause, restart, save/load, settings,
+audio cues and error notices. Native saves/settings live in the game's user-data
+location (see docs/SAVE_STATE.md). Browser localStorage migration is not automatic.
+Keyboard/mouse and existing controller APIs remain; physical device/audio behavior
+requires hardware evidence. Custom clients remain available for unusual UI and input.
+
+## Verification and delivery
+
+```sh
+python3 tools/be2.py check --game ../my-game --loop inner
+python3 tools/be2.py check --game ../my-game --loop integration
+python3 tools/be2.py check --game ../my-game --loop shipping
+# In the game, on Windows:
+python scripts/ship.py ship --no-install
+# Use ship without --no-install when shortcut installation is requested.
 ```
 
-- `dpad`: four direction buttons plus an optional action. Good for movement/platform/arcade rules.
-- `paddle`: horizontal position slider. Good for mouse/paddle/aiming games.
-- `tap`: touch the game to select/place. Good for management/strategy; no fake directional pad.
-
-The mobile panel uses a Game Boy-style directional cross and round A/B buttons. A performs the configured
-action (or Restart when action_label is null); B pauses/resumes. Small START and SELECT controls sit below.
-START plays/pauses; SELECT opens Sound/Save/Load and Restart when A has a gameplay action.
-Supply a short meaningful action_label or null when the game has no action. A coarse primary pointer selects the
-mobile panel; desktop uses existing keyboard/mouse/controllers. Touches feed exactly the same Intent as
-those devices. Pointer capture permits holding direction and action together. Cancellation, focus loss
-and hidden pages clear held controls. Focus never scrolls the panel out from under a finger. Gestures
-activate browser audio; control listeners do not disable normal scrolling outside the game/panel.
-
-The isolated browser gate runs a separate real-touch CDP profile in portrait and landscape. It exercises
-Start/Pause/restart, the game's meaningful probe, audio, saves/settings and offline reload. A keyboard
-probe is insufficient evidence for mobile. Emulation validates the supported path; it is not actual
-Android/iPhone hardware or Safari certification.
-
-## Progress and installation
-
-Normal play restores automatic progress at startup and checkpoints about once a second, also when
-paused/focus is lost or a game finishes. A sudden close may lose the last second. Save/Continue use a
-separate manual slot, so autosave never overwrites a deliberate checkpoint. Verification/capture always
-starts fresh and cannot overwrite the player's automatic progress. Errors are visible; prior saves survive
-failed writes. Snapshot KIND/VERSION/MIGRATIONS govern compatibility for both slots and all targets.
-
-Browser progress/settings/favorites survive reload and browser restart on **this device and origin**,
-until site data is cleared or the browser evicts it. Installing the browser game preserves the same origin
-storage. No account, cross-device sync or browser/native synchronization is implied. Native saves live in
-user data (XDG data home, macOS Application Support, Windows LocalAppData), not the installation folder.
-Old executable-adjacent saves/settings migrate on read. BLUEENGINE_DATA_DIR overrides native storage for
-isolated tests or portable installations. These changes let progress survive native package replacement.
-
-Every new web artifact includes app.webmanifest and a versioned service worker caching only declared
-package files. Browser Install app / Add to Home Screen is the local install option for 2D/3D/hybrid.
-Its first complete online load makes offline play available. HTTPS (localhost for development) is required;
-a file:// package is not an installed app. Browser support determines the install menu/prompt. Native ship
-remains available for declared desktop targets. Local building needs no hosting account.
-
-Asset cache updates replace asset caches only, never saves/settings. Each game's scope has its own cache.
-The browser gate checks installability and actually disables networking before reloading and restoring
-progress; successful cargo compilation is not installation evidence. No guarantee of permanent browser
-storage is possible; storage quota/privacy/eviction are platform constraints with explicit diagnostics.
-
-## Optional browser catalog (separate from BlueEngineGames)
-
-The following shared feed is the generic browser-hosting template. BlueEngineGames
-uses its native EXE release feed instead and has no web-play pages or payloads.
-
-Publishing merges verified browser metadata into the main game feed by stable game ID. A game with both
-browser and native versions has one card, both actions. Filters select presentation, browser/download and
-networking; data/native source classification is independent. Existing native download URLs remain intact.
-Star buttons use origin-local storage and always sort favorites ahead of the chosen secondary order.
-Empty stars are outlined; selected stars fill yellow and sit apart from titles. Titles open details
-pages with supported browser-play/install and native downloads. Native version histories stay intact;
-browser-only games use the same details-page path.
-Failed storage writes leave the old persisted favorites intact and explain the session-only change.
-The legacy web/index page redirects to the central feed. A standalone directory publisher uses the same
-feed/favorites UI. The publishing backend owns site integration; gameplay knows nothing about hosting.
+Rules/scenarios, schema validity, native presentation and packaged smoke are distinct
+proofs. Tests do not certify visual quality or heard audio. Inspect native captures.
+Ship verifies the game's own icon/resources, complete assets and package integrity,
+then launches an isolated package. Desktop-wide icon comparison is optional advisory.
+Other declared OS gates need their own evidence; engine changes retain full
+Linux/Windows CI and headless boundaries. BlueEngineGames offers EXE downloads only.

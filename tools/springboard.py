@@ -11,9 +11,9 @@ import tomllib
 import uuid
 
 try:
-    from . import task_inputs, workflow, web_games
+    from . import task_inputs, workflow
 except ImportError:
-    import task_inputs, workflow, web_games
+    import task_inputs, workflow
 
 VERSION = 1
 KINDS = ('new-game', 'change-game', 'engine', 'diagnose', 'upgrade')
@@ -80,6 +80,13 @@ def select(root, task, kind, project, targets, template, networking):
     if template and template not in data['starters']:
         raise ValueError('Unknown template; use ' + ', '.join(data['starters']))
     uncertainty, gaps = [], []
+    two_d = bool(re.search(r'\b2[ -]?d\b|two[ -]dimensional', text))
+    three_d = bool(re.search(r'\b3[ -]?d\b|three[ -]dimensional', text))
+    presentation = 'hybrid' if 'hybrid' in text or two_d and three_d else '2d' if two_d else '3d' if three_d else None
+    declarative = bool(re.search(r'\b(gamedocument|declarative)\b', text))
+    mechanics = [name for name in ('enemies', 'projectiles', 'physics', 'scoring', 'ai', 'timers', 'counters', 'interactables')
+                 if re.search(r'\b' + name + r'\b', text)]
+    native_physics = bool(re.search(r'\brapier\b|native world|worker api', text))
     if kind is None:
         if re.search(r'\b(upgrade|migrate)\b', text):
             kind = 'upgrade'
@@ -97,24 +104,32 @@ def select(root, task, kind, project, targets, template, networking):
     if not targets:
         if project and (project / 'game.project.json').is_file():
             try:
-                targets = web_games.validate_project(project)['targets']
+                targets = workflow.project_module(root).validate_project(project)['targets']
             except (ValueError, OSError) as error:
                 uncertainty.append(str(error))
-        if not targets:
-            targets = ['web'] if re.search(r'\b(browser|web|mobile)\b', text) else []
+        if not targets and kind in ('new-game', 'change-game'):
+            # Detect only a requested play target, not incidental maintenance prose.
+            targets = ['web'] if re.search(r'\b(browser|web)\b', text) else []
     targets = list(dict.fromkeys(targets))
     host = {'linux': 'linux', 'win32': 'windows', 'darwin': 'macos'}.get(sys.platform)
     targets = [host if t == 'native' else 'web' if t == 'browser' else t for t in targets]
+    if 'web' in targets:
+        gaps.append({'kind': 'retired_target',
+                     'detail': 'Browser gameplay/WASM is retired. The requested web target was retained as a blocker, not silently replaced.',
+                     'extension': 'docs/BROWSER_WORKFLOW.md',
+                     'next': 'Choose native Windows EXE delivery explicitly; retain presentation and gameplay requirements.'})
     if kind == 'new-game':
         if template is None:
-            if 'web' not in targets and re.search(r'\b(gamedocument|declarative|counters|interactables|timers)\b', text):
+            if presentation and network == 'offline' and not native_physics:
+                template = {'2d': 'two-d', '3d': 'three-d', 'hybrid': 'hybrid'}[presentation]
+            elif declarative:
                 template = 'stock'
-            elif 'web' in targets or network == 'offline' and not targets:
-                template = 'two-d' if re.search(r'\b2d\b|two-d|two dimensional', text) else data['cli_default']
-            elif re.search(r'\b(gamedocument|declarative|counters|interactables|timers)\b', text):
+            elif network != 'offline' or native_physics or set(mechanics) & {'enemies', 'projectiles', 'physics', 'scoring', 'ai'}:
+                template = 'custom-sim'
+            elif set(mechanics) & {'counters', 'interactables', 'timers'}:
                 template = 'stock'
             else:
-                template = 'custom-sim' if network != 'offline' or re.search(r'\b(enemies|projectiles|physics|scoring|ai)\b', text) else 'stock'
+                template = data['cli_default']
         starter = data['starters'][template]
         targets = targets or starter.get('default_targets', [host])
         if set(targets) - set(starter['targets']) or network not in starter['networking']:
@@ -128,20 +143,29 @@ def select(root, task, kind, project, targets, template, networking):
         if template == 'stock' and re.search(r'\b(enemies|projectiles)\b|per.frame physics|custom gameplay scripts', text):
             gaps.append({'kind': 'unsupported_combination', 'detail': 'Stock GameDocument counters/interactables/timers do not supply enemy/projectile/custom per-tick rules.',
                          'extension': 'docs/CUSTOM_SIM_CHEATSHEET.md', 'next': 'Select custom-sim explicitly or extend GameDocument through engine maintenance; retain the requested mechanics.'})
-        if 'web' in targets and re.search(r'\brapier\b|native world|worker api', text):
-            gaps.append({'kind': 'unsupported_combination', 'detail': 'Native Rapier/world/worker APIs are not available in the browser runtime.',
-                         'extension': 'docs/PORTABLE_GAMES.md', 'next': 'Use supported portable primitives or request an engine extension without dropping the requested behavior.'})
-        if 'web' in targets and re.search(r'\b(gamedocument|declarative)\b', text):
-            gaps.append({'kind': 'unsupported_combination', 'detail': 'GameDocument authoring is native; the portable browser starter owns Rust rules.',
-                         'extension': 'docs/GAME_QUICKSTART.md', 'next': 'Clarify authoring/runtime requirements or extend the engine; do not silently replace declarative rules.'})
+        if presentation == '2d' and template == 'stock':
+            gaps.append({'kind': 'unsupported_combination', 'detail': 'Stock uses the native 3D client; it cannot satisfy an explicit 2D presentation request.',
+                         'extension': 'docs/TWO_D.md', 'next': 'Select two-d for game-level Rust rules, or request a deliberate GameDocument/2D engine extension.'})
+        if declarative and starter['runtime'] == 'portable':
+            gaps.append({'kind': 'unsupported_combination', 'detail': 'Portable GameLogic is a typed Rust extension; it does not implement GameDocument authoring. Both requested requirements are retained.',
+                         'extension': 'docs/GAME_QUICKSTART.md', 'next': 'Clarify the authoring contract or request an engine extension without changing presentation.'})
+        if presentation and template == 'custom-sim':
+            gaps.append({'kind': 'workflow_not_coordinated', 'detail': 'Custom-sim supports custom presentation, but its sample is 3D. This coordinator does not scaffold the requested ' + presentation + ' custom client.',
+                         'extension': 'docs/NETPLAY.md' if network != 'offline' else 'docs/CUSTOM_SIM_CHEATSHEET.md',
+                         'next': 'Use NetGame/ClientView or the typed simulation API with an explicit ' + presentation + ' client; do not present the stock sample as the requested game.'})
+        if native_physics and starter['runtime'] == 'portable':
+            gaps.append({'kind': 'unsupported_combination', 'detail': 'Portable built-in collision is 2D; requested native physics/world APIs need a custom simulation/client.',
+                         'extension': 'docs/CUSTOM_SIM_CHEATSHEET.md', 'next': 'Select custom-sim and implement the requested presentation deliberately.'})
         runtime, feature = starter['runtime'], starter['feature']
     else:
         runtime, feature = None, None
         if project and (project / 'game.project.json').is_file():
             try:
-                p = web_games.validate_project(project)
+                p = workflow.project_module(root).validate_project(project)
                 runtime = p.get('runtime', 'portable' if p['presentation'] == '2d' else 'legacy-native')
                 feature = 'two_dimensional' if runtime == 'portable' else 'game_documents'
+                if presentation and presentation != p['presentation']:
+                    uncertainty.append('Requested presentation ' + presentation + ' differs from game.project.json; preserve the request and update authoring deliberately.')
                 if targets and set(targets) != set(p['targets']):
                     uncertainty.append('Requested targets differ from game.project.json; edit requirements deliberately before checks.')
                 if networking or re.search(r'\b(multiplayer|quic|udp|online)\b', text):
@@ -155,7 +179,8 @@ def select(root, task, kind, project, targets, template, networking):
     coordinated = kind in ('new-game', 'engine') or kind == 'change-game' and runtime == 'portable'
     limitations = [] if coordinated else ['This route delegates to existing tools; portable project and engine checks supply coordinated stages.']
     return {'kind': kind, 'template': template, 'runtime': runtime, 'targets': targets,
-            'networking': network, 'feature': feature, 'uncertainty': uncertainty, 'gaps': gaps,
+            'networking': network, 'feature': feature,
+            'requested': {'presentation': presentation, 'mechanics': mechanics, 'authoring': 'GameDocument' if declarative else None}, 'uncertainty': uncertainty, 'gaps': gaps,
             'coordinated': coordinated, 'limitations': limitations}
 
 
@@ -175,15 +200,6 @@ def readiness(root, route, identity, calls):
     add('host C linker', linker if linker or sys.platform != 'win32' else None, 'inner',
         'be2.py doctor; inspect/install host build tools explicitly', 'MSVC can be discovered by Cargo outside PATH; an unverified result does not certify it.' if not linker and sys.platform == 'win32' else None)
     targets = route['targets']
-    if 'web' in targets:
-        sysroot = tools['sysroot']['output'] if tools['sysroot']['ok'] else ''
-        std = Path(sysroot) / 'lib/rustlib/wasm32-unknown-unknown/lib'
-        add('wasm32 standard library', bool(sysroot and list(std.glob('libstd-*'))), 'shipping', 'be2.py web prepare GAME')
-        add('Node', bool(shutil.which('node')), 'shipping', 'Install Node explicitly; see docs/BROWSER_WORKFLOW.md')
-        browser = os.environ.get('BE2_CHROMIUM') or next((shutil.which(n) for n in ('chromium', 'chromium-browser', 'google-chrome', 'google-chrome-stable') if shutil.which(n)), None)
-        add('Chromium', bool(browser and (Path(browser).is_file() or shutil.which(browser))), 'shipping', 'Set BE2_CHROMIUM or install Chromium explicitly')
-        ws = task_inputs.probe(['node', '--input-type=module', '-e', 'console.log(import.meta.resolve("ws"))'], root / 'tools', calls)
-        add('Node ws', ws['ok'], 'shipping', 'be2.py web prepare GAME', ws.get('error'))
     if sys.platform == 'linux' and ('linux' in targets or route['kind'] == 'engine'):
         headers = task_inputs.probe(['pkg-config', '--exists', 'alsa', 'libudev'], root, calls)
         add('Linux presentation headers', headers['ok'], 'shipping', 'See native prerequisites in tools/README.md', headers.get('error'))
@@ -218,7 +234,8 @@ def start(root, objective, *, kind=None, project=None, targets=None, template=No
     state = {'schema_version': VERSION, 'id': task, 'objective': objective,
              'constraints': INVARIANTS + (constraints or []), 'engine': str(root),
              'base_revision': git['revision'], 'project': str(project) if project else None,
-             'name': name, 'route': route, 'paths': paths or [], 'initial_inputs': inputs,
+             'name': name, 'route': route, 'selectors': {'kind': kind, 'targets': targets or [],
+             'template': template, 'networking': networking}, 'paths': paths or [], 'initial_inputs': inputs,
              'reports': [], 'notes': [], 'created': datetime.datetime.now(datetime.timezone.utc).isoformat()}
     packet = refresh(root, state, detail=detail, observed=(calls, git, inputs))
     if persist:
@@ -239,7 +256,7 @@ def report_status(root, state, inputs):
             current = binding.get('task') == state['id'] and binding.get('after') == inputs and binding.get('stable_sources') is True
             if not current:
                 status = 'unverified'
-            elif report.get('skipped'):
+            elif report['ok'] and report.get('skipped'):
                 status = 'skipped'
             elif report['ok']:
                 if len(report['checks']) != len(report['plan']['commands']) or not all(c.get('ok') for c in report['checks']):
@@ -288,7 +305,16 @@ def refresh(root, state, *, detail=False, observed=None):
     if git is None:
         git = git_state(root, calls, detail)
         inputs = task_inputs.capture(root, state['project'], calls)
-    route = state['route']
+    # Re-evaluate saved routes against current authoritative support definitions.
+    # Legacy state has no explicit selector provenance: retain its selected route
+    # conservatively rather than silently switching its template/targets.
+    selectors = state.get('selectors', {'kind': state['route']['kind'],
+                'targets': state['route']['targets'], 'template': state['route']['template'],
+                'networking': state['route']['networking']})
+    route = select(root, state['objective'], selectors['kind'],
+                   Path(state['project']) if state['project'] else None,
+                   selectors['targets'], selectors['template'], selectors['networking'])
+    state['route'] = route
     owners = workflow.impact(root, state['paths'])['owners'] if state['paths'] else []
     query = route.get('feature') or (owners[0] if len(owners) == 1 else ' '.join(state['objective'].split())[:500])
     context = workflow.context(root, query, limit=1, level=3 if detail else 1)
@@ -307,7 +333,7 @@ def refresh(root, state, *, detail=False, observed=None):
     schema = {'state': 'unverified'}
     if project and (project / 'game.project.json').exists():
         try:
-            config = web_games.validate_project(project)
+            config = workflow.project_module(root).validate_project(project)
             schema = {'state': 'passed', 'proves': 'Project schema only'}
             if set(config['targets']) != set(route['targets']):
                 blockers.append('Set game.project.json targets to ' + json.dumps(route['targets']) + ' deliberately before verification.')
@@ -329,7 +355,7 @@ def refresh(root, state, *, detail=False, observed=None):
     integration = None
     final = {'state': 'unverified', 'requirements': ['Complete applicable Linux/Windows CI when engine inputs change.',
              'Inspect changed visuals/controls; physical devices/audio are not certified by emulation.',
-             'Execute every declared target gate; publication also requires public-source reproduction and deployment receipts.']}
+             'Execute every declared target gate; native delivery requires a complete isolated package smoke on the requested OS.']}
     if route['kind'] == 'diagnose':
         next_action = action(root, 'doctor', expected='Environment inventory; use context DIAGNOSTIC_ID for a specific failure.')
     elif route['kind'] == 'upgrade' and project:
@@ -348,7 +374,7 @@ def refresh(root, state, *, detail=False, observed=None):
             iteration = action(root, 'check', '--game', str(project), '--loop', 'inner', '--task', state['id'],
                                expected='Execute game behavior tests with current input identity; no dependency engine suite.')
             final['command'] = action(root, 'check', '--game', str(project), '--loop', 'shipping', '--task', state['id'],
-                                      expected='Complete browser and declared native package gates; other OSs need their own run.')
+                                      expected='Complete declared native package gates; other OSs need their own run.')
             next_action = iteration
             integration = action(root, 'check', '--game', str(project), '--loop', 'integration', '--task', state['id'],
                                  expected='Formatting/default-feature project verification.')
@@ -394,7 +420,7 @@ def refresh(root, state, *, detail=False, observed=None):
               'engine': {**git, 'root': str(root), 'source_identity': inputs['engine'], 'executable': inputs['tools']['authoring']},
               'project': state['project'], 'workflow': route, 'readiness': ready,
               'capabilities': {'starter': catalog(root)['starters'].get(route.get('template')),
-                               'browser': web_games.capabilities() if 'web' in route['targets'] else None,
+                               'browser': {'supported': False, 'status': 'retired', 'migration': 'docs/BROWSER_WORKFLOW.md'},
                                'extension': 'Custom code/clients remain available; runtime/target gaps require engineering, not dropping requested mechanics.'},
               'context': {'references': refs, 'paths': state['paths'],
                           'project_files': ['AGENTS.md', 'game.project.json', 'src/lib.rs'] if project else [],

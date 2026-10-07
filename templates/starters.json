@@ -7,7 +7,6 @@
       "runtime": "portable",
       "presentation": "hybrid",
       "targets": [
-        "web",
         "linux",
         "windows",
         "macos"
@@ -18,8 +17,6 @@
       "guide": "docs/PORTABLE_GAMES.md",
       "feature": "two_dimensional",
       "default_targets": [
-        "web",
-        "linux",
         "windows"
       ]
     },
@@ -27,7 +24,6 @@
       "runtime": "portable",
       "presentation": "2d",
       "targets": [
-        "web",
         "linux",
         "windows",
         "macos"
@@ -38,8 +34,6 @@
       "guide": "docs/TWO_D.md",
       "feature": "two_dimensional",
       "default_targets": [
-        "web",
-        "linux",
         "windows"
       ]
     },
@@ -47,7 +41,6 @@
       "runtime": "portable",
       "presentation": "3d",
       "targets": [
-        "web",
         "linux",
         "windows",
         "macos"
@@ -58,8 +51,6 @@
       "guide": "docs/PORTABLE_GAMES.md",
       "feature": "two_dimensional",
       "default_targets": [
-        "web",
-        "linux",
         "windows"
       ]
     },
@@ -67,7 +58,6 @@
       "runtime": "portable",
       "presentation": "hybrid",
       "targets": [
-        "web",
         "linux",
         "windows",
         "macos"
@@ -78,8 +68,6 @@
       "guide": "docs/PORTABLE_GAMES.md",
       "feature": "two_dimensional",
       "default_targets": [
-        "web",
-        "linux",
         "windows"
       ]
     },
@@ -96,7 +84,10 @@
         "native-multiplayer"
       ],
       "guide": "docs/GAME_QUICKSTART.md",
-      "feature": "game_documents"
+      "feature": "game_documents",
+      "default_targets": [
+        "windows"
+      ]
     },
     "custom-sim": {
       "runtime": "custom-simulation",
@@ -111,7 +102,10 @@
         "native-multiplayer"
       ],
       "guide": "docs/CUSTOM_SIM_CHEATSHEET.md",
-      "feature": "custom_simulation"
+      "feature": "custom_simulation",
+      "default_targets": [
+        "windows"
+      ]
     }
   }
 }

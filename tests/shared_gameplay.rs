@@ -117,3 +117,50 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     assert!(scaffold_new_game("shared-starter", &dir, None).is_err());
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn portable_starters_emit_native_requirements_and_no_browser_execution_path() {
+    use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
+    for (template, presentation) in [
+        (Template::TwoD, "2d"),
+        (Template::ThreeD, "3d"),
+        (Template::Hybrid, "hybrid"),
+        (Template::Portable, "hybrid"),
+    ] {
+        let dir = std::env::temp_dir().join(format!(
+            "blueengine-native-starter-{}-{}-{}",
+            template.name(),
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        scaffold_new_game_with("native-starter", &dir, Some("../BlueEngine"), template).unwrap();
+        let project: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(dir.join("game.project.json")).unwrap()).unwrap();
+        assert_eq!(project["presentation"], presentation);
+        assert_eq!(project["runtime"], "portable");
+        assert_eq!(project["targets"], serde_json::json!(["windows"]));
+        assert!(!dir.join("scripts/web.py").exists());
+        assert!(dir.join("scripts/project.py").is_file());
+        let guide = std::fs::read_to_string(dir.join("AGENTS.md")).unwrap();
+        assert!(guide.contains("ship --no-install"));
+        assert!(!guide.contains("scripts/blue web build"));
+        assert!(std::fs::read_to_string(dir.join("src/lib.rs"))
+            .unwrap()
+            .contains("impl GameLogic"));
+        #[cfg(unix)]
+        {
+            let rejected = std::process::Command::new(dir.join("scripts/blue"))
+                .arg("web")
+                .arg("prepare")
+                .output()
+                .unwrap();
+            assert_eq!(rejected.status.code(), Some(2));
+            assert!(String::from_utf8_lossy(&rejected.stderr).contains("retired"));
+            assert!(!dir.join("dist").exists());
+        }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+}

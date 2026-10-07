@@ -1,5 +1,9 @@
 # ADR 0045: Distribute BlueEngine games as Windows EXE installers
 
+Browser gameplay portions are superseded by [ADR 0049](0049-retire-browser-gameplay.md).
+The historical browser commands below are not current supported workflows. Native contracts remain.
+
+
 Status: accepted.
 
 ## Context

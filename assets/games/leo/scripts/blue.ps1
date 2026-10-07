@@ -4,16 +4,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 switch ($cmd) {
-    "web" {
-        $sub = if ($CheckArgs.Count) { $CheckArgs[0] } else { "build" }
-        $rest = if ($CheckArgs.Count -gt 1) { $CheckArgs[1..($CheckArgs.Count-1)] } else { @() }
-        python "$Root/../../../tools/be2.py" web $sub $Root @rest
-        exit $LASTEXITCODE
-    }
-    "publish" {
-        python "$Root/../../../tools/be2.py" web publish $Root @CheckArgs
-        exit $LASTEXITCODE
-    }
+    { $_ -in "web", "publish" } { throw "Browser gameplay is retired; use scripts/blue ship on Windows. See engine docs/BROWSER_WORKFLOW.md." }
     "check" {
         python scripts/check.py @CheckArgs
         exit $LASTEXITCODE

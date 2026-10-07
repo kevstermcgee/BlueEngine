@@ -344,7 +344,7 @@ def main():
     c.add_argument('--loop', choices=['inner', 'integration', 'shipping'], default='shipping',
                    help='Automatic change checks; shipping remains the default')
     c.add_argument('--path', action='append', default=[], help='Explicit path to check (repeatable; inner/integration only)')
-    c.add_argument('--game', help='Standalone game project; reuse its tests/browser/package gates, excluding dependency tests')
+    c.add_argument('--game', help='Standalone game project; reuse its native tests/package gates, excluding dependency tests')
     c.add_argument('--task', help='Bind observed check report to a springboard task/current inputs')
     c.add_argument('--base', default='HEAD', help='Compare current files against this commit (default HEAD)')
     c.add_argument('--windows', action='store_true',
@@ -375,8 +375,8 @@ def main():
     f = sub.add_parser('features')
     f.add_argument('--feature', help='Derived implementation/interface/schema/test/example map for one feature')
     f.add_argument('--validate', action='store_true', help='Check indexed paths, dependency edges and test suites without a build')
-    web = sub.add_parser('web', help='Portable browser build/verify/inspect/serve/publish/reproduce/capabilities'); web.add_argument('arguments', nargs=argparse.REMAINDER)
-    pub = sub.add_parser('publish', help='Test/build/verify source and publish a portable browser game'); pub.add_argument('arguments', nargs=argparse.REMAINDER)
+    web = sub.add_parser('web', help='Retired browser command: migration diagnostic only'); web.add_argument('arguments', nargs=argparse.REMAINDER)
+    pub = sub.add_parser('publish', help='Retired browser publication: use native shipping'); pub.add_argument('arguments', nargs=argparse.REMAINDER)
     u = sub.add_parser('upgrade', help='Plan and verify moving an external game to a chosen engine revision')
     uc = u.add_subparsers(dest='upgrade_command', required=True)
     up = uc.add_parser('plan', help='Read-only: baseline/target identity, runtime, applicable migrations')

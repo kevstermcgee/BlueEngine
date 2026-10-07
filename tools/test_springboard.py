@@ -23,7 +23,7 @@ class SpringboardTests(unittest.TestCase):
         (self.root / 'templates').mkdir()
         (self.root / 'src').mkdir()
         for name in ('be2.py', 'workflow.py', 'upgrade.py', 'springboard.py', 'task_inputs.py',
-                     'author.py', 'web_games.py', 'web_release.py', 'FEATURES.json'):
+                     'author.py', 'FEATURES.json'):
             shutil.copyfile(ROOT / 'tools' / name, self.root / 'tools' / name)
         for name in ('starters.json', 'game_project.py'):
             shutil.copyfile(ROOT / 'templates' / name, self.root / 'templates' / name)
@@ -56,7 +56,7 @@ class SpringboardTests(unittest.TestCase):
         (root / 'Cargo.toml').write_text('[package]\nname="relic-room"\nversion="0.1.0"\n'
                                        f'[dependencies]\nvesper3d={{package="be2",path={json.dumps(self.root.as_posix())}}}\n')
         (root / 'game.project.json').write_text(json.dumps({'schema_version': 1, 'id': 'relic-room',
-             'presentation': '2d', 'runtime': 'portable', 'targets': ['web'], 'networking': 'offline',
+             'presentation': '2d', 'runtime': 'portable', 'targets': ['windows'], 'networking': 'offline',
              'input': ['keyboard'], 'description': 'Collect four relics', 'session_minutes': 1, 'complexity': 'low'}))
         return root
 
@@ -66,6 +66,11 @@ class SpringboardTests(unittest.TestCase):
                            (' @unittest.skip("optional unavailable")\n' if skip else '') +
                            ' def test_behavior(self):\n  self.assertTrue(' + str(not failure) + ')\n')
         command = [sys.executable, '-m', 'unittest', 'fixture_behavior']
+        if game:
+            tests = game / 'tests'
+            tests.mkdir(exist_ok=True)
+            (tests / 'test_rules.py').write_bytes(fixture.read_bytes())
+            command = [sys.executable, '-m', 'unittest', 'discover', '-s', str(tests)]
         if mutate:
             command = [sys.executable, '-c', 'from pathlib import Path; Path("src/lib.rs").write_text("changed during check"); print("observed")']
         if payload is not None:
@@ -111,7 +116,7 @@ class SpringboardTests(unittest.TestCase):
             return real_run(argv, **kwargs)
         with patch('subprocess.run', side_effect=record):
             packet = self.start('Create a small 2D collect-four game', kind='new-game',
-                                project=Path(self.tmp.name) / 'new-relics', targets=['web'])
+                                project=Path(self.tmp.name) / 'new-relics', targets=['windows'])
         self.assertEqual(packet['workflow']['template'], 'two-d')
         self.assertEqual(packet['next_action']['argv'][-1], 'two-d')
         self.assertEqual(packet['inspection']['builds_triggered'], 0)
@@ -141,18 +146,20 @@ class SpringboardTests(unittest.TestCase):
         self.assertEqual(path.read_bytes(), before)
         self.assertEqual(refreshed['evidence']['inner']['state'], 'unverified')
 
-    def test_missing_compiler_and_wasm_prerequisites_are_not_ready(self):
+    def test_missing_compiler_prerequisites_are_not_ready(self):
         real_probe = task_inputs.probe
         def no_compiler(argv, root, calls=None):
             if argv[0] in ('rustc', 'cargo'):
                 return {'ok': False, 'output': '', 'error': 'tool unavailable'}
             return real_probe(argv, root, calls)
         with patch.object(task_inputs, 'probe', side_effect=no_compiler):
-            packet = self.start('Create a 2D game', kind='new-game', targets=['web'])
+            packet = self.start('Create a 2D game', kind='new-game', targets=['windows'])
         self.assertFalse(packet['readiness']['ready_to_attempt_inner'])
         self.assertEqual(packet['next_action']['argv'][-1], 'doctor')
         checks = {c['name']: c['state'] for c in packet['readiness']['checks']}
-        self.assertEqual(checks['wasm32 standard library'], 'failed')
+        self.assertEqual(checks['compiler'], 'failed')
+        self.assertNotIn('Node', checks)
+        self.assertNotIn('wasm32 standard library', checks)
         self.assertIn('compiler (inner)', springboard.readable(packet))
 
     def test_starter_catalog_selection_and_native_compatibility(self):
@@ -208,6 +215,19 @@ class SpringboardTests(unittest.TestCase):
         self.assertEqual(broken['next_action']['kind'], 'clarify')
         self.assertIn('Cargo.toml', ' '.join(broken['blockers']))
 
+    def test_resume_legacy_web_route_rechecks_retired_support(self):
+        packet = self.start('Create a 2D game', kind='new-game', targets=['windows'])
+        path = springboard.state_path(self.root, packet['task'])
+        state = json.loads(path.read_text())
+        state.pop('selectors')
+        state['route']['targets'] = ['web']
+        state['route']['gaps'] = []
+        path.write_text(json.dumps(state))
+        resumed = springboard.resume(self.root, packet['task'])
+        self.assertEqual(resumed['workflow']['targets'], ['web'])
+        self.assertEqual(resumed['next_action']['kind'], 'clarify')
+        self.assertIn('retired_target', [g['kind'] for g in resumed['workflow']['gaps']])
+
     def test_unknown_kind_requires_clarification_without_guess(self):
         packet = springboard.start(self.root, 'Invent surprising behavior')
         self.assertIsNone(packet['workflow']['kind'])
@@ -249,7 +269,7 @@ class SpringboardTests(unittest.TestCase):
 
     def test_successful_wrapper_with_skipped_shipping_is_skipped_not_passed(self):
         game = self.game()
-        packet = self.start('Create a 2D game', kind='new-game', project=game, targets=['web'])
+        packet = self.start('Create a 2D game', kind='new-game', project=game, targets=['windows'])
         self.run_observed(packet['task'], loop='shipping', game=game,
                           payload={'ok': True, 'skipped': ['ship.window: no display'], 'ship': 'skipped: no desktop'})
         resumed = springboard.resume(self.root, packet['task'])
@@ -279,7 +299,7 @@ class SpringboardTests(unittest.TestCase):
 
     def test_asset_and_package_changes_invalidate_game_evidence(self):
         game = self.game()
-        packet = self.start('Create a 2D game', kind='new-game', project=game, targets=['web'], template='two-d')
+        packet = self.start('Create a 2D game', kind='new-game', project=game, targets=['windows'], template='two-d')
         self.run_observed(packet['task'], game=game)
         self.assertEqual(springboard.resume(self.root, packet['task'])['evidence']['inner']['state'], 'passed')
         (game / 'assets/rules.json').write_text('{"new_rule":true}')
@@ -287,8 +307,82 @@ class SpringboardTests(unittest.TestCase):
         self.assertEqual(resumed['evidence']['inner']['state'], 'unverified')
         self.run_observed(packet['task'], game=game)
         (game / 'dist').mkdir()
-        (game / 'dist/game.wasm').write_bytes(b'changed executable')
+        (game / 'dist/game.exe').write_bytes(b'changed executable')
         self.assertEqual(springboard.resume(self.root, packet['task'])['evidence']['inner']['state'], 'unverified')
+
+    def test_executed_game_test_edits_invalidate_evidence(self):
+        game = self.game()
+        packet = self.start('Create a 2D game', kind='new-game', project=game, targets=['windows'])
+        result, report, _ = self.run_observed(packet['task'], game=game)
+        self.assertEqual(result.returncode, 0)
+        self.assertIn(str(game / 'tests'), report['checks'][0]['command'])
+        self.assertEqual(springboard.resume(self.root, packet['task'])['evidence']['inner']['state'], 'passed')
+        test = game / 'tests/test_rules.py'
+        original = test.read_text()
+        test.write_text(original.replace('assertTrue(True)', 'assertTrue(False)'))
+        resumed = springboard.resume(self.root, packet['task'])
+        self.assertEqual(resumed['evidence']['inner']['state'], 'unverified')
+        self.assertEqual(resumed['evidence']['inner']['previous_result'], 'passed')
+        observed = subprocess.run(report['checks'][0]['command'], cwd=self.root, capture_output=True)
+        self.assertNotEqual(observed.returncode, 0)
+        test.write_text(original)
+        # Content identity, not timestamp/commit identity: restoring exact inputs restores the evidence.
+        self.assertEqual(springboard.resume(self.root, packet['task'])['evidence']['inner']['state'], 'passed')
+        test.rename(game / 'tests/test_renamed.py')
+        self.assertEqual(springboard.resume(self.root, packet['task'])['evidence']['inner']['state'], 'unverified')
+
+    def test_game_test_changes_during_check_and_lock_exception_fail_closed(self):
+        game = self.game()
+        (game / 'tests').mkdir()
+        test = game / 'tests/acceptance.rs'
+        test.write_text('// tested input')
+        before = task_inputs.capture(self.root, game)
+        (game / 'Cargo.lock').write_text('# generated root registration')
+        metadata = {'commands': [['cargo', 'metadata']]}
+        self.assertTrue(task_inputs.stable_sources(before, task_inputs.capture(self.root, game), metadata))
+        test.write_text('// edited during verification')
+        self.assertFalse(task_inputs.stable_sources(before, task_inputs.capture(self.root, game), metadata))
+        test.unlink()
+        self.assertFalse(task_inputs.stable_sources(before, task_inputs.capture(self.root, game), metadata))
+
+    def test_windows_routing_preserves_presentation_and_mechanics(self):
+        cases = [('Create a 2D game with enemies projectiles scoring and AI', 'two-d', '2d'),
+                 ('Create a two dimensional game with timers and counters', 'two-d', '2d'),
+                 ('Create a hybrid game with projectiles', 'hybrid', 'hybrid'),
+                 ('Create a 3D game with enemies', 'three-d', '3d')]
+        for objective, template, presentation in cases:
+            with self.subTest(objective=objective):
+                packet = self.start(objective, kind='new-game', targets=['windows'])
+                self.assertEqual(packet['workflow']['template'], template)
+                self.assertEqual(packet['workflow']['requested']['presentation'], presentation)
+                self.assertEqual(packet['workflow']['targets'], ['windows'])
+                self.assertFalse(packet['workflow']['gaps'])
+                self.assertEqual(packet['next_action']['argv'][-1], template)
+        incompatible = self.start('Create a 2D GameDocument game with enemies', kind='new-game', targets=['windows'])
+        self.assertEqual(incompatible['workflow']['requested']['authoring'], 'GameDocument')
+        self.assertEqual(incompatible['next_action']['kind'], 'clarify')
+        explicit = self.start('Create a 2D game', kind='new-game', template='stock', targets=['windows'])
+        self.assertEqual(explicit['workflow']['template'], 'stock')
+        self.assertEqual(explicit['next_action']['kind'], 'clarify')
+        network = self.start('Create a 2D multiplayer game', kind='new-game', targets=['windows'])
+        self.assertEqual(network['workflow']['requested']['presentation'], '2d')
+        self.assertEqual(network['workflow']['networking'], 'native-multiplayer')
+        self.assertEqual(network['next_action']['kind'], 'clarify')
+        self.assertIn('custom client', ' '.join(network['blockers']))
+
+    def test_retired_browser_requests_and_engine_prose_do_not_select_web(self):
+        engine = self.start('Retire browser tooling and fix evidence for web assets', kind='engine')
+        self.assertEqual(engine['workflow']['targets'], ['headless'])
+        packet = self.start('Create a browser 2D game with enemies', kind='new-game', targets=['web'])
+        self.assertEqual(packet['workflow']['targets'], ['web'])
+        self.assertEqual(packet['workflow']['template'], 'two-d')
+        self.assertEqual(packet['next_action']['kind'], 'clarify')
+        self.assertIn('retired_target', [g['kind'] for g in packet['workflow']['gaps']])
+        checks = [c['name'] for c in packet['readiness']['checks']]
+        self.assertNotIn('Node', checks)
+        self.assertNotIn('Chromium', checks)
+        default = self.start('Create a 2D game', kind='new-game')
+        self.assertEqual(default['workflow']['targets'], ['windows'])
 
     def test_changed_inputs_during_check_cannot_certify_evidence(self):
         packet = self.start()

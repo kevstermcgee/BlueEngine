@@ -1,5 +1,9 @@
 # 2D and browser milestone evidence
 
+Historical measurement report. Browser gameplay is now retired by ADR 0049; commands
+and browser support below describe the earlier measured revision, not current guidance.
+
+
 Baseline inspected: `80d66091b3ab66d50fe3a88bdeda41d60c59ecfb` (2026-10-05).
 The exact final tested revision is recorded in each published `manifest.json` and in
 `.be2-work/2d-web-milestone/final-evidence.json`. Those receipts are generated after committing the

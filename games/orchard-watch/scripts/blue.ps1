@@ -4,16 +4,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 Set-Location $Root
 
 switch ($cmd) {
-    "web" {
-        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the two-d starter." }
-        python scripts/web.py @CheckArgs
-        exit $LASTEXITCODE
-    }
-    "publish" {
-        if (!(Test-Path scripts/web.py)) { throw "This game has no web target; use the two-d starter." }
-        python scripts/web.py publish @CheckArgs
-        exit $LASTEXITCODE
-    }
+    { $_ -in "web", "publish" } { throw "Browser gameplay is retired; use scripts/blue ship on Windows. See engine docs/BROWSER_WORKFLOW.md." }
     "check" {
         python scripts/check.py @CheckArgs
         exit $LASTEXITCODE
@@ -43,6 +34,6 @@ switch ($cmd) {
         exit $LASTEXITCODE
     }
     default {
-        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|dev|play|package|shortcut|ship|web|publish}"
+        Write-Host "Usage: .\scripts\blue.ps1 {check|build-all|dev|play|package|shortcut|ship}"
     }
 }

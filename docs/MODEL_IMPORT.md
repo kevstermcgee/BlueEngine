@@ -28,7 +28,7 @@ failure preserves completed packs. `pack.json` records provenance, hashes, exact
 box collider metadata, tags and triangle count. `provenance.json` retains repair warnings.
 Never edit generated model data; reimport into a new directory and review the difference.
 
-Use the same embedded data in native and browser builds, with the existing portable
+Use the same embedded data in native builds, with the existing portable
 feature (or native presentation). No glTF importer, image codec or file access is needed:
 
 ```rust,ignore
@@ -78,4 +78,4 @@ never extracts arbitrary paths, and records a receipt. No timestamps certify fre
 
 Verify edits with `python3 tools/be2.py check --changed --loop inner --plan` and the
 selected checks; final engine changes require `python3 tools/be2.py check` and both
-Linux/Windows CI. Games retain native/browser/package checks and manual art review.
+Linux/Windows CI. Games retain native/package checks and manual art review.

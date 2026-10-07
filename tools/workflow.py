@@ -168,9 +168,9 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
                 p.startswith('.github/') or p.endswith('build.rs')]
     fallback = sorted(set(affected['unmapped'] + boundary + invalid))
     common = {'loop': loop, 'base': base, 'changed_paths': paths, 'impact': affected,
-              'remaining': 'Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/browser/package gates.',
+              'remaining': 'Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/package gates.',
               'required_before_merge': ['python tools/be2.py check', 'Linux/Windows CI',
-                                        'relevant visual, browser, networking and package evidence'],
+                                        'relevant visual, networking and package evidence'],
               'graph_confidence': 'Declared dependencies; focused evidence is not full-suite certification.'}
     if fallback:
         return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
@@ -187,7 +187,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     native = native or any(p.startswith('templates/') and p.endswith(('.rs', '.tmpl')) for p in paths)
     if native:
         groups = suite_feature_groups(root, suites)
-        portable = bool({'two_dimensional', 'browser_games'} & set(affected['affected']))
+        portable = bool({'two_dimensional'} & set(affected['affected']))
         presentation = portable or bool({'graphics', 'game_presentation', 'client_kit', 'native_controllers',
                                          'offline_renderer', 'sandbox'} & set(affected['owners']))
         modes = ([[] , ['--no-default-features']] if loop == 'integration' else
@@ -233,18 +233,23 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
             'proves': 'Executed selected behavioral checks only; final shipping verification remains outstanding.',
             'requirements': {'unit': native, 'integration_suites': suites,
                              'networking': 'selected suites' if {'multiplayer', 'netplay', 'netplay_hub'} & set(affected['affected']) else 'deferred to shipping',
-                             'browser': 'real browser gate on affected games before shipping' if {'two_dimensional', 'browser_games'} & set(affected['affected']) else 'deferred to shipping',
-                             'packaging': 'affected game package gate before shipping' if {'game_shipping', 'browser_games'} & set(affected['affected']) else 'deferred to shipping',
+                             'packaging': 'affected game package gate before shipping' if {'game_shipping'} & set(affected['affected']) else 'deferred to shipping',
                              'full_suite': 'before merge'}}
+
+
+def project_module(root):
+    """Load the authoritative standalone project contract without browser helpers."""
+    spec = importlib.util.spec_from_file_location('game_project', Path(root) / 'templates/game_project.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def game_plan(root, game, loop='inner'):
     """Reuse standalone project gates; never run the dependency's engine tests for a game edit."""
     if loop not in ('inner', 'integration', 'shipping'):
         raise ValueError('Unknown development loop')
-    spec = importlib.util.spec_from_file_location('game_project', root / 'templates/game_project.py')
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = project_module(root)
     game = Path(game).resolve()
     if not (game / 'Cargo.toml').is_file():
         raise ValueError('Game Cargo.toml missing; scaffold with be2.py map new-game first')
@@ -268,9 +273,7 @@ def game_plan(root, game, loop='inner'):
                          [arg for arg in command if arg != '--no-default-features']]
             harnesses += [None, 'rust_project']
     else:
-        if 'web' in project['targets']:
-            commands.append([sys.executable, 'tools/be2.py', 'web', 'build', str(game)]); harnesses.append(None)
-        if set(project['targets']) - {'web'}:
+        if project['targets']:
             script = game / 'scripts/check.py'
             if not script.is_file():
                 raise ValueError('Native shipping requires the game scripts/check.py; refresh generated tooling')
@@ -280,7 +283,7 @@ def game_plan(root, game, loop='inner'):
             'proves': 'Game checks in selected loop only; engine dependency tests are excluded.',
             'remaining': ('Declared game gates on this host; other declared native platforms still need their own evidence.'
                           if loop == 'shipping' else 'Run check --game GAME --loop shipping; engine source edits also require engine check --changed.'),
-            'requirements': {'browser': 'web' in project['targets'], 'native_packaging': sorted(set(project['targets']) - {'web'}),
+            'requirements': {'native_packaging': sorted(project['targets']),
                              'networking': project['networking'], 'engine_suite': 'required only when engine inputs change'}}
 
 
@@ -581,7 +584,7 @@ def full_commands(test_profile='itest'):
          'tools.test_assets', 'tools.test_model_import', 'tools.test_schemas', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
-         'tools.test_hub_deploy','tools.test_web_games','tools.test_springboard'],
+         'tools.test_hub_deploy','tools.test_browser_retirement','tools.test_springboard'],
     ]
 
 

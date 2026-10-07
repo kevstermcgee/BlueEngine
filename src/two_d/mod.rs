@@ -110,7 +110,7 @@ pub struct Intent {
     #[serde(default)]
     pub sprint: bool,
 }
-/// Checked authored loop bank, shared by native and web presentation.
+/// Checked authored loop bank, shared by native presentation clients.
 pub struct AudioBankSpec {
     pub id: &'static str,
     pub root: &'static str,

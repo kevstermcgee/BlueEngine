@@ -450,7 +450,7 @@
         "cargo test --locked --no-default-features --features model-import --lib model_import",
         "python3 tools/be2.py schemas --check"
       ],
-      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import. Static glTF: read docs/MODEL_IMPORT.md; assets.py import-model writes CC0 packs and precomputed box metadata. Games embed preprocessed art in native/browser via asset_model::draw::Model; servers read only ColliderMetadata. Import-only dependencies are feature gated. Schemas are generated from opt-in Rust types/constraints; maintain with be2.py schemas --write/--check (docs/SCHEMAS.md). Structural validity retains all existing semantic and shipping gates.",
+      "note": "Unified JSON catalog API over native and data-only prefabs; qualified stable IDs, metadata search, external game-local packs and review-gated promotion proposals. Reuse, modify, generate, then import. Static glTF: read docs/MODEL_IMPORT.md; assets.py import-model writes CC0 packs and precomputed box metadata. Games embed preprocessed art in native via asset_model::draw::Model; servers read only ColliderMetadata. Import-only dependencies are feature gated. Schemas are generated from opt-in Rust types/constraints; maintain with be2.py schemas --write/--check (docs/SCHEMAS.md). Structural validity retains all existing semantic and shipping gates.",
       "depends_on": [],
       "keywords": [
         "asset",
@@ -879,7 +879,6 @@
     },
     "two_dimensional": {
       "files": [
-        "src/viewer/web.rs",
         "templates/game_project.py",
         "docs/TWO_D.md",
         "src/two_d/client.rs",
@@ -904,9 +903,9 @@
       ],
       "checks": [
         "cargo test --locked --lib two_d --no-default-features --features two-d",
-        "python -m unittest tools.test_web_games"
+        "python -m unittest tools.test_browser_retirement"
       ],
-      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native/browser install. Choose elements by gameplay value; no legacy renderer exploration.",
+      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native installation. Choose elements by gameplay value; no legacy renderer exploration.",
       "keywords": [
         "2d",
         "2D",
@@ -2114,39 +2113,17 @@
     "browser_games": {
       "files": [
         "tools/web_games.py",
-        "tools/web_publish.py",
-        "tools/browser_smoke.mjs",
-        "tools/test_web_games.py",
-        "templates/web/index.html",
-        "templates/web/platform.js",
-        "templates/web/mobile.js",
-        "templates/web/service-worker.js",
-        "templates/catalog/browser_catalog.py",
-        "templates/catalog/index.html",
-        "templates/catalog/app.js",
-        "templates/catalog/style.css",
-        "templates/catalog/catalog.css",
-        "tools/catalog_smoke.mjs",
-        "src/viewer/web_kit.rs",
-        "src/runtime/camera_boom.rs",
-        "src/runtime/shadow_quality.rs",
-        "assets/games/leo/game.project.json",
-        "assets/games/leo/src/browser.rs",
-        "tools/web_release.py",
-        "tools/web_reproduce.py",
-        "templates/web/controls.json",
-        "docs/BROWSER_WORKFLOW.md"
+        "tools/test_browser_retirement.py",
+        "docs/BROWSER_WORKFLOW.md",
+        "docs/archive/browser-gameplay/README.md"
       ],
       "read_first": [
-        "docs/BROWSER_WORKFLOW.md",
-        "docs/PORTABLE_GAMES.md",
-        "templates/two-d/AGENTS.md"
+        "docs/BROWSER_WORKFLOW.md"
       ],
       "checks": [
-        "python -m unittest tools.test_web_games",
-        "isolated real Chromium WASM playthrough and persistence smoke"
+        "python -m unittest tools.test_browser_retirement"
       ],
-      "note": "BlueEngine games distribute native Windows x64 EXE installers only; BlueEngineGames has no browser play and rejects web publication. Optional portable offline 2D/3D/hybrid web/native authoring for separate destinations. Per-game dpad/paddle/tap controls below canvas on mobile, autosave/settings, offline browser installation, isolated desktop AND mobile touch/audio/storage/offline gates. Shared catalog joins native/browser by ID; persistent stars pin favorites. Build/publish remain separate. Canonical web prepare/build/verify/inspect/serve/reproduce/publish/capabilities. Public exact-commit source retrieval is mandatory before publication. Individual browser stage and update recovery evidence; runtime bank closure excludes previews. Local build/verify works before Git/origin setup; only publication requires committed public source retrieval and empty-target reproduction.",
+      "note": "Browser gameplay/WASM build, preview, package, public reproduction and publication are retired. Legacy web/publish commands return BROWSER-RETIRED without installing/building/writing. Native Windows EXE distribution and portable 2D/3D/hybrid GameLogic composition remain supported. Node/ws, Chromium and wasm standard libraries are not development prerequisites. Existing web project requirements must be migrated explicitly; metadata alone does not port a renderer. Historical source is archived, not a supported toolkit.",
       "keywords": [
         "web",
         "wasm",
@@ -2177,14 +2154,13 @@
         "clean-checkout",
         "performance"
       ],
-      "depends_on": [
-        "two_dimensional"
-      ],
+      "depends_on": [],
       "public_api": [
         "AudioBankSpec",
         "GameLogic::audio_level",
         "Scene::render_view"
-      ]
+      ],
+      "status": "retired"
     },
     "props": {
       "files": [
@@ -2501,7 +2477,6 @@
     "src/viewer/house.rs": "Small, low-poly two-story house.",
     "src/viewer/game_edit.rs": "Edit a game in place without hand-keeping its records in step.",
     "src/viewer/gamepad.rs": "Native gamepads without a window/rendering dependency (gamepad feature).",
-    "tools/web_publish.py": "Optional GitHub Pages adapter.",
     "src/viewer/netplay/mod.rs": "Online play for custom simulations: NetGame::MAX_SEATS sets player join limits; cli::serve supplies the...",
     "tools/learn.py": "Blue learns from the games built on it (ADR 0038).",
     "src/viewer/kit/mirror.rs": "One planar reflection pass with an off-axis aperture and an explicit depth buffer.",
@@ -2512,7 +2487,6 @@
     "src/viewer/kit/shadow.rs": "Shadows for kit games: one setting, two tiers, one helper.",
     "src/viewer/prop_physics.rs": "Loose-prop rigid bodies and shared pickup/drop behavior, independent of graphics.",
     "src/viewer/kit/mod.rs": "An opt-in client kit for games that draw their own world.",
-    "src/viewer/web.rs": "Browser builds expose shared contracts, not native 3D/UDP/QUIC services.",
     "src/viewer/devkit/sim.rs": "An optional shape for games that own their simulation, plus the helpers that make it testable.",
     "docs/adr/0019-lifecycle-and-save-policy.md": "ADR 0019: One lifecycle for custom-simulation windows, and a save policy declared per game",
     "docs/adr/0018-physics-save-contract.md": "ADR 0018: The save contract a physics-backed simulation can keep",
@@ -2696,7 +2670,7 @@
     "templates/two-d/lib.rs": "Rules and presentation; shared client owns devices, audio, storage and timing.",
     "docs/adr/0034-level-geometry-and-waypoint-pathing-from-dead-air.md": "ADR 0034: Level geometry and waypoint pathing promoted from Dead Air",
     "src/viewer/game_scenario.rs": "Turn game-explore's shortest win into a scenario that plays it: walk to each target, look at it, press it...",
-    "tools/web_games.py": "Canonical portable browser commands and release gates; start with docs/BROWSER_WORKFLOW.md.",
+    "tools/web_games.py": "Retired browser command diagnostic; use native Windows EXE delivery.",
     "src/viewer/server.rs": "Authoritative dedicated multiplayer server for Blue Engine V2.",
     "src/viewer/kit/look.rs": "Scene lighting and the materials that draw dynamic geometry.",
     "docs/SAVE_STATE.md": "Save states",

@@ -1,5 +1,9 @@
 # ADR 0039: Shared 2D presentation and verified static browser artifacts
 
+Browser gameplay portions are superseded by [ADR 0049](0049-retire-browser-gameplay.md).
+The historical browser commands below are not current supported workflows. Native contracts remain.
+
+
 Status: Accepted
 
 2D is a presentation branch, not a second engine. `runtime` reuses the existing fixed-step simulation,

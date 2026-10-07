@@ -1,4 +1,4 @@
-//! One recommended offline client: fixed-step input, browser/native storage, audio, HUD and verification.
+//! One recommended offline client: fixed-step input, native storage, audio, HUD and verification.
 use super::draw::{GOLD, PINK, WHITE};
 use super::{draw::*, Intent, Point, Rect};
 use crate::runtime::{

@@ -208,7 +208,7 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertNotIn('--no-default-features', rust[0])
         self.assertIn('--no-default-features', rust[1])
         self.assertIn('two-d', rust[2])
-        self.assertIn('browser', plan['requirements'])
+        self.assertIn('packaging', plan['requirements'])
 
     def test_feature_guarded_schema_suite_runs_separately_from_normal_units(self):
         plan = workflow.change_plan(ROOT, ['src/viewer/game.rs'])
@@ -248,7 +248,8 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertIn('--no-default-features', inner['commands'][0])
         self.assertEqual(inner['command_harnesses'], ['rust_project'])
         ship = workflow.game_plan(ROOT, game, 'shipping')
-        self.assertIn([sys.executable, 'tools/be2.py', 'web', 'build', str(game)], ship['commands'])
+        self.assertIn([sys.executable, str(game / 'scripts/check.py')], ship['commands'])
+        self.assertFalse(any('web' in command for command in ship['commands']))
         self.assertNotIn(['cargo', 'test', '--locked', '--profile', 'itest'], ship['commands'])
 
     def test_progressive_context_and_index_validation(self):
@@ -300,10 +301,11 @@ class AutomaticLoopTests(unittest.TestCase):
     def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertIn('run: python tools/be2.py check', ci)
-        for gate in ('cargo build --release --locked', 'needs: [engine, leo, browser]',
-                     'Stock audio offscreen verification', 'Strict browser target linting',
-                     'Reproduce public browser sources'):
+        for gate in ('cargo build --release --locked', 'needs: [engine, leo]',
+                     'Stock audio offscreen verification'):
             self.assertIn(gate, ci)
+        self.assertNotIn('wasm32-unknown-unknown', ci)
+        self.assertNotIn('npm ci', ci)
         # Both platform and native/headless/portable checks remain in full_commands.
         self.assertIn('os: [ubuntu-latest, windows-latest]', ci)
         self.assertEqual(ci.count('run: python tools/be2.py check'), 1)

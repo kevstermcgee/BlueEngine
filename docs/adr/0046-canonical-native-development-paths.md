@@ -1,5 +1,9 @@
 # 0046: Canonical native development and delivery paths
 
+Browser gameplay portions are superseded by [ADR 0049](0049-retire-browser-gameplay.md).
+The historical browser commands below are not current supported workflows. Native contracts remain.
+
+
 ## Status
 
 Accepted. Starting revision: `b8a7f9ffba70a5ca155395ce1f5eb5d7108c721a`.

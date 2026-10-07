@@ -61,58 +61,9 @@ jobs:
           name: stock-audio-offscreen
           path: .be2-work/stock-audio/
           include-hidden-files: true
-  browser:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: wasm32-unknown-unknown
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install browser verifier prerequisites
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libasound2-dev libudev-dev pkg-config
-          google-chrome --version
-          npm ci --ignore-scripts --prefix tools
-      - name: Build and verify each isolated browser game
-        run: |
-          for game in lantern-run pocket-breaker orchard-watch lantern-grove; do
-            python3 tools/be2.py web prepare games/$game
-            python3 tools/be2.py web build games/$game
-          done
-          python3 tools/be2.py web prepare assets/games/leo
-          python3 tools/be2.py web build assets/games/leo
-      - name: Strict browser target linting and test compilation
-        run: |
-          rustfmt --check --edition 2021 tools/web_rustc.rs
-          python3 -m unittest tools.test_web_games.WasmReproducibilityTests
-          cargo clippy --locked --target wasm32-unknown-unknown --no-default-features --features portable,presentation --lib -- -D warnings
-          cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --target wasm32-unknown-unknown --no-default-features --features portable-client --all-targets -- -D warnings
-      - name: Reproduce public browser sources with empty Cargo targets
-        if: github.event_name == 'push'
-        run: |
-          python3 tools/be2.py web reproduce games/lantern-run
-          python3 tools/be2.py web reproduce assets/games/leo
-      - name: Reject undeclared runtime dependencies in real browser
-        env:
-          BE2_BROWSER_FIXTURE: games/lantern-run/dist/web
-        run: python3 -m unittest tools.test_web_games.BrowserDependencyTests
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: browser-evidence
-          include-hidden-files: true
-          path: |
-            games/*/.blue-check/web/
-            assets/games/leo/.blue-check/web/
-  # Preserve the existing required-check names. A successful engine lane alone must
-  # never certify a revision whose game/package/render lane failed or was skipped.
   test:
     if: always()
-    needs: [engine, leo, browser]
+    needs: [engine, leo]
     strategy:
       fail-fast: false
       matrix:
@@ -124,11 +75,9 @@ jobs:
         env:
           ENGINE_RESULT: ${{ needs.engine.result }}
           LEO_RESULT: ${{ needs.leo.result }}
-          BROWSER_RESULT: ${{ needs.browser.result }}
         run: |
           test "$ENGINE_RESULT" = success
           test "$LEO_RESULT" = success
-          test "$BROWSER_RESULT" = success
   # Independent game checks overlap engine verification. Rendered feedback is available
   # early; the workflow is green only after BOTH matrices finish every existing gate.
   leo:

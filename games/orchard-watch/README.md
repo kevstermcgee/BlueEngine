@@ -19,8 +19,7 @@ python scripts/check.py
 
 `ship` builds `dist/`, embeds the game icon, creates a desktop shortcut and verifies
 the isolated native payload. BlueEngineGames' Windows release workflow wraps that
-payload in the per-game EXE installer. Optional web-target metadata is retained for
-engine regression tests; it does not authorize browser publication.
+payload in the per-game EXE installer. Browser gameplay is retired; native Linux/Windows checks and Windows package smoke remain required.
 
 For package-only delivery use `python scripts/ship.py ship --no-install`; it keeps the
 isolated smoke and never accesses the desktop. Plain `ship` additionally installs and

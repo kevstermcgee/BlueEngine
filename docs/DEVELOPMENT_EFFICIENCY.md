@@ -45,32 +45,25 @@ storage/snapshots, audio triggers, viewport, mobile controls and browser install
 Compose Rect/Body/Trigger, seeded RNG and game rules for unique mechanics. The stock
 GameDocument runtime composes counters, interactions, conditions, timers and movers;
 its explorer can generate a physically executed winning route. Custom code remains available
-for novel mechanics; do not duplicate authority in drawing or adopt native-only APIs for web.
+for novel mechanics; do not duplicate authority in drawing. Browser gameplay is retired (ADR 0049).
 
 Verification building blocks already exist: `runtime::assert_deterministic`,
 `snapshot::assert_resumes_exactly`, `snapshot::assert_loads_replay_identically`,
-stock scenario intents/state assertions, transport/netplay fixtures, and the complete desktop
-plus touch browser gate. Extend the starter's public-input win, loss and collision assertions.
+stock scenario intents/state assertions, transport/netplay fixtures, and native packaged-game smoke. Extend the starter's public-input win, loss and collision assertions.
 Test restart, pickup idempotence and timer boundaries where the game's rules use them.
 Keep snapshots complete. Do not replace a losing/collision case with a happy-path hash.
 
-Local web build/verify works before Git/origin setup and produces an isolated verified
-package. Publication still requires committed exact public source, anonymous retrieval,
-empty-target reproduction and deployed file/manifest receipts. A local artifact does not
-claim a URL or public-source reproducibility.
-For presentation iteration use `web preview GAME`: it compiles current inputs, runs
-game tests, captures playing/outcome frames at desktop/portrait/landscape sizes and stores
-them in `.blue-check/web-preview`. It preserves `dist/web`. Inspect all captures and fix
-visuals before the final `web build`/game shipping check. Preview uses one isolated browser
-profile for visual layouts; it does not certify real controls, storage, offline/update
-recovery or independent touch behavior. The shipping gate still exercises those fully.
+Native game iteration uses `check --game GAME --loop inner`, then integration and shipping.
+Inspect native captures for presentation changes. Windows `scripts/ship.py ship --no-install`
+verifies resources/assets/integrity and launches an isolated package; installation is optional.
+Other declared platform/device gates still require their own evidence. Browser build/preview/
+publication and Chromium/WASM setup are retired rather than deferred final requirements.
 
 Check failures retain complete logs, compiler spans, test assertions and successful stages.
 The recovery packet names the smallest observed location, likely failure category and next
 reproduction/doctor command. Reports include stage time, attempted commands, executed tests,
 Cargo fresh/built artifacts and POSIX child CPU/RSS where available. Artifact reuse means
-Cargo checked inputs; it does not mean behavioral tests were skipped. Browser wrapper caches
-remain keyed by implementation/compiler hashes. No stale passing test result is reused.
+Cargo checked inputs; it does not mean behavioral tests were skipped. No stale passing test result is reused.
 
 Measure with `python3 tools/dev_bench.py --out .be2-work/dev-bench.json`.
 `--root OTHER_CHECKOUT` compares the older front door; `--execute TASK` runs one actual
