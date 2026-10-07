@@ -294,6 +294,162 @@
       {
         "source": "games/lantern-grove/.gitignore",
         "destination": "lantern-grove/.gitignore"
+      },
+      {
+        "source": "games/prickle-putt/src",
+        "destination": "prickle-putt/src"
+      },
+      {
+        "source": "games/prickle-putt/tests",
+        "destination": "prickle-putt/tests"
+      },
+      {
+        "source": "games/prickle-putt/assets",
+        "destination": "prickle-putt/assets"
+      },
+      {
+        "source": "games/prickle-putt/scripts",
+        "destination": "prickle-putt/scripts"
+      },
+      {
+        "source": "games/prickle-putt/Cargo.toml",
+        "destination": "prickle-putt/Cargo.toml"
+      },
+      {
+        "source": "games/prickle-putt/Cargo.lock",
+        "destination": "prickle-putt/Cargo.lock"
+      },
+      {
+        "source": "games/prickle-putt/build.rs",
+        "destination": "prickle-putt/build.rs"
+      },
+      {
+        "source": "games/prickle-putt/AGENTS.md",
+        "destination": "prickle-putt/AGENTS.md"
+      },
+      {
+        "source": "games/prickle-putt/CLAUDE.md",
+        "destination": "prickle-putt/CLAUDE.md"
+      },
+      {
+        "source": "games/prickle-putt/README.md",
+        "destination": "prickle-putt/README.md"
+      },
+      {
+        "source": "games/prickle-putt/STATUS.md",
+        "destination": "prickle-putt/STATUS.md"
+      },
+      {
+        "source": "games/prickle-putt/game.project.json",
+        "destination": "prickle-putt/game.project.json"
+      },
+      {
+        "source": "games/prickle-putt/.gitignore",
+        "destination": "prickle-putt/.gitignore"
+      },
+      {
+        "source": "games/puff-pop/src",
+        "destination": "puff-pop/src"
+      },
+      {
+        "source": "games/puff-pop/tests",
+        "destination": "puff-pop/tests"
+      },
+      {
+        "source": "games/puff-pop/assets",
+        "destination": "puff-pop/assets"
+      },
+      {
+        "source": "games/puff-pop/scripts",
+        "destination": "puff-pop/scripts"
+      },
+      {
+        "source": "games/puff-pop/Cargo.toml",
+        "destination": "puff-pop/Cargo.toml"
+      },
+      {
+        "source": "games/puff-pop/Cargo.lock",
+        "destination": "puff-pop/Cargo.lock"
+      },
+      {
+        "source": "games/puff-pop/build.rs",
+        "destination": "puff-pop/build.rs"
+      },
+      {
+        "source": "games/puff-pop/AGENTS.md",
+        "destination": "puff-pop/AGENTS.md"
+      },
+      {
+        "source": "games/puff-pop/CLAUDE.md",
+        "destination": "puff-pop/CLAUDE.md"
+      },
+      {
+        "source": "games/puff-pop/README.md",
+        "destination": "puff-pop/README.md"
+      },
+      {
+        "source": "games/puff-pop/STATUS.md",
+        "destination": "puff-pop/STATUS.md"
+      },
+      {
+        "source": "games/puff-pop/game.project.json",
+        "destination": "puff-pop/game.project.json"
+      },
+      {
+        "source": "games/puff-pop/.gitignore",
+        "destination": "puff-pop/.gitignore"
+      },
+      {
+        "source": "games/topsy-turvy/src",
+        "destination": "topsy-turvy/src"
+      },
+      {
+        "source": "games/topsy-turvy/tests",
+        "destination": "topsy-turvy/tests"
+      },
+      {
+        "source": "games/topsy-turvy/assets",
+        "destination": "topsy-turvy/assets"
+      },
+      {
+        "source": "games/topsy-turvy/scripts",
+        "destination": "topsy-turvy/scripts"
+      },
+      {
+        "source": "games/topsy-turvy/Cargo.toml",
+        "destination": "topsy-turvy/Cargo.toml"
+      },
+      {
+        "source": "games/topsy-turvy/Cargo.lock",
+        "destination": "topsy-turvy/Cargo.lock"
+      },
+      {
+        "source": "games/topsy-turvy/build.rs",
+        "destination": "topsy-turvy/build.rs"
+      },
+      {
+        "source": "games/topsy-turvy/AGENTS.md",
+        "destination": "topsy-turvy/AGENTS.md"
+      },
+      {
+        "source": "games/topsy-turvy/CLAUDE.md",
+        "destination": "topsy-turvy/CLAUDE.md"
+      },
+      {
+        "source": "games/topsy-turvy/README.md",
+        "destination": "topsy-turvy/README.md"
+      },
+      {
+        "source": "games/topsy-turvy/STATUS.md",
+        "destination": "topsy-turvy/STATUS.md"
+      },
+      {
+        "source": "games/topsy-turvy/game.project.json",
+        "destination": "topsy-turvy/game.project.json"
+      },
+      {
+        "source": "games/topsy-turvy/.gitignore",
+        "destination": "topsy-turvy/.gitignore"
       }
     ],
     "prototypes": [

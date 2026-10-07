@@ -1,0 +1,62 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "bubbles": {
+      "file": "music-bubbles.wav",
+      "checksum": "52b0a00575035646",
+      "frames": 756000,
+      "peak": 0.15458511,
+      "rms": 0.043756276,
+      "dc": 0.0000053426375,
+      "seam_jump": 0.00008376606
+    },
+    "danger": {
+      "file": "music-danger.wav",
+      "checksum": "74807ca2d93b426a",
+      "frames": 756000,
+      "peak": 0.16012482,
+      "rms": 0.044557635,
+      "dc": 0.000028710678,
+      "seam_jump": 0.0002565477
+    },
+    "groove": {
+      "file": "music-groove.wav",
+      "checksum": "be91cdbe2a5a0a8e",
+      "frames": 756000,
+      "peak": 0.267655,
+      "rms": 0.09118745,
+      "dc": 0.000051502448,
+      "seam_jump": 0.00023997575
+    },
+    "reef": {
+      "file": "music-reef.wav",
+      "checksum": "91b44e285fc9cb08",
+      "frames": 756000,
+      "peak": 0.20983121,
+      "rms": 0.04721077,
+      "dc": 1.653069e-8,
+      "seam_jump": 0.0017807176
+    },
+    "steel": {
+      "file": "music-steel.wav",
+      "checksum": "24ae7629b817590c",
+      "frames": 756000,
+      "peak": 0.15059136,
+      "rms": 0.033178404,
+      "dc": 0.0000013099275,
+      "seam_jump": 0.0003954377
+    },
+    "thump": {
+      "file": "music-thump.wav",
+      "checksum": "69ee44a4768db336",
+      "frames": 756000,
+      "peak": 0.14906842,
+      "rms": 0.022529487,
+      "dc": 0.00046352317,
+      "seam_jump": 0.0
+    }
+  },
+  "music_scale": 0.8019905
+}

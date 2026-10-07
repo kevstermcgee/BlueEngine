@@ -1,0 +1,21 @@
+{
+  "title": "Prickle Putt",
+  "tagline": "Two hedgehogs, nine hedge-walled greens, one controller to pass.",
+  "controls": "Stick/arrows aim; Space or A starts the meter then flings; N music, M sound, K save, L load, R restart",
+  "engine_revision": "28a8c4d2e6d8",
+  "package": [
+    "assets/audio"
+  ],
+  "smoke_args": [
+    "--verify",
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--size",
+    "1280x720",
+    "--mute"
+  ]
+}

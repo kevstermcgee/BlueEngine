@@ -1,0 +1,24 @@
+{
+  "complexity": "low",
+  "description": "Two hedgehogs, nine hedge-walled greens, one controller to pass.",
+  "id": "prickle-putt",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "mobile_controls": {
+    "action_label": "Putt",
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 15,
+  "targets": [
+    "web",
+    "linux",
+    "windows"
+  ]
+}

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+PY="$(command -v python3 || command -v python || true)"
+if [ -z "$PY" ]; then
+  echo "scripts/blue needs Python 3 (python3 or python on PATH)" >&2
+  exit 1
+fi
+
+cmd="${1:-help}"
+case "$cmd" in
+  web) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py "$@" ;;
+  publish) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py publish "$@" ;;
+  check)
+    shift
+    "$PY" scripts/check.py "$@"
+    ;;
+  build-all)
+    cargo build --release
+    ;;
+  dev)
+    shift
+    "$PY" scripts/dev.py "$@"
+    ;;
+  play)
+    "$PY" scripts/dev.py --release
+    ;;
+  package)
+    shift
+    "$PY" scripts/ship.py package "$@"
+    ;;
+  shortcut)
+    shift
+    "$PY" scripts/ship.py shortcut "$@"
+    ;;
+  ship)
+    shift
+    "$PY" scripts/ship.py ship "$@"
+    ;;
+  *)
+    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship|web|publish}"
+    ;;
+esac

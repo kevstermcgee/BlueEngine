@@ -1,0 +1,24 @@
+{
+  "complexity": "low",
+  "description": "Two pufferfish, one reef, one controller: puff up, squeeze through, pop the walls.",
+  "id": "puff-pop",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "mobile_controls": {
+    "action_label": "OK",
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 15,
+  "targets": [
+    "web",
+    "linux",
+    "windows"
+  ]
+}

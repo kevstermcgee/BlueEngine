@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "cave": {
+      "file": "music-cave.wav",
+      "checksum": "56776bf3fdaf8071",
+      "frames": 661500,
+      "peak": 0.28592578,
+      "rms": 0.059779868,
+      "dc": 1.3381582e-7,
+      "seam_jump": 0.0014095157
+    },
+    "echo": {
+      "file": "music-echo.wav",
+      "checksum": "4a2d00f1b07314e7",
+      "frames": 661500,
+      "peak": 0.1221935,
+      "rms": 0.025691122,
+      "dc": 9.864044e-8,
+      "seam_jump": 0.0017901922
+    },
+    "kick": {
+      "file": "music-kick.wav",
+      "checksum": "6d17d641afdcd5b7",
+      "frames": 661500,
+      "peak": 0.27187595,
+      "rms": 0.03358884,
+      "dc": 0.0009125202,
+      "seam_jump": 0.0
+    },
+    "pulse": {
+      "file": "music-pulse.wav",
+      "checksum": "62a2d0e35762c9e7",
+      "frames": 661500,
+      "peak": 0.23243545,
+      "rms": 0.11763378,
+      "dc": 0.0008475512,
+      "seam_jump": 0.00008760765
+    },
+    "wings": {
+      "file": "music-wings.wav",
+      "checksum": "07c88e299f95492e",
+      "frames": 661500,
+      "peak": 0.15726231,
+      "rms": 0.06424152,
+      "dc": 0.000013833398,
+      "seam_jump": 0.000010110438
+    }
+  },
+  "music_scale": 0.80784863
+}

@@ -1,0 +1,24 @@
+{
+  "complexity": "low",
+  "description": "Two bats, one cave, one button: flip gravity, shave the spikes, go deeper.",
+  "id": "topsy-turvy",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "mobile_controls": {
+    "action_label": "Flip",
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 15,
+  "targets": [
+    "web",
+    "linux",
+    "windows"
+  ]
+}

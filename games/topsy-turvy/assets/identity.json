@@ -1,0 +1,21 @@
+{
+  "title": "Topsy-Turvy",
+  "tagline": "Two bats, one cave, one button: flip gravity, shave the spikes, go deeper.",
+  "controls": "A/Space flips gravity; UP = ceiling, DOWN = floor; N music, M sound, K save, L load, R restart",
+  "engine_revision": "28a8c4d2e6d8",
+  "package": [
+    "assets/audio"
+  ],
+  "smoke_args": [
+    "--verify",
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--size",
+    "1280x720",
+    "--mute"
+  ]
+}

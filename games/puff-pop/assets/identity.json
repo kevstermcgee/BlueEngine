@@ -1,0 +1,21 @@
+{
+  "title": "Puff Pop",
+  "tagline": "Two pufferfish, one reef, one controller: puff up, squeeze through, pop the walls.",
+  "controls": "Hold UP (stick or D-pad) to puff and float, release to sink, DOWN to squeeze; A/Space confirms; N music, M sound, K save, L load",
+  "engine_revision": "28a8c4d2e6d8",
+  "package": [
+    "assets/audio"
+  ],
+  "smoke_args": [
+    "--verify",
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--size",
+    "1280x720",
+    "--mute"
+  ]
+}

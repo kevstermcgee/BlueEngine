@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "meadow": {
+      "file": "music-meadow.wav",
+      "checksum": "1dd9ef4fb81a0ac2",
+      "frames": 814154,
+      "peak": 0.37903565,
+      "rms": 0.09338869,
+      "dc": 7.775742e-8,
+      "seam_jump": 0.0028671268
+    },
+    "plink": {
+      "file": "music-plink.wav",
+      "checksum": "7053f318e736ab26",
+      "frames": 814154,
+      "peak": 0.2222998,
+      "rms": 0.061139986,
+      "dc": 0.0000021434878,
+      "seam_jump": 0.0
+    },
+    "stroll": {
+      "file": "music-stroll.wav",
+      "checksum": "da0bcf7501fdda5e",
+      "frames": 814154,
+      "peak": 0.2681627,
+      "rms": 0.106273234,
+      "dc": 0.00005383016,
+      "seam_jump": 0.000119015574
+    },
+    "whistle": {
+      "file": "music-whistle.wav",
+      "checksum": "d9db5275f93faae6",
+      "frames": 814154,
+      "peak": 0.22302257,
+      "rms": 0.06327236,
+      "dc": 3.9094328e-7,
+      "seam_jump": 0.0033651218
+    }
+  },
+  "music_scale": 0.95588845
+}
