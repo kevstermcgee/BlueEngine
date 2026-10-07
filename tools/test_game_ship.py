@@ -2670,7 +2670,7 @@ class WindowsVerifyTests(TempTestCase):
 
     def test_no_desktop_is_skipped_explicitly(self):
         with mock.patch.object(game_ship, 'desktop_folders', return_value={'user': None, 'common': None}):
-            code, report, _err = call_main(self.root, 'verify', '--json', env=self.env)
+            code, report, _err = call_main(self.root, 'verify', '--json', '--check-shortcut', '--icon-similarity', env=self.env)
         for name in ('shortcut-file', 'shortcut-icon', 'shortcut-unique'):
             self.assertEqual(check_by_name(report, name)['detail'], 'no desktop')
             self.assertIn(f'{name}: no desktop', report['skipped'])
@@ -2761,6 +2761,14 @@ class CompiledGameTests(unittest.TestCase):
         self.assertEqual(statuses['launch'], 'skip')
         self.assertEqual(statuses['smoke'], 'skip')
         self.assertTrue(report['ok'])
+
+    def test_real_windows_resources_verify_without_desktop_access(self):
+        with mock.patch.object(game_ship, 'desktop_folders', side_effect=AssertionError('desktop access')), \
+             mock.patch.object(game_ship.Verifier, 'other_shortcuts', side_effect=AssertionError('scan')):
+            code, report, _ = call_main(self.root, 'verify', '--json', env=self.env)
+        self.assertEqual(code, 0, report)
+        self.assertEqual(self.statuses(report)['exe-resources'], 'pass')
+        self.assertEqual(self.statuses(report)['shortcut-file'], 'skip')
 
     def test_the_exe_must_carry_the_title(self):
         with self.set_identity(title='Another Name'):

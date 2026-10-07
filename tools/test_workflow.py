@@ -60,6 +60,25 @@ class BuildDeliveryTests(unittest.TestCase):
         self.assertEqual(cinematic['required-features'], ['offline'])
 
 
+@unittest.skipUnless(sys.platform == 'win32', 'Windows compatibility launcher')
+class WindowsLauncherTests(unittest.TestCase):
+    def test_old_entry_routes_workbench_and_preserves_stock_arguments_without_building(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in ('launch_bea.bat', 'BEA_Launcher.ps1'):
+                shutil.copy2(ROOT / name, root / name)
+            (root / 'cargo.bat').write_text('@echo off\necho ROUTE:%*\n', encoding='utf-8')
+            env = dict(os.environ, PATH=str(root) + os.pathsep + os.environ['PATH'])
+            for args, expected in [([], '--bin blueengine-sandbox --'),
+                                   (['--map', 'assets/maps/test.json', '--feta'], '--bin be2 -- --map assets/maps/test.json --feta')]:
+                result = subprocess.run(['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+                                         '-File', str(root / 'BEA_Launcher.ps1'), *args],
+                                        cwd=root, env=env, capture_output=True, text=True, timeout=30,
+                                        **workflow.console_options())
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn(expected, result.stdout)
+
+
 class ContextTests(unittest.TestCase):
     def test_stock_audio_pipeline_and_bindings_are_discoverable(self):
         packet = workflow.context(ROOT, 'stock GameDocument audio pipeline cues and adaptive music')
