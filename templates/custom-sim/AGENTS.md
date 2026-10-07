@@ -75,10 +75,12 @@ Without keywords a record is archive-only. Do not copy session logs or credentia
 
 ## Definition of done (every game made with BlueEngine)
 1. `python scripts/check.py` passes. It ends with the ship gate, so it fails until step 2 is done.
-2. The game ships as a package with its own icon and desktop shortcut: fill in `assets/identity.json`
+2. The game ships as a package with its own icon: fill in `assets/identity.json`
    (real title, tagline, controls), regenerate the icon if the title changed
    (`be2-tools icon TITLE assets --replace`, add a number for another design), then run
-   `scripts/blue ship`. It builds a release
-   package in `dist/`, creates the shortcut named after the game, and verifies target, icon
-   uniqueness among the desktop's shortcuts, window title and icon. Never point a shortcut at `target/`.
+   `scripts/blue ship --no-install`. It builds a release package in `dist/`, verifies assets,
+   executable resources and an isolated packaged-game smoke without desktop access.
+   `scripts/blue ship` additionally creates a shortcut and checks its target and icon;
+   on Windows it checks the launched window. Icon similarity is optional advisory only.
+   Never point a shortcut at `target/`.
 3. You looked at real frames of the shipped exe and exercised the controls; say what you did not verify.

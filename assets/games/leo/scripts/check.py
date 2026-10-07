@@ -156,9 +156,9 @@ def parse_json_output(text):
 
 
 def ship_stage(root, report, directory, index, ship_folder=None):
-    """Verify the package and isolated smoke; installation is checked only when requested."""
+    """Verify package integrity/resources; shipping runs smoke, installation is opt-in."""
     ship = root / 'scripts/ship.py'
-    command = [sys.executable, str(ship), 'verify', '--json', '--smoke']
+    command = [sys.executable, str(ship), 'verify', '--json']
     if ship_folder is not None:
         command.extend(['--folder', str(Path(ship_folder).resolve())])
     log = directory / f'{index + 1}.log'

@@ -58,7 +58,8 @@ For visual iteration run `web preview GAME` and inspect all captures in `.blue-c
 before the final shipping check. Preview preserves `dist/web` and cannot certify shipping.
 
 Game projects start with their own AGENTS.md and project check. For new games read docs/PORTABLE_GAMES.md, select Windows distribution and choose portable (flexible), two-d, three-d or hybrid; use the shared browser/native client and explicit game.project.json requirements. Native game completion requires the game's own title/icon, executable resources, complete package and
-isolated packaged-game smoke. `scripts/check.py` verifies those without desktop access; `scripts/blue ship --no-install`
+isolated packaged-game smoke. `scripts/check.py` checks content, code and package integrity/resources
+without desktop access; `scripts/blue ship --no-install`
 packages and smoke-tests without installation. When installation is requested, `scripts/blue ship` creates a
 shortcut and checks its target and icon. Desktop-wide icon similarity is optional advisory only.
 Pick the starter by the rules (docs/GAME_QUICKSTART.md): `GameDocument` counters/interactables/timers use stock;

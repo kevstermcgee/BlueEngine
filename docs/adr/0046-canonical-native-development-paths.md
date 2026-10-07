@@ -28,8 +28,11 @@ ranges and impulses were embedded in HeadlessWorld beside reusable simulation se
   builds and smoke-tests it without installation. `ship` installs a shortcut and verifies
   its own target/start-in/icon; `--folder` and `--check-shortcut` request those checks.
   Icon similarity is opt-in advisory, including unavailable shell diagnostics. Resources,
-  hashes, asset closure, isolated captures and explicit skips remain. Project final check
-  now requests isolated smoke, rather than silently leaving it unrun.
+  hashes, asset closure, isolated captures and explicit skips remain. Project checks retain
+  display-independent package verification; shipping requests isolated smoke. Hosted Windows
+  runners cannot create Leo's required WGL context, so actual native rendered smoke remains
+  unverified there (Linux's isolated package smoke is exercised). Do not treat that limit as
+  passing Windows rendering evidence or weaken normal `ship` to hide it.
 - BEA's old PowerShell entry redirects to a small batch compatibility entry. Bare launch
   opens the sandbox; existing stock-client arguments still reach be2 without substitution.
   The engine desktop shortcut selects sandbox. Game shortcuts still target game dist/.
