@@ -692,7 +692,12 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
 
 def game_shipping_status(payload, role, command):
     """Require fresh package/smoke evidence; only deliberate optional skips are OK."""
-    if payload is None or payload.get('ok') is not True:
+    if not isinstance(payload, dict) or payload.get('ok') is not True:
+        return 'unverified'
+    skipped = payload.get('skipped')
+    if skipped is None:
+        skipped = []
+    if not isinstance(skipped, list) or not all(isinstance(value, str) for value in skipped):
         return 'unverified'
     if role == 'game_check' and '--skip-ship' in command:
         # The following game_ship command owns delivery. All other skips remain
@@ -700,9 +705,9 @@ def game_shipping_status(payload, role, command):
         optional = {'ship: skipped: --skip-ship'}
         if payload.get('ship') != 'skipped: --skip-ship':
             return 'unverified'
-        return 'skipped' if set(payload.get('skipped') or []) - optional else 'passed'
+        return 'skipped' if set(skipped) - optional else 'passed'
     if role != 'game_ship' or command[-2:] != ['ship', '--no-install']:
-        return 'skipped' if payload.get('skipped') else 'unverified'
+        return 'skipped' if skipped else 'unverified'
     verify = payload.get('verify')
     package = payload.get('package')
     if (payload.get('command') != 'ship' or not isinstance(verify, dict) or verify.get('ok') is not True
@@ -727,9 +732,14 @@ def game_shipping_status(payload, role, command):
         return 'unverified'
     if any(c.get('status') not in ('pass', 'warn', 'skip') for c in checks):
         return 'unverified'
-    skipped = {c['name'] for c in checks if c['status'] == 'skip'}
-    skipped.update(str(value).split(':', 1)[0] for value in verify.get('skipped') or [])
-    if skipped - optional or payload.get('skipped'):
+    verify_skipped = verify.get('skipped')
+    if verify_skipped is None:
+        verify_skipped = []
+    if not isinstance(verify_skipped, list) or not all(isinstance(value, str) for value in verify_skipped):
+        return 'unverified'
+    skipped_checks = {c['name'] for c in checks if c['status'] == 'skip'}
+    skipped_checks.update(value.split(':', 1)[0] for value in verify_skipped)
+    if skipped_checks - optional or skipped:
         return 'skipped'
     if next(c for c in checks if c['name'] == 'smoke')['status'] != 'pass':
         return 'unverified'
