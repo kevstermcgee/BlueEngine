@@ -248,7 +248,10 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertIn('--no-default-features', inner['commands'][0])
         self.assertEqual(inner['command_harnesses'], ['rust_project'])
         ship = workflow.game_plan(ROOT, game, 'shipping')
-        self.assertIn([sys.executable, str(game / 'scripts/check.py')], ship['commands'])
+        self.assertEqual(ship['commands'], [
+            [sys.executable, str(game / 'scripts/check.py'), '--skip-ship'],
+            [sys.executable, str(game / 'scripts/ship.py'), 'ship', '--no-install']])
+        self.assertEqual(ship['command_roles'], ['game_check', 'game_ship'])
         self.assertFalse(any('web' in command for command in ship['commands']))
         self.assertNotIn(['cargo', 'test', '--locked', '--profile', 'itest'], ship['commands'])
 
@@ -630,6 +633,34 @@ class RunnerTests(unittest.TestCase):
             'print("Ran 1 test in 0.01s\\n\\nOK (skipped=1)")'], 'python')
         self.assertEqual(result.returncode, 3)
         self.assertEqual(summary['failure']['category'], 'empty_test_selection')
+
+    def test_malformed_shipping_skips_preserve_structured_failure_and_log(self):
+        host = {'linux': 'linux', 'win32': 'windows', 'darwin': 'macos'}[sys.platform]
+        for field in ('game_check', 'game_ship', 'verify'):
+            for invalid in (42, '', {}, [{'name': 'smoke'}]):
+                with self.subTest(field=field, skipped=invalid):
+                    if field == 'game_check':
+                        payload = {'ok': True, 'ship': 'skipped: --skip-ship', 'skipped': invalid}
+                        harness, arguments = 'game_check', ['--skip-ship']
+                    else:
+                        payload = {'ok': True, 'command': 'ship', 'package': {'ok': True},
+                                   'verify': {'ok': True, 'platform': host, 'checks': [
+                                       {'name': name, 'status': 'pass'} for name in
+                                       ('identity', 'icon-files', 'icon-art', 'wiring',
+                                        'package', 'exe-resources', 'smoke')]}}
+                        (payload['verify'] if field == 'verify' else payload)['skipped'] = invalid
+                        harness, arguments = 'game_ship', ['ship', '--no-install']
+                    output = json.dumps(payload)
+                    result, summary, report = self.run_check(
+                        [sys.executable, '-c', 'print(' + repr(output) + ')', *arguments], harness)
+                    self.assertEqual(result.returncode, 3, result.stderr)
+                    self.assertNotIn('Traceback', result.stderr)
+                    self.assertFalse(summary['ok'])
+                    self.assertEqual(summary['failure']['category'], 'incomplete_shipping_evidence')
+                    self.assertIn('unverified', summary['failure']['diagnostics'][0])
+                    self.assertEqual(summary['failure']['returncode'], 0)
+                    self.assertEqual(len(report['checks']), 1)
+                    self.assertEqual(Path(summary['failure']['log']).read_text().strip(), output)
 
     @unittest.skipUnless(shutil.which('cargo'), 'Cargo needed for real diagnostic integration')
     def test_real_cargo_compiler_assertion_and_empty_selection(self):

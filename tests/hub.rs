@@ -355,6 +355,43 @@ impl RoomProcess for Crashable {
     }
 }
 
+/// Observe the real server's first STATUS line without binding its port during startup.
+struct ReadinessSpawner(std::sync::mpsc::Sender<u16>);
+struct ReadinessProcess {
+    inner: Box<dyn RoomProcess>,
+    port: u16,
+    ready: Option<std::sync::mpsc::Sender<u16>>,
+}
+impl Spawner for ReadinessSpawner {
+    fn spawn(&mut self, spec: &RoomSpec) -> io::Result<Box<dyn RoomProcess>> {
+        Ok(Box::new(ReadinessProcess {
+            inner: ProcessSpawner.spawn(spec)?,
+            port: spec.port,
+            ready: Some(self.0.clone()),
+        }))
+    }
+    fn port_free(&mut self, ip: &str, port: u16) -> bool {
+        ProcessSpawner.port_free(ip, port)
+    }
+}
+impl RoomProcess for ReadinessProcess {
+    fn status(&mut self) -> Option<RoomStatus> {
+        let status = self.inner.status();
+        if status.is_some() {
+            if let Some(ready) = self.ready.take() {
+                let _ = ready.send(self.port);
+            }
+        }
+        status
+    }
+    fn exited(&mut self) -> bool {
+        self.inner.exited()
+    }
+    fn kill(&mut self) {
+        self.inner.kill();
+    }
+}
+
 /// A spawner with no processes at all (for tests of the front door only).
 struct Pretend;
 struct PretendProc;
@@ -669,6 +706,7 @@ fn a_room_nobody_joins_closes_and_its_port_is_freed_while_public_stays() {
     let pool = 4;
     let (base, socket) = bound_hub_ports(pool);
     let dir = TempDir::new("ghost");
+    let (ready, started) = std::sync::mpsc::channel();
     let hub = TestHub::start(
         dir.path(),
         socket,
@@ -676,7 +714,7 @@ fn a_room_nobody_joins_closes_and_its_port_is_freed_while_public_stays() {
         &config_text(base, pool, dir.path(), "", false),
         relaxed(),
         legacy::Mode::Serve,
-        real_spawner,
+        move || Box::new(ReadinessSpawner(ready)),
     );
     let mut hc = HubClient::new(hub.addr, "toy-footrace").unwrap();
     hc.request_create("Ghost");
@@ -684,8 +722,14 @@ fn a_room_nobody_joins_closes_and_its_port_is_freed_while_public_stays() {
         panic!()
     };
     assert!(list(&mut hc).iter().any(|r| r.name == "Ghost"));
+    // A free-port probe temporarily owns the socket and can make the child fail
+    // its bind. Wait for STATUS (emitted after the bind), without joining the room.
     assert!(
-        eventually(10, || !port_is_free(room.port)),
+        eventually(10, || started.try_iter().any(|port| port == room.port)),
+        "the real room server reports readiness before its port is probed"
+    );
+    assert!(
+        !port_is_free(room.port),
         "a live room holds its port once its server has started"
     );
     assert!(

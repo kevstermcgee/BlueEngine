@@ -143,9 +143,12 @@ def select(root, task, kind, project, targets, template, networking):
         if template == 'stock' and re.search(r'\b(enemies|projectiles)\b|per.frame physics|custom gameplay scripts', text):
             gaps.append({'kind': 'unsupported_combination', 'detail': 'Stock GameDocument counters/interactables/timers do not supply enemy/projectile/custom per-tick rules.',
                          'extension': 'docs/CUSTOM_SIM_CHEATSHEET.md', 'next': 'Select custom-sim explicitly or extend GameDocument through engine maintenance; retain the requested mechanics.'})
-        if presentation == '2d' and template == 'stock':
-            gaps.append({'kind': 'unsupported_combination', 'detail': 'Stock uses the native 3D client; it cannot satisfy an explicit 2D presentation request.',
-                         'extension': 'docs/TWO_D.md', 'next': 'Select two-d for game-level Rust rules, or request a deliberate GameDocument/2D engine extension.'})
+        starter_presentation = '3d' if template == 'stock' else starter['presentation']
+        if presentation and starter_presentation in ('2d', '3d', 'hybrid') and presentation != starter_presentation:
+            gaps.append({'kind': 'unsupported_combination',
+                         'detail': f'{template} scaffolds {starter_presentation} presentation, which conflicts with the requested {presentation} presentation. Both requirements are retained.',
+                         'extension': 'docs/PORTABLE_GAMES.md',
+                         'next': 'Select a matching starter explicitly or implement the requested presentation deliberately; the selected starter has not been replaced.'})
         if declarative and starter['runtime'] == 'portable':
             gaps.append({'kind': 'unsupported_combination', 'detail': 'Portable GameLogic is a typed Rust extension; it does not implement GameDocument authoring. Both requested requirements are retained.',
                          'extension': 'docs/GAME_QUICKSTART.md', 'next': 'Clarify the authoring contract or request an engine extension without changing presentation.'})
@@ -264,11 +267,14 @@ def report_status(root, state, inputs):
                 for i, check in enumerate(report['checks']):
                     harnesses = report['plan'].get('command_harnesses')
                     harness = harnesses[i] if harnesses else report['plan'].get('test_harness')
-                    result = workflow.command_evidence(Path(path).parent / check['log'], check['returncode'], harness)
+                    result = workflow.command_evidence(Path(path).parent / check['log'], check['returncode'], harness,
+                                                       command=check['command'])
                     if result.get('category'):
                         status = 'unverified'
-                if loop == 'shipping' and report['plan'].get('game'):
-                    for check in report['checks']:
+                if status == 'passed' and loop == 'shipping' and report['plan'].get('game'):
+                    statuses, delivery, validation = [], False, False
+                    roles = report['plan'].get('command_roles', [None] * len(report['checks']))
+                    for i, check in enumerate(report['checks']):
                         if check['command'][:2] == ['cargo', 'metadata']:
                             continue  # Dependency inventory is not a behavioral/shipping gate.
                         text = (Path(path).parent / check['log']).read_text(encoding='utf-8', errors='replace')
@@ -281,12 +287,16 @@ def report_status(root, state, inputs):
                             if isinstance(value, dict) and 'ok' in value:
                                 payload = value
                                 break
-                        if payload is None or payload.get('ok') is not True:
-                            status = 'unverified'
-                        elif payload.get('skipped') or str(payload.get('ship', '')).startswith(('skipped', 'not run')):
-                            status = 'skipped'
-                        elif payload.get('browser') is False:
-                            status = 'skipped'
+                        role = roles[i]
+                        delivery |= role == 'game_ship'
+                        validation |= role == 'game_check'
+                        statuses.append(workflow.game_shipping_status(payload, role, check['command']))
+                    if 'unverified' in statuses:
+                        status = 'unverified'
+                    elif 'skipped' in statuses:
+                        status = 'skipped'
+                    elif not (delivery and validation):
+                        status = 'unverified'
             item = {'stage': loop, 'state': status, 'report': path, 'current_inputs': current,
                     'previous_result': 'passed' if report['ok'] else 'failed'}
             if report.get('failure'):
@@ -294,7 +304,7 @@ def report_status(root, state, inputs):
             history.append(item)
             if loop in stages:
                 stages[loop] = item
-        except (OSError, ValueError, KeyError, TypeError) as error:
+        except (OSError, ValueError, KeyError, TypeError, IndexError) as error:
             history.append({'state': 'unverified', 'report': path, 'detail': str(error)})
     return stages, history
 

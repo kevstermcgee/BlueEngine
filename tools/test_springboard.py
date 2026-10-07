@@ -60,7 +60,7 @@ class SpringboardTests(unittest.TestCase):
              'input': ['keyboard'], 'description': 'Collect four relics', 'session_minutes': 1, 'complexity': 'low'}))
         return root
 
-    def run_observed(self, task, *, loop='inner', failure=False, skip=False, mutate=False, game=None, payload=None):
+    def run_observed(self, task, *, loop='inner', failure=False, skip=False, mutate=False, game=None, payload=None, role=None):
         fixture = self.root / 'fixture_behavior.py'
         fixture.write_text('import unittest\nclass Behavior(unittest.TestCase):\n' +
                            (' @unittest.skip("optional unavailable")\n' if skip else '') +
@@ -80,6 +80,17 @@ class SpringboardTests(unittest.TestCase):
                 'remaining': 'Shipping/CI still required'}
         if game:
             plan['game'] = str(game)
+        if role:
+            plan['command_roles'] = [role]
+            if role == 'game_ship':
+                command.extend(['ship', '--no-install'])
+                # Delivery alone cannot certify the complete shipping pipeline.
+                check_payload = {'ok': True, 'skipped': ['ship: skipped: --skip-ship'], 'ship': 'skipped: --skip-ship'}
+                plan['commands'].insert(0, [sys.executable, '-c', 'print(' + repr(json.dumps(check_payload)) + ')', '--skip-ship'])
+                plan['command_roles'].insert(0, 'game_check')
+                plan['command_harnesses'].insert(0, None)
+            elif role == 'game_check':
+                command.append('--skip-ship')
         # Exercise the actual canonical runner; no hand-authored passing report.
         script = ('import sys,runpy;sys.path.insert(0,"tools");import workflow;'
                   'workflow.change_plan=lambda *a,**kw:' + repr(plan) + ';'
@@ -277,6 +288,117 @@ class SpringboardTests(unittest.TestCase):
         self.assertNotIn('machine_gate', resumed['completion'])
         self.assertEqual(resumed['next_action']['kind'], 'repair')
 
+    def shipping_payload(self):
+        host = {'linux': 'linux', 'win32': 'windows', 'darwin': 'macos'}[sys.platform]
+        checks = [{'name': name, 'status': 'pass'} for name in
+                  ('identity', 'icon-files', 'icon-art', 'wiring', 'package', 'exe-resources', 'smoke')]
+        checks += [{'name': name, 'status': 'skip'} for name in
+                   ('shortcut-file', 'shortcut-icon', 'shortcut-unique', 'launch')]
+        return {'ok': True, 'command': 'ship', 'package': {'ok': True},
+                'verify': {'ok': True, 'platform': host, 'checks': checks,
+                           'skipped': [c['name'] + ': optional' for c in checks if c['status'] == 'skip']}}
+
+    def test_shipping_optional_skips_do_not_block_fresh_package_smoke(self):
+        game = self.game()
+        packet = self.start('Change a 2D game', kind='change-game', project=game)
+        self.run_observed(packet['task'], loop='shipping', game=game,
+                          payload=self.shipping_payload(), role='game_ship')
+        resumed = springboard.resume(self.root, packet['task'])
+        self.assertEqual(resumed['evidence']['shipping']['state'], 'passed')
+        self.assertIn('machine_gate', resumed['completion'])
+        self.assertEqual(resumed['next_action']['kind'], 'review')
+
+    def test_shipping_missing_skipped_and_foreign_smoke_cannot_pass(self):
+        game = self.game()
+        for change, expected in [('missing', 'unverified'), ('skip', 'skipped'),
+                                 ('foreign', 'unverified'), ('unknown', 'skipped'),
+                                 ('resources', 'skipped')]:
+            with self.subTest(change=change):
+                payload = self.shipping_payload()
+                checks = payload['verify']['checks']
+                if change == 'missing':
+                    checks[:] = [c for c in checks if c['name'] != 'smoke']
+                elif change == 'skip':
+                    next(c for c in checks if c['name'] == 'smoke')['status'] = 'skip'
+                elif change == 'foreign':
+                    payload['verify']['platform'] = 'macos' if sys.platform != 'darwin' else 'windows'
+                elif change == 'unknown':
+                    checks.append({'name': 'future-required-check', 'status': 'skip'})
+                else:
+                    payload['verify']['platform'] = 'windows'
+                    next(c for c in checks if c['name'] == 'exe-resources')['status'] = 'skip'
+                packet = self.start('Change game rules', kind='change-game', project=game)
+                # Exercise Windows resource requirements on any host.
+                with patch.object(sys, 'platform', 'win32') if change == 'resources' else patch.object(sys, 'platform', sys.platform):
+                    status = workflow.game_shipping_status(payload, 'game_ship', ['python', 'ship.py', 'ship', '--no-install'])
+                self.assertEqual(status, expected)
+                if change != 'resources':
+                    self.run_observed(packet['task'], loop='shipping', game=game, payload=payload, role='game_ship')
+                    self.assertEqual(springboard.resume(self.root, packet['task'])['evidence']['shipping']['state'], expected)
+
+    def test_shipping_plan_runs_tests_then_fresh_package_without_installation(self):
+        game = self.game()
+        (game / 'Cargo.lock').write_text('[[package]]\nname="relic-room"\nversion="0.1.0"\n')
+        check_payload = {'ok': True, 'ship': 'skipped: --skip-ship', 'skipped': ['ship: skipped: --skip-ship']}
+        (game / 'scripts/check.py').write_text(
+            'import json,sys\nfrom pathlib import Path\n'
+            'assert sys.argv[1:]==["--skip-ship"]\n'
+            'assert not Path("dist").exists()\n'
+            'print(' + repr(json.dumps(check_payload)) + ')\n')
+        (game / 'scripts/ship.py').write_text(
+            'import sys\nfrom pathlib import Path\n'
+            'assert sys.argv[1:]==["ship","--no-install"]\n'
+            # The runner invokes absolute game scripts from the engine root.
+            'dist=Path(__file__).resolve().parents[1]/"dist"\n'
+            'dist.mkdir()\n(dist/"smoke.txt").write_text("fresh smoke")\n'
+            'print(' + repr(json.dumps(self.shipping_payload())) + ')\n')
+        packet = self.start('Change a 2D game', kind='change-game', project=game)
+        result = subprocess.run([sys.executable, str(self.root / 'tools/be2.py'), 'check',
+                                 '--game', str(game), '--loop', 'shipping', '--task', packet['task']],
+                                cwd=self.root, capture_output=True, text=True, **workflow.console_options())
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((game / 'dist/smoke.txt').read_text(), 'fresh smoke')
+        resumed = springboard.resume(self.root, packet['task'])
+        self.assertEqual(resumed['evidence']['shipping']['state'], 'passed')
+        report = json.loads(Path(resumed['evidence']['shipping']['report']).read_text())
+        self.assertEqual(report['plan']['command_roles'], ['game_check', 'game_ship'])
+        # A successful process that omits smoke must fail the actual command,
+        # even without --task. It must not merely wait for resume to downgrade it.
+        ship = game / 'scripts/ship.py'
+        original = ship.read_text()
+        good = self.shipping_payload()
+        for smoke in ('skip', 'missing'):
+            with self.subTest(smoke=smoke):
+                shutil.rmtree(game / 'dist')
+                incomplete = self.shipping_payload()
+                checks = incomplete['verify']['checks']
+                if smoke == 'missing':
+                    checks[:] = [c for c in checks if c['name'] != 'smoke']
+                else:
+                    next(c for c in checks if c['name'] == 'smoke')['status'] = 'skip'
+                ship.write_text(original.replace(repr(json.dumps(good)), repr(json.dumps(incomplete))))
+                result = subprocess.run([sys.executable, str(self.root / 'tools/be2.py'), 'check',
+                                         '--game', str(game), '--loop', 'shipping'],
+                                        cwd=self.root, capture_output=True, text=True, **workflow.console_options())
+                self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+                summary = json.loads(result.stdout)
+                self.assertFalse(summary['ok'])
+                self.assertEqual(summary['failure']['category'], 'incomplete_shipping_evidence')
+        shutil.rmtree(game / 'dist')
+        (game / 'scripts/check.py').write_text('raise SystemExit(7)\n')
+        result = subprocess.run([sys.executable, str(self.root / 'tools/be2.py'), 'check',
+                                 '--game', str(game), '--loop', 'shipping'], cwd=self.root,
+                                capture_output=True, text=True, **workflow.console_options())
+        self.assertEqual(result.returncode, 7, result.stdout + result.stderr)
+        self.assertFalse((game / 'dist').exists())
+
+    def test_delivery_check_alone_does_not_certify_shipping(self):
+        game = self.game()
+        packet = self.start('Change game rules', kind='change-game', project=game)
+        self.run_observed(packet['task'], loop='shipping', game=game,
+                          payload={'ok': True, 'ship': 'pass'})
+        self.assertEqual(springboard.resume(self.root, packet['task'])['evidence']['shipping']['state'], 'unverified')
+
     def test_relevant_changes_and_missing_logs_invalidate_passes(self):
         for change in ('source', 'configuration', 'binary', 'log'):
             with self.subTest(change=change):
@@ -374,6 +496,22 @@ class SpringboardTests(unittest.TestCase):
         self.assertEqual(native_3d['workflow']['requested']['presentation'], '3d')
         self.assertFalse(native_3d['workflow']['gaps'])
         self.assertEqual(native_3d['next_action']['argv'][-1], 'custom-sim')
+
+    def test_explicit_starters_keep_selection_and_flag_presentation_conflicts(self):
+        for presentation in ('2d', '3d', 'hybrid'):
+            for template, scaffolded in [('two-d', '2d'), ('three-d', '3d'),
+                                          ('hybrid', 'hybrid'), ('portable', 'hybrid'), ('stock', '3d')]:
+                with self.subTest(presentation=presentation, template=template):
+                    packet = self.start(f'Create a {presentation} game', kind='new-game',
+                                        template=template, targets=['windows'])
+                    self.assertEqual(packet['workflow']['template'], template)
+                    self.assertEqual(packet['workflow']['requested']['presentation'], presentation)
+                    if presentation == scaffolded:
+                        self.assertFalse(packet['workflow']['gaps'])
+                        self.assertEqual(packet['next_action']['kind'], 'command')
+                    else:
+                        self.assertEqual(packet['next_action']['kind'], 'clarify')
+                        self.assertIn('conflicts', ' '.join(packet['blockers']))
 
     def test_retired_browser_requests_and_engine_prose_do_not_select_web(self):
         engine = self.start('Retire browser tooling and fix evidence for web assets', kind='engine')

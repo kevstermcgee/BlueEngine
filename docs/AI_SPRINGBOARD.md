@@ -38,6 +38,8 @@ Windows routing respects explicit 2D/3D/hybrid before mechanics and OS. Portable
 Rust rules can implement enemies/projectiles/scoring; conflicting stock/GameDocument or native
 physics/networking requirements need an explicit engineering route. Headless
 engine APIs exist even though this coordinator does not scaffold a headless application.
+An explicit starter remains selected, but a conflicting 2D/3D/hybrid request is
+reported as a blocker; choose a matching starter or implement that presentation deliberately.
 
 Tool presence is not target readiness. Rust version/toolchain, host C linker and relevant native presentation headers are checked
 without compilation. Dependency-cache availability and real build success remain
@@ -67,6 +69,14 @@ Planned checks and passed, failed, skipped or unverified evidence are distinct. 
 validity is not behavior. An inner pass is not shipping. Notes are context only; checks
 without `--task`, legacy reports without input binding and delegated tool results are not
 promoted to coordinated passing evidence. No independent verification cache exists.
+For native games, the shipping loop runs `scripts/check.py --skip-ship` first,
+then `scripts/ship.py ship --no-install`. It builds a fresh package and runs its
+isolated graphical smoke without installing shortcuts. Run it on a declared native
+target with a working display. Passing evidence requires both commands, current
+package/resource checks and an executed smoke; package verification alone is insufficient.
+Unrequested shortcut installation, shortcut launch and icon similarity are optional
+omissions. Missing smoke, Windows executable resources or unknown skipped checks
+remain outstanding. Retained legacy check-only reports cannot certify this shipping loop.
 The coordinator stages portable new games and focused engine changes. Existing native
 games, diagnosis and upgrades delegate to their established tools. Existing portable
 games reuse the same project-check stages. Advanced custom code,

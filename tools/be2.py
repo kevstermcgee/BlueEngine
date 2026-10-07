@@ -70,7 +70,7 @@ def invoke(args, *, env=None, log=None, capture=False, timeout=None, harness=Non
                             'diagnostics': [str(error)]}
                 exit_code = 127 if isinstance(error, FileNotFoundError) else 126
         if evidence is None:
-            evidence = workflow.command_evidence(Path(log), returncode, harness)
+            evidence = workflow.command_evidence(Path(log), returncode, harness, command=args)
             exit_code = (returncode if returncode > 0 else 128 - returncode) if returncode else 3
         evidence.update(elapsed_seconds=round(time.monotonic() - started, 3),
                         log_bytes=Path(log).stat().st_size)
