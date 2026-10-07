@@ -71,7 +71,9 @@ class BrowserRetirementTests(unittest.TestCase):
             self.assertIn('windows', project['targets'])
             self.assertNotIn('web', project['targets'])
             plan = workflow.game_plan(ROOT, game, 'shipping')
-            self.assertIn([sys.executable, str(game / 'scripts/check.py')], plan['commands'])
+            self.assertIn([sys.executable, str(game / 'scripts/check.py'), '--skip-ship'], plan['commands'])
+            self.assertIn([sys.executable, str(game / 'scripts/ship.py'), 'ship', '--no-install'], plan['commands'])
+            self.assertLess(plan['command_roles'].index('game_check'), plan['command_roles'].index('game_ship'))
             self.assertFalse(any('web' in c for c in plan['commands']))
             self.assertEqual(plan['requirements']['native_packaging'], sorted(project['targets']))
 
