@@ -146,6 +146,17 @@ pub trait GameLogic: Snapshot<Input = Intent> + Sized {
     fn take_cues(&mut self) -> Vec<usize> {
         Vec::new()
     }
+    /// Where the shared client's sparkle for a cue bursts, in logical pixels (the canvas is 800x450).
+    /// The default is the middle of the canvas; return the ball, pickup or impact so feedback lands on it.
+    fn cue_point(&self, _cue: usize) -> Point {
+        Point::new(400, 200)
+    }
+    /// The shared client's Restart (R, the mobile Restart control). The default is a fresh game.
+    /// Override it to keep what belongs to the players rather than to one round (scoreboards,
+    /// unlocks, settings held in state), so a restart cannot erase progress the autosave carries.
+    fn restart(&mut self) {
+        *self = Self::new(7);
+    }
 }
 pub fn verify<G: GameLogic>() -> (u64, &'static str) {
     let mut game = G::new(7);

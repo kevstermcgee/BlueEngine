@@ -39,6 +39,13 @@ The canonical starter is a small complete collector. Examples with different mec
 - `draw::Game::draw` reads your state; `client::run` owns timing/input, pause/restart, sound,
   settings, saves, error notices and verification evidence. Main only supplies identity/icon configuration.
 
+Optional `GameLogic` hooks: `cue_point(cue)` places the shared sparkle for a cue (default: canvas middle),
+`restart()` replaces the default fresh `new()` when R restarts, so a game can keep scoreboards or unlocks that
+its autosave carries. `Game::show_hud()` returning false removes the title/controls labels for a clean screen.
+Native controllers: left stick or D-pad moves, A acts/starts, Start plays/pauses, B pauses (same as the browser).
+`Intent.action` is a press edge only; there is no held-button field, so hold-to-charge mechanics use the
+direction axes (see games/puff-pop).
+
 Rules/tests live in lib.rs. Presentation is its `#[cfg(feature="client")]` implementation. Every sound
 cue is 0 pickup, 1 damage, 2 success; shared generated WAVs load asynchronously. New genres may need
 a custom sound bank later. This milestone intentionally has no editor or genre framework.

@@ -363,11 +363,22 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         let mut look_native = [0.; 2];
         #[cfg(all(not(target_arch = "wasm32"), feature = "gamepad"))]
         if let Some(pads) = pads.as_mut() {
+            use crate::viewer::gamepad::Button;
             let pad = pads.poll(true);
-            x += (pad.left_stick[0] * 1.5) as i32;
+            // Same contract as the browser's standard gamepad: stick or D-pad moves, A acts/starts,
+            // Start plays or pauses, B pauses. See templates/web/controls.json.
+            let dpad = pad.dpad();
+            x += (pad.left_stick[0] * 1.5) as i32 + i32::from(dpad[3]) - i32::from(dpad[2]);
             y -= (pad.left_stick[1] * 1.5) as i32;
+            y += i32::from(dpad[1]) - i32::from(dpad[0]);
             action |= pad.menu_select();
             start |= pad.menu_select();
+            if pad.pressed(Button::Start) {
+                digital.commands |= if started { 2 } else { 1 };
+            }
+            if pad.menu_back() {
+                digital.commands |= 2;
+            }
             if G::drag_look() {
                 look_native = [pad.right_stick[0] * dt * 2., pad.right_stick[1] * dt * 2.];
             }
@@ -394,7 +405,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             audio.play(0, settings.sound);
         }
         if platform::command_key(KeyCode::R) || digital.commands & 4 != 0 {
-            game = G::new(7);
+            game.restart();
             inputs.clear();
             last_tick = 0;
             verification_tick = 0;
@@ -510,7 +521,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         for cue in game.take_cues() {
             audio.play(cue, settings.sound);
-            particles.burst(Point::new(400, 200), if cue == 1 { PINK } else { GOLD });
+            particles.burst(game.cue_point(cue), if cue == 1 { PINK } else { GOLD });
         }
         audio.update(&game, started && !paused && focused, &settings, dt)?;
         autosave_time += dt;
