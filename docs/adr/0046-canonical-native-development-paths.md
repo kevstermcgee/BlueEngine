@@ -61,6 +61,9 @@ project). Starter instructions retain the existing 3 KB context limit, and disco
 contracts retain shutdown/transport details and their recorded retrieval floor.
 The retained in-process hub fixtures transfer an already-bound socket into startup:
 allocation may retry a contested port, but gameplay assertions never retry or weaken.
+The flood fixture sends each positive probe once with a 3 s receive deadline for CI
+scheduling, checks its sender/nonce/reply kind, and retains the original burst bounds,
+refill delay and garbage-silence windows. Fake-clock limiter tests preserve exact policy.
 
 ## Acceptance and evidence
 

@@ -739,18 +739,19 @@ fn the_front_door_over_real_sockets_floods_get_a_burst_then_silence_and_garbage_
         "about the burst of 10 (plus a refill or two): {answered}"
     );
     // A different source address is a different bucket.
+    // Allow CI scheduling delays for positive replies. Requests are sent once;
+    // burst/refill limits and garbage-silence windows remain unchanged.
+    let reply_timeout = Duration::from_secs(3);
     if let Ok(other) = UdpSocket::bind("127.0.0.2:0") {
-        other
-            .set_read_timeout(Some(Duration::from_millis(500)))
-            .unwrap();
+        other.set_read_timeout(Some(reply_timeout)).unwrap();
         other.send_to(&Request::Cookie.encode(2), hub.addr).unwrap();
-        let (n, _) = other
+        let (n, peer) = other
             .recv_from(&mut buf)
             .expect("another address is still served");
-        assert!(matches!(
-            Reply::decode(&buf[..n]).unwrap().reply,
-            Reply::Cookie { .. }
-        ));
+        assert_eq!(peer, hub.addr);
+        let reply = Reply::decode(&buf[..n]).unwrap();
+        assert_eq!(reply.nonce, 2);
+        assert!(matches!(reply.reply, Reply::Cookie { .. }));
     }
     // Rates recover.
     std::thread::sleep(Duration::from_millis(1200));
@@ -763,13 +764,14 @@ fn the_front_door_over_real_sockets_floods_get_a_burst_then_silence_and_garbage_
             hub.addr,
         )
         .unwrap();
-    flooder
-        .set_read_timeout(Some(Duration::from_millis(500)))
-        .unwrap();
-    assert!(
-        flooder.recv_from(&mut buf).is_ok(),
-        "answered again after a pause"
-    );
+    flooder.set_read_timeout(Some(reply_timeout)).unwrap();
+    let (n, peer) = flooder
+        .recv_from(&mut buf)
+        .expect("answered again after a pause");
+    assert_eq!(peer, hub.addr);
+    let reply = Reply::decode(&buf[..n]).unwrap();
+    assert_eq!(reply.nonce, 3);
+    assert!(matches!(reply.reply, Reply::Pong));
     // Garbage from a fresh address gets no reply and does not hurt the hub.
     let s = UdpSocket::bind("127.0.0.1:0").unwrap();
     s.set_read_timeout(Some(Duration::from_millis(300)))
@@ -788,8 +790,13 @@ fn the_front_door_over_real_sockets_floods_get_a_burst_then_silence_and_garbage_
             junk.len()
         );
     }
+    s.set_read_timeout(Some(reply_timeout)).unwrap();
     s.send_to(&Request::Cookie.encode(9), hub.addr).unwrap();
-    assert!(s.recv_from(&mut buf).is_ok());
+    let (n, peer) = s.recv_from(&mut buf).expect("valid cookie after garbage");
+    assert_eq!(peer, hub.addr);
+    let reply = Reply::decode(&buf[..n]).unwrap();
+    assert_eq!(reply.nonce, 9);
+    assert!(matches!(reply.reply, Reply::Cookie { .. }));
 }
 
 #[test]
