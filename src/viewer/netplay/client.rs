@@ -96,7 +96,10 @@ pub struct NetClient<G: NetGame, T: DatagramTransport> {
     participant: Option<usize>,
     last_server_tick: u32,
     last_event_tick: u32,
-    events: Vec<G::Event>,
+    events: Vec<(u32, G::Event)>,
+    event_receiver: super::event_channel::Receiver<G::Event>,
+    control_epoch: u64,
+    closed_epoch: u64,
     started_at: Option<f64>,
     last_hello: f64,
     last_ping: f64,
@@ -130,6 +133,9 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
             last_server_tick: 0,
             last_event_tick: 0,
             events: Vec::new(),
+            event_receiver: super::event_channel::Receiver::new(),
+            control_epoch: 0,
+            closed_epoch: 0,
             started_at: None,
             last_hello: f64::NEG_INFINITY,
             last_ping: f64::NEG_INFINITY,
@@ -185,7 +191,22 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
     }
     /// Events for effects and sound, oldest first, each delivered once.
     pub fn drain_events(&mut self) -> Vec<G::Event> {
+        self.drain_timed_events()
+            .into_iter()
+            .map(|(_, e)| e)
+            .collect()
+    }
+    /// Events with their original authoritative server tick (the same queue as `drain_events`).
+    pub fn drain_timed_events(&mut self) -> Vec<(u32, G::Event)> {
         std::mem::take(&mut self.events)
+    }
+    /// Events evicted from the bounded reliable stream before this client could receive them.
+    pub fn event_gaps(&self) -> u64 {
+        self.event_receiver.gaps
+    }
+    /// Latest accepted state tick, useful for translating timed events into the game's clock.
+    pub fn server_tick(&self) -> u32 {
+        self.last_server_tick
     }
 
     fn send(&self, msg: &ClientMsg<G::Input>) {
@@ -276,7 +297,20 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
                 if d.peer != self.server {
                     continue;
                 }
+                if G::RELIABLE_EVENTS && super::event_channel::recognizes(&d.data) {
+                    if self.receive_event_frame(&d.data) {
+                        self.stats.packets_in += 1;
+                        self.stats.bytes_in += d.data.len() as u64;
+                        self.last_packet = now;
+                    }
+                    continue;
+                }
                 if let Ok(msg) = decode_server::<G>(&d.data) {
+                    if G::RELIABLE_EVENTS
+                        && matches!(msg, ServerMsg::Snapshot(_) | ServerMsg::Lobby(_))
+                    {
+                        continue;
+                    }
                     self.stats.packets_in += 1;
                     self.stats.bytes_in += d.data.len() as u64;
                     self.last_packet = now;
@@ -328,6 +362,79 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
         }
     }
 
+    fn receive_event_frame(&mut self, bytes: &[u8]) -> bool {
+        use super::event_channel::Frame;
+        let Ok(frame) = super::event_channel::decode(bytes) else {
+            return false;
+        };
+        match frame {
+            Frame::Lobby { token, epoch, body }
+                if Some(token) == self.token && epoch >= self.control_epoch =>
+            {
+                let Ok(msg @ ServerMsg::Lobby(_)) = decode_server::<G>(body) else {
+                    return false;
+                };
+                if matches!(&msg, ServerMsg::Lobby(l) if l.stage != 0 && epoch <= self.closed_epoch)
+                {
+                    return false;
+                }
+                self.control_epoch = epoch;
+                self.on_message(msg);
+                true
+            }
+            Frame::State { token, epoch, body }
+                if Some(token) == self.token
+                    && epoch >= self.control_epoch
+                    && epoch > self.closed_epoch =>
+            {
+                let Ok(msg @ ServerMsg::Snapshot(_)) = decode_server::<G>(body) else {
+                    return false;
+                };
+                self.control_epoch = epoch;
+                if epoch > self.event_receiver.epoch {
+                    self.carried = self.carried.merged(&self.view.prediction());
+                    self.view.reset();
+                    self.pending.clear();
+                    self.event_receiver.reset(epoch);
+                }
+                self.on_message(msg);
+                true
+            }
+            Frame::Gap {
+                token,
+                epoch,
+                sequence,
+            } if Some(token) == self.token
+                && epoch == self.event_receiver.epoch
+                && self.state == ClientState::Playing =>
+            {
+                self.event_receiver.skip(sequence);
+                let ack = super::event_channel::ack(token, epoch, self.event_receiver.acknowledged);
+                let _ = self.transport.try_send(self.server, &ack);
+                true
+            }
+            Frame::Data {
+                token,
+                epoch,
+                base,
+                first,
+                entries,
+            } if Some(token) == self.token
+                && epoch == self.event_receiver.epoch
+                && self.state == ClientState::Playing =>
+            {
+                let Ok(events) = self.event_receiver.receive::<G>(base, first, &entries) else {
+                    return false;
+                };
+                self.events.extend(events);
+                let ack = super::event_channel::ack(token, epoch, self.event_receiver.acknowledged);
+                let _ = self.transport.try_send(self.server, &ack);
+                true
+            }
+            _ => false,
+        }
+    }
+
     fn on_message(&mut self, msg: ServerMsg<G::Snapshot, G::Event>) {
         match msg {
             ServerMsg::Welcome { token, slot, .. } => {
@@ -361,7 +468,7 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
                 }
                 for (tick, event) in &s.events {
                     if *tick > self.last_event_tick {
-                        self.events.push(event.clone());
+                        self.events.push((*tick, event.clone()));
                     }
                 }
                 if let Some(newest) = s.events.iter().map(|e| e.0).max() {
@@ -399,6 +506,10 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
         self.pending.clear();
         self.carried = self.carried.merged(&self.view.prediction());
         self.view.reset();
+        if G::RELIABLE_EVENTS {
+            self.closed_epoch = self.closed_epoch.max(self.control_epoch);
+            self.event_receiver.reset(self.event_receiver.epoch);
+        }
     }
 
     /// One fixed tick of local input: predicted at once and sent. Call only while `state()` is `Playing`.

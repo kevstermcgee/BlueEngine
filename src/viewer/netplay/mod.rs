@@ -29,6 +29,7 @@ pub(crate) fn say(args: std::fmt::Arguments<'_>) {
 
 pub mod cli;
 pub mod client;
+mod event_channel;
 pub mod failure;
 pub mod hub;
 pub mod server;
@@ -39,7 +40,7 @@ pub use client::{ClientConfig, ClientState, NetClient, NetStats, PredictionStats
 pub use failure::ConnectFailure;
 pub use server::{
     hello_fingerprint, MatchLog, NetReport, NetServer, PeerReport, PeerStats, ServerConfig,
-    ServerLoad, ServerSendStats, Stage, StatusSnapshot,
+    ServerEventStats, ServerLoad, ServerSendStats, Stage, StatusSnapshot,
 };
 pub use wire::{LobbyEntry, LobbyState, MAX_DATAGRAM};
 
@@ -131,6 +132,18 @@ pub trait NetGame: Sized + 'static {
     const SNAPSHOT_EVERY: u64 = 2;
     /// Whether two players may not pick the same choice.
     const UNIQUE_CHOICES: bool = true;
+    /// Opt into the bounded, independently acknowledged event stream. Changes the handshake fingerprint.
+    /// Events must fit one datagram (at most 1047 encoded bytes at the standard payload limit).
+    /// Retains at most 4096 events / 1 MiB / ten seconds; explicit gaps are observable on the client.
+    const RELIABLE_EVENTS: bool = false;
+    /// Human seats for this process's room settings. Clamped to `1..=MAX_SEATS`.
+    fn lobby_capacity() -> usize {
+        Self::MAX_SEATS
+    }
+    /// Connected humans required before ready or automatic countdown may start.
+    fn minimum_players() -> usize {
+        1
+    }
 
     /// A number that changes whenever anything both sides must agree on changes (rules, numbers, map). Peers
     /// with a different fingerprint are refused, so a stale client never plays a new server.
@@ -156,6 +169,16 @@ pub trait NetGame: Sized + 'static {
     fn release(m: &mut Self::Match, participant: usize);
     /// The state for a client driving `participant` (`None` for a spectator).
     fn snapshot(m: &Self::Match, participant: Option<usize>) -> Self::Snapshot;
+    /// Optional payload adaptation: keep required state and prioritize nearby optional effects.
+    /// The budget excludes engine framing. Defaults to the original snapshot for source compatibility.
+    fn snapshot_with_budget(
+        m: &Self::Match,
+        participant: Option<usize>,
+        max_bytes: usize,
+    ) -> Self::Snapshot {
+        let _ = max_bytes;
+        Self::snapshot(m, participant)
+    }
     fn is_over(m: &Self::Match) -> bool;
     /// A summary of the finished match for `matches.jsonl` (results, per-participant statistics).
     fn report(m: &Self::Match) -> serde_json::Value;

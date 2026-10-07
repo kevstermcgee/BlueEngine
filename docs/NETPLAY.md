@@ -25,6 +25,40 @@ time; times out a dead server. What to draw and how to predict is your `ClientVi
 Works on any `DatagramTransport`: raw UDP, the engine's QUIC/TLS (`net::server_transport`,
 `net::client_transport`, see `docs/HOSTING.md`), or the in-memory `net::loopback::LoopNet` used in tests.
 
+## Busy combat and two-player rooms
+
+New games with event bursts should set `const RELIABLE_EVENTS: bool = true` in `NetGame`.
+This opt-in changes the handshake fingerprint, so old clients receive version mismatch instead of accepting a different wire stream.
+Existing games keep their original snapshot/event layout until they opt in.
+
+State snapshots and events then travel independently. The private `NEV1` stream authenticates frames with the session token and peer address,
+uses a match epoch to reject reordered frames from earlier matches, and acknowledges monotonically increasing event sequence numbers.
+Events from the same tick remain distinct. The server encodes each event once and retries up to four bounded event datagrams per snapshot;
+movement state does not wait for the event backlog. Final results continue retrying at the game's snapshot cadence until the return to the lobby.
+Lobby transitions carry the same epoch: late lobby packets cannot reset a new match. Already delivered events remain available to drain across transitions.
+This is session authentication over the selected transport; use the existing QUIC/TLS profile when encryption is required.
+
+Every datagram respects `min(transport.payload_limit(peer), net::MAX_PACKET_BYTES)` (currently 1100 bytes).
+`NetGame::snapshot_with_budget` can preserve required player/objective state while trimming nearby optional projectiles/effects to that budget.
+The default calls the existing `snapshot`, so existing implementors remain source compatible.
+An event must fit its own datagram (1047 encoded bytes at the standard limit).
+Retention is bounded by ten seconds, 4096 events, and 1 MiB of encoded payload, whichever comes first.
+Evicted or unencodable events are explicit gaps, reported by `NetClient::event_gaps`; they never block state or subsequent events.
+`NetServer::event_stats` and the optional `reliable_events` archive object expose retained bytes/events and oversized encodings.
+Send acceptance is still a local transport outcome, not proof of remote receipt.
+
+`drain_timed_events()` returns original server ticks from the same queue as `drain_events()`;
+use one drain per frame to place effects accurately in replay history.
+`server_tick()` supplies the state clock. A game's paused results clock needs a stable offset, not a new offset per result snapshot.
+
+For explicit duels, override `lobby_capacity()` to return two and `minimum_players()` to return two.
+The server clamps both to valid seat bounds. Ready and automatic starts both require the minimum;
+a disconnect during countdown cancels it. The actual capacity appears in lobby/status messages.
+Games with bots may return one as their minimum; bot-free games should usually require an opponent.
+Deadfall verifies these contracts through real UDP/hub tests and simulation tests of its objective modes.
+The engine regression fixture sends 480 padded combat events per second alongside state, including delay, jitter and 30% loss,
+and checks delivery once, final state, bounded datagrams, oversize gaps and repeated matches.
+
 ## Starting point
 
 Use `src/viewer/netplay/toy.rs` (`ToyGame` and `ToyView`) and
@@ -144,7 +178,7 @@ parse both. `NetServer::run_realtime_with(stop, max_ticks, |snapshot| ..)` is th
 starts one server process per room from a shared port pool. Players click Play Online, see the rooms of *their* game, pick or
 make one. The hub's registry (`hub.conf`) maps game ids to server programs and says which settings players may choose; a game
 appears by adding a `[game ID]` section and running `be2-hub reload ID`. Wire protocol `BEHB` v1 (`hub/wire.rs`): list, create
-with a source-address cookie, ping; old Deadfall `DFHB` v1 clients keep working (`hub/legacy.rs`, `legacy = serve|refuse`).
+with a source-address cookie, ping; old Deadfall `DFHB` v1 clients can still discover rooms and receive update notices (`hub/legacy.rs`, `legacy = serve|refuse`).
 Rooms close after 120 s empty, or 45 s if nobody ever joined; each game's Public room restarts if it dies; reload retires one
 game's rooms without ending matches in progress (at most 30 minutes). `be2-hub verify GAME --server CANDIDATE` checks a new server
 build with the registry's own rules before it is installed, and `be2-hub status GAME` reports what the running hub holds (a reload
@@ -171,7 +205,7 @@ Online state machine, `Online::new(&hub.address, MyGame::NAME, hub::local_build:
 
 ## Limits and what is not covered
 
-- A snapshot must fit `MAX_DATAGRAM` (1,200 bytes). The kit sheds old events first; a snapshot that is too big on
+- A snapshot must fit `MAX_DATAGRAM` (1,100 bytes, further limited by the active transport). The kit sheds old events first; a snapshot that is too big on
   its own is not sent (the server prints a warning). Use a compact layout, or split the world.
 - One snapshot format for everyone: no per-client interest management yet.
 - Prediction is your game's. Spooky Kart predicts its own kart only, so bumps show as small corrections that grow

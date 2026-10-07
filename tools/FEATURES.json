@@ -1804,14 +1804,17 @@
         "src/viewer/net/any.rs",
         "tests/netplay.rs",
         "docs/NETPLAY.md",
-        "docs/adr/0022-custom-sim-multiplayer-kit.md"
+        "docs/adr/0022-custom-sim-multiplayer-kit.md",
+        "src/viewer/netplay/event_channel.rs",
+        "tests/netplay_event_delivery.rs"
       ],
       "checks": [
         "cargo test --locked --profile itest --test netplay",
         "cargo test --locked --lib net::codec net::loopback",
-        "python tools/check_headless.py"
+        "python tools/check_headless.py",
+        "cargo test --locked --profile itest --test netplay_event_delivery"
       ],
-      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. A failed connect is a typed NetClient::failure() (ConnectFailure: Unreachable/VersionMismatch/WrongKey/MatchInProgress/Full/Other) with a player-facing hint(). Extracted from Spooky Kart; toy.rs is the smallest complete game. New multiplayer starting point: src/viewer/netplay/toy.rs (NetGame + ClientView), src/bin/be2-toy-server.rs (netplay::cli::serve). Old multiplayer template is archived, not recommended.",
+      "note": "Online play for custom-sim games. NetGame supplies rules, layouts and seats; ClientView supplies prediction and interpolation; NetServer/NetClient supply lobby, sessions, input bundles, snapshots, events, bot handoff, per-match telemetry (matches.jsonl) on any DatagramTransport (UDP, QUIC/TLS, in-memory LoopNet). net::codec is the bounds-checked binary Writer/Reader. A failed connect is a typed NetClient::failure() (ConnectFailure: Unreachable/VersionMismatch/WrongKey/MatchInProgress/Full/Other) with a player-facing hint(). Extracted from Spooky Kart; toy.rs is the smallest complete game. New multiplayer starting point: src/viewer/netplay/toy.rs (NetGame + ClientView), src/bin/be2-toy-server.rs (netplay::cli::serve). Old multiplayer template is archived, not recommended. Opt-in RELIABLE_EVENTS separates authenticated, sequenced event delivery from state; bounded retention exposes gaps. lobby_capacity/minimum_players gate room seats and countdown. snapshot_with_budget lets games trim optional effects to the active path budget.",
       "keywords": [
         "netplay",
         "multiplayer",
@@ -1843,7 +1846,12 @@
         "connect",
         "failure",
         "unreachable",
-        "rejected"
+        "rejected",
+        "event burst",
+        "event gaps",
+        "duel",
+        "minimum players",
+        "payload budget"
       ],
       "depends_on": [
         "multiplayer",
@@ -1882,6 +1890,18 @@
         {
           "suite": "netplay",
           "test": "a_laggy_lossy_network_still_produces_a_finished_match"
+        },
+        {
+          "suite": "netplay_event_delivery",
+          "test": "combat_events_survive_delay_jitter_and_thirty_percent_loss"
+        },
+        {
+          "suite": "netplay_event_delivery",
+          "test": "a_two_player_room_waits_for_the_friend_and_refuses_a_third_human"
+        },
+        {
+          "suite": "netplay_event_delivery",
+          "test": "events_reset_cleanly_across_matches_despite_reordering_and_loss"
         }
       ],
       "contract": {
@@ -1897,7 +1917,7 @@
           "audio devices",
           "a window"
         ],
-        "performance": "One snapshot per client every SNAPSHOT_EVERY ticks, each within 1,200 bytes",
+        "performance": "One snapshot per client every SNAPSHOT_EVERY ticks, within the active transport ceiling (at most 1,100 bytes); up to four bounded reliable-event retries per snapshot.",
         "consumers": [
           "custom-sim games with online play"
         ]
@@ -2662,7 +2682,7 @@
     "src/viewer/devkit/synth.rs": "Procedural audio for games that ship no recordings: a small DSP toolkit, a WAV writer and parser, 23...",
     "templates/game_project.py": "Canonical dimensionality/target requirements; copied into standalone game tooling.",
     "docs/CUSTOM_SIM_CHEATSHEET.md": "Custom-sim cheat sheet: the game-facing API on one page",
-    "docs/TWO_D.md": "2D games \u2192 browser",
+    "docs/TWO_D.md": "2D games → browser",
     "docs/learning/REPORT.md": "What the engine has learned from the games built on it",
     "src/viewer/capabilities.rs": "Native discovery.",
     "src/bin/be2-ctl.rs": "be2-ctl: list, inspect, start, stop and restart BlueEngine game servers on this machine (Unix).",

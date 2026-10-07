@@ -4,8 +4,7 @@
 //! and on the in-memory [`LoopNet`](crate::viewer::net::loopback::LoopNet) that the tests use.
 use super::failure::{full_reason, REASON_KEY, REASON_MATCH, REASON_VERSION};
 use super::wire::{
-    decode_client, encode_server, ClientMsg, LobbyEntry, LobbyState, ServerMsg, SnapshotMsg, Token,
-    MAX_DATAGRAM,
+    decode_client, ClientMsg, LobbyEntry, LobbyState, ServerMsg, SnapshotMsg, Token, MAX_DATAGRAM,
 };
 use super::{NetGame, Seat};
 use crate::viewer::devkit::Rng;
@@ -141,6 +140,15 @@ pub struct MatchLog {
     pub net: NetReport,
 }
 
+/// Reliable event stream counters. Retained cache is bounded; receipt is measured by client gaps and ACKs.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ServerEventStats {
+    pub emitted: u64,
+    pub retained: usize,
+    pub retained_bytes: usize,
+    pub oversized: u64,
+}
+
 struct Player {
     id: u8,
     name: String,
@@ -152,6 +160,7 @@ struct Player {
     started: bool,
     applied_seq: u32,
     acked_tick: u32,
+    event_ack: u64,
     left_early: bool,
     stats: PeerStats,
 }
@@ -191,6 +200,9 @@ pub struct NetServer<G: NetGame, T: DatagramTransport> {
     log: Vec<MatchLog>,
     match_history_limit: Option<usize>,
     fingerprint: u32,
+    capacity: usize,
+    minimum_players: usize,
+    event_sender: super::event_channel::Sender,
 }
 
 struct InputQueue<I> {
@@ -209,9 +221,10 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             None => random_token()?[0],
         };
         let fingerprint = hello_fingerprint::<G>();
+        let capacity = G::lobby_capacity().clamp(1, G::MAX_SEATS);
         Ok(Self {
             transport,
-            sessions: SessionRegistry::new(G::MAX_SEATS, cfg.session_timeout),
+            sessions: SessionRegistry::new(capacity, cfg.session_timeout),
             inputs: Default::default(),
             limiter: HandshakeLimiter::new(32),
             cfg,
@@ -230,6 +243,9 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             log: Vec::new(),
             match_history_limit: None,
             fingerprint,
+            capacity,
+            minimum_players: G::minimum_players().clamp(1, capacity),
+            event_sender: Default::default(),
         })
     }
 
@@ -276,9 +292,53 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         self.load.send
     }
 
+    /// Bounded cache and encoding failures for opt-in reliable events.
+    pub fn event_stats(&self) -> ServerEventStats {
+        self.event_sender.stats()
+    }
+
     fn send(&mut self, peer: SocketAddr, msg: &ServerMsg<G::Snapshot, G::Event>) {
-        let bytes = encode_server::<G>(msg);
+        let bytes = self.message_bytes(peer, msg);
         self.send_encoded(peer, &bytes);
+        if matches!(msg, ServerMsg::Snapshot(_)) {
+            self.send_events(peer);
+        }
+    }
+
+    fn message_bytes(&self, peer: SocketAddr, msg: &ServerMsg<G::Snapshot, G::Event>) -> Vec<u8> {
+        let limit = self.transport.payload_limit(peer).min(MAX_DATAGRAM);
+        if G::RELIABLE_EVENTS && matches!(msg, ServerMsg::Snapshot(_) | ServerMsg::Lobby(_)) {
+            if let Some(session) = self.sessions.iter().find(|s| s.peer == peer) {
+                let body = super::wire::encode_server_with_limit::<G>(
+                    msg,
+                    limit.saturating_sub(super::event_channel::STATE_HEADER),
+                );
+                return if matches!(msg, ServerMsg::Lobby(_)) {
+                    super::event_channel::lobby(session.token, self.match_index as u64, &body)
+                } else {
+                    super::event_channel::state(session.token, self.match_index as u64, &body)
+                };
+            }
+        }
+        super::wire::encode_server_with_limit::<G>(msg, limit)
+    }
+
+    fn send_events(&mut self, peer: SocketAddr) {
+        if !G::RELIABLE_EVENTS {
+            return;
+        }
+        let Some(session) = self.sessions.iter().find(|s| s.peer == peer) else {
+            return;
+        };
+        let packets = self.event_sender.packets(
+            session.token,
+            self.match_index as u64,
+            session.data.event_ack,
+            self.transport.payload_limit(peer),
+        );
+        for packet in packets {
+            self.send_encoded(peer, &packet);
+        }
     }
 
     fn send_encoded(&mut self, peer: SocketAddr, bytes: &[u8]) -> bool {
@@ -341,7 +401,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                 Stage::Results => 2,
             },
             seconds_left: self.countdown.map_or(0, |t| t.div_ceil(G::TICK_HZ) as u8),
-            participants: self.cfg.participants.clamp(1, 255) as u8,
+            participants: self.cfg.participants.min(self.capacity).clamp(1, 255) as u8,
             entries,
         }
     }
@@ -361,6 +421,26 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             return;
         };
         for d in datagrams {
+            if G::RELIABLE_EVENTS && super::event_channel::recognizes(&d.data) {
+                match super::event_channel::decode(&d.data) {
+                    Ok(super::event_channel::Frame::Ack {
+                        token,
+                        epoch,
+                        sequence,
+                    }) if epoch == self.match_index as u64
+                        && sequence <= self.event_sender.last() =>
+                    {
+                        if let Some(p) = self.owned(d.peer, &token) {
+                            p.event_ack = p.event_ack.max(sequence);
+                            p.stats.packets_in += 1;
+                            p.stats.bytes_in += d.data.len() as u64;
+                            self.sessions.touch(&token, now);
+                        }
+                    }
+                    _ => self.load.bad_datagrams += 1,
+                }
+                continue;
+            }
             match decode_client::<G>(&d.data) {
                 Ok(msg) => {
                     if let Some(entry) = self.sessions.get_by_peer_mut(&d.peer) {
@@ -430,7 +510,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                 if self.stage == Stage::Match {
                     return self.reject(peer, REASON_MATCH);
                 }
-                let full = full_reason(G::MAX_SEATS);
+                let full = full_reason(self.capacity);
                 if self.sessions.get_by_peer(&peer).is_none() && self.sessions.is_full() {
                     return self.reject(peer, &full);
                 }
@@ -443,7 +523,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                     .filter(|s| s.peer != peer)
                     .map(|s| s.data.id)
                     .collect();
-                let id = (0..G::MAX_SEATS as u8)
+                let id = (0..self.capacity as u8)
                     .find(|i| !used.contains(i))
                     .unwrap_or(0);
                 let player = Player {
@@ -456,6 +536,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                     started: false,
                     applied_seq: 0,
                     acked_tick: 0,
+                    event_ack: 0,
                     left_early: false,
                     stats: PeerStats::default(),
                 };
@@ -623,9 +704,10 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
 
     fn step_lobby(&mut self) {
         let humans = self.sessions.count();
-        let all_ready = humans > 0 && self.sessions.iter().all(|s| s.data.ready);
+        let all_ready =
+            humans >= self.minimum_players && self.sessions.iter().all(|s| s.data.ready);
         let waited_too_long = self.cfg.auto_start_seconds > 0
-            && humans > 0
+            && humans >= self.minimum_players
             && self
                 .first_join_tick
                 .is_some_and(|t| self.tick - t >= self.cfg.auto_start_seconds as u64 * G::TICK_HZ);
@@ -666,7 +748,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             })
             .collect();
         seats.sort_by_key(|s| s.id);
-        let participants = self.cfg.participants.max(seats.len());
+        let participants = self.cfg.participants.min(self.capacity).max(seats.len());
         let (m, assigned) = G::start(seed, &seats, participants);
         for (seat, participant) in seats.iter().zip(&assigned) {
             let token = self
@@ -680,6 +762,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                     e.data.started = false;
                     e.data.applied_seq = 0;
                     e.data.acked_tick = 0;
+                    e.data.event_ack = 0;
                     e.data.left_early = false;
                     e.data.stats = PeerStats::default();
                 }
@@ -691,6 +774,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         }
         self.current = Some(m);
         self.events.clear();
+        self.event_sender.reset();
         // Junk received while waiting in the lobby is still worth reporting: it carries into this match's line.
         self.load = LoadCounters {
             bad_datagrams: self.load.bad_datagrams,
@@ -724,7 +808,11 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             }
         }
         for e in G::step(m, &inputs) {
-            self.events.push_back((tick32, e));
+            if G::RELIABLE_EVENTS {
+                self.event_sender.push::<G>(tick32, &e);
+            } else {
+                self.events.push_back((tick32, e));
+            }
         }
         while self
             .events
@@ -747,6 +835,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         applied_seq: u32,
         acked_tick: u32,
         participant: Option<usize>,
+        budget: usize,
     ) -> ServerMsg<G::Snapshot, G::Event> {
         let m = self
             .current
@@ -756,7 +845,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             server_tick: self.tick as u32,
             applied_seq,
             you: participant.map_or(255, |p| p.min(254) as u8),
-            snapshot: G::snapshot(m, participant),
+            snapshot: G::snapshot_with_budget(m, participant, budget),
             events: self
                 .events
                 .iter()
@@ -780,8 +869,22 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             })
             .collect();
         for (peer, applied, acked, participant) in targets {
-            let msg = self.snapshot_msg(applied, acked, participant);
-            let bytes = encode_server::<G>(&msg);
+            let msg = self.snapshot_msg(
+                applied,
+                acked,
+                participant,
+                self.transport
+                    .payload_limit(peer)
+                    .min(MAX_DATAGRAM)
+                    .saturating_sub(
+                        16 + if G::RELIABLE_EVENTS {
+                            super::event_channel::STATE_HEADER
+                        } else {
+                            0
+                        },
+                    ),
+            );
+            let bytes = self.message_bytes(peer, &msg);
             let len = bytes.len();
             self.load.snapshots += 1;
             self.load.snapshot_bytes += len as u64;
@@ -789,6 +892,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             if self.send_encoded(peer, &bytes) {
                 self.load.send.snapshots_accepted += 1;
             }
+            self.send_events(peer);
         }
     }
 
@@ -827,7 +931,12 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             },
         };
         if let Some(dir) = &self.cfg.report_dir {
-            if let Err(e) = append_log(dir, &entry, self.load.send) {
+            if let Err(e) = append_log(
+                dir,
+                &entry,
+                self.load.send,
+                G::RELIABLE_EVENTS.then(|| self.event_stats()),
+            ) {
                 eprintln!("[Server] Could not write the match report: {e}");
             }
         }
@@ -847,7 +956,14 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
     }
 
     fn step_results(&mut self) {
-        if self.tick.is_multiple_of((G::TICK_HZ / 10).max(1)) {
+        // Finish flushing combat events at the regular snapshot cadence. Slowing this to
+        // 10 Hz can strand the tail of a busy match before a short results screen closes.
+        let every = if G::RELIABLE_EVENTS {
+            G::SNAPSHOT_EVERY.max(1)
+        } else {
+            (G::TICK_HZ / 10).max(1)
+        };
+        if self.tick.is_multiple_of(every) {
             let targets: Vec<(SocketAddr, u32, u32, Option<usize>)> = self
                 .sessions
                 .iter()
@@ -861,7 +977,21 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                 })
                 .collect();
             for (peer, applied, acked, participant) in targets {
-                let msg = self.snapshot_msg(applied, acked, participant);
+                let msg = self.snapshot_msg(
+                    applied,
+                    acked,
+                    participant,
+                    self.transport
+                        .payload_limit(peer)
+                        .min(MAX_DATAGRAM)
+                        .saturating_sub(
+                            16 + if G::RELIABLE_EVENTS {
+                                super::event_channel::STATE_HEADER
+                            } else {
+                                0
+                            },
+                        ),
+                );
                 self.send(peer, &msg);
             }
         }
@@ -943,7 +1073,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             tick: self.tick,
             stage: self.stage,
             players: self.sessions.count(),
-            participants: self.cfg.participants,
+            participants: self.cfg.participants.min(self.capacity),
             matches: self.match_index,
         }
     }
@@ -1017,7 +1147,13 @@ fn sanitize(name: &str, id: u8) -> String {
 /// The value a client must send in `Hello` (and a server compares): the game's fingerprint folded with a hash
 /// of its name, so two different games never accept each other's players even on equal fingerprints.
 pub fn hello_fingerprint<G: NetGame>() -> u32 {
-    G::fingerprint() ^ name_hash(G::NAME)
+    G::fingerprint()
+        ^ name_hash(G::NAME)
+        ^ if G::RELIABLE_EVENTS {
+            name_hash("NEV1")
+        } else {
+            0
+        }
 }
 
 fn name_hash(name: &str) -> u32 {
@@ -1030,19 +1166,26 @@ fn append_log(
     dir: &std::path::Path,
     entry: &MatchLog,
     send: ServerSendStats,
+    reliable_events: Option<ServerEventStats>,
 ) -> std::io::Result<()> {
     #[derive(Serialize)]
     struct ArchivedMatch<'a> {
         #[serde(flatten)]
         entry: &'a MatchLog,
         send: ServerSendStats,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reliable_events: Option<ServerEventStats>,
     }
     std::fs::create_dir_all(dir)?;
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(dir.join("matches.jsonl"))?;
-    let line =
-        serde_json::to_string(&ArchivedMatch { entry, send }).map_err(std::io::Error::other)?;
+    let line = serde_json::to_string(&ArchivedMatch {
+        entry,
+        send,
+        reliable_events,
+    })
+    .map_err(std::io::Error::other)?;
     writeln!(file, "{line}")
 }

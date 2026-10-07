@@ -6,8 +6,8 @@ use crate::viewer::net::codec::{Reader, WireError, WireResult, Writer};
 pub const MAGIC: [u8; 2] = *b"NP";
 /// Bump when the envelope layout changes; peers with another version are refused.
 pub const PROTOCOL: u8 = 1;
-/// A datagram budget below the engine's 1,400-byte limit and a typical QUIC datagram.
-pub const MAX_DATAGRAM: usize = 1200;
+/// The engine-wide ceiling; an active transport may impose a smaller per-peer budget.
+pub const MAX_DATAGRAM: usize = crate::viewer::net::MAX_PACKET_BYTES;
 /// Longest text field (join key, name).
 pub const MAX_TEXT: usize = 32;
 /// Inputs bundled into one datagram, newest last: redundancy that makes a lost datagram cost nothing.
@@ -241,6 +241,13 @@ pub fn decode_client<G: NetGame>(bytes: &[u8]) -> WireResult<ClientMsg<G::Input>
 /// Encode a server message. A snapshot that would not fit a datagram sheds its oldest events first; if the
 /// snapshot alone is too big the result is longer than [`MAX_DATAGRAM`] and the sender must not send it.
 pub fn encode_server<G: NetGame>(msg: &ServerMsg<G::Snapshot, G::Event>) -> Vec<u8> {
+    encode_server_with_limit::<G>(msg, MAX_DATAGRAM)
+}
+
+pub(crate) fn encode_server_with_limit<G: NetGame>(
+    msg: &ServerMsg<G::Snapshot, G::Event>,
+    limit: usize,
+) -> Vec<u8> {
     match msg {
         ServerMsg::Welcome {
             token,
@@ -273,28 +280,36 @@ pub fn encode_server<G: NetGame>(msg: &ServerMsg<G::Snapshot, G::Event>) -> Vec<
             w.finish()
         }
         ServerMsg::Snapshot(s) => {
-            let mut keep = s.events.len().min(MAX_EVENTS);
-            loop {
-                let mut w = start(104);
-                w.u32(s.server_tick);
-                w.u32(s.applied_seq);
-                w.u8(s.you);
-                let mut body = Writer::new();
-                G::write_snapshot(&s.snapshot, &mut body);
-                w.u16(body.len() as u16);
-                w.raw(body.as_slice());
-                let events = &s.events[s.events.len() - keep..];
-                w.u8(events.len() as u8);
-                for (tick, e) in events {
-                    w.u32(*tick);
-                    G::write_event(e, &mut w);
-                }
-                let bytes = w.finish();
-                if bytes.len() <= MAX_DATAGRAM || keep == 0 {
-                    return bytes;
-                }
-                keep -= 1;
+            let mut w = start(104);
+            w.u32(s.server_tick);
+            w.u32(s.applied_seq);
+            w.u8(s.you);
+            let mut body = Writer::new();
+            G::write_snapshot(&s.snapshot, &mut body);
+            w.u16(body.len() as u16);
+            w.raw(body.as_slice());
+            // Serialize each payload once, even when events must be fitted to the budget.
+            let first = s.events.len().saturating_sub(MAX_EVENTS);
+            let encoded: Vec<Vec<u8>> = s.events[first..]
+                .iter()
+                .map(|(tick, e)| {
+                    let mut event = Writer::new();
+                    event.u32(*tick);
+                    G::write_event(e, &mut event);
+                    event.finish()
+                })
+                .collect();
+            let mut size = w.len() + 1 + encoded.iter().map(Vec::len).sum::<usize>();
+            let mut first = 0;
+            while size > limit.min(MAX_DATAGRAM) && first < encoded.len() {
+                size -= encoded[first].len();
+                first += 1;
             }
+            w.u8((encoded.len() - first) as u8);
+            for event in &encoded[first..] {
+                w.raw(event);
+            }
+            w.finish()
         }
         ServerMsg::Pong { stamp } => {
             let mut w = start(105);
