@@ -2772,6 +2772,21 @@ class CompiledGameTests(unittest.TestCase):
         self.assertEqual(statuses['smoke'], 'skip')
         self.assertTrue(report['ok'])
 
+    def test_advisory_shell_failure_cannot_fail_own_resource_verification(self):
+        other = self.folder / 'Unrelated.lnk'
+        render = game_ship.shell_render
+        def fail_other(paths, sizes=(32,)):
+            if str(other) in map(str, paths):
+                raise game_ship.ShipError('unrelated shell icon unavailable')
+            return render(paths, sizes)
+        with mock.patch.object(game_ship.Verifier, 'other_shortcuts', return_value=[other]), \
+             mock.patch.object(game_ship, 'shell_render', side_effect=fail_other):
+            code, report = self.verify()
+        self.assertEqual(code, 0, report)
+        self.assertEqual(self.statuses(report)['exe-resources'], 'pass')
+        self.assertEqual(self.statuses(report)['shortcut-icon'], 'pass')
+        self.assertEqual(self.statuses(report)['shortcut-unique'], 'warn')
+
     def test_real_windows_resources_verify_without_desktop_access(self):
         with mock.patch.object(game_ship, 'desktop_folders', side_effect=AssertionError('desktop access')), \
              mock.patch.object(game_ship.Verifier, 'other_shortcuts', side_effect=AssertionError('scan')):

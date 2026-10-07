@@ -2767,8 +2767,6 @@ class Verifier:
         lnk = self.launcher_path() if self.want_shortcut or self.icon_similarity else None
         if lnk is not None and lnk.is_file():
             wanted.append((str(lnk), (32, 256)))
-        if self.icon_similarity:
-            wanted.extend((str(p), (32,)) for p in self.other_shortcuts() if lnk is None or norm_path(p) != norm_path(lnk))
         try:
             self._shell = self._render_batch(wanted)
         except ShipError as error:
@@ -2976,8 +2974,13 @@ class Verifier:
         if not self.native_windows:
             return SKIP, 'shell icon rendering needs a Windows host'
         ours = make_signature(*self.render(path, 32))
+        # Advisory rendering runs after required own-resource checks, so unrelated shell
+        # errors cannot poison their cached evidence. Keep the optional work bounded/batched.
+        others = self.other_shortcuts()
+        self._shell.update(self._render_batch([(str(p), (32,)) for p in others
+                                              if norm_path(p) != norm_path(path)]))
         compared, nearest, clashes, twins = 0, None, [], []
-        for other in self.other_shortcuts():
+        for other in others:
             if norm_path(other) == norm_path(path):
                 continue
             entry = (self._shell or {}).get(str(other))
