@@ -390,6 +390,20 @@ class PublishGamesTests(unittest.TestCase):
                 with self.assertRaises(publish_games.PublishError):
                     publish_games.load_manifest(root)
 
+    def test_check_and_export_reject_overlapping_preservation_without_touching_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root, output = self.setup_repos(temp)
+            publish_games.publish(root, output, "r1")
+            before = self.snapshot(output)
+            manifest = self.manifest(root)
+            manifest["preserve"] = ["games/item.txt"]
+            self.write_manifest(root, manifest)
+            with self.assertRaisesRegex(publish_games.PublishError, "preserved path overlaps"):
+                publish_games.check(root, "r2")
+            with self.assertRaisesRegex(publish_games.PublishError, "preserved path overlaps"):
+                publish_games.publish(root, output, "r2")
+            self.assertEqual(self.snapshot(output), before)
+
 
 if __name__ == "__main__":
     unittest.main()

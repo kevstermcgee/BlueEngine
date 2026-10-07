@@ -16,9 +16,11 @@ ranges and impulses were embedded in HeadlessWorld beside reusable simulation se
 ## Decision
 
 - Archive the old multiplayer prototype under `docs/archive/multiplayer-game`, including
-  presentation/source history. Continue exporting its existing published destination and
-  add explicit preservation ownership; removing a mapping otherwise deletes unchanged
-  previously exported files. New projects use `NetGame`, `ClientView`, `netplay::cli::serve`
+  presentation/source history. Keep its existing published destination and mapping under
+  engine ownership; removing that mapping otherwise deletes unchanged exported files.
+  `preserve` is for independently maintained, unexported content and must not overlap that
+  mapping. Read-only publication checks enforce the same ownership constraint as export.
+  New projects use `NetGame`, `ClientView`, `netplay::cli::serve`
   and the existing ToyGame/ToyView/toy-server example. No replacement networking runtime.
 - Default features are `client` only. `build cinematic` explicitly enables historical
   `offline` for `vesper3d`; default packages omit that executable. Scene/geometry/math and

@@ -178,6 +178,11 @@ def export_tree(root: Path, staging: Path, manifest: dict, revision: str) -> dic
         "files": sorted(catalog_files, key=lambda item: item["path"]),
     }
     published_paths = set(emitted)
+    for value in catalog["preserved_paths"]:
+        preserved_path = safe_relative(value, "preserve")
+        prefix = preserved_path.as_posix().rstrip("/") + "/"
+        if preserved_path.as_posix() in published_paths or any(path.startswith(prefix) for path in published_paths):
+            raise PublishError(f"preserved path overlaps published content: {preserved_path.as_posix()}")
     for playable in catalog["playables"]:
         if playable["entry"] not in published_paths:
             raise PublishError(f"playable entry is not published: {playable['entry']}")
@@ -331,11 +336,6 @@ def publish(root: Path, output: Path, revision: str, *, dry_run: bool = False) -
     with tempfile.TemporaryDirectory(prefix="games-publish-", dir=output.parent) as temp:
         staging = Path(temp)
         catalog = export_tree(root, staging, manifest, revision)
-        emitted = {item["path"] for item in catalog["files"]}
-        for preserved_path in preserved:
-            prefix = preserved_path.as_posix().rstrip("/") + "/"
-            if preserved_path.as_posix() in emitted or any(path.startswith(prefix) for path in emitted):
-                raise PublishError(f"preserved path overlaps published content: {preserved_path.as_posix()}")
         changes = plan_export(output, staging, catalog, owned, preserved)
         catalog_target = output / CATALOG_NAME
         if catalog_target.is_symlink():

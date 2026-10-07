@@ -27,8 +27,7 @@
     "games/dead-air",
     "games/prop-hunt",
     "games/slapstick",
-    "games/feta",
-    "prototypes/multiplayer-game"
+    "games/feta"
   ],
   "collections": {
     "games": [
