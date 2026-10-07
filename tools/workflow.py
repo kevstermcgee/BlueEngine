@@ -254,7 +254,7 @@ def game_plan(root, game, loop='inner'):
     if not (game / 'Cargo.toml').is_file():
         raise ValueError('Game Cargo.toml missing; scaffold with be2.py map new-game first')
     project = module.validate_project(game)
-    commands, harnesses = [], []
+    commands, harnesses, roles = [], [], []
     # A scaffold seeds the engine lock; Cargo must register the new root package
     # once before locked iteration/shipping can work. Existing game locks stay locked.
     import tomllib
@@ -263,23 +263,30 @@ def game_plan(root, game, loop='inner'):
     locked = tomllib.loads(lock.read_text(encoding='utf-8')) if lock.is_file() else {}
     if not any(p.get('name') == manifest['package']['name'] for p in locked.get('package', [])):
         commands.append(['cargo', 'metadata', '--format-version', '1',
-                         '--manifest-path', str(game / 'Cargo.toml')]); harnesses.append(None)
+                         '--manifest-path', str(game / 'Cargo.toml')]); harnesses.append(None); roles.append('metadata')
     if loop != 'shipping':
         command = ['cargo', 'test', '--locked', '--manifest-path', str(game / 'Cargo.toml'),
                    '--no-default-features', '--message-format=json']
-        commands.append(command); harnesses.append('rust_project')
+        commands.append(command); harnesses.append('rust_project'); roles.append('tests')
         if loop == 'integration':
             commands += [['cargo', 'fmt', '--manifest-path', str(game / 'Cargo.toml'), '--check'],
                          [arg for arg in command if arg != '--no-default-features']]
             harnesses += [None, 'rust_project']
+            roles += ['format', 'tests']
     else:
         if project['targets']:
             script = game / 'scripts/check.py'
-            if not script.is_file():
-                raise ValueError('Native shipping requires the game scripts/check.py; refresh generated tooling')
-            commands.append([sys.executable, str(script)]); harnesses.append(None)
+            ship = game / 'scripts/ship.py'
+            if not script.is_file() or not ship.is_file():
+                raise ValueError('Native shipping requires scripts/check.py and scripts/ship.py; refresh generated tooling')
+            # Test first without requiring a pre-existing package, then build and
+            # exercise a fresh isolated package without touching the desktop.
+            commands += [[sys.executable, str(script), '--skip-ship'],
+                         [sys.executable, str(ship), 'ship', '--no-install']]
+            harnesses += ['game_check', 'game_ship']
+            roles += ['game_check', 'game_ship']
     return {'scope': 'game_shipping' if loop == 'shipping' else 'focused', 'loop': loop,
-            'game': str(game), 'commands': commands, 'command_harnesses': harnesses,
+            'game': str(game), 'commands': commands, 'command_harnesses': harnesses, 'command_roles': roles,
             'proves': 'Game checks in selected loop only; engine dependency tests are excluded.',
             'remaining': ('Declared game gates on this host; other declared native platforms still need their own evidence.'
                           if loop == 'shipping' else 'Run check --game GAME --loop shipping; engine source edits also require engine check --changed.'),
@@ -683,7 +690,53 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
             'test_harness': harness, 'commands': commands}
 
 
-def command_evidence(log, returncode, harness=None):
+def game_shipping_status(payload, role, command):
+    """Require fresh package/smoke evidence; only deliberate optional skips are OK."""
+    if payload is None or payload.get('ok') is not True:
+        return 'unverified'
+    if role == 'game_check' and '--skip-ship' in command:
+        # The following game_ship command owns delivery. All other skips remain
+        # outstanding, including unrecognised future checks.
+        optional = {'ship: skipped: --skip-ship'}
+        if payload.get('ship') != 'skipped: --skip-ship':
+            return 'unverified'
+        return 'skipped' if set(payload.get('skipped') or []) - optional else 'passed'
+    if role != 'game_ship' or command[-2:] != ['ship', '--no-install']:
+        return 'skipped' if payload.get('skipped') else 'unverified'
+    verify = payload.get('verify')
+    package = payload.get('package')
+    if (payload.get('command') != 'ship' or not isinstance(verify, dict) or verify.get('ok') is not True
+            or not isinstance(package, dict) or package.get('ok') is not True):
+        return 'unverified'
+    host = {'linux': 'linux', 'win32': 'windows', 'darwin': 'macos'}.get(sys.platform)
+    if verify.get('platform') != host:
+        return 'unverified'
+    checks = verify.get('checks')
+    if not isinstance(checks, list) or not all(isinstance(c, dict) for c in checks):
+        return 'unverified'
+    names = [c.get('name') for c in checks]
+    if not all(isinstance(name, str) for name in names):
+        return 'unverified'
+    required = {'identity', 'icon-files', 'icon-art', 'wiring', 'package', 'smoke'}
+    optional = {'shortcut-file', 'shortcut-icon', 'shortcut-unique', 'launch'}
+    if host == 'windows':
+        required.add('exe-resources')
+    else:
+        optional.add('exe-resources')  # PE resources do not apply to native ELF/Mach-O.
+    if len(set(names)) != len(names) or not required <= set(names):
+        return 'unverified'
+    if any(c.get('status') not in ('pass', 'warn', 'skip') for c in checks):
+        return 'unverified'
+    skipped = {c['name'] for c in checks if c['status'] == 'skip'}
+    skipped.update(str(value).split(':', 1)[0] for value in verify.get('skipped') or [])
+    if skipped - optional or payload.get('skipped'):
+        return 'skipped'
+    if next(c for c in checks if c['name'] == 'smoke')['status'] != 'pass':
+        return 'unverified'
+    return 'passed'
+
+
+def command_evidence(log, returncode, harness=None, command=None):
     """Read Cargo JSON compiler records and ordinary test text separately. No root-cause inference."""
     diagnostics, panics, tail, summaries = [], [], [], []
     artifacts = {'fresh': 0, 'built': 0}
@@ -691,12 +744,15 @@ def command_evidence(log, returncode, harness=None):
     python_tests = None
     python_skips = 0
     location = None
+    payload = None
     with log.open(encoding='utf-8', errors='replace') as stream:
         for line in stream:
             try:
                 record = json.loads(line) if line.startswith('{') else None
             except ValueError:
                 record = None
+            if isinstance(record, dict) and 'ok' in record:
+                payload = record
             if isinstance(record, dict) and record.get('reason') == 'compiler-artifact':
                 artifacts['fresh' if record.get('fresh') else 'built'] += 1
                 continue
@@ -741,6 +797,11 @@ def command_evidence(log, returncode, harness=None):
         result['diagnostics'] = diagnostics or panics or tail
         if location:
             result['location'] = location
+    elif harness in ('game_check', 'game_ship'):
+        status = game_shipping_status(payload, harness, command or [])
+        if status != 'passed':
+            result.update(category='incomplete_shipping_evidence',
+                          diagnostics=[f'{harness} returned {status} delivery evidence; inspect the package/smoke checks and full log.'])
     elif harness:
         # AI-WARNING TEST-SELECTION-001: A zero-exit harness with no executed tests is not regression evidence.
         counts = summaries if harness in ('rust', 'rust_project') else ([] if python_tests is None else [python_tests - python_skips])

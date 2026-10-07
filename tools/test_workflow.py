@@ -248,7 +248,10 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertIn('--no-default-features', inner['commands'][0])
         self.assertEqual(inner['command_harnesses'], ['rust_project'])
         ship = workflow.game_plan(ROOT, game, 'shipping')
-        self.assertIn([sys.executable, str(game / 'scripts/check.py')], ship['commands'])
+        self.assertEqual(ship['commands'], [
+            [sys.executable, str(game / 'scripts/check.py'), '--skip-ship'],
+            [sys.executable, str(game / 'scripts/ship.py'), 'ship', '--no-install']])
+        self.assertEqual(ship['command_roles'], ['game_check', 'game_ship'])
         self.assertFalse(any('web' in command for command in ship['commands']))
         self.assertNotIn(['cargo', 'test', '--locked', '--profile', 'itest'], ship['commands'])
 
