@@ -18,6 +18,8 @@ jobs:
     timeout-minutes: 45
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
+      GALLIUM_DRIVER: llvmpipe
+      LIBGL_ALWAYS_SOFTWARE: '1'
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -30,6 +32,28 @@ jobs:
         with:
           shared-key: engine-checks-test
           save-if: false
+      - name: Enable software OpenGL on the disposable Windows runner
+        shell: pwsh
+        run: |
+          # Mesa's Windows ICD provides OpenGL on the hosted runner, which has no GPU.
+          # Follow mesa-dist-win's system-wide ICD registration; the game package stays intact.
+          # https://github.com/pal1000/mesa-dist-win/blob/master/bin/modules/reggl.cmd
+          $archive = Join-Path $env:RUNNER_TEMP 'mesa3d.7z'
+          $mesa = Join-Path $env:RUNNER_TEMP 'mesa3d'
+          Invoke-WebRequest 'https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z' -OutFile $archive
+          $expected = '351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695'
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) {
+            throw 'Mesa archive SHA-256 mismatch'
+          }
+          & 'C:\Program Files\7-Zip\7z.exe' x $archive "-o$mesa" -y
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item (Join-Path $mesa 'x64/libgallium_wgl.dll') (Join-Path $env:WINDIR 'System32/mesadrv.dll')
+          $key = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\OpenGLDrivers\MSOGL'
+          New-Item -Path $key -Force | Out-Null
+          New-ItemProperty -Path $key -Name DLL -PropertyType String -Value 'mesadrv.dll' -Force | Out-Null
+          New-ItemProperty -Path $key -Name DriverVersion -PropertyType DWord -Value 1 -Force | Out-Null
+          New-ItemProperty -Path $key -Name Flags -PropertyType DWord -Value 1 -Force | Out-Null
+          New-ItemProperty -Path $key -Name Version -PropertyType DWord -Value 2 -Force | Out-Null
       - name: Build fresh native authoring tool
         run: cargo build --locked --profile itest --no-default-features --bin be2-tools
       - name: Check, package and smoke-test Lantern Run without installation
