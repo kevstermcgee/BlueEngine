@@ -49,6 +49,14 @@ against template history; customized copies are not overwritten. Native portable
 input/audio/storage, rendering-free authority, networking and game capture remain.
 Separate browser-runtime cleanup is outside this decision.
 
+## Consequences
+
+Maintained generated scripts keep their canonical project helper (including Leo's older
+project). Starter instructions retain the existing 3 KB context limit, and discovery
+contracts retain shutdown/transport details and their recorded retrieval floor.
+The retained in-process hub fixtures transfer an already-bound socket into startup:
+allocation may retry a contested port, but gameplay assertions never retry or weaken.
+
 ## Acceptance and evidence
 
 Required: default build/package exclude cinematic; explicit cinematic CLI/unit/Clippy/doc

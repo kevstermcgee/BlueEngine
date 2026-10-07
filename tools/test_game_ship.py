@@ -1587,6 +1587,16 @@ class VerifyBase(TempTestCase):
         (self.root / 'assets' / name).write_bytes(data)
 
 
+class MaintainedProjectTests(unittest.TestCase):
+    def test_leo_shipping_configuration_loads_without_build_or_desktop(self):
+        root = Path(__file__).resolve().parents[1] / 'assets/games/leo'
+        with mock.patch.object(game_ship.subprocess, 'run', side_effect=AssertionError('process')), \
+             mock.patch.object(game_ship, 'desktop_folders', side_effect=AssertionError('desktop')):
+            project = game_ship.load_project(root, 'windows')
+            self.assertEqual(project.exe_stem(), 'leo')
+        self.assertTrue((root / 'scripts/project.py').is_file())
+
+
 class PackageDeliveryTests(VerifyBase):
     def test_package_verification_never_reads_desktop(self):
         with mock.patch.object(game_ship, 'desktop_folders', side_effect=AssertionError('desktop access')), \

@@ -65,6 +65,19 @@ fn free_ports(n: u16) -> u16 {
     panic!("no free run of {} loopback ports in 25000-26899", n + 1);
 }
 
+/// Acquire ownership, not only a free-port observation. Other sockets may bind between
+/// the probe and acquisition; retry allocation only, never retry a gameplay assertion.
+fn bound_hub_ports(n: u16) -> (u16, UdpSocket) {
+    loop {
+        let base = free_ports(n);
+        match UdpSocket::bind(("127.0.0.1", base)) {
+            Ok(socket) => return (base, socket),
+            Err(error) if error.kind() == std::io::ErrorKind::AddrInUse => continue,
+            Err(error) => panic!("cannot reserve hub socket: {error}"),
+        }
+    }
+}
+
 struct TempDir(PathBuf);
 impl TempDir {
     fn new(tag: &str) -> TempDir {
@@ -119,10 +132,10 @@ struct TestHub {
 }
 
 impl TestHub {
-    /// Run a hub on `127.0.0.1:base` from `config` text (written to `dir/hub.conf`), with the given spawner.
+    /// Transfer an already-bound hub socket into the runtime, using config written to `dir/hub.conf`.
     fn start(
         dir: &Path,
-        base: u16,
+        socket: UdpSocket,
         pool: u16,
         config: &str,
         limits: Limits,
@@ -131,7 +144,7 @@ impl TestHub {
     ) -> TestHub {
         let conf_path = dir.join("hub.conf");
         std::fs::write(&conf_path, config).unwrap();
-        let socket = UdpSocket::bind(("127.0.0.1", base)).unwrap();
+        let base = socket.local_addr().unwrap().port();
         let stop = Arc::new(AtomicBool::new(false));
         let flag = stop.clone();
         let report_dir = dir.join("reports");
@@ -498,11 +511,12 @@ fn a_server_whose_output_reader_is_gone_keeps_running_instead_of_panicking() {
 
 #[test]
 fn a_room_made_through_the_hub_takes_two_real_players_with_the_settings_chosen_and_reports_them() {
-    let (base, pool) = (free_ports(4), 4);
+    let pool = 4;
+    let (base, socket) = bound_hub_ports(pool);
     let dir = TempDir::new("room");
     let mut hub = TestHub::start(
         dir.path(),
-        base,
+        socket,
         pool,
         &config_text(base, pool, dir.path(), "", false),
         relaxed(),
@@ -608,14 +622,15 @@ fn a_room_made_through_the_hub_takes_two_real_players_with_the_settings_chosen_a
 
 #[test]
 fn a_crashed_public_room_is_restarted_on_a_fresh_port() {
-    let (base, pool) = (free_ports(3), 3);
+    let pool = 3;
+    let (base, socket) = bound_hub_ports(pool);
     let dir = TempDir::new("crash");
     let crash = Crash::default();
     let spawned = Arc::new(Mutex::new(Vec::new()));
     let (c2, s2) = (crash.clone(), spawned.clone());
     let hub = TestHub::start(
         dir.path(),
-        base,
+        socket,
         pool,
         &config_text(base, pool, dir.path(), "", false),
         relaxed(),
@@ -651,11 +666,12 @@ fn a_crashed_public_room_is_restarted_on_a_fresh_port() {
 
 #[test]
 fn a_room_nobody_joins_closes_and_its_port_is_freed_while_public_stays() {
-    let (base, pool) = (free_ports(4), 4);
+    let pool = 4;
+    let (base, socket) = bound_hub_ports(pool);
     let dir = TempDir::new("ghost");
     let hub = TestHub::start(
         dir.path(),
-        base,
+        socket,
         pool,
         &config_text(base, pool, dir.path(), "", false),
         relaxed(),
@@ -688,11 +704,12 @@ fn a_room_nobody_joins_closes_and_its_port_is_freed_while_public_stays() {
 
 #[test]
 fn the_front_door_over_real_sockets_floods_get_a_burst_then_silence_and_garbage_is_ignored() {
-    let (base, pool) = (free_ports(2), 2);
+    let pool = 2;
+    let (base, socket) = bound_hub_ports(pool);
     let dir = TempDir::new("flood");
     let hub = TestHub::start(
         dir.path(),
-        base,
+        socket,
         pool,
         &config_text(base, pool, dir.path(), "", false),
         Limits::default(),
@@ -777,11 +794,12 @@ fn the_front_door_over_real_sockets_floods_get_a_burst_then_silence_and_garbage_
 
 #[test]
 fn a_spoofed_source_cannot_create_a_room_without_the_cookie_its_address_was_given() {
-    let (base, pool) = (free_ports(2), 2);
+    let pool = 2;
+    let (base, socket) = bound_hub_ports(pool);
     let dir = TempDir::new("cookie");
     let hub = TestHub::start(
         dir.path(),
-        base,
+        socket,
         pool,
         &config_text(base, pool, dir.path(), "", false),
         relaxed(),
