@@ -1601,14 +1601,15 @@ class PackageDeliveryTests(VerifyBase):
     def test_package_verification_never_reads_desktop(self):
         with mock.patch.object(game_ship, 'desktop_folders', side_effect=AssertionError('desktop access')), \
              mock.patch.object(game_ship.Verifier, 'other_shortcuts', side_effect=AssertionError('scan')):
-            code, report, _ = call_main(self.root, 'verify', '--json')
+            code, report, _ = call_main(self.root, 'verify', '--json', '--platform', self.plat)
         self.assertEqual(code, 0, report)
         self.assertEqual(self.statuses(report)['shortcut-file'], 'skip')
         self.assertEqual(self.statuses(report)['shortcut-unique'], 'skip')
 
     def test_installation_verifies_own_shortcut_without_comparing_other_icons(self):
         with mock.patch.object(game_ship.Verifier, 'other_shortcuts', side_effect=AssertionError('scan')):
-            code, report, _ = call_main(self.root, 'verify', '--json', '--folder', str(self.folder))
+            code, report, _ = call_main(self.root, 'verify', '--json', '--platform', self.plat,
+                                      '--folder', str(self.folder))
         self.assertEqual(code, 0, report)
         self.assertEqual(self.statuses(report)['shortcut-file'], 'pass')
         self.assertEqual(self.statuses(report)['shortcut-icon'], 'pass')
@@ -1616,7 +1617,8 @@ class PackageDeliveryTests(VerifyBase):
 
     def test_failed_advisory_is_a_warning_not_a_package_failure(self):
         with mock.patch.object(game_ship.Verifier, 'check_shortcut_unique', side_effect=game_ship.ShipError('shell unavailable')):
-            code, report, _ = call_main(self.root, 'verify', '--json', '--icon-similarity')
+            code, report, _ = call_main(self.root, 'verify', '--json', '--platform', self.plat,
+                                      '--icon-similarity')
         self.assertEqual(code, 0, report)
         self.assertEqual(self.statuses(report)['shortcut-unique'], 'warn')
 
@@ -2962,7 +2964,8 @@ class CompiledGameTests(unittest.TestCase):
         self.assertTrue(result['ok'])
         self.assertEqual(result['shortcut']['action'], 'refreshed')
         statuses = self.statuses(result['verify'])
-        self.assertEqual({statuses[n] for n in statuses}, {'pass'})
+        self.assertEqual(statuses.pop('shortcut-unique'), 'skip')
+        self.assertEqual(set(statuses.values()), {'pass'})
         stamp = self.project.read_stamp()
         self.assertEqual((stamp['verified']['launch'], stamp['verified']['smoke']), (True, True))
         self.assertEqual(stamp['exe'], f'{self.stem}.exe')

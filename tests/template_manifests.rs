@@ -23,10 +23,11 @@ fn no_manifest_cargo_can_see_in_templates_contains_a_placeholder() {
         &Path::new(env!("CARGO_MANIFEST_DIR")).join("templates"),
         &mut found,
     );
-    assert!(
-        !found.is_empty(),
-        "the forkable multiplayer template should still be found"
-    );
+    // The retired example remains a Cargo consumer, but is no longer a starter.
+    let archived =
+        Path::new(env!("CARGO_MANIFEST_DIR")).join("docs/archive/multiplayer-game/Cargo.toml");
+    assert!(archived.is_file(), "preserve the archived example manifest");
+    found.push(archived);
     for path in found {
         let text = std::fs::read_to_string(&path).unwrap();
         assert!(
