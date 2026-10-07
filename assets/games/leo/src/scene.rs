@@ -7,7 +7,7 @@ use vesper3d::{
     viewer::{
         devkit::{
             procedural::{ChunkId, WorldPoint},
-            Rng,
+            FpsCamera, Rng,
         },
         kit::{Batch, Look, Materials, Shadows, Template, Tint, View},
     },
@@ -19,6 +19,30 @@ pub fn smooth(x: f32) -> f32 {
 }
 pub fn daylight(phase: f32) -> f32 {
     smooth((-(phase * std::f32::consts::TAU).cos() + 0.22) / 0.44)
+}
+#[derive(Clone, Copy, Default)]
+pub struct ViewOptions {
+    pub pending_look: [f32; 2],
+    pub portrait: bool,
+}
+
+fn camera_view(sim: &Sim, alpha: f32, options: ViewOptions) -> Result<View, String> {
+    let p = sim.interpolated(alpha);
+    let mut orientation = FpsCamera::new(sim.player.yaw, sim.player.pitch);
+    orientation.turn(options.pending_look);
+    let (eye, yaw, pitch) = if options.portrait {
+        let yaw = orientation.yaw + std::f32::consts::PI;
+        let focus = V(p.0, p.1 - sim.player.profile().eye_height + 0.95, p.2);
+        let desired = focus - V(yaw.sin(), 0., -yaw.cos()) * 2.6 + V(0., 0.45, 0.);
+        (sim.camera_eye(focus, desired)?, yaw, (orientation.pitch - 0.10).clamp(-1.2, 1.2))
+    } else {
+        // Controller position is eye level. Pending input turns the view on frames
+        // between fixed ticks, without applying it to the authoritative player twice.
+        (p, orientation.yaw, orientation.pitch)
+    };
+    let mut view = View::first_person(vec3(eye.0, eye.1, eye.2), yaw, pitch);
+    view.fov = 65f32.to_radians();
+    Ok(view)
 }
 fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     std::array::from_fn(|i| a[i] + (b[i] - a[i]) * t)
@@ -49,6 +73,12 @@ struct ChunkArt {
     trees: Vec<Template>,
     flowers: Vec<Template>,
 }
+#[derive(PartialEq)]
+struct WorldKey {
+    seed: u64,
+    origin: ChunkId,
+    chunks: Vec<(ChunkId, bool)>,
+}
 pub struct Scene {
     plants: Vec<Template>,
     chunks: BTreeMap<ChunkId, ChunkArt>,
@@ -59,6 +89,8 @@ pub struct Scene {
     arm: Template,
     leg: Template,
     world: Batch,
+    world_key: Option<WorldKey>,
+    world_rebuilds: u64,
     actors: Batch,
     sky: Batch,
     glow: Batch,
@@ -278,6 +310,8 @@ impl Scene {
             arm,
             leg,
             world: Batch::new(),
+            world_key: None,
+            world_rebuilds: 0,
             actors: Batch::new(),
             sky: Batch::new(),
             glow: Batch::new(),
@@ -325,9 +359,9 @@ impl Scene {
         alpha: f32,
         materials: &Materials,
         shadows: &mut Shadows,
-        portrait: bool,
+        options: ViewOptions,
     ) -> Result<View, String> {
-        self.draw_view(sim, alpha, materials, shadows, portrait, None)
+        self.draw_view(sim, alpha, materials, shadows, options, None)
     }
     /// Same art and lighting in the browser canvas; cameras include its physical viewport.
     pub fn draw_view(
@@ -336,7 +370,7 @@ impl Scene {
         alpha: f32,
         materials: &Materials,
         shadows: &mut Shadows,
-        portrait: bool,
+        options: ViewOptions,
         viewport: Option<(i32, i32, i32, i32)>,
     ) -> Result<View, String> {
         let p = sim.interpolated(alpha);
@@ -364,13 +398,8 @@ impl Scene {
                 self.chunks.insert(*id, art);
             }
         }
-        let yaw = sim.player.yaw + if portrait { std::f32::consts::PI } else { 0. };
         let focus = V(p.0, p.1 - sim.player.profile().eye_height + 0.95, p.2);
-        let (distance, height, pitch) = if portrait { (2.6, 0.45, -0.10) } else { (4.8, 1.05, -0.20) };
-        let desired = focus - V(yaw.sin(), 0., -yaw.cos()) * distance + V(0., height, 0.);
-        let eye = sim.camera_eye(focus, desired)?;
-        let mut view = View::first_person(vec3(eye.0, eye.1, eye.2), yaw, (sim.player.pitch + pitch).clamp(-1.2, 1.2));
-        view.fov = 65f32.to_radians();
+        let view = camera_view(sim, alpha, options)?;
         let phase = sim.time().phase;
         let day = daylight(phase);
         let mut mood = look(phase);
@@ -409,24 +438,8 @@ impl Scene {
         self.sky.draw();
         gl_use_material(&materials.fx_add);
         self.glow.draw();
-        self.world.clear();
+        self.update_world(sim, p, radius, if viewport.is_some() { 32. } else { 48. })?;
         self.actors.clear();
-        for (id, chunk) in &self.chunks {
-            let [x, z] = WorldPoint { chunk: *id, local: [0.; 2] }.relative(sim.origin, CHUNK_SIZE)?;
-            let dist = (x + 16. - p.0).hypot(z + 16. - p.2);
-            if dist > radius {
-                continue;
-            }
-            let m = Mat4::from_translation(vec3(x, 0., z));
-            for t in &chunk.trees {
-                self.world.add(t, m, Tint::NONE);
-            }
-            if dist < if viewport.is_some() { 32. } else { 48. } {
-                for t in &chunk.flowers {
-                    self.world.add(t, m, Tint::NONE);
-                }
-            }
-        }
         let root = Mat4::from_translation(vec3(p.0, p.1 - sim.player.profile().eye_height, p.2))
             * Mat4::from_rotation_y(-sim.player.yaw);
         let speed = (sim.player.position - sim.previous).length() / vesper3d::viewer::devkit::TICK;
@@ -462,16 +475,137 @@ impl Scene {
         self.world.draw();
         shadows.draw_decals(materials);
         gl_use_material(&materials.world);
-        self.actors.draw();
+        // Keep Leo's cast shadow in first person, but do not render his head
+        // around the eye-level camera. Portrait captures still show the full boy.
+        if options.portrait {
+            self.actors.draw();
+        }
         gl_use_default_material();
         set_default_camera();
         Ok(view)
+    }
+    pub fn world_rebuilds(&self) -> u64 {
+        self.world_rebuilds
+    }
+    fn update_world(&mut self, sim: &Sim, p: V, radius: f32, flowers: f32) -> Result<(), String> {
+        let mut chunks = Vec::with_capacity(self.chunks.len());
+        for id in self.chunks.keys() {
+            let [x, z] = WorldPoint { chunk: *id, local: [16.; 2] }.relative(sim.origin, CHUNK_SIZE)?;
+            let distance = (x - p.0).hypot(z - p.2);
+            if distance <= radius {
+                chunks.push((*id, distance < flowers));
+            }
+        }
+        let key = WorldKey { seed: sim.seed, origin: sim.origin, chunks };
+        if self.world_key.as_ref() == Some(&key) {
+            return Ok(());
+        }
+        self.world.clear();
+        for (id, flowers) in &key.chunks {
+            let chunk = &self.chunks[id];
+            let [x, z] = WorldPoint { chunk: *id, local: [0.; 2] }.relative(sim.origin, CHUNK_SIZE)?;
+            let m = Mat4::from_translation(vec3(x, 0., z));
+            for t in &chunk.trees {
+                self.world.add(t, m, Tint::NONE);
+            }
+            if *flowers {
+                for t in &chunk.flowers {
+                    self.world.add(t, m, Tint::NONE);
+                }
+            }
+        }
+        self.world_key = Some(key);
+        self.world_rebuilds += 1;
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vesper3d::viewer::devkit::{Lifecycle, Simulation, TICK};
+
+    #[test]
+    fn normal_view_starts_at_eye_level_and_loads_in_first_person() {
+        let mut sim = Sim::new(7);
+        sim.step(&leo::Input { look: [0.8, -0.25], ..Default::default() }).unwrap();
+        let bytes = vesper3d::viewer::devkit::snapshot::save(&sim, "walk").unwrap();
+        let mut loaded = Sim::new(8);
+        vesper3d::viewer::devkit::snapshot::restore(&mut loaded, &bytes).unwrap();
+        for player in [&sim, &loaded] {
+            let view = camera_view(player, 1., ViewOptions::default()).unwrap();
+            let p = player.player.position;
+            assert_eq!(view.eye, vec3(p.0, p.1, p.2));
+            assert!((view.yaw - player.player.yaw).abs() < 1e-6);
+            assert!((view.pitch - player.player.pitch).abs() < 1e-6);
+        }
+        let portrait = camera_view(&sim, 1., ViewOptions { portrait: true, ..Default::default() }).unwrap();
+        assert!((portrait.eye - vec3(16., sim.player.position.1, 16.)).length() > 2.);
+    }
+
+    #[test]
+    fn eye_position_interpolates_walk_and_hop_between_ticks() {
+        let mut sim = Sim::new(7);
+        sim.step(&leo::Input { forward: 1., jump: true, ..Default::default() }).unwrap();
+        let before = camera_view(&sim, 0., ViewOptions::default()).unwrap();
+        let halfway = camera_view(&sim, 0.5, ViewOptions::default()).unwrap();
+        let after = camera_view(&sim, 1., ViewOptions::default()).unwrap();
+        assert_eq!(halfway.eye, before.eye.lerp(after.eye, 0.5));
+        assert!(after.eye.y > before.eye.y && after.eye.z < before.eye.z);
+    }
+
+    #[test]
+    fn look_responds_without_a_tick_and_is_not_applied_twice() {
+        let mut sim = Sim::new(7);
+        let mut life = Lifecycle::<()>::start(&["leo".into(), "--seed".into(), "7".into()], &[]).unwrap();
+        let before = sim.state_hash();
+        life.feed((), 0, [0.12, -0.08]);
+        assert_eq!(life.ticks(TICK * 0.4, 1., true), 0);
+        let view = camera_view(&sim, life.alpha(), ViewOptions { pending_look: life.pending_look(), portrait: false })
+            .unwrap();
+        assert!((view.yaw - 0.12).abs() < 1e-6 && (view.pitch - 0.08).abs() < 1e-6);
+        assert_eq!(sim.state_hash(), before, "a rendered frame must not mutate the saveable simulation");
+        assert_eq!(life.ticks(TICK, 1., true), 1);
+        sim.step(&leo::Input { look: life.take_tick().look, ..Default::default() }).unwrap();
+        let next = camera_view(&sim, life.alpha(), ViewOptions { pending_look: life.pending_look(), portrait: false })
+            .unwrap();
+        assert!((next.yaw - view.yaw).abs() < 1e-6 && (next.pitch - view.pitch).abs() < 1e-6);
+    }
+
+    #[test]
+    fn static_world_reuses_batches_and_refreshes_detail_seed_and_origin() {
+        let mut sim = Sim::new(7);
+        let mut scene = Scene::new();
+        let mut tree = Template::new();
+        tree.box_(vec3(0., 1., 0.), Vec3::ONE, [0.3, 0.5, 0.2], 0.);
+        scene.chunks.insert(ChunkId::default(), ChunkArt { trees: vec![tree.clone()], flowers: vec![tree] });
+        let positions = |scene: &Scene| -> Vec<_> {
+            scene.world.meshes.iter().flat_map(|m| m.vertices.iter().map(|v| v.position)).collect()
+        };
+        scene.update_world(&sim, sim.player.position, 115., 48.).unwrap();
+        let full = positions(&scene);
+        for _ in 0..100 {
+            scene.update_world(&sim, sim.player.position + V(0.01, 0., 0.), 115., 48.).unwrap();
+        }
+        assert_eq!(scene.world_rebuilds(), 1);
+        assert_eq!(positions(&scene), full);
+        scene.update_world(&sim, V(80., 1.23, 16.), 115., 48.).unwrap();
+        assert_eq!(scene.world_rebuilds(), 2);
+        assert_eq!(positions(&scene).len() * 2, full.len(), "distant flowers leave the batch");
+        sim.seed = 8;
+        scene.update_world(&sim, sim.player.position, 115., 48.).unwrap();
+        assert_eq!(scene.world_rebuilds(), 3);
+        sim.origin.x = 1;
+        scene.update_world(&sim, sim.player.position, 115., 48.).unwrap();
+        assert_eq!(scene.world_rebuilds(), 4);
+        for (before, after) in full.iter().zip(positions(&scene)) {
+            assert_eq!(after, *before - vec3(CHUNK_SIZE, 0., 0.));
+        }
+        scene.chunks.clear();
+        scene.update_world(&sim, sim.player.position, 115., 48.).unwrap();
+        assert!(positions(&scene).is_empty(), "removed chunks must not leave stale geometry");
+    }
+
     #[test]
     fn sun_moon_cutover_fades_without_a_lighting_jump() {
         for horizon in [0.25, 0.75] {

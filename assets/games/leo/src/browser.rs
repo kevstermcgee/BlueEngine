@@ -130,7 +130,14 @@ impl vesper3d::portable::draw::Game for Walker {
                 });
             }
             let visual = cache.as_mut().expect("initialized presentation");
-            visual.scene.draw_view(&self.sim, 1., &visual.materials, &mut visual.shadows, false, Some(viewport))?;
+            visual.scene.draw_view(
+                &self.sim,
+                1.,
+                &visual.materials,
+                &mut visual.shadows,
+                crate::scene::ViewOptions::default(),
+                Some(viewport),
+            )?;
             Ok(())
         });
     }
