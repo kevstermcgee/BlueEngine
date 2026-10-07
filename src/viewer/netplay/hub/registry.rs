@@ -98,6 +98,10 @@ pub struct HubSection {
     pub legacy: Option<Mode>,
     pub max_rooms_per_ip: Option<usize>,
     pub max_processes: Option<usize>,
+    pub room_startup_timeout_ms: Option<u64>,
+    pub room_status_timeout_ms: Option<u64>,
+    pub public_restart_max_ms: Option<u64>,
+    pub public_restart_reset_ms: Option<u64>,
     /// Requests one source address may burst, and per second after that (default 10 and 2).
     pub rate_burst: Option<f64>,
     pub rate_per_sec: Option<f64>,
@@ -114,6 +118,10 @@ pub struct HubSettings {
     pub legacy: Mode,
     pub max_rooms_per_ip: usize,
     pub max_processes: usize,
+    pub room_startup_timeout_ms: u64,
+    pub room_status_timeout_ms: u64,
+    pub public_restart_max_ms: u64,
+    pub public_restart_reset_ms: u64,
     pub rate_burst: f64,
     pub rate_per_sec: f64,
 }
@@ -162,6 +170,14 @@ impl HubSection {
             .or(self.max_processes)
             .unwrap_or(pool_size as usize)
             .clamp(1, pool_size as usize);
+        let timeout = |name: &str, value: Option<u64>, default| {
+            let value = value.unwrap_or(default);
+            if (1..=3_600_000).contains(&value) {
+                Ok(value)
+            } else {
+                Err(format!("{name} must be 1..=3600000 milliseconds"))
+            }
+        };
         Ok(HubSettings {
             listen,
             bind_ip: over.bind_ip.or(self.bind_ip).unwrap_or(*listen4.ip()),
@@ -175,6 +191,28 @@ impl HubSection {
             legacy: over.legacy.or(self.legacy).unwrap_or(Mode::Serve),
             max_rooms_per_ip: over.max_rooms_per_ip.or(self.max_rooms_per_ip).unwrap_or(2),
             max_processes,
+            room_startup_timeout_ms: timeout(
+                "room_startup_timeout_ms",
+                over.room_startup_timeout_ms
+                    .or(self.room_startup_timeout_ms),
+                30_000,
+            )?,
+            room_status_timeout_ms: timeout(
+                "room_status_timeout_ms",
+                over.room_status_timeout_ms.or(self.room_status_timeout_ms),
+                30_000,
+            )?,
+            public_restart_max_ms: timeout(
+                "public_restart_max_ms",
+                over.public_restart_max_ms.or(self.public_restart_max_ms),
+                60_000,
+            )?,
+            public_restart_reset_ms: timeout(
+                "public_restart_reset_ms",
+                over.public_restart_reset_ms
+                    .or(self.public_restart_reset_ms),
+                60_000,
+            )?,
             rate_burst: over.rate_burst.or(self.rate_burst).unwrap_or(10.),
             rate_per_sec: over.rate_per_sec.or(self.rate_per_sec).unwrap_or(2.),
         })
@@ -365,6 +403,10 @@ pub fn parse_config(text: &str, base_dir: &Path) -> Result<Config, ConfigError> 
                     "legacy" => h.legacy = Some(value.parse().map_err(|e| err(n, e))?),
                     "max_rooms_per_ip" => h.max_rooms_per_ip = Some(num("max_rooms_per_ip")? as usize),
                     "max_processes" => h.max_processes = Some(num("max_processes")? as usize),
+                    "room_startup_timeout_ms" => h.room_startup_timeout_ms = Some(num(key)?),
+                    "room_status_timeout_ms" => h.room_status_timeout_ms = Some(num(key)?),
+                    "public_restart_max_ms" => h.public_restart_max_ms = Some(num(key)?),
+                    "public_restart_reset_ms" => h.public_restart_reset_ms = Some(num(key)?),
                     "rate_burst" | "rate_per_sec" => {
                         let v = value
                             .parse::<f64>()
@@ -381,7 +423,7 @@ pub fn parse_config(text: &str, base_dir: &Path) -> Result<Config, ConfigError> 
                         return Err(err(
                             n,
                             format!(
-                                "unknown [hub] key {key} (known: listen, bind_ip, pool_start, pool_size, report_dir, legacy, max_rooms_per_ip, max_processes, rate_burst, rate_per_sec)"
+                                "unknown [hub] key {key} (known: listen, bind_ip, pool_start, pool_size, report_dir, legacy, max_rooms_per_ip, max_processes, room_startup_timeout_ms, room_status_timeout_ms, public_restart_max_ms, public_restart_reset_ms, rate_burst, rate_per_sec)"
                             ),
                         ))
                     }
@@ -979,6 +1021,45 @@ server = bin/spooky-kart-server
             !k.public && k.max_rooms == 4 && k.transport == "development" && k.auto_start.is_none()
         );
         assert!(k.client_settings.is_none());
+    }
+
+    #[test]
+    fn room_watchdog_settings_resolve_validate_and_allow_overrides() {
+        let c = parse("[hub]\nroom_startup_timeout_ms=45000\nroom_status_timeout_ms=12000\npublic_restart_max_ms=90000\npublic_restart_reset_ms=120000").unwrap();
+        let s = c.hub.resolve(&HubSection::default()).unwrap();
+        assert_eq!(
+            (
+                s.room_startup_timeout_ms,
+                s.room_status_timeout_ms,
+                s.public_restart_max_ms,
+                s.public_restart_reset_ms
+            ),
+            (45000, 12000, 90000, 120000)
+        );
+        assert_eq!(
+            c.hub
+                .resolve(&HubSection {
+                    room_status_timeout_ms: Some(5000),
+                    ..Default::default()
+                })
+                .unwrap()
+                .room_status_timeout_ms,
+            5000
+        );
+        for key in [
+            "room_startup_timeout_ms",
+            "room_status_timeout_ms",
+            "public_restart_max_ms",
+            "public_restart_reset_ms",
+        ] {
+            for value in [0, 3_600_001] {
+                assert!(parse(&format!("[hub]\n{key}={value}"))
+                    .unwrap()
+                    .hub
+                    .resolve(&HubSection::default())
+                    .is_err());
+            }
+        }
     }
 
     #[test]

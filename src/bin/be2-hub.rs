@@ -362,6 +362,10 @@ fn serve(flags: &Flags) -> Result<(), String> {
             report_dir: Some(settings.report_dir.clone()),
             max_processes: settings.max_processes,
             max_rooms_per_ip: settings.max_rooms_per_ip,
+            startup_timeout_ms: settings.room_startup_timeout_ms,
+            status_timeout_ms: settings.room_status_timeout_ms,
+            public_restart_max_ms: settings.public_restart_max_ms,
+            public_restart_reset_ms: settings.public_restart_reset_ms,
             ..Default::default()
         },
         limits: Limits {

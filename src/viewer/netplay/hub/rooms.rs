@@ -42,6 +42,14 @@ pub struct ManagerConfig {
     pub never_joined_timeout_ms: u64,
     /// Wait this long before restarting a dead Public room.
     pub public_restart_ms: u64,
+    /// Maximum pause after repeated Public room failures.
+    pub public_restart_max_ms: u64,
+    /// Continuous fresh status needed to reset the failure backoff.
+    pub public_restart_reset_ms: u64,
+    /// Grace for a newly started server to print its first status.
+    pub startup_timeout_ms: u64,
+    /// Grace since the last fresh status before a server is considered hung.
+    pub status_timeout_ms: u64,
     /// A retired room that still has players is closed after this long anyway.
     pub retire_grace_ms: u64,
     /// Room servers at once, all games and retired rooms together.
@@ -60,6 +68,10 @@ impl Default for ManagerConfig {
             empty_timeout_ms: 120_000,
             never_joined_timeout_ms: 45_000,
             public_restart_ms: 2_000,
+            public_restart_max_ms: 60_000,
+            public_restart_reset_ms: 60_000,
+            startup_timeout_ms: 30_000,
+            status_timeout_ms: 30_000,
             retire_grace_ms: 30 * 60_000,
             max_processes: 16,
             max_rooms_per_ip: 2,
@@ -93,6 +105,8 @@ struct Room {
     /// The capacity to list until the server reports its own.
     capacity_hint: u8,
     created_ms: u64,
+    last_status_ms: Option<u64>,
+    healthy_since_ms: Option<u64>,
     /// A player has been seen in the room at least once.
     ever_joined: bool,
     /// Since when the room has been seen empty (a new room counts as empty from its creation).
@@ -154,6 +168,7 @@ pub struct RoomManager {
     cursor: usize,
     /// Per game: not before this time may its Public room be started again.
     next_public_try_ms: HashMap<String, u64>,
+    public_failures: HashMap<String, u32>,
 }
 
 impl RoomManager {
@@ -164,11 +179,28 @@ impl RoomManager {
             rooms: Vec::new(),
             cursor: 0,
             next_public_try_ms: HashMap::new(),
+            public_failures: HashMap::new(),
         }
     }
 
     pub fn config(&self) -> &ManagerConfig {
         &self.cfg
+    }
+
+    fn schedule_public_retry(&mut self, game: &str, now_ms: u64) {
+        let failures = self.public_failures.entry(game.to_string()).or_default();
+        *failures = failures.saturating_add(1).min(32);
+        let delay = self
+            .cfg
+            .public_restart_ms
+            .saturating_mul(1_u64 << (*failures - 1))
+            .min(
+                self.cfg
+                    .public_restart_max_ms
+                    .max(self.cfg.public_restart_ms),
+            );
+        self.next_public_try_ms
+            .insert(game.to_string(), now_ms.saturating_add(delay));
     }
 
     /// Room servers running now, retired ones included.
@@ -235,8 +267,7 @@ impl RoomManager {
                     r.name, r.game, r.port
                 ));
                 if r.public && r.retired_at_ms.is_none() {
-                    self.next_public_try_ms
-                        .insert(r.game.clone(), now_ms + self.cfg.public_restart_ms);
+                    self.schedule_public_retry(&r.game, now_ms);
                 }
                 continue;
             }
@@ -248,13 +279,32 @@ impl RoomManager {
         while i < self.rooms.len() {
             let room = &mut self.rooms[i];
             room.status = room.process.status();
+            if room.status.is_some() {
+                room.last_status_ms = Some(now_ms);
+                let since = *room.healthy_since_ms.get_or_insert(now_ms);
+                if room.public
+                    && room.retired_at_ms.is_none()
+                    && now_ms.saturating_sub(since) >= cfg.public_restart_reset_ms
+                {
+                    self.public_failures.remove(&room.game);
+                }
+            } else {
+                room.healthy_since_ms = None;
+            }
             if room.status.is_some_and(|s| s.players > 0) {
                 room.ever_joined = true;
                 room.empty_since_ms = None;
             } else {
                 room.empty_since_ms.get_or_insert(now_ms);
             }
-            let why = if let Some(since) = room.retired_at_ms {
+            let unresponsive = room.status.is_none()
+                && match room.last_status_ms {
+                    Some(last) => now_ms.saturating_sub(last) >= cfg.status_timeout_ms,
+                    None => now_ms.saturating_sub(room.created_ms) >= cfg.startup_timeout_ms,
+                };
+            let why = if unresponsive {
+                Some("server stopped reporting status".to_string())
+            } else if let Some(since) = room.retired_at_ms {
                 if room.status.is_some_and(|s| s.players == 0) {
                     Some("retired and empty".to_string())
                 } else if now_ms.saturating_sub(since) >= cfg.retire_grace_ms {
@@ -285,7 +335,10 @@ impl RoomManager {
                     room.name, room.game, room.port
                 ));
                 room.process.kill();
-                self.rooms.remove(i);
+                let closed = self.rooms.remove(i);
+                if unresponsive && closed.public && closed.retired_at_ms.is_none() {
+                    self.schedule_public_retry(&closed.game, now_ms);
+                }
                 continue;
             }
             i += 1;
@@ -315,10 +368,14 @@ impl RoomManager {
                     game.config.public_name
                 )),
                 Err(e) => {
-                    let retry = self.cfg.public_restart_ms.max(5_000);
                     log(&format!("{}; will retry", e.describe(id)));
-                    self.next_public_try_ms
-                        .insert(id.to_string(), now_ms + retry);
+                    match e {
+                        StartFail::Spawn(_) => self.schedule_public_retry(id, now_ms),
+                        StartFail::Capacity(_) => {
+                            self.next_public_try_ms
+                                .insert(id.to_string(), now_ms.saturating_add(5_000));
+                        }
+                    }
                 }
             }
         }
@@ -353,6 +410,8 @@ impl RoomManager {
             status: None,
             capacity_hint: game.info.max_seats.min(255) as u8,
             created_ms: now_ms,
+            last_status_ms: None,
+            healthy_since_ms: None,
             ever_joined: false,
             empty_since_ms: Some(now_ms),
             creator: None,
@@ -366,7 +425,11 @@ impl RoomManager {
         let mut live: Vec<&Room> = self
             .rooms
             .iter()
-            .filter(|r| r.game == game && r.retired_at_ms.is_none())
+            .filter(|r| {
+                r.game == game
+                    && r.retired_at_ms.is_none()
+                    && (r.last_status_ms.is_none() || r.status.is_some())
+            })
             .collect();
         live.sort_by_key(|r| !r.public);
         live.into_iter().map(Room::info).collect()
@@ -473,6 +536,8 @@ impl RoomManager {
             status: None,
             capacity_hint: game.info.max_seats.min(255) as u8,
             created_ms: now_ms,
+            last_status_ms: None,
+            healthy_since_ms: None,
             ever_joined: false,
             empty_since_ms: Some(now_ms),
             creator: Some(creator),
@@ -499,6 +564,7 @@ impl RoomManager {
             n += 1;
         }
         self.next_public_try_ms.remove(game);
+        self.public_failures.remove(game);
         n
     }
 
@@ -625,6 +691,9 @@ pub(crate) mod tests {
             pool_start: 5000,
             pool_size: 6,
             max_processes: 6,
+            // Lifetime tests advance synthetic time without simulating heartbeats.
+            startup_timeout_ms: u64::MAX,
+            status_timeout_ms: u64::MAX,
             ..Default::default()
         }
     }
@@ -636,6 +705,97 @@ pub(crate) mod tests {
 
     fn names(m: &RoomManager, game: &str) -> Vec<String> {
         m.rooms_of(game).into_iter().map(|r| r.name).collect()
+    }
+
+    #[test]
+    fn watchdog_recovers_only_the_hung_room_and_allows_temporary_status_loss() {
+        let (mut m, w) = manager(ManagerConfig {
+            startup_timeout_ms: 1000,
+            status_timeout_ms: 500,
+            ..cfg()
+        });
+        let reg = registry(&[entry("deadfall", 1), entry("kart", 2)]);
+        m.tick(0, &reg);
+        let deadfall = m.public_room("deadfall").unwrap().port;
+        let kart = m.public_room("kart").unwrap().port;
+        for port in [deadfall, kart] {
+            w.borrow_mut()
+                .status
+                .insert(port, status(2, RoomState::Playing));
+        }
+        m.tick(100, &reg);
+        w.borrow_mut().status.remove(&deadfall);
+        m.tick(599, &reg);
+        assert!(
+            m.rooms_of("deadfall").is_empty(),
+            "stale room hidden during grace"
+        );
+        assert!(w.borrow().killed.is_empty());
+        w.borrow_mut()
+            .status
+            .insert(deadfall, status(2, RoomState::Playing));
+        m.tick(600, &reg);
+        assert_eq!(m.rooms_of("deadfall").len(), 1);
+        w.borrow_mut().status.remove(&deadfall);
+        m.tick(1100, &reg);
+        assert_eq!(w.borrow().killed, [deadfall]);
+        assert_eq!(m.public_room("kart").unwrap().port, kart);
+        m.tick(3099, &reg);
+        assert!(m.public_room("deadfall").is_none());
+        m.tick(3100, &reg);
+        assert_ne!(m.public_room("deadfall").unwrap().port, deadfall);
+    }
+
+    #[test]
+    fn startup_watchdog_does_not_require_a_first_heartbeat() {
+        let (mut m, w) = manager(ManagerConfig {
+            startup_timeout_ms: 1000,
+            ..cfg()
+        });
+        let reg = registry(&[entry("deadfall", 1)]);
+        m.tick(0, &reg);
+        m.tick(999, &reg);
+        assert!(w.borrow().killed.is_empty());
+        m.tick(1000, &reg);
+        assert_eq!(w.borrow().killed, [5000]);
+        assert_eq!(m.processes(), 0);
+    }
+
+    #[test]
+    fn repeated_public_failures_back_off_and_only_healthy_public_runtime_resets_them() {
+        let (mut m, w) = manager(ManagerConfig {
+            public_restart_max_ms: 5000,
+            public_restart_reset_ms: 1000,
+            ..cfg()
+        });
+        let d = entry("deadfall", 1);
+        let reg = registry(std::slice::from_ref(&d));
+        m.tick(0, &reg);
+        let private = m.create(&d, "Healthy private", vec![], ip(1), 0).unwrap();
+        w.borrow_mut()
+            .status
+            .insert(private.port, status(1, RoomState::Playing));
+        let mut now = 10;
+        for delay in [2000, 4000, 5000] {
+            let port = m.public_room("deadfall").unwrap().port;
+            w.borrow_mut().dead.push(port);
+            m.tick(now, &reg);
+            assert_eq!(m.next_public_try_ms["deadfall"], now + delay);
+            m.tick(now + delay - 1, &reg);
+            assert!(m.public_room("deadfall").is_none());
+            now += delay;
+            m.tick(now, &reg);
+            now += 10;
+        }
+        let port = m.public_room("deadfall").unwrap().port;
+        w.borrow_mut()
+            .status
+            .insert(port, status(1, RoomState::Playing));
+        m.tick(now, &reg);
+        m.tick(now + 1000, &reg);
+        w.borrow_mut().dead.push(port);
+        m.tick(now + 1001, &reg);
+        assert_eq!(m.next_public_try_ms["deadfall"], now + 3001);
     }
 
     #[test]
@@ -856,7 +1016,7 @@ pub(crate) mod tests {
         m.tick(2000 + 120_000, &reg);
         assert_eq!(names(&m, "deadfall"), ["Public"]);
         assert!(w.borrow().killed.contains(&made.port));
-        // A stale status (the server hangs) reads as empty, not as the last count.
+        // A stale status (the server hangs) is not advertised to new players.
         let (mut m, w) = manager(cfg());
         let made = m.create(&d, "Mine", vec![], ip(1), 0).unwrap();
         w.borrow_mut()
@@ -865,14 +1025,7 @@ pub(crate) mod tests {
         m.tick(1000, &reg);
         w.borrow_mut().status.clear();
         m.tick(2000, &reg);
-        assert_eq!(
-            m.rooms_of("deadfall")
-                .iter()
-                .find(|r| r.name == "Mine")
-                .unwrap()
-                .players,
-            0
-        );
+        assert!(!m.rooms_of("deadfall").iter().any(|r| r.name == "Mine"));
     }
 
     #[test]
@@ -938,10 +1091,10 @@ pub(crate) mod tests {
         let pub_port = m.rooms_of("deadfall")[0].port;
         w.borrow_mut().dead.push(pub_port);
         m.tick(5000, &reg);
-        m.tick(8000, &reg);
+        m.tick(9000, &reg);
         assert!(m.rooms_of("deadfall").is_empty());
         w.borrow_mut().fail_spawn = false;
-        m.tick(13_000, &reg);
+        m.tick(17_000, &reg);
         assert_eq!(names(&m, "deadfall"), ["Public"]);
     }
 

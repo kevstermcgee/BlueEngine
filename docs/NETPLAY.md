@@ -121,6 +121,17 @@ default_auto_start })` is the whole executable (`src/bin/be2-toy-server.rs` is t
 never reused) and `NetGame::configure(&[(u8, u32)])`, called once with every setting's value before the socket binds. Both are
 optional and default to none.
 
+Native servers retain the most recent 256 match reports in memory. `--history-limit N` changes this;
+zero disables in-memory history. Every completed report still appends to `matches.jsonl` and match
+numbering keeps increasing. Library users retain the existing unlimited default and may call
+`NetServer::set_match_history_limit(Some(N))`; `None` restores unlimited retention.
+
+`NetServer::send_stats()` distinguishes local send attempts, acceptance, backpressure,
+errors and oversized messages, plus accepted bytes and snapshots. Counters reset at match start.
+Archives include the same counters in an additional top-level `send` object; existing `MatchLog`
+readers still parse old and new archives. The existing peer byte/packet counters and
+`snapshots_sent` retain their attempted-send meaning. Queue acceptance is never a delivery ack.
+
 `--info` prints `game=`, `fingerprint=` (the raw `NetGame::fingerprint()`), `build=` (`cli::build_id::<G>()`: the `Hello` value
 folded with the netplay envelope version), `max_seats=`, `tick_hz=` and one
 `setting=<id>:<name>:<flag>:<kind>:<min>:<max>:<default>` per setting, then exits 0. `--status-lines` prints
@@ -138,6 +149,16 @@ Rooms close after 120 s empty, or 45 s if nobody ever joined; each game's Public
 game's rooms without ending matches in progress (at most 30 minutes). `be2-hub verify GAME --server CANDIDATE` checks a new server
 build with the registry's own rules before it is installed, and `be2-hub status GAME` reports what the running hub holds (a reload
 acknowledgement is not readiness); `deploy/hub/update.sh` uses both. Hub rooms are raw UDP, so `transport = production` is refused.
+
+The hub also closes a room that never prints its first status within 30 seconds, or has no fresh status
+for 30 seconds. Previously healthy rooms with stale status disappear from join lists during that grace.
+The process reader already expires status after five seconds, so recovery follows that freshness window
+plus the grace. Public rooms restart after 2 seconds; repeated exits, hangs or spawn failures double
+the delay up to 60 seconds. A minute of continuous healthy Public-room status resets the backoff;
+healthy private rooms do not reset it. Retired rooms are never restarted by the watchdog.
+Optional `[hub]` keys `room_startup_timeout_ms`, `room_status_timeout_ms`, `public_restart_max_ms`,
+and `public_restart_reset_ms` set these deadlines (1..=3600000 milliseconds). Reload starts a new
+failure history. These checks use the existing native status channel; no extra listener is opened.
 
 A game's client side is `hub::client` (std only, no window): `HubClient::new(hub_addr, game_id)` for one non-blocking request
 at a time (`request_list`, `request_create_with(name, &[(setting_id, value)])`, `poll() -> Option<HubEvent>`), or the whole Play

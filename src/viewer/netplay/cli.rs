@@ -472,6 +472,8 @@ pub struct Options {
     pub join_key: Option<String>,
     pub auto_start: u32,
     pub report_dir: PathBuf,
+    /// Recent match reports retained in memory; the disk archive remains complete.
+    pub history_limit: usize,
     pub seed: Option<u64>,
     pub participants: usize,
     pub status_lines: bool,
@@ -502,6 +504,7 @@ pub fn parse_args(
         join_key: env_join_key.filter(|k| !k.is_empty()),
         auto_start: spec.default_auto_start,
         report_dir: PathBuf::from(spec.default_report_dir),
+        history_limit: 256,
         seed: None,
         participants: match spec.participants {
             Participants::Flag {
@@ -537,6 +540,7 @@ pub fn parse_args(
             "--join-key" => o.join_key = Some(value(&mut i, arg)?),
             "--auto-start" => o.auto_start = number(arg, &value(&mut i, arg)?)?,
             "--report-dir" => o.report_dir = value(&mut i, arg)?.into(),
+            "--history-limit" => o.history_limit = number(arg, &value(&mut i, arg)?)?,
             "--seed" => o.seed = Some(number(arg, &value(&mut i, arg)?)?),
             "--status-lines" => o.status_lines = true,
             "--exit-on-stdin-eof" => o.exit_on_stdin_eof = true,
@@ -619,6 +623,10 @@ pub fn help_text(spec: &ServeSpec, schema: &[SettingDef]) -> String {
         ),
     );
     line("--seed N", "fixed seed, for reproducible matches".into());
+    line(
+        "--history-limit N",
+        "recent reports kept in memory; 0 = none (default 256); disk archive unchanged".into(),
+    );
     match spec.participants {
         Participants::Flag {
             flag,
@@ -735,6 +743,7 @@ pub fn run<G: NetGame>(
     }
     let transport = server_transport(opts.transport, &opts.listen)?;
     let mut server = NetServer::<G, _>::new(transport, cfg)?;
+    server.set_match_history_limit(Some(opts.history_limit));
     if opts.exit_on_stdin_eof {
         // The hub keeps our stdin open; when it dies (even by SIGKILL) the pipe closes and so do we: no orphans.
         std::thread::spawn(|| {
@@ -915,6 +924,7 @@ mod tests {
         assert_eq!(o.transport, TransportProfile::Development);
         assert_eq!((o.auto_start, o.participants, o.seed), (45, 8, None));
         assert_eq!(o.report_dir, PathBuf::from("toy-data"));
+        assert_eq!(o.history_limit, 256);
         assert!(!o.status_lines && !o.exit_on_stdin_eof && o.join_key.is_none());
         assert_eq!(o.settings, vec![(1, 40), (2, 0), (3, 1)]);
         let Ok(Command::Run(o)) = run_args(
@@ -932,6 +942,21 @@ mod tests {
             panic!()
         };
         assert_eq!(o.participants, 1, "clamped up");
+    }
+
+    #[test]
+    fn history_limit_accepts_zero_and_rejects_invalid_values() {
+        let Ok(Command::Run(o)) = run_args("--history-limit 0") else {
+            panic!()
+        };
+        assert_eq!(o.history_limit, 0);
+        for text in [
+            "--history-limit",
+            "--history-limit -1",
+            "--history-limit many",
+        ] {
+            assert!(run_args(text).is_err());
+        }
     }
 
     #[test]

@@ -10,7 +10,8 @@ use super::wire::{
 use super::{NetGame, Seat};
 use crate::viewer::devkit::Rng;
 use crate::viewer::net::{
-    constant_time_eq, random_token, DatagramTransport, HandshakeLimiter, SessionRegistry,
+    constant_time_eq, random_token, DatagramTransport, HandshakeLimiter, SendOutcome,
+    SessionRegistry,
 };
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, VecDeque};
@@ -110,6 +111,19 @@ pub struct ServerLoad {
     pub bad_datagrams: u64,
 }
 
+/// Local transport submissions, reset when a match starts. Acceptance is not peer delivery.
+/// Archived as an additional `send` object without changing the existing match-report types.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ServerSendStats {
+    pub attempts: u64,
+    pub accepted: u64,
+    pub accepted_bytes: u64,
+    pub backpressured: u64,
+    pub errors: u64,
+    pub oversized: u64,
+    pub snapshots_accepted: u64,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct NetReport {
     pub peers: Vec<PeerReport>,
@@ -145,6 +159,7 @@ struct Player {
 /// Counters that reset every match.
 #[derive(Default)]
 struct LoadCounters {
+    send: ServerSendStats,
     ticks: u64,
     tick_us_sum: u64,
     tick_us_max: u32,
@@ -174,6 +189,7 @@ pub struct NetServer<G: NetGame, T: DatagramTransport> {
     departed: Vec<PeerReport>,
     rng: Rng,
     log: Vec<MatchLog>,
+    match_history_limit: Option<usize>,
     fingerprint: u32,
 }
 
@@ -212,6 +228,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             departed: Vec::new(),
             rng: Rng::new(seed),
             log: Vec::new(),
+            match_history_limit: None,
             fingerprint,
         })
     }
@@ -230,9 +247,23 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
     pub fn current(&self) -> Option<&G::Match> {
         self.current.as_ref()
     }
-    /// Every match finished since the server started (also appended to `matches.jsonl` when configured).
+    /// Completed matches retained in memory (also appended to `matches.jsonl` when configured).
+    /// The library retains all matches unless [`Self::set_match_history_limit`] is called.
     pub fn match_log(&self) -> &[MatchLog] {
         &self.log
+    }
+    /// Keep the most recent `limit` reports in memory; `None` retains all and `Some(0)` retains none.
+    /// This never trims the on-disk archive or resets match numbering.
+    pub fn set_match_history_limit(&mut self, limit: Option<usize>) {
+        self.match_history_limit = limit;
+        self.trim_match_history();
+    }
+
+    fn trim_match_history(&mut self) {
+        if let Some(limit) = self.match_history_limit {
+            let excess = self.log.len().saturating_sub(limit);
+            self.log.drain(..excess);
+        }
     }
     pub fn local_addr(&self) -> crate::Result<SocketAddr> {
         self.transport.local_addr()
@@ -240,22 +271,46 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
     pub fn fingerprint(&self) -> u32 {
         self.fingerprint
     }
+    /// Local send outcomes since the current match began (or process start before its first match).
+    pub fn send_stats(&self) -> ServerSendStats {
+        self.load.send
+    }
 
     fn send(&mut self, peer: SocketAddr, msg: &ServerMsg<G::Snapshot, G::Event>) {
         let bytes = encode_server::<G>(msg);
-        if bytes.len() > MAX_DATAGRAM {
+        self.send_encoded(peer, &bytes);
+    }
+
+    fn send_encoded(&mut self, peer: SocketAddr, bytes: &[u8]) -> bool {
+        self.load.send.attempts += 1;
+        if bytes.len() > MAX_DATAGRAM.min(self.transport.payload_limit(peer)) {
+            self.load.send.oversized += 1;
             eprintln!(
                 "[Server] A {}-byte message does not fit a datagram; not sent",
                 bytes.len()
             );
-            return;
+            return false;
         }
         if let Some(entry) = self.sessions.get_by_peer_mut(&peer) {
             entry.data.stats.packets_out += 1;
             entry.data.stats.bytes_out += bytes.len() as u64;
         }
         // Backpressure just drops this datagram: the next snapshot supersedes it.
-        let _ = self.transport.try_send(peer, &bytes);
+        match self.transport.try_send(peer, bytes) {
+            Ok(SendOutcome::Accepted { bytes: n }) if n == bytes.len() => {
+                self.load.send.accepted += 1;
+                self.load.send.accepted_bytes += n as u64;
+                true
+            }
+            Ok(SendOutcome::Backpressured) => {
+                self.load.send.backpressured += 1;
+                false
+            }
+            Ok(SendOutcome::Accepted { .. }) | Err(_) => {
+                self.load.send.errors += 1;
+                false
+            }
+        }
     }
 
     fn reject(&mut self, peer: SocketAddr, reason: &str) {
@@ -726,11 +781,14 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             .collect();
         for (peer, applied, acked, participant) in targets {
             let msg = self.snapshot_msg(applied, acked, participant);
-            let len = encode_server::<G>(&msg).len();
+            let bytes = encode_server::<G>(&msg);
+            let len = bytes.len();
             self.load.snapshots += 1;
             self.load.snapshot_bytes += len as u64;
             self.load.snapshot_bytes_max = self.load.snapshot_bytes_max.max(len);
-            self.send(peer, &msg);
+            if self.send_encoded(peer, &bytes) {
+                self.load.send.snapshots_accepted += 1;
+            }
         }
     }
 
@@ -769,7 +827,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             },
         };
         if let Some(dir) = &self.cfg.report_dir {
-            if let Err(e) = append_log(dir, &entry) {
+            if let Err(e) = append_log(dir, &entry, self.load.send) {
                 eprintln!("[Server] Could not write the match report: {e}");
             }
         }
@@ -781,6 +839,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             entry.net.server.tick_us_max
         ));
         self.log.push(entry);
+        self.trim_match_history();
         self.load.bad_datagrams = 0;
         self.stage = Stage::Results;
         self.stage_since = self.tick;
@@ -967,12 +1026,23 @@ fn name_hash(name: &str) -> u32 {
     })
 }
 
-fn append_log(dir: &std::path::Path, entry: &MatchLog) -> std::io::Result<()> {
+fn append_log(
+    dir: &std::path::Path,
+    entry: &MatchLog,
+    send: ServerSendStats,
+) -> std::io::Result<()> {
+    #[derive(Serialize)]
+    struct ArchivedMatch<'a> {
+        #[serde(flatten)]
+        entry: &'a MatchLog,
+        send: ServerSendStats,
+    }
     std::fs::create_dir_all(dir)?;
     let mut file = std::fs::OpenOptions::new()
         .create(true)
         .append(true)
         .open(dir.join("matches.jsonl"))?;
-    let line = serde_json::to_string(entry).map_err(std::io::Error::other)?;
+    let line =
+        serde_json::to_string(&ArchivedMatch { entry, send }).map_err(std::io::Error::other)?;
     writeln!(file, "{line}")
 }

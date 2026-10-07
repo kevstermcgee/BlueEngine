@@ -39,7 +39,7 @@ pub use client::{ClientConfig, ClientState, NetClient, NetStats, PredictionStats
 pub use failure::ConnectFailure;
 pub use server::{
     hello_fingerprint, MatchLog, NetReport, NetServer, PeerReport, PeerStats, ServerConfig,
-    ServerLoad, Stage, StatusSnapshot,
+    ServerLoad, ServerSendStats, Stage, StatusSnapshot,
 };
 pub use wire::{LobbyEntry, LobbyState, MAX_DATAGRAM};
 

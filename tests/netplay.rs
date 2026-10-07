@@ -491,7 +491,279 @@ fn every_finished_match_appends_one_json_line_to_matches_jsonl() {
     let _ = std::fs::remove_dir_all(&dir);
 }
 
+#[test]
+fn bounded_history_keeps_recent_matches_and_the_complete_disk_archive() {
+    let dir = std::env::temp_dir().join(format!("netplay-bounded-log-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let mut w = world(
+        1,
+        0,
+        0.,
+        &[0, 1],
+        ServerConfig {
+            report_dir: Some(dir.clone()),
+            ..config()
+        },
+    );
+    w.server.set_match_history_limit(Some(2));
+    for _ in 0..4 {
+        play_a_match(&mut w);
+    }
+    assert_eq!(
+        w.server
+            .match_log()
+            .iter()
+            .map(|m| m.match_index)
+            .collect::<Vec<_>>(),
+        [3, 4]
+    );
+    w.server.set_match_history_limit(Some(1));
+    assert_eq!(w.server.match_log()[0].match_index, 4);
+    w.server.set_match_history_limit(Some(0));
+    play_a_match(&mut w);
+    assert!(w.server.match_log().is_empty());
+    let text = std::fs::read_to_string(dir.join("matches.jsonl")).unwrap();
+    for line in text.lines() {
+        let archived: serde_json::Value = serde_json::from_str(line).unwrap();
+        let send = &archived["send"];
+        assert!(send["accepted"].as_u64().unwrap() > 0);
+        assert_eq!(send["attempts"], send["accepted"]);
+        assert_eq!(send["backpressured"], 0);
+        assert_eq!(send["errors"], 0);
+        assert_eq!(send["oversized"], 0);
+    }
+    let entries: Vec<MatchLog> = text
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    assert_eq!(
+        entries.iter().map(|m| m.match_index).collect::<Vec<_>>(),
+        [1, 2, 3, 4, 5]
+    );
+    w.server.set_match_history_limit(None);
+    play_a_match(&mut w);
+    assert_eq!(w.server.match_log()[0].match_index, 6);
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
 // ---- the envelope ----
+
+// Instrument the game codec without changing the production wire format.
+struct ControlledTransport {
+    endpoint: LoopEnd,
+    mode: std::rc::Rc<std::cell::Cell<u8>>,
+    limit: std::rc::Rc<std::cell::Cell<usize>>,
+    submissions: std::rc::Rc<std::cell::Cell<usize>>,
+}
+impl DatagramTransport for ControlledTransport {
+    fn send(&self, peer: SocketAddr, data: &[u8]) -> vesper3d::Result<usize> {
+        self.endpoint.send(peer, data)
+    }
+    fn receive(&mut self) -> vesper3d::Result<Vec<vesper3d::viewer::net::Datagram>> {
+        self.endpoint.receive()
+    }
+    fn local_addr(&self) -> vesper3d::Result<SocketAddr> {
+        self.endpoint.local_addr()
+    }
+    fn payload_limit(&self, _: SocketAddr) -> usize {
+        self.limit.get()
+    }
+    fn try_send(
+        &self,
+        peer: SocketAddr,
+        data: &[u8],
+    ) -> vesper3d::Result<vesper3d::viewer::net::SendOutcome> {
+        use vesper3d::viewer::net::SendOutcome;
+        self.submissions.set(self.submissions.get() + 1);
+        match self.mode.get() {
+            1 => Ok(SendOutcome::Backpressured),
+            2 => Err(std::io::Error::other("injected transport failure").into()),
+            _ => self.endpoint.try_send(peer, data),
+        }
+    }
+}
+
+#[test]
+fn send_outcomes_distinguish_acceptance_backpressure_errors_and_active_payload_limits() {
+    use std::cell::Cell;
+    use std::rc::Rc;
+    let net = LoopNet::new(0, 0, 0., 99);
+    let mode = Rc::new(Cell::new(0));
+    let limit = Rc::new(Cell::new(MAX_DATAGRAM));
+    let submissions = Rc::new(Cell::new(0));
+    let mut server = NetServer::<ToyGame, _>::new(
+        ControlledTransport {
+            endpoint: net.endpoint(addr(0)),
+            mode: mode.clone(),
+            limit: limit.clone(),
+            submissions: submissions.clone(),
+        },
+        config(),
+    )
+    .unwrap();
+    let peer = net.endpoint(addr(1));
+    let hello = encode_client::<ToyGame>(&ClientMsg::Hello {
+        nonce: [17, 19],
+        fingerprint: server.fingerprint(),
+        name: "Transport test".into(),
+        key: String::new(),
+        choice: 1,
+    });
+    let submit = |server: &mut NetServer<ToyGame, ControlledTransport>| {
+        peer.send(addr(0), &hello).unwrap();
+        net.advance();
+        server.poll(Instant::now());
+    };
+    submit(&mut server);
+    let accepted = server.send_stats();
+    assert!(accepted.accepted > 0 && accepted.accepted_bytes > 0);
+    assert_eq!(accepted.attempts, accepted.accepted);
+    mode.set(1);
+    submit(&mut server);
+    assert!(server.send_stats().backpressured > 0);
+    mode.set(2);
+    submit(&mut server);
+    assert!(server.send_stats().errors > 0);
+    let previous = submissions.get();
+    limit.set(0);
+    submit(&mut server);
+    assert_eq!(
+        submissions.get(),
+        previous,
+        "oversized messages are never submitted"
+    );
+    let stats = server.send_stats();
+    assert!(stats.oversized > 0);
+    assert_eq!(stats.accepted, accepted.accepted);
+    assert_eq!(stats.accepted_bytes, accepted.accepted_bytes);
+    assert_eq!(
+        stats.attempts,
+        stats.accepted + stats.backpressured + stats.errors + stats.oversized
+    );
+}
+
+thread_local! { static SNAPSHOT_WRITES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) }; }
+struct CountedGame;
+struct CountedView;
+impl vesper3d::viewer::netplay::ClientView<CountedGame> for CountedView {
+    fn new() -> Self {
+        Self
+    }
+    fn on_snapshot(&mut self, _: &ToySnapshot, _: Option<usize>, _: &[(u32, ToyInput)], _: f64) {}
+    fn on_input(&mut self, _: &ToyInput) {}
+    fn frame(&mut self, _: f64, _: f32) {}
+    fn reset(&mut self) {}
+}
+impl NetGame for CountedGame {
+    type Input = ToyInput;
+    type Match = <ToyGame as NetGame>::Match;
+    type View = CountedView;
+    type Snapshot = ToySnapshot;
+    type Event = ToyEvent;
+    const NAME: &'static str = ToyGame::NAME;
+    const MAX_SEATS: usize = ToyGame::MAX_SEATS;
+    const CHOICES: u8 = ToyGame::CHOICES;
+    fn fingerprint() -> u32 {
+        ToyGame::fingerprint()
+    }
+    fn write_input(i: &ToyInput, w: &mut Writer) {
+        ToyGame::write_input(i, w);
+    }
+    fn read_input(r: &mut Reader) -> vesper3d::viewer::net::codec::WireResult<ToyInput> {
+        ToyGame::read_input(r)
+    }
+    fn write_snapshot(s: &ToySnapshot, w: &mut Writer) {
+        SNAPSHOT_WRITES.with(|n| n.set(n.get() + 1));
+        ToyGame::write_snapshot(s, w);
+    }
+    fn read_snapshot(r: &mut Reader) -> vesper3d::viewer::net::codec::WireResult<ToySnapshot> {
+        ToyGame::read_snapshot(r)
+    }
+    fn write_event(e: &ToyEvent, w: &mut Writer) {
+        ToyGame::write_event(e, w);
+    }
+    fn read_event(r: &mut Reader) -> vesper3d::viewer::net::codec::WireResult<ToyEvent> {
+        ToyGame::read_event(r)
+    }
+    fn start(
+        seed: u64,
+        seats: &[vesper3d::viewer::netplay::Seat],
+        participants: usize,
+    ) -> (Self::Match, Vec<usize>) {
+        ToyGame::start(seed, seats, participants)
+    }
+    fn participants(m: &Self::Match) -> usize {
+        ToyGame::participants(m)
+    }
+    fn step(m: &mut Self::Match, inputs: &[Option<ToyInput>]) -> Vec<ToyEvent> {
+        ToyGame::step(m, inputs)
+    }
+    fn release(m: &mut Self::Match, p: usize) {
+        ToyGame::release(m, p);
+    }
+    fn snapshot(m: &Self::Match, p: Option<usize>) -> ToySnapshot {
+        ToyGame::snapshot(m, p)
+    }
+    fn is_over(m: &Self::Match) -> bool {
+        ToyGame::is_over(m)
+    }
+    fn report(m: &Self::Match) -> serde_json::Value {
+        ToyGame::report(m)
+    }
+}
+
+#[test]
+fn each_recipient_snapshot_is_encoded_once_and_decodes_without_wire_changes() {
+    let net = LoopNet::new(0, 0, 0., 9);
+    let mut server = NetServer::<CountedGame, _>::new(net.endpoint(addr(0)), config()).unwrap();
+    let mut clients: Vec<_> = (1..=2)
+        .map(|n| {
+            NetClient::<CountedGame, _>::new(
+                net.endpoint(addr(n)),
+                addr(0),
+                ClientConfig {
+                    name: format!("Counted {n}"),
+                    key: String::new(),
+                    choice: n as u8,
+                },
+            )
+            .unwrap()
+        })
+        .collect();
+    for tick in 0..300 {
+        net.advance();
+        server.poll(Instant::now());
+        server.step(Instant::now());
+        for client in &mut clients {
+            client.poll(tick as f64 / 60.);
+            if *client.state() == ClientState::Lobby {
+                client.ready(true);
+            }
+        }
+        if server.stage() == Stage::Match {
+            break;
+        }
+    }
+    assert_eq!(server.stage(), Stage::Match);
+    SNAPSHOT_WRITES.with(|n| n.set(0));
+    let before = server.send_stats().snapshots_accepted;
+    for _ in 0..CountedGame::SNAPSHOT_EVERY {
+        net.advance();
+        server.poll(Instant::now());
+        server.step(Instant::now());
+    }
+    assert_eq!(
+        SNAPSHOT_WRITES.with(|n| n.get()),
+        2,
+        "one encoding for each of two recipients"
+    );
+    assert_eq!(server.send_stats().snapshots_accepted - before, 2);
+    net.advance();
+    for client in &mut clients {
+        client.poll(10.);
+        assert_eq!(*client.state(), ClientState::Playing);
+    }
+}
 
 fn sample_snapshot() -> ToySnapshot {
     ToySnapshot {
