@@ -1,6 +1,6 @@
 # Idea Forge: development feedback for BlueEngine
 
-Date: 2026-10-07. Project: `games/idea-forge`. Runtime: portable, 2D, offline.
+Date: 2026-10-07. Updated: 2026-10-08. Project: `games/idea-forge`. Runtime: portable, 2D, offline.
 Delivery: Windows x64 EXE installer on BlueEngineGames. Linux is a native verification
 target. The rendering-free CLI is available from source. An initial browser build
 was tested from an older branch; browser gameplay is retired on current main and
@@ -241,7 +241,7 @@ explicit prerequisites in manual release orchestration.
 
 ### IF-15: hosted Windows runners lack the native client's required OpenGL
 
-Severity: medium for CI. Status: CI renderer setup; actual rerun required.
+Severity: medium for CI. Status: verified in the real isolated Windows package smoke.
 
 The Windows utility tests and Clippy passed. Native identity, full icon set,
 package hashes and embedded FileDescription/ProductName/icon also passed. The
@@ -256,13 +256,60 @@ inherited by child processes as described in
 [Microsoft's DLL search contract](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order).
 The standard ship verifier still copies only declared product files and executes
 that isolated package; renderer DLLs remain CI dependencies and are not bundled
-with the utility. No smoke skip or injected success is used. The rerun must produce
-an actual nonblank capture before this finding can be marked verified.
+with the utility. No smoke skip or injected success is used. The rerun produced
+an actual nonblank
+960x540 capture; its native Windows receipt records `smoke: true` at engine
+revision `54b5e87ca766`. The picture was inspected. Both native utility CI jobs passed.
 
 Recommendation: provide documented software-rendered Windows smoke infrastructure
 for portable OpenGL clients. Keep hardware-driver and audible-output claims separate
 from this virtual-runtime evidence. Preserve resource-only failures and launch
 failures as distinct diagnostics, since one does not imply the other passed.
+
+### IF-16: one parallel local engine test failed an immediately released UDP port
+
+Severity: low for CI stability. Status: open; isolated retry passed.
+
+A full local run stopped at stage 14/39: `the_real_spawner_skips_ports_in_use`
+failed its positive port-availability assertion after dropping the held UDP socket.
+The remaining 493 tests in that selection passed. The exact isolated retry passed
+immediately. A concurrent allocation of the released ephemeral port is a plausible
+explanation, not a demonstrated root cause. No spawner behavior was changed for
+this offline utility. Full Linux/Windows CI subsequently passed all engine stages.
+
+Recommendation: review the test's assumption that a released port stays available
+between drop and probe under parallel socket tests. Record bind errors and avoid
+promoting a partial full run or isolated retry into full-suite completion evidence.
+
+### IF-17: a task-local verification cache exhausted disk capacity
+
+Severity: medium for local verification. Status: capacity recovered; interrupted
+full-run evidence remains partial.
+
+The final feedback check passed stages 1 through 19 of the 39-stage engine plan.
+Stage 20, schema-validation Clippy, could not write Rust metadata or its incremental
+query cache: OS error 28, no space left on device. The error also prevented the
+runner from finishing its normal report. The task-owned target directory occupied
+24 GiB, including approximately 9.8 GiB of incremental caches; the root volume had
+no available space. This is a build-resource failure, not a passing full check.
+
+Recovery removed only the inactive `debug/incremental` and `itest/incremental`
+directories inside this task's isolated target, recovering approximately 9.7 GiB.
+Source, user caches, completed packages and verification captures were preserved.
+Retry the failed stage and all remaining commands from the maintained full plan;
+keep their continuation evidence separate from an uninterrupted full-check receipt.
+
+Recommendation: report available capacity before a full matrix, budget task-local
+cache growth, and preserve a failure receipt even when its normal disk is full.
+Offer safe task-owned cache cleanup and explicit continuation with content binding.
+
+The explicit continuation subsequently passed all maintained commands 20 through
+39, including the complete tooling test batch. Commands 1 through 19 had passed
+before the capacity failure. This covers the maintained local plan across two
+receipts; it is not described as one uninterrupted successful runner receipt.
+The ignored `.be2-work/final-check-continuation/report.json` records every remaining
+command and exit code. Full merged-source Linux/Windows CI is separate successful
+end-to-end evidence.
 
 ## Verification and publication evidence
 
@@ -275,8 +322,60 @@ Full Linux/Windows engine checks and browser CI passed:
 https://github.com/kevstermcgee/BlueEngine/actions/runs/37729911409.
 This is historical development evidence, not native delivery certification.
 
-Native validation and the installer/deployment receipt are recorded below when
-those gates finish. Ignored `.blue-check` and CI artifacts hold detailed evidence;
+Native completion evidence:
+
+- Source `54b5e87ca766`, merged through PR 15 into `c83bc392f717`.
+- Full Linux/Windows engine verification, shipping release builds and aggregate
+  gates passed: https://github.com/kevstermcgee/BlueEngine/actions/runs/37738209848.
+- The merged source `c83bc392f717` also passed full Linux/Windows CI, including
+  stock-audio offscreen verification:
+  https://github.com/kevstermcgee/BlueEngine/actions/runs/37741901873.
+- Native utility CI passed on both systems: 11 rule/CLI/identity/layout tests,
+  formatting, Clippy, package/icon checks and isolated executable smoke. Windows
+  also verified embedded title/product/icon resources. Native captures were reviewed.
+- Virtual X11 keyboard input with the pointer hovering Generate activated focused
+  Keep correctly. R retained the library; K saved, another Generate changed it, and
+  L restored three generated ideas and one favorite. Evidence is in the ignored
+  `.blue-check/manual-input` folder, with storage isolated from user data.
+- The complete catalog review passed at companion source `32acb2db20af`:
+  https://github.com/kevstermcgee/BlueEngineGames/actions/runs/37735869264.
+- The selected Windows installer review passed at `fc476e9e2c68`:
+  https://github.com/kevstermcgee/BlueEngineGames/actions/runs/37736894026. Its
+  catalog, ZIP and EXE hashes were checked; the payload is Windows x64 and includes
+  the standard updater. This review artifact was not claimed as a published release.
+
+Production delivery verified on 2026-10-08 at 07:35 UTC:
+
+- Complete-catalog Windows production build passed:
+  https://github.com/kevstermcgee/BlueEngineGames/actions/runs/37741291032.
+  It uses companion source `e5d8e76c8bce` and engine `54b5e87ca766`.
+- Immutable release: [blueengine-54b5e87ca766-games-e5d8e76c8bce-37741291032-1](https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-54b5e87ca766-games-e5d8e76c8bce-37741291032-1).
+- Pages deployment passed:
+  https://github.com/kevstermcgee/BlueEngineGames/actions/runs/37744249759.
+- Public [Idea Forge download page](https://kevstermcgee.github.io/BlueEngineGames/games/idea-forge/) returned HTTP 200,
+  offered the exact release's Windows installer, and appeared in the catalog.
+  The live landscape screenshot matched the authored screenshot's SHA-256.
+- Public EXE and ZIP downloads returned HTTP 200 and matched published checksum
+  files and GitHub asset digests. Installer: 2,906,763 bytes,
+  SHA-256 `65af3cca0c4e236944acd01433fa64cc344467dee4e2a5b1b89d9b32a7ecb329`.
+  ZIP SHA-256: `26443f6976250fb971bd478c220d7fc651f64439ba54e5d1c243ac4f65810371`.
+- The published catalog contains 35 playable entries, including Idea Forge.
+  The ignored `.blue-check/publication/native.json` stores the verification receipt.
+- The normal exporter synchronized merged engine `c83bc392f717` into companion
+  `c934da54dc60`. That complete production build also passed:
+  https://github.com/kevstermcgee/BlueEngineGames/actions/runs/37741924713.
+  Its Pages deployment passed:
+  https://github.com/kevstermcgee/BlueEngineGames/actions/runs/37746983417.
+- Latest [immutable release](https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-c83bc392f717-games-c934da54dc60-37741924713-1) was independently verified at
+  08:01 UTC. The public page and catalog link this release's installer; installer,
+  ZIP and screenshot returned HTTP 200. Hashes matched published sums and API
+  digests. Latest installer: 2,906,971 bytes,
+  SHA-256 `78bfce8cc355ab0f87997c47a37cbff87c438cea4cbb0daf69e4e6c6be8d7082`.
+  Latest ZIP SHA-256: `3be1b7d10a4d549f84c2a2c7ae3b47eb1a4525f948381c0499301960103c11a4`.
+  `.blue-check/publication/native.json` identifies this latest verification; its
+  downloaded artifacts are stored under the matching release-tag subdirectory.
+
+Ignored `.blue-check` and CI artifacts hold detailed evidence;
 no session logs or credentials belong in this file. Interrupted local full checks
 are not reported as successful runs.
 
