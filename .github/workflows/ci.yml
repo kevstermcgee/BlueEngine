@@ -179,10 +179,41 @@ jobs:
           cargo fmt --manifest-path games/idea-forge/Cargo.toml --check
           cargo test --locked --manifest-path games/idea-forge/Cargo.toml
           cargo clippy --locked --all-targets --manifest-path games/idea-forge/Cargo.toml -- -D warnings
+      - name: Prepare pinned software OpenGL for Windows CI
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'mesa-ci.7z'
+          $mesa = Join-Path $env:RUNNER_TEMP 'mesa-ci'
+          Invoke-WebRequest 'https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z' -OutFile $archive
+          $expected = '351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695'
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Mesa archive checksum mismatch' }
+          & 7z x $archive "-o$mesa" 'x64/*' -y
+          if ($LASTEXITCODE -ne 0) { throw 'Mesa extraction failed' }
+          $driver = Join-Path $mesa 'x64'
+          if (!(Test-Path (Join-Path $driver 'opengl32.dll'))) { throw 'Mesa OpenGL driver missing' }
+          "BE2_CI_OPENGL_DIR=$driver" >> $env:GITHUB_ENV
       - name: Windows package resources and isolated smoke
         if: runner.os == 'Windows'
-        shell: bash
-        run: python games/idea-forge/scripts/ship.py ship --no-install
+        shell: python
+        run: |
+          import ctypes, os, runpy, sys
+          # Windows children inherit this process's DLL directory. The real smoke
+          # still copies only declared product files into its isolated directory.
+          # Mesa remains a pinned CI dependency, outside the shipped package.
+          kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+          set_directory = kernel.SetDllDirectoryW
+          set_directory.argtypes = [ctypes.c_wchar_p]
+          set_directory.restype = ctypes.c_int
+          if not set_directory(os.environ['BE2_CI_OPENGL_DIR']):
+              raise ctypes.WinError(ctypes.get_last_error())
+          os.environ.update(GALLIUM_DRIVER='llvmpipe', LIBGL_ALWAYS_SOFTWARE='1')
+          sys.argv = ['games/idea-forge/scripts/ship.py', 'ship', '--no-install']
+          try:
+              runpy.run_path(sys.argv[0], run_name='__main__')
+          finally:
+              if not set_directory(None):
+                  raise ctypes.WinError(ctypes.get_last_error())
       - name: Linux package and isolated smoke
         if: runner.os == 'Linux'
         shell: bash

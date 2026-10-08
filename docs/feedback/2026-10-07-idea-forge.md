@@ -99,8 +99,8 @@ JSON through its headless CLI; desktop favorites/history use engine storage.
 No hand-written persistence format or unexpected browser network service was added.
 
 Recommendation: provide a bounded user-triggered download intent with explicit
-filename/content-type/text-size validation. Support native save dialogs and browser
-Blob downloads; clipboard should require a gesture and report denial visibly.
+filename/content-type/text-size validation. Support native save dialogs; clipboard should require an explicit action and
+report denial visibly. Browser text-download experiments are outside current native delivery.
 Test failed export without destroying the user's existing file or saved library.
 
 ### IF-06: restart can preserve progress, invalidating an absolute input probe
@@ -238,6 +238,31 @@ that review run was canceled without publishing. Staging now uses a command-scop
 publisher identity and compares the remote branch SHA with the intended commit
 before dispatch. Recommendation: make commit success and exact branch revision
 explicit prerequisites in manual release orchestration.
+
+### IF-15: hosted Windows runners lack the native client's required OpenGL
+
+Severity: medium for CI. Status: CI renderer setup; actual rerun required.
+
+The Windows utility tests and Clippy passed. Native identity, full icon set,
+package hashes and embedded FileDescription/ProductName/icon also passed. The
+isolated executable then exited 101 in miniquad's WGL initialization with
+`WGL_ARB_pixel_format is required`. This is a real failed launch, not successful
+Windows runtime evidence. The hosted runner's graphics environment was insufficient.
+
+Resolution: the Windows CI lane downloads a version-pinned, SHA-256-checked
+[Mesa distribution](https://github.com/pal1000/mesa-dist-win/releases/tag/26.2.4)
+and selects llvmpipe in the launcher process. Its temporary DLL directory is
+inherited by child processes as described in
+[Microsoft's DLL search contract](https://learn.microsoft.com/en-us/windows/win32/dlls/dynamic-link-library-search-order).
+The standard ship verifier still copies only declared product files and executes
+that isolated package; renderer DLLs remain CI dependencies and are not bundled
+with the utility. No smoke skip or injected success is used. The rerun must produce
+an actual nonblank capture before this finding can be marked verified.
+
+Recommendation: provide documented software-rendered Windows smoke infrastructure
+for portable OpenGL clients. Keep hardware-driver and audible-output claims separate
+from this virtual-runtime evidence. Preserve resource-only failures and launch
+failures as distinct diagnostics, since one does not imply the other passed.
 
 ## Verification and publication evidence
 
