@@ -1,0 +1,17 @@
+{
+  "title": "Gap Flip",
+  "tagline": "Trade empty space. Find a way together.",
+  "controls": "Click token, click axis, click ghost; Undo is unlimited; R room restart; Esc pause; K save; L load",
+  "smoke_args": [
+    "--verify",
+    "--mute",
+    "--capture",
+    "{dir}",
+    "--frames",
+    "2,28,62,90",
+    "--exit-after",
+    "92",
+    "--size",
+    "800x450"
+  ]
+}

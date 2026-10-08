@@ -1,0 +1,18 @@
+{
+  "complexity": "medium",
+  "description": "Reflect tokens across their clear corridors. Rearrange useful gaps and match every symbol in ten rooms.",
+  "id": "gap-flip",
+  "input": [
+    "keyboard",
+    "mouse"
+  ],
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 15,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}
