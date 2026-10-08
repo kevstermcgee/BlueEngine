@@ -11,7 +11,10 @@ feedback-only change.
 ## Nightly implementation and remaining scope
 
 Implementation starts from `b701462692068cb34c195d4a148a0a5df17f8c20`.
-Changes are left uncommitted for the maintenance harness; this note does not claim a final published revision.
+The nightly harness retained these changes after its final check exceeded the Unix socket pathname limit.
+Recovery integrated them with `06b670842cb0c6740be32a13b2ed77e423700e90`; the installed nightly runner now
+uses a short private temporary directory, and the server-control fixture no longer inherits a long `TMPDIR`.
+The original nightly report remains historical evidence; publication follows fresh validation of the recovered changes.
 The historical intake statement above applies to the original review, not the evidence described here.
 
 Two failures reproduced on that baseline and have focused regressions:

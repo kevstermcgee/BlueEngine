@@ -3,10 +3,12 @@
 #![cfg(unix)]
 use std::{
     io::{BufRead, Read, Write},
-    os::unix::{fs::PermissionsExt, net::UnixStream},
+    os::unix::{
+        fs::{DirBuilderExt, PermissionsExt},
+        net::UnixStream,
+    },
     path::{Path, PathBuf},
     process::{Command, Output, Stdio},
-    sync::atomic::{AtomicU32, Ordering},
     time::{Duration, Instant},
 };
 
@@ -17,8 +19,6 @@ const SIGKILL: i32 = 9;
 const SIGSTOP: i32 = 19;
 const SIGCONT: i32 = 18;
 
-static NEXT: AtomicU32 = AtomicU32::new(0);
-
 /// An isolated state directory; every server it started is killed when it is dropped.
 struct Env {
     state: PathBuf,
@@ -27,14 +27,15 @@ struct Env {
 
 impl Env {
     fn new() -> Self {
-        // Short: a Unix socket path is limited to about 100 bytes.
-        let state = std::env::temp_dir().join(format!(
-            "be2ctl-{}-{}",
-            std::process::id(),
-            NEXT.fetch_add(1, Ordering::SeqCst)
-        ));
-        let _ = std::fs::remove_dir_all(&state);
-        std::fs::create_dir_all(&state).unwrap();
+        // TMPDIR can exceed the Unix socket limit before we append servers/NAME.sock.
+        // Atomically create a private, unpredictable directory under a short root.
+        let mut random = [0; 8];
+        getrandom::fill(&mut random).unwrap();
+        let state = Path::new("/tmp").join(format!("be2ctl-{:016x}", u64::from_ne_bytes(random)));
+        std::fs::DirBuilder::new()
+            .mode(0o700)
+            .create(&state)
+            .unwrap();
         Env {
             state,
             pids: Default::default(),

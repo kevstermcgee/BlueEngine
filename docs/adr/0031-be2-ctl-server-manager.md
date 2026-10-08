@@ -42,3 +42,5 @@ a network control port.
 `tests/server_ctl.rs` drives real servers: lifecycle and final autosave, restart keeps arguments, duplicate names, startup failure,
 an unregistered server, a SIGSTOPped server that needs `--force`, stale and unreadable records, and a control socket that stays
 private and answers after garbage input.
+The fixture creates private, unpredictable state directories directly under `/tmp`, independently of `TMPDIR`,
+so deeply nested maintenance directories cannot overflow the Unix socket pathname limit.
