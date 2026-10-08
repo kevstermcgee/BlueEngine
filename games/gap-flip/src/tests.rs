@@ -69,6 +69,44 @@ fn reflection_exchanges_gaps_and_is_its_own_inverse() {
     assert_eq!(corridor(r, &[6], 0, Axis::Vertical).destination, 16);
 }
 #[test]
+fn every_two_token_corridor_preserves_boundaries_and_reverses_exactly() {
+    // Enumerate floor placements, including offsets, equal gaps and neighbors on either axis.
+    // The invariant is stronger than testing only the authored winning routes.
+    for room in ROOMS {
+        let floors: Vec<_> = (0..(room.width() * room.height()) as u8)
+            .filter(|&p| {
+                let (x, y) = room.xy(p);
+                room.floor(x, y)
+            })
+            .collect();
+        for &moving in &floors {
+            for &boundary in &floors {
+                if moving == boundary {
+                    continue;
+                }
+                for axis in [Axis::Horizontal, Axis::Vertical] {
+                    let gap = corridor(room, &[moving, boundary], 0, axis);
+                    assert!(floors.contains(&gap.destination));
+                    assert_ne!(gap.destination, boundary);
+                    let (x, y) = room.xy(moving);
+                    let (qx, qy) = room.xy(gap.destination);
+                    match axis {
+                        Axis::Horizontal => assert_eq!(y, qy),
+                        Axis::Vertical => assert_eq!(x, qx),
+                    }
+                    assert_eq!(
+                        (qx - x).abs() + (qy - y).abs(),
+                        (i32::from(gap.before) - i32::from(gap.after)).abs()
+                    );
+                    let reverse = corridor(room, &[gap.destination, boundary], 0, axis);
+                    assert_eq!(reverse.destination, moving);
+                    assert_eq!((reverse.before, reverse.after), (gap.after, gap.before));
+                }
+            }
+        }
+    }
+}
+#[test]
 fn exact_preview_needs_confirmation_and_invalid_clicks_cost_nothing() {
     let mut g = GapFlip::new(7);
     g.step(&click(center(HORIZONTAL)));

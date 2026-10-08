@@ -298,6 +298,10 @@
       {
         "source": "games/idea-forge",
         "destination": "idea-forge"
+      },
+      {
+        "source": "games/gap-flip",
+        "destination": "gap-flip"
       }
     ],
     "prototypes": [
