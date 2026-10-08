@@ -176,6 +176,12 @@ hub is stopped is not a failure.
 * **Roll back**: `update.sh --rollback GAME` verifies `CARGO-BIN.previous`, reinstalls it, reloads and waits for ready. The source
   that was rolled back is remembered, so the next run does not deploy it again until the source changes (or `--force`).
   `CARGO-BIN.previous` is only ever refreshed from a server whose activation completed.
+  Its source identity follows the retained artifact: after A succeeds, B fails readiness, and C succeeds,
+  rollback restores A with A's identity. Requesting B afterward builds B instead of claiming it is installed.
+  The updater hashes the retained file before carrying its metadata forward; rollback checks that hash before
+  assigning a source identity. A mismatched recorded artifact fails without changing the installation or receipt.
+  An older artifact with no matching source metadata can be validated and restored, but receives an unknown
+  source identity rather than borrowing another revision's identity.
   Remembering that rejected source never completes an unfinished rollback: the ordinary updater verifies the restored
   executable's size and SHA-256 against its receipt, resumes installation if interrupted, then resumes activation/readiness.
   A missing or inconsistent installed artifact is restored only from the receipt-matching, validated previous executable;
