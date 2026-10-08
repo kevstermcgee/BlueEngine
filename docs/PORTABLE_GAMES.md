@@ -45,6 +45,14 @@ Leo retains its optional native portable presentation with the same authoritativ
 radians and `sprint`; look and press edges are consumed once per fixed tick. F toggles fullscreen in
 portable native players. Unsupported device operations produce an explicit notice.
 
+`draw::Game::device_input(&mut self, Intent) -> Intent` optionally maps game-specific
+native keys into public intentions before fixed-step accumulation. It runs only
+while focused, started and unpaused; its default preserves existing input. Return
+`action: true` for a press edge. With `pointer_target_only_on_press`, a changed
+pointer is retained as an explicit command target even across frames without a tick.
+Update camera-only presentation here; keep gameplay in `Simulation::step`, and
+exercise the same commands through `verification_input` and rule tests.
+
 `GameLogic::audio_banks()` declares checked `AudioBankSpec { id, root, music }` loop banks.
 Package their directories in identity.package. `audio_level(bank, layer)` supplies finite 0..1 levels
 from read-only simulation. Checksums/PCM/sample counts are validated before decoding. Independent

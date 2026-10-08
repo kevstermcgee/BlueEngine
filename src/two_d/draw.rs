@@ -385,6 +385,13 @@ impl Particles {
 }
 pub trait Game: super::GameLogic {
     fn draw<'a>(&'a self, scene: &mut Scene<'a>);
+    /// Map native device edges into public Intent before fixed-step accumulation.
+    /// Called only while focused, started and unpaused. Camera-only state may be
+    /// updated here; gameplay must still change exclusively in Simulation::step.
+    /// A changed pointer with action=true is retained as an explicit command target.
+    fn device_input(&mut self, input: super::Intent) -> super::Intent {
+        input
+    }
     /// Optional third-person look: drag inside the canvas or use the controller's right stick.
     fn drag_look() -> bool {
         false

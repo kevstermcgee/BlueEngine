@@ -302,6 +302,10 @@
       {
         "source": "games/gap-flip",
         "destination": "gap-flip"
+      },
+      {
+        "source": "games/corkscrew-key",
+        "destination": "corkscrew-key"
       }
     ],
     "prototypes": [

@@ -1,0 +1,14 @@
+{
+  "title": "Corkscrew Key",
+  "tagline": "A turn is a journey. Six sockets. Unlimited possibilities.",
+  "controls": "1/2/3 select world axis; Left/Right select sign; Space screw step/next; Z undo; R retry chamber; H hint; right-drag orbit; scroll zoom; K save; L load; Esc pause",
+  "smoke_args": [
+    "--verify",
+    "--capture",
+    "{dir}",
+    "--frames",
+    "1,3,6,9,12",
+    "--exit-after",
+    "14"
+  ]
+}

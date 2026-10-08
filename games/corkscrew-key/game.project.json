@@ -1,0 +1,22 @@
+{
+  "complexity": "medium",
+  "description": "Six spatial puzzles: every quarter-turn translates the asymmetric key along the same fixed world axis. Unlimited undo; no timer or permanent loss.",
+  "id": "corkscrew-key",
+  "input": [
+    "keyboard",
+    "mouse"
+  ],
+  "mobile_controls": {
+    "action_label": null,
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "3d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 15,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

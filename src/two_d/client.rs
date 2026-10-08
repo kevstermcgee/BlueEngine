@@ -447,26 +447,28 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             };
         }
         let focused = platform::focused();
-        if G::pointer_target_only_on_press() {
-            pointer_actions.feed(
-                action,
-                pointer,
-                is_mouse_button_pressed(MouseButton::Left),
-                digital.action && digital.pointer.is_some(),
-            );
-        }
-        let intent = if focused && started && !paused {
-            Intent {
+        let mut intent = if focused && started && !paused {
+            game.device_input(Intent {
                 x: x.clamp(-1, 1),
                 y: y.clamp(-1, 1),
                 pointer,
-                action: false,
+                action,
                 sprint: platform::sprint_key(),
                 look: [0.; 2],
-            }
+            })
         } else {
             Intent::default()
         };
+        action = intent.action;
+        if G::pointer_target_only_on_press() {
+            pointer_actions.feed(
+                action,
+                intent.pointer,
+                is_mouse_button_pressed(MouseButton::Left) || intent.pointer != pointer,
+                digital.action && digital.pointer.is_some(),
+            );
+        }
+        intent.action = false;
         if !focused || paused || !started {
             inputs.clear();
             pointer_actions.clear();
@@ -810,6 +812,20 @@ mod platform {
 #[cfg(test)]
 mod pointer_action_tests {
     use super::*;
+    #[test]
+    fn mapped_device_command_survives_a_frame_without_a_tick_and_fires_once() {
+        let hover = Some(Point::new(400, 200));
+        let command = Some(Point::new(-1, 7));
+        let mut targets = ActionPointer::default();
+        let mut inputs = InputAccumulator::<Intent>::new();
+        // The hook maps a keyboard edge to an explicit public command target.
+        targets.feed(true, command, command != hover, false);
+        inputs.feed(Intent::default(), 1, [0.; 2]);
+        targets.feed(false, hover, false, false);
+        inputs.feed(Intent::default(), 0, [0.; 2]);
+        assert_eq!(targets.take(inputs.take_tick().pressed(1)), command);
+        assert_eq!(targets.take(inputs.take_tick().pressed(1)), None);
+    }
     #[test]
     fn keyboard_and_controller_ignore_hover_but_clicks_and_taps_keep_targets() {
         let cursor = Some(Point::new(400, 200));
