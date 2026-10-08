@@ -310,7 +310,7 @@ class DailyTests(unittest.TestCase):
                                        daily_root=self.root / "daily", timezone="America/Los_Angeles")
         self.now = datetime(2026, 10, 8, 17, tzinfo=timezone.utc)
         self.built = []
-        self.fail = False
+        self.fail_next = False
         self.create = patch.object(forge, "create_run", side_effect=self.create_worker).start()
         self.run = patch.object(forge.Forge, "run", lambda worker: self.publish_worker(worker)).start()
         self.addCleanup(patch.stopall)
@@ -331,8 +331,8 @@ class DailyTests(unittest.TestCase):
 
     def publish_worker(self, worker):
         self.built.append((worker.state["dimension"], worker.directory))
-        if self.fail:
-            self.fail = False
+        if self.fail_next:
+            self.fail_next = False
             worker.state["status"] = "failed"
             worker.save()
             raise forge.ForgeError("A genuine publication gate failed")
@@ -348,7 +348,7 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(self.create.call_count, 2)
 
     def test_failure_retries_the_same_run_then_builds_the_other_dimension(self):
-        self.fail = True
+        self.fail_next = True
         self.assertEqual(forge.daily_batch(self.args, self.now), 1)
         self.assertEqual(len(self.built), 1)
         first = self.built[0]
@@ -364,10 +364,10 @@ class DailyTests(unittest.TestCase):
                                  "order": ["3d", "2d"], "status": "pending",
                                  "slots": {"3d": {"directory": str(reserved), "status": "pending"}}})
         forge.daily_batch(self.args, self.now)
-        self.assertEqual(self.built[0], ("3d", reserved))
+        self.assertEqual(self.built[0], ("3d", reserved.resolve()))
 
     def test_published_label_without_completed_feedback_is_resumed(self):
-        self.fail = True
+        self.fail_next = True
         forge.daily_batch(self.args, self.now)
         directory = self.built[0][1]
         state = forge.load_json(directory / "state.json")
@@ -393,7 +393,7 @@ class DailyTests(unittest.TestCase):
         self.create.assert_not_called()
 
     def test_old_unfinished_batch_is_completed_before_the_new_day(self):
-        self.fail = True
+        self.fail_next = True
         forge.daily_batch(self.args, self.now)
         first = self.built[0]
         forge.daily_batch(self.args, datetime(2026, 10, 9, 17, tzinfo=timezone.utc))
@@ -424,10 +424,10 @@ class DailyTests(unittest.TestCase):
         self.assertIn("Persistent=true", timer)
         service = (units / "ideaforge-daily.service").read_text()
         self.assertIn('"daily" "--config"', service)
-        self.assertIn(f"WorkingDirectory={self.root}\n", service)
+        self.assertIn(f"WorkingDirectory={self.root.resolve()}\n", service)
         saved = forge.load_json(self.root / "config/ideaforge/daily.json")
         self.assertNotIn("publish", saved)
-        self.assertEqual(saved["engine_root"], str(self.root))
+        self.assertEqual(saved["engine_root"], str(self.root.resolve()))
         self.assertIn(["systemctl", "--user", "enable", "--now", "ideaforge-daily.timer"],
                       [call.args[0] for call in command.call_args_list])
 
