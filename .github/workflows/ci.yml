@@ -63,7 +63,7 @@ jobs:
           include-hidden-files: true
   test:
     if: always()
-    needs: [engine, leo]
+    needs: [engine, leo, idea-forge]
     strategy:
       fail-fast: false
       matrix:
@@ -75,9 +75,11 @@ jobs:
         env:
           ENGINE_RESULT: ${{ needs.engine.result }}
           LEO_RESULT: ${{ needs.leo.result }}
+          FORGE_RESULT: ${{ needs.idea-forge.result }}
         run: |
           test "$ENGINE_RESULT" = success
           test "$LEO_RESULT" = success
+          test "$FORGE_RESULT" = success
   # Independent game checks overlap engine verification. Rendered feedback is available
   # early; the workflow is green only after BOTH matrices finish every existing gate.
   leo:
@@ -146,4 +148,52 @@ jobs:
             .be2-work/leo-launchers/
             assets/games/leo/.blue-check/
             assets/games/leo/dist/
+          include-hidden-files: true
+
+  idea-forge:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: engine-checks-test
+          save-if: false
+      - name: Install native dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+      - name: Utility rules, exports, presentation and lint
+        shell: bash
+        run: |
+          cargo fmt --manifest-path games/idea-forge/Cargo.toml --check
+          cargo test --locked --manifest-path games/idea-forge/Cargo.toml
+          cargo clippy --locked --all-targets --manifest-path games/idea-forge/Cargo.toml -- -D warnings
+      - name: Windows package resources and isolated smoke
+        if: runner.os == 'Windows'
+        shell: bash
+        run: python games/idea-forge/scripts/ship.py ship --no-install
+      - name: Linux package and isolated smoke
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          printf 'pcm.!default { type null }\nctl.!default { type null }\n' > "$RUNNER_TEMP/forge-asound.conf"
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSA_CONFIG_PATH="$RUNNER_TEMP/forge-asound.conf" python games/idea-forge/scripts/ship.py ship --no-install
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: idea-forge-native-${{ runner.os }}
+          path: |
+            games/idea-forge/dist/ship.json
+            games/idea-forge/.blue-check/
           include-hidden-files: true

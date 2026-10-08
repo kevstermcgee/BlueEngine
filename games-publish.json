@@ -294,6 +294,10 @@
       {
         "source": "games/lantern-grove/.gitignore",
         "destination": "lantern-grove"
+      },
+      {
+        "source": "games/idea-forge",
+        "destination": "idea-forge"
       }
     ],
     "prototypes": [

@@ -1,0 +1,19 @@
+{
+  "complexity": "low",
+  "description": "Generate distinct gameplay mechanics, explore concrete prototype plans, and keep your favorite game ideas. Optional stories; works offline.",
+  "id": "idea-forge",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 10,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

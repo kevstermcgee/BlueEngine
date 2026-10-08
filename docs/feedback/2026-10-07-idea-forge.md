@@ -1,0 +1,233 @@
+# Idea Forge: development feedback for BlueEngine
+
+Date: 2026-10-07. Project: `games/idea-forge`. Runtime: portable, 2D, offline.
+Delivery: Windows x64 EXE installer on BlueEngineGames. Linux is a native verification
+target. The rendering-free CLI is available from source. An initial browser build
+was tested from an older branch; browser gameplay is retired on current main and
+no browser package was deployed.
+
+## Product and mechanic quality
+
+The utility generates briefs from a seeded, shuffled catalog of 36 distinct
+mechanics, equally divided among puzzle, action and strategy. Every brief has a
+specific player action and rule, play loop, explanation of the intended fun,
+minimal prototype, design risk and optional story. The catalog contains no
+cosmetic variants counted as new mechanics. Generation excludes every previously
+generated ID, even after genre changes and save/load. Exhaustion is explicit.
+
+This finite offline catalog does not establish worldwide novelty or prove fun.
+Each generated idea's risk is a concrete playtest question; prototype the core
+interaction before expanding it. Example: Borrowed Falls conserves falling
+distance; its first prototype should prove that players understand the ruler and
+discover upward movement by themselves. More authored mechanics can be added in
+a versioned update; preserve saved ID/index compatibility or supply a migration.
+
+## Development issues and proposed improvements
+
+### IF-01: keyboard/controller actions inherited a hovered pointer
+
+Severity: high for button interfaces. Status: addressed with an opt-in engine API.
+
+Evidence: `src/two_d/client.rs` constructed every Intent with the current mouse
+position, including Space and controller A. A tool could not distinguish a click
+on a button from a keyboard activation with the cursor hovering over that button.
+This made full keyboard navigation unreliable without application heuristics.
+
+Resolution: `GameLogic::pointer_target_only_on_press()` defaults to false, keeping
+continuous aiming/paddle input compatible. Idea Forge opts in. The shared client
+retains a pointer target only for a mouse press or canvas tap. That target is
+latched until the fixed-step press edge is consumed, including display frames
+that run no simulation tick; movement after the click cannot move its target.
+Pause, focus loss, restart and load clear pending input and its target. A focused button receives Space/A. The exploratory browser branch also cleared
+stale mobile-panel targets; that change is not part of native delivery. Simulation still consumes only
+Intent and never reads device APIs.
+
+Regression: engine `pointer_action_tests`, game keyboard/pointer tests, and
+native package checks; the initial browser branch also passed desktop controller
+and independent touch verification. Future refinement:
+an explicit device-source field would also support accessible text/UI widgets.
+
+### IF-02: relative scaffold engine path silently produced a wrong dependency
+
+Severity: medium. Status: workaround; engine validation remains open.
+
+Reproduction from an engine checkout:
+`be2.py map new-game idea-forge games/idea-forge . two-d`.
+The command succeeded but generated `vesper3d.path = "."`, interpreted by Cargo
+relative to the game, not the authoring command's working directory. The first
+test reported no matching `be2` package in the game directory.
+
+Workaround: corrected the game's dependency to `../..`. Recommendation: resolve
+the provided engine path in the command's directory, verify its package identity,
+then write a path relative to the output game. Add nested-output and absolute/
+relative-path fixtures. Error before creating output if the engine cannot resolve.
+
+### IF-03: an isolated worktree does not inherit browser test dependencies
+
+Severity: low. Status: resolved with the documented preparation flow.
+
+The initial `be2.py start` readiness packet found Node and Chromium but reported
+`ERR_MODULE_NOT_FOUND` for `ws`. Other worktrees had their own node_modules.
+`npm ci --ignore-scripts --prefix tools` and `web prepare` resolved this checkout's
+prerequisites. The readiness diagnostic was useful and did not install implicitly.
+Recommendation: keep setup scoped to the selected worktree and show the exact
+preparation command in its failed readiness item. Do not rely on sibling artifacts.
+
+### IF-04: prose layout needs application-owned line wrapping
+
+Severity: medium for creative tools. Status: local implementation; shared UI gap.
+
+The public drawing surface supplies text primitives, not wrapped paragraphs or
+accessible button layout/navigation. This project supplies ASCII-aware wrapping,
+button hit rectangles, focus navigation and three content pages. The source has
+an authored-text capacity test, with visual inspection still required because
+character counts do not measure proportional glyph widths.
+
+Recommendation: expose measured wrap/layout primitives independent of simulation,
+plus keyboard/controller focus and semantic button hit regions. Verify all content
+at the supported logical viewport and both mobile orientations. Keep the shared
+notice area at y=395 separate from application content. Avoid a general UI framework
+until another consumer demonstrates the same needs.
+
+### IF-05: portable exports lack a shared browser file-download interface
+
+Severity: medium for utilities. Status: known product limitation and local CLI.
+
+The portable game API handles save state, but does not expose a documented
+user-triggered text download/clipboard command. This utility exports Markdown and
+JSON through its headless CLI; desktop favorites/history use engine storage.
+No hand-written persistence format or unexpected browser network service was added.
+
+Recommendation: provide a bounded user-triggered download intent with explicit
+filename/content-type/text-size validation. Support native save dialogs and browser
+Blob downloads; clipboard should require a gesture and report denial visibly.
+Test failed export without destroying the user's existing file or saved library.
+
+### IF-06: restart can preserve progress, invalidating an absolute input probe
+
+Severity: medium for verification. Status: addressed in this project.
+
+A library-preserving `restart()` intentionally keeps previously generated ideas.
+A probe such as `generated > 1` can then pass before any new real-device action.
+Idea Forge takes a new observation baseline after restart and restore and requires
+the generated-plus-favorite count to increase. This baseline is verification-only,
+excluded from gameplay and state hashing. Pointer/keyboard/controller probes still
+use real public actions; replay never mutates state to pass a check.
+
+Recommendation: document the distinction between a persistent achievement and a
+fresh device interaction. Prefer before/after assertions in the generic browser
+gate so project probes cannot accidentally certify an earlier session's activity.
+
+### IF-07: cache and compiled target paths were offloaded to slow storage
+
+Severity: medium for iteration time. Status: task-local build mitigation.
+
+The first headless compile/test completed in 5m55s. Concurrent Cargo jobs later
+stalled while host I/O pressure exceeded 90 percent. Both compiler cache and the
+main checkout's `target/debug` and `target/itest` were symlinks to a USB-mounted
+drive. This is host evidence, not an engine benchmark or proof of one root cause.
+Bypassing only the compiler cache was insufficient. No global cache or existing
+compiled targets were modified.
+
+Mitigation: stop only this task's process trees, serialize local checks, use
+command-local `RUSTC_WRAPPER=''` and a real local-disk `CARGO_TARGET_DIR`. Full
+Linux/Windows CI provides completion evidence; interrupted local full runs do not.
+The initial anonymous, empty-target reproduction passed on local disk.
+Recommendation: show resolved cache/target paths and observed stalls in timing
+diagnostics without silently changing a user's build configuration.
+
+### IF-08: headless success did not compile the presentation implementation
+
+Severity: low. Status: corrected application error.
+
+The first browser compilation caught E0185: this project's `show_hud` method used
+`&self`, while `draw::Game::show_hud` is an associated function. Headless rule tests
+had passed because the presentation implementation is feature-gated. Corrected
+the implementation to `fn show_hud() -> bool`. Keep both presentation compilation
+and headless behavior in the delivery gates; neither replaces the other.
+
+### IF-09: the default cue sparkle covered prose
+
+Severity: low. Status: corrected presentation behavior and restored native hook.
+
+Desktop preview showed the shared pickup/success sparkle at the default canvas
+center, briefly obscuring the mechanic text. Override the existing `cue_point`
+hook to put generation feedback on Generate and favorite feedback on Keep.
+The initial branch provided this hook. Current native main had removed it, so
+the compatible default-center hook is restored for this utility; no new particle
+system is needed.
+Recommendation: mention this hook next to portable UI/utility guidance so text
+interfaces do not inherit an arena-centered effect by accident.
+
+### IF-10: short touch verification replay outran audio activation
+
+Severity: medium. Status: fixed in the exploratory browser branch; outside native delivery.
+
+The first complete build passed desktop but failed independent touch verification:
+audio decoded three buffers and both browser contexts eventually ran, but zero
+sound submissions were recorded. The three-frame accelerated route could consume
+all gameplay cues before the gesture's asynchronous AudioContext resume completed.
+This was a real failed gate, not a missing audio asset or a passing touch test.
+
+Resolution: accelerated verification waits for the real platform audio-active
+signal before advancing the public-input route. It does not inject cues, change
+rules or synthesize a success counter. Ordinary play timing is unchanged. The
+shipping touch gate must still prove activation, decode and actual submissions.
+This readiness guard is separate from proof of audible or enjoyable audio.
+
+### IF-11: stale checkout guidance selected a retired publication route
+
+Severity: high for delivery. Status: corrected workflow; policy already exists.
+
+The initial engine checkout was on `couch-games`, which still documented browser
+publication. Its package passed desktop/touch checks, anonymous exact-commit
+retrieval and empty-target reproduction. The adapter then refused to rewrite the
+current companion catalog because its integration point had changed. No companion
+push occurred. Reading current main revealed ADR 0045/0049 and the explicit
+Windows-installer-only policy; updating an adapter to reintroduce browser hosting
+would have violated that policy.
+
+Resolution: rebuilt this feature on current engine main, refreshed the generated
+project/ship tooling, declared Windows distribution and Linux verification, and
+used the native installer workflow. Recommendation: check current distribution
+policy and companion contract before expensive builds, including when the task
+starts from a long-lived engine branch. Fail before source retrieval/reproduction
+when the current destination rejects the chosen delivery type.
+
+### IF-12: the native shared client had no persistent restart hook
+
+Severity: medium for utilities. Status: addressed with a compatible engine hook.
+
+The current native client reset every game with `G::new(7)` when R was pressed,
+which would discard Idea Forge's library. Added `GameLogic::restart()` with that
+same default behavior; the utility overrides it to request another idea while
+retaining generated IDs and favorites. Existing games keep their original reset.
+The utility's restart/snapshot tests verify library preservation. Future utilities
+should choose reset semantics deliberately and describe them in their controls.
+
+## Verification and publication evidence
+
+The initial branch `db361f4786b07e71fea41100a0154b9ade7c1159` passed 10 headless/CLI/
+identity tests, all six inspected browser preview captures, desktop/controller and
+independent touch shipping checks, anonymous exact-revision retrieval and an
+empty-target rebuild with matching package hashes. Package ID:
+`ad62463a401423065d192c50dbe8d33a7fae157ade781bd7d8558d935f096a12`.
+Full Linux/Windows engine checks and browser CI passed:
+https://github.com/kevstermcgee/BlueEngine/actions/runs/37729911409.
+This is historical development evidence, not native delivery certification.
+
+Native validation and the installer/deployment receipt are recorded below when
+those gates finish. Ignored `.blue-check` and CI artifacts hold detailed evidence;
+no session logs or credentials belong in this file. Interrupted local full checks
+are not reported as successful runs.
+
+Hardware limits: virtual displays, software rendering and emulated controller/
+touch checks do not certify physical phones/controllers or audible speaker output.
+
+## What future engine runs should retrieve
+
+Learning ledger entries use `utility`, `buttons`, `pointer`, `keyboard`, `wrapping`,
+`export`, `scaffold`, `path`, `probe`, `distribution`, `native` and `restart` keywords.
+Representative query: `portable utility buttons keyboard pointer wrapping export`.
+The learning loop should surface these traps before another creative tool is built.
+Promote shared capabilities only with their own regression evidence.

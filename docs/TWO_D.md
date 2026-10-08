@@ -59,3 +59,8 @@ for a complete package and isolated launch smoke; plain ship requests installati
 The shared native client owns storage/audio/input. Retain the engine's Snapshot
 migration and deterministic continuation tests. A compile pass does not prove
 rendered behavior, physical controller input or audible playback.
+
+Button utilities can opt into `GameLogic::pointer_target_only_on_press()` so keyboard/controller
+actions use focus and actual click targets survive frames without simulation ticks. Default input
+retains continuous pointer aiming. Override `restart()` to keep a persistent library; its default
+creates a fresh `Self::new(7)`, preserving ordinary game restart behavior.
