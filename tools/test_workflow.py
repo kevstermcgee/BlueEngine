@@ -304,8 +304,9 @@ class AutomaticLoopTests(unittest.TestCase):
     def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertIn('run: python tools/be2.py check', ci)
-        for gate in ('cargo build --release --locked', 'needs: [engine, leo]',
-                     'Stock audio offscreen verification'):
+        for gate in ('cargo build --release --locked', 'needs: [engine, leo, idea-forge]',
+                     'Stock audio offscreen verification', 'test "$FORGE_RESULT" = success',
+                     'Windows package resources and isolated smoke'):
             self.assertIn(gate, ci)
         self.assertNotIn('wasm32-unknown-unknown', ci)
         self.assertNotIn('npm ci', ci)

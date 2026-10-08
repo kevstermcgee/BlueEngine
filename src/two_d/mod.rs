@@ -125,6 +125,14 @@ pub trait GameLogic: Snapshot<Input = Intent> + Sized {
     const VERIFY_TICKS: u32;
     fn new(seed: u64) -> Self;
     fn tick(&self) -> u32;
+    /// Default restart begins a fresh game; persistent utilities may keep their library.
+    fn restart(&mut self) {
+        *self = Self::new(7);
+    }
+    /// Only click/tap presses supply pointer action targets; default retains continuous aiming.
+    fn pointer_target_only_on_press() -> bool {
+        false
+    }
     fn outcome(&self) -> &'static str;
     /// A public-input playthrough, also consumed by native/headless and browser verification.
     fn verification_input(tick: u32) -> Intent;
@@ -145,6 +153,10 @@ pub trait GameLogic: Snapshot<Input = Intent> + Sized {
     /// Presentation events; never feed audio/particles back into authoritative state.
     fn take_cues(&mut self) -> Vec<usize> {
         Vec::new()
+    }
+    /// Position of read-only cue feedback; defaults to the existing canvas center.
+    fn cue_point(&self, _cue: usize) -> Point {
+        Point::new(400, 200)
     }
 }
 pub fn verify<G: GameLogic>() -> (u64, &'static str) {
