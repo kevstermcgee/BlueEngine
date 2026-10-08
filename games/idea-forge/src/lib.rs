@@ -238,6 +238,13 @@ impl GameLogic for Forge {
     fn pointer_target_only_on_press() -> bool {
         true
     }
+    fn cue_point(&self, cue: usize) -> Point {
+        if cue == 2 {
+            Point::new(394, 366)
+        } else {
+            Point::new(254, 366)
+        }
+    }
     fn take_cues(&mut self) -> Vec<usize> {
         std::mem::take(&mut self.cues)
     }

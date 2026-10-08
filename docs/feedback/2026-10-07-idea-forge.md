@@ -139,6 +139,17 @@ had passed because the presentation implementation is feature-gated. Corrected
 the implementation to `fn show_hud() -> bool`. Keep both presentation compilation
 and headless behavior in the delivery gates; neither replaces the other.
 
+### IF-09: the default cue sparkle covered prose
+
+Severity: low. Status: corrected presentation behavior after capture inspection.
+
+Desktop preview showed the shared pickup/success sparkle at the default canvas
+center, briefly obscuring the mechanic text. Override the existing `cue_point`
+hook to put generation feedback on Generate and favorite feedback on Keep.
+The engine already provided the right hook; no new particle system was needed.
+Recommendation: mention this hook next to portable UI/utility guidance so text
+interfaces do not inherit an arena-centered effect by accident.
+
 ## Verification and publication evidence
 
 Evidence is kept in the game's ignored `.blue-check` folders and the engine's
