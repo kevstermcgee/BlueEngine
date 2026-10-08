@@ -256,6 +256,22 @@ class SupervisorTests(unittest.TestCase):
             self.worker.rebuild()
         self.assertEqual(self.state["completed"], ["publish-games"])
 
+    def test_local_review_defers_windows_delivery_to_the_supervisor_gates(self):
+        _, capture = self.native_game()
+        def agent(label, prompt, schema, **kwargs):
+            if label.startswith("build"):
+                return {"summary": "Built", "findings": []}
+            self.assertIn("before\nWindows CI and installer publication", prompt)
+            self.assertIn("actual\nportability defect in the source remains a blocker", prompt)
+            self.assertEqual(kwargs["image"], capture)
+            return {"approved": True, "mechanic_assessment": "Implemented",
+                    "visual_assessment": "Readable", "blockers": [], "findings": []}
+        with patch.object(self.worker, "agent", side_effect=agent), patch.object(self.worker, "verify_local"):
+            self.worker.build()
+        self.assertIn("verified_code", self.state)
+        self.assertNotIn("ci", self.state)
+        self.assertNotIn("publication", self.state)
+
 
 if __name__ == "__main__":
     unittest.main()

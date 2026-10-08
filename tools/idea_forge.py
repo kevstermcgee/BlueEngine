@@ -434,7 +434,14 @@ inspect the attached actual isolated native-package capture. Identify whether th
 rule is implemented and understandable, whether its specified outcome/retry loop works,
 and any broken input, layout or fabricated verification shortcut. Do not edit files.
 approved must be false when there are blockers. Compilation/automated tests cannot prove
-subjective fun or global novelty. Record genuine engine friction separately in findings
+subjective fun or global novelty. This is the LOCAL IMPLEMENTATION review, before
+Windows CI and installer publication. Assess the implementation and the native evidence
+available on this host. The supervisor subsequently requires exact-source Windows and
+Linux native CI, Windows installer review and verified production downloads. Windows
+installer evidence pending those later stages is an expected pipeline state; it does
+not block this local review and must not be reported as engine friction. An actual
+portability defect in the source remains a blocker. Never claim overall delivery here.
+Record genuine engine friction separately in findings
 with sanitized reproduction/workaround/improvement details, not transcripts or identifiers.
 Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image=capture)
                 self.state.setdefault("reviews", []).append(review)

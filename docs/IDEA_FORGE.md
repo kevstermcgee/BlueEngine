@@ -58,6 +58,9 @@ tools. The supervisor independently runs game formatting, nonempty behavioral
 tests, Clippy and an isolated native package smoke. A separate read-only AI review
 inspects source and the actual capture; blocking issues trigger bounded repairs.
 Default repair budget is two additional attempts (`--repairs`).
+This review approves the local implementation; Windows installer evidence is
+collected by the subsequent native CI and publication gates. Source portability
+defects remain review blockers.
 
 Publication requires exact-commit full engine CI, generated-game Windows and Linux
 tests/resources/isolated launches, and a Windows installer review. The companion
