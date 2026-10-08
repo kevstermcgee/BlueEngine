@@ -799,15 +799,53 @@ class PreviousArtifactAndRollback(DeployTestCase):
     def test_the_known_working_server_is_kept_and_an_unfinished_install_does_not_replace_it(self):
         self.f.deploy()
         first = self.f.installed()
+        first_receipt = self.f.receipt()
         self.f.ctl(status=['starting'])
         self.assertFailed(self.update_to('aaaa0002'), 'NOT ready')
+        second_identity = self.f.receipt()['identity']
         self.assertEqual((self.f.install / 'game-server.previous').read_text(), first)
         # A third build replaces the unfinished second one: the previous known-good file is still the first.
         self.f.ctl(status=['ready'])
         self.assertOk(self.update_to('aaaa0003'))
         self.assertEqual((self.f.install / 'game-server.previous').read_text(), first)
+        prior = self.f.receipt()['previous']
+        self.assertEqual(prior['identity'], first_receipt['identity'])
+        self.assertEqual(prior['sha256'], first_receipt['binary']['sha256'])
+        self.assertOk(self.f.run('--rollback', 'game'))
+        self.assertEqual(self.f.installed(), first)
+        self.assertEqual(self.f.receipt()['identity'], first_receipt['identity'])
+        builds = len(self.f.builds())
+        self.assertOk(self.update_to('aaaa0002'))
+        self.assertEqual(len(self.f.builds()), builds + 1)
+        self.assertIn('aaaa0002', self.f.installed())
+        self.assertEqual(self.f.receipt()['identity'], second_identity)
+        self.assertOk(self.update_to('aaaa0003'))
         self.assertOk(self.update_to('aaaa0004'))
         self.assertIn('aaaa0003', (self.f.install / 'game-server.previous').read_text())
+
+    def test_rollback_rejects_a_valid_but_unrecorded_previous_artifact(self):
+        first = self.prepare_rollback()
+        # Both are valid servers, but the receipt records A while the file now contains B.
+        installed = self.f.installed()
+        receipt = self.f.receipt()
+        self.assertNotEqual(first, installed)
+        (self.f.install / 'game-server.previous').write_text(installed)
+        self.assertFailed(self.f.run('--rollback', 'game'), 'does not match')
+        self.assertEqual(self.f.installed(), installed)
+        self.assertEqual(self.f.receipt(), receipt)
+
+    def test_a_replaced_install_does_not_lend_its_source_identity_to_the_previous_file(self):
+        self.f.deploy()
+        recorded = self.f.receipt()['identity']
+        # An externally installed, valid server can be retained, but has unknown source provenance.
+        (self.f.install / self.f.BIN).write_text('#!/bin/sh\n# BUILD=external MODE=ok\n')
+        self.assertOk(self.update_to('aaaa0002'))
+        prior = self.f.receipt()['previous']
+        self.assertIsNone(prior['identity'])
+        self.assertOk(self.f.run('--rollback', 'game'))
+        self.assertIn('external', self.f.installed())
+        self.assertEqual(self.f.receipt()['identity'], 'rolled-back')
+        self.assertNotEqual(self.f.receipt()['identity'], recorded)
 
     def test_rollback_reinstalls_the_previous_server_validates_it_and_is_not_undone_by_the_next_run(self):
         self.f.deploy()

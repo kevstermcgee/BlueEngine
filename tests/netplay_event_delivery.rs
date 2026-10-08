@@ -1,17 +1,87 @@
 //! Busy combat must not make state snapshots permanently exceed the datagram budget.
+use std::cell::RefCell;
 use std::net::SocketAddr;
+use std::rc::Rc;
 use std::time::Instant;
 use vesper3d::viewer::net::codec::{Reader, WireResult, Writer};
-use vesper3d::viewer::net::loopback::LoopNet;
+use vesper3d::viewer::net::loopback::{LoopEnd, LoopNet};
+use vesper3d::viewer::net::{Datagram, DatagramTransport};
 use vesper3d::viewer::netplay::{
     ClientConfig, ClientState, ClientView, NetClient, NetGame, NetServer, PredictionStats, Seat,
     ServerConfig,
 };
 
-struct CombatGame<const MIN: usize = 1, const LARGE: bool = false>;
+struct CombatGame<
+    const MIN: usize = 1,
+    const LARGE: bool = false,
+    const DURATION: u32 = 180,
+    const CAPACITY: usize = 2,
+>;
 struct CombatView(u32);
 
-impl<const MIN: usize, const LARGE: bool> NetGame for CombatGame<MIN, LARGE> {
+struct QueuedDatagram {
+    from: SocketAddr,
+    to: SocketAddr,
+    bytes: Vec<u8>,
+}
+struct OrderedEnd {
+    inner: LoopEnd,
+    outgoing: Rc<RefCell<Vec<QueuedDatagram>>>,
+}
+impl DatagramTransport for OrderedEnd {
+    fn send(&self, peer: SocketAddr, data: &[u8]) -> vesper3d::Result<usize> {
+        assert!(data.len() <= 1100, "actual transport payload ceiling");
+        self.outgoing.borrow_mut().push(QueuedDatagram {
+            from: self.inner.local_addr()?,
+            to: peer,
+            bytes: data.to_vec(),
+        });
+        Ok(data.len())
+    }
+    fn payload_limit(&self, _: SocketAddr) -> usize {
+        1100
+    }
+    fn receive(&mut self) -> vesper3d::Result<Vec<Datagram>> {
+        self.inner.receive()
+    }
+    fn local_addr(&self) -> vesper3d::Result<SocketAddr> {
+        self.inner.local_addr()
+    }
+}
+
+#[test]
+fn previous_reliable_event_protocol_is_rejected_at_handshake() {
+    use vesper3d::viewer::net::DatagramTransport;
+    use vesper3d::viewer::netplay::wire::{decode_server, encode_client, ClientMsg, ServerMsg};
+    let net = LoopNet::new(0, 0, 0., 81);
+    let addr = |n: u16| SocketAddr::from(([127, 0, 0, 1], 35_000 + n));
+    let mut server =
+        NetServer::<CombatGame, _>::new(net.endpoint(addr(0)), ServerConfig::default()).unwrap();
+    let mut client = net.endpoint(addr(1));
+    let hello = encode_client::<CombatGame>(&ClientMsg::Hello {
+        key: String::new(),
+        name: "Old reliable client".into(),
+        choice: 0,
+        nonce: [1, 2],
+        // Pinned NEV1 fingerprint for this game, before retention-aware gap framing.
+        fingerprint: 0x8acf_92d1,
+    });
+    client.send(addr(0), &hello).unwrap();
+    net.advance();
+    server.poll(Instant::now());
+    net.advance();
+    let replies = client.receive().unwrap();
+    assert_eq!(replies.len(), 1);
+    assert!(matches!(
+        decode_server::<CombatGame>(&replies[0].data).unwrap(),
+        ServerMsg::Rejected { .. }
+    ));
+    assert_eq!(server.players(), 0);
+}
+
+impl<const MIN: usize, const LARGE: bool, const DURATION: u32, const CAPACITY: usize> NetGame
+    for CombatGame<MIN, LARGE, DURATION, CAPACITY>
+{
     type Input = u8;
     type Match = u32;
     type View = CombatView;
@@ -20,7 +90,7 @@ impl<const MIN: usize, const LARGE: bool> NetGame for CombatGame<MIN, LARGE> {
     const NAME: &'static str = "event-budget-test";
     const MAX_SEATS: usize = 4;
     fn lobby_capacity() -> usize {
-        2
+        CAPACITY
     }
     fn minimum_players() -> usize {
         MIN
@@ -67,7 +137,7 @@ impl<const MIN: usize, const LARGE: bool> NetGame for CombatGame<MIN, LARGE> {
         (0, (0..seats.len()).collect())
     }
     fn participants(_: &u32) -> usize {
-        2
+        CAPACITY
     }
     fn step(m: &mut u32, _: &[Option<u8>]) -> Vec<u32> {
         let first = *m * 8;
@@ -79,14 +149,16 @@ impl<const MIN: usize, const LARGE: bool> NetGame for CombatGame<MIN, LARGE> {
         *m
     }
     fn is_over(m: &u32) -> bool {
-        *m >= 180
+        *m >= DURATION
     }
     fn report(m: &u32) -> serde_json::Value {
         serde_json::json!({"ticks": m})
     }
 }
 
-impl<const MIN: usize, const LARGE: bool> ClientView<CombatGame<MIN, LARGE>> for CombatView {
+impl<const MIN: usize, const LARGE: bool, const DURATION: u32, const CAPACITY: usize>
+    ClientView<CombatGame<MIN, LARGE, DURATION, CAPACITY>> for CombatView
+{
     fn new() -> Self {
         Self(0)
     }
@@ -101,6 +173,122 @@ impl<const MIN: usize, const LARGE: bool> ClientView<CombatGame<MIN, LARGE>> for
     fn prediction(&self) -> PredictionStats {
         PredictionStats::default()
     }
+}
+
+#[test]
+fn two_minutes_of_combat_delivers_promptly_to_four_lossy_clients() {
+    type SustainedGame = CombatGame<4, false, 7200, 4>;
+    let net = LoopNet::new(4, 3, 30., 81);
+    let outgoing = Rc::new(RefCell::new(Vec::<QueuedDatagram>::new()));
+    let endpoint = |address| OrderedEnd {
+        inner: net.endpoint(address),
+        outgoing: outgoing.clone(),
+    };
+    let addr = |n: u16| SocketAddr::from(([127, 0, 0, 1], 34_000 + n));
+    let mut server = NetServer::<SustainedGame, _>::new(
+        endpoint(addr(0)),
+        ServerConfig {
+            participants: 4,
+            countdown_seconds: 0,
+            auto_start_seconds: 0,
+            results_seconds: 3,
+            seed: Some(1),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let mut clients: Vec<_> = (1..=4)
+        .map(|n| {
+            NetClient::<SustainedGame, _>::new(
+                endpoint(addr(n)),
+                addr(0),
+                ClientConfig {
+                    name: format!("Sustained {n}"),
+                    choice: 0,
+                    key: String::new(),
+                },
+            )
+            .unwrap()
+        })
+        .collect();
+    let mut delivered = [0; 4];
+    let mut event_age = [const { Vec::new() }; 4];
+    let mut state_age = [const { Vec::new() }; 4];
+    let mut started_at = None;
+    let mut max_retained = 0;
+    let mut max_bytes = 0;
+    for tick in 0u32..7500 {
+        // Session HashMaps use random iteration order. Sort streams before assigning seeded
+        // network impairments, preserving order within each stream without changing the engine.
+        let mut queued = std::mem::take(&mut *outgoing.borrow_mut());
+        queued.sort_by_key(|d| (d.from, d.to));
+        for d in queued {
+            net.endpoint(d.from).send(d.to, &d.bytes).unwrap();
+        }
+        net.advance();
+        server.poll(Instant::now());
+        server.step(Instant::now());
+        if server.stage() == vesper3d::viewer::netplay::Stage::Match {
+            started_at.get_or_insert(tick);
+        }
+        let stats = server.event_stats();
+        max_retained = max_retained.max(stats.retained);
+        max_bytes = max_bytes.max(stats.retained_bytes);
+        for (i, client) in clients.iter_mut().enumerate() {
+            client.poll(tick as f64 / 60.);
+            match client.state() {
+                ClientState::Lobby if started_at.is_none() => client.ready(true),
+                ClientState::Playing => client.tick(0),
+                _ => {}
+            }
+            if let Some(start) = started_at {
+                let elapsed = tick - start + 1;
+                if elapsed <= 7200 && client.view().0 > 0 {
+                    // Sample every playing tick, including ticks without a new snapshot.
+                    state_age[i].push((tick + 1).saturating_sub(client.server_tick()));
+                }
+                for (original_tick, event) in client.drain_timed_events() {
+                    assert_eq!(
+                        event, delivered[i],
+                        "client {i}: lost/duplicate/out-of-order event at tick {tick}, original={original_tick}, gaps={}, retained={stats:?}, state_tick={}",
+                        client.event_gaps(), client.view().0
+                    );
+                    delivered[i] += 1;
+                    event_age[i].push((tick + 1).saturating_sub(original_tick));
+                }
+            }
+        }
+    }
+    fn ages(samples: &mut [u32]) -> (u32, u32, u32) {
+        samples.sort_unstable();
+        (
+            samples[samples.len() / 2],
+            samples[samples.len() * 99 / 100],
+            *samples.last().unwrap(),
+        )
+    }
+    for (i, client) in clients.iter().enumerate() {
+        let event = ages(&mut event_age[i]);
+        let state = ages(&mut state_age[i]);
+        eprintln!("client={i} event_age_ticks(p50,p99,max)={event:?} state_age_ticks(p50,p99,max)={state:?} events={} gaps={}", delivered[i], client.event_gaps());
+        assert_eq!(delivered[i], 7200 * 8);
+        assert_eq!(client.event_gaps(), 0);
+        // Ordered events must repair lost predecessors across several ACK round trips.
+        // At 60 Hz allow p99 <= 0.75 s / max <= 1.5 s; independent state uses 0.5 s / 1 s.
+        assert!(event.1 <= 45 && event.2 <= 90, "event age {event:?}");
+        assert!(state.1 <= 30 && state.2 <= 60, "state age {state:?}");
+        assert!(
+            state_age[i].len() > 7000,
+            "measure sustained play, not only results"
+        );
+    }
+    eprintln!(
+        "retained_events_max={max_retained} retained_bytes_max={max_bytes} send={:?}",
+        server.send_stats()
+    );
+    assert!(max_retained <= 4096);
+    assert!(max_bytes <= 1024 * 1024);
+    assert_eq!(server.send_stats().oversized, 0);
 }
 
 #[test]

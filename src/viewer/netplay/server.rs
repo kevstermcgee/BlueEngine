@@ -161,6 +161,7 @@ struct Player {
     applied_seq: u32,
     acked_tick: u32,
     event_ack: u64,
+    event_cursor: u64,
     left_early: bool,
     stats: PeerStats,
 }
@@ -327,7 +328,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
         if !G::RELIABLE_EVENTS {
             return;
         }
-        let Some(session) = self.sessions.iter().find(|s| s.peer == peer) else {
+        let Some(session) = self.sessions.get_by_peer_mut(&peer) else {
             return;
         };
         let packets = self.event_sender.packets(
@@ -335,6 +336,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
             self.match_index as u64,
             session.data.event_ack,
             self.transport.payload_limit(peer),
+            &mut session.data.event_cursor,
         );
         for packet in packets {
             self.send_encoded(peer, &packet);
@@ -537,6 +539,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                     applied_seq: 0,
                     acked_tick: 0,
                     event_ack: 0,
+                    event_cursor: 0,
                     left_early: false,
                     stats: PeerStats::default(),
                 };
@@ -763,6 +766,7 @@ impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
                     e.data.applied_seq = 0;
                     e.data.acked_tick = 0;
                     e.data.event_ack = 0;
+                    e.data.event_cursor = 0;
                     e.data.left_early = false;
                     e.data.stats = PeerStats::default();
                 }
@@ -1150,7 +1154,7 @@ pub fn hello_fingerprint<G: NetGame>() -> u32 {
     G::fingerprint()
         ^ name_hash(G::NAME)
         ^ if G::RELIABLE_EVENTS {
-            name_hash("NEV1")
+            name_hash(super::event_channel::PROTOCOL)
         } else {
             0
         }

@@ -1,12 +1,79 @@
 # Focused reliability milestone for scheduled maintenance
 
-Status: **queued for tonight's AI update; do not implement during feedback intake.**
+Status: **partially implemented in nightly maintenance; the deferred requirements below remain open.**
 
 Source: Kevin's requested reliability review, received 2026-10-07. The review
 baseline is `4d8572acea96e81eeac56570d602c9cb28f2cbef`. Remote `main` was also
 at that revision when this feedback was recorded. This document preserves the
 requested work; its findings have **not** been reproduced or certified by this
 feedback-only change.
+
+## Nightly implementation and remaining scope
+
+Implementation starts from `b701462692068cb34c195d4a148a0a5df17f8c20`.
+The nightly harness retained these changes after its final check exceeded the Unix socket pathname limit.
+Recovery integrated them with `06b670842cb0c6740be32a13b2ed77e423700e90`; the installed nightly runner now
+uses a short private temporary directory, and the server-control fixture no longer inherits a long `TMPDIR`.
+The original nightly report remains historical evidence; publication follows fresh validation of the recovered changes.
+The historical intake statement above applies to the original review, not the evidence described here.
+
+Two failures reproduced on that baseline and have focused regressions:
+
+* **Rollback identity:** A → failed B → C retained executable A with metadata for B.
+  The updater now carries forward metadata matched to the actual retained hash. Rollback checks the hash before
+  assigning a source identity; a mismatched recorded artifact leaves the installation and receipt untouched.
+  The regression continues through rollback to A and a subsequent ordinary request for B, which must rebuild B.
+  An externally replaced artifact cannot borrow the recorded source identity. Existing interrupted-rollback,
+  readiness retry and rejected-source protection tests remain in place.
+* **Eviction/oversize recovery:** with sequence 1 evicted, four oversized retained events used every send opportunity
+  without communicating the retention floor. Gap frames now carry that floor, count missing sequences once and
+  drain buffered successors. Reordering cannot skip earlier retained deliverable events. The regression uses
+  120-, 600- and 1100-byte peer limits and no new emissions during recovery.
+
+Sustained testing also reproduced a retry scheduling defect: four datagrams repeatedly starting at the ACK point
+could not sustain the combat workload over delayed/lossy links. Each peer now retries its oldest batch and cycles
+through newer retained batches. Reaching the tail resets the cycle even when further events are emitted.
+No send acceptance advances acknowledgement, and the four-datagram and retention limits remain unchanged.
+
+The focused `netplay_event_delivery` suite passes seven tests. The two-minute scenario uses four clients,
+four ticks of delay, up to three ticks of jitter, 30% packet loss, 480 events/second and a real 1100-byte transport
+ceiling. Stable per-stream submission ordering makes the seeded impairment pattern independent of session HashMaps.
+Each client receives all 57,600 events once, in order, with zero gaps and only three seconds of results.
+Measurements at 60 Hz are:
+
+| Client | Event age p50 / p99 / maximum (ticks) | State-update age p50 / p99 / maximum (ticks) |
+| --- | --- | --- |
+| 0 | 16 / 36 / 47 | 7 / 13 / 21 |
+| 1 | 17 / 37 / 49 | 7 / 13 / 20 |
+| 2 | 16 / 37 / 49 | 7 / 13 / 19 |
+| 3 | 18 / 38 / 49 | 7 / 13 / 17 |
+
+Peak retention is 4096 entries and 262,144 encoded bytes; oversized sends and local send errors are zero.
+State age is sampled every playing tick after the first snapshot, including ticks without a fresh update.
+The event p99/max regression bounds allow 0.75/1.5 seconds for predecessor recovery across ACK round trips;
+independent state keeps tighter 0.5/1-second bounds. These measurements cover this fixture, not internet reachability,
+encryption, hardware performance or Windows runtime behavior. The canonical final checks remain separate evidence,
+recorded by `be2.py check`; this note alone never certifies them.
+
+Compatibility: the private reliable stream is now `NEV2`, with a changed handshake fingerprint and a regression
+rejecting `NEV1` clients. Rebuild reliable-event clients and servers together. Default legacy stream fingerprints,
+wire layouts, public traits and configuration structs are preserved. Generated game tooling is not changed here.
+
+Deferred requirements and concrete next steps:
+
+* **Canonical starter/check/shipping tooling (section 2):** the generated checker still omits the `itest` and
+  `be2-tools/release` outputs and prefers PATH. Consolidate matching-engine discovery and freshness, propagate
+  the absolute Cargo target directory through internally launched project commands, then update generated copies
+  through the existing upgrade mechanism. Verify the complete representative starter/check/ship path and every
+  override/conflicting-output case before claiming completion.
+* **Deliberately delayed prior-match inputs (section 4):** ordinary lossy/rematch event regressions pass, but
+  client input bundles do not carry a match epoch. Add a transport fixture that holds actual first-match inputs
+  and releases them after the next match starts; reproduce any authority leak before designing its repair.
+* **Real Windows packaged runtime (section 5):** this maintenance host is Linux. Current engine Windows packaging
+  still uses `--no-launch --no-smoke`; Linux graphical smoke and stand-in installer tests do not close this gap.
+  Use a Windows runner with a usable desktop to launch a clean real package, exercise input, capture startup/screen
+  evidence and confirm a clean exit, tying that evidence to the artifact hash. No CI/automation or deployment
+  configuration is changed by this maintenance pass, and Windows/manual evidence is not certified.
 
 ## Starting instructions and scope
 
