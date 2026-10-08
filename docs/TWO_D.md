@@ -45,6 +45,10 @@ its autosave carries. `Game::show_hud()` returning false removes the title/contr
 Native controllers: left stick or D-pad moves, A acts/starts, Start plays/pauses, B pauses (same as the browser).
 `Intent.action` is a press edge only; there is no held-button field, so hold-to-charge mechanics use the
 direction axes (see games/puff-pop).
+Button-based utilities can return true from `GameLogic::pointer_target_only_on_press()`.
+The shared client then supplies a pointer only for a click/tap, so keyboard Space and
+controller A use the tool's selected button instead of the current mouse hover target.
+The default remains continuous pointer input for aiming and paddle games.
 
 Rules/tests live in lib.rs. Presentation is its `#[cfg(feature="client")]` implementation. Every sound
 cue is 0 pickup, 1 damage, 2 success; shared generated WAVs load asynchronously. New genres may need

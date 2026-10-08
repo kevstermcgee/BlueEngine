@@ -455,6 +455,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             };
         }
         let focused = platform::focused();
+        if G::pointer_target_only_on_press() {
+            pointer = action_pointer(
+                pointer,
+                is_mouse_button_pressed(MouseButton::Left),
+                digital.action && digital.pointer.is_some(),
+            );
+        }
         let intent = if focused && started && !paused {
             Intent {
                 x: x.clamp(-1, 1),
@@ -636,6 +643,28 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     #[cfg(not(target_arch = "wasm32"))]
     {
         Ok(())
+    }
+}
+
+/// Keep pointer targets for actual click/tap actions, not a stationary cursor with Space/A.
+fn action_pointer(pointer: Option<Point>, clicked: bool, tapped: bool) -> Option<Point> {
+    if clicked || tapped {
+        pointer
+    } else {
+        None
+    }
+}
+
+#[cfg(test)]
+mod pointer_action_tests {
+    use super::*;
+    #[test]
+    fn keyboard_and_controller_ignore_hover_but_clicks_and_taps_keep_targets() {
+        let cursor = Some(Point::new(400, 200));
+        assert_eq!(action_pointer(cursor, false, false), None);
+        assert_eq!(action_pointer(cursor, true, false), cursor);
+        assert_eq!(action_pointer(cursor, false, true), cursor);
+        assert_eq!(action_pointer(None, true, false), None);
     }
 }
 mod platform {

@@ -37,7 +37,7 @@
   }
   const face=document.createElement('div');face.className='face-buttons';
   const action=config.action_label!==null;
-  const a=button('A',action?'action':'restart',()=>{if(action)state.action=true;else state.commands|=commands.restart.bit;});
+  const a=button('A',action?'action':'restart',()=>{if(action){state.pointer=null;state.action=true;}else state.commands|=commands.restart.bit;});
   a.setAttribute('aria-label',action?(config.action_label||'Action'):'Restart');
   const b=button('B','pause',()=>{state.commands|=commands.pause.bit;});b.setAttribute('aria-label','Pause or resume');
   for(const [key,label] of [[b,'Pause'],[a,action?(config.action_label||'Action'):'Restart']]){

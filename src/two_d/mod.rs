@@ -131,6 +131,11 @@ pub trait GameLogic: Snapshot<Input = Intent> + Sized {
     /// One meaningful real-device interaction, verified separately from automated replay.
     fn probe_input() -> Intent;
     fn probe_success(&self) -> bool;
+    /// Button-based tools may opt out of continuous pointer aiming. Keyboard/controller
+    /// actions then have no pointer target; click/tap actions retain theirs.
+    fn pointer_target_only_on_press() -> bool {
+        false
+    }
     /// Read-only marker for expensive streaming work. Presentation times steps that change it;
     /// measurements never feed back into simulation or saves. Ordinary games need no marker.
     fn streaming_marker(&self) -> (i64, i64) {

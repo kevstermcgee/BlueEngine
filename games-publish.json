@@ -450,6 +450,10 @@
       {
         "source": "games/topsy-turvy/.gitignore",
         "destination": "topsy-turvy/.gitignore"
+      },
+      {
+        "source": "games/idea-forge",
+        "destination": "idea-forge"
       }
     ],
     "prototypes": [
