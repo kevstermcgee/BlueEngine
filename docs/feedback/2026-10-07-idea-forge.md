@@ -33,7 +33,10 @@ This made full keyboard navigation unreliable without application heuristics.
 
 Resolution: `GameLogic::pointer_target_only_on_press()` defaults to false, keeping
 continuous aiming/paddle input compatible. Idea Forge opts in. The shared client
-retains a pointer target only for a mouse press or canvas tap. The mobile action
+retains a pointer target only for a mouse press or canvas tap. That target is
+latched until the fixed-step press edge is consumed, including display frames
+that run no simulation tick; movement after the click cannot move its target.
+Pause, focus loss, restart and load clear pending input and its target. The mobile action
 button clears its old canvas target before setting its action edge. A focused
 button then receives Space/A and the panel action. Simulation still consumes only
 Intent and never reads device APIs.

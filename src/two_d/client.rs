@@ -291,6 +291,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut audio = Audio::new::<G>(platform::muted()).await?;
     let mut stepper = FixedStepper::new();
     let mut inputs = InputAccumulator::<Intent>::new();
+    let mut pointer_actions = ActionPointer::default();
     let mut particles = Particles::new(8);
     let mut renderer = Renderer::default();
     let mut last_tick = 0;
@@ -407,6 +408,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         if platform::command_key(KeyCode::R) || digital.commands & 4 != 0 {
             game.restart();
             inputs.clear();
+            pointer_actions.clear();
             last_tick = 0;
             verification_tick = 0;
             started = true;
@@ -447,6 +449,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             notice = match storage::load(&store, &mut game) {
                 Ok(true) => {
                     inputs.clear();
+                    pointer_actions.clear();
                     last_tick = game.tick();
                     "Game resumed".into()
                 }
@@ -456,7 +459,8 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         let focused = platform::focused();
         if G::pointer_target_only_on_press() {
-            pointer = action_pointer(
+            pointer_actions.feed(
+                action,
                 pointer,
                 is_mouse_button_pressed(MouseButton::Left),
                 digital.action && digital.pointer.is_some(),
@@ -476,6 +480,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         };
         if !focused || paused || !started {
             inputs.clear();
+            pointer_actions.clear();
             last_pointer = None;
         }
         inputs.feed(
@@ -506,6 +511,9 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             let tick = inputs.take_tick();
             let mut intent = tick.held;
             intent.action = tick.pressed(1);
+            if G::pointer_target_only_on_press() {
+                intent.pointer = pointer_actions.take(intent.action);
+            }
             intent.look = tick.look;
             if verification {
                 intent = G::verification_input(verification_tick);
@@ -646,27 +654,29 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     }
 }
 
-/// Keep pointer targets for actual click/tap actions, not a stationary cursor with Space/A.
-fn action_pointer(pointer: Option<Point>, clicked: bool, tapped: bool) -> Option<Point> {
-    if clicked || tapped {
-        pointer
-    } else {
-        None
+/// The action target travels with its press edge across frames with no fixed tick.
+#[derive(Default)]
+struct ActionPointer {
+    target: Option<Point>,
+}
+impl ActionPointer {
+    fn feed(&mut self, action: bool, pointer: Option<Point>, clicked: bool, tapped: bool) {
+        if action {
+            self.target = if clicked || tapped { pointer } else { None };
+        }
+    }
+    fn take(&mut self, action: bool) -> Option<Point> {
+        if action {
+            self.target.take()
+        } else {
+            None
+        }
+    }
+    fn clear(&mut self) {
+        self.target = None;
     }
 }
 
-#[cfg(test)]
-mod pointer_action_tests {
-    use super::*;
-    #[test]
-    fn keyboard_and_controller_ignore_hover_but_clicks_and_taps_keep_targets() {
-        let cursor = Some(Point::new(400, 200));
-        assert_eq!(action_pointer(cursor, false, false), None);
-        assert_eq!(action_pointer(cursor, true, false), cursor);
-        assert_eq!(action_pointer(cursor, false, true), cursor);
-        assert_eq!(action_pointer(None, true, false), None);
-    }
-}
 mod platform {
     #[derive(Default)]
     pub struct Digital {
@@ -807,4 +817,37 @@ mod platform {
     }
     #[cfg(target_arch = "wasm32")]
     pub use browser::*;
+}
+
+#[cfg(test)]
+mod pointer_action_tests {
+    use super::*;
+    #[test]
+    fn keyboard_and_controller_ignore_hover_but_clicks_and_taps_keep_targets() {
+        let cursor = Some(Point::new(400, 200));
+        let mut targets = ActionPointer::default();
+        targets.feed(true, cursor, false, false);
+        assert_eq!(targets.take(true), None);
+        targets.feed(true, cursor, true, false);
+        assert_eq!(targets.take(true), cursor);
+        targets.feed(true, cursor, false, true);
+        assert_eq!(targets.take(true), cursor);
+        assert_eq!(targets.take(true), None);
+    }
+    #[test]
+    fn a_fast_click_keeps_its_location_until_the_press_edge_is_consumed() {
+        let mut targets = ActionPointer::default();
+        let mut inputs = InputAccumulator::<Intent>::new();
+        let click = Some(Point::new(20, 30));
+        targets.feed(true, click, true, false);
+        inputs.feed(Intent::default(), 1, [0.; 2]);
+        // A display frame runs no fixed tick, then the pointer moves before the next tick.
+        targets.feed(false, Some(Point::new(500, 300)), false, false);
+        inputs.feed(Intent::default(), 0, [0.; 2]);
+        assert_eq!(targets.take(inputs.take_tick().pressed(1)), click);
+        assert_eq!(targets.take(inputs.take_tick().pressed(1)), None);
+        targets.feed(true, click, false, true);
+        targets.clear();
+        assert_eq!(targets.take(true), None);
+    }
 }
