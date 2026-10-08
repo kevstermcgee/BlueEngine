@@ -51,7 +51,7 @@ class SupervisorTests(unittest.TestCase):
         self.state = {"id": "fixture", "created": "2026-10-08T00:00:00+00:00", "status": "running",
                       "source_root": str(self.engine), "target_dir": str(self.directory),
                       "timeout": 10, "wait_timeout": 1, "story": False, "brief": "test", "agent": "codex",
-                      "repairs": 0, "publish": False, "idea": idea()}
+                      "repairs": 0, "publish": False, "min_free_gib": 0, "idea": idea()}
         self.worker = forge.Forge(self.directory, self.state)
 
     def native_game(self, smoke=True):
