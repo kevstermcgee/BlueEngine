@@ -220,6 +220,25 @@ the resulting artwork and reran package verification. Recommendation: run native
 identity/resource checks before expensive release builds, and select icon tooling
 for the actual delivery target rather than accepting a web-only bitmap set.
 
+### IF-14: integration metadata failed existing workflow and ledger checks
+
+Severity: low. Status: corrected authoring errors; existing checks caught them.
+
+Adding the independent utility CI job changed the aggregate dependency list, but
+this task initially left the workflow regression's expected list unchanged. The
+full Python suite failed, so the expectation was updated to require the utility
+job, its success condition and Windows isolated smoke. A later ledger test rejected
+this task's `identity` area; the supported category is `assets`. Validate new
+entries with the learning tool's schema, rather than assuming a descriptive label
+is supported. Neither failed full local run is passing evidence.
+
+Review-release staging also exposed a missing local Git author identity. The
+failed commit was followed by an accidental dispatch of the old branch revision;
+that review run was canceled without publishing. Staging now uses a command-scoped
+publisher identity and compares the remote branch SHA with the intended commit
+before dispatch. Recommendation: make commit success and exact branch revision
+explicit prerequisites in manual release orchestration.
+
 ## Verification and publication evidence
 
 The initial branch `db361f4786b07e71fea41100a0154b9ade7c1159` passed 10 headless/CLI/
