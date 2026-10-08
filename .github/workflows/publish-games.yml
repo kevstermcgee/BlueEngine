@@ -7,8 +7,7 @@ on:
       - Cargo.lock
       - Cargo.toml
       - assets/games/**
-      - games/signal-garden/**
-      - games/idea-forge/**
+      - games/**
       - assets/maps/starters/**
       - examples/**
       - previews/**

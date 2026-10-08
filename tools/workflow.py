@@ -592,7 +592,7 @@ def full_commands(test_profile='itest'):
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
          'tools.test_hub_deploy','tools.test_browser_retirement','tools.test_springboard',
-         'tools.test_machine_utilities'],
+         'tools.test_machine_utilities', 'tools.test_idea_forge'],
     ]
 
 

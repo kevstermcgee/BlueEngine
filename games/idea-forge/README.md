@@ -1,5 +1,7 @@
 # Idea Forge
 
+For the **AI CLI that generates an idea, builds its game, publishes it and returns engine feedback**, see [IdeaForge CLI](https://github.com/kevstermcgee/BlueEngine/blob/main/docs/IDEA_FORGE.md). This folder is the earlier curated idea browser.
+
 A BlueEngine utility for finding a gameplay rule worth prototyping. Play it in the
 BlueEngineGames download catalog. Install the Windows EXE and use it offline.
 

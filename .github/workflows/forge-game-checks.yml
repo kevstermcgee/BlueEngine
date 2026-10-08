@@ -1,0 +1,103 @@
+name: Forge game checks
+
+on:
+  workflow_dispatch:
+    inputs:
+      game_slug:
+        description: Generated native game to verify on Linux and Windows
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  game:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GAME_SLUG: ${{ inputs.game_slug }}
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Validate game path
+        shell: python
+        run: |
+          import os, pathlib, re
+          slug = os.environ['GAME_SLUG']
+          if not re.fullmatch(r'[a-z0-9]+(?:-[a-z0-9]+)*', slug):
+              raise SystemExit('Invalid generated game slug')
+          game = pathlib.Path('games') / slug
+          if not game.is_dir() or game.is_symlink() or not (game / 'scripts/ship.py').is_file():
+              raise SystemExit('Generated game does not have native ship tooling')
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            games/${{ inputs.game_slug }} -> ../../target
+      - name: Linux native prerequisites
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+      - name: Game rules, identity and code checks
+        shell: python
+        run: |
+          import os, subprocess
+          manifest = 'games/' + os.environ['GAME_SLUG'] + '/Cargo.toml'
+          for command in (
+              ['cargo', 'fmt', '--manifest-path', manifest, '--check'],
+              ['cargo', 'test', '--locked', '--manifest-path', manifest],
+              ['cargo', 'clippy', '--locked', '--all-targets', '--manifest-path', manifest, '--', '-D', 'warnings'],
+          ):
+              subprocess.run(command, check=True)
+      - name: Pinned Windows software OpenGL for real isolated smoke
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'mesa-ci.7z'
+          $mesa = Join-Path $env:RUNNER_TEMP 'mesa-ci'
+          Invoke-WebRequest 'https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z' -OutFile $archive
+          $expected = '351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695'
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne $expected) { throw 'Mesa checksum mismatch' }
+          & 7z x $archive "-o$mesa" 'x64/*' -y
+          if ($LASTEXITCODE -ne 0) { throw 'Mesa extraction failed' }
+          "BE2_CI_OPENGL_DIR=$(Join-Path $mesa 'x64')" >> $env:GITHUB_ENV
+      - name: Windows native resources and isolated package launch
+        if: runner.os == 'Windows'
+        shell: python
+        run: |
+          import ctypes, os, runpy, sys
+          kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+          setter = kernel.SetDllDirectoryW
+          setter.argtypes = [ctypes.c_wchar_p]
+          setter.restype = ctypes.c_int
+          if not setter(os.environ['BE2_CI_OPENGL_DIR']):
+              raise ctypes.WinError(ctypes.get_last_error())
+          os.environ.update(GALLIUM_DRIVER='llvmpipe', LIBGL_ALWAYS_SOFTWARE='1')
+          sys.argv = ['games/' + os.environ['GAME_SLUG'] + '/scripts/ship.py', 'ship', '--no-install']
+          try:
+              runpy.run_path(sys.argv[0], run_name='__main__')
+          finally:
+              if not setter(None):
+                  raise ctypes.WinError(ctypes.get_last_error())
+      - name: Linux native package and isolated launch
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          printf 'pcm.!default { type null }\nctl.!default { type null }\n' > "$RUNNER_TEMP/forge-asound.conf"
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSA_CONFIG_PATH="$RUNNER_TEMP/forge-asound.conf" python "games/$GAME_SLUG/scripts/ship.py" ship --no-install
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: forge-${{ inputs.game_slug }}-${{ runner.os }}
+          path: |
+            games/${{ inputs.game_slug }}/dist/ship.json
+            games/${{ inputs.game_slug }}/.blue-check/
+          include-hidden-files: true

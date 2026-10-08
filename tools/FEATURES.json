@@ -2480,6 +2480,43 @@
       "depends_on": [
         "change_workflow"
       ]
+    },
+    "idea_forge": {
+      "files": [
+        "tools/idea_forge.py",
+        "tools/test_idea_forge.py",
+        "ideaforge",
+        "docs/IDEA_FORGE.md",
+        ".github/workflows/forge-game-checks.yml"
+      ],
+      "checks": [
+        "python -m unittest tools.test_idea_forge"
+      ],
+      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility.",
+      "keywords": [
+        "ideaforge",
+        "idea forge",
+        "generate game ideas",
+        "automatic game development",
+        "ai game builder",
+        "build generated game",
+        "mechanic generation",
+        "game feedback pipeline"
+      ],
+      "read_first": [
+        "docs/IDEA_FORGE.md",
+        "tools/idea_forge.py"
+      ],
+      "depends_on": [
+        "game_scaffolding",
+        "learning_loop"
+      ],
+      "public_api": [
+        "ideaforge run",
+        "ideaforge generate",
+        "ideaforge resume",
+        "ideaforge status"
+      ]
     }
   },
   "format": 1,
@@ -2682,7 +2719,7 @@
     "src/viewer/devkit/synth.rs": "Procedural audio for games that ship no recordings: a small DSP toolkit, a WAV writer and parser, 23...",
     "templates/game_project.py": "Canonical dimensionality/target requirements; copied into standalone game tooling.",
     "docs/CUSTOM_SIM_CHEATSHEET.md": "Custom-sim cheat sheet: the game-facing API on one page",
-    "docs/TWO_D.md": "2D games → browser",
+    "docs/TWO_D.md": "2D games \u2192 browser",
     "docs/learning/REPORT.md": "What the engine has learned from the games built on it",
     "src/viewer/capabilities.rs": "Native discovery.",
     "src/bin/be2-ctl.rs": "be2-ctl: list, inspect, start, stop and restart BlueEngine game servers on this machine (Unix).",
@@ -2699,6 +2736,8 @@
     "src/viewer/kit/shape.rs": "Procedural modelling beyond boxes and balls: lofts, sweeps, rounded boxes, capsules, mirrored halves...",
     "docs/BROWSER_WORKFLOW.md": "Browser 2D/hybrid/3D: create/build/test/publish/reproduce/upgrade commands, capabilities and evidence.",
     "src/viewer/combat.rs": "Shared deterministic attack timing; game-owned weapon policy.",
-    "src/viewer/stock_demo/mod.rs": "Stock Scientist/Feta protocol compatibility and balance; new games use fps/Netplay."
+    "src/viewer/stock_demo/mod.rs": "Stock Scientist/Feta protocol compatibility and balance; new games use fps/Netplay.",
+    "tools/idea_forge.py": "IdeaForge: generate a fresh game, have Codex build it in BlueEngine, and return engine feedback.",
+    "docs/IDEA_FORGE.md": "IdeaForge: an AI game-building CLI"
   }
 }
