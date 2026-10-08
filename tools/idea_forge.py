@@ -979,10 +979,12 @@ def install_schedule(args):
     units.mkdir(parents=True, exist_ok=True)
     invocation = " ".join(systemd_quote(v) for v in
                           (sys.executable, Path(__file__).resolve(), "daily", "--config", config))
+    working_directory = str(args.engine_root.resolve())
+    systemd_quote(working_directory)  # Reject line breaks; this directive takes a literal path.
     (units / "ideaforge-daily.service").write_text(
         "[Unit]\nDescription=IdeaForge: one 2D and one 3D game per day\n"
         "After=network-online.target\n\n[Service]\nType=oneshot\n"
-        f"WorkingDirectory={systemd_quote(args.engine_root.resolve())}\n"
+        f"WorkingDirectory={working_directory.replace('%', '%%')}\n"
         f"Environment={systemd_quote('PATH=' + os.environ.get('PATH', '/usr/local/bin:/usr/bin:/bin'))}\n"
         + (f"Environment={systemd_quote('CARGO_TARGET_DIR=' + os.environ['CARGO_TARGET_DIR'])}\n"
            if os.environ.get("CARGO_TARGET_DIR") else "")

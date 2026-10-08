@@ -424,6 +424,7 @@ class DailyTests(unittest.TestCase):
         self.assertIn("Persistent=true", timer)
         service = (units / "ideaforge-daily.service").read_text()
         self.assertIn('"daily" "--config"', service)
+        self.assertIn(f"WorkingDirectory={self.root}\n", service)
         saved = forge.load_json(self.root / "config/ideaforge/daily.json")
         self.assertNotIn("publish", saved)
         self.assertEqual(saved["engine_root"], str(self.root))
