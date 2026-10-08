@@ -16,6 +16,7 @@ import sys
 import tempfile
 import textwrap
 import unittest
+from unittest import mock
 
 from tools import hub_deploy
 
@@ -332,6 +333,26 @@ class DeployTestCase(unittest.TestCase):
             self.assertIn(needle, done.stdout + done.stderr)
 
 
+class InputMutationGuard(unittest.TestCase):
+    def test_retired_inputs_are_reread_and_must_remain_unchanged(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / 'old-checkout-asset'
+            path.write_bytes(b'original')
+            before, after = hub_deploy.Inputs(), hub_deploy.Inputs()
+            before.files[str(path)] = hub_deploy.sha256_file(path)
+            self.assertIsNone(hub_deploy.changed_during_build(before, after, 0))
+            path.write_bytes(b'changed')
+            self.assertEqual(hub_deploy.changed_during_build(before, after, 0), str(path))
+            path.unlink()
+            self.assertEqual(hub_deploy.changed_during_build(before, after, 0), str(path))
+
+    def test_unreadable_retired_input_fails_closed(self):
+        before, after = hub_deploy.Inputs(), hub_deploy.Inputs()
+        before.files['old-checkout-asset'] = 'digest'
+        with mock.patch.object(hub_deploy, 'sha256_file', side_effect=PermissionError('denied')):
+            self.assertEqual(hub_deploy.changed_during_build(before, after, 0), 'old-checkout-asset')
+
+
 class FirstDeployment(DeployTestCase):
     def test_a_first_run_builds_verifies_installs_activates_and_only_then_says_ready(self):
         done = self.f.run()
@@ -453,6 +474,27 @@ class RebuildDecisions(DeployTestCase):
         self.f.set_artifact('aaaa0002')
         self.assertOk(self.f.run())
         self.assertEqual(self.f.receipt()['info']['build'], 'aaaa0002')
+
+    def test_moving_engine_checkout_replaces_retired_dep_info_without_rejecting_the_build(self):
+        old_asset = self.f.engine / 'assets/pic.png'
+        self.f.ctl(depinfo={'vesper3d': [str(old_asset)]})
+        self.f.deploy()
+        old_engine = self.f.engine
+        self.f.engine = self.f.tmp / 'new-engine'
+        shutil.copytree(old_engine, self.f.engine)
+        self.f.write_metadata()
+        new_asset = self.f.engine / 'assets/pic.png'
+        self.f.ctl(depinfo={'vesper3d': [str(new_asset)]})
+        self.f.set_artifact('aaaa0002')
+        self.assertOk(self.f.run())
+        receipt = self.f.receipt()
+        self.assertEqual(receipt['phase'], 'ready')
+        self.assertEqual(receipt['info']['build'], 'aaaa0002')
+        self.assertNotIn(str(old_asset), receipt['extras']['files'])
+        self.assertIn(str(new_asset), receipt['extras']['files'])
+        self.assertEqual(receipt['identity'], self.f.inputs().identity)
+        self.assertIn('up to date', self.f.run().stdout)
+        self.assertEqual(len(self.f.builds()), 2)
 
     def test_features_lockfile_toolchain_and_environment_invalidate_the_receipt(self):
         cases = ('a feature', 'the lockfile', 'the toolchain', 'RUSTFLAGS', 'a manifest', 'a cargo config')

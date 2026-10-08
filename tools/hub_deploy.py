@@ -514,9 +514,18 @@ def git_revisions(inputs):
 
 def changed_during_build(before, after, started_ns):
     """Names the first input that moved while the build ran, or None. A file the build's own dep-info newly lists is
-    fine when it is older than the build's start."""
+    fine when it is older than the build's start. Retired dep-info paths are re-read: moving to another checkout
+    must not look like a mutation, but dropping a path from dep-info must not hide a mutation either."""
     for path, digest in before.files.items():
-        if after.files.get(path) != digest:
+        observed = after.files.get(path)
+        if path not in after.files:
+            try:
+                observed = sha256_file(path)
+            except FileNotFoundError:
+                observed = 'missing'
+            except OSError:
+                return path
+        if observed != digest:
             return path
     for path in after.files:
         if path not in before.files and after.mtimes.get(path, 0) >= started_ns:
