@@ -495,7 +495,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         let ticks = if verification && started {
             // Replay uses the same fixed steps; graphics need not redraw after every eight ticks.
             // Real-device verification below runs normal timing independently.
-            60
+            // A real touch gesture resumes Web Audio asynchronously. Do not finish a short
+            // accelerated route before its ordinary gameplay cues can reach that context.
+            if platform::audio_active() {
+                60
+            } else {
+                0
+            }
         } else {
             stepper.advance(if focused && started && !paused {
                 dt

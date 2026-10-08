@@ -153,6 +153,22 @@ The engine already provided the right hook; no new particle system was needed.
 Recommendation: mention this hook next to portable UI/utility guidance so text
 interfaces do not inherit an arena-centered effect by accident.
 
+### IF-10: short touch verification replay outran audio activation
+
+Severity: medium. Status: addressed in the shared verification client.
+
+The first complete build passed desktop but failed independent touch verification:
+audio decoded three buffers and both browser contexts eventually ran, but zero
+sound submissions were recorded. The three-frame accelerated route could consume
+all gameplay cues before the gesture's asynchronous AudioContext resume completed.
+This was a real failed gate, not a missing audio asset or a passing touch test.
+
+Resolution: accelerated verification waits for the real platform audio-active
+signal before advancing the public-input route. It does not inject cues, change
+rules or synthesize a success counter. Ordinary play timing is unchanged. The
+shipping touch gate must still prove activation, decode and actual submissions.
+This readiness guard is separate from proof of audible or enjoyable audio.
+
 ## Verification and publication evidence
 
 Evidence is kept in the game's ignored `.blue-check` folders and the engine's
