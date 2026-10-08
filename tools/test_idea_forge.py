@@ -229,6 +229,33 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(self.state["commands"][-1]["exit_code"], 7)
         self.assertTrue((self.directory / self.state["commands"][-1]["log"]).exists())
 
+    def test_rebuild_preserves_idea_and_findings_but_invalidates_old_delivery_gates(self):
+        self.state.update(completed=["setup", "generate", "build-and-review", "feedback", "source-commit", "engine-ci"],
+                          engine_head="old", games_head="old-games", verified_code="old-digest",
+                          ci={"engine-checks": {"head": "old"}}, dispatched=["generated-game-linux-windows"],
+                          feedback_path="docs/feedback/fixture.md",
+                          build_reports=[{"summary": "Built", "findings": [finding()]}])
+        self.worker.rebuild()
+        self.assertEqual(self.state["completed"], ["setup", "generate"])
+        self.assertEqual(self.state["idea"], idea())
+        self.assertEqual(self.state["build_reports"][0]["findings"], [finding()])
+        for key in ("ci", "engine_head", "games_head", "verified_code", "dispatched"):
+            self.assertNotIn(key, self.state)
+        self.assertEqual(self.state["verification_history"][0]["ci"]["engine-checks"]["head"], "old")
+        with patch.object(self.worker, "setup") as setup, patch.object(self.worker, "generate") as generate, \
+                patch.object(self.worker, "build") as build, patch.object(self.worker, "feedback"), \
+                patch.object(self.worker, "register_source"):
+            self.worker.run()
+        setup.assert_not_called()
+        generate.assert_not_called()
+        build.assert_called_once()
+
+    def test_rebuild_cannot_erase_an_already_published_run(self):
+        self.state["completed"] = ["publish-games"]
+        with self.assertRaisesRegex(forge.ForgeError, "already published"):
+            self.worker.rebuild()
+        self.assertEqual(self.state["completed"], ["publish-games"])
+
 
 if __name__ == "__main__":
     unittest.main()

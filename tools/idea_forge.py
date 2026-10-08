@@ -395,7 +395,7 @@ Return only the schema-constrained concept. No credentials or environment identi
         if shutil.disk_usage(self.state["target_dir"]).free < threshold:
             raise ForgeError("Insufficient free space for native compilation; choose a larger target disk")
         idea = self.state["idea"]
-        problem = ""
+        problem = self.state.get("rebuild_reason", "")
         for attempt in range(self.state["repairs"] + 1):
             prompt = f"""Build the actual game described below in this BlueEngine checkout.
 Read root AGENTS.md, use tools/be2.py start and its selected documentation, and use the
@@ -766,6 +766,25 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("Final feedback was not verified on engine main")
         self.state["feedback_commit"] = git(self.engine, "rev-parse", "HEAD")
 
+    def rebuild(self):
+        """Recheck integrated changes without regenerating the selected concept."""
+        if "publish-games" in self.state.get("completed", []) or self.state.get("publication"):
+            raise ForgeError("This run has already published; start a new run for another release")
+        self.state.setdefault("verification_history", []).append({
+            key: self.state.get(key) for key in
+            ("completed", "engine_head", "games_head", "verified_code", "ci")})
+        self.state["completed"] = [name for name in self.state.get("completed", [])
+                                   if name in ("setup", "generate")]
+        for key in ("verified_code", "engine_head", "games_head", "screenshot", "ci",
+                    "dispatched", "feedback_commit", "error"):
+            self.state.pop(key, None)
+        self.state["rebuild_reason"] = (
+            "The existing game worktree was updated. Preserve the selected concept and "
+            "revalidate the implementation, tests, native visuals and controls against "
+            "the current engine. Previous verification cannot certify these changes.")
+        self.state.update(status="created", phase="build-and-review")
+        self.save()
+
     def run(self):
         stages = [("setup", self.setup), ("generate", self.generate), ("build-and-review", self.build),
                   ("feedback", self.feedback), ("source-commit", self.register_source)]
@@ -857,6 +876,8 @@ def main(argv=None):
     resume.add_argument("directory", type=Path)
     resume.add_argument("--publish", action="store_true", help="Enable publication for a locally built run")
     resume.add_argument("--games-root", type=Path, help="BlueEngineGames checkout for publication")
+    resume.add_argument("--rebuild", action="store_true",
+                        help="Invalidate old gates and rebuild/review the same idea after worktree changes")
     status = sub.add_parser("status", help="Inspect a run's phase and verified delivery")
     status.add_argument("directory", type=Path)
     args = parser.parse_args(argv)
@@ -870,14 +891,6 @@ def main(argv=None):
                                   ("status", "phase", "completed", "publication", "feedback_path")}, indent=2))
                 return 0
             forge = Forge(args.directory, state)
-            if args.publish:
-                if args.games_root:
-                    state["games_root"] = str(args.games_root.resolve())
-                if not state.get("games_root") or not Path(state["games_root"]).is_dir():
-                    raise ForgeError("Publication needs a BlueEngineGames checkout")
-                state["publish"] = True
-                state["engine_repository"] = github_repository(Path(state["source_root"]))
-                forge.save()
         else:
             if args.agent_timeout <= 0 or args.wait_timeout <= 0 or args.min_free_gib < 0:
                 raise ForgeError("Timeouts must be positive and capacity threshold nonnegative")
@@ -891,6 +904,17 @@ def main(argv=None):
                 print(f"Concept only. To build: ideaforge resume {forge.directory}", file=sys.stderr)
                 return 0
         with run_lock(forge.directory):
+            if args.command == "resume":
+                if args.rebuild:
+                    forge.rebuild()
+                if args.publish:
+                    if args.games_root:
+                        state["games_root"] = str(args.games_root.resolve())
+                    if not state.get("games_root") or not Path(state["games_root"]).is_dir():
+                        raise ForgeError("Publication needs a BlueEngineGames checkout")
+                    state["publish"] = True
+                    state["engine_repository"] = github_repository(Path(state["source_root"]))
+                    forge.save()
             forge.run()
         return 0
     except (ForgeError, OSError, ValueError, KeyError) as error:
