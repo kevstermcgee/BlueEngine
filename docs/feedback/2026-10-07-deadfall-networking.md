@@ -12,7 +12,7 @@ Two-player room hooks preserve existing `MAX_SEATS` and public configuration str
 
 ## Evidence and reproduction
 
-Focused gate: `cargo test --locked --profile itest --no-default-features --test netplay_event_delivery` (five tests, including 30% packet loss and repeated matches). Encoder and malformed-frame units live in `viewer::netplay::event_channel`; the canonical full engine check includes them and existing consumers. Full Linux/Windows CI remains required before merge.
+Focused gate: `cargo test --locked --profile itest --no-default-features --test netplay_event_delivery` (five tests, including 30% packet loss and repeated matches). Encoder and malformed-frame units live in `viewer::netplay::event_channel`; the canonical full engine check includes them and existing consumers. The full native engine CI passed on Linux and Windows at `f0657a1b3ee7`, including release builds and existing consumers: [run 37701469367](https://github.com/kevstermcgee/BlueEngine/actions/runs/37701469367). The game's native Linux and Windows checks also passed with the same `fed4da58` join pin: [run 37706280287](https://github.com/kevstermcgee/BlueEngineGames/actions/runs/37706280287).
 
 Game tests exercise real hub room creation, all eight stable setting IDs, every mode/map, opposing duel teams and replicated cosmetics. Navigation checks cover spawn physics and paths to every pickup/base/site. The game also uses real UDP with six humans/six bots. These tests cannot establish interstate reachability or hardware rendering performance.
 
@@ -21,7 +21,11 @@ Game tests exercise real hub room creation, all eight stable setting IDs, every 
 * Typed per-room context could replace process-global `NetGame` settings and the associated test serialization.
 * A shared bounded asynchronous resolver could remove game-side DNS worker glue while retaining responsive cancellation.
 * Reusable 3D navigation would remove per-game graphs; jump links must use the actual controller clearance and reject walls.
-* Hardware input injection would test the native key path rather than relying solely on scripts. The current complete native keyboard table is adopted by Deadfall.
+* A reusable native input-injection fixture would automate window controls rather than relying solely on scripts. Deadfall adopts the complete native keyboard table; a private Linux XTest review confirmed the actual Tab scoreboard path, alongside scripted gameplay captures. Cross-platform hardware/controller feel still needs playtesting.
 * Legacy custom-sim projects without `game.project.json` still use native project check/ship scripts; automatic `check --game` cannot yet route those projects.
 
-Learning records L-086 through L-088 include retrieval keywords and concise context hints. Retrieval was checked with `be2.py context "combat event burst packet budget lobby rematch loss" --compact`.
+The game also reproduced synchronous bot A* queries exceeding its 12 ms UDP gate. It now resumes searches with at most 1024 heap pops per bot per tick, rate-limits failed paths and discards pending plans on respawn. The engine could usefully own a reusable multi-floor navigation API with that work budget; this remains game-owned code, recorded as L-089.
+
+Native game CI also found different raw join fingerprints for identical source on different machines: procedural spawn angles were hashed using raw floating-point bits. Deadfall now rounds numeric fingerprint inputs to 0.0001 units and tests the same pinned value on native Linux and Windows. This game-side defect would have prevented joining the Linux host from a different build; record L-090 captures the reusable portability trap.
+
+Learning records L-086 through L-090 include retrieval keywords and concise context hints. Retrieval was checked with `be2.py context "combat event burst packet budget lobby rematch loss" --compact`.
