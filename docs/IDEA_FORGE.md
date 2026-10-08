@@ -58,6 +58,9 @@ tools. The supervisor independently runs game formatting, nonempty behavioral
 tests, Clippy and an isolated native package smoke. A separate read-only AI review
 inspects source and the actual capture; blocking issues trigger bounded repairs.
 Default repair budget is two additional attempts (`--repairs`).
+This review approves the local implementation; Windows installer evidence is
+collected by the subsequent native CI and publication gates. Source portability
+defects remain review blockers.
 
 Publication requires exact-commit full engine CI, generated-game Windows and Linux
 tests/resources/isolated launches, and a Windows installer review. The companion
@@ -86,7 +89,11 @@ An agent's completion claim never substitutes for executed checks. Changed code
 or commits invalidate old publication gates. Repository pushes never force or
 overwrite another author's updates. If main advances concurrently, integrate it
 in the retained worktree and re-run the affected checks before retrying; stale
-receipts cannot authorize the new source. A failed run still retains feedback
+receipts cannot authorize the new source. Before production publication, use
+`ideaforge resume /path/to/run --rebuild` after integrating the changes. This
+preserves the idea and AI findings, archives old receipts and reruns build,
+review and publication gates. An already published run cannot be rebuilt; create
+a new run for another release. A failed run still retains feedback
 locally when the AI has provided it. Virtual/software graphics checks do not
 certify physical controller hardware or speaker output.
 

@@ -31,9 +31,11 @@ New games with event bursts should set `const RELIABLE_EVENTS: bool = true` in `
 This opt-in changes the handshake fingerprint, so old clients receive version mismatch instead of accepting a different wire stream.
 Existing games keep their original snapshot/event layout until they opt in.
 
-State snapshots and events then travel independently. The private `NEV1` stream authenticates frames with the session token and peer address,
-uses a match epoch to reject reordered frames from earlier matches, and acknowledges monotonically increasing event sequence numbers.
+State snapshots and events then travel independently. The private `NEV2` stream authenticates frames with the session token and peer address,
+uses a match epoch to reject reordered event/control frames from earlier matches, and acknowledges monotonically increasing event sequence numbers.
 Events from the same tick remain distinct. The server encodes each event once and retries up to four bounded event datagrams per snapshot;
+each recipient retries its oldest unacknowledged batch while cycling through newer retained batches. Reaching the tail restarts that cycle
+even when new events arrive, so delayed acknowledgements and continued emissions cannot leave earlier lost batches unretried.
 movement state does not wait for the event backlog. Final results continue retrying at the game's snapshot cadence until the return to the lobby.
 Lobby transitions carry the same epoch: late lobby packets cannot reset a new match. Already delivered events remain available to drain across transitions.
 This is session authentication over the selected transport; use the existing QUIC/TLS profile when encryption is required.
@@ -44,6 +46,12 @@ The default calls the existing `snapshot`, so existing implementors remain sourc
 An event must fit its own datagram (1047 encoded bytes at the standard limit).
 Retention is bounded by ten seconds, 4096 events, and 1 MiB of encoded payload, whichever comes first.
 Evicted or unencodable events are explicit gaps, reported by `NetClient::event_gaps`; they never block state or subsequent events.
+Gap frames carry the same retention floor as event data, so eviction followed by several oversized entries can recover
+without waiting for new events. Only that floor certifies evicted sequences; a reordered oversize gap cannot skip earlier
+retained, deliverable events. Filling a gap also drains already buffered successors. Both eviction and oversize loss are counted once.
+The retention-aware framing changes the reliable-event handshake fingerprint. Rebuild clients and servers together for games
+that enabled `RELIABLE_EVENTS`: old `NEV1` clients are rejected at handshake. Games using the default legacy stream keep their wire
+format and fingerprint, and no public game trait or configuration struct changes.
 `NetServer::event_stats` and the optional `reliable_events` archive object expose retained bytes/events and oversized encodings.
 Send acceptance is still a local transport outcome, not proof of remote receipt.
 
@@ -58,6 +66,12 @@ Games with bots may return one as their minimum; bot-free games should usually r
 Deadfall verifies these contracts through real UDP/hub tests and simulation tests of its objective modes.
 The engine regression fixture sends 480 padded combat events per second alongside state, including delay, jitter and 30% loss,
 and checks delivery once, final state, bounded datagrams, oversize gaps and repeated matches.
+An additional seeded test runs 120 seconds of combat with four clients, four ticks of delay, up to three ticks of jitter,
+30% datagram loss, 480 events per second and the effective 1100-byte ceiling. It measures event age and state-update age
+throughout play, with three seconds of results for the final tail. Ordered events allow p99 <= 45 ticks and maximum <= 90 ticks
+(0.75/1.5 seconds at 60 Hz) for predecessor repair across ACK round trips; independent state allows 30/60 ticks (0.5/1 second).
+It also requires zero gaps and retention within 4096 entries/1 MiB. These are scenario-specific regression bounds,
+not an internet latency guarantee or hardware/server-capacity measurement.
 
 ## Starting point
 

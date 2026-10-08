@@ -776,15 +776,15 @@ def build_and_promote(settings, result, entry, before, old_receipt, destination,
     for warning in [v for k, v in report.items() if k == 'warning']:
         say(game, f'warning: {warning}')
     candidate_record = binary_record(candidate)
+    prior = keep_previous(destination, settings, bin_name, old_receipt)
     new_receipt = {
         'schema': 1, 'game': game, 'bin': bin_name, 'identity': after.identity, 'components': after.components, 'extras': after.extras,
         'revisions': git_revisions(after), 'built_at': now_iso(),
         'info': {'game': report.get('game'), 'build': report['build'], 'max_seats': report.get('max_seats'),
                  'settings': report.get('settings')},
         'binary': candidate_record, 'phase': 'installing', 'complete': False,
-        'previous': previous_section(old_receipt, destination),
+        'previous': prior,
     }
-    keep_previous(destination, settings, bin_name, old_receipt)
     receipt_path = settings.receipt_path(game)
     try:
         write_json_atomic(receipt_path, new_receipt)
@@ -806,23 +806,30 @@ def build_and_promote(settings, result, entry, before, old_receipt, destination,
 
 
 def previous_section(old_receipt, destination):
-    if not old_receipt:
+    """Describe the actual retained file; an unfinished install may have kept an older artifact."""
+    if not destination.is_file():
         return None
-    return {'identity': old_receipt.get('identity'), 'sha256': (old_receipt.get('binary') or {}).get('sha256'),
-            'build': (old_receipt.get('info') or {}).get('build'), 'phase': old_receipt.get('phase'),
-            'complete': bool(old_receipt.get('complete'))}
+    digest = sha256_file(destination)
+    if old_receipt and digest == (old_receipt.get('binary') or {}).get('sha256'):
+        return {'identity': old_receipt.get('identity'), 'sha256': digest,
+                'build': (old_receipt.get('info') or {}).get('build'), 'phase': old_receipt.get('phase'),
+                'complete': bool(old_receipt.get('complete'))}
+    prior = (old_receipt or {}).get('previous') or {}
+    if digest == prior.get('sha256'):
+        return dict(prior)
+    # A pre-receipt or externally replaced artifact has no verified source identity.
+    return {'identity': None, 'sha256': digest, 'build': None, 'phase': 'unknown', 'complete': False}
 
 
 def keep_previous(destination, settings, bin_name, old_receipt):
     """Keep the installed executable as BIN.previous when it is known to work (its activation completed), or when
     there is no previous copy yet. A half-activated install never overwrites a known-good previous copy."""
     previous = settings.home / f'{bin_name}.previous'
-    if not destination.is_file():
-        return
-    if is_complete(old_receipt) or not previous.exists():
+    if destination.is_file() and (is_complete(old_receipt) or not previous.exists()):
         tmp = previous.with_name(previous.name + '.tmp')
         shutil.copy2(destination, tmp)
         os.replace(tmp, previous)
+    return previous_section(old_receipt, previous)
 
 
 def resume(settings, result, receipt, destination):
@@ -943,13 +950,17 @@ def rollback_game(settings, entry):
         os.chmod(candidate, 0o755)
         report = hub_verify(settings, game, candidate, destination)
         prior = receipt.get('previous') or {}
+        candidate_record = binary_record(candidate)
+        if prior.get('sha256') and candidate_record['sha256'] != prior['sha256']:
+            raise DeployError('rollback artifact does not match the previous executable recorded in the receipt')
+        identity = prior.get('identity') if prior.get('sha256') == candidate_record['sha256'] else None
         new_receipt = {
-            'schema': 1, 'game': game, 'bin': bin_name, 'identity': prior.get('identity') or 'rolled-back',
+            'schema': 1, 'game': game, 'bin': bin_name, 'identity': identity or 'rolled-back',
             'components': {}, 'extras': receipt.get('extras') or {},
             'rolled_back_from': receipt.get('rolled_back_from') or receipt.get('identity'),
             'info': {'game': report.get('game'), 'build': report['build'], 'max_seats': report.get('max_seats'),
                      'settings': report.get('settings')},
-            'binary': binary_record(candidate), 'phase': 'installing', 'complete': False, 'built_at': now_iso(),
+            'binary': candidate_record, 'phase': 'installing', 'complete': False, 'built_at': now_iso(),
             'note': 'rollback to the previous executable',
         }
         write_json_atomic(receipt_path, new_receipt)

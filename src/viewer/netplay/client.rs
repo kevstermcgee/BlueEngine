@@ -403,12 +403,13 @@ impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
             Frame::Gap {
                 token,
                 epoch,
+                base,
                 sequence,
             } if Some(token) == self.token
                 && epoch == self.event_receiver.epoch
                 && self.state == ClientState::Playing =>
             {
-                self.event_receiver.skip(sequence);
+                self.events.extend(self.event_receiver.skip(base, sequence));
                 let ack = super::event_channel::ack(token, epoch, self.event_receiver.acknowledged);
                 let _ = self.transport.try_send(self.server, &ack);
                 true
