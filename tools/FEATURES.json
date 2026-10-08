@@ -2492,7 +2492,7 @@
       "checks": [
         "python -m unittest tools.test_idea_forge"
       ],
-      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility.",
+      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates.",
       "keywords": [
         "ideaforge",
         "idea forge",
@@ -2501,7 +2501,10 @@
         "ai game builder",
         "build generated game",
         "mechanic generation",
-        "game feedback pipeline"
+        "game feedback pipeline",
+        "daily games",
+        "2d and 3d",
+        "systemd schedule"
       ],
       "read_first": [
         "docs/IDEA_FORGE.md",
@@ -2515,7 +2518,9 @@
         "ideaforge run",
         "ideaforge generate",
         "ideaforge resume",
-        "ideaforge status"
+        "ideaforge status",
+        "ideaforge daily",
+        "ideaforge schedule"
       ]
     }
   },

@@ -20,6 +20,7 @@ From the BlueEngine checkout:
 ```sh
 ./ideaforge run --games-root ../BlueEngineGames
 ./ideaforge run --games-root ../BlueEngineGames --brief "A tactile puzzle about trading physical rules" --story
+./ideaforge run --games-root ../BlueEngineGames --dimension 3d
 # Portable invocation, including Windows:
 python tools/idea_forge.py run --games-root ../BlueEngineGames
 ```
@@ -50,6 +51,51 @@ Generated mechanics are compared against prior concepts and the existing catalog
 exact repeats are rejected. The AI explains close comparisons, intended fun and a
 playtest risk. Neither the CLI nor a test suite certifies worldwide originality or
 subjective fun.
+
+## Two games every day
+
+On this Linux host, enable the persistent user-systemd schedule with:
+
+```sh
+ideaforge schedule --games-root /home/kevin/BlueEngineGames --timezone America/Los_Angeles
+```
+
+The scheduler starts immediately, then wakes hourly at ten minutes past the hour.
+Each Pacific calendar date gets exactly two publishing slots: one 2D game and one
+3D game. Their order is chosen randomly once and retained. Games build sequentially
+so they share the build cache and the second starts against the latest engine main.
+A 3D concept must use a rendered 3D world with depth relevant to its mechanic;
+a tilted flat puzzle does not qualify. Concept validation, project presentation
+checks and the independent AI review enforce the requested dimension.
+
+Hourly wakeups resume a failed or interrupted game instead of generating a
+replacement. Once both games have verified public downloads and committed engine
+feedback, further wakeups that date do nothing. A retained earlier day's batch
+finishes before today's games start. Publication checks still apply; infrastructure
+failures or long builds can delay delivery beyond the intended calendar day.
+Concurrent-main conflicts retain their worktrees for the integration/rebuild
+procedure below rather than forcing a push.
+
+Private daily journals live in `.be2-work/idea-forge/daily/batches/DATE/state.json`.
+The user timer survives logout when login lingering is enabled (it is enabled on
+this host), catches up after downtime, and prevents overlapping service instances.
+It runs on this machine, so the machine must be available. Saved settings are in
+`~/.config/ideaforge/daily.json`; service logs and controls are:
+
+```sh
+systemctl --user list-timers ideaforge-daily.timer
+journalctl --user -u ideaforge-daily.service -n 40
+systemctl --user disable --now ideaforge-daily.timer  # prevent future wakeups
+systemctl --user stop ideaforge-daily.service         # interrupt current work; retain progress
+```
+
+For another scheduler or a one-off daily batch, use `ideaforge daily --games-root
+/path/to/BlueEngineGames --timezone America/Los_Angeles`. Daily commands require
+an IANA timezone database; Windows hosts may need Python's `tzdata` package.
+`--daily-root` and `--runs-root` can relocate journals. Keep those locations stable
+when changing the schedule so existing daily slots continue to prevent duplicates.
+Legacy concept JSON without a dimension remains accepted for unconstrained
+`run --idea`; an explicit `--dimension` requires a matching declaration.
 
 ## What completion means
 

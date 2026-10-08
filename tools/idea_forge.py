@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import re
+import random
 import shutil
 import signal
 import struct
@@ -25,6 +26,7 @@ import unicodedata
 import urllib.request
 from datetime import datetime, timezone
 from uuid import uuid4
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 try:
     from tools import learn
@@ -50,6 +52,7 @@ def text_schema(limit=400):
 
 
 IDEA_SCHEMA = object_schema({
+    "dimension": {"type": "string", "enum": ["2d", "3d"]},
     "title": text_schema(70), "slug": {"type": "string", "pattern": "^" + SLUG + "$", "maxLength": 60},
     "genre": text_schema(60), "mechanic": text_schema(1400),
     "player_actions": {"type": "array", "items": text_schema(180), "minItems": 1, "maxItems": 6},
@@ -59,6 +62,8 @@ IDEA_SCHEMA = object_schema({
     "novelty_check": text_schema(1000), "playtest_risk": text_schema(500),
     "story": {"anyOf": [text_schema(800), {"type": "null"}]},
 })
+LEGACY_IDEA_SCHEMA = object_schema({k: v for k, v in IDEA_SCHEMA["properties"].items()
+                                    if k != "dimension"})
 FINDING_SCHEMA = object_schema({
     "area": {"type": "string", "enum": list(learn.AREAS)},
     "severity": {"type": "string", "enum": ["low", "medium", "high"]},
@@ -364,6 +369,10 @@ reskins or another ordinary platformer/shooter with a narrative change are insuf
 Describe exact inputs, rules, win/loss conditions, why decisions are interesting, and a
 small prototype that tests the fun. Story is {'optional' if self.state['story'] else 'not requested; return null'}.
 The requested direction is: {json.dumps(self.state['brief'])}.
+Required dimensionality: {self.state.get('dimension', 'any')}. Return dimension as 2d or 3d.
+For 2d, the playable space and presentation are two-dimensional. For 3d, the game
+must have a real rendered 3D world with depth that matters to the central mechanic;
+a flat puzzle with a tilted camera does not meet this requirement.
 Read AGENTS.md and docs/PORTABLE_GAMES.md for what BlueEngine actually supports.
 Compare the core rule to existing games and the prior mechanics below. Explain the closest
 comparison and the concrete difference in novelty_check; worldwide originality and fun
@@ -373,9 +382,12 @@ Prior mechanics: {json.dumps(prior)}.
 Return only the schema-constrained concept. No credentials or environment identifiers."""
         if self.state.get("idea_input"):
             idea = load_json(self.state["idea_input"])
-            validate(idea, IDEA_SCHEMA)
+            validate(idea, IDEA_SCHEMA if "dimension" in idea else LEGACY_IDEA_SCHEMA)
         else:
             idea = self.agent("concept-candidate", prompt, IDEA_SCHEMA)
+        required = self.state.get("dimension", "any")
+        if required != "any" and idea.get("dimension") != required:
+            raise ForgeError("The concept does not meet the requested dimension")
         if (self.engine / "games" / idea["slug"]).exists():
             raise ForgeError("The generated slug already exists; existing games were preserved")
         # Re-read completed concepts: another generation may have finished while
@@ -406,6 +418,10 @@ Follow the concept's outcome rules: if it has no terminal loss, preserve that ch
 and implement its undo/retry behavior instead of adding hazards or a move budget.
 Use BlueEngine's fixed-step authoritative simulation, Intent input, Snapshot saving and
 the shared native client; rendering reads state. Do not implement a browser game.
+Required dimension: {idea.get('dimension', self.state.get('dimension', 'any'))}.
+For 2d use a two-dimensional playable space and presentation. For 3d use a real
+rendered 3D world whose depth matters to the mechanic, not a tilted flat puzzle.
+Declare the matching presentation in game.project.json (2d or 3d).
 Declare Windows delivery and Linux verification. Use existing game/engine APIs rather
 than inventing them. Meaningful rule tests must cover the unique interaction, failure,
 determinism and save/load. verification_input must exercise real public gameplay.
@@ -432,6 +448,8 @@ Previous verification/review problem to resolve: {problem or 'none; initial impl
 against this concept: {json.dumps(idea)}. Read its source, tests, AGENTS.md and README;
 inspect the attached actual isolated native-package capture. Identify whether the unique
 rule is implemented and understandable, whether its specified outcome/retry loop works,
+and whether its declared dimension is real: 3D requires a rendered 3D world with
+meaningful depth in the mechanic, while 2D requires a two-dimensional playable space.
 and any broken input, layout or fabricated verification shortcut. Do not edit files.
 approved must be false when there are blockers. Compilation/automated tests cannot prove
 subjective fun or global novelty. This is the LOCAL IMPLEMENTATION review, before
@@ -475,6 +493,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             if not script.is_file() or script.read_bytes() != canonical.read_bytes():
                 raise ForgeError("Native packaging scripts must come from the fresh canonical engine templates")
         project = load_json(game / "game.project.json")
+        dimension = self.state["idea"].get("dimension", self.state.get("dimension", "any"))
+        if dimension != "any" and project.get("presentation") != dimension:
+            raise ForgeError("The game presentation does not meet the requested dimension")
         if not {"windows", "linux"}.issubset(project.get("targets", [])) or "web" in project.get("targets", []):
             raise ForgeError("The game must declare native Windows delivery and Linux verification")
         changed = (git(self.engine, "diff", "--name-only", "HEAD").splitlines()
@@ -831,7 +852,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                           "resume": str(self.directory)}, indent=2))
 
 
-def create_run(args):
+def create_run(args, directory=None):
     source = args.engine_root.resolve()
     if not (source / "tools/be2.py").is_file() or not (source / "Cargo.toml").is_file():
         raise ForgeError("--engine-root must be a BlueEngine source checkout")
@@ -839,9 +860,10 @@ def create_run(args):
         raise ForgeError("Codex CLI is required; install/sign in, or set --agent-executable")
     if args.publish and (not args.games_root or not args.games_root.is_dir()):
         raise ForgeError("Publication needs --games-root pointing to the BlueEngineGames checkout")
-    directory = (args.runs_root or source / ".be2-work/idea-forge/runs").resolve() / (
-        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid4().hex[:8])
-    directory.mkdir(parents=True, mode=0o700)
+    directory = directory or new_run_directory(args)
+    if (directory / "state.json").exists():
+        raise ForgeError("A retained run must be resumed, never overwritten")
+    directory.mkdir(parents=True, mode=0o700, exist_ok=True)
     target = Path(os.environ.get("CARGO_TARGET_DIR", source / ".be2-work/idea-forge/cargo-target")).resolve()
     target.mkdir(parents=True, exist_ok=True)
     if args.command == "run" and shutil.disk_usage(target).free < args.min_free_gib * 1024**3:
@@ -850,6 +872,7 @@ def create_run(args):
              "source_root": str(source), "games_root": str(args.games_root.resolve()) if args.games_root else None,
              "base": args.base, "branch": "idea-forge/" + directory.name, "target_dir": str(target),
              "agent": args.agent, "model": args.model, "brief": args.brief, "story": args.story,
+             "dimension": args.dimension,
              "idea_input": str(args.idea.resolve()) if getattr(args, "idea", None) else None,
              "repairs": args.repairs, "timeout": args.agent_timeout, "wait_timeout": args.wait_timeout,
              "min_free_gib": args.min_free_gib,
@@ -859,16 +882,140 @@ def create_run(args):
     return forge
 
 
+def new_run_directory(args):
+    return (args.runs_root or args.engine_root / ".be2-work/idea-forge/runs").resolve() / (
+        datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S") + "-" + uuid4().hex[:8])
+
+
+def delivery_complete(state):
+    return (state.get("status") == "published" and bool(state.get("publication"))
+            and "publish-feedback" in state.get("completed", []))
+
+
+def daily_batch(args, now=None):
+    """Two persistent slots per local date; retries always resume the same games."""
+    daily_root = (args.daily_root or args.engine_root / ".be2-work/idea-forge/daily").resolve()
+    daily_root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    today = (now or datetime.now(timezone.utc)).astimezone(ZoneInfo(args.timezone)).date().isoformat()
+    with run_lock(daily_root):
+        batches = daily_root / "batches"
+        paths = sorted(batches.glob("*/state.json"))
+        current = batches / today / "state.json"
+        if not current.exists():
+            order = ["2d", "3d"]
+            random.SystemRandom().shuffle(order)
+            atomic_json(current, {"version": 1, "date": today, "timezone": args.timezone,
+                                  "order": order, "slots": {}, "status": "pending"})
+            paths.append(current)
+        failed = False
+        for path in sorted(paths):
+            batch = load_json(path)
+            if batch.get("version") != 1 or sorted(batch.get("order", [])) != ["2d", "3d"]:
+                raise ForgeError("Invalid daily batch journal")
+            if batch["status"] == "published":
+                continue
+            for dimension in batch["order"]:
+                slot = batch["slots"].get(dimension)
+                if slot is None:
+                    # Reserve the identity BEFORE creating the run. A process exit
+                    # between the two writes cannot create a replacement concept.
+                    slot = {"directory": str(new_run_directory(args)), "status": "pending"}
+                    batch["slots"][dimension] = slot
+                    atomic_json(path, batch)
+                directory = Path(slot["directory"])
+                try:
+                    if (directory / "state.json").exists():
+                        state = load_json(directory / "state.json")
+                        if state.get("dimension") != dimension or not state.get("publish"):
+                            raise ForgeError("Daily slot does not match its retained publishing run")
+                        worker = Forge(directory, state)
+                    else:
+                        settings = argparse.Namespace(**vars(args))
+                        settings.command, settings.dimension = "run", dimension
+                        worker = create_run(settings, directory)
+                    with run_lock(directory):
+                        if not delivery_complete(worker.state):
+                            worker.run()
+                    if not delivery_complete(worker.state):
+                        raise ForgeError("Daily completion requires verified publication and feedback")
+                    slot["status"] = "published"
+                except (ForgeError, OSError, ValueError, KeyError) as error:
+                    failed = True
+                    slot["status"] = "failed"
+                    print(f"IdeaForge daily: {batch['date']} {dimension} retained for retry ({type(error).__name__})",
+                          file=sys.stderr, flush=True)
+                atomic_json(path, batch)
+                if slot["status"] != "published":
+                    break
+            if all(batch["slots"].get(d, {}).get("status") == "published" for d in ("2d", "3d")):
+                batch["status"] = "published"
+                atomic_json(path, batch)
+                print(f"IdeaForge daily: {batch['date']} published one 2D and one 3D game", flush=True)
+            else:
+                # Finish older retained work before allocating more days of games.
+                break
+        return 1 if failed else 0
+
+
+def systemd_quote(value):
+    value = str(value)
+    if any(c in value for c in "\n\r\0"):
+        raise ForgeError("Scheduler paths must be single-line values")
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"').replace('%', '%%').replace('$', '$$') + '"'
+
+
+def install_schedule(args):
+    """Install an hourly wakeup: completed daily slots make later wakeups no-ops."""
+    if not sys.platform.startswith("linux") or not shutil.which("systemctl"):
+        raise ForgeError("Automatic installation needs Linux user systemd; schedule `ideaforge daily` on other hosts")
+    config_root = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    config = config_root / "ideaforge/daily.json"
+    values = {k: str(v.resolve()) if isinstance(v, Path) else v for k, v in vars(args).items()
+              if k not in ("command", "config", "dimension", "publish")}
+    config.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    atomic_json(config, values)
+    config.chmod(0o600)
+    units = config_root / "systemd/user"
+    units.mkdir(parents=True, exist_ok=True)
+    invocation = " ".join(systemd_quote(v) for v in
+                          (sys.executable, Path(__file__).resolve(), "daily", "--config", config))
+    (units / "ideaforge-daily.service").write_text(
+        "[Unit]\nDescription=IdeaForge: one 2D and one 3D game per day\n"
+        "After=network-online.target\n\n[Service]\nType=oneshot\n"
+        f"WorkingDirectory={systemd_quote(args.engine_root.resolve())}\n"
+        f"Environment={systemd_quote('PATH=' + os.environ.get('PATH', '/usr/local/bin:/usr/bin:/bin'))}\n"
+        + (f"Environment={systemd_quote('CARGO_TARGET_DIR=' + os.environ['CARGO_TARGET_DIR'])}\n"
+           if os.environ.get("CARGO_TARGET_DIR") else "")
+        + f"ExecStart={invocation}\nTimeoutStartSec=infinity\nKillMode=control-group\nUMask=0077\n")
+    (units / "ideaforge-daily.timer").write_text(
+        "[Unit]\nDescription=Wake IdeaForge hourly to complete the daily pair\n\n[Timer]\n"
+        f"OnCalendar=*-*-* *:10:00 {args.timezone}\nPersistent=true\nAccuracySec=1min\n"
+        "Unit=ideaforge-daily.service\n\n[Install]\nWantedBy=timers.target\n")
+    subprocess.run(["systemctl", "--user", "daemon-reload"], check=True)
+    subprocess.run(["systemctl", "--user", "enable", "--now", "ideaforge-daily.timer"], check=True)
+    subprocess.run(["systemctl", "--user", "start", "--no-block", "ideaforge-daily.service"], check=True)
+    print(f"IdeaForge scheduled: one 2D + one 3D daily in {args.timezone}; random order; hourly retry.\nConfig: {config}")
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
-    for name in ("run", "generate"):
-        command = sub.add_parser(name, help="Build/publish a game" if name == "run" else "Generate a fresh AI game concept")
+    for name in ("run", "generate", "daily", "schedule"):
+        command = sub.add_parser(name, help={"run": "Build/publish a game", "generate": "Generate a fresh AI game concept",
+                                            "daily": "Complete today's 2D and 3D games", "schedule": "Enable automatic daily games"}[name])
         command.add_argument("--engine-root", type=Path, default=ROOT)
         command.add_argument("--games-root", type=Path, default=ROOT.parent / "BlueEngineGames")
         command.add_argument("--runs-root", type=Path)
         command.add_argument("--base", default="origin/main", help="Committed source base; working edits are preserved")
         command.add_argument("--brief", default="A small, original game with a surprising and satisfying central rule")
+        if name in ("run", "generate"):
+            command.add_argument("--dimension", choices=("any", "2d", "3d"), default="any")
+        else:
+            command.add_argument("--timezone", default="America/Los_Angeles")
+            command.add_argument("--daily-root", type=Path)
+            command.set_defaults(dimension="any")
+        if name == "daily":
+            command.add_argument("--config", type=Path, help="Load a schedule's saved settings")
         if name == "run":
             command.add_argument("--idea", type=Path, help="Build a previously generated schema-valid concept JSON")
         command.add_argument("--story", action="store_true")
@@ -878,7 +1025,10 @@ def main(argv=None):
         command.add_argument("--agent-timeout", type=int, default=3600)
         command.add_argument("--wait-timeout", type=int, default=10800)
         command.add_argument("--min-free-gib", type=float, default=8)
-        command.add_argument("--no-publish", dest="publish", action="store_false", default=name == "run")
+        if name in ("run", "generate"):
+            command.add_argument("--no-publish", dest="publish", action="store_false", default=name == "run")
+        else:
+            command.set_defaults(publish=True)
     resume = sub.add_parser("resume", help="Continue a retained run without repeating completed stages")
     resume.add_argument("directory", type=Path)
     resume.add_argument("--publish", action="store_true", help="Enable publication for a locally built run")
@@ -889,6 +1039,23 @@ def main(argv=None):
     status.add_argument("directory", type=Path)
     args = parser.parse_args(argv)
     try:
+        if args.command == "daily" and args.config:
+            values = load_json(args.config)
+            for key, value in values.items():
+                if key not in vars(args) or key in ("command", "config", "dimension", "publish"):
+                    raise ForgeError("Unsupported daily configuration field")
+                setattr(args, key, Path(value) if key.endswith("_root") and value is not None else value)
+        if args.command in ("daily", "schedule"):
+            try:
+                ZoneInfo(args.timezone)
+            except (ZoneInfoNotFoundError, ValueError):
+                raise ForgeError("Unknown daily timezone") from None
+            if args.agent_timeout <= 0 or args.wait_timeout <= 0 or args.min_free_gib < 0:
+                raise ForgeError("Timeouts must be positive and capacity threshold nonnegative")
+            if args.command == "schedule":
+                install_schedule(args)
+                return 0
+            return daily_batch(args)
         if args.command in ("resume", "status"):
             state = load_json(args.directory / "state.json")
             if state.get("version") != 1:

@@ -6,13 +6,15 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import argparse
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from tools import idea_forge as forge
 
 
 def idea():
-    return {"title": "Rule Relay", "slug": "rule-relay", "genre": "puzzle",
+    return {"dimension": "2d", "title": "Rule Relay", "slug": "rule-relay", "genre": "puzzle",
             "mechanic": "Move one physical rule between two machines; the donor loses it immediately.",
             "player_actions": ["Select a donor", "Select a recipient"],
             "rules": ["Only one machine owns each rule", "Transfers consume a turn", "Doors need two rules"],
@@ -65,7 +67,7 @@ class SupervisorTests(unittest.TestCase):
             (self.engine / "templates" / ("game_" + name + ".py")).write_text(text)
         for name in ("Cargo.toml", "src/lib.rs", "src/main.rs"):
             (game / name).write_text("fixture")
-        forge.atomic_json(game / "game.project.json", {"targets": ["windows", "linux"]})
+        forge.atomic_json(game / "game.project.json", {"targets": ["windows", "linux"], "presentation": "2d"})
         (game / "dist").mkdir()
         forge.atomic_json(game / "dist/ship.json", {"verified": {"smoke": smoke}})
         capture = game / ".blue-check/smoke/shot_00030.png"
@@ -83,6 +85,32 @@ class SupervisorTests(unittest.TestCase):
         concept["rules"] = []
         with self.assertRaises(forge.ForgeError):
             forge.validate(concept, forge.IDEA_SCHEMA)
+
+    def test_three_dimensional_requirement_blocks_a_flat_package(self):
+        self.native_game()
+        self.state["idea"]["dimension"] = "3d"
+        with patch.object(self.worker, "command") as command:
+            with self.assertRaisesRegex(forge.ForgeError, "requested dimension"):
+                self.worker.verify_local()
+            command.assert_not_called()
+
+    def test_generation_cannot_substitute_a_2d_concept_for_a_3d_request(self):
+        (self.engine / "games").mkdir()
+        self.state["dimension"] = "3d"
+        with patch.object(self.worker, "agent", return_value=idea()):
+            with self.assertRaisesRegex(forge.ForgeError, "requested dimension"):
+                self.worker.generate()
+        self.assertFalse((self.directory / "idea.json").exists())
+
+    def test_legacy_concept_input_still_builds_without_a_dimension_constraint(self):
+        (self.engine / "games").mkdir()
+        concept = idea()
+        del concept["dimension"]
+        supplied = self.directory / "supplied.json"
+        forge.atomic_json(supplied, concept)
+        self.state["idea_input"] = str(supplied)
+        self.worker.generate()
+        self.assertEqual(self.state["idea"], concept)
 
     def test_exact_mechanic_repetition_ignores_case_and_punctuation(self):
         first, second = idea(), idea()
@@ -271,6 +299,141 @@ class SupervisorTests(unittest.TestCase):
         self.assertIn("verified_code", self.state)
         self.assertNotIn("ci", self.state)
         self.assertNotIn("publication", self.state)
+
+
+class DailyTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.args = argparse.Namespace(engine_root=self.root, runs_root=self.root / "runs",
+                                       daily_root=self.root / "daily", timezone="America/Los_Angeles")
+        self.now = datetime(2026, 10, 8, 17, tzinfo=timezone.utc)
+        self.built = []
+        self.fail = False
+        self.create = patch.object(forge, "create_run", side_effect=self.create_worker).start()
+        self.run = patch.object(forge.Forge, "run", lambda worker: self.publish_worker(worker)).start()
+        self.addCleanup(patch.stopall)
+        try:
+            forge.ZoneInfo(self.args.timezone)
+            self.real_timezones = True
+        except forge.ZoneInfoNotFoundError:
+            self.real_timezones = False
+            patch.object(forge, "ZoneInfo", return_value=timezone.utc).start()
+
+    def create_worker(self, args, directory):
+        directory.mkdir(parents=True, exist_ok=True)
+        state = {"dimension": args.dimension, "publish": True, "target_dir": str(self.root),
+                 "status": "created", "completed": []}
+        worker = forge.Forge(directory, state)
+        worker.save()
+        return worker
+
+    def publish_worker(self, worker):
+        self.built.append((worker.state["dimension"], worker.directory))
+        if self.fail:
+            self.fail = False
+            worker.state["status"] = "failed"
+            worker.save()
+            raise forge.ForgeError("A genuine publication gate failed")
+        worker.state.update(status="published", completed=["publish-feedback"],
+                            publication={"page": "https://example.invalid/game"})
+        worker.save()
+
+    def test_daily_publishes_exactly_one_of_each_and_repeated_wakeups_do_nothing(self):
+        self.assertEqual(forge.daily_batch(self.args, self.now), 0)
+        self.assertCountEqual([d for d, _ in self.built], ["2d", "3d"])
+        forge.daily_batch(self.args, self.now)
+        self.assertEqual(len(self.built), 2)
+        self.assertEqual(self.create.call_count, 2)
+
+    def test_failure_retries_the_same_run_then_builds_the_other_dimension(self):
+        self.fail = True
+        self.assertEqual(forge.daily_batch(self.args, self.now), 1)
+        self.assertEqual(len(self.built), 1)
+        first = self.built[0]
+        self.assertEqual(forge.daily_batch(self.args, self.now), 0)
+        self.assertEqual(self.built[1], first)
+        self.assertNotEqual(self.built[2][0], first[0])
+        self.assertEqual(self.create.call_count, 2)
+
+    def test_reserved_run_recovers_after_exit_before_creation(self):
+        batch = self.args.daily_root / "batches/2026-10-08/state.json"
+        reserved = self.args.runs_root / "reserved"
+        forge.atomic_json(batch, {"version": 1, "date": "2026-10-08", "timezone": self.args.timezone,
+                                 "order": ["3d", "2d"], "status": "pending",
+                                 "slots": {"3d": {"directory": str(reserved), "status": "pending"}}})
+        forge.daily_batch(self.args, self.now)
+        self.assertEqual(self.built[0], ("3d", reserved))
+
+    def test_published_label_without_completed_feedback_is_resumed(self):
+        self.fail = True
+        forge.daily_batch(self.args, self.now)
+        directory = self.built[0][1]
+        state = forge.load_json(directory / "state.json")
+        state.update(status="published", publication={"page": "https://example.invalid/game"})
+        forge.atomic_json(directory / "state.json", state)
+        forge.daily_batch(self.args, self.now)
+        self.assertEqual(self.built[0], self.built[1])
+
+    def test_calendar_date_uses_pacific_midnight_and_handles_daylight_saving(self):
+        if not self.real_timezones:
+            self.skipTest("Host has no IANA timezone database; daily behavior is tested with UTC")
+        forge.daily_batch(self.args, datetime(2026, 11, 1, 6, 30, tzinfo=timezone.utc))
+        self.assertTrue((self.args.daily_root / "batches/2026-10-31/state.json").exists())
+        forge.daily_batch(self.args, datetime(2026, 11, 1, 8, 30, tzinfo=timezone.utc))
+        forge.daily_batch(self.args, datetime(2026, 11, 1, 9, 30, tzinfo=timezone.utc))
+        self.assertEqual(len(self.built), 4)
+
+    def test_overlapping_daily_supervisors_are_blocked(self):
+        self.args.daily_root.mkdir()
+        with forge.run_lock(self.args.daily_root):
+            with self.assertRaises(forge.ForgeError):
+                forge.daily_batch(self.args, self.now)
+        self.create.assert_not_called()
+
+    def test_old_unfinished_batch_is_completed_before_the_new_day(self):
+        self.fail = True
+        forge.daily_batch(self.args, self.now)
+        first = self.built[0]
+        forge.daily_batch(self.args, datetime(2026, 10, 9, 17, tzinfo=timezone.utc))
+        self.assertEqual(self.built[1], first)
+        self.assertEqual(len(self.built), 5)
+        self.assertEqual(self.create.call_count, 4)
+
+    def test_schedule_configuration_drives_daily_without_disabling_publication(self):
+        config = self.root / "config.json"
+        forge.atomic_json(config, {"engine_root": str(self.root), "games_root": str(self.root / "games"),
+                                  "daily_root": str(self.args.daily_root), "timezone": "America/Los_Angeles"})
+        with patch.object(forge, "daily_batch", return_value=0) as daily:
+            self.assertEqual(forge.main(["daily", "--config", str(config)]), 0)
+        settings = daily.call_args.args[0]
+        self.assertEqual(settings.engine_root, self.root)
+        self.assertTrue(settings.publish)
+
+    def test_installer_persists_settings_and_enables_hourly_retry_timer(self):
+        self.args.publish = True
+        with patch.dict(os.environ, {"XDG_CONFIG_HOME": str(self.root / "config")}), \
+                patch.object(forge.sys, "platform", "linux"), \
+                patch.object(forge.shutil, "which", return_value="systemctl"), \
+                patch.object(forge.subprocess, "run") as command:
+            forge.install_schedule(self.args)
+        units = self.root / "config/systemd/user"
+        timer = (units / "ideaforge-daily.timer").read_text()
+        self.assertIn("OnCalendar=*-*-* *:10:00 America/Los_Angeles", timer)
+        self.assertIn("Persistent=true", timer)
+        service = (units / "ideaforge-daily.service").read_text()
+        self.assertIn('"daily" "--config"', service)
+        saved = forge.load_json(self.root / "config/ideaforge/daily.json")
+        self.assertNotIn("publish", saved)
+        self.assertEqual(saved["engine_root"], str(self.root))
+        self.assertIn(["systemctl", "--user", "enable", "--now", "ideaforge-daily.timer"],
+                      [call.args[0] for call in command.call_args_list])
+
+    def test_scheduler_rejects_multiline_paths_and_escapes_expansions(self):
+        with self.assertRaises(forge.ForgeError):
+            forge.systemd_quote("path\nExecStart=another-command")
+        self.assertEqual(forge.systemd_quote('/tmp/space % $ "'), '"/tmp/space %% $$ \\""')
 
 
 if __name__ == "__main__":
