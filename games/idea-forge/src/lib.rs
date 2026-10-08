@@ -370,7 +370,7 @@ mod presentation {
         scene.text(3, text, Point::new(202, y), 14., MINT);
     }
     impl draw::Game for Forge {
-        fn show_hud(&self) -> bool {
+        fn show_hud() -> bool {
             false
         }
         fn menu_status(&self) -> String {

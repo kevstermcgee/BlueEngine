@@ -113,6 +113,32 @@ Recommendation: document the distinction between a persistent achievement and a
 fresh device interaction. Prefer before/after assertions in the generic browser
 gate so project probes cannot accidentally certify an earlier session's activity.
 
+### IF-07: offloaded compiler cache coincided with severe I/O stalls
+
+Severity: medium for iteration time. Status: task-local build mitigation.
+
+The first headless compile/test completed in 5m55s. Subsequent concurrent Cargo
+tasks made little progress; host I/O pressure exceeded 90 percent while compiler
+processes waited. The configured compiler cache was a symlink to a USB-mounted
+drive. This is host evidence, not an engine speed benchmark or proof of one root
+cause. No cache contents or global configuration were changed.
+
+Mitigation: stop only this task's validation process trees, bypass the compiler
+cache using command-local `RUSTC_WRAPPER=''`, and run checks in sequence. Clean
+publication reproduction already disables the compiler cache and starts with an
+empty target. Recommendation: report target/cache locations and observed stalls
+in build timing diagnostics, without silently changing a user's cache settings.
+
+### IF-08: headless success did not compile the presentation implementation
+
+Severity: low. Status: corrected application error.
+
+The first browser compilation caught E0185: this project's `show_hud` method used
+`&self`, while `draw::Game::show_hud` is an associated function. Headless rule tests
+had passed because the presentation implementation is feature-gated. Corrected
+the implementation to `fn show_hud() -> bool`. Keep both presentation compilation
+and headless behavior in the delivery gates; neither replaces the other.
+
 ## Verification and publication evidence
 
 Evidence is kept in the game's ignored `.blue-check` folders and the engine's
