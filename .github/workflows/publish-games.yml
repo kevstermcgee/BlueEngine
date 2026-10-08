@@ -8,6 +8,7 @@ on:
       - Cargo.toml
       - assets/games/**
       - games/signal-garden/**
+      - games/idea-forge/**
       - assets/maps/starters/**
       - examples/**
       - previews/**
