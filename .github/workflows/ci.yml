@@ -79,7 +79,7 @@ jobs:
           npm ci --ignore-scripts --prefix tools
       - name: Build and verify each isolated browser game
         run: |
-          for game in lantern-run pocket-breaker orchard-watch lantern-grove; do
+          for game in idea-forge lantern-run pocket-breaker orchard-watch lantern-grove; do
             python3 tools/be2.py web prepare games/$game
             python3 tools/be2.py web build games/$game
           done
