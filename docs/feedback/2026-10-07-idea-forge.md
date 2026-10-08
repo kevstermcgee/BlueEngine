@@ -205,6 +205,21 @@ retaining generated IDs and favorites. Existing games keep their original reset.
 The utility's restart/snapshot tests verify library preservation. Future utilities
 should choose reset semantics deliberately and describe them in their controls.
 
+### IF-13: a browser icon set did not meet native package requirements
+
+Severity: medium for packaging. Status: corrected assets; shared gate worked.
+
+The initial native package launched and produced a reviewed 960x540 capture, but
+failed icon-files and icon-art: the ICO omitted 20/24/40/96/256 sizes, its large
+frames were not PNG-encoded and the 32px art had only four colors. Browser display
+success did not satisfy native resource quality requirements.
+
+Resolution: regenerated this utility's complete icon set using the fresh canonical
+`be2.py map icon "Idea Forge" games/idea-forge/assets --replace` command. Inspected
+the resulting artwork and reran package verification. Recommendation: run native
+identity/resource checks before expensive release builds, and select icon tooling
+for the actual delivery target rather than accepting a web-only bitmap set.
+
 ## Verification and publication evidence
 
 The initial branch `db361f4786b07e71fea41100a0154b9ade7c1159` passed 10 headless/CLI/
