@@ -120,12 +120,12 @@ def select(root, task, kind, project, targets, template, networking):
                      'next': 'Choose native Windows EXE delivery explicitly; retain presentation and gameplay requirements.'})
     if kind == 'new-game':
         if template is None:
-            if presentation and network == 'offline' and not native_physics:
-                template = {'2d': 'two-d', '3d': 'three-d', 'hybrid': 'hybrid'}[presentation]
-            elif declarative:
+            if declarative:
                 template = 'stock'
-            elif network != 'offline' or native_physics or set(mechanics) & {'enemies', 'projectiles', 'physics', 'scoring', 'ai'}:
+            elif network != 'offline' or native_physics or (presentation != '2d' and set(mechanics) & {'enemies', 'projectiles', 'physics', 'scoring', 'ai'}):
                 template = 'custom-sim'
+            elif presentation:
+                template = {'2d': 'two-d', '3d': 'three-d', 'hybrid': 'hybrid'}[presentation]
             elif set(mechanics) & {'counters', 'interactables', 'timers'}:
                 template = 'stock'
             else:

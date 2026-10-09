@@ -1,0 +1,197 @@
+{
+  "revision": "90949ab5fcdc3a90a0e378d4c059ff07a6ce49a6",
+  "onboarding_method": "Unique bytes of root AGENTS.md, its new-game routing guides (PORTABLE_GAMES, GAME_QUICKSTART), mandatory custom-sim cheatsheet for requested 3D enemies, and start packet read_first/canonical_example. Conditional audio/network/maintenance guides and invoked tooling source excluded. No recursive link traversal. Reference envelope retained separately.",
+  "tracked_bytes": 124959698,
+  "reference_envelope_bytes": 348298,
+  "reference_envelope_files": {
+    "AGENTS.md": 8699,
+    "assets/audio/observatory/project.json": 2147,
+    "docs/AI_DEV_FEEDBACK.md": 14554,
+    "docs/AI_SPRINGBOARD.md": 6529,
+    "docs/AUDIO.md": 17699,
+    "docs/BROWSER_WORKFLOW.md": 1791,
+    "docs/CUSTOM_SIM_CHEATSHEET.md": 17883,
+    "docs/ENGINE_MAINTENANCE.md": 7650,
+    "docs/GAME_QUICKSTART.md": 16199,
+    "docs/NETPLAY.md": 19600,
+    "docs/PORTABLE_GAMES.md": 6070,
+    "docs/SAVE_STATE.md": 12991,
+    "docs/SCHEMAS.md": 4489,
+    "docs/learning/README.md": 9182,
+    "scripts/publish_games.py": 19708,
+    "templates/two-d/AGENTS.md": 2406,
+    "templates/two-d/lib.rs": 4664,
+    "tools/assets.py": 23289,
+    "tools/author.py": 11070,
+    "tools/be2.py": 31056,
+    "tools/learn.py": 92116,
+    "tools/perf.py": 14903,
+    "tools/xcapture.py": 3603
+  },
+  "onboarding_files": {
+    "AGENTS.md": 8699,
+    "docs/PORTABLE_GAMES.md": 6070,
+    "docs/GAME_QUICKSTART.md": 16199,
+    "docs/CUSTOM_SIM_CHEATSHEET.md": 17883,
+    "templates/two-d/AGENTS.md": 2406,
+    "templates/two-d/lib.rs": 4664
+  },
+  "onboarding_bytes": 55921,
+  "baseline_check": {
+    "status": "partial: temporary target exhausted disk at offline compilation",
+    "seconds": 656.701,
+    "completed_stages": [
+      {
+        "command": [
+          "cargo",
+          "fmt",
+          "--check"
+        ],
+        "tests": null,
+        "seconds": 1.928
+      },
+      {
+        "command": [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--lib",
+          "--profile",
+          "itest",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "tests": null,
+        "seconds": 83.881
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json"
+        ],
+        "tests": 998,
+        "seconds": 274.955
+      },
+      {
+        "command": [
+          "cargo",
+          "clippy",
+          "--all-targets",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "tests": null,
+        "seconds": 19.402
+      },
+      {
+        "command": [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--lib",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "tests": null,
+        "seconds": 16.829
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 866,
+        "seconds": 217.843
+      },
+      {
+        "command": [
+          "cargo",
+          "clippy",
+          "--all-targets",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "tests": null,
+        "seconds": 15.0
+      },
+      {
+        "command": [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--lib",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "offline",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "tests": null,
+        "seconds": 4.872
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "tools.test_workflow",
+          "tools.test_assets",
+          "tools.test_model_import",
+          "tools.test_schemas",
+          "scripts.test_publish_games",
+          "tools.test_game_check",
+          "tools.test_game_ship",
+          "tools.test_media_tools",
+          "tools.test_xcapture",
+          "tools.test_upgrade",
+          "tools.test_learn",
+          "tools.test_hub_deploy",
+          "tools.test_browser_retirement",
+          "tools.test_springboard",
+          "tools.test_machine_utilities",
+          "tools.test_idea_forge"
+        ],
+        "tests": 589,
+        "seconds": 182.78
+      }
+    ]
+  },
+  "verification_environment": {
+    "RUSTC_WRAPPER": "",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_ITEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "note": "Same full gates/assertions/feature modes; symbols/incremental cache disabled to fit available storage. Initial baseline failed with default symbols/cache; do not infer speedup from timings."
+  }
+}

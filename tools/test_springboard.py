@@ -470,8 +470,8 @@ class SpringboardTests(unittest.TestCase):
     def test_windows_routing_preserves_presentation_and_mechanics(self):
         cases = [('Create a 2D game with enemies projectiles scoring and AI', 'two-d', '2d'),
                  ('Create a two dimensional game with timers and counters', 'two-d', '2d'),
-                 ('Create a hybrid game with projectiles', 'hybrid', 'hybrid'),
-                 ('Create a 3D game with enemies', 'three-d', '3d')]
+                 ('Create a hybrid game', 'hybrid', 'hybrid'),
+                 ('Create a 3D game with enemies', 'custom-sim', '3d')]
         for objective, template, presentation in cases:
             with self.subTest(objective=objective):
                 packet = self.start(objective, kind='new-game', targets=['windows'])
@@ -496,6 +496,31 @@ class SpringboardTests(unittest.TestCase):
         self.assertEqual(native_3d['workflow']['requested']['presentation'], '3d')
         self.assertFalse(native_3d['workflow']['gaps'])
         self.assertEqual(native_3d['next_action']['argv'][-1], 'custom-sim')
+
+    def test_generated_starter_tables_match_the_catalog(self):
+        from tools import starter_docs
+        self.assertEqual(starter_docs.update(check=True), [])
+
+    def test_representative_starter_routes(self):
+        cases = [
+            ('Create a 2D game', 'two-d'),
+            ('Create a 2D game with enemies', 'two-d'),
+            ('Create a 3D game', 'three-d'),
+            ('Create a 3D first-person game with patrolling enemies', 'custom-sim'),
+            ('Create a 3D game with projectiles and AI', 'custom-sim'),
+            ('Create a 3D multiplayer game', 'custom-sim'),
+            ('Create a 2D multiplayer game', 'custom-sim'),
+            ('Create a declarative 3D GameDocument game', 'stock'),
+            ('Create a declarative multiplayer game with timers', 'stock'),
+            ('Create a game with counters and interactables', 'stock'),
+            ('Create a flexible game', 'portable'),
+            ('Create a hybrid game', 'hybrid'),
+            ('Create a 2D game with Rapier physics', 'custom-sim'),
+        ]
+        for prompt, expected in cases:
+            with self.subTest(prompt=prompt):
+                route = springboard.select(self.root, prompt, 'new-game', None, [], None, None)
+                self.assertEqual(route['template'], expected)
 
     def test_explicit_starters_keep_selection_and_flag_presentation_conflicts(self):
         for presentation in ('2d', '3d', 'hybrid'):
