@@ -1,5 +1,31 @@
 # Audio: generated sound, generated ambient music, and settings that survive a relaunch
 
+## Device failures and evidence
+
+The Linux/Windows playback boundary starts lazily after checked PCM resources are submitted. Missing
+hardware, initialization/worker-start errors, runtime device loss and disconnected/full audio-worker queues produce
+one `AUDIO-BACKEND` diagnostic and `BackendState::Unavailable(reason)`; gameplay can continue silently.
+This is a failed playback backend, not successful audio verification. `SoundBank::backend_state()`
+exposes it; poll each frame and inspect `state()`, `errors()` and `status().worker_failed`.
+`resource_failed()` distinguishes invalid resources/rendering/decoding from unavailable hardware.
+The stock client retains checked resources and gameplay when hardware fails; capture reports say
+`unavailable` and `submitted: false`. Missing/corrupt resources still fail startup.
+Linux mixing stays within its 44,100 Hz sample clock even with an immediately writable software/null
+device; an ALSA wait exceeding 1,000 ms reports unavailability rather than discarding mixed samples.
+`verify_playback` rejects unavailable playback. Restart the application after repairing a failed device;
+this change does not implement hot device replacement. Muting before loading avoids opening a device.
+
+`audio validate`, `render`, `check` and the numerical loop report need no playback hardware. They prove
+resource validity/generated buffers, not audible output. Package the entire checked bundle and identity
+assets; the existing project/package checks catch missing files. The fixed-step authority never reads
+backend health or depends on sound. Treat cues as presentation of confirmed events.
+
+The engine uses its small `vendor/quad-snd` patch directly, so standalone path dependencies receive
+identical Linux ALSA/Windows WASAPI failure handling. Macroquad still owns windows/rendering. Use engine
+`SoundBank`/`AudioBank` or `viewer::audio_backend` rather than enabling a separate Macroquad audio worker.
+Backend `Ready` and successful submission cannot prove speaker/headphone audibility; listen on hardware.
+Other platform backends retain upstream behavior and are outside the Linux/Windows support gates.
+
 ## Normal authoring path: a named audio project
 
 Start with `be2-tools audio describe`, then edit the small reference

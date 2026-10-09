@@ -1,0 +1,19 @@
+[
+ {"key":"d","down":true},
+ {"key":"space","down":true},
+ {"wait":{"field":"state.player.x","gte":73}},
+ {"key":"d","down":false},
+ {"key":"space","down":false},
+ {"expect":{"field":"accepted_input.action_ticks","gte":1}},
+ {"key":"Escape","down":true},
+ {"wait":{"field":"paused","eq":true}},
+ {"key":"Escape","down":false},
+ {"key":"Escape","down":true},
+ {"wait":{"field":"paused","eq":false}},
+ {"key":"Escape","down":false},
+ {"move":[200,150]},
+ {"button":1,"down":true},
+ {"wait":{"field":"accepted_input.action_ticks","gte":2}},
+ {"button":1,"down":false},
+ {"expect":{"field":"state.player.x","gte":73}}
+]

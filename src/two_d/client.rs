@@ -5,7 +5,7 @@ use crate::runtime::{
     storage::{self, PlatformStorage},
     FixedStepper, InputAccumulator,
 };
-use macroquad::audio::{
+use crate::viewer::audio_backend::{
     load_sound_from_bytes, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
 };
 use macroquad::prelude::*;
@@ -246,6 +246,7 @@ pub async fn run<G: Game>() {
     }
 }
 async fn run_inner<G: Game>() -> Result<(), String> {
+    let input_reporting = std::env::args().any(|arg| arg == "--input-report");
     #[cfg(not(target_arch = "wasm32"))]
     let capture = {
         let args: Vec<_> = std::env::args().collect();
@@ -620,8 +621,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         audio.evidence.enabled = settings.sound && !audio.muted;
         audio.evidence.activated = platform::audio_active();
-        if game.tick() != last_tick || frame % 30 == 0 {
-            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"step_ticks":step_ticks,"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls,"chunk_render_max_ms":chunk_render_max_ms,"chunk_render_frames":chunk_render_frames,"chunk_render_stalls_over_50ms":chunk_render_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
+        if (input_reporting || cfg!(target_arch = "wasm32"))
+            && (game.tick() != last_tick || frame % 30 == 0)
+        {
+            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"state":if input_reporting { Some(game.capture()) } else { None },"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"step_ticks":step_ticks,"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls,"chunk_render_max_ms":chunk_render_max_ms,"chunk_render_frames":chunk_render_frames,"chunk_render_stalls_over_50ms":chunk_render_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio_backend":format!("{:?}",crate::viewer::audio_backend::state()),"audio":audio.evidence});
             platform::report(&report.to_string());
             last_tick = game.tick();
         }
@@ -721,10 +724,15 @@ mod platform {
     }
     #[cfg(not(target_arch = "wasm32"))]
     pub fn audio_active() -> bool {
-        true
+        matches!(
+            crate::viewer::audio_backend::state(),
+            crate::viewer::audio_backend::BackendState::Ready
+        )
     }
     #[cfg(not(target_arch = "wasm32"))]
-    pub fn report(_: &str) {}
+    pub fn report(value: &str) {
+        println!("{value}");
+    }
     #[cfg(not(target_arch = "wasm32"))]
     pub fn now_ms() -> f64 {
         0. // Browser instrumentation only; native has its own performance/capture tooling.

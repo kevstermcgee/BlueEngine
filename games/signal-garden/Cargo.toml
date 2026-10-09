@@ -20,7 +20,7 @@ required-features = ["client"]
 
 [dependencies]
 vesper3d = { package = "be2", path = "../..", default-features = false }
-macroquad = { optional = true, version = "=0.4.14", default-features = false, features = ["audio"] }
+macroquad = { optional = true, version = "=0.4.14", default-features = false }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 

@@ -1,5 +1,5 @@
 //! Client-only sound: observe actual impacts, not input or wind-up animation.
-use macroquad::audio::{load_sound_from_bytes, play_sound, PlaySoundParams, Sound};
+use vesper3d::viewer::audio_backend::{load_sound_from_bytes, play_sound, PlaySoundParams, Sound};
 pub struct ImpactAudio {
     sound: Option<Sound>,
     seen: u32,

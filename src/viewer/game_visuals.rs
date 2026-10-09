@@ -141,14 +141,15 @@ pub struct WeaponPresentation {
     pub last_shot: f64,
     next_shot: f64,
     impacts: VecDeque<(f64, V, V)>,
-    sound: Option<macroquad::audio::Sound>,
+    sound: Option<crate::viewer::audio_backend::Sound>,
 }
 impl WeaponPresentation {
     pub async fn new() -> Self {
-        let sound =
-            macroquad::audio::load_sound_from_bytes(include_bytes!("../../assets/ui/shot.wav"))
-                .await
-                .ok();
+        let sound = crate::viewer::audio_backend::load_sound_from_bytes(include_bytes!(
+            "../../assets/ui/shot.wav"
+        ))
+        .await
+        .ok();
         Self {
             models: (0..6).map(weapon_mesh).collect(),
             last_shot: -10.,
@@ -179,9 +180,9 @@ impl WeaponPresentation {
             self.impacts.pop_front();
         }
         if let Some(s) = &self.sound {
-            macroquad::audio::play_sound(
+            crate::viewer::audio_backend::play_sound(
                 s,
-                macroquad::audio::PlaySoundParams {
+                crate::viewer::audio_backend::PlaySoundParams {
                     looped: false,
                     volume: 0.28,
                 },

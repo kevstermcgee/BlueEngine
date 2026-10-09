@@ -27,14 +27,14 @@ def main():
     alsa.write_text('pcm.!default { type null }\n', encoding='utf-8')
     env = {**os.environ, 'ALSA_CONFIG_PATH': str(alsa), 'LIBGL_ALWAYS_SOFTWARE': '1'}
     binary = args.binary.resolve()
-    def run(label, game, scenario=None, mute=False):
+    def run(label, game, scenario=None, mute=False, audio_env=None):
         capture = output / label
         command = [str(binary), '--game', str(game), '--capture', str(capture), '--settings', str(output / 'settings.json')]
         if scenario:
             command += ['--scenario', str(scenario)]
         if mute:
             command += ['--mute']
-        result = subprocess.run(command, cwd=root, env=env, text=True, capture_output=True, timeout=180)
+        result = subprocess.run(command, cwd=root, env=audio_env or env, text=True, capture_output=True, timeout=180)
         (output / f'{label}.log').write_text(result.stdout + result.stderr, encoding='utf-8')
         return result, capture
 
@@ -54,6 +54,19 @@ def main():
     for file in ('world.png', 'loss-0.png', 'reset-1.png', 'win-1.png', 'menu.png'):
         assert (capture / file).stat().st_size > 1000, file
 
+    # A real failed device must preserve authority and captures, without claiming submissions.
+    unavailable, unavailable_capture = run('unavailable', fixture / 'game-audio.json',
+        fixture / 'audio-loss-restart-win.json', audio_env={**env, 'ALSA_CONFIG_PATH': str(output / 'absent-alsa.conf')})
+    assert unavailable.returncode == 0, unavailable.stderr
+    unavailable_rows = json.loads((unavailable_capture / 'run.json').read_text())
+    assert len(unavailable_rows) == len(rows) and unavailable_rows[-1]['completed']
+    assert all(row['audio']['state'] == 'unavailable' and not row['audio']['submitted'] for row in unavailable_rows)
+    assert [{k: v for k, v in row.items() if k != 'audio'} for row in unavailable_rows] == \
+           [{k: v for k, v in row.items() if k != 'audio'} for row in rows], 'audio must not change authoritative evidence'
+    assert 'AUDIO-BACKEND' in unavailable.stderr and 'panicked' not in unavailable.stderr
+    for file in ('world.png', 'loss-0.png', 'reset-1.png', 'win-1.png', 'menu.png'):
+        assert (unavailable_capture / file).stat().st_size > 1000, file
+
     # Copy only this fixture to a new output, corrupt one runtime artifact, and require failure.
     broken = output / 'broken'
     broken.mkdir()
@@ -72,6 +85,9 @@ def main():
                 'audibility_verified': False, 'frames': len(rows), 'cue_events': events,
                 'negative_exit': negative.returncode, 'negative_capture': False,
                 'muted_exit': muted.returncode, 'muted_skips_missing_assets': True}
+    evidence['unavailable_exit'] = unavailable.returncode
+    evidence['unavailable_keeps_authority'] = True
+    evidence['unavailable_submits_playback'] = False
     (output / 'evidence.json').write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
     print(json.dumps(evidence))
 
