@@ -284,6 +284,47 @@ class SupervisorTests(unittest.TestCase):
             self.worker.rebuild()
         self.assertEqual(self.state["completed"], ["publish-games"])
 
+    def test_source_registration_recovers_before_and_after_manifest_write_and_commit(self):
+        path = self.engine / "games-publish.json"
+        forge.atomic_json(path, {"collections": {"games": []}})
+        self.state["verified_code"] = forge.code_digest(self.engine)
+        write = forge.atomic_json
+        for after in (False, True):
+            def interrupted(destination, value):
+                if destination == path:
+                    if after:
+                        write(destination, value)
+                    raise KeyboardInterrupt()
+                write(destination, value)
+            with patch.object(forge, "atomic_json", side_effect=interrupted):
+                with self.assertRaises(KeyboardInterrupt):
+                    self.worker.register_source()
+            self.worker = forge.Forge(self.directory, forge.load_json(self.directory / "state.json"))
+        commit = self.worker.commit
+        def interrupted_commit(*args):
+            commit(*args)
+            raise KeyboardInterrupt()
+        with patch.object(self.worker, "command"), patch.object(self.worker, "commit", side_effect=interrupted_commit):
+            with self.assertRaises(KeyboardInterrupt):
+                self.worker.register_source()
+        self.worker = forge.Forge(self.directory, forge.load_json(self.directory / "state.json"))
+        with patch.object(self.worker, "command"):
+            self.worker.register_source()
+        self.assertEqual(len(forge.load_json(path)["collections"]["games"]), 1)
+        self.assertEqual(self.worker.state["engine_head"], forge.git(self.engine, "rev-parse", "HEAD"))
+
+    def test_independent_export_cannot_claim_an_existing_slug(self):
+        self.worker.games.mkdir(parents=True)
+        catalog = self.worker.games / ".release-games.json"
+        forge.atomic_json(catalog, {"native_playables": [{"slug": self.state["idea"]["slug"]}]})
+        before = catalog.read_bytes()
+        self.state["games_root"] = str(self.engine)
+        with patch.object(self.worker, "command"), patch.object(forge, "github_repository", return_value="fixture/games"):
+            with self.assertRaises(forge.TerminalError):
+                self.worker.export()
+        self.assertEqual(catalog.read_bytes(), before)
+        self.assertNotIn("export_base", self.state)
+
     def test_local_review_defers_windows_delivery_to_the_supervisor_gates(self):
         _, capture = self.native_game()
         def agent(label, prompt, schema, **kwargs):
@@ -373,9 +414,36 @@ class IntegrationRecoveryTests(unittest.TestCase):
     def test_publication_push_succeeded_before_journal_completion(self):
         self.worker.games = self.other
         self.state["games_head"] = forge.git(self.other, "rev-parse", "HEAD")
-        with patch.object(self.worker, "assert_source_gates"), patch.object(self.worker, "command", wraps=self.worker.command) as command:
+        self.state["publication_started"] = True
+        (self.other / "dirty-after-push.rs").write_text("not release evidence")
+        with patch.object(self.worker, "assert_source_gates", side_effect=AssertionError("must reconcile first")), patch.object(self.worker, "command", wraps=self.worker.command) as command:
             self.worker.publish_games()
         self.assertNotIn("publish-catalog", [c.kwargs.get("label") for c in command.call_args_list])
+
+    def test_unchanged_source_reuses_game_receipt_but_checks_exact_integration_head(self):
+        self.state["ci"] = {"generated-game-linux-windows": {"head": self.release_head, "run": 7, "url": "fixture"}}
+        self.worker.integrate_engine()
+        self.assertEqual(self.state["integration_code"], self.state["verified_code"])
+        with patch.object(self.worker, "wait_ci", side_effect=self.ci) as waits:
+            self.worker.integration_ci()
+        self.assertEqual([call.args[4] for call in waits.call_args_list], ["integration-engine-checks"])
+        self.assertEqual(self.state["ci"]["integration-game-linux-windows"]["run"], 7)
+        def api(endpoint):
+            if "/actions/runs/" in endpoint:
+                head = self.release_head if endpoint.endswith("/7") else self.state["integration_head"]
+                return {"head_sha": head, "status": "completed", "conclusion": "success"}
+            return self.api(endpoint)
+        with patch.object(self.worker, "api", side_effect=api):
+            self.worker.publish_feedback()
+
+    def test_changed_source_dispatches_game_ci_instead_of_reusing_artifact_receipt(self):
+        self.state["ci"] = {"generated-game-linux-windows": {"head": self.release_head, "run": 7, "url": "fixture"}}
+        self.advance()
+        self.worker.integrate_engine()
+        with patch.object(self.worker, "wait_ci", side_effect=self.ci) as waits:
+            self.worker.integration_ci()
+        self.assertEqual(len(waits.call_args_list), 2)
+        self.assertEqual(self.state["ci"]["integration-game-linux-windows"]["head"], self.state["integration_head"])
 
     def test_main_advancing_after_publication_is_revalidated(self):
         self.advance()
@@ -437,7 +505,7 @@ class IntegrationRecoveryTests(unittest.TestCase):
         ledger.parent.mkdir(parents=True)
         entry = {"game": "other-game", "area": "input", "tokens": 0, "note": "Other finding",
                  "status": "open", "ref": "docs/feedback/other.md", "keywords": ["input", "keys"]}
-        forge.learn.append_entry(entry, path=ledger)
+        other_entry = forge.learn.append_entry(entry, path=ledger)
         forge.git(self.other, "add", ".")
         forge.git(self.other, "commit", "-qm", "Other worker feedback")
         forge.git(self.other, "push", "-q", "origin", "HEAD:main")
@@ -446,6 +514,12 @@ class IntegrationRecoveryTests(unittest.TestCase):
         entries, malformed = forge.learn.load_ledger(self.worker.integration / "docs/learning/ledger.jsonl")
         self.assertEqual((len(entries), malformed), (2, 0))
         self.assertEqual({e["game"] for e in entries}, {"rule-relay", "other-game"})
+        self.assertEqual(len({e["id"] for e in entries}), 2)
+        self.assertEqual(next(e for e in entries if e["game"] == "other-game")["id"], other_entry["id"])
+        before = (self.worker.integration / "docs/learning/ledger.jsonl").read_bytes()
+        with patch.object(self.worker, "wait_ci", side_effect=self.ci), patch.object(self.worker, "api", side_effect=self.api):
+            self.worker.run()
+        self.assertEqual((self.worker.integration / "docs/learning/ledger.jsonl").read_bytes(), before)
 
 
 class DailyTests(unittest.TestCase):

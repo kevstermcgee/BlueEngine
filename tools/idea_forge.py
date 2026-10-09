@@ -42,6 +42,10 @@ class ForgeError(RuntimeError):
     """A failed gate; an idea or an agent's claim is never completion evidence."""
 
 
+class TerminalError(ForgeError):
+    """This run cannot publish safely; retain it and choose a new run or release identity."""
+
+
 class RecoverableError(ForgeError):
     """Resume can retry this stage without replacing a published artifact."""
 
@@ -123,7 +127,7 @@ def atomic_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(path.name + ".partial")
-    with temporary.open("w", encoding="utf-8") as output:
+    with temporary.open("w", encoding="utf-8", newline="\n") as output:
         output.write(json.dumps(value, indent=2) + "\n")
         output.flush()
         os.fsync(output.fileno())
@@ -233,7 +237,7 @@ def github_repository(root):
     return match[1]
 
 
-def code_digest(root):
+def code_digest(root, replacements=None):
     """Bind verification to code/assets; feedback prose can be appended afterward."""
     paths = subprocess.check_output(["git", "-C", str(root), "ls-files", "-co",
                                      "--exclude-standard", "-z"]).decode().split("\0")
@@ -243,7 +247,9 @@ def code_digest(root):
             continue
         path = Path(root) / name
         digest.update(name.encode() + b"\0")
-        if path.is_symlink():
+        if replacements and name in replacements:
+            digest.update(replacements[name])
+        elif path.is_symlink():
             digest.update(os.readlink(path).encode())
         elif path.is_file():
             digest.update(path.read_bytes())
@@ -421,7 +427,7 @@ Return only the schema-constrained concept. No credentials or environment identi
         if required != "any" and idea.get("dimension") != required:
             raise ForgeError("The concept does not meet the requested dimension")
         if (self.engine / "games" / idea["slug"]).exists():
-            raise ForgeError("The generated slug already exists; existing games were preserved")
+            raise TerminalError("The generated slug already exists; existing games were preserved; start a new run with a fresh slug")
         # Re-read completed concepts: another generation may have finished while
         # this model was thinking. Keep ideas from failed builds too.
         fresh_prior = [load_json(p) for p in self.directory.parent.glob("*/idea.json")
@@ -613,8 +619,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         self.save()
 
     def register_source(self):
-        expected = self.state.get("registration_code", self.state["verified_code"])
-        if code_digest(self.engine) != expected:
+        if code_digest(self.engine) not in (self.state["verified_code"], self.state.get("registration_code")):
             raise ForgeError("Code changed after verification; rebuild before publishing")
         path = self.engine / "games-publish.json"
         manifest = load_json(path)
@@ -622,6 +627,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         source = "games/" + self.state["idea"]["slug"]
         if not any(e["source"] == source for e in entries):
             entries.append({"source": source, "destination": self.state["idea"]["slug"]})
+            content = (json.dumps(manifest, indent=2) + "\n").encode()
+            self.state["registration_code"] = code_digest(self.engine, {"games-publish.json": content})
+            self.save()  # Persist the exact allowed edit before writing or committing it.
             atomic_json(path, manifest)
         self.state["registration_code"] = code_digest(self.engine)
         self.save()
@@ -681,6 +689,12 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             self.command(["git", "worktree", "add", "-b", self.state["branch"], str(self.games), "origin/main"],
                          cwd=source, label="games-worktree")
         self.state["games_repository"] = github_repository(source)
+        if "export_base" not in self.state:
+            catalog = load_json(self.games / ".release-games.json")
+            if any(e["slug"] == self.state["idea"]["slug"] for e in catalog["native_playables"]):
+                raise TerminalError("The download slug already belongs to another publication; preserve it and start a fresh run")
+            self.state["export_base"] = git(self.games, "rev-parse", "HEAD")
+            self.save()  # Claim the absent slug before writing; retries belong to this run only.
         self.command([sys.executable, "scripts/publish_games.py", "export", "--output", self.games,
                       "--revision", self.state["engine_head"]], label="export-game")
         slug = self.state["idea"]["slug"]
@@ -698,7 +712,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                  "kind": "cargo-package", "binary": binary}
         existing = next((e for e in entries if e["slug"] == slug), None)
         if existing and existing != entry:
-            raise ForgeError("An independently maintained download definition uses this slug")
+            raise TerminalError("An independently maintained download definition uses this slug; use a new run")
         if not existing:
             entries.append(entry)
             atomic_json(path, manifest)
@@ -734,10 +748,17 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                 raise ForgeError(f"The {label} gate does not certify this source")
 
     def publish_games(self):
+        # Recorded intent was written only after exact-source gates succeeded.
+        # Reconcile a lost push response before reading mutable local source.
+        if self.state.get("publication_started"):
+            self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="publication-fetch")
+            if self.is_ancestor(self.games, self.state["games_head"], "origin/main"):
+                return
         self.assert_source_gates()
         if git(self.games, "rev-parse", "HEAD") != self.state["games_head"] or git(self.games, "status", "--porcelain"):
             raise ForgeError("Companion source changed after installer review")
-        self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="publication-fetch")
+        if not self.state.get("publication_started"):
+            self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="publication-fetch")
         # A push may have succeeded before the supervisor saved its completion.
         if self.is_ancestor(self.games, self.state["games_head"], "origin/main"):
             return
@@ -893,7 +914,23 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                     for line in lines:
                         if learn.validate_entry(json.loads(line)):
                             raise ForgeError("Invalid concurrent learning entry; inspect the ledger")
-                resolved[name] = "\n".join(dict.fromkeys(versions[1] + versions[2])) + "\n"
+                # Main keeps its published ledger identities. Independent workers can allocate
+                # the same next L-number; renumber only our unpublished conflicting addition.
+                merged = list(versions[2])
+                entries = [json.loads(line) for line in merged]
+                ids = [e["id"] for e in entries if e.get("id")]
+                if len(ids) != len(set(ids)):
+                    raise RecoverableError("Main already has conflicting learning IDs; inspect the retained ledger")
+                for line in versions[1]:
+                    entry = json.loads(line)
+                    if entry in entries:
+                        continue
+                    if entry.get("id") and any(e.get("id") == entry["id"] for e in entries):
+                        entry["id"] = learn.next_ledger_id(entries)
+                        line = json.dumps(entry)
+                    entries.append(entry)
+                    merged.append(line)
+                resolved[name] = "\n".join(merged) + "\n"
             else:
                 versions = [json.loads(t) for t in texts]
                 base, ours, theirs = versions
@@ -927,9 +964,15 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         branch = self.state["branch"] + "-integration"
         self.command(["git", "push", "-u", "origin", "HEAD"], cwd=root, label="push-integration-review")
         repository = self.state["engine_repository"]
-        self.wait_ci(repository, "forge-game-checks.yml", branch, head,
-                     "integration-game-linux-windows", dispatch=True,
-                     fields={"game_slug": self.state["idea"]["slug"]})
+        artifact_gate = self.state.get("ci", {}).get("generated-game-linux-windows")
+        if (self.state["integration_code"] == self.state["verified_code"] and artifact_gate
+                and artifact_gate["head"] == self.state["engine_head"]):
+            self.state["ci"]["integration-game-linux-windows"] = dict(artifact_gate)
+            self.save()
+        else:
+            self.wait_ci(repository, "forge-game-checks.yml", branch, head,
+                         "integration-game-linux-windows", dispatch=True,
+                         fields={"game_slug": self.state["idea"]["slug"]})
         self.wait_ci(repository, "ci.yml", branch, head, "integration-engine-checks")
 
     def publish_feedback(self):
@@ -939,10 +982,15 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise RecoverableError("Integration source changed; resume revalidates it without rebuilding the published game")
         for label in ("integration-engine-checks", "integration-game-linux-windows"):
             receipt = self.state.get("ci", {}).get(label)
-            if not receipt or receipt["head"] != head:
+            expected = head
+            if (label == "integration-game-linux-windows" and receipt
+                    and receipt["head"] == self.state["engine_head"]
+                    and self.state["integration_code"] == self.state["verified_code"]):
+                expected = self.state["engine_head"]
+            if not receipt or receipt["head"] != expected:
                 raise RecoverableError(f"Missing exact-source gate: {label}; resume integration")
             run = self.api(f"repos/{self.state['engine_repository']}/actions/runs/{receipt['run']}")
-            if run["head_sha"] != head or run["status"] != "completed" or run["conclusion"] != "success":
+            if run["head_sha"] != expected or run["status"] != "completed" or run["conclusion"] != "success":
                 raise ForgeError(f"The {label} gate does not certify integrated source")
         self.command(["git", "fetch", "origin", "main"], cwd=root, label="feedback-fetch")
         if not self.is_ancestor(root, head, "origin/main"):
@@ -975,6 +1023,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         self.save()
 
     def run(self):
+        if delivery_complete(self.state):
+            print(f"IdeaForge: already delivered ({self.directory})", flush=True)
+            return
         stages = [("setup", self.setup), ("generate", self.generate), ("build-and-review", self.build),
                   ("feedback", self.feedback), ("source-commit", self.register_source)]
         if self.state["publish"]:
@@ -997,7 +1048,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                     self.state["completed"] = [s for s in self.state["completed"]
                                                if s not in ("integrate-engine", "integration-ci")]
                 self.state.update(status="failed", error=type(error).__name__,
-                                  recovery="resume" if isinstance(error, RecoverableError)
+                                  failure_kind="terminal" if isinstance(error, TerminalError) else "recoverable",
+                                  recovery="preserve outputs; choose a new run/release identity" if isinstance(error, TerminalError)
+                                  else "resume" if isinstance(error, RecoverableError)
                                   else "inspect stage diagnostics; repair and resume")
                 self.state.setdefault("failures", []).append({"phase": name, "description":
                     str(error).split("; private log:")[0] if isinstance(error, ForgeError)
@@ -1232,7 +1285,7 @@ def main(argv=None):
                 raise ForgeError("Unsupported run state version")
             if args.command == "status":
                 print(json.dumps({key: state.get(key) for key in
-                                  ("status", "phase", "completed", "publication", "feedback_path", "recovery", "integration_head")}, indent=2))
+                                  ("status", "phase", "completed", "publication", "feedback_path", "failure_kind", "recovery", "integration_head")}, indent=2))
                 return 0
             forge = Forge(args.directory, state)
         else:

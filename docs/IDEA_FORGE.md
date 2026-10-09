@@ -138,8 +138,9 @@ publication receipt describe the immutable release; `integration_head` and
 `integration_code` describe the source proposed for engine main. They are never interchangeable.
 
 After publication, `resume` merges current main in `engine-integration`, retains concurrent
-append-only learning/publication entries, writes final feedback and runs **new exact-commit
-Linux/Windows engine and generated-game CI**. A concurrent push resets integration stages
+append-only learning/publication entries, writes final feedback and runs exact-commit
+Linux/Windows engine CI. Generated-game CI is rerun when the relevant source digest changes;
+an unchanged digest retains the original exact-artifact game receipt instead of rebuilding. A concurrent push resets integration stages
 for the next resume. Already published installers, screenshots and their receipts stay intact;
 this validation checks the integrated engine/game source without republishing the game.
 The separate integration branch ends in `-integration`. CI success and remote feedback blob
@@ -149,6 +150,7 @@ is detected by ancestry; repeated resumes do not publish or append feedback twic
 Recoverable failures identify the retained stage/worktree and retry action (`status` includes
 `recovery`). Resolve code conflicts in `engine-integration`, commit and resume. Only validated
 append-only conflicts in the learning ledger and game-source registry resolve automatically;
+main keeps its ledger IDs and unpublished colliding additions receive fresh IDs;
 conflicting slugs or edits to existing entries require inspection. Never force-push.
 Before catalog publication, changed release source requires `resume --rebuild`; this preserves
 the concept/findings and archives old gates. Rebuild is prohibited after a publication push is
