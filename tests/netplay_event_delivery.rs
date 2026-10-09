@@ -1,5 +1,5 @@
 //! Busy combat must not make state snapshots permanently exceed the datagram budget.
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::net::SocketAddr;
 use std::rc::Rc;
 use std::time::Instant;
@@ -27,10 +27,18 @@ struct QueuedDatagram {
 struct OrderedEnd {
     inner: LoopEnd,
     outgoing: Rc<RefCell<Vec<QueuedDatagram>>>,
+    backpressure: bool,
+    attempts: Cell<u64>,
 }
 impl DatagramTransport for OrderedEnd {
     fn send(&self, peer: SocketAddr, data: &[u8]) -> vesper3d::Result<usize> {
         assert!(data.len() <= 1100, "actual transport payload ceiling");
+        self.attempts.set(self.attempts.get() + 1);
+        if self.backpressure
+            && (self.attempts.get().is_multiple_of(7) || self.outgoing.borrow().len() >= 128)
+        {
+            return Err(std::io::Error::from(std::io::ErrorKind::WouldBlock).into());
+        }
         self.outgoing.borrow_mut().push(QueuedDatagram {
             from: self.inner.local_addr()?,
             to: peer,
@@ -177,12 +185,23 @@ impl<const MIN: usize, const LARGE: bool, const DURATION: u32, const CAPACITY: u
 
 #[test]
 fn two_minutes_of_combat_delivers_promptly_to_four_lossy_clients() {
+    sustained_combat(false);
+}
+
+#[test]
+fn sustained_reliable_events_survive_bounded_transport_backpressure_and_loss() {
+    sustained_combat(true);
+}
+
+fn sustained_combat(backpressure: bool) {
     type SustainedGame = CombatGame<4, false, 7200, 4>;
     let net = LoopNet::new(4, 3, 30., 81);
     let outgoing = Rc::new(RefCell::new(Vec::<QueuedDatagram>::new()));
     let endpoint = |address| OrderedEnd {
         inner: net.endpoint(address),
         outgoing: outgoing.clone(),
+        backpressure,
+        attempts: Cell::new(0),
     };
     let addr = |n: u16| SocketAddr::from(([127, 0, 0, 1], 34_000 + n));
     let mut server = NetServer::<SustainedGame, _>::new(
@@ -221,6 +240,9 @@ fn two_minutes_of_combat_delivers_promptly_to_four_lossy_clients() {
         // Session HashMaps use random iteration order. Sort streams before assigning seeded
         // network impairments, preserving order within each stream without changing the engine.
         let mut queued = std::mem::take(&mut *outgoing.borrow_mut());
+        if backpressure {
+            assert!(queued.len() <= 128, "bounded shared submission queue");
+        }
         queued.sort_by_key(|d| (d.from, d.to));
         for d in queued {
             net.endpoint(d.from).send(d.to, &d.bytes).unwrap();
@@ -273,9 +295,13 @@ fn two_minutes_of_combat_delivers_promptly_to_four_lossy_clients() {
         eprintln!("client={i} event_age_ticks(p50,p99,max)={event:?} state_age_ticks(p50,p99,max)={state:?} events={} gaps={}", delivered[i], client.event_gaps());
         assert_eq!(delivered[i], 7200 * 8);
         assert_eq!(client.event_gaps(), 0);
-        // Ordered events must repair lost predecessors across several ACK round trips.
-        // At 60 Hz allow p99 <= 0.75 s / max <= 1.5 s; independent state uses 0.5 s / 1 s.
-        assert!(event.1 <= 45 && event.2 <= 90, "event age {event:?}");
+        // Preserve the existing 30%-loss latency contract. The additional stress case rejects
+        // one in seven local submissions before that loss and allows bounded 2s p99 / 3s max repair.
+        let (event_p99, event_max) = if backpressure { (120, 180) } else { (45, 90) };
+        assert!(
+            event.1 <= event_p99 && event.2 <= event_max,
+            "event age {event:?}"
+        );
         assert!(state.1 <= 30 && state.2 <= 60, "state age {state:?}");
         assert!(
             state_age[i].len() > 7000,
@@ -289,6 +315,9 @@ fn two_minutes_of_combat_delivers_promptly_to_four_lossy_clients() {
     assert!(max_retained <= 4096);
     assert!(max_bytes <= 1024 * 1024);
     assert_eq!(server.send_stats().oversized, 0);
+    if backpressure {
+        assert!(server.send_stats().backpressured > 0);
+    }
 }
 
 #[test]

@@ -894,9 +894,14 @@
         "templates/two-d/web.py",
         "docs/PORTABLE_GAMES.md",
         "templates/two-d/world.rs",
-        "tests/portable_storage.rs"
+        "tests/portable_storage.rs",
+        "docs/NATIVE_INPUT.md",
+        "docs/examples/native-input.json",
+        "tools/xcapture.py",
+        "tools/test_xcapture.py"
       ],
       "read_first": [
+        "docs/NATIVE_INPUT.md",
         "docs/PORTABLE_GAMES.md",
         "templates/two-d/AGENTS.md",
         "templates/two-d/lib.rs"
@@ -905,7 +910,7 @@
         "cargo test --locked --lib two_d --no-default-features --features two-d",
         "python -m unittest tools.test_browser_retirement"
       ],
-      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native installation. Choose elements by gameplay value; no legacy renderer exploration.",
+      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native installation. Choose elements by gameplay value; no legacy renderer exploration. Native keyboard/mouse mappings: docs/NATIVE_INPUT.md; xcapture --input sends X11/XTest OS events through the window to authoritative state. Replay, virtual OS input and physical hardware are distinct evidence.",
       "keywords": [
         "2d",
         "2D",
@@ -921,7 +926,13 @@
         "3d",
         "portable",
         "minimap",
-        "mixed dimensions"
+        "mixed dimensions",
+        "native keyboard mapping",
+        "mouse movement",
+        "held input",
+        "input conflict",
+        "XTest",
+        "input-report"
       ],
       "canonical_example": "templates/two-d/lib.rs",
       "depends_on": [],
@@ -933,7 +944,10 @@
         "two_d::draw::Scene",
         "two_d::client::run",
         "portable::draw::World",
-        "portable::draw::Scene::world"
+        "portable::draw::Scene::world",
+        "draw::Game::device_input(&mut self, Intent) -> Intent",
+        "tools/xcapture.py --input SCRIPT.json",
+        "--input-report authoritative Snapshot"
       ]
     },
     "performance_regression_budgets": {
@@ -1680,7 +1694,7 @@
         "python -m unittest tools.test_hub_deploy",
         "python tools/check_headless.py"
       ],
-      "note": "One hub for every netplay game (ADR 0037). netplay::cli::serve::<G>(ServeSpec) is the shared server main (--listen --transport --join-key --auto-start --report-dir --seed, a participants flag, --set ID=VALUE and per-setting flags from NetGame::settings(), --status-lines, --exit-on-stdin-eof, --info, --help). be2-hub lists and creates rooms for every game in its registry file on one UDP port, one server process per room on a shared round-robin port pool, protocol BEHB v1 (list, create with a source-address cookie, ping) plus the legacy DFHB v1 adapter for shipped Deadfall clients, token-bucket and room caps, never-joined (45 s) and empty (120 s) reaping, per-game Public rooms, and 'be2-hub reload GAME' that retires one game's rooms (new Public room first: a replacement that cannot start changes nothing), 'be2-hub verify GAME --server CANDIDATE' (the registry's rules on --info with time and output limits, plus an isolated start that must print STATUS) and 'be2-hub status GAME' (the hub's own view: registry build, whether the Public room process prints STATUS with the expected build; reload's acknowledgement is never readiness). transport = production is refused at load (hub rooms are raw UDP). hub::client is the game side: HubClient, the std-only Online Play Online state machine, local_build::<G>() and default_hub() (blue-engine.duckdns.org:4100). deploy/hub holds the systemd units, portmap (be2-hub ports), ddns and update.sh, whose per-game logic is tools/hub_deploy.py: dependency-aware build identity (game + path-dependency source, manifests, lockfile, toolchain, args, env; no rebuild when nothing relevant changed), staged candidate, verify, atomic promotion with BIN.previous, reload, status-confirmed readiness, a receipt per game whose phase (installing/installed/activated/ready) makes an incomplete activation retryable, and --rollback. Feta, BlueDM and Riftwake have their own netcode and are out of scope. tools/hub_deploy.py resumes incomplete rollback installation/activation/readiness before skipping rejected source, verifies restored SHA-256, and recovers only from a receipt-matching previous artifact; otherwise fails without rebuilding the rejected source.",
+      "note": "BEHB v2 advertises per-room transport and admission requirement. Production hub rooms reuse existing pinned QUIC/TLS, require join_key_env (exactly 32 bytes) and cli::serve hub_admission capability. Provision TLS pin/key and admission secrets outside discovery. hub::connect_room / connect_room_with_pin join with supplied ClientConfig; UDP discovery never distributes credentials. Development binds are loopback unless BLUE_ALLOW_DEVELOPMENT_INTERNET=1 explicitly permits trusted legacy deployments; helper rejects remote UDP. BEHB v1 gets update refusal; DFHB v1 remains for unkeyed development rooms; BECT remains v1. RoomManager health/terminate expose readiness, players, heartbeat, idle eligibility and graceful drain using existing Spawner/status/watchdog. Existing rollback/update tooling, bounded transport and reliable-event acknowledgements remain. deploy/hub/update.sh and tools/hub_deploy.py retain dependency-aware identities, exact artifact receipts, atomic promotion, readiness checks and receipt-matched rollback recovery. Interrupted rollback resumes before skipping rejected source; it never rebuilds that rejected source.",
       "keywords": [
         "hub",
         "be2-hub",
@@ -1727,7 +1741,12 @@
         "updater",
         "recovery",
         "receipt",
-        "deployment"
+        "deployment",
+        "production hub",
+        "authenticated room join",
+        "room readiness",
+        "idle shutdown",
+        "join_key_env"
       ],
       "depends_on": [
         "netplay",
@@ -1755,7 +1774,11 @@
         "hub::local_build",
         "hub::default_hub",
         "hub::wire::Request",
-        "hub::legacy"
+        "hub::legacy",
+        "hub::connect_room::<G>(addr, room, ClientConfig)",
+        "hub::connect_room_with_pin::<G>(addr, room, ClientConfig, pin)",
+        "RoomManager::health(now_ms)",
+        "RoomManager::terminate(port, now_ms)"
       ],
       "evidence": [
         {
@@ -2325,7 +2348,10 @@
         "assets/games/leo/assets/audio-source/nature.json",
         "assets/games/leo/assets/audio-source/music.json",
         "assets/games/leo/AUDIO.md",
-        "tools/leo_smoke.py"
+        "tools/leo_smoke.py",
+        "src/viewer/audio_backend.rs",
+        "vendor/quad-snd",
+        "tests/audio_backend.rs"
       ],
       "read_first": [
         "docs/AUDIO.md",
@@ -2380,9 +2406,14 @@
         "crickets",
         "wind",
         "crossfade",
-        "loop"
+        "loop",
+        "missing audio device",
+        "ALSA",
+        "WASAPI",
+        "audio worker failure",
+        "audio backend health"
       ],
-      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream. Imported clips support exact-length adaptive looping ambience with a bounded wrap crossfade, stereo preservation and worst-subset headroom. Leo uses recorded nature and a separate original score, driven by authoritative day/night state; edits need rendering, not a Rust rebuild.",
+      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream. Imported clips support exact-length adaptive looping ambience with a bounded wrap crossfade, stereo preservation and worst-subset headroom. Leo uses recorded nature and a separate original score, driven by authoritative day/night state; edits need rendering, not a Rust rebuild. Linux/Windows native playback uses the engine-owned quad-snd patch: unavailable hardware and worker failures produce explicit BackendState::Unavailable, never gameplay authority. Validate/render/check resources without hardware; Ready/submission is not audible playback.",
       "contract": {
         "owns": "Data-authored effects and music, crossfaded imported ambience loops, reusable checked PCM bundles, named presentation playback and numeric quality evidence",
         "inputs": "Versioned AudioProject JSON, seed, optional imported WAV and read-only game events, optional presentation.audio state bindings",
@@ -2410,7 +2441,9 @@
         "checked_wav",
         "StockAudio",
         "AudioCursor",
-        "GameSession::advance_observed"
+        "GameSession::advance_observed",
+        "SoundBank::backend_state()",
+        "viewer::audio_backend::state()"
       ],
       "depends_on": [
         "custom_simulation",
@@ -2492,7 +2525,7 @@
       "checks": [
         "python -m unittest tools.test_idea_forge"
       ],
-      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates.",
+      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates. Published artifacts remain immutable while a separate journaled engine-integration worktree merges concurrent main and delivers feedback. Changed relevant source requires new game CI; unchanged source reuses the exact original game receipt. Resume reconciles lost Git push responses and preserves append-only feedback; terminal slug conflicts require a new run identity.",
       "keywords": [
         "ideaforge",
         "idea forge",

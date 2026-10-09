@@ -73,8 +73,8 @@ replacement. Once both games have verified public downloads and committed engine
 feedback, further wakeups that date do nothing. A retained earlier day's batch
 finishes before today's games start. Publication checks still apply; infrastructure
 failures or long builds can delay delivery beyond the intended calendar day.
-Concurrent-main conflicts retain their worktrees for the integration/rebuild
-procedure below rather than forcing a push.
+Concurrent-main advances are merged and verified in a separate integration worktree;
+code conflicts retain that worktree for resolution rather than forcing a push.
 
 Private daily journals live in `.be2-work/idea-forge/daily/batches/DATE/state.json`.
 The user timer survives logout when login lingering is enabled (it is enabled on
@@ -131,17 +131,32 @@ or faster disk. A run lock prevents two supervisors advancing one run. Timeouts
 stop only the supervisor's own command process group. Completed phases survive;
 `resume` retries the failed phase rather than starting a new idea.
 
-An agent's completion claim never substitutes for executed checks. Changed code
-or commits invalidate old publication gates. Repository pushes never force or
-overwrite another author's updates. If main advances concurrently, integrate it
-in the retained worktree and re-run the affected checks before retrying; stale
-receipts cannot authorize the new source. Before production publication, use
-`ideaforge resume /path/to/run --rebuild` after integrating the changes. This
-preserves the idea and AI findings, archives old receipts and reruns build,
-review and publication gates. An already published run cannot be rebuilt; create
-a new run for another release. A failed run still retains feedback
-locally when the AI has provided it. Virtual/software graphics checks do not
-certify physical controller hardware or speaker output.
+An agent's completion claim never substitutes for executed checks. Artifact verification,
+catalog publication, public-download verification, engine integration, integration CI and
+feedback delivery are distinct journaled stages. `engine_head`, `games_head` and the
+publication receipt describe the immutable release; `integration_head` and
+`integration_code` describe the source proposed for engine main. They are never interchangeable.
+
+After publication, `resume` merges current main in `engine-integration`, retains concurrent
+append-only learning/publication entries, writes final feedback and runs exact-commit
+Linux/Windows engine CI. Generated-game CI is rerun when the relevant source digest changes;
+an unchanged digest retains the original exact-artifact game receipt instead of rebuilding. A concurrent push resets integration stages
+for the next resume. Already published installers, screenshots and their receipts stay intact;
+this validation checks the integrated engine/game source without republishing the game.
+The separate integration branch ends in `-integration`. CI success and remote feedback blob
+identity are required before the daily slot completes. A push that succeeded before interruption
+is detected by ancestry; repeated resumes do not publish or append feedback twice.
+
+Recoverable failures identify the retained stage/worktree and retry action (`status` includes
+`recovery`). Resolve code conflicts in `engine-integration`, commit and resume. Only validated
+append-only conflicts in the learning ledger and game-source registry resolve automatically;
+main keeps its ledger IDs and unpublished colliding additions receive fresh IDs;
+conflicting slugs or edits to existing entries require inspection. Never force-push.
+Before catalog publication, changed release source requires `resume --rebuild`; this preserves
+the concept/findings and archives old gates. Rebuild is prohibited after a publication push is
+attempted because its remote outcome may be uncertain. Resume first to reconcile that outcome.
+An already published run finishes integration through ordinary `resume`, without `--rebuild`.
+Virtual/software graphics checks do not certify physical controller hardware or speaker output.
 
 Codex automation uses documented `exec`, sandbox, stdin, output-schema and final
 message interfaces: https://learn.chatgpt.com/docs/non-interactive-mode.

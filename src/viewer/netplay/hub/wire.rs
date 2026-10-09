@@ -1,4 +1,4 @@
-//! The hub's datagram protocol, `BEHB` version 1, and the loopback control protocol `BECT`.
+//! The hub's datagram protocol, `BEHB` version 2, and the loopback control protocol `BECT`.
 //!
 //! One UDP datagram each way, little endian. A request is padded with zeros up to a minimum length for its kind
 //! and a reply is capped per kind, so the hub can never be used to amplify traffic by more than a small factor
@@ -10,7 +10,7 @@
 //!
 //! game id  = len(u8) bytes                    1..=24 of a-z 0-9 -
 //! string   = len(u8) utf8 bytes
-//! room     = name(string<=96) players(u8) capacity(u8) state(u8: 0 lobby, 1 match) port(u16) public(u8)
+//! room     = name(string<=96) players(u8) capacity(u8) state(u8: 0 lobby, 1 match) port(u16) public(u8) transport(u8: 0 UDP, 1 QUIC/TLS) requires_key(u8)
 //!
 //! request kinds                                   min length
 //!   1 List    game skip(u8)                          200
@@ -38,10 +38,11 @@
 //! Reload's `ok` means "the hub re-read the game and asked for a replacement room", not that the room is ready;
 //! status's text is what the hub holds right now (see [`deploy::GameStatus`](super::deploy::GameStatus)).
 //! Hubs older than status ignore kind 2 (silence), which `be2-hub status` reports as "no answer".
+use crate::viewer::net::TransportProfile;
 use std::fmt;
 
 pub const MAGIC: [u8; 4] = *b"BEHB";
-pub const VERSION: u8 = 1;
+pub const VERSION: u8 = 2;
 /// The default hub port.
 pub const DEFAULT_PORT: u16 = 4100;
 /// Every reply fits one safe datagram.
@@ -55,6 +56,7 @@ pub const MAX_SETTINGS: usize = 8;
 /// The longest game id.
 pub const MAX_GAME_ID: usize = 24;
 
+pub const CONTROL_VERSION: u8 = 1;
 pub const CONTROL_MAGIC: [u8; 4] = *b"BECT";
 
 const REQ_LIST: u8 = 1;
@@ -106,6 +108,10 @@ pub struct RoomInfo {
     pub port: u16,
     /// The permanent Public room of the game.
     pub public: bool,
+    /// QUIC/TLS production or explicitly local development UDP.
+    pub transport: TransportProfile,
+    /// The player must supply an out-of-band admission key. Secrets never appear in discovery.
+    pub requires_key: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -219,13 +225,18 @@ impl Put {
         self.u8(end as u8);
         self.0.extend_from_slice(&s.as_bytes()[..end]);
     }
-    pub fn room(&mut self, r: &RoomInfo) {
+    pub fn room_legacy(&mut self, r: &RoomInfo) {
         self.str(&r.name, 96);
         self.u8(r.players);
         self.u8(r.capacity);
         self.u8(matches!(r.state, RoomState::Playing) as u8);
         self.u16(r.port);
         self.u8(r.public as u8);
+    }
+    pub fn room(&mut self, r: &RoomInfo) {
+        self.room_legacy(r);
+        self.u8(matches!(r.transport, TransportProfile::Production) as u8);
+        self.u8(r.requires_key as u8);
     }
 }
 
@@ -264,7 +275,7 @@ impl Cur<'_> {
     pub fn game(&mut self) -> Option<String> {
         self.str().filter(|g| game_id_ok(g))
     }
-    pub fn room(&mut self) -> Option<RoomInfo> {
+    pub fn room_legacy(&mut self) -> Option<RoomInfo> {
         Some(RoomInfo {
             name: self.str()?,
             players: self.u8()?,
@@ -276,7 +287,26 @@ impl Cur<'_> {
             },
             port: self.u16()?,
             public: self.u8()? != 0,
+            transport: TransportProfile::Development,
+            requires_key: false,
         })
+    }
+    pub fn room(&mut self) -> Option<RoomInfo> {
+        let mut room = self.room_legacy()?;
+        room.transport = match self.u8()? {
+            0 => TransportProfile::Development,
+            1 => TransportProfile::Production,
+            _ => return None,
+        };
+        room.requires_key = match self.u8()? {
+            0 => false,
+            1 => true,
+            _ => return None,
+        };
+        if room.transport == TransportProfile::Production && !room.requires_key {
+            return None;
+        }
+        Some(room)
     }
 }
 
@@ -373,7 +403,7 @@ impl Request {
 impl Reply {
     /// Encoded size of one listed room.
     pub fn room_len(r: &RoomInfo) -> usize {
-        1 + r.name.len().min(96) + 6
+        1 + r.name.len().min(96) + 8
     }
 
     pub fn encode(&self, nonce: u32, build: u32) -> Vec<u8> {
@@ -493,7 +523,7 @@ impl Control {
         };
         let mut p = Put(Vec::new());
         p.0.extend_from_slice(&CONTROL_MAGIC);
-        p.u8(VERSION);
+        p.u8(CONTROL_VERSION);
         p.u8(kind);
         p.u32(nonce);
         p.str(game, MAX_GAME_ID);
@@ -501,7 +531,7 @@ impl Control {
     }
 
     pub fn decode(data: &[u8]) -> Option<(u32, Control)> {
-        if data.len() < REQUEST_HEADER || data[..4] != CONTROL_MAGIC || data[4] != VERSION {
+        if data.len() < REQUEST_HEADER || data[..4] != CONTROL_MAGIC || data[4] != CONTROL_VERSION {
             return None;
         }
         let nonce = u32::from_le_bytes([data[6], data[7], data[8], data[9]]);
@@ -518,7 +548,7 @@ impl ControlReply {
     pub fn encode(&self, nonce: u32) -> Vec<u8> {
         let mut p = Put(Vec::new());
         p.0.extend_from_slice(&CONTROL_MAGIC);
-        p.u8(VERSION);
+        p.u8(CONTROL_VERSION);
         p.u8(0x81);
         p.u32(nonce);
         p.u8(self.ok as u8);
@@ -529,7 +559,7 @@ impl ControlReply {
     pub fn decode(data: &[u8]) -> Option<(u32, ControlReply)> {
         if data.len() < REQUEST_HEADER
             || data[..4] != CONTROL_MAGIC
-            || data[4] != VERSION
+            || data[4] != CONTROL_VERSION
             || data[5] != 0x81
         {
             return None;
@@ -619,6 +649,8 @@ mod tests {
             state: RoomState::Playing,
             port,
             public: false,
+            transport: crate::viewer::net::TransportProfile::Development,
+            requires_key: false,
         }
     }
 
@@ -629,6 +661,23 @@ mod tests {
             settings: vec![(1, 25), (2, 1)],
             cookie: 0x0123_4567_89ab_cdef,
         }
+    }
+
+    #[test]
+    fn production_metadata_round_trips_and_never_accepts_unkeyed_production() {
+        let mut secure = room("secure", 4101);
+        secure.transport = TransportProfile::Production;
+        secure.requires_key = true;
+        let reply = Reply::Created {
+            room: secure.clone(),
+        };
+        let bytes = reply.encode_within(1, 2, MAX_REPLY);
+        assert_eq!(Reply::decode(&bytes).unwrap().reply, reply);
+        secure.requires_key = false;
+        assert!(
+            Reply::decode(&Reply::Created { room: secure }.encode_within(1, 2, MAX_REPLY))
+                .is_none()
+        );
     }
 
     #[test]
@@ -666,7 +715,7 @@ mod tests {
             skip: 7,
         }
         .encode(0x0403_0201);
-        assert_eq!(&bytes[..10], b"BEHB\x01\x01\x01\x02\x03\x04");
+        assert_eq!(&bytes[..10], b"BEHB\x02\x01\x01\x02\x03\x04");
         assert_eq!(&bytes[10..16], b"\x04kart\x07");
         assert!(bytes[16..].iter().all(|b| *b == 0) && bytes.len() == 200);
         let bytes = create().encode(1);
@@ -815,6 +864,7 @@ mod tests {
         let c = Control::Reload {
             game: "deadfall".into(),
         };
+        assert_eq!(c.encode(9)[4], 1, "loopback deployment control remains v1");
         assert_eq!(Control::decode(&c.encode(9)), Some((9, c)));
         let st = Control::Status {
             game: "deadfall".into(),

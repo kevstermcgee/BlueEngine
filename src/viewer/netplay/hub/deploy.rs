@@ -129,6 +129,7 @@ pub fn verify_candidate(
             server: candidate.to_path_buf(),
             settings: entry.public_settings.clone(),
             transport: entry.config.transport.clone(),
+            join_key_env: entry.config.join_key_env.clone(),
             auto_start: entry.config.auto_start,
             report_dir: Some(report_dir.clone()),
             public: true,

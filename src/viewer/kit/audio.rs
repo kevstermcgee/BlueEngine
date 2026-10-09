@@ -9,7 +9,7 @@
 //!
 //! Sounds are addressed by index (`Preset as usize`, your own enum's discriminant) and variant; the
 //! bank plays variants round-robin so repeated sounds do not fatigue.
-use macroquad::audio::{
+use crate::viewer::audio_backend::{
     load_sound_from_bytes, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
 };
 use std::collections::VecDeque;
@@ -37,6 +37,7 @@ struct Loader {
     errors: Vec<String>,
     rendered: bool,
     failed: bool,
+    resource_errors: usize,
 }
 
 impl Loader {
@@ -48,6 +49,7 @@ impl Loader {
             errors: Vec::new(),
             rendered: false,
             failed: false,
+            resource_errors: 0,
         }
     }
     /// Take the worker's result if it has arrived, then release up to `budget` queued sounds.
@@ -68,11 +70,13 @@ impl Loader {
                 Ok(Err(error)) => {
                     self.rx = None;
                     self.failed = true;
+                    self.resource_errors += 1;
                     self.errors.push(error);
                 }
                 Err(TryRecvError::Disconnected) => {
                     self.rx = None;
                     self.failed = true;
+                    self.resource_errors += 1;
                     self.errors
                         .push("audio worker exited without a result".into());
                 }
@@ -100,8 +104,8 @@ impl Loader {
     }
 }
 
-/// Observable audio evidence. Loaded/submitted means the backend accepted it, not that a listener
-/// heard it: a disconnected or null output device still needs a listening check.
+/// Observable audio evidence. Loaded counts describe validated resources/handles; playback counters
+/// record submissions while the backend was Ready. Worker failure rejects verification. None proves audibility.
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct AudioStatus {
     pub muted: bool,
@@ -230,6 +234,12 @@ impl SoundBank {
     /// Finish loading once the worker is done: bounded decoder submissions per call. Call every
     /// frame; expensive generation/file verification remains on the worker, not in this method.
     pub async fn poll(&mut self) {
+        if let crate::viewer::audio_backend::BackendState::Unavailable(error) = self.backend_state()
+        {
+            if !self.loader.errors.contains(&error) {
+                self.loader.errors.push(error);
+            }
+        }
         for slot in self.loader.pump(5) {
             match slot {
                 Slot::Sfx(i, bytes) => {
@@ -239,7 +249,10 @@ impl SoundBank {
                     }
                     match load_sound_from_bytes(&bytes).await {
                         Ok(sound) => self.sounds[i].push(sound),
-                        Err(error) => self.loader.errors.push(format!("effect {i}: {error}")),
+                        Err(error) => {
+                            self.loader.resource_errors += 1;
+                            self.loader.errors.push(format!("effect {i}: {error}"));
+                        }
                     }
                 }
                 Slot::Stem(bytes) => match load_sound_from_bytes(&bytes).await {
@@ -248,7 +261,10 @@ impl SoundBank {
                         self.stem_now.push(0.);
                         self.stem_target.push(0.);
                     }
-                    Err(error) => self.loader.errors.push(format!("music stem: {error}")),
+                    Err(error) => {
+                        self.loader.resource_errors += 1;
+                        self.loader.errors.push(format!("music stem: {error}"));
+                    }
                 },
             }
         }
@@ -260,15 +276,27 @@ impl SoundBank {
     }
 
     /// Loading/ready concerns assets and decoder submission; the backend cannot confirm audibility.
+    /// Hardware-worker health; Ready is device initialization, not a listening test.
+    pub fn backend_state(&self) -> crate::viewer::audio_backend::BackendState {
+        crate::viewer::audio_backend::state()
+    }
+    /// Resource/render/decode failures, independent of unavailable playback hardware.
+    pub fn resource_failed(&self) -> bool {
+        self.loader.failed || self.loader.resource_errors > 0
+    }
     pub fn status(&self) -> AudioStatus {
         AudioStatus {
             muted: self.muted,
             rendered: self.loader.rendered,
             pending: !self.loader.finished(),
-            worker_failed: self.loader.failed,
+            worker_failed: self.loader.failed
+                || matches!(
+                    self.backend_state(),
+                    crate::viewer::audio_backend::BackendState::Unavailable(_)
+                ),
             loaded_effects: self.sounds.iter().map(Vec::len).sum(),
             loaded_stems: self.stems.len(),
-            load_failures: self.loader.errors.len(),
+            load_failures: self.loader.resource_errors,
             effect_plays: self.effect_plays,
             music_playing: self.music_playing,
         }
@@ -302,7 +330,13 @@ impl SoundBank {
     /// Play the next variant of `sound` at `volume` (0-1, scaled by [`SoundBank::sfx_volume`]).
     /// Unknown or not-yet-loaded sounds are ignored.
     pub fn play(&mut self, sound: usize, volume: f32) {
-        if self.muted || !self.loader.errors.is_empty() {
+        if self.muted
+            || !self.loader.errors.is_empty()
+            || !matches!(
+                self.backend_state(),
+                crate::viewer::audio_backend::BackendState::Ready
+            )
+        {
             return;
         }
         let Some(variants) = self.sounds.get(sound).filter(|v| !v.is_empty()) else {
@@ -319,7 +353,13 @@ impl SoundBank {
 
     /// Play a specific variant (a combo pitch ladder). An out-of-range variant plays the last one.
     pub fn play_variant(&mut self, sound: usize, variant: usize, volume: f32) {
-        if self.muted || !self.loader.errors.is_empty() {
+        if self.muted
+            || !self.loader.errors.is_empty()
+            || !matches!(
+                self.backend_state(),
+                crate::viewer::audio_backend::BackendState::Ready
+            )
+        {
             return;
         }
         if let Some(s) = self
@@ -341,6 +381,10 @@ impl SoundBank {
     /// Start every music stem together, silent until [`SoundBank::update_music`] raises them.
     pub fn start_music(&mut self) {
         if self.muted
+            || !matches!(
+                self.backend_state(),
+                crate::viewer::audio_backend::BackendState::Ready
+            )
             || !self.loader.errors.is_empty()
             || self.music_playing
             || self.stems.is_empty()
@@ -368,7 +412,13 @@ impl SoundBank {
         if !self.music_playing {
             return;
         }
-        if self.muted || !self.loader.errors.is_empty() {
+        if self.muted
+            || !self.loader.errors.is_empty()
+            || !matches!(
+                self.backend_state(),
+                crate::viewer::audio_backend::BackendState::Ready
+            )
+        {
             for stem in &self.stems {
                 set_sound_volume(stem, 0.);
             }

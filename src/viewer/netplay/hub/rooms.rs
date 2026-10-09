@@ -100,6 +100,8 @@ struct Room {
     name: String,
     port: u16,
     public: bool,
+    transport: crate::viewer::net::TransportProfile,
+    requires_key: bool,
     process: Box<dyn RoomProcess>,
     status: Option<RoomStatus>,
     /// The capacity to list until the server reports its own.
@@ -155,8 +157,21 @@ impl Room {
             state,
             port: self.port,
             public: self.public,
+            transport: self.transport,
+            requires_key: self.requires_key,
         }
     }
+}
+
+/// Provider-neutral lifecycle observation. Unknown player counts cannot certify an idle room.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RoomHealth {
+    pub port: u16,
+    pub ready: bool,
+    pub active_players: Option<u8>,
+    pub heartbeat_age_ms: Option<u64>,
+    pub idle_shutdown_eligible: bool,
+    pub terminating: bool,
 }
 
 /// Owns the room table, the port pool and the child servers.
@@ -180,6 +195,39 @@ impl RoomManager {
             cursor: 0,
             next_public_try_ms: HashMap::new(),
             public_failures: HashMap::new(),
+        }
+    }
+
+    /// Readiness, admission load, heartbeat and idle eligibility after the latest [`Self::tick`].
+    pub fn health(&self, now_ms: u64) -> Vec<RoomHealth> {
+        self.rooms
+            .iter()
+            .map(|room| RoomHealth {
+                port: room.port,
+                ready: room.status.is_some() && room.retired_at_ms.is_none(),
+                active_players: room.status.map(|status| status.players),
+                heartbeat_age_ms: room.last_status_ms.map(|at| now_ms.saturating_sub(at)),
+                idle_shutdown_eligible: room.status.is_some_and(|s| s.players == 0)
+                    && !room.public
+                    && ((!room.ever_joined
+                        && now_ms.saturating_sub(room.created_ms)
+                            >= self.cfg.never_joined_timeout_ms)
+                        || room.empty_since_ms.is_some_and(|at| {
+                            now_ms.saturating_sub(at) >= self.cfg.empty_timeout_ms
+                        })),
+                terminating: room.retired_at_ms.is_some(),
+            })
+            .collect()
+    }
+
+    /// Remove one room from discovery and let occupied play finish within the retirement grace.
+    /// A client with a cached address and valid credentials can still join until the child exits.
+    pub fn terminate(&mut self, port: u16, now_ms: u64) -> bool {
+        if let Some(room) = self.rooms.iter_mut().find(|room| room.port == port) {
+            room.retired_at_ms.get_or_insert(now_ms);
+            true
+        } else {
+            false
         }
     }
 
@@ -243,6 +291,7 @@ impl RoomManager {
             server: game.config.server.clone(),
             settings,
             transport: game.config.transport.clone(),
+            join_key_env: game.config.join_key_env.clone(),
             auto_start: game.config.auto_start,
             // One directory per game and port so two servers never append to the same matches.jsonl.
             report_dir: self
@@ -406,6 +455,8 @@ impl RoomManager {
             name,
             port,
             public: true,
+            transport: game.config.transport.parse().expect("validated transport"),
+            requires_key: game.config.join_key_env.is_some(),
             process,
             status: None,
             capacity_hint: game.info.max_seats.min(255) as u8,
@@ -532,6 +583,8 @@ impl RoomManager {
             name,
             port,
             public: false,
+            transport: game.config.transport.parse().expect("validated transport"),
+            requires_key: game.config.join_key_env.is_some(),
             process,
             status: None,
             capacity_hint: game.info.max_seats.min(255) as u8,
@@ -705,6 +758,46 @@ pub(crate) mod tests {
 
     fn names(m: &RoomManager, game: &str) -> Vec<String> {
         m.rooms_of(game).into_iter().map(|r| r.name).collect()
+    }
+
+    #[test]
+    fn health_reports_unknown_load_and_termination_stops_admitting_before_drain() {
+        let (mut m, w) = manager(cfg());
+        let d = GameEntry::new(
+            GameConfig2::quiet("d"),
+            super::super::registry::tests::fake_info("d", 1),
+            None,
+        )
+        .unwrap();
+        let reg = registry(std::slice::from_ref(&d));
+        let room = m.create(&d, "Private", vec![], ip(1), 0).unwrap();
+        assert_eq!(m.health(0)[0].active_players, None);
+        assert!(!m.health(0)[0].ready);
+        w.borrow_mut()
+            .status
+            .insert(room.port, status(2, RoomState::Playing));
+        m.tick(10, &reg);
+        let health = &m.health(20)[0];
+        assert!(health.ready);
+        assert_eq!(health.active_players, Some(2));
+        assert_eq!(health.heartbeat_age_ms, Some(10));
+        assert!(!health.idle_shutdown_eligible);
+        assert!(m.terminate(room.port, 20));
+        assert!(
+            m.terminate(room.port, 21),
+            "termination retries are idempotent"
+        );
+        assert!(m.rooms_of("d").is_empty());
+        assert!(m.health(21)[0].terminating);
+        m.tick(22, &reg);
+        assert!(w.borrow().killed.is_empty(), "occupied room drains first");
+        w.borrow_mut()
+            .status
+            .insert(room.port, status(0, RoomState::Lobby));
+        m.tick(30, &reg);
+        assert_eq!(w.borrow().killed, [room.port]);
+        assert!(m.health(30).is_empty());
+        assert!(!m.terminate(room.port, 31));
     }
 
     #[test]

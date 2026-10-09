@@ -22,7 +22,7 @@ use vesper3d::viewer::netplay::hub::{
     self, build_matches, local_build, parse_config, room_addr, Hub, HubClient, HubEvent,
     HubOptions, Limits, ManagerConfig, ProcessInfo, ProcessSpawner,
 };
-use vesper3d::viewer::netplay::toy::{ToyGame, ToyInput};
+use vesper3d::viewer::netplay::toy::{ToyEvent, ToyGame, ToyInput};
 use vesper3d::viewer::netplay::{ClientConfig, ClientState, NetClient, NetGame};
 
 const TOY_SERVER: &str = env!("CARGO_BIN_EXE_be2-toy-server");
@@ -311,6 +311,159 @@ fn states<T: vesper3d::viewer::net::DatagramTransport>(
     clients: &[NetClient<ToyGame, T>],
 ) -> Vec<ClientState> {
     clients.iter().map(|c| c.state().clone()).collect()
+}
+
+#[test]
+fn production_room_discovery_admission_reconnect_and_restart_use_pinned_quic() {
+    let pool = 4;
+    let base = free_ports(pool);
+    let dir = TempDir::new("production");
+    let generated = rcgen::generate_simple_self_signed(vec!["feta.local".into()]).unwrap();
+    let certificate = generated.cert.der().to_vec();
+    let cert = dir.path().join("cert.der");
+    let key_file = dir.path().join("key.der");
+    std::fs::write(&cert, &certificate).unwrap();
+    std::fs::write(&key_file, generated.signing_key.serialize_der()).unwrap();
+    let config = config_text(
+        base,
+        pool,
+        dir.path(),
+        "transport = production\njoin_key_env = HUB_TEST_ADMISSION",
+        false,
+    );
+    let conf = dir.path().join("hub.conf");
+    std::fs::write(&conf, config).unwrap();
+    let secret = "0123456789abcdef0123456789abcdef";
+    let start = || {
+        let child = Command::new(HUB_BIN)
+            .arg("--config")
+            .arg(&conf)
+            .env("BLUE_TLS_CERT_FILE", &cert)
+            .env("BLUE_TLS_KEY_FILE", &key_file)
+            .env("HUB_TEST_ADMISSION", secret)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .spawn()
+            .unwrap();
+        HubProcess { child, base, pool }
+    };
+    let mut process = start();
+    let addr = SocketAddr::from(([127, 0, 0, 1], base));
+    let mut hc = HubClient::new(addr, "toy-footrace").unwrap();
+    let mut rooms = Vec::new();
+    assert!(eventually(20, || {
+        rooms = list(&mut hc);
+        !rooms.is_empty()
+    }));
+    let public = rooms.remove(0);
+    assert_eq!(public.transport, TransportProfile::Production);
+    assert!(public.requires_key);
+    let connect = |room: &RoomInfo, name: &str, key: &str| {
+        hub::connect_room_with_pin::<ToyGame>(
+            addr,
+            room,
+            ClientConfig {
+                name: name.into(),
+                key: key.into(),
+                choice: 0,
+            },
+            &certificate,
+        )
+    };
+    assert!(connect(&public, "Missing", "").is_err());
+    let mut invalid = vec![connect(&public, "Invalid", "wrong-key").unwrap()];
+    assert!(drive(&mut invalid, 15, |c| matches!(
+        c[0].state(),
+        ClientState::Rejected(_)
+    )));
+    assert_eq!(
+        invalid[0].failure(),
+        Some(vesper3d::viewer::netplay::ConnectFailure::WrongKey)
+    );
+    let mut clients = vec![
+        connect(&public, "One", secret).unwrap(),
+        connect(&public, "Two", secret).unwrap(),
+    ];
+    assert!(
+        drive(&mut clients, 15, |c| c
+            .iter()
+            .all(|x| *x.state() == ClientState::Lobby)),
+        "{:?}",
+        states(&clients)
+    );
+    assert!(eventually(10, || {
+        drive(&mut clients, 0, |_| true);
+        list(&mut hc)[0].players == 2
+    }));
+    clients[0].leave();
+    clients[0] = connect(&public, "Reconnected", secret).unwrap();
+    assert!(drive(&mut clients, 15, |c| c
+        .iter()
+        .all(|x| *x.state() == ClientState::Lobby)));
+    hc.request_create("Private");
+    let HubEvent::Created { room, .. } = wait_event(&mut hc) else {
+        panic!("production create failed")
+    };
+    assert_eq!(room.transport, TransportProfile::Production);
+    let mut private = vec![connect(&room, "Private player", secret).unwrap()];
+    assert!(drive(&mut private, 15, |c| *c[0].state() == ClientState::Lobby));
+    for client in &mut clients {
+        client.ready(true);
+    }
+    assert!(
+        drive(&mut clients, 30, |c| c.iter().all(|x| x
+            .view()
+            .snapshot
+            .as_ref()
+            .is_some_and(|s| s.winner.is_some()))),
+        "authenticated hub clients must receive authoritative match results"
+    );
+    for client in &mut clients {
+        let events = client.drain_events();
+        assert_eq!(
+            events
+                .iter()
+                .filter(|e| matches!(e, ToyEvent::Started))
+                .count(),
+            1
+        );
+        assert_eq!(
+            events
+                .iter()
+                .filter(|e| matches!(e, ToyEvent::Finished { .. }))
+                .count(),
+            1
+        );
+        assert!(
+            client.drain_events().is_empty(),
+            "reliable QUIC events are delivered once"
+        );
+    }
+    private[0].leave();
+    for client in &mut clients {
+        client.leave();
+    }
+    drop(private);
+    drop(clients);
+    // Hub termination closes stdin of every child; rooms must release their ports.
+    process.child.kill().unwrap();
+    process.child.wait().unwrap();
+    assert!(eventually(10, || (base + 1..base + 1 + pool).all(port_is_free)));
+    process = start();
+    let mut hc = HubClient::new(addr, "toy-footrace").unwrap();
+    assert!(eventually(20, || {
+        rooms = list(&mut hc);
+        !rooms.is_empty()
+    }));
+    assert_eq!(
+        rooms.len(),
+        1,
+        "private rooms are ephemeral; Public recovers on restart"
+    );
+    let mut clients = vec![connect(&rooms[0], "After restart", secret).unwrap()];
+    assert!(drive(&mut clients, 15, |c| *c[0].state() == ClientState::Lobby));
+    clients[0].leave();
+    drop(process);
 }
 
 // ---- a spawner that runs real servers but can be told to crash one ---------------------------------------------------
@@ -1450,9 +1603,7 @@ mod deployment {
             let out = hub_cmd(&args);
             let e = text(&out.stderr);
             assert!(
-                !out.status.success()
-                    && e.contains("transport = production is not available for hub rooms")
-                    && e.contains("line 3"),
+                !out.status.success() && e.contains("production requires join_key_env"),
                 "a requested secure transport is refused, never downgraded: {e}"
             );
         }

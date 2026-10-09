@@ -256,6 +256,7 @@ async fn main() {
     let vignette = hud::make_vignette();
     let (mut world, mut alpha, mut add) = (Batch::new(), Batch::new(), Batch::new());
 
+    let input_reporting = args.iter().any(|arg| arg == "--input-report");
     loop {
         // The cursor is captured while a run is in progress; the shell's menu releases it.
         input.begin_frame_with_keyboard(&mut shell, !sim.over, unattended || platform::focused(), platform::keyboard());
@@ -315,6 +316,13 @@ async fn main() {
         if playing {
             juice.update(dt);
             fx.update(dt);
+        }
+
+        if input_reporting {
+            use vesper3d::viewer::devkit::Snapshot;
+            println!("{}", serde_json::json!({"ready":true,"verified":life.script().is_some(),
+                "tick":sim.tick,"hash":format!("{:016x}",sim.state_hash()),"state":sim.capture(),
+                "paused":shell.paused,"focused":unattended || platform::focused()}));
         }
 
         // 3. Camera: the simulation's pose plus any look motion no tick has consumed yet.

@@ -249,6 +249,8 @@ pub struct Info {
     pub max_seats: usize,
     pub tick_hz: u64,
     pub settings: Vec<SettingDef>,
+    /// Supports the hub's private BLUE_NETPLAY_JOIN_KEY environment contract.
+    pub hub_admission: bool,
 }
 
 impl Info {
@@ -259,6 +261,7 @@ impl Info {
             build: build_id::<G>(),
             max_seats: G::MAX_SEATS,
             tick_hz: G::TICK_HZ,
+            hub_admission: true,
             settings: G::settings().iter().map(SettingDef::from).collect(),
         }
     }
@@ -271,6 +274,9 @@ impl Info {
         let _ = writeln!(out, "build={:08x}", self.build);
         let _ = writeln!(out, "max_seats={}", self.max_seats);
         let _ = writeln!(out, "tick_hz={}", self.tick_hz);
+        if self.hub_admission {
+            let _ = writeln!(out, "hub_admission=1");
+        }
         for s in &self.settings {
             let _ = writeln!(out, "setting={}", s.to_field());
         }
@@ -283,6 +289,7 @@ impl Info {
         let (mut game, mut fingerprint, mut build, mut max_seats, mut tick_hz) =
             (None, None, None, None, None);
         let mut settings = Vec::new();
+        let mut hub_admission = false;
         for (n, line) in text.lines().enumerate() {
             let line = line.trim();
             if line.is_empty() {
@@ -326,6 +333,7 @@ impl Info {
                             .ok_or_else(|| at("tick_hz is not a positive number".into()))?,
                     )
                 }
+                "hub_admission" => hub_admission = value == "1",
                 "setting" => settings.push(SettingDef::parse_field(value).map_err(at)?),
                 _ => {}
             }
@@ -339,6 +347,7 @@ impl Info {
             max_seats: max_seats.ok_or_else(|| missing("max_seats"))?,
             tick_hz: tick_hz.ok_or_else(|| missing("tick_hz"))?,
             settings,
+            hub_admission,
         })
     }
 }
@@ -700,7 +709,9 @@ pub fn run<G: NetGame>(
         )
         .into());
     }
-    let env_key = std::env::var(spec.join_key_env).ok();
+    let env_key = std::env::var("BLUE_NETPLAY_JOIN_KEY")
+        .ok()
+        .or_else(|| std::env::var(spec.join_key_env).ok());
     let opts = match parse_args(spec, &schema, args, env_key)? {
         Command::Info => {
             out.write_all(Info::of::<G>().to_text().as_bytes())?;
@@ -828,6 +839,7 @@ mod tests {
     #[test]
     fn info_round_trips_and_has_the_documented_lines() {
         let info = Info {
+            hub_admission: false,
             game: "toy-footrace".into(),
             fingerprint: 0x0123_abcd,
             build: 0xdead_beef,

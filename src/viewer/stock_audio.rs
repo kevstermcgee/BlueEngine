@@ -322,13 +322,32 @@ impl StockSound {
             )
             .await?;
             let start = std::time::Instant::now();
-            while !bank.sounds.ready() {
+            while !bank.sounds.ready()
+                || matches!(
+                    bank.sounds.backend_state(),
+                    super::audio_backend::BackendState::Starting
+                )
+            {
                 // Poll handshakes/snapshots without stepping authority or sending predicted input.
                 // Establish the current baseline after asset loading finishes.
                 session.advance(Default::default(), 0., false)?;
                 bank.sounds.poll().await;
                 if bank.sounds.state() == super::kit::AudioState::Failed {
-                    return Err(format!("Stock audio failed: {:?}", bank.sounds.errors()).into());
+                    if bank.sounds.resource_failed()
+                        || !matches!(
+                            bank.sounds.backend_state(),
+                            super::audio_backend::BackendState::Unavailable(_)
+                        )
+                    {
+                        return Err(format!(
+                            "Stock audio resources failed: {:?}",
+                            bank.sounds.errors()
+                        )
+                        .into());
+                    }
+                    if !bank.sounds.status().pending {
+                        break; // Checked assets remain valid; unavailable hardware never stops authority.
+                    }
                 }
                 if bank.sounds.state() == super::kit::AudioState::Empty {
                     return Err("Stock audio bundle has no playable assets".into());
@@ -366,19 +385,26 @@ impl StockSound {
         capture: bool,
     ) -> Result<Option<serde_json::Value>> {
         let levels = self.cursor.music(state, playing);
+        let backend = self.bank.as_ref().map(|bank| bank.sounds.backend_state());
+        let playback_ready = matches!(backend, Some(super::audio_backend::BackendState::Ready));
         if let Some(bank) = &mut self.bank {
             bank.sounds.sfx_volume = self.settings.sfx_level();
             bank.sounds.music_volume = self.settings.music_level();
-            for cue in cues {
-                bank.play(&cue.cue, cue.volume)?;
+            if playback_ready {
+                for cue in cues {
+                    bank.play(&cue.cue, cue.volume)?;
+                }
+                let mix: Vec<_> = levels
+                    .iter()
+                    .map(|(name, level)| (name.as_str(), *level))
+                    .collect();
+                bank.music(seconds, &mix)?;
             }
-            let mix: Vec<_> = levels
-                .iter()
-                .map(|(name, level)| (name.as_str(), *level))
-                .collect();
-            bank.music(seconds, &mix)?;
         }
-        Ok(capture.then(|| serde_json::json!({"state": if self.bank.is_some() { "ready" } else { "muted" }, "cues":cues.iter().map(|c| &c.cue).collect::<Vec<_>>(), "submitted":self.bank.is_some(), "sfx_level":self.settings.sfx_level(), "music_level":self.settings.music_level(), "layers":levels, "audibility_verified":false})))
+        Ok(capture.then(|| serde_json::json!({"state": match &backend {
+            None => "muted", Some(super::audio_backend::BackendState::Ready) => "ready",
+            Some(super::audio_backend::BackendState::Unavailable(_)) => "unavailable", _ => "starting"
+        }, "backend":backend.as_ref().map(|b| format!("{b:?}")), "cues":cues.iter().map(|c| &c.cue).collect::<Vec<_>>(), "submitted":playback_ready, "sfx_level":self.settings.sfx_level(), "music_level":self.settings.music_level(), "layers":levels, "audibility_verified":false})))
     }
     pub fn menu(
         &mut self,

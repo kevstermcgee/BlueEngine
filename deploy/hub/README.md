@@ -206,10 +206,30 @@ to temporary directories and a fake `systemctl`, so they never touch a live inst
 ### What the hub is not
 
 The hub lists rooms and starts processes. It is not a relay or NAT traversal (players connect to `hub_host:room_port`, so the ports
-must be open), not an identity service and not an encrypted transport. Rooms it starts are raw UDP (the "development" transport,
-unencrypted and unauthenticated); the rate limits and creation cookies reduce abuse, they do not replace encryption or
-authentication. `transport = production` in `hub.conf` is refused at load with an explanation instead of being passed to a server
-nobody could join or quietly run unencrypted; a game that needs QUIC/TLS is run by hand (docs/HOSTING.md).
+must be open), not an identity service and not an encrypted transport. Room discovery is UDP; gameplay rooms can use the existing pinned QUIC/TLS production transport.
+For each Internet game set `transport = production` and `join_key_env = MY_GAME_JOIN_KEY`. Provision
+that exactly 32-byte secret, `BLUE_TLS_CERT_FILE` and `BLUE_TLS_KEY_FILE` in the hub service environment;
+use DER credentials for `feta.local` as described in docs/HOSTING.md. Rebuild room servers with the
+current `netplay::cli::serve` admission capability. Clients use BEHB v2 metadata and `hub::connect_room`
+with a separately provisioned key/public certificate (docs/NETPLAY.md). Discovery never distributes credentials.
+
+For the user service, add a drop-in with `systemctl --user edit blueengine-hub`:
+
+```ini
+[Service]
+EnvironmentFile=%h/.config/blueengine/hub-secrets.env
+```
+
+Keep that file private (mode 0600), with the named admission variables and TLS file paths. Keep DER
+private keys outside source control and readable only by the server account. Supply the same environment
+to an operator's `be2-hub verify --start`/update session so its isolated readiness probe can start a
+production candidate; service credentials are not automatically inherited by a terminal.
+
+Development binds are loopback unless the operator explicitly sets `BLUE_ALLOW_DEVELOPMENT_INTERNET=1`
+for a trusted legacy deployment. That opt-in still uses unauthenticated, unencrypted UDP. Creation cookies
+and rate limits reduce abuse; they do not establish player identity. Existing deployments must explicitly
+opt in or migrate to production. BEHB v1 receives an update notice; DFHB v1 supports only unkeyed development
+rooms; BECT deployment control remains v1. Upgrade hub and supported discovery clients together.
 
 ## 8. Changing rooms and limits
 

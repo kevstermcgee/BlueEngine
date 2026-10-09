@@ -24,8 +24,8 @@ required-features = ["client"]
 default = ["client"]
 # Historical name: cinematic scene export, unrelated to offline gameplay.
 offline = ["dep:png", "dep:ctrlc"]
-presentation = ["dep:macroquad"]
-two-d = ["dep:macroquad"]
+presentation = ["dep:macroquad", "dep:quad-snd"]
+two-d = ["dep:macroquad", "dep:quad-snd"]
 portable = ["two-d"]
 model-import = ["presentation", "dep:gltf", "dep:base64", "dep:image"]
 schema-generation = ["dep:schemars"]
@@ -88,7 +88,8 @@ serde = { version = "=1.0.219", features = ["derive"] }
 serde_json = "=1.0.140"
 png = { version = "=0.17.16", optional = true }
 ctrlc = { version = "=3.4.5", optional = true }
-macroquad = { version = "=0.4.14", default-features = false, features = ["audio"], optional = true }
+macroquad = { version = "=0.4.14", default-features = false, optional = true }
+quad-snd = { package = "blueengine-quad-snd", path = "vendor/quad-snd", optional = true }
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 schemars = { version = "=1.2.2", optional = true }
 jsonschema = { version = "=0.34.0", default-features = false, optional = true }

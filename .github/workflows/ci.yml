@@ -28,7 +28,7 @@ jobs:
           shared-key: engine-checks-test
       - name: Install FFmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libxtst6 libgl1-mesa-dri
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress -y
@@ -47,6 +47,13 @@ jobs:
         env:
           BE2_AUDIO_OFFSCREEN: '1'
         run: xvfb-run -a -s '-screen 0 1280x720x24' python tools/stock_audio_smoke.py target/release/be2 .be2-work/stock-audio
+      - name: Native keyboard and mouse mapping (Linux)
+        if: runner.os == 'Linux'
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target
+        run: |
+          cargo build --locked --manifest-path games/corkscrew-key/Cargo.toml --profile itest --config 'profile.itest.inherits="dev"' --config 'profile.itest.debug="line-tables-only"' --config 'profile.itest.package."*".opt-level=3' --config 'profile.itest.package."*".debug=false'
+          python tools/xcapture.py target/itest/corkscrew-key --input docs/examples/corkscrew-key-native-input.json --frames 300 --timeout 90 --out .be2-work/native-input
       - name: Verification evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -60,6 +67,13 @@ jobs:
         with:
           name: stock-audio-offscreen
           path: .be2-work/stock-audio/
+          include-hidden-files: true
+      - name: Native input evidence
+        if: always() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-input-x11
+          path: .be2-work/native-input/
           include-hidden-files: true
   test:
     if: always()

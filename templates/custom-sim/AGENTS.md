@@ -84,3 +84,8 @@ Without keywords a record is archive-only. Do not copy session logs or credentia
    on Windows it checks the launched window. Icon similarity is optional advisory only.
    Never point a shortcut at `target/`.
 3. You looked at real frames of the shipped exe and exercised the controls; say what you did not verify.
+
+For keyboard/mouse mapping evidence, read engine docs/NATIVE_INPUT.md and use
+`tools/xcapture.py --input SCRIPT.json`. It exercises the native window and actual simulation
+with `--input-report`; replay is separate evidence. Assert state transitions and reserved-key conflicts.
+For missing hardware inspect `SoundBank::backend_state()` and docs/AUDIO.md; buffer checks do not prove audibility.

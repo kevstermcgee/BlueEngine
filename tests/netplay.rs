@@ -42,6 +42,40 @@ fn config() -> ServerConfig {
     }
 }
 
+#[test]
+fn admission_credentials_are_not_silently_truncated() {
+    let net = LoopNet::new(0, 0, 0., 99);
+    assert!(NetClient::<ToyGame, _>::new(
+        net.endpoint(addr(1)),
+        addr(0),
+        ClientConfig {
+            key: "k".repeat(33),
+            name: "Too long".into(),
+            choice: 0,
+        }
+    )
+    .is_err());
+    assert!(NetServer::<ToyGame, _>::new(
+        net.endpoint(addr(0)),
+        ServerConfig {
+            join_key: Some("k".repeat(33)),
+            ..config()
+        }
+    )
+    .is_err());
+    let mut world = world(
+        1,
+        0,
+        0.,
+        &[0],
+        ServerConfig {
+            join_key: Some("0123456789abcdef0123456789abcdef".into()),
+            ..config()
+        },
+    );
+    assert!(world.run_until(120, World::all_in_lobby));
+}
+
 fn client_at(net: &LoopNet, n: u16, choice: u8, key: &str) -> Client {
     NetClient::new(
         net.endpoint(addr(n)),
