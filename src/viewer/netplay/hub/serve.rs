@@ -211,6 +211,20 @@ impl Hub {
     // ---- BEHB --------------------------------------------------------------------------------------------------------
 
     fn handle_behb(&mut self, src: SocketAddr, data: &[u8], now_ms: u64) -> Option<Vec<u8>> {
+        if data.len() >= 32 && data[4] == 1 {
+            // Preserve old reply framing for an explicit mixed-version diagnostic, never a UDP downgrade.
+            let nonce = u32::from_le_bytes(data[6..10].try_into().ok()?);
+            if !self.admit(src, now_ms) {
+                return None;
+            }
+            let mut reply = Reply::Error {
+                code: ErrorCode::BadRequest,
+                text: "Update: hub v2.".into(),
+            }
+            .encode_within(nonce, 0, data.len().min(MAX_REPLY));
+            reply[4] = 1;
+            return Some(reply);
+        }
         let (nonce, request) = Request::decode(data)?;
         if data.len() < min_request_len(&request) {
             return None;
@@ -356,7 +370,15 @@ impl Hub {
             return None;
         }
         let max_len = legacy::max_reply_len(&request);
-        let (reply, build) = if self.legacy == Mode::Refuse {
+        let (reply, build) = if self.legacy == Mode::Refuse
+            || self.registry.get(legacy::GAME)?.config.transport == "production"
+            || self
+                .registry
+                .get(legacy::GAME)?
+                .config
+                .join_key_env
+                .is_some()
+        {
             let build = legacy::refusing_build(fingerprint);
             match request {
                 legacy::Request::Ping => (legacy::Reply::Pong, build),
@@ -883,6 +905,19 @@ mod tests {
             Reply::decode(&d).unwrap().reply,
             Reply::Created { .. }
         ));
+    }
+
+    #[test]
+    fn old_behb_clients_receive_bounded_update_notice_without_room_metadata() {
+        let (mut h, _) = hub();
+        let mut request = list("kart").encode(12);
+        request[4] = 1;
+        let mut response = h.handle(src(1), &request, 0).unwrap();
+        assert!(response.len() <= request.len());
+        assert_eq!(response[4], 1);
+        response[4] = 2; // Error framing is unchanged; v1 has no transport fields.
+        assert!(matches!(Reply::decode(&response).unwrap().reply,
+            Reply::Error { code: ErrorCode::BadRequest, text } if text.contains("hub v2")));
     }
 
     #[test]

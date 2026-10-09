@@ -205,10 +205,10 @@ impl Reply {
                 p.u8(*total);
                 p.u8(rooms.len().min(255) as u8);
                 for r in rooms {
-                    p.room(r);
+                    p.room_legacy(r);
                 }
             }
-            Reply::Created { room } => p.room(room),
+            Reply::Created { room } => p.room_legacy(room),
             Reply::Error { code, text } => {
                 p.u8(old_code(*code) as u8);
                 p.str(text, MAX_ERROR_TEXT);
@@ -229,11 +229,13 @@ impl Reply {
                 let (skip, total, n) = (c.u8()?, c.u8()?, c.u8()? as usize);
                 let mut rooms = Vec::with_capacity(n.min(32));
                 for _ in 0..n {
-                    rooms.push(c.room()?);
+                    rooms.push(c.room_legacy()?);
                 }
                 Reply::Rooms { skip, total, rooms }
             }
-            REP_CREATED => Reply::Created { room: c.room()? },
+            REP_CREATED => Reply::Created {
+                room: c.room_legacy()?,
+            },
             REP_ERROR => Reply::Error {
                 code: ErrorCode::from_u8(c.u8()?),
                 text: c.str()?,
@@ -404,6 +406,8 @@ mod tests {
             },
             port,
             public,
+            transport: crate::viewer::net::TransportProfile::Development,
+            requires_key: false,
         }
     }
 

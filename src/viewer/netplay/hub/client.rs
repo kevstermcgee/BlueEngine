@@ -95,6 +95,49 @@ pub fn room_addr(hub_addr: SocketAddr, port: u16) -> SocketAddr {
     SocketAddr::new(hub_addr.ip(), port)
 }
 
+/// Discover a room with [`HubClient`] / [`Online`], then connect through its advertised transport.
+/// Production TLS uses the locally provisioned pin (`BLUE_TLS_CERT_FILE`); discovery cannot change it.
+/// The admission key is supplied by the player/deployment, never fetched over the hub's UDP channel.
+pub fn connect_room<G: NetGame>(
+    hub_addr: SocketAddr,
+    room: &RoomInfo,
+    cfg: crate::viewer::netplay::ClientConfig,
+) -> crate::Result<crate::viewer::netplay::NetClient<G, crate::viewer::net::AnyTransport>> {
+    let pin = if room.transport == crate::viewer::net::TransportProfile::Production {
+        crate::viewer::net::quic::trusted_certificate()?
+    } else {
+        Vec::new()
+    };
+    connect_room_with_pin(hub_addr, room, cfg, &pin)
+}
+
+/// As [`connect_room`] with a certificate provisioned by the caller, never one supplied by discovery.
+pub fn connect_room_with_pin<G: NetGame>(
+    hub_addr: SocketAddr,
+    room: &RoomInfo,
+    cfg: crate::viewer::netplay::ClientConfig,
+    pin: &[u8],
+) -> crate::Result<crate::viewer::netplay::NetClient<G, crate::viewer::net::AnyTransport>> {
+    use crate::viewer::net::{client_transport, TransportProfile};
+    if room.requires_key && cfg.key.is_empty() {
+        return Err("This room requires an admission key; obtain it from the host".into());
+    }
+    if room.transport == TransportProfile::Development && !hub_addr.ip().is_loopback() {
+        return Err("Remote development UDP requires an explicit custom client; use a production room for Internet play".into());
+    }
+    if room.transport == TransportProfile::Production && !room.requires_key {
+        return Err("Production room lacks admission metadata; refresh or update the game".into());
+    }
+    let addr = room_addr(hub_addr, room.port);
+    let transport = match room.transport {
+        TransportProfile::Development => client_transport(room.transport, addr)?,
+        TransportProfile::Production => crate::viewer::net::AnyTransport::new(
+            crate::viewer::net::quic::SecureSocket::client(addr, pin.to_vec())?,
+        ),
+    };
+    crate::viewer::netplay::NetClient::new(transport, addr, cfg)
+}
+
 /// What to tell the player when the hub's build is not this game's.
 pub fn update_message(game_title: &str) -> String {
     format!(
@@ -908,6 +951,8 @@ mod tests {
             state: RoomState::Lobby,
             port,
             public,
+            transport: crate::viewer::net::TransportProfile::Development,
+            requires_key: false,
         }
     }
 
@@ -1243,6 +1288,8 @@ mod tests {
             state: RoomState::Lobby,
             port: 4100,
             public,
+            transport: crate::viewer::net::TransportProfile::Development,
+            requires_key: false,
         }
     }
 

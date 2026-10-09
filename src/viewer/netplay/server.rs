@@ -213,6 +213,13 @@ struct InputQueue<I> {
 
 impl<G: NetGame, T: DatagramTransport> NetServer<G, T> {
     pub fn new(transport: T, cfg: ServerConfig) -> crate::Result<Self> {
+        if cfg
+            .join_key
+            .as_ref()
+            .is_some_and(|key| key.len() > super::wire::MAX_TEXT)
+        {
+            return Err("Admission key exceeds the netplay wire limit of 32 bytes".into());
+        }
         assert!(
             G::MAX_SEATS >= 1 && G::MAX_SEATS <= 16,
             "MAX_SEATS must be 1..=16"

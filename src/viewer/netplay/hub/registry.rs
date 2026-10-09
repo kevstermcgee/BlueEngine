@@ -32,7 +32,7 @@
 //! user_set = kills=40            # defaults for player-made rooms (a player's own choice wins)
 //! client_settings = bots,kills   # which settings players may choose (default: all of the game's)
 //! max_rooms = 4                  # player-made rooms at once (default 4, at most 24)
-//! transport = development        # the only transport hub rooms have (default); production is refused, see below
+//! transport = development        # local UDP (default); use production for Internet rooms
 //! auto_start = 30                # passed as --auto-start (default: the server's own)
 //!
 //! [game spooky-kart]
@@ -43,12 +43,12 @@
 //! ```
 //!
 //! # Transport
-//! Rooms the hub starts are raw UDP (the engine's "development" transport, no encryption, no server
-//! authentication): the hub protocol carries neither a transport nor a join key, so a client has no way to
-//! learn that a room wants anything else. `transport = production` is therefore **refused at load** with an
-//! explanation instead of being passed to the server (a room nobody could join) or quietly run as raw UDP (a
-//! downgrade). A game that needs QUIC/TLS is run by hand with `--transport production` (docs/HOSTING.md). The
-//! hub's rate limits and creation cookies keep abuse down; they are not encryption and not authentication.
+//! BEHB v2 advertises each room's transport and admission requirement. Production reuses pinned-certificate
+//! QUIC/TLS and requires `join_key_env = VARIABLE`, whose secret is sent only to the child server's environment.
+//! The key must be exactly 32 bytes (netplay's text field limit). Secrets and TLS private keys never go on the
+//! discovery wire. Provision BLUE_TLS_CERT_FILE / BLUE_TLS_KEY_FILE as described in docs/HOSTING.md.
+//! Development UDP binds must be loopback unless the operator explicitly opts into trusted legacy deployments.
+
 use super::legacy::Mode;
 use super::wire::{game_id_ok, sanitize_name};
 use crate::viewer::netplay::cli::{resolve_settings, Info, SettingDef};
@@ -233,6 +233,8 @@ pub struct GameConfig {
     pub client_settings: Option<Vec<String>>,
     pub max_rooms: usize,
     pub transport: String,
+    /// Environment variable holding an admission secret; its value never goes on the hub wire.
+    pub join_key_env: Option<String>,
     pub auto_start: Option<u32>,
 }
 
@@ -306,6 +308,7 @@ pub fn parse_config(text: &str, base_dir: &Path) -> Result<Config, ConfigError> 
                         client_settings: None,
                         max_rooms: 4,
                         transport: "development".into(),
+                        join_key_env: None,
                         auto_start: None,
                     });
                     games_server.push(false);
@@ -466,23 +469,15 @@ pub fn parse_config(text: &str, base_dir: &Path) -> Result<Config, ConfigError> 
                         game.max_rooms = v;
                     }
                     "transport" => match value {
-                        "development" => game.transport = value.to_string(),
-                        "production" => {
-                            return Err(err(
-                                n,
-                                format!(
-                                    "transport = production is not available for hub rooms: the hub starts raw UDP rooms and its protocol carries neither a transport nor a join key, so [game {}] could not be joined. Remove the line (development is the only hub transport), or run that game's server by hand with --transport production (docs/HOSTING.md)",
-                                    game.id
-                                ),
-                            ))
-                        }
-                        _ => {
-                            return Err(err(
-                                n,
-                                format!("transport must be development, got {value:?}"),
-                            ))
-                        }
+                        "development" | "production" => game.transport = value.to_string(),
+                        _ => return Err(err(n, "transport must be development or production".into())),
                     },
+                    "join_key_env" => {
+                        if value.is_empty() || !value.bytes().all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_') {
+                            return Err(err(n, "join_key_env must name an uppercase environment variable".into()));
+                        }
+                        game.join_key_env = Some(value.to_string());
+                    }
                     "auto_start" => {
                         game.auto_start = Some(
                             u32::try_from(num("auto_start")?)
@@ -493,7 +488,7 @@ pub fn parse_config(text: &str, base_dir: &Path) -> Result<Config, ConfigError> 
                         return Err(err(
                             n,
                             format!(
-                                "unknown [game] key {key} (known: server, public, public_name, public_set, user_set, client_settings, max_rooms, transport, auto_start)"
+                                "unknown [game] key {key} (known: server, public, public_name, public_set, user_set, client_settings, max_rooms, transport, join_key_env, auto_start)"
                             ),
                         ))
                     }
@@ -502,6 +497,15 @@ pub fn parse_config(text: &str, base_dir: &Path) -> Result<Config, ConfigError> 
         }
     }
     for (g, has) in cfg.games.iter().zip(games_server) {
+        if g.transport == "production" && g.join_key_env.is_none() {
+            return Err(err(
+                0,
+                format!(
+                    "[game {}] production requires join_key_env for session admission",
+                    g.id
+                ),
+            ));
+        }
         if !has {
             return Err(err(0, format!("[game {}] has no server = path", g.id)));
         }
@@ -703,6 +707,11 @@ pub struct SettingFault(pub String);
 
 impl GameEntry {
     pub fn new(config: GameConfig, info: Info, key: Option<FileKey>) -> Result<GameEntry, String> {
+        if (config.transport == "production" || config.join_key_env.is_some())
+            && !info.hub_admission
+        {
+            return Err("Admission server lacks hub_admission=1; rebuild with the current shared cli::serve".into());
+        }
         let by_name = |pairs: &[(String, u32)], what: &str| -> Result<Vec<(u8, u32)>, String> {
             pairs
                 .iter()
@@ -915,6 +924,7 @@ pub(crate) mod tests {
 
     pub fn fake_info(game: &str, fingerprint: u32) -> Info {
         Info {
+            hub_admission: false,
             game: game.into(),
             fingerprint,
             build: crate::viewer::netplay::cli::fold_build(fingerprint),
@@ -935,6 +945,7 @@ pub(crate) mod tests {
             client_settings: None,
             max_rooms: 4,
             transport: "development".into(),
+            join_key_env: None,
             auto_start: Some(30),
         }
     }
@@ -945,6 +956,25 @@ pub(crate) mod tests {
 
     fn parse(text: &str) -> Result<Config, ConfigError> {
         parse_config(text, Path::new("/etc/be2"))
+    }
+
+    #[test]
+    fn production_requires_an_admission_capable_server() {
+        let mut cfg = game_config("secure");
+        cfg.transport = "production".into();
+        cfg.join_key_env = Some("GAME_ADMISSION".into());
+        let mut info = fake_info("secure", 1);
+        assert!(GameEntry::new(cfg.clone(), info.clone(), None)
+            .unwrap_err()
+            .contains("hub_admission"));
+        cfg.transport = "development".into();
+        assert!(
+            GameEntry::new(cfg.clone(), info.clone(), None).is_err(),
+            "keyed development must enforce its advertised admission too"
+        );
+        cfg.transport = "production".into();
+        info.hub_admission = true;
+        assert!(GameEntry::new(cfg, info, None).is_ok());
     }
 
     const FULL: &str = "\
@@ -1112,8 +1142,8 @@ server = bin/spooky-kart-server
             ),
             (
                 "[game a]\nserver=x\ntransport=production",
-                3,
-                "not available for hub rooms",
+                0,
+                "requires join_key_env",
             ),
             ("[game a]\nserver=x\nwat=1", 3, "unknown [game] key"),
             ("[game a]\nserver=x\npublic_name=<b>", 3, "valid room name"),

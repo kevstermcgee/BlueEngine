@@ -59,6 +59,7 @@ pub struct RoomSpec {
     pub settings: Vec<(u8, u32)>,
     /// `development` or `production`.
     pub transport: String,
+    pub join_key_env: Option<String>,
     pub auto_start: Option<u32>,
     pub report_dir: Option<PathBuf>,
     pub public: bool,
@@ -122,7 +123,15 @@ impl RoomProcess for ChildRoom {
         !matches!(self.child.try_wait(), Ok(None))
     }
     fn kill(&mut self) {
-        let _ = self.child.kill();
+        // cli::serve observes stdin EOF at a fixed-step boundary; fall back to a bounded forced stop.
+        self.child.stdin.take();
+        let deadline = Instant::now() + Duration::from_millis(500);
+        while matches!(self.child.try_wait(), Ok(None)) && Instant::now() < deadline {
+            std::thread::sleep(Duration::from_millis(5));
+        }
+        if matches!(self.child.try_wait(), Ok(None)) {
+            let _ = self.child.kill();
+        }
         let _ = self.child.wait();
     }
 }
@@ -143,7 +152,30 @@ impl Spawner for ProcessSpawner {
             // The server creates it too, but a hub that cannot write there should say so now, not per match.
             std::fs::create_dir_all(dir)?;
         }
-        let mut child = Command::new(&spec.server)
+        let mut command = Command::new(&spec.server);
+        command.env_remove("BLUE_NETPLAY_JOIN_KEY");
+        if spec.transport == "development"
+            && !spec
+                .listen
+                .parse::<std::net::SocketAddr>()
+                .is_ok_and(|a| a.ip().is_loopback())
+            && std::env::var("BLUE_ALLOW_DEVELOPMENT_INTERNET").as_deref() != Ok("1")
+        {
+            return Err(io::Error::new(io::ErrorKind::PermissionDenied,
+                "Development UDP requires a loopback bind; explicitly set BLUE_ALLOW_DEVELOPMENT_INTERNET=1 for trusted legacy deployments"));
+        }
+        if let Some(name) = &spec.join_key_env {
+            let key = std::env::var(name).ok().filter(|k| k.len() == 32)
+                .ok_or_else(|| io::Error::new(io::ErrorKind::PermissionDenied,
+                    format!("Admission environment {name} must contain exactly 32 bytes (the netplay wire limit)")))?;
+            command.env("BLUE_NETPLAY_JOIN_KEY", key);
+        } else if spec.transport == "production" {
+            return Err(io::Error::new(
+                io::ErrorKind::PermissionDenied,
+                "Production rooms require admission credentials",
+            ));
+        }
+        let mut child = command
             .args(args(spec))
             // The hub holds stdin open; the server exits when it closes, so a hub that is killed leaves no orphans.
             .stdin(Stdio::piped())
@@ -191,6 +223,7 @@ mod tests {
             server: "/srv/deadfall-server".into(),
             settings: vec![(1, 1), (2, 25)],
             transport: "development".into(),
+            join_key_env: None,
             auto_start: Some(30),
             report_dir: Some("/var/reports/deadfall/port-4102".into()),
             public: false,

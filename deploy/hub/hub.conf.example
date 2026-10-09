@@ -31,12 +31,15 @@ user_set = kills=40
 client_settings = bots,kills
 # Player-made rooms at once, for this game.
 max_rooms = 4
-# Rooms the hub starts are raw UDP: unencrypted and unauthenticated (the rate limits above are not a substitute). The only
-# transport is the default, "development"; `transport = production` is refused at load rather than silently downgraded.
-# A game that needs QUIC/TLS is run by hand (docs/HOSTING.md), not through this hub.
+# Internet rooms require production and a private service-environment admission key (exactly 32 bytes).
+# Provision BLUE_TLS_CERT_FILE / BLUE_TLS_KEY_FILE; distribute only the trusted certificate to clients.
+transport = production
+join_key_env = DEADFALL_JOIN_KEY
 auto_start = 30
 
 [game spooky-kart]
+transport = production
+join_key_env = SPOOKY_KART_JOIN_KEY
 server = /home/kevin/blueengine/spooky-kart-server
 public = on
 max_rooms = 4

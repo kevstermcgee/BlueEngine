@@ -7,7 +7,7 @@
 //! dies. Games are told apart by a game id on the wire; which executable runs a game, and which settings a room
 //! may have, come only from the registry file the box's owner writes ([`registry`]).
 //!
-//! * [`wire`]: the protocol, `BEHB` v1 (list, create with a source-address cookie, ping).
+//! * [`wire`]: the protocol, `BEHB` v2 (list, create with a source-address cookie, ping).
 //! * [`legacy`]: the `DFHB` v1 protocol of the already-shipped Deadfall clients, answered byte for byte.
 //! * [`limits`]: the abuse limits (token buckets per source, for creating, and global).
 //! * [`registry`]: the config file, `--info` of each game's server, and the checks on both.
@@ -32,13 +32,14 @@ pub mod spawn;
 pub mod wire;
 
 pub use client::{
-    build_matches, default_hub, local_build, room_addr, Action, HubClient, HubEvent, Online,
+    build_matches, connect_room, connect_room_with_pin, default_hub, local_build, room_addr,
+    Action, HubClient, HubEvent, Online,
 };
 pub use limits::Limits;
 pub use registry::{
     parse_config, Config, GameEntry, HubSection, HubSettings, ProcessInfo, Registry,
 };
-pub use rooms::{ManagerConfig, RoomManager};
+pub use rooms::{ManagerConfig, RoomHealth, RoomManager};
 pub use serve::{serve, Hub, HubOptions};
 pub use spawn::ProcessSpawner;
 pub use wire::{ErrorCode, Reply, Request, RoomInfo, RoomState};

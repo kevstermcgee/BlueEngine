@@ -110,6 +110,9 @@ pub struct NetClient<G: NetGame, T: DatagramTransport> {
 
 impl<G: NetGame, T: DatagramTransport> NetClient<G, T> {
     pub fn new(transport: T, server: SocketAddr, cfg: ClientConfig) -> crate::Result<Self> {
+        if cfg.key.len() > super::wire::MAX_TEXT {
+            return Err("Admission key exceeds the netplay wire limit of 32 bytes".into());
+        }
         let want_choice = cfg.choice;
         Ok(Self {
             transport,

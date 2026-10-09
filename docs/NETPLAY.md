@@ -181,7 +181,7 @@ readers still parse old and new archives. The existing peer byte/packet counters
 `snapshots_sent` retain their attempted-send meaning. Queue acceptance is never a delivery ack.
 
 `--info` prints `game=`, `fingerprint=` (the raw `NetGame::fingerprint()`), `build=` (`cli::build_id::<G>()`: the `Hello` value
-folded with the netplay envelope version), `max_seats=`, `tick_hz=` and one
+folded with the netplay envelope version), `max_seats=`, `tick_hz=` `hub_admission=1` and one
 `setting=<id>:<name>:<flag>:<kind>:<min>:<max>:<default>` per setting, then exits 0. `--status-lines` prints
 `STATUS game=<name> players=<n> max=<participants> stage=lobby|match|results build=<hex8>` once a second. `cli::{Info, Status}`
 parse both. `NetServer::run_realtime_with(stop, max_ticks, |snapshot| ..)` is the hook behind the status line.
@@ -191,12 +191,12 @@ parse both. `NetServer::run_realtime_with(stop, max_ticks, |snapshot| ..)` is th
 `be2-hub` (`netplay::hub`, ADR 0037, `deploy/hub/README.md`) lists and creates rooms for every registered game on one UDP port and
 starts one server process per room from a shared port pool. Players click Play Online, see the rooms of *their* game, pick or
 make one. The hub's registry (`hub.conf`) maps game ids to server programs and says which settings players may choose; a game
-appears by adding a `[game ID]` section and running `be2-hub reload ID`. Wire protocol `BEHB` v1 (`hub/wire.rs`): list, create
+appears by adding a `[game ID]` section and running `be2-hub reload ID`. Wire protocol `BEHB` v2 (`hub/wire.rs`): list, create
 with a source-address cookie, ping; old Deadfall `DFHB` v1 clients can still discover rooms and receive update notices (`hub/legacy.rs`, `legacy = serve|refuse`).
 Rooms close after 120 s empty, or 45 s if nobody ever joined; each game's Public room restarts if it dies; reload retires one
 game's rooms without ending matches in progress (at most 30 minutes). `be2-hub verify GAME --server CANDIDATE` checks a new server
 build with the registry's own rules before it is installed, and `be2-hub status GAME` reports what the running hub holds (a reload
-acknowledgement is not readiness); `deploy/hub/update.sh` uses both. Hub rooms are raw UDP, so `transport = production` is refused.
+acknowledgement is not readiness); `deploy/hub/update.sh` uses both. Production rooms use the existing pinned QUIC/TLS transport; see the configuration and join path below.
 
 The hub also closes a room that never prints its first status within 30 seconds, or has no fresh status
 for 30 seconds. Previously healthy rooms with stale status disappear from join lists during that grace.
@@ -216,6 +216,48 @@ Online state machine, `Online::new(&hub.address, MyGame::NAME, hub::local_build:
 `scroll_to`, `hub_error_message`, `connect_failure_message` (from `ConnectFailure`). `hub::default_hub(cli_arg, last_used)` is the
 `ServerChoice` chain (command line, `server.txt`, last used, `blue-engine.duckdns.org:4100`). A hub whose build differs from
 `local_build` (`Online::mismatch()`) would be refused by its rooms: show `update_message`.
+
+## Production hub rooms and lifecycle
+
+Configure each Internet game with `transport = production` and `join_key_env = MY_GAME_JOIN_KEY`.
+Provision that variable as an exactly 32-byte admission secret in the hub service environment, plus
+`BLUE_TLS_CERT_FILE` and `BLUE_TLS_KEY_FILE` (DER, `feta.local` identity; see [HOSTING.md](HOSTING.md)).
+The hub copies the admission secret into the child's reserved `BLUE_NETPLAY_JOIN_KEY`, never command
+arguments or discovery replies. The server must advertise `hub_admission=1` from `cli::serve --info`;
+older servers fail configuration instead of silently ignoring admission. Share the key and trusted
+public certificate with eligible players through a separate trusted channel. This shared secret is
+session admission, not a per-player identity/account service.
+
+Discovery `RoomInfo` carries `transport` and `requires_key` in addition to port/build/lifecycle fields.
+On `Action::Join { addr, room }`, call
+`hub::connect_room::<MyGame>(addr, &room, ClientConfig { name, key, choice: 0 })`, then use the normal
+`NetClient::poll`/`frame` loop. `addr` may already contain the room port; the helper uses its host and
+`room.port`. It obtains the trusted pin through `BLUE_TLS_CERT_FILE`; packaged clients may use
+`hub::connect_room_with_pin` with their independently provisioned certificate. Never trust a certificate
+or secret learned from UDP discovery. Missing keys fail early; incorrect keys receive the existing
+admission rejection. Name/key wire fields are at most 32 bytes and oversized keys fail rather than
+being truncated. Failed joins and disconnects use the existing `ConnectFailure`/reconnect state machine.
+
+Development UDP binds are loopback by default. A trusted existing deployment can explicitly set
+`BLUE_ALLOW_DEVELOPMENT_INTERNET=1` on its hub; that permits legacy raw UDP and does not provide TLS or
+admission. The new join helper rejects remote development rooms. Use production for public sessions.
+
+BEHB v2 is an explicit discovery protocol upgrade. BEHB v1 receives a bounded update notice in v1 error
+framing; it never receives a production room disguised as UDP. DFHB v1 remains byte-compatible for
+unkeyed development Deadfall rooms; secure rooms receive its existing update refusal. Loopback BECT
+control remains v1. Gameplay netplay wire/acknowledgement protocols and bounded transport queues are
+unchanged. Upgrade hub and discovery clients together; game build mismatches retain update rejection.
+
+`RoomManager`/`Spawner` remain the provider-neutral lifecycle boundary: `create`, `tick`, `health` and
+`terminate` expose creation, readiness, active players, heartbeat age, private idle eligibility and
+termination. Unknown/stale status has unknown player count, never an invented zero. `terminate` removes
+the room from discovery immediately and allows occupied rooms to drain within the retirement grace.
+Cached addresses with valid credentials can still join during that grace; a future host wanting strict
+draining needs a server admission-close control. Child shutdown
+closes its controlled stdin for a fixed-step exit, then kills it after a bounded 500 ms fallback.
+Existing empty/never-joined deadlines and Public-room restart backoff remain; private rooms do not
+promise match persistence after a crash. A restarted hub recreates configured Public rooms. There is
+no cloud provider integration or new background service.
 
 ## Limits and what is not covered
 
