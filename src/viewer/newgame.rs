@@ -97,6 +97,69 @@ pub fn scaffold_new_game(
     scaffold_new_game_with(name, target_dir, engine_rel_path, Template::Stock)
 }
 
+/// Scaffold for the authoring command: an explicit engine path is resolved from the caller's
+/// working directory and written relative to the generated manifest. The omitted path retains
+/// the legacy project-relative `../BlueEngine` default. The library's project-relative entry
+/// points ([`scaffold_new_game`] and [`scaffold_new_game_with`]) retain their existing contract.
+pub fn scaffold_new_game_from_cwd(
+    name: &str,
+    target_dir: &Path,
+    engine_path: Option<&str>,
+    template: Template,
+) -> Result<()> {
+    let Some(engine_path) = engine_path else {
+        return scaffold_new_game_with(name, target_dir, None, template);
+    };
+    let engine = fs::canonicalize(engine_path)
+        .map_err(|e| format!("Cannot resolve ENGINE_PATH '{engine_path}': {e}"))?;
+    if !engine.join("Cargo.toml").is_file() {
+        return Err(format!("ENGINE_PATH '{}' has no Cargo.toml", engine.display()).into());
+    }
+    // Canonicalize existing ancestors, including symlinks, without creating the output. Resolve
+    // '..' after those symlinks, as the filesystem does, even when the final directory is new.
+    let mut target = PathBuf::new();
+    for component in std::path::absolute(target_dir)?.components() {
+        match component {
+            std::path::Component::ParentDir => {
+                target.pop();
+            }
+            _ => {
+                target.push(component);
+                if target.exists() {
+                    target = fs::canonicalize(target)?;
+                }
+            }
+        }
+    }
+    if target == engine {
+        return Err("ENGINE_PATH resolves to the game directory (self dependency)".into());
+    }
+    let engine_parts: Vec<_> = engine.components().collect();
+    let target_parts: Vec<_> = target.components().collect();
+    let shared = engine_parts
+        .iter()
+        .zip(&target_parts)
+        .take_while(|(a, b)| a == b)
+        .count();
+    let dependency = if shared == 0 {
+        // Windows paths on different volumes cannot be expressed relatively.
+        engine
+    } else {
+        let mut relative = PathBuf::new();
+        for _ in shared..target_parts.len() {
+            relative.push("..");
+        }
+        for part in &engine_parts[shared..] {
+            relative.push(part);
+        }
+        relative
+    };
+    let dependency = dependency
+        .to_str()
+        .ok_or("ENGINE_PATH cannot be represented as a UTF-8 Cargo path")?;
+    scaffold_new_game_with(name, target_dir, Some(dependency), template)
+}
+
 /// Scaffold a project. `engine_rel_path` is written into `Cargo.toml` as given (relative to the new
 /// project, or absolute; default `../BlueEngine`).
 pub fn scaffold_new_game_with(

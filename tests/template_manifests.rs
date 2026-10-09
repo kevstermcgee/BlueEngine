@@ -47,7 +47,7 @@ fn the_custom_sim_template_is_still_scaffolded_with_its_engine_path_filled_in() 
             "new-game",
             "tmpl-check",
             dir.to_str().unwrap(),
-            "../engine",
+            env!("CARGO_MANIFEST_DIR"),
             "custom-sim",
         ])
         .output()
@@ -59,5 +59,23 @@ fn the_custom_sim_template_is_still_scaffolded_with_its_engine_path_filled_in() 
     );
     let manifest = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
     assert!(!manifest.contains("{{"), "{manifest}");
-    assert!(manifest.contains("../engine"), "{manifest}");
+    let dependency = manifest
+        .lines()
+        .find(|line| line.starts_with("vesper3d ="))
+        .unwrap();
+    let quoted = dependency
+        .split("path = ")
+        .nth(1)
+        .unwrap()
+        .split(", default-features")
+        .next()
+        .unwrap();
+    let path: String = serde_json::from_str(quoted).unwrap();
+    assert_eq!(
+        dir.join(path).canonicalize().unwrap(),
+        Path::new(env!("CARGO_MANIFEST_DIR"))
+            .canonicalize()
+            .unwrap()
+    );
+    std::fs::remove_dir_all(dir).unwrap();
 }

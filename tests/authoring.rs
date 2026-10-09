@@ -24,6 +24,203 @@ impl Drop for Scratch {
         let _ = std::fs::remove_dir_all(&self.0);
     }
 }
+
+fn scaffold_dependency(dir: &std::path::Path) -> PathBuf {
+    let manifest = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap();
+    let dependency = manifest
+        .lines()
+        .find(|line| line.starts_with("vesper3d ="))
+        .unwrap();
+    let quoted = dependency
+        .split("path = ")
+        .nth(1)
+        .unwrap()
+        .split(", default-features")
+        .next()
+        .unwrap();
+    let path: String = serde_json::from_str(quoted).unwrap();
+    dir.join(path)
+}
+
+#[test]
+fn cli_scaffold_resolves_engine_paths() {
+    let s = Scratch::new();
+    let engine = s.0.join("engine with spaces");
+    std::fs::create_dir_all(engine.join(".git")).unwrap();
+    std::fs::write(engine.join("Cargo.toml"), "[package]\nname = \"be2\"\n").unwrap();
+    std::fs::write(engine.join("Cargo.lock"), "# retained engine pins\n").unwrap();
+    std::fs::write(
+        engine.join(".git/HEAD"),
+        "0123456789abcdef0123456789abcdef01234567\n",
+    )
+    .unwrap();
+    for (name, cwd, output, engine_arg, template) in [
+        (
+            "nested",
+            engine.clone(),
+            PathBuf::from("games/nested"),
+            PathBuf::from("."),
+            "two-d",
+        ),
+        (
+            "absolute",
+            s.0.clone(),
+            s.0.join("outside/absolute"),
+            engine.clone(),
+            "custom-sim",
+        ),
+        (
+            "sibling",
+            s.0.clone(),
+            PathBuf::from("games with spaces/sibling"),
+            PathBuf::from("engine with spaces"),
+            "stock",
+        ),
+        (
+            "parents",
+            engine.clone(),
+            PathBuf::from("games/../nested/parents"),
+            PathBuf::from("."),
+            "three-d",
+        ),
+    ] {
+        let run = Command::new(env!("CARGO_BIN_EXE_be2-tools"))
+            .current_dir(&cwd)
+            .args(["new-game", name])
+            .arg(&output)
+            .arg(&engine_arg)
+            .arg(template)
+            .output()
+            .unwrap();
+        assert!(
+            run.status.success(),
+            "{name}: {}",
+            String::from_utf8_lossy(&run.stdout)
+        );
+        let game = cwd.join(output);
+        assert_eq!(
+            scaffold_dependency(&game).canonicalize().unwrap(),
+            engine.canonicalize().unwrap()
+        );
+        assert_eq!(
+            std::fs::read(game.join("Cargo.lock")).unwrap(),
+            std::fs::read(engine.join("Cargo.lock")).unwrap()
+        );
+        let identity: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(game.join("assets/identity.json")).unwrap())
+                .unwrap();
+        assert_eq!(identity["engine_revision"], "0123456789ab");
+    }
+}
+
+#[test]
+fn cli_scaffold_dependency_is_accepted_by_cargo() {
+    let s = Scratch::new();
+    let game = s.0.join("game with spaces");
+    let engine = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let run = Command::new(env!("CARGO_BIN_EXE_be2-tools"))
+        .current_dir(engine)
+        .args(["new-game", "cargo-proof"])
+        .arg(&game)
+        .args([".", "two-d"])
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&run.stdout)
+    );
+    assert_eq!(
+        scaffold_dependency(&game).canonicalize().unwrap(),
+        engine.canonicalize().unwrap()
+    );
+    let metadata = Command::new("cargo")
+        .current_dir(&game)
+        .args(["metadata", "--offline", "--no-deps", "--format-version=1"])
+        .output()
+        .unwrap();
+    assert!(
+        metadata.status.success(),
+        "{}",
+        String::from_utf8_lossy(&metadata.stderr)
+    );
+    let metadata: serde_json::Value = serde_json::from_slice(&metadata.stdout).unwrap();
+    let dependency = metadata["packages"][0]["dependencies"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|dep| dep["name"] == "be2")
+        .unwrap();
+    assert_eq!(
+        std::path::Path::new(dependency["path"].as_str().unwrap())
+            .canonicalize()
+            .unwrap(),
+        engine.canonicalize().unwrap()
+    );
+}
+
+#[test]
+fn cli_scaffold_rejects_bad_engine_paths_before_creating_output() {
+    let s = Scratch::new();
+    let empty = s.0.join("empty");
+    std::fs::create_dir(&empty).unwrap();
+    for engine in [s.0.join("missing"), empty] {
+        let output = s.0.join("new/nested/game");
+        let run = Command::new(env!("CARGO_BIN_EXE_be2-tools"))
+            .args(["new-game", "reject"])
+            .arg(&output)
+            .arg(engine)
+            .arg("two-d")
+            .output()
+            .unwrap();
+        assert!(!run.status.success());
+        assert!(String::from_utf8_lossy(&run.stderr).contains("ENGINE_PATH"));
+        assert!(!s.0.join("new").exists());
+    }
+    std::fs::write(s.0.join("Cargo.toml"), "[package]\nname = \"be2\"\n").unwrap();
+    let before = std::fs::read(s.0.join("Cargo.toml")).unwrap();
+    let run = Command::new(env!("CARGO_BIN_EXE_be2-tools"))
+        .current_dir(&s.0)
+        .args(["new-game", "reject", ".", ".", "two-d"])
+        .output()
+        .unwrap();
+    assert!(!run.status.success());
+    assert!(String::from_utf8_lossy(&run.stderr).contains("self dependency"));
+    assert_eq!(std::fs::read(s.0.join("Cargo.toml")).unwrap(), before);
+    assert!(!s.0.join("src").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn cli_scaffold_resolves_symlinks_before_making_the_dependency_relative() {
+    let s = Scratch::new();
+    let real = s.0.join("real/engine");
+    std::fs::create_dir_all(&real).unwrap();
+    std::fs::write(real.join("Cargo.toml"), "[package]\nname = \"be2\"\n").unwrap();
+    std::os::unix::fs::symlink(&real, s.0.join("alias")).unwrap();
+    let run = Command::new(env!("CARGO_BIN_EXE_be2-tools"))
+        .current_dir(&s.0)
+        .args([
+            "new-game",
+            "linked",
+            "alias/../games/linked",
+            "alias",
+            "two-d",
+        ])
+        .output()
+        .unwrap();
+    assert!(
+        run.status.success(),
+        "{}",
+        String::from_utf8_lossy(&run.stdout)
+    );
+    let game = s.0.join("real/games/linked");
+    assert_eq!(
+        scaffold_dependency(&game).canonicalize().unwrap(),
+        real.canonicalize().unwrap()
+    );
+}
+
 #[test]
 fn export_roundtrip_preserves_geometry_collision_and_entities() {
     let d = MapDocument::house().unwrap();

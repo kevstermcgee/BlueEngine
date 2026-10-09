@@ -14,6 +14,15 @@ the stock and custom-simulation native workflows below retain their package and 
 | want a 2D offline native game | **two-d**: `be2-tools new-game my-game ../my-game ../BlueEngine two-d` — read [TWO_D.md](TWO_D.md) |
 | need enemies, projectiles, scoring, AI, waves, procedural content or per-frame physics: anything `GameDocument` cannot express | **custom-sim**: `be2-tools new-game my-game ../my-game ../BlueEngine custom-sim` |
 
+An explicit `ENGINE_PATH` in the new-game authoring command is resolved from the
+command's working directory. From the engine root,
+`python3 tools/be2.py map new-game my-game games/my-game . two-d` writes `../..`
+as the Cargo dependency. Absolute paths work too; existing symlinks are resolved
+before computing the dependency relative to the new manifest. A missing engine
+directory or `Cargo.toml` fails before creating output. Omitting `ENGINE_PATH`
+retains the project-relative `../BlueEngine` default. The public Rust
+`scaffold_new_game` / `scaffold_new_game_with` APIs still take project-relative paths.
+
 For multiplayer, use the **custom-sim** project plus the tiny `ToyGame`/`ToyView` and
 `be2-toy-server` assembly in [NETPLAY.md](NETPLAY.md). The old multiplayer template is archived.
 

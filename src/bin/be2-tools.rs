@@ -738,7 +738,7 @@ fn run() -> Result<()> {
             );
         }
         "new-game" => {
-            use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
+            use vesper3d::viewer::newgame::{scaffold_new_game_from_cwd, Template};
             let name = arg(1)?;
             let dir = arg(2)?;
             // NAME DIRECTORY [ENGINE_PATH] [TEMPLATE]; a lone template name may stand in for the path.
@@ -754,7 +754,7 @@ fn run() -> Result<()> {
                     (engine, None) => (engine, None),
                 };
             let template = template.unwrap_or_else(Template::cli_default);
-            scaffold_new_game_with(name, Path::new(dir), engine, template)?;
+            scaffold_new_game_from_cwd(name, Path::new(dir), engine, template)?;
             println!(
                 "{}",
                 json!({"ok": true, "name": name, "directory": dir, "template": template.name()})
