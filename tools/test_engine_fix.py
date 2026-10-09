@@ -23,9 +23,14 @@ class EngineFixTests(unittest.TestCase):
         (root / 'tests/input.json').write_text('test fixture')
 
     def test_only_baseline_failure_then_fixed_success_reaches_full_check(self):
-        for before_code, executed, accepted in [(1, 1, True), (0, 1, False), (1, 0, False)]:
-            with self.subTest(before_code=before_code, executed=executed), tempfile.TemporaryDirectory() as directory:
+        for before_code, executed, accepted, alias in [(1, 1, True, False), (0, 1, False, False),
+                                                        (1, 0, False, False), (1, 1, True, True)]:
+            with self.subTest(before_code=before_code, executed=executed, alias=alias), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
+                if alias:
+                    # Resolving a valid spelling must preserve containment (also Windows 8.3 names).
+                    (root / 'alias').mkdir()
+                    root = root / 'alias' / '..'
                 self.fixture(root)
                 original_run = subprocess.run
                 checks = []

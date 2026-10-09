@@ -46,10 +46,14 @@ def verify(base, test):
     baseline = report_dir / 'baseline'
     subprocess.run(['git', 'worktree', 'add', '--detach', str(baseline), revision], cwd=ROOT, check=True, capture_output=True)
     try:
+        # Compare canonical paths on both sides, including Windows short-name aliases.
+        fixture_root = (ROOT / 'tests').resolve()
+        if not fixture_root.is_relative_to(ROOT.resolve()):
+            raise ValueError('Regression fixtures must stay within tests/')
         # Copy the regression and changed test fixtures, never the engine fix.
         for relative in sorted(set(path for path in changed if path.startswith('tests/'))):
             source, destination = ROOT / relative, baseline / relative
-            if source.is_symlink() or not source.resolve().is_relative_to(ROOT / 'tests'):
+            if source.is_symlink() or not source.resolve().is_relative_to(fixture_root):
                 raise ValueError('Regression fixtures must stay within tests/')
             if source.is_file():
                 destination.parent.mkdir(parents=True, exist_ok=True)

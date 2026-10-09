@@ -36,13 +36,13 @@
     "tools/perf.py": 14903,
     "tools/xcapture.py": 3603
   },
-  "tracked_bytes": 54975841,
+  "tracked_bytes": 55007627,
   "tracked_bytes_method": "Sum indexed regular file sizes in the final working tree, including this receipt and performance records; generated untracked audio/build artifacts excluded.",
   "final_check": {
     "ok": true,
-    "seconds": 596.944,
+    "seconds": 464.285,
     "commands": 40,
-    "report": ".be2-work/check-20261009T183206884919Z-gb4uwsyk/report.json",
+    "report": ".be2-work/check-20261009T190244231048Z-7wprmmhr/report.json",
     "test_counts": [
       {
         "command": [
@@ -560,7 +560,8 @@
     "Portable starters support game-owned planar 2D enemies; three-d substitutes drawing, not spatial 3D collision.",
     "The HMAC implementation was in src/viewer/net/session.rs, not src/net/session.rs.",
     "AI_REFERENCE include_str was not required by the selected Docker binaries; Cargo still requires declared examples and embedded tool inputs.",
-    "BE2_ARCHITECTURE.md describes current contracts and moved to docs/ without a legacy banner; nine historical roots moved to docs/archive/."
+    "BE2_ARCHITECTURE.md describes current contracts and moved to docs/ without a legacy banner; nine historical roots moved to docs/archive/.",
+    "Windows CI found a short-name fixture-root mismatch in the separate engine-fix verifier. A directory-alias regression failed before canonicalizing both containment boundaries and passed after the fix."
   ],
   "learning_ledger": {
     "total": 130,
