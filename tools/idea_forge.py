@@ -153,15 +153,16 @@ def run_lock(directory):
         if os.name == "nt":
             import msvcrt
             lease.seek(0)
-            if not lease.read(1):
-                lease.write(b"0")
-                lease.flush()
-            lease.seek(0)
             try:
+                # Windows byte locks cover an empty file too. Acquire before any I/O:
+                # reading another supervisor's locked byte is itself access-denied.
                 msvcrt.locking(lease.fileno(), msvcrt.LK_NBLCK, 1)
                 locked = True
             except OSError:
                 raise RecoverableError("This run already has an active supervisor; retry after it exits") from None
+            if os.fstat(lease.fileno()).st_size == 0:
+                lease.write(b"0")
+                lease.flush()
         else:
             import fcntl
             try:

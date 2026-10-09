@@ -37,7 +37,7 @@ class SupervisorTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.directory = Path(self.temp.name)
+        self.directory = Path(self.temp.name).resolve()
         self.engine = self.directory / "engine"
         self.engine.mkdir()
         subprocess.run(["git", "init", "-q", str(self.engine)], check=True)
@@ -128,10 +128,17 @@ class SupervisorTests(unittest.TestCase):
 
     def test_a_second_supervisor_cannot_advance_the_same_run(self):
         with forge.run_lock(self.directory):
-            with self.assertRaises(forge.ForgeError):
-                with forge.run_lock(self.directory):
-                    self.fail("A second supervisor acquired the run")
+            for _ in range(3):
+                with self.assertRaises(forge.RecoverableError):
+                    with forge.run_lock(self.directory):
+                        self.fail("A second supervisor acquired the run")
         self.assertFalse((self.directory / "supervisor.lock").exists())
+        lease = self.directory / "supervisor.lease"
+        size = lease.stat().st_size
+        with forge.run_lock(self.directory):
+            pass
+        self.assertEqual(lease.stat().st_size, size)
+        self.assertLessEqual(size, 1)
 
     def test_code_binding_changes_for_rules_but_not_feedback(self):
         original = forge.code_digest(self.engine)
@@ -526,7 +533,7 @@ class DailyTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.args = argparse.Namespace(engine_root=self.root, runs_root=self.root / "runs",
                                        daily_root=self.root / "daily", timezone="America/Los_Angeles")
         self.now = datetime(2026, 10, 8, 17, tzinfo=timezone.utc)
