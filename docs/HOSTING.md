@@ -252,3 +252,17 @@ or `congested-bursty` to exercise a development UDP session under repeatable imp
 `be2-tools bench` returns nonzero if the authoritative simulation, snapshot, delta or
 spatial-query regression budget is exceeded. Run `python tools/be2.py check` before
 publishing a build.
+
+## Container build
+
+`docker build -t blueengine-server .` builds both `be2-headless` and `be2-tools`
+with Rust 1.87 and the committed lock. The container CI lane runs tooling and
+bounded development/production servers. The runtime is unprivileged and exposes
+UDP 7777. Supply `BLUE_TLS_KEY_FILE` and `BLUE_TLS_CERT_FILE` as readable mounted
+PKCS#8/private-key and public-certificate DER files for the default production
+command. No key is baked into the image. For a local smoke:
+
+```sh
+docker run --rm blueengine-server --server 0.0.0.0:7777 --transport development --ticks 6
+docker run --rm --entrypoint be2-tools blueengine-server describe
+```

@@ -6,6 +6,24 @@ concurrency:
 permissions:
   contents: read
 jobs:
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build locked headless server and tooling
+        run: docker build -t blueengine-server .
+      - name: Tooling and bounded dedicated server smoke
+        run: |
+          docker run --rm --entrypoint be2-tools blueengine-server describe
+          docker run --rm blueengine-server --server 0.0.0.0:7777 --transport development --ticks 6
+      - name: Production QUIC server with an ephemeral identity
+        run: |
+          mkdir -m 755 .be2-work-container-tls
+          openssl req -x509 -newkey rsa:2048 -nodes -keyout .be2-work-container-tls/key.pem -out .be2-work-container-tls/cert.pem -days 1 -subj /CN=localhost
+          openssl pkcs8 -topk8 -nocrypt -in .be2-work-container-tls/key.pem -outform DER -out .be2-work-container-tls/key.der
+          openssl x509 -in .be2-work-container-tls/cert.pem -outform DER -out .be2-work-container-tls/cert.der
+          chmod 444 .be2-work-container-tls/*.der
+          docker run --rm -v "$PWD/.be2-work-container-tls:/tls:ro" -e BLUE_TLS_KEY_FILE=/tls/key.der -e BLUE_TLS_CERT_FILE=/tls/cert.der blueengine-server --server 0.0.0.0:7777 --transport production --ticks 6
   engine:
     strategy:
       fail-fast: false
@@ -63,7 +81,7 @@ jobs:
           include-hidden-files: true
   test:
     if: always()
-    needs: [engine, leo, idea-forge]
+    needs: [engine, leo, idea-forge, container]
     strategy:
       fail-fast: false
       matrix:
@@ -73,10 +91,12 @@ jobs:
       - name: Require all engine and game gates
         shell: bash
         env:
+          CONTAINER_RESULT: ${{ needs.container.result }}
           ENGINE_RESULT: ${{ needs.engine.result }}
           LEO_RESULT: ${{ needs.leo.result }}
           FORGE_RESULT: ${{ needs.idea-forge.result }}
         run: |
+          test "$CONTAINER_RESULT" = success
           test "$ENGINE_RESULT" = success
           test "$LEO_RESULT" = success
           test "$FORGE_RESULT" = success

@@ -1,0 +1,12 @@
+.git
+.be2-work
+.blue-check
+target
+dist
+**/target
+**/dist
+**/.blue-check
+**/.be2-work
+**/__pycache__
+**/*.pyc
+assets/games/leo/assets/audio
