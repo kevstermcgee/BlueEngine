@@ -29,10 +29,7 @@ fn default_true() -> bool {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::trigger_zone))]
 pub struct TriggerZone {
     pub id: String,
@@ -43,10 +40,7 @@ pub struct TriggerZone {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::spawn_point))]
 pub struct SpawnPoint {
     pub id: String,
@@ -56,10 +50,7 @@ pub struct SpawnPoint {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::interactable))]
 pub struct Interactable {
     pub entity: String,
@@ -74,10 +65,7 @@ pub struct Interactable {
 /// (`all`, `any`, `not`). `{"counter": "x", "equals": 1}` is the original form and still works.
 #[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::condition))]
 #[cfg_attr(feature = "schema-generation", schemars(rename = "condition"))]
 pub struct Condition {
@@ -272,10 +260,7 @@ fn default_mover_duration() -> u32 {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::mover))]
 pub struct Mover {
     pub id: String,
@@ -289,10 +274,7 @@ pub struct Mover {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::timer))]
 pub struct TimerDefinition {
     pub id: String,
@@ -305,10 +287,7 @@ pub struct TimerDefinition {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "action", rename_all = "snake_case", deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::game_action))]
 pub enum GameAction {
     Increment {
@@ -345,10 +324,7 @@ pub enum GameAction {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::rule))]
 pub struct Rule {
     pub id: String,
@@ -367,10 +343,7 @@ pub struct Rule {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::game_document))]
 pub struct GameDocument {
     pub schema_version: u32,

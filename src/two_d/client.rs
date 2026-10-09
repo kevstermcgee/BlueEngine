@@ -77,10 +77,6 @@ impl Audio {
         let mut loops = Vec::new();
         let mut ids = std::collections::BTreeSet::new();
         for bank in G::audio_banks() {
-            platform::report(
-                &serde_json::json!({"ready":false,"notice":format!("Loading {} audio…",bank.id)})
-                    .to_string(),
-            );
             if !ids.insert(bank.id) {
                 return Err(format!("Duplicate audio bank ID {}", bank.id));
             }
@@ -88,7 +84,7 @@ impl Audio {
                 .await
                 .map_err(|e| {
                     format!(
-                        "Audio bank {} unavailable: {e}; declare it in the web package",
+                        "Audio bank {} unavailable: {e}; declare it in identity.package",
                         bank.id
                     )
                 })?;
@@ -101,7 +97,6 @@ impl Audio {
             }
             for (layer, info) in metadata.music {
                 let path = format!("{}/{}", bank.root, info.file);
-                platform::report(&serde_json::json!({"ready":false,"notice":format!("Loading {}/{} audio…",bank.id,layer)}).to_string());
                 let bytes = macroquad::file::load_file(&path)
                     .await
                     .map_err(|e| format!("Audio asset {path} unavailable: {e}"))?;
@@ -208,7 +203,6 @@ impl Audio {
 pub fn config(title: &str) -> macroquad::conf::Conf {
     #[allow(unused_mut)]
     let mut size = (960_u32, 540_u32);
-    #[cfg(not(target_arch = "wasm32"))]
     {
         let args: Vec<_> = std::env::args().collect();
         if crate::runtime::playback::has_flag(&args, "--size") {
@@ -235,18 +229,10 @@ pub fn config(title: &str) -> macroquad::conf::Conf {
 pub async fn run<G: Game>() {
     if let Err(error) = run_inner::<G>().await {
         platform::error(&error);
-        #[cfg(not(target_arch = "wasm32"))]
         std::process::exit(1);
-        #[cfg(target_arch = "wasm32")]
-        loop {
-            clear_background(INK);
-            draw_text(&error, 20., 50., 22., PINK);
-            next_frame().await;
-        }
     }
 }
 async fn run_inner<G: Game>() -> Result<(), String> {
-    #[cfg(not(target_arch = "wasm32"))]
     let capture = {
         let args: Vec<_> = std::env::args().collect();
         let plan =
@@ -268,7 +254,6 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let verification = platform::verify_mode();
     #[allow(unused_mut)]
     let mut persist_progress = !verification;
-    #[cfg(not(target_arch = "wasm32"))]
     {
         persist_progress &= capture.is_none();
     }
@@ -281,8 +266,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     }
     let mut autosave_time = 0.;
     let mut autosave_hash = None;
-    let mut started = verification && cfg!(not(target_arch = "wasm32"));
-    #[cfg(not(target_arch = "wasm32"))]
+    let mut started = verification;
     {
         started |= capture.is_some();
     }
@@ -294,27 +278,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut pointer_actions = ActionPointer::default();
     let mut particles = Particles::new(8);
     let mut renderer = Renderer::default();
-    let mut last_tick = 0;
     let mut frame = 0;
     let mut last_pointer = None;
-    let mut step_max_ms = 0_f64;
-    let mut draw_max_ms = 0_f64;
-    let mut chunk_max_ms = 0_f64;
-    let mut chunk_updates = 0_u64;
-    let mut chunk_stalls = 0_u64;
-    let mut chunk_render_max_ms = 0_f64;
-    let mut chunk_render_frames = 0_u64;
-    let mut chunk_render_stalls = 0_u64;
-    let mut movement_ticks = 0_u64;
-    let mut action_ticks = 0_u64;
-    let mut step_ticks = 0_u64;
-    #[cfg(not(target_arch = "wasm32"))]
     let mut fullscreen = false;
-    #[cfg(all(not(target_arch = "wasm32"), feature = "gamepad"))]
+    #[cfg(feature = "gamepad")]
     let mut pads = crate::viewer::gamepad::Gamepads::new().ok();
     loop {
         frame += 1;
-        #[cfg(not(target_arch = "wasm32"))]
         if is_key_pressed(KeyCode::F) {
             fullscreen = !fullscreen;
             macroquad::miniquad::window::set_fullscreen(fullscreen);
@@ -330,20 +300,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             pointer = Some(point);
         }
         #[allow(unused_mut)]
-        #[cfg(not(target_arch = "wasm32"))]
         let mut x = i32::from(is_key_down(KeyCode::D) || is_key_down(KeyCode::Right))
             - i32::from(is_key_down(KeyCode::A) || is_key_down(KeyCode::Left))
             + digital.x;
         #[allow(unused_mut)]
-        #[cfg(not(target_arch = "wasm32"))]
         let mut y = i32::from(is_key_down(KeyCode::S) || is_key_down(KeyCode::Down))
             - i32::from(is_key_down(KeyCode::W) || is_key_down(KeyCode::Up))
             + digital.y;
-        #[cfg(target_arch = "wasm32")]
-        let (mut x, mut y) = {
-            let keyboard = platform::keyboard_movement();
-            (keyboard.0 + digital.x, keyboard.1 + digital.y)
-        };
         #[allow(unused_mut)]
         let mut action = platform::primary_key() || is_mouse_button_pressed(MouseButton::Left);
         #[allow(unused_mut)]
@@ -351,18 +314,9 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             platform::command_key(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left);
         action |= digital.action;
         start |= digital.commands & 1 != 0;
-        #[cfg(target_arch = "wasm32")]
-        {
-            let pad = platform::pad();
-            x += pad.0;
-            y += pad.1;
-            action |= pad.2;
-            start |= pad.2;
-            digital.commands |= pad.3;
-        }
         #[allow(unused_mut)]
         let mut look_native = [0.; 2];
-        #[cfg(all(not(target_arch = "wasm32"), feature = "gamepad"))]
+        #[cfg(feature = "gamepad")]
         if let Some(pads) = pads.as_mut() {
             let pad = pads.poll(true);
             x += (pad.left_stick[0] * 1.5) as i32;
@@ -382,12 +336,6 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         } else {
             last_pointer = None;
         }
-        #[cfg(target_arch = "wasm32")]
-        if G::drag_look() {
-            let stick = platform::look_pad();
-            look[0] += stick[0] * dt * 2.;
-            look[1] -= stick[1] * dt * 2.;
-        }
         look[0] += look_native[0];
         look[1] += look_native[1];
         if !started && start {
@@ -398,7 +346,6 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             game.restart();
             inputs.clear();
             pointer_actions.clear();
-            last_tick = 0;
             verification_tick = 0;
             started = true;
             notice.clear();
@@ -439,7 +386,6 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Ok(true) => {
                     inputs.clear();
                     pointer_actions.clear();
-                    last_tick = game.tick();
                     "Game resumed".into()
                 }
                 Ok(false) => "No save yet. K saves.".into(),
@@ -494,7 +440,6 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 0.
             })
         };
-        let mut streamed_this_frame = false;
         for _ in 0..ticks {
             if verification && verification_tick >= G::VERIFY_TICKS {
                 break;
@@ -510,20 +455,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 intent = G::verification_input(verification_tick);
                 verification_tick += 1;
             }
-            step_ticks += 1;
-            movement_ticks += u64::from(intent.x != 0 || intent.y != 0);
-            action_ticks += u64::from(intent.action);
-            let marker = game.streaming_marker();
-            let step_start = platform::now_ms();
             game.step(&intent);
-            let elapsed = platform::now_ms() - step_start;
-            step_max_ms = step_max_ms.max(elapsed);
-            if game.streaming_marker() != marker {
-                streamed_this_frame = true;
-                chunk_updates += 1;
-                chunk_max_ms = chunk_max_ms.max(elapsed);
-                chunk_stalls += u64::from(elapsed > 50.);
-            }
         }
         for cue in game.take_cues() {
             audio.play(cue, settings.sound);
@@ -596,18 +528,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             );
         }
         clear_background(BLACK);
-        let draw_start = platform::now_ms();
         scene.draw(view, Point::default(), &mut renderer)?;
-        let draw_elapsed = platform::now_ms() - draw_start;
-        draw_max_ms = draw_max_ms.max(draw_elapsed);
-        if streamed_this_frame {
-            // Include deferred presentation work on streaming frames. This is the whole draw,
-            // not a claim that every millisecond was spent generating chunk art.
-            chunk_render_frames += 1;
-            chunk_render_max_ms = chunk_render_max_ms.max(draw_elapsed);
-            chunk_render_stalls += u64::from(draw_elapsed > 50.);
-        }
-        #[cfg(not(target_arch = "wasm32"))]
         if let Some(plan) = &capture {
             if plan.wants(frame) {
                 let path = plan.path_for(frame);
@@ -620,12 +541,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         audio.evidence.enabled = settings.sound && !audio.muted;
         audio.evidence.activated = platform::audio_active();
-        if game.tick() != last_tick || frame % 30 == 0 {
-            let report = serde_json::json!({"ready":true,"verified":verification_tick>=G::VERIFY_TICKS,"probe":G::probe_input(),"probe_passed":game.probe_success(),"game":G::ID,"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"started":started,"paused":paused,"focused":focused,"frame_seconds":dt,"accepted_input":{"step_ticks":step_ticks,"movement_ticks":movement_ticks,"action_ticks":action_ticks},"performance":{"step_max_ms":step_max_ms,"draw_max_ms":draw_max_ms,"chunk_update_max_ms":chunk_max_ms,"chunk_updates":chunk_updates,"chunk_stalls_over_50ms":chunk_stalls,"chunk_render_max_ms":chunk_render_max_ms,"chunk_render_frames":chunk_render_frames,"chunk_render_stalls_over_50ms":chunk_render_stalls},"notice":notice,"sound":settings.sound,"music_on":settings.music,"music":audio.loop_evidence,"audio":audio.evidence});
-            platform::report(&report.to_string());
-            last_tick = game.tick();
-        }
-        #[cfg(not(target_arch = "wasm32"))]
+
         {
             if capture.as_ref().is_some_and(|c| c.finished(frame))
                 || (capture.is_none() && verification && verification_tick >= G::VERIFY_TICKS)
@@ -639,7 +555,6 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         next_frame().await;
     }
-    #[cfg(not(target_arch = "wasm32"))]
     {
         Ok(())
     }
@@ -676,137 +591,39 @@ mod platform {
         pub commands: i32,
         pub pointer: Option<super::Point>,
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn touch() -> Digital {
         Digital::default()
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn muted() -> bool {
         let args: Vec<_> = std::env::args().collect();
         crate::runtime::playback::has_flag(&args, "--mute")
             || (crate::runtime::playback::has_flag(&args, "--capture")
                 && !crate::runtime::playback::has_flag(&args, "--audible"))
     }
-    #[cfg(target_arch = "wasm32")]
-    pub fn muted() -> bool {
-        false
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn verify_mode() -> bool {
         std::env::args().any(|a| a == "--verify")
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn primary_key() -> bool {
         macroquad::prelude::is_key_pressed(macroquad::prelude::KeyCode::Space)
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn sprint_key() -> bool {
         use macroquad::prelude::*;
         is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift)
     }
     pub fn command_key(key: macroquad::prelude::KeyCode) -> bool {
-        #[cfg(target_arch = "wasm32")]
-        {
-            let _ = key;
-            false
-        }
-        #[cfg(not(target_arch = "wasm32"))]
         {
             macroquad::prelude::is_key_pressed(key)
         }
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn focused() -> bool {
         true
     }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn audio_active() -> bool {
         true
     }
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn report(_: &str) {}
-    #[cfg(not(target_arch = "wasm32"))]
-    pub fn now_ms() -> f64 {
-        0. // Browser instrumentation only; native has its own performance/capture tooling.
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     pub fn error(error: &str) {
         eprintln!("2D client: {error}");
     }
-    #[cfg(target_arch = "wasm32")]
-    mod browser {
-        #![allow(unsafe_code)]
-        unsafe extern "C" {
-            fn be2_report(ptr: *const u8, len: usize);
-            fn be2_error(ptr: *const u8, len: usize);
-            fn be2_verify() -> i32;
-            fn be2_focused() -> i32;
-            fn be2_audio_active() -> i32;
-            fn be2_pad(axis: i32) -> f32;
-            fn be2_clock() -> f64;
-            fn be2_keyboard(axis: i32) -> i32;
-            fn be2_touch(field: i32) -> i32;
-        }
-        pub fn report(value: &str) {
-            unsafe {
-                be2_report(value.as_ptr(), value.len());
-            }
-        }
-        pub fn error(value: &str) {
-            unsafe {
-                be2_error(value.as_ptr(), value.len());
-            }
-        }
-        pub fn verify_mode() -> bool {
-            unsafe { be2_verify() != 0 }
-        }
-        pub fn focused() -> bool {
-            unsafe { be2_focused() != 0 }
-        }
-        pub fn audio_active() -> bool {
-            unsafe { be2_audio_active() != 0 }
-        }
-        pub fn now_ms() -> f64 {
-            unsafe { be2_clock() }
-        }
-        pub fn keyboard_movement() -> (i32, i32) {
-            unsafe { (be2_keyboard(0), be2_keyboard(1)) }
-        }
-        pub fn primary_key() -> bool {
-            unsafe { be2_keyboard(3) != 0 }
-        }
-        pub fn sprint_key() -> bool {
-            unsafe { be2_keyboard(2) != 0 }
-        }
-        pub fn pad() -> (i32, i32, bool, i32) {
-            unsafe {
-                (
-                    (be2_pad(0) * 1.5) as i32,
-                    (be2_pad(1) * 1.5) as i32,
-                    be2_pad(2) > 0.,
-                    be2_pad(5) as i32,
-                )
-            }
-        }
-        pub fn look_pad() -> [f32; 2] {
-            unsafe { [be2_pad(3), be2_pad(4)] }
-        }
-        pub fn touch() -> super::Digital {
-            unsafe {
-                let x = be2_touch(5);
-                let y = be2_touch(6);
-                super::Digital {
-                    x: be2_touch(0),
-                    y: be2_touch(1),
-                    action: be2_touch(2) != 0,
-                    commands: be2_touch(3),
-                    pointer: (x >= 0 && y >= 0).then_some(crate::two_d::Point::new(x, y)),
-                }
-            }
-        }
-    }
-    #[cfg(target_arch = "wasm32")]
-    pub use browser::*;
 }
 
 #[cfg(test)]

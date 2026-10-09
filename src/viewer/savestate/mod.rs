@@ -54,7 +54,6 @@ use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 
-#[cfg(not(target_arch = "wasm32"))]
 pub mod world;
 
 /// First eight bytes of every save file.
@@ -662,7 +661,6 @@ pub fn describe(path: &Path) -> Result<Value, SaveError> {
     let header = &loaded.header;
     let payload: Result<Value, _> = serde_json::from_slice(&loaded.payload);
     let summary = match &payload {
-        #[cfg(not(target_arch = "wasm32"))]
         Ok(_) if header.kind == world::KIND => {
             let expect = Expect {
                 kind: world::KIND,

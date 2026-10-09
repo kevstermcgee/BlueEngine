@@ -17,10 +17,7 @@ fn full() -> f32 {
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::stock_audio))]
 pub struct StockAudio {
     /// Child directory containing bank.json, relative to the game document.
@@ -38,10 +35,7 @@ pub struct StockAudio {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::cue))]
 pub struct Cue {
     pub cue: String,
@@ -52,10 +46,7 @@ pub struct Cue {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::cue_event))]
 pub enum CueEvent {
     CounterChanged {
@@ -73,10 +64,7 @@ pub enum CueEvent {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::music_layer))]
 pub struct MusicLayer {
     #[serde(default = "full")]
@@ -88,10 +76,7 @@ pub struct MusicLayer {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::counter_mix))]
 pub struct CounterMix {
     pub name: String,

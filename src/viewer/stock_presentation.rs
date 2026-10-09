@@ -6,10 +6,7 @@ use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::stock_presentation))]
 pub struct StockPresentation {
     pub objective: Option<String>,
@@ -25,10 +22,7 @@ pub struct StockPresentation {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::counter_display))]
 pub struct CounterDisplay {
     pub visible: bool,
@@ -48,10 +42,7 @@ impl Default for CounterDisplay {
 }
 #[derive(Clone, Copy, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 pub enum CounterFormat {
     #[default]
     Number,
@@ -61,10 +52,7 @@ pub enum CounterFormat {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::palette))]
 pub struct Palette {
     pub background: [f32; 4],
@@ -88,10 +76,7 @@ impl Default for Palette {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(default, deny_unknown_fields)]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 #[cfg_attr(feature = "schema-generation", schemars(transform = crate::authoring_schemas::hud))]
 pub struct Hud {
     pub scale: f32,

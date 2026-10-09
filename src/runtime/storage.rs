@@ -1,4 +1,4 @@
-//! Fallible persistence, namespaced per game, with identical native/browser snapshot bytes.
+//! Fallible persistence, namespaced per game, with stable native snapshot bytes.
 use super::{snapshot, Snapshot};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -35,9 +35,8 @@ pub fn load_slot<S: Snapshot>(
 pub fn read_settings<T: DeserializeOwned + Default>(store: &impl Storage) -> Result<T, String> {
     match store.read("settings")? {
         None => Ok(T::default()),
-        Some(bytes) => serde_json::from_slice(&bytes).map_err(|e| {
-            format!("Settings invalid: {e}; reset browser/site storage or settings file")
-        }),
+        Some(bytes) => serde_json::from_slice(&bytes)
+            .map_err(|e| format!("Settings invalid: {e}; reset the settings file")),
     }
 }
 pub fn write_settings<T: Serialize>(store: &impl Storage, settings: &T) -> Result<(), String> {
@@ -68,7 +67,6 @@ impl PlatformStorage {
         Ok(format!("{}{key}", self.namespace))
     }
 }
-#[cfg(not(target_arch = "wasm32"))]
 impl Storage for PlatformStorage {
     fn read(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
         let name = self.key(key)?.replace(':', "_");
@@ -103,7 +101,6 @@ impl Storage for PlatformStorage {
             .map_err(|e| format!("Storage unavailable: {e}"))
     }
 }
-#[cfg(not(target_arch = "wasm32"))]
 fn native_directory() -> Result<std::path::PathBuf, String> {
     use std::{env, path::PathBuf};
     if let Some(path) = env::var_os("BLUEENGINE_DATA_DIR") {
@@ -121,54 +118,7 @@ fn native_directory() -> Result<std::path::PathBuf, String> {
         "User storage location unavailable; set BLUEENGINE_DATA_DIR to a writable directory".into()
     })
 }
-#[cfg(target_arch = "wasm32")]
-mod browser {
-    #![allow(unsafe_code)] // only audited JS imports; gameplay never touches raw memory
-    use super::*;
-    unsafe extern "C" {
-        fn be2_storage_read(key: *const u8, len: usize, out: *mut u8, cap: usize) -> i32;
-        fn be2_storage_write(key: *const u8, len: usize, bytes: *const u8, count: usize) -> i32;
-        fn be2_timestamp() -> f64;
-    }
-    pub fn timestamp() -> u64 {
-        unsafe { be2_timestamp() as u64 }
-    }
-    impl Storage for PlatformStorage {
-        fn read(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
-            let key = self.key(key)?;
-            let len = unsafe { be2_storage_read(key.as_ptr(), key.len(), std::ptr::null_mut(), 0) };
-            if len == -1 {
-                return Ok(None);
-            }
-            if !(0..=4 * 1024 * 1024).contains(&len) {
-                return Err("Browser storage unavailable/invalid; allow site storage, leave private mode, or reset this site's data".into());
-            }
-            let mut bytes = vec![0; len as usize];
-            let count = unsafe {
-                be2_storage_read(key.as_ptr(), key.len(), bytes.as_mut_ptr(), bytes.len())
-            };
-            if count != len {
-                return Err("Browser storage changed during read; retry load".into());
-            }
-            Ok(Some(bytes))
-        }
-        fn write(&self, key: &str, bytes: &[u8]) -> Result<(), String> {
-            let key = self.key(key)?;
-            if unsafe { be2_storage_write(key.as_ptr(), key.len(), bytes.as_ptr(), bytes.len()) }
-                != 0
-            {
-                return Err("Browser storage write failed; quota or privacy policy blocked it. Previous save retained.".into());
-            }
-            Ok(())
-        }
-    }
-}
 pub fn timestamp_ms() -> u64 {
-    #[cfg(target_arch = "wasm32")]
-    {
-        browser::timestamp()
-    }
-    #[cfg(not(target_arch = "wasm32"))]
     {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

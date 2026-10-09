@@ -3,10 +3,7 @@ use std::ops::{Add, Div, Mul, Neg, Sub};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Deserialize, Serialize)]
 #[serde(from = "[f32; 3]", into = "[f32; 3]")]
-#[cfg_attr(
-    all(feature = "schema-generation", not(target_arch = "wasm32")),
-    derive(schemars::JsonSchema)
-)]
+#[cfg_attr(feature = "schema-generation", derive(schemars::JsonSchema))]
 pub struct V(pub f32, pub f32, pub f32);
 impl From<[f32; 3]> for V {
     fn from(a: [f32; 3]) -> Self {

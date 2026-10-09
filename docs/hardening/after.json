@@ -1,0 +1,580 @@
+{
+  "baseline_revision": "90949ab5fcdc3a90a0e378d4c059ff07a6ce49a6",
+  "onboarding_method": "Same read-obligation criterion as baseline: unique root AGENTS.md, its mandatory new-game guides/cheatsheet, and start packet references/read_first/canonical_example; exclude conditional audio/network/maintenance guides and invoked tool source; no recursive links.",
+  "onboarding_note": "Correct routing selects custom-sim, its current guide, CUSTOM_CLIENT and the native example. Before routing selected three-d with a 2D example. Higher bytes reflect the corrected capability, not an onboarding speedup.",
+  "onboarding_files": {
+    "AGENTS.md": 8785,
+    "docs/CUSTOM_CLIENT.md": 15987,
+    "docs/CUSTOM_SIM_CHEATSHEET.md": 17883,
+    "docs/GAME_QUICKSTART.md": 16910,
+    "templates/custom-sim/src/main.rs": 18949
+  },
+  "onboarding_bytes": 78514,
+  "reference_envelope_bytes": 381731,
+  "reference_envelope_files": {
+    "AGENTS.md": 8785,
+    "assets/audio/observatory/project.json": 2147,
+    "docs/AI_DEV_FEEDBACK.md": 14554,
+    "docs/AI_SPRINGBOARD.md": 6529,
+    "docs/AUDIO.md": 17858,
+    "docs/BROWSER_WORKFLOW.md": 1791,
+    "docs/CUSTOM_CLIENT.md": 15987,
+    "docs/CUSTOM_SIM_CHEATSHEET.md": 17883,
+    "docs/ENGINE_MAINTENANCE.md": 7704,
+    "docs/GAME_QUICKSTART.md": 16910,
+    "docs/NETPLAY.md": 19600,
+    "docs/SAVE_STATE.md": 12991,
+    "docs/SCHEMAS.md": 4489,
+    "docs/learning/README.md": 11707,
+    "scripts/publish_games.py": 20059,
+    "templates/custom-sim/src/main.rs": 18949,
+    "templates/starters.json": 2928,
+    "tools/assets.py": 23289,
+    "tools/author.py": 11070,
+    "tools/be2.py": 31056,
+    "tools/learn.py": 96939,
+    "tools/perf.py": 14903,
+    "tools/xcapture.py": 3603
+  },
+  "tracked_bytes": 54975841,
+  "tracked_bytes_method": "Sum indexed regular file sizes in the final working tree, including this receipt and performance records; generated untracked audio/build artifacts excluded.",
+  "final_check": {
+    "ok": true,
+    "seconds": 596.944,
+    "commands": 40,
+    "report": ".be2-work/check-20261009T183206884919Z-gb4uwsyk/report.json",
+    "test_counts": [
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json"
+        ],
+        "tests": 1000
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 868
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "offline",
+          "--message-format=json"
+        ],
+        "tests": 888
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 9
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml",
+          "--message-format=json"
+        ],
+        "tests": 9
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "two-d",
+          "--lib",
+          "--message-format=json"
+        ],
+        "tests": 499
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "model-import",
+          "--lib",
+          "model_import",
+          "--message-format=json"
+        ],
+        "tests": 6
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--test",
+          "authoring_schemas",
+          "--message-format=json"
+        ],
+        "tests": 10
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml",
+          "--message-format=json"
+        ],
+        "tests": 3
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "tests": 7
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--message-format=json"
+        ],
+        "tests": 13
+      },
+      {
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--no-default-features",
+          "--features",
+          "portable-client",
+          "--message-format=json"
+        ],
+        "tests": 13
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "tools/check_authoring.py"
+        ],
+        "tests": 53
+      },
+      {
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "tools.test_workflow",
+          "tools.test_assets",
+          "tools.test_model_import",
+          "tools.test_schemas",
+          "scripts.test_publish_games",
+          "tools.test_game_check",
+          "tools.test_game_ship",
+          "tools.test_media_tools",
+          "tools.test_xcapture",
+          "tools.test_upgrade",
+          "tools.test_learn",
+          "tools.test_hub_deploy",
+          "tools.test_browser_retirement",
+          "tools.test_springboard",
+          "tools.test_machine_utilities",
+          "tools.test_idea_forge",
+          "tools.test_engine_fix"
+        ],
+        "tests": 606
+      }
+    ]
+  },
+  "timing_limits": {
+    "strict_pre_edit_baseline": {
+      "status": "partial: temporary target exhausted disk at offline compilation",
+      "seconds": 656.701,
+      "completed_stages": [
+        {
+          "command": [
+            "cargo",
+            "fmt",
+            "--check"
+          ],
+          "tests": null,
+          "seconds": 1.928
+        },
+        {
+          "command": [
+            "cargo",
+            "rustdoc",
+            "--locked",
+            "--lib",
+            "--profile",
+            "itest",
+            "--message-format=json",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "tests": null,
+          "seconds": 83.881
+        },
+        {
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--profile",
+            "itest",
+            "--message-format=json"
+          ],
+          "tests": 998,
+          "seconds": 274.955
+        },
+        {
+          "command": [
+            "cargo",
+            "clippy",
+            "--all-targets",
+            "--locked",
+            "--profile",
+            "itest",
+            "--message-format=json",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "tests": null,
+          "seconds": 19.402
+        },
+        {
+          "command": [
+            "cargo",
+            "rustdoc",
+            "--locked",
+            "--lib",
+            "--profile",
+            "itest",
+            "--no-default-features",
+            "--message-format=json",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "tests": null,
+          "seconds": 16.829
+        },
+        {
+          "command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--profile",
+            "itest",
+            "--no-default-features",
+            "--message-format=json"
+          ],
+          "tests": 866,
+          "seconds": 217.843
+        },
+        {
+          "command": [
+            "cargo",
+            "clippy",
+            "--all-targets",
+            "--locked",
+            "--profile",
+            "itest",
+            "--no-default-features",
+            "--message-format=json",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "tests": null,
+          "seconds": 15.0
+        },
+        {
+          "command": [
+            "cargo",
+            "rustdoc",
+            "--locked",
+            "--lib",
+            "--profile",
+            "itest",
+            "--no-default-features",
+            "--features",
+            "offline",
+            "--message-format=json",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "tests": null,
+          "seconds": 4.872
+        },
+        {
+          "command": [
+            "/usr/bin/python3",
+            "-m",
+            "unittest",
+            "tools.test_workflow",
+            "tools.test_assets",
+            "tools.test_model_import",
+            "tools.test_schemas",
+            "scripts.test_publish_games",
+            "tools.test_game_check",
+            "tools.test_game_ship",
+            "tools.test_media_tools",
+            "tools.test_xcapture",
+            "tools.test_upgrade",
+            "tools.test_learn",
+            "tools.test_hub_deploy",
+            "tools.test_browser_retirement",
+            "tools.test_springboard",
+            "tools.test_machine_utilities",
+            "tools.test_idea_forge"
+          ],
+          "tests": 589,
+          "seconds": 182.78
+        }
+      ]
+    },
+    "first_passing_full_check_after_routing_only_seconds": 1415.671,
+    "note": "Final check uses a warm cache. Strict pre-edit baseline exhausted disk. Initial and final durations are not a controlled speed comparison."
+  },
+  "verification_environment": {
+    "RUSTC_WRAPPER": "",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_ITEST_DEBUG": "0",
+    "CARGO_PROFILE_DEV_DEBUG": "0",
+    "note": "Same full gates/assertions/feature modes; symbols/incremental cache disabled to fit available storage. Initial baseline failed with default symbols/cache; do not infer speedup from timings."
+  },
+  "cross_build_multiplayer": [
+    {
+      "direction": "before-server_after-client",
+      "report": {
+        "bytes_per_client_per_s": 1421.0,
+        "clients_joined": 2,
+        "clients_refused": 0,
+        "clients_requested": 2,
+        "deltas": 78,
+        "generator_late_frames": 0,
+        "generator_worst_late_ms": 0.0,
+        "max_packet_bytes": 130,
+        "refusal_reason": null,
+        "resyncs": 0,
+        "seconds": 2.01,
+        "snapshots": 2,
+        "update_gap_ms_max": 51.0,
+        "update_gap_ms_mean": 50.2,
+        "update_gaps_over_100ms": 0,
+        "welcome_ms_max": 17.3
+      }
+    },
+    {
+      "direction": "after-server_before-client",
+      "report": {
+        "bytes_per_client_per_s": 1421.0,
+        "clients_joined": 2,
+        "clients_refused": 0,
+        "clients_requested": 2,
+        "deltas": 78,
+        "generator_late_frames": 0,
+        "generator_worst_late_ms": 0.0,
+        "max_packet_bytes": 131,
+        "refusal_reason": null,
+        "resyncs": 0,
+        "seconds": 2.01,
+        "snapshots": 2,
+        "update_gap_ms_max": 51.0,
+        "update_gap_ms_mean": 49.8,
+        "update_gaps_over_100ms": 0,
+        "welcome_ms_max": 17.1
+      }
+    }
+  ],
+  "leo_music_regeneration": {
+    "music/music-home.wav": {
+      "samples": 4233600,
+      "changed_samples": 0,
+      "max_pcm16_delta": 0
+    },
+    "music/music-starlight.wav": {
+      "samples": 4233600,
+      "changed_samples": 2,
+      "max_pcm16_delta": 1
+    },
+    "music/music-wander.wav": {
+      "samples": 4233600,
+      "changed_samples": 2,
+      "max_pcm16_delta": 1
+    },
+    "nature/music-birds.wav": {
+      "samples": 2116800,
+      "changed_samples": 0,
+      "max_pcm16_delta": 0
+    },
+    "nature/music-leaves.wav": {
+      "samples": 2116800,
+      "changed_samples": 0,
+      "max_pcm16_delta": 0
+    },
+    "nature/music-night.wav": {
+      "samples": 2116800,
+      "changed_samples": 0,
+      "max_pcm16_delta": 0
+    },
+    "nature/music-wind.wav": {
+      "samples": 2116800,
+      "changed_samples": 0,
+      "max_pcm16_delta": 0
+    }
+  },
+  "verified_exceptions": [
+    "Portable starters support game-owned planar 2D enemies; three-d substitutes drawing, not spatial 3D collision.",
+    "The HMAC implementation was in src/viewer/net/session.rs, not src/net/session.rs.",
+    "AI_REFERENCE include_str was not required by the selected Docker binaries; Cargo still requires declared examples and embedded tool inputs.",
+    "BE2_ARCHITECTURE.md describes current contracts and moved to docs/ without a legacy banner; nine historical roots moved to docs/archive/."
+  ],
+  "learning_ledger": {
+    "total": 130,
+    "before_open": 68,
+    "open": 41,
+    "promoted": 75,
+    "duplicate": 12,
+    "wontfix": 2,
+    "audit": "docs/hardening/feedback-audit.md"
+  },
+  "browser_target_conditions": {
+    "before": 72,
+    "after": 1,
+    "remaining": "Explicit WASM retirement diagnostic"
+  },
+  "history_recommendation": "No history was rewritten. Removing generated WAVs and duplicate maps reduces new trees and exports but retains old Git objects. An optional future coordinated history cleanup could remove those blobs; it would require updating pinned engine/game revisions and collaborator clones. That decision belongs to the repository owner."
+}
