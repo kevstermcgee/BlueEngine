@@ -250,6 +250,30 @@ def screenshot_from_package(game, not_before=0):
     raise ForgeError("The isolated package needs a landscape native screenshot")
 
 
+def codex_usage(path):
+    """Keep only numeric turn.completed usage; never copy events/transcripts to feedback."""
+    totals = {key: 0 for key in ("input_tokens", "cached_input_tokens", "output_tokens")}
+    turns = 0
+    for line in Path(path).read_text(encoding="utf-8", errors="replace").splitlines():
+        try:
+            event = json.loads(line)
+        except ValueError:
+            continue
+        if not isinstance(event, dict) or event.get("type") != "turn.completed":
+            continue
+        usage = event.get("usage")
+        if not isinstance(usage, dict) or any(type(usage.get(k)) is not int or usage[k] < 0
+                                               for k in ("input_tokens", "output_tokens")):
+            continue
+        for key in totals:
+            value = usage.get(key, 0)
+            if type(value) is int and value >= 0:
+                totals[key] += value
+        turns += 1
+    return {"usage": totals if turns else None, "turns": turns,
+            "usage_note": None if turns else "Codex CLI emitted no valid turn.completed usage; wall time only."}
+
+
 class Forge:
     def __init__(self, directory, state):
         self.directory = Path(directory).resolve()
@@ -322,21 +346,48 @@ class Forge:
         argv = [self.state["agent"], "exec", "--sandbox", "workspace-write" if writable else "read-only",
                 "-c", "approval_policy=\"never\"", "--ephemeral", "--color", "never", "--json",
                 "--output-schema", str(schema_path), "--output-last-message", str(answer_path),
-                "--cd", str(self.engine)]
+                "--cd", str(self.game if writable else self.engine)]
         if writable:
-            argv.extend(["--add-dir", self.state["target_dir"]])
+            self.ensure_game_scope()
+            self.game.mkdir(parents=True, exist_ok=True)
+            private = self.engine / ".be2-work"
+            private.mkdir(exist_ok=True)
+            feedback = self.engine / "docs/feedback"
+            feedback.mkdir(parents=True, exist_ok=True)
+            source_stamp = self.source_stamp()
+            argv.extend(["--add-dir", self.state["target_dir"], "--add-dir", str(private),
+                         "--add-dir", str(feedback)])
         if self.state.get("model"):
             argv.extend(["--model", self.state["model"]])
         if image:
             argv.extend(["--image", str(image)])
         argv.append("-")
-        self.command(argv, label=label, stdin=prompt)
+        before = len(self.state.get("commands", []))
+        try:
+            self.command(argv, label=label, stdin=prompt)
+        finally:
+            completed = self.state.get("commands", [])[before:]
+            for command in completed:
+                measured = codex_usage(self.directory / command["log"])
+                self.state.setdefault("agent_measurements", []).append({
+                    "label": label, "seconds": command["seconds"], **measured})
+            self.save()
         if not answer_path.exists():
             raise ForgeError(f"{label} produced no structured response")
         answer = load_json(answer_path)
         validate(answer, schema)
         if "findings" in answer:
             public_findings(answer["findings"])
+        if writable:
+            try:
+                self.ensure_game_scope()
+                if self.source_stamp() != source_stamp:
+                    raise ForgeError("The worker touched engine src/; use the separate tools/engine_fix.py path")
+            except ForgeError:
+                if "findings" in answer:
+                    self.state.setdefault("build_reports", []).append(answer)
+                    self.save()
+                raise
         return answer
 
     def setup(self):
@@ -426,7 +477,12 @@ Declare Windows delivery and Linux verification. Use existing game/engine APIs r
 than inventing them. Meaningful rule tests must cover the unique interaction, failure,
 determinism and save/load. verification_input must exercise real public gameplay.
 Inspect native captures and real controls; tests alone do not prove fun or visuals.
-Keep scope to this game and necessary compatible engine fixes with their tests/docs.
+Keep all edits inside this game folder and docs/feedback. Engine source is read-only.
+If the engine needs a fix, return reproducible feedback and a workaround; never edit
+src/, engine tests, manifests, templates, policy or other games. Engine fixes run separately
+with tools/engine_fix.py, which requires a baseline-failing regression test.
+Your working directory is the game folder. Engine checkout: {self.engine}.
+Run its absolute tools/be2.py path for start/map commands; use --project {self.game}.
 Work as a single AI worker; do not spawn additional agents. Do not change global
 policies, CI, publisher or IdeaForge implementation. Do not commit,
 push, publish, install shortcuts, send messages or access credentials. The supervisor
@@ -480,7 +536,48 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
     def game(self):
         return self.engine / "games" / self.state["idea"]["slug"]
 
+    def source_stamp(self):
+        # Catch writes followed by content restoration, which git diff alone misses.
+        return {file.relative_to(self.engine).as_posix():
+                (file.stat().st_mtime_ns, hashlib.sha256(file.read_bytes()).hexdigest())
+                for file in (self.engine / "src").rglob("*") if file.is_file()}
+
+    def ensure_game_scope(self, supervisor=False):
+        base = self.state.get("base_commit", "HEAD")
+        changed = (git(self.engine, "diff", "--name-only", base).splitlines()
+                   + git(self.engine, "ls-files", "--others", "--exclude-standard").splitlines())
+        allowed = (f"games/{self.state['idea']['slug']}/", "docs/feedback/")
+        if supervisor:
+            allowed += ("docs/learning/",)
+        def own_receipt(path):
+            expected = self.state.get("supervisor_files", {}).get(path)
+            full = self.engine / path
+            return expected and full.is_file() and hashlib.sha256(full.read_bytes()).hexdigest() == expected
+        if any(not p.startswith(allowed) and not own_receipt(p) and not (supervisor and p == "games-publish.json")
+               for p in changed):
+            raise ForgeError("The worker changed files outside its game scope; engine changes require "
+                             "a separate tools/engine_fix.py run with a regression test")
+        if self.game.is_symlink() or not self.game.resolve().is_relative_to(self.engine):
+            raise ForgeError("The generated game directory escapes its engine worktree")
+
+    def measurements(self):
+        agents = self.state.get("agent_measurements", [])
+        known = [agent["usage"] for agent in agents if agent.get("usage") is not None]
+        usage = {key: sum(row.get(key, 0) for row in known)
+                 for key in ("input_tokens", "cached_input_tokens", "output_tokens")}
+        # Cached input is already part of input_tokens; do not count it twice.
+        started = datetime.fromisoformat(self.state["created"]).timestamp()
+        return {"run": self.state["id"], "game": self.state["idea"]["slug"],
+                "tokens": usage["input_tokens"] + usage["output_tokens"],
+                "usage": usage if known else None,
+                "wall_seconds": round(max(0., time.time() - started), 3),
+                "agent_seconds": round(sum(agent["seconds"] for agent in agents), 3),
+                "usage_note": "Measured from Codex CLI turn.completed usage; cached input included once."
+                    if agents and len(known) == len(agents) else
+                    "Partial/unavailable CLI usage; tokens sum only exposed turns, wall time recorded."}
+
     def verify_local(self):
+        self.ensure_game_scope()
         game = self.game
         if game.is_symlink() or not game.resolve().is_relative_to(self.engine):
             raise ForgeError("The generated game directory escapes its engine worktree")
@@ -498,11 +595,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("The game presentation does not meet the requested dimension")
         if not {"windows", "linux"}.issubset(project.get("targets", [])) or "web" in project.get("targets", []):
             raise ForgeError("The game must declare native Windows delivery and Linux verification")
-        changed = (git(self.engine, "diff", "--name-only", "HEAD").splitlines()
-                   + git(self.engine, "ls-files", "--others", "--exclude-standard").splitlines())
-        allowed = (f"games/{self.state['idea']['slug']}/", "src/", "tests/", "docs/")
-        if any(not p.startswith(allowed) and p not in ("Cargo.toml", "Cargo.lock") for p in changed):
-            raise ForgeError("The worker changed supervisor/policy files outside its game scope")
+        self.ensure_game_scope()
         manifest = game / "Cargo.toml"
         self.command(["cargo", "fmt", "--manifest-path", manifest, "--check"], label="game-format")
         log = self.command(["cargo", "test", "--locked", "--manifest-path", manifest], label="game-tests")
@@ -535,6 +628,15 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                  "## Generated mechanic", "", idea["mechanic"], "", "## Novelty and playtesting", "",
                  idea["novelty_check"], "", idea["playtest_risk"], "",
                  "## Findings from the AI that developed and reviewed the game", ""]
+        measured = self.measurements()
+        cost_file = self.engine / "docs/learning/forge-runs.jsonl"
+        cost_file.parent.mkdir(parents=True, exist_ok=True)
+        costs = [json.loads(line) for line in cost_file.read_text().splitlines()] if cost_file.exists() else []
+        costs = [row for row in costs if row["run"] != measured["run"]] + [measured]
+        cost_file.write_text("".join(json.dumps(row) + "\n" for row in costs), encoding="utf-8")
+        lines.extend(["## Measured game-run cost", "",
+                      f"Tokens: {measured['tokens']}; wall seconds: {measured['wall_seconds']}; "
+                      f"Codex seconds: {measured['agent_seconds']}. {measured['usage_note']}", ""])
         ledger = self.engine / "docs/learning/ledger.jsonl"
         entries, malformed = learn.load_ledger(ledger)
         if malformed:
@@ -544,12 +646,23 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                           "Observed: " + finding["observed"], "", "Reproduce: " + finding["reproduction"], "",
                           "Workaround: " + finding["workaround"], "",
                           "Proposed engine improvement: " + finding["recommendation"], ""])
-            entry = {"game": idea["slug"], "area": finding["area"], "tokens": 0,
+            entry = {"game": idea["slug"], "area": finding["area"], "tokens": measured["tokens"] if index == 1 else 0,
+                     "wall_seconds": measured["wall_seconds"] if index == 1 else 0,
+                     "measurement_ref": "docs/learning/forge-runs.jsonl",
                      "note": finding["observed"], "workaround": finding["workaround"],
                      "status": "open", "ref": relative, "keywords": finding["keywords"]}
-            if not any(e.get("game") == entry["game"] and e.get("note") == entry["note"]
-                       and e.get("ref") == relative for e in entries):
+            existing = next((e for e in entries if e.get("game") == entry["game"]
+                             and e.get("note") == entry["note"] and e.get("ref") == relative), None)
+            if existing is None:
                 entries.append(learn.append_entry(entry, path=ledger))
+            else:
+                existing.update({key: entry[key] for key in ("tokens", "wall_seconds", "measurement_ref")})
+        if unique:
+            if any(learn.validate_entry(entry) for entry in entries):
+                raise ForgeError("The measured learning ledger is invalid; preserved without replacement")
+            temporary = ledger.with_name(".forge-ledger-" + uuid4().hex)
+            temporary.write_text("".join(json.dumps(entry) + "\n" for entry in entries), encoding="utf-8")
+            os.replace(temporary, ledger)
         if not unique:
             lines.extend(["The worker reported no engine friction. No findings were fabricated.", ""])
         lines.extend(["## Verification and delivery", "",
@@ -578,9 +691,13 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         path = self.engine / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\n".join(lines), encoding="utf-8")
+        self.state["supervisor_files"] = {
+            file.relative_to(self.engine).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
+            for file in (ledger, cost_file) if file.is_file()}
         self.save()
 
     def register_source(self):
+        self.ensure_game_scope(supervisor=True)
         if code_digest(self.engine) != self.state["verified_code"]:
             raise ForgeError("Code changed after verification; rebuild before publishing")
         path = self.engine / "games-publish.json"
@@ -782,7 +899,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("Code changed after publication; unverified changes cannot enter engine main")
         self.state["status"] = "published"
         self.feedback()
-        git(self.engine, "add", self.state["feedback_path"], "docs/learning/ledger.jsonl")
+        git(self.engine, "add", self.state["feedback_path"], "docs/learning/ledger.jsonl", "docs/learning/forge-runs.jsonl")
         self.commit(self.engine, "Record verified delivery and AI feedback for " + self.state["idea"]["title"])
         self.command(["git", "fetch", "origin", "main"], label="feedback-fetch")
         # Never force-push or overwrite changes made by another engine author.

@@ -19,6 +19,7 @@ import collections
 import datetime
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -1151,7 +1152,7 @@ REF_RE = re.compile(r'^[A-Za-z0-9 ._#:/,+\-]{1,80}$')
 WORD_LIST_RE = re.compile(r'^[a-z0-9][a-z0-9 _.\-]{0,39}$')
 HASH_TOKEN_RE = re.compile(r'\b[0-9a-f]{7,40}\b')
 ENTRY_FIELDS = ('id', 'date', 'game', 'area', 'tokens', 'note', 'workaround', 'duplicated', 'trap', 'hint', 'status',
-                'ref', 'keywords', 'features')
+                'ref', 'keywords', 'features', 'wall_seconds', 'measurement_ref')
 MAX_HINT = 110
 
 
@@ -1190,6 +1191,10 @@ def validate_entry(entry):
     tokens = entry.get('tokens')
     if not isinstance(tokens, int) or isinstance(tokens, bool) or tokens < 0:
         errors.append('tokens must be a whole number >= 0 (0 = not measured)')
+    seconds = entry.get('wall_seconds')
+    if seconds is not None and (type(seconds) not in (int, float) or not math.isfinite(seconds) or seconds < 0):
+        errors.append('wall_seconds must be a finite number >= 0')
+    check_text('measurement_ref', entry.get('measurement_ref'), errors)
     check_text('note', entry.get('note'), errors, required=True)
     for field in ('workaround', 'trap', 'hint', 'ref'):
         check_text(field, entry.get(field), errors)

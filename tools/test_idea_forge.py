@@ -1,5 +1,6 @@
 """Behavioral gates for the IdeaForge supervisor, without paid AI calls or real publication."""
 import os
+import json
 from pathlib import Path
 import struct
 import subprocess
@@ -188,6 +189,96 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(forge.learn.validate_entry(ledger[0]), [])
         self.assertEqual(ledger[0]["game"], "rule-relay")
         self.assertEqual(ledger[0]["tokens"], 0)
+
+    def test_stub_cli_records_real_tokens_and_game_wall_time(self):
+        def command(argv, *, label, stdin=None):
+            log = self.directory / 'usage.log'
+            log.write_text(json.dumps({'type': 'turn.completed', 'usage': {
+                'input_tokens': 1234, 'cached_input_tokens': 1000, 'output_tokens': 296}}) + '\n')
+            response = Path(argv[argv.index('--output-last-message') + 1])
+            forge.atomic_json(response, {'summary': 'Built', 'findings': [finding()]})
+            self.state.setdefault('commands', []).append({
+                'label': label, 'exit_code': 0, 'seconds': 12.5, 'log': log.name})
+            return log
+        started = datetime.fromisoformat(self.state['created']).timestamp()
+        with patch.object(self.worker, 'command', side_effect=command), patch('time.time', return_value=started + 180):
+            report = self.worker.agent('build-0', 'fixture', forge.BUILD_SCHEMA, writable=True)
+            self.state['build_reports'] = [report]
+            self.worker.feedback()
+        entries, bad = forge.learn.load_ledger(self.engine / 'docs/learning/ledger.jsonl')
+        self.assertEqual(bad, 0)
+        self.assertEqual(entries[0]['tokens'], 1530)  # Cached input is already in input_tokens.
+        self.assertEqual(entries[0]['wall_seconds'], 180)
+        cost = json.loads((self.engine / 'docs/learning/forge-runs.jsonl').read_text())
+        self.assertEqual(cost['usage']['cached_input_tokens'], 1000)
+        self.assertEqual(cost['agent_seconds'], 12.5)
+        self.assertEqual(cost['game'], 'rule-relay')
+
+    def test_resume_allows_supervisor_receipts_but_refuses_worker_edits_to_them(self):
+        self.state['build_reports'] = [{'summary': 'Built', 'findings': [finding()]}]
+        self.worker.feedback()
+        self.worker.ensure_game_scope()
+        ledger = self.engine / 'docs/learning/ledger.jsonl'
+        ledger.write_text(ledger.read_text() + 'worker alteration')
+        with self.assertRaisesRegex(forge.ForgeError, 'outside its game scope'):
+            self.worker.ensure_game_scope()
+
+    def test_resumed_feedback_updates_cost_without_duplicating_findings(self):
+        self.state['build_reports'] = [{'summary': 'Built', 'findings': [finding()]}]
+        self.worker.feedback()
+        self.state['agent_measurements'] = [{'seconds': 2, 'usage': {'input_tokens': 321, 'output_tokens': 123}}]
+        self.worker.feedback()
+        rows, bad = forge.learn.load_ledger(self.engine / 'docs/learning/ledger.jsonl')
+        self.assertEqual(bad, 0)
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['tokens'], 444)
+
+    def test_missing_cli_usage_is_explicit_and_keeps_wall_time(self):
+        log = self.directory / 'old-cli.log'
+        log.write_text('worker completed without a usage event\n')
+        result = forge.codex_usage(log)
+        self.assertIsNone(result['usage'])
+        self.assertIn('wall time only', result['usage_note'])
+
+    def test_game_run_refuses_engine_source_even_if_committed(self):
+        self.native_game()
+        self.state['base_commit'] = forge.git(self.engine, 'rev-parse', 'HEAD')
+        source = self.engine / 'src/lib.rs'
+        source.parent.mkdir()
+        source.write_text('// engine mutation')
+        forge.git(self.engine, 'add', 'src/lib.rs')
+        forge.git(self.engine, 'commit', '-qm', 'Unapproved engine mutation')
+        with patch.object(self.worker, 'command') as command:
+            with self.assertRaisesRegex(forge.ForgeError, 'outside its game scope'):
+                self.worker.verify_local()
+            command.assert_not_called()
+
+    def test_touching_unchanged_engine_source_is_also_refused(self):
+        source = self.engine / 'src/lib.rs'
+        source.parent.mkdir()
+        source.write_text('// baseline engine')
+        forge.git(self.engine, 'add', 'src/lib.rs')
+        forge.git(self.engine, 'commit', '-qm', 'Baseline engine source')
+        def command(argv, *, label, stdin=None):
+            stat = source.stat()
+            os.utime(source, ns=(stat.st_atime_ns, stat.st_mtime_ns + 1_000_000_000))
+            forge.atomic_json(Path(argv[argv.index('--output-last-message') + 1]),
+                              {'summary': 'Touched', 'findings': [finding()]})
+        with patch.object(self.worker, 'command', side_effect=command):
+            with self.assertRaisesRegex(forge.ForgeError, 'touched engine src/'):
+                self.worker.agent('build-0', 'fixture', forge.BUILD_SCHEMA, writable=True)
+        self.assertEqual(forge.git(self.engine, 'diff', '--name-only'), '')
+
+    def test_worker_that_modifies_src_is_refused_after_the_cli(self):
+        def command(argv, *, label, stdin=None):
+            (self.engine / 'src').mkdir()
+            (self.engine / 'src/lib.rs').write_text('// attempted engine fix')
+            forge.atomic_json(Path(argv[argv.index('--output-last-message') + 1]),
+                              {'summary': 'Blocked', 'findings': [finding()]})
+        with patch.object(self.worker, 'command', side_effect=command):
+            with self.assertRaisesRegex(forge.ForgeError, 'separate tools/engine_fix.py'):
+                self.worker.agent('build-0', 'fixture', forge.BUILD_SCHEMA, writable=True)
+        self.assertEqual(self.state['build_reports'][0]['findings'], [finding()])
 
     def test_a_failed_build_retains_real_ai_feedback_and_does_not_publish(self):
         self.state["completed"] = ["setup", "generate"]

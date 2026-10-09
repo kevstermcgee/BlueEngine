@@ -61,7 +61,9 @@ One JSON object per line; fields in this order. `record` fills `id` and `date`.
 | `date` | `YYYY-MM-DD` | assigned (UTC) |
 | `game` | text | `spooky-kart`, `deadfall`, `prop-hunt`, `physics-games`, `engine` ... |
 | `area` | enum | `networking rendering geometry input audio physics ai tooling docs workflow platform assets save ui simulation process other` |
-| `tokens` | int >= 0 | approximate tokens it cost; `0` = not measured |
+| `tokens` | int >= 0 | measured CLI total or author estimate; `0` = unmeasured/unallocated; see the run receipt |
+| `wall_seconds` | finite number >= 0, optional | elapsed game-run wall time; IdeaForge puts the total on its first finding |
+| `measurement_ref` | text, optional | path to the numeric per-game receipt |
 | `note` | text, one line, under 400 chars | what happened |
 | `workaround` | text, optional | what the agent did instead, or the engine feature that now solves it |
 | `duplicated` | list of paths, optional | code the agent had to write or copy that other games will too |
@@ -115,3 +117,21 @@ These sets informed tuning and are development/regression fixtures, despite thei
 Feature/path retrieval and packet size estimates do not establish actual token savings, faster development or
 better game-completion rates. The report computes current fixture scores read-only and distinguishes them from
 historical evaluation runs.
+
+## IdeaForge measurements and engine fixes
+
+Each run writes numeric Codex `turn.completed` usage and wall time to
+`forge-runs.jsonl`. Input tokens include cached input once. Missing CLI usage is
+explicitly unavailable; wall time remains measured. Feedback links this receipt;
+only its first finding carries the whole-run token/wall total, so findings do not
+multiply the cost. No per-finding attribution is inferred. Retries and reviews
+are included, and the receipt is replaced by run ID on resume.
+
+Game workers write only their game folder and feedback. Changes to engine src,
+tests, manifests or templates refuse the run, including changes committed during
+the run (the guard compares against its original base). Report an engine issue
+instead. In a separate engine branch, add an integration regression for it, then
+run `python3 tools/engine_fix.py --base BASE --test SUITE::exact_test`.
+It requires that test to fail against the baseline code and pass with the fix,
+and runs the full engine check. A game run cannot use that path to modify its
+engine; resume with a new fixed engine baseline for a new measurement.
