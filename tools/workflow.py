@@ -357,7 +357,7 @@ def ledger_hints(root, query, selected=()):
             entry = json.loads(line)
         except ValueError:
             continue
-        if isinstance(entry, dict) and isinstance(entry.get('note'), str):
+        if isinstance(entry, dict) and isinstance(entry.get('note'), str) and entry.get('status') != 'duplicate':
             entries.append(entry)
     keyword_sets = [learned_words(' '.join(w for w in entry.get('keywords', []) if isinstance(w, str)))
                     if isinstance(entry.get('keywords', []), list) else set() for entry in entries]

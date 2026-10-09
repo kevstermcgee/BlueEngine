@@ -53,7 +53,7 @@ Claude Code session logs under `~/.claude/projects/` hold private conversation t
 
 ## Ledger schema (`ledger.jsonl`)
 
-One JSON object per line; fields in this order. `record` fills `id` and `date`.
+One JSON object per line. `record` fills `id` and `date`.
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -68,7 +68,8 @@ One JSON object per line; fields in this order. `record` fills `id` and `date`.
 | `workaround` | text, optional | what the agent did instead, or the engine feature that now solves it |
 | `duplicated` | list of paths, optional | code the agent had to write or copy that other games will too |
 | `trap` | text, optional | the silent failure to warn the next agent about (shown by `be2.py context`) |
-| `status` | `open` / `promoted` / `wontfix` | `promoted` means the engine now provides it |
+| `status` | `open` / `promoted` / `wontfix` / `duplicate` | `promoted` means the engine now provides it |
+| `duplicate_of` | learning ID, required for duplicate status | canonical L-NNN; original report metadata stays intact |
 | `ref` | text, optional (required when promoted) | the commit, ADR or tracking note: `1e2d2bc`, `ADR 0036` |
 | `keywords` | up to 20 lowercase words, required for hints | words a future task would use; omission warns that the record is archive-only |
 | `features` | `FEATURES.json` ids, optional | features this relates to; drives `context` hints |
@@ -90,7 +91,7 @@ nothing matches. A promoted entry becomes "solved: ... (ref)"; an entry with a `
 3. **Promote** when the thresholds in ADR 0038 are met (copied in two or more games with 100+ lines, or one friction
    item above about 50k tokens, or a bug class that escaped to players): implement it in the engine, add its ADR and,
    if existing games must act, a migration entry (`tools/upgrade_migrations.json`, ADR 0032/0034/0035), then flip the
-   ledger entry to `promoted` (edit `status` and add `ref` on its line in place; `tools/test_learn.py` validates the file)
+   ledger entry to `promoted` with `learn.py close --commit COMMIT` (use a Closes-Learning trailer or --entry; the command validates the file)
    and re-run `eval`.
 4. **Check discovery.** A promoted capability that `be2.py context` cannot find is not promoted: add a task to
    `tasks.jsonl` that a real agent would have typed, run `learn.py eval`, and fix `tools/FEATURES.json`
@@ -135,3 +136,19 @@ run `python3 tools/engine_fix.py --base BASE --test SUITE::exact_test`.
 It requires that test to fail against the baseline code and pass with the fix,
 and runs the full engine check. A game run cannot use that path to modify its
 engine; resume with a new fixed engine baseline for a new measurement.
+
+## Close fixes and merge repeated reports
+
+After verifying an engine fix, put `Closes-Learning: L-106, L-112` in its commit
+message. Run `python3 tools/learn.py close --commit COMMIT` to resolve those IDs to
+the fixing commit. Historical commits can use repeatable `--entry L-NNN`.
+The commit must be in this checkout's history. The command validates the ledger
+and preserves it on malformed input or unknown IDs; commit the reconciliation.
+Closure records verified work; the command cannot prove that a claimed fix works.
+
+`python3 tools/learn.py merge L-118 --into L-106` retains the original observation,
+game, date and ID as a `duplicate` alias. The canonical entry holds merged keywords;
+duplicate hints no longer compete for a fresh agent's context. Close the canonical
+entry once its fix is verified. Frequency counts include its aliases and distinguish
+report occurrences from independent games. Evidence and the five most frequent open
+topics are in the [hardening feedback audit](../hardening/feedback-audit.md).

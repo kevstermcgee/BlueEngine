@@ -3,6 +3,7 @@ smoke test that skips cleanly when the game checkouts are absent. Every fake sec
 import contextlib
 import io
 import json
+import subprocess
 import os
 from pathlib import Path
 import shutil
@@ -454,6 +455,57 @@ def entry(**overrides):
 
 
 class LedgerTests(unittest.TestCase):
+    def test_close_and_merge_preserve_history_and_refuse_unknown_ids(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'ledger.jsonl'
+            rows = [entry(id='L-001', date='2026-10-09', keywords=['audio']),
+                    entry(id='L-002', date='2026-10-09', keywords=['mute'])]
+            path.write_text(''.join(json.dumps(row) + '\n' for row in rows))
+            before = path.read_bytes()
+            with self.assertRaises(learn.LearnError):
+                learn.close_entries(path, ['L-999'], '90949ab')
+            self.assertEqual(path.read_bytes(), before)
+            learn.merge_entry(path, 'L-002', 'L-001')
+            merged, bad = learn.load_ledger(path)
+            self.assertEqual(bad, 0)
+            self.assertEqual(merged[1]['duplicate_of'], 'L-001')
+            self.assertEqual(merged[1]['note'], rows[1]['note'])
+            self.assertEqual(merged[0]['keywords'], ['audio', 'mute'])
+            learn.close_entries(path, ['L-001'], '90949ab')
+            closed, _ = learn.load_ledger(path)
+            self.assertEqual(closed[0]['status'], 'promoted')
+            self.assertEqual(closed[0]['ref'], '90949ab')
+            self.assertEqual(closed[1]['id'], 'L-002')
+            with self.assertRaises(learn.LearnError):
+                learn.merge_entry(path, 'L-001', 'L-002')
+
+    def test_fix_commit_trailer_closes_entries(self):
+        from unittest.mock import patch
+        import argparse
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            for key, value in [('user.name', 'Fixture'), ('user.email', 'fixture@example.invalid')]:
+                subprocess.run(['git', '-C', str(root), 'config', key, value], check=True)
+            path = root / 'ledger.jsonl'
+            path.write_text(json.dumps(entry(id='L-001', date='2026-10-09')) + '\n')
+            subprocess.run(['git', '-C', str(root), 'add', '.'], check=True)
+            subprocess.run(['git', '-C', str(root), 'commit', '-qm', 'Fix fixture\n\nCloses-Learning: L-001'], check=True)
+            with patch.object(learn, 'ROOT', root):
+                self.assertEqual(learn.cmd_close(argparse.Namespace(commit='HEAD', entry=None, ledger=path)), 0)
+            rows, _ = learn.load_ledger(path)
+            self.assertEqual(rows[0]['status'], 'promoted')
+            self.assertRegex(rows[0]['ref'], r'^[0-9a-f]{12}$')
+
+    def test_malformed_ledger_cannot_be_partially_rewritten(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'ledger.jsonl'
+            path.write_text(json.dumps(entry(id='L-001', date='2026-10-09')) + '\n{bad\n')
+            before = path.read_bytes()
+            with self.assertRaises(learn.LearnError):
+                learn.close_entries(path, ['L-001'], '90949ab')
+            self.assertEqual(path.read_bytes(), before)
+
     def test_a_good_entry_validates(self):
         self.assertEqual(learn.validate_entry(entry()), [])
         full = entry(workaround='use X', trap='silent', status='promoted', ref='7ca1536', duplicated=['~/G/src/a.rs'],

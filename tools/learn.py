@@ -21,6 +21,7 @@ import hashlib
 import json
 import math
 import os
+import tempfile
 from pathlib import Path
 import re
 import subprocess
@@ -1143,7 +1144,7 @@ def cmd_dupes(args):
 LEDGER = LEARNING / 'ledger.jsonl'
 AREAS = ('networking', 'rendering', 'geometry', 'input', 'audio', 'physics', 'ai', 'tooling', 'docs', 'workflow',
          'platform', 'assets', 'save', 'ui', 'simulation', 'process', 'other')
-STATUSES = ('open', 'promoted', 'wontfix')
+STATUSES = ('open', 'promoted', 'wontfix', 'duplicate')
 MAX_TEXT = 400
 MAX_PATHS = 12
 MAX_WORDS = 20
@@ -1152,7 +1153,7 @@ REF_RE = re.compile(r'^[A-Za-z0-9 ._#:/,+\-]{1,80}$')
 WORD_LIST_RE = re.compile(r'^[a-z0-9][a-z0-9 _.\-]{0,39}$')
 HASH_TOKEN_RE = re.compile(r'\b[0-9a-f]{7,40}\b')
 ENTRY_FIELDS = ('id', 'date', 'game', 'area', 'tokens', 'note', 'workaround', 'duplicated', 'trap', 'hint', 'status',
-                'ref', 'keywords', 'features', 'wall_seconds', 'measurement_ref')
+                'ref', 'keywords', 'features', 'wall_seconds', 'measurement_ref', 'duplicate_of')
 MAX_HINT = 110
 
 
@@ -1206,6 +1207,11 @@ def validate_entry(entry):
         errors.append('status must be one of: ' + ', '.join(STATUSES))
     if entry.get('status') == 'promoted' and not entry.get('ref'):
         errors.append('a promoted entry needs --ref (the commit or ADR that did it)')
+    duplicate = entry.get('duplicate_of')
+    if entry.get('status') == 'duplicate' and (not isinstance(duplicate, str) or not re.fullmatch(r'L-\d+', duplicate)):
+        errors.append('a duplicate entry needs duplicate_of: L-NNN')
+    if duplicate and entry.get('status') != 'duplicate':
+        errors.append('duplicate_of requires duplicate status')
     duplicated = entry.get('duplicated', [])
     if not isinstance(duplicated, list) or len(duplicated) > MAX_PATHS or \
             any(not isinstance(item, str) or len(item) > 160 or secret_like(item) or '\n' in item for item in duplicated):
@@ -1237,6 +1243,84 @@ def load_ledger(path=None):
         else:
             bad += 1
     return entries, bad
+
+
+def validated_ledger(path):
+    entries, bad = load_ledger(path)
+    if bad or any(validate_entry(entry) or not re.fullmatch(r'L-\d+', str(entry.get('id', ''))) for entry in entries):
+        raise LearnError('Malformed ledger preserved without modification')
+    if len({entry['id'] for entry in entries}) != len(entries):
+        raise LearnError('Duplicate ledger IDs')
+    return entries
+
+
+def rewrite_ledger(path, entries):
+    """Preserve historical IDs; validate before atomic replacement."""
+    path = Path(path)
+    ids = {entry['id'] for entry in entries}
+    if len(ids) != len(entries):
+        raise LearnError('Duplicate ledger IDs')
+    for entry in entries:
+        problems = validate_entry(entry)
+        if problems:
+            raise LearnError('Ledger entry rejected: ' + '; '.join(problems))
+        if entry.get('duplicate_of') is not None and entry['duplicate_of'] not in ids:
+            raise LearnError('Unknown duplicate target')
+    with tempfile.NamedTemporaryFile(mode='w', encoding='utf-8', dir=path.parent, delete=False) as stream:
+        for entry in entries:
+            stream.write(json.dumps(entry, ensure_ascii=False) + '\n')
+        temporary = stream.name
+    os.replace(temporary, path)
+
+
+def close_entries(path, ids, ref):
+    entries = validated_ledger(path)
+    found = {entry['id'] for entry in entries}
+    if not ids or set(ids) - found:
+        raise LearnError('Select existing learning IDs')
+    for entry in entries:
+        if entry['id'] in ids:
+            if entry['status'] == 'duplicate':
+                raise LearnError('Close the canonical entry instead of a duplicate')
+            entry.update(status='promoted', ref=ref)
+    rewrite_ledger(path, entries)
+    return ids
+
+
+def merge_entry(path, duplicate, canonical):
+    entries = validated_ledger(path)
+    indexed = {entry['id']: entry for entry in entries}
+    if duplicate == canonical or {duplicate, canonical} - indexed.keys():
+        raise LearnError('Select two different existing learning IDs')
+    source, target = indexed[duplicate], indexed[canonical]
+    if target['status'] == 'duplicate':
+        raise LearnError('Merge into a canonical entry, never a duplicate chain')
+    source.update(status='duplicate', duplicate_of=canonical)
+    target['keywords'] = list(dict.fromkeys(target.get('keywords', []) + source.get('keywords', [])))[:MAX_WORDS]
+    rewrite_ledger(path, entries)
+
+
+def cmd_close(args):
+    if args.commit.startswith('-'):
+        raise LearnError('Commit must be a revision, not an option')
+    result = subprocess.run(['git', 'rev-parse', '--verify', args.commit + '^{commit}'], cwd=ROOT, text=True, capture_output=True)
+    if result.returncode:
+        raise LearnError('Fixing commit does not exist')
+    revision = result.stdout.strip()
+    if subprocess.run(['git', 'merge-base', '--is-ancestor', revision, 'HEAD'], cwd=ROOT).returncode:
+        raise LearnError('Fixing commit must be in this checkout history')
+    message = subprocess.check_output(['git', 'show', '-s', '--format=%B', revision], cwd=ROOT, text=True)
+    trailers = '\n'.join(re.findall(r'^Closes-Learning:\s*(.*)$', message, re.M))
+    ids = args.entry or re.findall(r'L-\d+', trailers)
+    closed = close_entries(args.ledger or LEDGER, ids, revision[:12])
+    print(json.dumps({'closed': closed, 'commit': revision}))
+    return 0
+
+
+def cmd_merge(args):
+    merge_entry(args.ledger or LEDGER, args.entry, args.into)
+    print(json.dumps({'duplicate': args.entry, 'canonical': args.into}))
+    return 0
 
 
 def next_ledger_id(entries):
@@ -1773,6 +1857,14 @@ def build_parser():
     c.add_argument('--ledger', metavar='FILE', help=argparse.SUPPRESS)
     c.add_argument('--dry-run', action='store_true', help='validate and print without writing')
     c.add_argument('--json', action='store_true')
+    c = sub.add_parser('close', help='close entries from a verified fixing commit')
+    c.add_argument('--commit', required=True)
+    c.add_argument('--entry', action='append', help='explicit ID for a historical commit without a trailer')
+    c.add_argument('--ledger', help=argparse.SUPPRESS)
+    m = sub.add_parser('merge', help='retain a duplicate as an alias of its canonical entry')
+    m.add_argument('entry')
+    m.add_argument('--into', required=True)
+    m.add_argument('--ledger', help=argparse.SUPPRESS)
     m = sub.add_parser('modules', help='refresh the per-file summaries in tools/FEATURES.json that context uses to route to a file')
     m.add_argument('--write', action='store_true', help='write the "modules" map into tools/FEATURES.json')
     m.add_argument('--check', action='store_true', help='exit 1 when the committed map is stale')
@@ -1786,7 +1878,7 @@ def build_parser():
 def main(argv=None):
     args = build_parser().parse_args(argv)
     handler = {'sessions': cmd_sessions, 'dupes': cmd_dupes, 'eval': cmd_eval, 'report': cmd_report,
-               'record': cmd_record, 'scan': cmd_scan, 'modules': cmd_modules}[args.command]
+               'record': cmd_record, 'scan': cmd_scan, 'modules': cmd_modules, 'close': cmd_close, 'merge': cmd_merge}[args.command]
     try:
         return handler(args)
     except LearnError as error:
