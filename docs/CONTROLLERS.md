@@ -7,7 +7,7 @@ reported to stderr and leaves keyboard/mouse usable. Mapped device support depen
 on the OS driver and gilrs database. Linux builds need `libudev-dev` and `pkg-config`
 in addition to the client's existing ALSA requirements. Windows uses gilrs' default
 Windows Gaming Input backend. macOS uses its native backend. Platform availability
-is not evidence of hardware testing; see VALIDATION.md.
+is not evidence of hardware testing; see docs/archive/VALIDATION.md.
 
 ## Stock bindings
 

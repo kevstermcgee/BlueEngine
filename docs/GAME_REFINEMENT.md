@@ -3,7 +3,7 @@
 > Historical validation snapshot. Timers, kinematic movers and optional authenticated
 > UDP sessions were added after this report; use `be2-tools game-describe`,
 > `be2-headless --help`, [GAME_QUICKSTART.md](GAME_QUICKSTART.md), and
-> [BE2_ARCHITECTURE.md](../BE2_ARCHITECTURE.md) for the current contract.
+> [BE2_ARCHITECTURE.md](BE2_ARCHITECTURE.md) for the current contract.
 
 The feedback correctly identified the next missing layer: map authoring alone cannot
 produce a playable objective. This pass implements a deliberately bounded version

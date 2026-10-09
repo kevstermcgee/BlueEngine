@@ -7,9 +7,9 @@ selection; the invariants and manual checks below still apply to relevant change
 
 For **content authoring**, start with `python tools/author.py describe` and tools/AUTHORING.md. Discover reusable content first with `python tools/assets.py search TEXT`; the asset workflow is Reuse → Modify → Generate → Import, not “built-ins only.” Use query/assets/recipes/schema and native map tools; do not load engine source into context. The supported workflow includes static maps, inspectable props and bounded GameDocument v1 prototypes (docs/GAME_QUICKSTART.md). Report unsupported gameplay requirements as engine work rather than inventing APIs. The architecture-reading and Rust-check requirements below apply to **engine maintenance**, not data-only authoring.
 
-For runtime changes, consult BE2_ARCHITECTURE.md and the matching feature record.
-BLUE_ARCHITECTURE.md is historical viewer context. Read AI_REFERENCE.md for Vesper
-scene-contract changes and ARCHITECTURE.md before changing the offline renderer.
+For runtime changes, consult docs/BE2_ARCHITECTURE.md and the matching feature record.
+docs/archive/BLUE_ARCHITECTURE.md is historical viewer context. Read docs/archive/AI_REFERENCE.md for Vesper
+scene-contract changes and docs/archive/ARCHITECTURE.md before changing the offline renderer.
 
 Keep the engine and authoring API native Rust. Keep player movement independent from the frame rate and from rendering. Preserve the library's unsafe-code prohibition; Windows input/focus queries and own-window lifecycle calls belong only in the executable.
 
@@ -22,7 +22,7 @@ publish build output, logs, credentials or unreviewed scratch files.
 
 Run `cargo fmt --check`, `cargo test --locked`, and `cargo clippy --all-targets --locked -- -D warnings` for engine changes. When changing visuals, render and inspect stills and the actual pause menu. Exercise both key layouts and cursor capture after input changes. Update the AI reference for scene-contract changes. Do not claim untested platforms or interactions work.
 
-For BE2, read BE2_ARCHITECTURE.md first. Also validate cargo test --locked --no-default-features and cargo clippy --all-targets --locked --no-default-features -- -D warnings. Keep PulseNet separate from the renderer.
+For BE2, read docs/BE2_ARCHITECTURE.md first. Also validate cargo test --locked --no-default-features and cargo clippy --all-targets --locked --no-default-features -- -D warnings. Keep PulseNet separate from the renderer.
 
 ## Agent editing tools
 
@@ -52,7 +52,7 @@ challenge-response, session tokens and replay protection to either profile. Prot
 - Simulation contract: src/viewer/simulation.rs; physics: src/viewer/controller.rs.
 - Static map contract: src/viewer/authoring.rs; CLI: src/bin/be2-tools.rs.
 - Client wiring/UI: src/bin/blue-engine.rs; headless driver: src/bin/be2-headless.rs.
-- Current architecture: BE2_ARCHITECTURE.md; decisions: docs/adr/README.md;
+- Current architecture: docs/BE2_ARCHITECTURE.md; decisions: docs/adr/README.md;
   vocabulary: docs/GLOSSARY.md; context review: docs/CONTEXT_REVIEW.md.
 - Prototype API: docs/AI_QUICKSTART.md, src/prelude.rs, examples/prototype.rs.
 - Native discovery: be2-tools describe; be2-tools search TEXT.

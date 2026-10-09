@@ -15,7 +15,7 @@ use vesper3d::{
     Result,
 };
 
-const HELP:&str="Vesper3D 0.1 — compact scenes, cinematic 3D\n\n  vesper3d validate SCENE.json\n  vesper3d frame SCENE.json OUTPUT.png [--time 2] [--quality high]\n  vesper3d contact SCENE.json OUTPUT.png [--quality draft]\n  vesper3d render SCENE.json OUTPUT.mp4 [--quality standard]\n  vesper3d bench SCENE.json [--time 2] [--quality draft]\n  vesper3d doctor\n  vesper3d reference\n\nOptions: --width EVEN --threads 1..64 --overwrite --ffmpeg PATH\nAll commands return JSON on stdout; render progress and errors use stderr.\nRead AI_REFERENCE.md for the complete scene contract.";
+const HELP:&str="Vesper3D 0.1 — compact scenes, cinematic 3D\n\n  vesper3d validate SCENE.json\n  vesper3d frame SCENE.json OUTPUT.png [--time 2] [--quality high]\n  vesper3d contact SCENE.json OUTPUT.png [--quality draft]\n  vesper3d render SCENE.json OUTPUT.mp4 [--quality standard]\n  vesper3d bench SCENE.json [--time 2] [--quality draft]\n  vesper3d doctor\n  vesper3d reference\n\nOptions: --width EVEN --threads 1..64 --overwrite --ffmpeg PATH\nAll commands return JSON on stdout; render progress and errors use stderr.\nRead docs/archive/AI_REFERENCE.md for the complete scene contract.";
 fn main() {
     if let Err(e) = run() {
         eprintln!("{}", serde_json::json!({"ok":false,"error":e.to_string()}));
@@ -37,7 +37,7 @@ fn run() -> Result<()> {
         return Ok(());
     }
     if command == "reference" {
-        print!("{}", include_str!("../AI_REFERENCE.md"));
+        print!("{}", include_str!("../docs/archive/AI_REFERENCE.md"));
         return Ok(());
     }
     let mut positional = vec![];

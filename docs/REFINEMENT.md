@@ -2,7 +2,7 @@
 
 > Historical validation snapshot. Protocol 3, GameDocument v1, transport-agnostic
 > authority, production QUIC/TLS and optional HMAC client authentication were added later. Use
-> [BE2_ARCHITECTURE.md](../BE2_ARCHITECTURE.md), the root README and
+> [BE2_ARCHITECTURE.md](BE2_ARCHITECTURE.md), the root README and
 > `be2-tools describe` for the current contract.
 
 ## Goal and scope

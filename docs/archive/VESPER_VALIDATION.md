@@ -1,3 +1,5 @@
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
 # Validation — Vesper3D 0.1.0
 
 Verified locally on Windows x64, September 22, 2026. The initial core compiled on Rust 1.87.0; the final source, tests, checks and distributed executable were built with Rust 1.98.1 after the host toolchain changed during development. Renderer worker count: 12. FFmpeg and ffprobe were available locally.

@@ -2,7 +2,7 @@
 
 Current runtime contract. The repository is BlueEngine; Cargo package/executables
 remain `be2` and the compatibility library is `vesper3d`. Historical background:
-[ADR 0004](docs/adr/0004-authoring-and-compatibility.md).
+[ADR 0004](adr/0004-authoring-and-compatibility.md).
 
 ## Shared simulation and presentation
 
@@ -18,7 +18,7 @@ retains its historical best-effort physics behavior for compatibility.
 The optional `gamepad` feature also works without graphics: `viewer/gamepad.rs`
 polls gilrs devices and produces frame snapshots; the executable merges those
 with keyboard/mouse before the existing fixed-step and network input paths. See
-[controller contract](docs/CONTROLLERS.md) and [ADR 0011](docs/adr/0011-native-controllers.md). `offline`
+[controller contract](CONTROLLERS.md) and [ADR 0011](adr/0011-native-controllers.md). `offline`
 gates the inherited output renderer. `--no-default-features` includes neither:
 Serde, Rapier and networking remain. `be2-headless --server` runs the selected
 datagram profile; without that flag it runs bounded local simulation/benchmark ticks.
@@ -35,7 +35,7 @@ SceneBuilder batches existing validated edits and requires an explicit standalon
 visual collision without a reachability target. Catalog props use existing rigid-body extraction. `build` returns MapDocument;
 `world` constructs a fallible HeadlessWorld. `prelude` exposes the minimal shared
 surface. Stable-ID `impulse` and copied `prop_position` avoid retaining body borrows.
-See [API audit](docs/API_AUDIT.md) and [quickstart](docs/AI_QUICKSTART.md).
+See [API audit](API_AUDIT.md) and [quickstart](AI_QUICKSTART.md).
 
 The native command registry drives parser arity, help and describe. Search reads
 embedded tools/FEATURES.json, returns at most ten records and does not read source.
@@ -83,7 +83,7 @@ There are no periodic whole-world keyframes. A session-bound resync starts a new
 partial keyframe and coalesces duplicate requests using the receiver's tick floor.
 Relevance exits are explicit removals; reentry compares against the committed
 baseline. Reconnects allocate fresh tokens; Hello retries preserve the live session.
-See [ADR 0014](docs/adr/0014-bounded-replication.md) and [limits](docs/HOSTING.md).
+See [ADR 0014](adr/0014-bounded-replication.md) and [limits](HOSTING.md).
 Combat resolves nearer static geometry before applying prop impulses.
 Constants in weapons.rs/wrench.rs define ranges/cooldowns.
 The reusable FPS domain is deliberately above this stock packet path; BlueDM shows a
@@ -117,10 +117,10 @@ checked-in absolute budgets for simulation steps, snapshots, deltas and room loo
 budget failures return nonzero. These are service ceilings suitable for heterogeneous
 CI, not hardware-normalized baselines or allocation guards. Replay-test compares two
 in-memory runs and quantized checksums do not prove cross-platform bitwise determinism.
-See [refinement report](docs/REFINEMENT.md).
+See [refinement report](REFINEMENT.md).
 
 No arbitrary gameplay scripting, account service or required MCP
-adapter is implemented. [ADRs](docs/adr/README.md) record settled boundaries.
+adapter is implemented. [ADRs](adr/README.md) record settled boundaries.
 
 ## Data-driven prototypes
 
@@ -157,7 +157,7 @@ Collision is rechecked for the interpolated pose; first-person remains unchanged
 
 Standalone client presentation lives in `viewer/game_client.rs` behind `presentation`; `viewer/presentation.rs` is rendering-free bounded pose smoothing. `HeadlessWorld::with_static_room` preserves authored static collision without catalog rigid-body extraction. See docs/GAME_PRESENTATION.md.
 
-Shared standalone-game infrastructure: [gameplay kit](docs/SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.
+Shared standalone-game infrastructure: [gameplay kit](SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.
 
 ## Shared authored-game runner
 

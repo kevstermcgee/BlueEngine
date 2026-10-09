@@ -1,3 +1,5 @@
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
 # Authenticated multiplayer, network proxy & doc drift protection — 2026-09-25
 
 Added cryptographic authentication handshake (HMAC-SHA256 challenge-response, 128-bit random nonces and salts, constant-time verification, session token issuance and validation), live network impairment proxy (`UdpProxyServer`, Gilbert-Elliott 2-state Markov burst loss, Gaussian latency/jitter with Box-Muller transform, packet duplication, presets for bad-wifi, mobile-3g, satellite, and congested-bursty), and automated documentation drift protection (`be2-tools doc-check`, `audit_documentation`).
@@ -209,7 +211,7 @@ All four launcher JSON maps expanded to approximately 2x gross floor/yard area. 
 Procedural and JSON room loading now refines table/desk/chair/bench collision envelopes into visible-part bounds. Tests cover Feta standing passage, Scientist exclusion, quarter-turn furniture, fixed/dynamic cases, solid legs and undersides, all four shipped map desks, and moved furniture without ghost proxies. Full seven-stage check passed: .be2-work/check-20260923T211414339288Z/report.json. Client/tools/headless release builds installed in bin, including BE2.exe and BE2-decor.exe; hashes/backups: .be2-work/feta-clearance. Four audits and all 46 shipped routes passed with packaged tools. School/Feta client capture and menu reviewed. Movement mappings and character dimensions are unchanged; no manual keyboard-input retest in this collision-only pass.
 
 
-## Native controllers � 2026-09-26
+## Native controllers — 2026-09-26
 
 Implemented optional gilrs input and stock-client bindings on Windows x64 with
 Rust 1.98.1. `python tools/be2.py check` passed all nine steps: formatting, both

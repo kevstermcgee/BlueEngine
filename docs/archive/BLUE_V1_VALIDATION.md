@@ -1,3 +1,5 @@
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
 # Blue Engine 0.1 validation
 
 Verified on Windows x64, September 22, 2026.
@@ -47,7 +49,7 @@ The final capture run reported 0.470 seconds to prepare the scene and meshes, 50
 
 The library's unsafe-code prohibition is retained. Small read-only Win32 calls are confined to the executable for focus and keyboard state. The executable needs no network, FFmpeg, installation, or runtime scene files.
 
-Not established: Linux/macOS execution, long-duration soak testing, every graphics driver, physical hardware held-key feel, extreme high-DPI combinations, or dynamic lighting/physics. The live prototype deliberately has static scene geometry and no object actions. The pre-existing CI file is retained, but remote CI has not run for this local repository. Original Vesper release measurements are in VESPER_VALIDATION.md.
+Not established: Linux/macOS execution, long-duration soak testing, every graphics driver, physical hardware held-key feel, extreme high-DPI combinations, or dynamic lighting/physics. The live prototype deliberately has static scene geometry and no object actions. The pre-existing CI file is retained, but remote CI has not run for this local repository. Original Vesper release measurements are in docs/archive/VESPER_VALIDATION.md.
 
 
 ## Wrench update

@@ -1,5 +1,7 @@
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
 > Legacy cinematic scene reference, not the game-authoring entry point.
-> Start games with [GAME_QUICKSTART](docs/GAME_QUICKSTART.md) and `be2.py start`.
+> Start games with [GAME_QUICKSTART](../GAME_QUICKSTART.md) and `be2.py start`.
 > The explicit cinematic tool is `python3 tools/be2.py build cinematic` (Cargo `offline`).
 
 # Vesper3D — AI reference

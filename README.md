@@ -2,7 +2,10 @@
 
 <img src="assets/branding/blueengine.png" alt="BlueEngine official logo" width="128" height="128">
 
-An AI-first Rust 3D engine foundation for building small, testable prototypes.
+An AI-first Rust engine for small, testable native 2D and 3D games.
+Games ship as **Windows x64 EXE installers only** ([ADR 0045](docs/adr/0045-windows-only-game-distribution.md)).
+Browser gameplay/WASM is retired ([ADR 0049](docs/adr/0049-retire-browser-gameplay.md));
+Linux/macOS remain native development targets.
 
 Curated games, prototypes, test content, and demos are copied automatically to
 [BlueEngineGames](https://github.com/kevstermcgee/BlueEngineGames). See

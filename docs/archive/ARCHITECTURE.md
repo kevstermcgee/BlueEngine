@@ -1,3 +1,5 @@
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
 # Architecture
 
 The pipeline is `JSON -> validate -> compile geometry -> evaluate time -> build BVH -> render rows -> finish frame -> encode -> commit`.

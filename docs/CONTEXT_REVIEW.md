@@ -13,4 +13,4 @@ Reviewed against the BE2 working tree on 2026-09-23.
 | Smaller modules | Existing controller, simulation, camera, wrench, props and platform modules already separate concerns. Largest files are roughly 975 lines (client), 737 (geometry), 719 (house), including tests where present. Defer mechanical splitting until a feature edit establishes a useful boundary; file size alone does not justify churn. |
 | Glossary | Added a compact domain glossary distinguishing current concepts from planned multiplayer. |
 
-Start with AGENTS.md, select a feature in tools/FEATURES.json, and consult only the relevant rustdoc/source/test. Use BE2_ARCHITECTURE.md for current architecture; older Blue/Vesper documents are subsystem references and may describe superseded viewer limitations.
+Start with AGENTS.md, select a feature in tools/FEATURES.json, and consult only the relevant rustdoc/source/test. Use docs/BE2_ARCHITECTURE.md for current architecture; older Blue/Vesper documents are subsystem references and may describe superseded viewer limitations.

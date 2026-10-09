@@ -1,3 +1,5 @@
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
 # Map plan
 
 1. **House — playable:** two floors, living room, kitchen/dining area, two bedrooms, bathroom, staircase and fenced backyard.

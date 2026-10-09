@@ -1,8 +1,10 @@
-> Historical viewer implementation notes. Current engine contracts and limits are in BE2_ARCHITECTURE.md and `be2-tools describe`; original future-tense statements below describe earlier revisions.
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
+> Historical viewer implementation notes. Current engine contracts and limits are in docs/BE2_ARCHITECTURE.md and `be2-tools describe`; original future-tense statements below describe earlier revisions.
 
 # Blue Engine: real-time extension
 
-See README.md for controls and ARCHITECTURE.md for the inherited offline pipeline.
+See README.md for controls and docs/archive/ARCHITECTURE.md for the inherited offline pipeline.
 
 - `viewer/controller.rs`: pure player simulation, look angles, grounded movement, jumps, crouching, and height-aware cylinder versus AABB collision. No window or device dependency.
 - `viewer/room.rs`: typed Vesper scene assembly, collision bounds, stable semantic entities and occlusion-aware focus query.

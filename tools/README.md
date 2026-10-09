@@ -182,7 +182,7 @@ For gameplay, graphics, audio, networking or new reusable prop types, use `FEATU
 2. Make a narrow source change and preserve existing semantic IDs and feature boundaries.
 3. Run focused tests for that behavior. Run the required complete `check` suite before delivery.
 4. For visuals, capture and inspect the changed area and menu. For controls, exercise both key layouts, cursor capture and camera modes.
-5. Update this guide and the feature index when entry points or contracts change. Record tested platforms and remaining limits in VALIDATION.md.
+5. Update this guide and the feature index when entry points or contracts change. Record tested platforms and remaining limits in docs/archive/VALIDATION.md.
 6. Build and package. Keep useful source, routes and patches tracked; keep scratch exports and logs out of the final asset set.
 
 To remove a feature, inspect all references with `rg`, remove its runtime path and assets intentionally, then update callers, tests, feature flags and documentation together. Never remove a dependency solely because it appears unused in one binary: the offline renderer and headless build share this crate. For networking, preserve the rendering-free, transport-agnostic authoritative boundary and the explicit development/production profiles.

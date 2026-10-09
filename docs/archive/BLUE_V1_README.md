@@ -1,3 +1,5 @@
+> Legacy: historical compatibility reference; start current games with [GAME_QUICKSTART](../GAME_QUICKSTART.md).
+
 # Blue Engine 0.1
 
 A native first-person room viewer in Rust, built from the Vesper3D animation engine. Explore a furnished blue-accented studio at eye level using the keyboard and mouse.
@@ -36,7 +38,7 @@ The original Rust scene graph, materials, primitive definitions, models, transfo
 
 A new real-time layer tessellates the evaluated primitives once, bakes static lighting and contact shadows using the original BVH, and draws those meshes through a GPU backend. The camera and player update each frame. This keeps offline scene construction out of the interactive frame loop. The live viewer is intentionally a static-room prototype; it is not the offline renderer running every frame and does not claim identical shading.
 
-The original offline commands remain available in **bin/vesper3d.exe**. See VESPER_README.md and AI_REFERENCE.md for authoring and MP4 export. FFmpeg is needed only for the original video export workflow.
+The original offline commands remain available in **bin/vesper3d.exe**. See docs/archive/VESPER_README.md and docs/archive/AI_REFERENCE.md for authoring and MP4 export. FFmpeg is needed only for the original video export workflow.
 
 ## Interactions
 
@@ -72,7 +74,7 @@ For repeatable interaction screenshots, use `BlueEngine.exe --capture-interactio
 
 For repeatable jump/crouch screenshots, use `BlueEngine.exe --capture-motion PATH_TO_EMPTY_FOLDER`. This simulates a jump, a held crouch, and standing again; the report records the captured eye heights. As with the regular capture mode, same-named output files are replaced in the supplied folder.
 
-See VALIDATION.md for actual checks and limitations. VESPER_VALIDATION.md records the inherited engine's earlier release. This repository preserves that engine's local Git history; no remote repository has been published.
+See docs/archive/VALIDATION.md for actual checks and limitations. docs/archive/VESPER_VALIDATION.md records the inherited engine's earlier release. This repository preserves that engine's local Git history; no remote repository has been published.
 
 
 ## Wrench

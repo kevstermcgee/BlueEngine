@@ -579,6 +579,7 @@ def full_commands(test_profile='itest'):
         commands.extend([['cargo','fmt','--manifest-path',manifest,'--check'],
                          ['cargo','test','--locked','--manifest-path',manifest,'--no-default-features'],
                          ['cargo','test','--locked','--manifest-path',manifest]])
+    commands.append([sys.executable, 'tools/check_docs.py'])
     leo='assets/games/leo/Cargo.toml'
     commands.extend([['cargo','fmt','--manifest-path',leo,'--check'],
                      ['cargo','test','--locked','--manifest-path',leo,'--no-default-features'],
