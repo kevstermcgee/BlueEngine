@@ -301,6 +301,153 @@ class SupervisorTests(unittest.TestCase):
         self.assertNotIn("publication", self.state)
 
 
+class IntegrationRecoveryTests(unittest.TestCase):
+    """Real bare remotes and worktrees; CI receipts alone are substituted."""
+    def setUp(self):
+        SupervisorTests.setUp(self)
+        self.remote = self.directory / "remote.git"
+        subprocess.run(["git", "init", "--bare", "-q", str(self.remote)], check=True)
+        forge.git(self.engine, "branch", "-M", "main")
+        forge.git(self.engine, "remote", "add", "origin", str(self.remote))
+        forge.git(self.engine, "push", "-q", "origin", "HEAD:main")
+        self.other = self.directory / "other"
+        forge.git(self.engine, "worktree", "add", "-b", "other", str(self.other), "main")
+        forge.git(self.engine, "checkout", "-b", "idea-forge/fixture")
+        (self.engine / "game.rs").write_text("verified game")
+        self.state["build_reports"] = [{"findings": [finding()]}]
+        self.worker.feedback()
+        forge.git(self.engine, "add", ".")
+        forge.git(self.engine, "commit", "-qm", "Verified game")
+        self.state.update(branch="idea-forge/fixture", publish=True,
+                          engine_repository="fixture/engine", engine_head=forge.git(self.engine, "rev-parse", "HEAD"),
+                          verified_code=forge.code_digest(self.engine),
+                          publication={"page": "https://example.invalid/game", "release": "immutable",
+                                       "installer_sha256": "installer", "zip_sha256": "zip"},
+                          completed=["setup", "generate", "build-and-review", "feedback", "source-commit",
+                                     "engine-ci", "export", "installer-review", "publish-games", "verify-publication"])
+        self.worker.save()
+        self.release_head = self.state["engine_head"]
+        self.receipt = dict(self.state["publication"])
+
+    def advance(self, name="main-change.rs"):
+        (self.other / name).write_text("concurrent authoritative source change")
+        forge.git(self.other, "add", ".")
+        forge.git(self.other, "commit", "-qm", "Concurrent main")
+        forge.git(self.other, "push", "-q", "origin", "HEAD:main")
+
+    def ci(self, repository, workflow, branch, head, label, **kwargs):
+        receipt = {"head": head, "run": 1, "url": "fixture"}
+        self.worker.state.setdefault("ci", {})[label] = receipt
+        self.worker.save()
+        return receipt
+
+    def api(self, endpoint):
+        if "/actions/runs/" in endpoint:
+            return {"head_sha": self.worker.state["integration_head"], "status": "completed", "conclusion": "success"}
+        path = self.worker.state["feedback_path"]
+        forge.git(self.other, "fetch", "-q", "origin", "main")
+        return {"sha": forge.git(self.other, "rev-parse", "origin/main:" + path)}
+
+    def finish(self):
+        with patch.object(self.worker, "wait_ci", side_effect=self.ci), patch.object(self.worker, "api", side_effect=self.api):
+            self.worker.run()
+        self.assertTrue(forge.delivery_complete(self.worker.state))
+        self.assertEqual(self.worker.state["publication"], self.receipt)
+        self.assertEqual(self.worker.state["engine_head"], self.release_head)
+        self.assertEqual(forge.git(self.engine, "rev-parse", "HEAD"), self.release_head)
+        entries, malformed = forge.learn.load_ledger(self.worker.integration / "docs/learning/ledger.jsonl")
+        self.assertEqual((len(entries), malformed), (1, 0))
+
+    def test_normal_and_repeated_resume_preserve_release_and_feedback(self):
+        self.finish()
+        head = forge.git(self.worker.integration, "rev-parse", "HEAD")
+        self.finish()
+        self.assertEqual(forge.git(self.worker.integration, "rev-parse", "HEAD"), head)
+
+    def test_main_advancing_before_catalog_publication_does_not_invalidate_release(self):
+        self.advance()
+        # Engine source did not move: exact source gates remain attached to this artifact.
+        self.assertEqual(forge.code_digest(self.engine), self.state["verified_code"])
+        self.finish()
+
+    def test_publication_push_succeeded_before_journal_completion(self):
+        self.worker.games = self.other
+        self.state["games_head"] = forge.git(self.other, "rev-parse", "HEAD")
+        with patch.object(self.worker, "assert_source_gates"), patch.object(self.worker, "command", wraps=self.worker.command) as command:
+            self.worker.publish_games()
+        self.assertNotIn("publish-catalog", [c.kwargs.get("label") for c in command.call_args_list])
+
+    def test_main_advancing_after_publication_is_revalidated(self):
+        self.advance()
+        self.finish()
+        self.assertNotEqual(self.worker.state["integration_code"], self.worker.state["verified_code"])
+        self.assertTrue((self.worker.integration / "main-change.rs").exists())
+        self.assertEqual(self.worker.state["ci"]["integration-engine-checks"]["head"], self.worker.state["integration_head"])
+
+    def test_main_advancing_after_integration_ci_recovers_on_resume(self):
+        self.worker.integrate_engine()
+        with patch.object(self.worker, "wait_ci", side_effect=self.ci):
+            self.worker.integration_ci()
+        self.worker.state["completed"] += ["integrate-engine", "integration-ci"]
+        self.advance()
+        with patch.object(self.worker, "api", side_effect=self.api):
+            with self.assertRaisesRegex(forge.RecoverableError, "main advanced"):
+                self.worker.run()
+        self.assertNotIn("integration-ci", self.worker.state["completed"])
+        self.finish()
+
+    def test_interruptions_after_each_integration_effect_are_idempotent(self):
+        for phase in ("integrate_engine", "integration_ci", "publish_feedback"):
+            with self.subTest(phase=phase):
+                operation = getattr(self.worker, phase)
+                def interrupted():
+                    operation()
+                    raise KeyboardInterrupt()
+                with patch.object(self.worker, "wait_ci", side_effect=self.ci), \
+                        patch.object(self.worker, "api", side_effect=self.api), \
+                        patch.object(self.worker, phase, side_effect=interrupted):
+                    with self.assertRaises(KeyboardInterrupt):
+                        self.worker.run()
+                self.worker = forge.Forge(self.directory, forge.load_json(self.directory / "state.json"))
+        self.finish()
+
+    def test_changed_integration_cannot_reuse_ci(self):
+        self.worker.integrate_engine()
+        with patch.object(self.worker, "wait_ci", side_effect=self.ci):
+            self.worker.integration_ci()
+        (self.worker.integration / "source.rs").write_text("unverified rules")
+        with self.assertRaisesRegex(forge.RecoverableError, "source changed"):
+            self.worker.publish_feedback()
+
+    def test_failed_feedback_push_preserves_publication_then_recovers(self):
+        command = self.worker.command
+        def fail_push(argv, **kwargs):
+            if kwargs.get("label") == "publish-engine-feedback":
+                raise forge.RecoverableError("Git push failed; resume")
+            return command(argv, **kwargs)
+        with patch.object(self.worker, "command", side_effect=fail_push), \
+                patch.object(self.worker, "wait_ci", side_effect=self.ci), patch.object(self.worker, "api", side_effect=self.api):
+            with self.assertRaises(forge.RecoverableError):
+                self.worker.run()
+        self.finish()
+
+    def test_overlapping_worker_ledger_appends_are_preserved(self):
+        self.advance()
+        ledger = self.other / "docs/learning/ledger.jsonl"
+        ledger.parent.mkdir(parents=True)
+        entry = {"game": "other-game", "area": "input", "tokens": 0, "note": "Other finding",
+                 "status": "open", "ref": "docs/feedback/other.md", "keywords": ["input", "keys"]}
+        forge.learn.append_entry(entry, path=ledger)
+        forge.git(self.other, "add", ".")
+        forge.git(self.other, "commit", "-qm", "Other worker feedback")
+        forge.git(self.other, "push", "-q", "origin", "HEAD:main")
+        with patch.object(self.worker, "wait_ci", side_effect=self.ci), patch.object(self.worker, "api", side_effect=self.api):
+            self.worker.run()
+        entries, malformed = forge.learn.load_ledger(self.worker.integration / "docs/learning/ledger.jsonl")
+        self.assertEqual((len(entries), malformed), (2, 0))
+        self.assertEqual({e["game"] for e in entries}, {"rule-relay", "other-game"})
+
+
 class DailyTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
