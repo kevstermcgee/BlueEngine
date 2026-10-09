@@ -301,6 +301,26 @@ class AutomaticLoopTests(unittest.TestCase):
             self.assertEqual(locked.returncode, 0, locked.stderr)
             self.assertEqual(workflow.game_plan(ROOT, game)['commands'][0][1], 'test')
 
+    def test_container_context_includes_declared_cargo_targets(self):
+        import shlex
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
+        sources = []
+        for line in (ROOT / 'Dockerfile').read_text().splitlines():
+            words = shlex.split(line)
+            if words and words[0] == 'COPY' and not words[1].startswith('--'):
+                sources.extend(word.rstrip('/') for word in words[1:-1])
+        required = ['src/lib.rs']
+        for target in manifest.get('bin', []):
+            required.append(target.get('path', 'src/bin/' + target['name'] + '.rs'))
+        for target in manifest.get('example', []):
+            required.append(target.get('path', 'examples/' + target['name'] + '.rs'))
+        for path in required:
+            with self.subTest(path=path):
+                self.assertTrue((ROOT / path).is_file())
+                self.assertTrue(any(path == source or path.startswith(source + '/') for source in sources),
+                                'Cargo parses declared targets even when only selected binaries build')
+
     def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertIn('run: python tools/be2.py check', ci)

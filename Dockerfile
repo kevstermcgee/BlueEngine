@@ -3,6 +3,7 @@ FROM rust:1.87-slim-bookworm AS builder
 WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
+COPY examples ./examples
 COPY tools ./tools
 COPY templates ./templates
 COPY assets ./assets
