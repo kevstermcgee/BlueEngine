@@ -1901,32 +1901,64 @@
       "name": "House",
       "description": "Original furnished BlueEngine starter, including its expanded grounds.",
       "group": "Starter maps",
-      "path": "assets/games/blueengine-sandbox/maps/house.json",
-      "signs": []
+      "path": "assets/maps/starters/house.json",
+      "signs": [],
+      "spawn": {
+        "feet": [
+          0,
+          0,
+          4.6
+        ],
+        "yaw": -0.1
+      }
     },
     {
       "id": "school-wing",
       "name": "School Wing",
       "description": "Original furnished BlueEngine starter, including its expanded grounds.",
       "group": "Starter maps",
-      "path": "assets/games/blueengine-sandbox/maps/school-wing.json",
-      "signs": []
+      "path": "assets/maps/starters/school-wing.json",
+      "signs": [],
+      "spawn": {
+        "feet": [
+          0,
+          0,
+          4.6
+        ],
+        "yaw": -0.1
+      }
     },
     {
       "id": "office",
       "name": "Office",
       "description": "Original furnished BlueEngine starter, including its expanded grounds.",
       "group": "Starter maps",
-      "path": "assets/games/blueengine-sandbox/maps/office.json",
-      "signs": []
+      "path": "assets/maps/starters/office.json",
+      "signs": [],
+      "spawn": {
+        "feet": [
+          0,
+          0,
+          4.6
+        ],
+        "yaw": -0.1
+      }
     },
     {
       "id": "convenience-store",
       "name": "Convenience Store",
       "description": "Original furnished BlueEngine starter, including its expanded grounds.",
       "group": "Starter maps",
-      "path": "assets/games/blueengine-sandbox/maps/convenience-store.json",
-      "signs": []
+      "path": "assets/maps/starters/convenience-store.json",
+      "signs": [],
+      "spawn": {
+        "feet": [
+          0,
+          0,
+          4.6
+        ],
+        "yaw": -0.1
+      }
     },
     {
       "id": "test-lab",

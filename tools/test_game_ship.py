@@ -3254,3 +3254,25 @@ class BuildScriptEmbedTests(TempTestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class LeoAudioPackagingTests(unittest.TestCase):
+    def test_render_failure_keeps_previous_completed_banks(self):
+        import importlib.util
+        import sys
+        from unittest.mock import patch
+        scripts = Path(__file__).resolve().parents[1] / 'assets/games/leo/scripts'
+        spec = importlib.util.spec_from_file_location('leo_render_audio', scripts / 'render_audio.py')
+        renderer = importlib.util.module_from_spec(spec)
+        with patch.object(sys, 'path', [str(scripts), *sys.path]):
+            spec.loader.exec_module(renderer)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bank = root / 'assets/audio/music/bank.json'
+            bank.parent.mkdir(parents=True)
+            bank.write_text('previous checked bank')
+            with patch.object(renderer, 'render', side_effect=RuntimeError('render failed')):
+                with self.assertRaisesRegex(RuntimeError, 'render failed'):
+                    renderer.ensure_audio(root)
+            self.assertEqual(bank.read_text(), 'previous checked bank')
+            self.assertEqual(list((root / 'assets').glob('.audio-*')), [])

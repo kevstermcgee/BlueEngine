@@ -47,3 +47,11 @@ Plants use original geometry informed by [RHS oak](https://www.rhs.org.uk/plants
 [clover](https://www.rhs.org.uk/weeds/clover-in-lawns) and
 [wildflowers](https://www.rhs.org.uk/science/pdf/conservation-and-biodiversity/wildlife/rhs-perfect-for-pollinators-wildflowers).
 No RHS artwork, photographs or plant textures are copied.
+
+Rendered banks and seeded leaf PCM are generated files, ignored by Git and source
+publication. `scripts/ship.py package` (also `ship`) renders/checks both banks before
+packaging; it preserves the previous generated banks if rendering fails. The three
+credited field-recording excerpts and both JSON projects stay in source, so no
+download is needed. For a source-tree audio run, first run
+`python scripts/render_audio.py [ENGINE_TOOLS]`. Runtime layers and bank metadata
+ship in `assets/audio`; preview mixes do not.

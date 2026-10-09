@@ -71,6 +71,20 @@ class PublishGamesTests(unittest.TestCase):
 
     # -- ownership ------------------------------------------------------------------------------------
 
+    def test_leo_generated_audio_does_not_change_source_exports(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'assets/games/leo'
+            (source / 'assets/audio-source').mkdir(parents=True)
+            (source / 'assets/audio-source/music.json').write_text('score')
+            clean = {nested.as_posix() for _, nested in publish_games.files_under(source, root=root)}
+            (source / 'assets/audio/music').mkdir(parents=True)
+            (source / 'assets/audio/music/day.wav').write_text('rendered')
+            (source / 'assets/audio-source/leaves.wav').write_text('generated')
+            warm = {nested.as_posix() for _, nested in publish_games.files_under(source, root=root)}
+            self.assertEqual(clean, warm)
+            self.assertIn('assets/audio-source/music.json', warm)
+
     def test_maintained_native_projects_export_real_build_files(self):
         # The manifest's destination is a directory even for a single source file.
         # Checking the production manifest catches Cargo.toml/Cargo.toml exports.

@@ -28,6 +28,8 @@ pub struct Destination {
     pub description: String,
     pub group: String,
     pub path: String,
+    #[serde(default)]
+    pub spawn: Option<vesper3d::viewer::authoring::MapSpawn>,
     pub signs: Vec<Sign>,
 }
 #[derive(Deserialize)]
@@ -62,6 +64,13 @@ pub fn load_map(root: &Path, path: &str) -> Result<MapDocument> {
     } else {
         MapDocument::load(&root.join(path))
     }
+}
+pub fn load_destination(root: &Path, destination: &Destination) -> Result<MapDocument> {
+    let mut doc = load_map(root, &destination.path)?;
+    if let Some(spawn) = destination.spawn {
+        doc.default_spawn = Some(spawn);
+    }
+    Ok(doc)
 }
 pub fn find_root(explicit: Option<PathBuf>) -> Result<PathBuf> {
     if let Some(root) = explicit {

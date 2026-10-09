@@ -7,13 +7,7 @@ Each twelve-minute day moves continuously through sunrise, daylight, sunset and
 stars. The main and pause menus show your current day; the walking view has no
 day counter or status panel. There is no score, combat or deadline.
 
-Browser: the same simulation and original character/meadow/sky art. WASD/arrows wander, Shift runs,
-drag inside the game to look, Space hops, F toggles fullscreen, Esc pauses, M/N toggle nature/music,
-and K/L save/load. Mobile: D-pad wanders, A hops, B pauses; drag the game to look. SELECT contains
-sound/music/save/load below the game. Progress resumes on this device; Install app/Add to Home Screen
-supports offline play after the first complete load. Browser and native saves remain independent.
-
-The alternate presentation is now a native-only optional `leo-portable` executable:
+After rendering audio (see below), the alternate presentation is a native-only optional `leo-portable` executable:
 `cargo run --no-default-features --features portable-client --bin leo-portable`.
 Historical browser-named source modules retain the same Sim/SimState and saves.
 Browser/WASM builds and publication are retired; see the engine migration guide.
@@ -51,10 +45,13 @@ python scripts/ship.py ship --folder PRIVATE_LAUNCHERS --no-launch --no-smoke
 python scripts/check.py --ship-folder PRIVATE_LAUNCHERS
 ```
 
-Committed source WAVs, scores and rendered checked bundles ship inside `assets`.
-Audio JSON edits need rerendering, not a Rust rebuild: `python scripts/render_audio.py
-ENGINE_TOOLS --output NEW_ASSET_ROOT/audio`, then capture with `--assets NEW_ASSET_ROOT`.
-Existing bundles are never overwritten; validate the candidate before adopting it.
+Scores and the three credited field excerpts stay committed in `assets/audio-source`.
+Packaging renders and checks `assets/audio` automatically; generated banks and seeded
+leaf PCM stay out of Git and source exports. For a source-only native run, first use
+`python scripts/render_audio.py [ENGINE_TOOLS]`. Audio JSON edits need rerendering,
+not a Rust rebuild: `python scripts/render_audio.py ENGINE_TOOLS --output
+NEW_ASSET_ROOT/audio`, then inspect the candidate. Packaging preserves the previous
+generated banks if rendering or checking fails.
 
 Capture flags: `--capture NEW_DIR --frames 0,30,90 --exit-after 100 --script
 "fwd:0-90,sprint:0-90,jump@30" --seed 7 --perf`. `--day-seconds 4..3600` accelerates
@@ -70,3 +67,11 @@ The implementation is a bounded example of the engine primitives, with cached
 code-generated meshes, flat ground and juvenile stylized plants. It is not a
 photorealistic ecosystem simulation. Automated capture proves rendered frames
 and submitted audio, not subjective musical quality or hardware audibility.
+
+Rendered banks and seeded leaf PCM are generated files, ignored by Git and source
+publication. `scripts/ship.py package` (also `ship`) renders/checks both banks before
+packaging; it preserves the previous generated banks if rendering fails. The three
+credited field-recording excerpts and both JSON projects stay in source, so no
+download is needed. For a source-tree audio run, first run
+`python scripts/render_audio.py [ENGINE_TOOLS]`. Runtime layers and bank metadata
+ship in `assets/audio`; preview mixes do not.

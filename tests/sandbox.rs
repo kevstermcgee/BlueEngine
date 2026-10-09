@@ -23,7 +23,11 @@ fn every_registered_asset_and_destination_compiles_with_clear_spawn() {
         assert!(room.entities.iter().any(|e| e.id == "specimen"));
     }
     for map in &catalog.maps {
-        let doc = content::load_map(root(), &map.path).unwrap();
+        let doc = content::load_destination(root(), map).unwrap();
+        if map.path.starts_with("assets/maps/starters/") {
+            assert_eq!(doc.default_spawn.unwrap().feet, V(0., 0., 4.6));
+            assert_eq!(doc.default_spawn.unwrap().yaw, -0.1);
+        }
         doc.build_standalone().unwrap();
     }
     assert!(catalog

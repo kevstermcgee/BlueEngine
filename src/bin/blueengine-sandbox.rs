@@ -155,7 +155,7 @@ impl App {
     fn new(root: PathBuf) -> Result<Self> {
         let catalog = content::Catalog::load(&root)?;
         let stage = Stage::new(
-            content::load_map(&root, &catalog.maps[0].path)?,
+            content::load_destination(&root, &catalog.maps[0])?,
             CharacterKind::Scientist,
             &catalog.maps[0].signs,
         )?;
@@ -217,7 +217,7 @@ impl App {
         }
         let (doc, signs) = match tab {
             Tab::Maps => (
-                content::load_map(&self.root, &self.catalog.maps[index].path)?,
+                content::load_destination(&self.root, &self.catalog.maps[index])?,
                 self.catalog.maps[index].signs.as_slice(),
             ),
             Tab::Assets => (

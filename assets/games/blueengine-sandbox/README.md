@@ -138,7 +138,7 @@ if present. The wizard remains retired. All skins except Feta use the human hull
 - **V** opens a searchable, paged palette of all 78 assets while in the map.
 - Select an asset to close the palette and show a translucent placement preview.
 - **Left click** places a copy. **Right click** cancels the preview.
-- **R** rotates by 90 degrees. **Mouse wheel** changes reach (2–30 m).
+- **R** rotates by 90 degrees. **Mouse wheel** changes reach (2â€“30 m).
 - **Shift + wheel** adjusts elevation; **G** toggles a 25 cm placement grid.
 - Aim at surfaces to stack objects, or use reach/elevation to build in open space.
 - **E** copies an aimed catalog asset into the placement preview.
@@ -190,3 +190,6 @@ The workbench header reports the connected device or initialization error.
 `--sign-capture NEW_DIR` captures the atrium's Red apple label from nine camera
 angles for regression inspection. Signs test against world depth but never write
 depth, preventing overlapping transparent glyph tiles from erasing letter strokes.
+
+The four furnished maps reuse `assets/maps/starters/*.json`; their sandbox spawn
+overrides live in catalog.json. Sandbox-specific maps remain under maps/.

@@ -18,7 +18,9 @@ python tools/audio_report.py NEW_BUNDLE_DIRECTORY/preview-mix.wav --loop --fail-
 computes the PCM assets and publishes `bank.json` last in an exclusively reserved directory. It fails
 without replacing an existing bundle. `check` rereads every runtime file and verifies PCM format,
 sample counts, checksums and equal music-layer lengths. Keep `project.json` in source control, render
-once before packaging, and ship the whole bundle. Edit audio data and rerender to a new directory;
+before packaging, and ship the runtime bank files. Generated banks need not be tracked;
+Leo renders/checks its committed JSON and source clips automatically at package time,
+and omits authoring preview mixes. Edit audio data and rerender to a new directory;
 the runtime executable needs no rebuild and performs no music synthesis at startup. Bundles are
 versioned data, not an opaque compiled cache. Checksums detect stale/corrupt files; they are not
 cryptographic signatures. Rendering is repeatable on one platform; floating-point DSP does not promise

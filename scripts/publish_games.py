@@ -103,7 +103,7 @@ def load_manifest(root: Path) -> dict:
     return data
 
 
-def files_under(source: Path):
+def files_under(source: Path, root: Path | None = None):
     if source.is_symlink():
         raise PublishError(f"symlinks are not published: {source}")
     if source.is_file():
@@ -120,8 +120,12 @@ def files_under(source: Path):
         for name in folders:
             if (parent / name).is_symlink():
                 raise PublishError(f"symlinks are not published: {parent / name}")
+        if root and parent == root / "assets/games/leo/assets":
+            folders[:] = [name for name in folders if name != "audio" and not name.startswith((".audio-render-", ".audio-old-"))]
         for name in sorted(names):
             candidate = parent / name
+            if root and candidate == root / "assets/games/leo/assets/audio-source/leaves.wav":
+                continue
             if candidate.is_symlink():
                 raise PublishError(f"symlinks are not published: {candidate}")
             if candidate.is_file():
@@ -151,7 +155,7 @@ def export_tree(root: Path, staging: Path, manifest: dict, revision: str) -> dic
                 raise PublishError(f"source escapes repository: {source_rel}") from error
 
             is_file = source.is_file()
-            for candidate, nested in files_under(source):
+            for candidate, nested in files_under(source, root=root):
                 suffix = Path(candidate.name) if is_file and destination_rel == Path(".") else nested
                 target_rel = Path(category) / destination_rel / suffix
                 target_key = target_rel.as_posix()

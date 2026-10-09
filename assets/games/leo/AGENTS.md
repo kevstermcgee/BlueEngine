@@ -32,7 +32,7 @@ Derived plants/art and interpolation history are regenerated, not authoritative.
 Audio data: `assets/audio-source` holds score JSON and credited PCM excerpts;
 `assets/audio` holds checked rendered banks. Edit data, render into a new directory
 with `scripts/render_audio.py ENGINE_TOOLS --output NEW_DIRECTORY`, check quality,
-then adopt reviewed bundles. No Rust rebuild for audio edits. Never claim numeric
+then inspect reviewed bundles. Packaging regenerates banks from the committed source. No Rust rebuild for audio edits. Never claim numeric
 quality or null-sink submission proves subjective listening or hardware audibility.
 
 Iterate with `cargo test --no-default-features` or the selected packet check.
@@ -48,3 +48,11 @@ natively. Keep the original Sim/SimState, saves, audio banks and credits. src/sc
 applies a validated viewport to every camera; default native main.rs stays independent.
 Browser/WASM builds and publication are retired. Native captures, package checks and
 physical input/audio evidence remain separate requirements.
+
+Rendered banks and seeded leaf PCM are generated files, ignored by Git and source
+publication. `scripts/ship.py package` (also `ship`) renders/checks both banks before
+packaging; it preserves the previous generated banks if rendering fails. The three
+credited field-recording excerpts and both JSON projects stay in source, so no
+download is needed. For a source-tree audio run, first run
+`python scripts/render_audio.py [ENGINE_TOOLS]`. Runtime layers and bank metadata
+ship in `assets/audio`; preview mixes do not.

@@ -2058,6 +2058,8 @@ def package_integrity(project, plat=None):
 def cmd_package(project, no_build=False):
     identity = project.identity
     require_icon(project)  # fail before a long build
+    from render_audio import ensure_audio
+    ensure_audio(project.root)
     built = locate_built_exe(project) if no_build else cargo_build_release(project)
     plan = package_plan(project, built)
     # dist/ also holds what the game writes beside its exe (saves, settings, records, logs). Only the files
