@@ -62,6 +62,7 @@ dependencies = [
  "macroquad",
  "quinn",
  "rapier3d",
+ "ring",
  "rustls",
  "serde",
  "serde_json",

@@ -304,30 +304,11 @@ pub use crate::runtime::hash::sha256;
 
 /// Compute standard HMAC-SHA256 for message using secret key.
 pub fn hmac_sha256(key: &[u8], msg: &[u8]) -> [u8; 32] {
-    let mut key_block = [0u8; 64];
-    if key.len() > 64 {
-        let digest = sha256(key);
-        key_block[..32].copy_from_slice(&digest);
-    } else {
-        key_block[..key.len()].copy_from_slice(key);
-    }
-
-    let mut o_key_pad = [0x5cu8; 64];
-    let mut i_key_pad = [0x36u8; 64];
-    for i in 0..64 {
-        o_key_pad[i] ^= key_block[i];
-        i_key_pad[i] ^= key_block[i];
-    }
-
-    let mut inner = Vec::with_capacity(64 + msg.len());
-    inner.extend_from_slice(&i_key_pad);
-    inner.extend_from_slice(msg);
-    let inner_hash = sha256(&inner);
-
-    let mut outer = Vec::with_capacity(64 + 32);
-    outer.extend_from_slice(&o_key_pad);
-    outer.extend_from_slice(&inner_hash);
-    sha256(&outer)
+    let key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, key);
+    ring::hmac::sign(&key, msg)
+        .as_ref()
+        .try_into()
+        .expect("HMAC-SHA256 tag is 32 bytes")
 }
 
 /// Compute cryptographic challenge response proof for authentication handshake.

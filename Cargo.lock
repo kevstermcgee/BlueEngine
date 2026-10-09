@@ -136,6 +136,7 @@ dependencies = [
  "png",
  "quinn",
  "rapier3d",
+ "ring",
  "rcgen",
  "rustls",
  "schemars",

@@ -63,6 +63,7 @@ dependencies = [
  "png",
  "quinn",
  "rapier3d",
+ "ring",
  "rustls",
  "serde",
  "serde_json",
