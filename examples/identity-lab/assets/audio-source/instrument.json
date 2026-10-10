@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "seed": 761,
+  "effects": {
+    "tick": {
+      "gain": 0.6,
+      "source": {
+        "kind": "wav",
+        "file": "relay.wav"
+      }
+    },
+    "gesture": {
+      "gain": 0.65,
+      "source": {
+        "kind": "wav",
+        "file": "latch.wav"
+      }
+    },
+    "open": {
+      "gain": 0.6,
+      "source": {
+        "kind": "wav",
+        "file": "latch.wav"
+      }
+    },
+    "reject": {
+      "gain": 0.4,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "square",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.15,
+                  "midi": 42,
+                  "pan": 0
+                },
+                {
+                  "at": 0.3,
+                  "beats": 0.15,
+                  "midi": 42,
+                  "pan": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "resolve": {
+      "gain": 0.5,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "triangle",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.4,
+                  "midi": 48,
+                  "pan": 0
+                },
+                {
+                  "at": 0.4,
+                  "beats": 0.4,
+                  "midi": 60,
+                  "pan": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "music": null
+}

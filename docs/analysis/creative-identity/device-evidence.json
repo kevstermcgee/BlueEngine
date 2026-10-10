@@ -1,0 +1,7 @@
+{
+  "ok": true,
+  "device_delivery": "X11 XTest keyboard/mouse; no --script",
+  "start_by_capture": true,
+  "action_pause_click_rejection_menu_navigation_resume_win_restart_keyboard_hover_save_load_settings_fullscreen": true,
+  "physical_controller_speaker_focus_verified": false
+}

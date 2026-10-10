@@ -199,6 +199,9 @@ jobs:
           cargo fmt --manifest-path games/idea-forge/Cargo.toml --check
           cargo test --locked --manifest-path games/idea-forge/Cargo.toml
           cargo clippy --locked --all-targets --manifest-path games/idea-forge/Cargo.toml -- -D warnings
+          cargo fmt --manifest-path examples/identity-lab/Cargo.toml --check
+          cargo test --locked --manifest-path examples/identity-lab/Cargo.toml
+          cargo clippy --locked --all-targets --manifest-path examples/identity-lab/Cargo.toml -- -D warnings
       - name: Prepare pinned software OpenGL for Windows CI
         if: runner.os == 'Windows'
         shell: pwsh
@@ -217,7 +220,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: python
         run: |
-          import ctypes, os, runpy, sys
+          import ctypes, os, runpy, sys, subprocess
           # Windows children inherit this process's DLL directory. The real smoke
           # still copies only declared product files into its isolated directory.
           # Mesa remains a pinned CI dependency, outside the shipped package.
@@ -228,9 +231,19 @@ jobs:
           if not set_directory(os.environ['BE2_CI_OPENGL_DIR']):
               raise ctypes.WinError(ctypes.get_last_error())
           os.environ.update(GALLIUM_DRIVER='llvmpipe', LIBGL_ALWAYS_SOFTWARE='1')
-          sys.argv = ['games/idea-forge/scripts/ship.py', 'ship', '--no-install']
+          def run_script(argv):
+              sys.argv = argv
+              try:
+                  runpy.run_path(argv[0], run_name='__main__')
+              except SystemExit as error:
+                  if error.code not in (None, 0):
+                      raise
           try:
-              runpy.run_path(sys.argv[0], run_name='__main__')
+              run_script(['games/idea-forge/scripts/ship.py', 'ship', '--no-install'])
+              run_script(['examples/identity-lab/scripts/ship.py', 'ship', '--no-install'])
+              subprocess.run([sys.executable, 'examples/identity-lab/scripts/presentation_smoke.py',
+                              'examples/identity-lab/dist/identity-lab.exe',
+                              'examples/identity-lab/.blue-check/presentation'], check=True)
           finally:
               if not set_directory(None):
                   raise ctypes.WinError(ctypes.get_last_error())
@@ -240,6 +253,8 @@ jobs:
         run: |
           printf 'pcm.!default { type null }\nctl.!default { type null }\n' > "$RUNNER_TEMP/forge-asound.conf"
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSA_CONFIG_PATH="$RUNNER_TEMP/forge-asound.conf" python games/idea-forge/scripts/ship.py ship --no-install
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSA_CONFIG_PATH="$RUNNER_TEMP/forge-asound.conf" python examples/identity-lab/scripts/ship.py ship --no-install
+          xvfb-run -a python examples/identity-lab/scripts/presentation_smoke.py examples/identity-lab/dist/identity-lab examples/identity-lab/.blue-check/presentation
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -247,4 +262,6 @@ jobs:
           path: |
             games/idea-forge/dist/ship.json
             games/idea-forge/.blue-check/
+            examples/identity-lab/dist/ship.json
+            examples/identity-lab/.blue-check/
           include-hidden-files: true

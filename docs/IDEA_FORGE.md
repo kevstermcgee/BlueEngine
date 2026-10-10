@@ -145,3 +145,12 @@ certify physical controller hardware or speaker output.
 
 Codex automation uses documented `exec`, sandbox, stdin, output-schema and final
 message interfaces: https://learn.chatgpt.com/docs/non-interactive-mode.
+
+New concepts include a concise `creative_identity`: camera/input, visual medium,
+palette/contrast, typography/interface metaphor, motion, sound/music/silence,
+coherence across gameplay/menus/outcomes and differences from previous examples.
+Generation compares prior briefs as well as mechanics. Build prompts use the brief
+and link the authoritative presentation/audio contracts; review returns separate
+identity and audio assessments against actual available evidence. This is a design
+brief, not an enforced style preset or questionnaire. Old concepts without a brief
+remain accepted; the builder chooses and records one in the game's README.

@@ -31,21 +31,17 @@ and hybrid presentation are described in docs/PORTABLE_GAMES.md.
 - `draw::Game::draw` reads your state; `client::run` owns timing/input, pause/restart, sound,
   settings, saves, error notices and verification evidence. Main only supplies identity/icon configuration.
 
-Rules/tests live in lib.rs. Presentation is its `#[cfg(feature="client")]` implementation. Every sound
-cue is 0 pickup, 1 damage, 2 success; shared generated WAVs load asynchronously. New genres may need
-a custom sound bank later. This milestone intentionally has no editor or genre framework.
-
-The shared client overlays the title at logical (24,30), controls at (24,428)/(24,448), and
-transient save/error notices at (24,395), on layers 100/101 of the 800×450 canvas.
-Reserve those areas in your HUD; avoid drawing another title or controls over them.
-It also owns start/pause/win/loss panels at (145,135), size 510×180, layers 200/201.
-Supply game-specific text through `Game::menu_status()`; avoid a duplicate terminal panel
-under that overlay. `Game::show_hud()` controls title/control labels, while a custom client
-remains available for a different presentation. Shared keys are R restart, K save, L load,
-Esc pause and M sound; these do not need game-owned key handlers.
-Inspect contrast, glyphs and the native captures before final
-packaging. The built-in bitmap font covers ordinary ASCII; custom text/art remains
-available through the drawing APIs and custom clients.
+Rules/tests live in lib.rs. Presentation is its `#[cfg(feature="client")]` implementation.
+For changing camera, replacing the full interface, theme/font assets and action hit regions,
+read the authoritative [presentation contract](GAME_PRESENTATION.md#portable-interface-ownership).
+The shared client preserves pause/restart, input gating, settings, saves and focus through
+`Game::interface`; a different appearance does not need a different client.
+For game-owned semantic sound events, checked banks and optional numeric fallbacks,
+read [shared-client audio](AUDIO.md#portable-shared-client). Numeric cues 0/1/2 remain supported.
+Default title/control/notice positions and menu bounds remain prototype defaults, and
+`show_hud()` still hides default labels. `interface` replaces every overlay, including notices.
+[Identity Lab](../examples/identity-lab/README.md) demonstrates three different interfaces
+and audio identities over identical rules. Inspect captures and controls before packaging.
 The starter already uses `runtime::assert_deterministic`, `snapshot::assert_resumes_exactly`,
 `two_d::verify` for a public-input route, collision and loss assertions. Extend them
 with timer, pickup, locked-exit and restart cases. Native packaged-game smoke checks the client; inspect pause, storage, audio and input separately.

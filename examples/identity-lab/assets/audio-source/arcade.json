@@ -1,0 +1,321 @@
+{
+  "version": 1,
+  "seed": 932,
+  "effects": {
+    "tick": {
+      "gain": 0.45,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "square",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.1,
+                  "midi": 84,
+                  "pan": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "gesture": {
+      "gain": 0.5,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "triangle",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.12,
+                  "midi": 72,
+                  "pan": -0.3
+                },
+                {
+                  "at": 0.15,
+                  "beats": 0.18,
+                  "midi": 79,
+                  "pan": 0.3
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "open": {
+      "gain": 0.5,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "triangle",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.12,
+                  "midi": 60,
+                  "pan": -0.4
+                },
+                {
+                  "at": 0.2,
+                  "beats": 0.12,
+                  "midi": 64,
+                  "pan": 0
+                },
+                {
+                  "at": 0.4,
+                  "beats": 0.18,
+                  "midi": 67,
+                  "pan": 0.4
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "reject": {
+      "gain": 0.45,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "saw",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.2,
+                  "midi": 48,
+                  "pan": 0
+                },
+                {
+                  "at": 0.25,
+                  "beats": 0.3,
+                  "midi": 43,
+                  "pan": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "resolve": {
+      "gain": 0.55,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "triangle",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.2,
+                  "midi": 72,
+                  "pan": -0.4
+                },
+                {
+                  "at": 0.3,
+                  "beats": 0.2,
+                  "midi": 76,
+                  "pan": 0
+                },
+                {
+                  "at": 0.6,
+                  "beats": 0.3,
+                  "midi": 79,
+                  "pan": 0.4
+                },
+                {
+                  "at": 1,
+                  "beats": 0.8,
+                  "midi": 84,
+                  "pan": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "music": {
+    "kind": "score",
+    "score": {
+      "bpm": 132,
+      "beats": 8,
+      "layers": [
+        {
+          "name": "bounce",
+          "gain": 0.2,
+          "instrument": {
+            "wave": "triangle",
+            "attack": 0.006,
+            "decay": 0.08,
+            "sustain": 0.1,
+            "release": 0.1
+          },
+          "notes": [
+            {
+              "at": 0.0,
+              "beats": 0.25,
+              "midi": 48,
+              "pan": 0.3
+            },
+            {
+              "at": 0.5,
+              "beats": 0.25,
+              "midi": 60,
+              "pan": -0.3
+            },
+            {
+              "at": 1.0,
+              "beats": 0.25,
+              "midi": 55,
+              "pan": 0.3
+            },
+            {
+              "at": 1.5,
+              "beats": 0.25,
+              "midi": 64,
+              "pan": -0.3
+            },
+            {
+              "at": 2.0,
+              "beats": 0.25,
+              "midi": 48,
+              "pan": 0.3
+            },
+            {
+              "at": 2.5,
+              "beats": 0.25,
+              "midi": 60,
+              "pan": -0.3
+            },
+            {
+              "at": 3.0,
+              "beats": 0.25,
+              "midi": 55,
+              "pan": 0.3
+            },
+            {
+              "at": 3.5,
+              "beats": 0.25,
+              "midi": 64,
+              "pan": -0.3
+            },
+            {
+              "at": 4.0,
+              "beats": 0.25,
+              "midi": 48,
+              "pan": 0.3
+            },
+            {
+              "at": 4.5,
+              "beats": 0.25,
+              "midi": 60,
+              "pan": -0.3
+            },
+            {
+              "at": 5.0,
+              "beats": 0.25,
+              "midi": 55,
+              "pan": 0.3
+            },
+            {
+              "at": 5.5,
+              "beats": 0.25,
+              "midi": 64,
+              "pan": -0.3
+            },
+            {
+              "at": 6.0,
+              "beats": 0.25,
+              "midi": 48,
+              "pan": 0.3
+            },
+            {
+              "at": 6.5,
+              "beats": 0.25,
+              "midi": 60,
+              "pan": -0.3
+            },
+            {
+              "at": 7.0,
+              "beats": 0.25,
+              "midi": 55,
+              "pan": 0.3
+            },
+            {
+              "at": 7.5,
+              "beats": 0.25,
+              "midi": 64,
+              "pan": -0.3
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

@@ -23,7 +23,13 @@ def idea():
             "why_fun": "Each improvement creates a new weakness elsewhere.",
             "prototype": "Three machines, two rules and one exit.",
             "novelty_check": "Rule transfer differs from resource collection; prior art still needs comparison.",
-            "playtest_risk": "Players must see which rule the donor lost.", "story": None}
+            "playtest_risk": "Players must see which rule the donor lost.", "story": None,
+            "creative_identity": {"camera":"Top-down, pointer selects machines; arrows change focus.",
+                "visual_medium":"Etched diagrams on paper.", "palette_contrast":"Ink on cream; silhouettes identify rules.",
+                "typography_interface":"Serif labels; notebook index menu with semantic actions.",
+                "motion":"Brief ink reveals; no screen shake.", "sound_music_silence":"Pencil ticks, paper turns; no music.",
+                "coherence":"Same diagram grammar in gameplay, menus and results.",
+                "difference":"Avoid the garden starter tiles and centered dark panels."}}
 
 
 def finding():
@@ -87,6 +93,36 @@ class SupervisorTests(unittest.TestCase):
         with self.assertRaises(forge.ForgeError):
             forge.validate(concept, forge.IDEA_SCHEMA)
 
+    def test_creative_brief_reaches_generation_build_review_and_history(self):
+        (self.engine / "games").mkdir()
+        runs = self.directory / "runs"
+        current = runs / "current"
+        current.mkdir(parents=True)
+        self.worker = forge.Forge(current, self.state)
+        self.worker.engine = self.engine
+        forge.atomic_json(runs / "prior/idea.json", idea())
+        prompts = []
+        def agent(label, prompt, schema, **kwargs):
+            prompts.append((label, prompt, schema))
+            if label == "concept-candidate":
+                candidate = idea(); candidate["mechanic"] = "Turn one machine inside out to reverse the signal."
+                return candidate
+            if label.startswith("build"):
+                return {"summary":"Built", "findings":[]}
+            return {"approved":True, "mechanic_assessment":"Works", "visual_assessment":"Captured",
+                    "identity_assessment":"Notebook and input match", "audio_assessment":"Named paper cues inspected",
+                    "blockers":[], "findings":[]}
+        with patch.object(self.worker, "agent", side_effect=agent):
+            self.worker.generate()
+            game, capture = self.native_game()
+            with patch.object(self.worker, "verify_local"), patch.object(forge, "screenshot_from_package", return_value=capture):
+                self.worker.build()
+        self.assertIn('creative_identity', prompts[0][1])
+        self.assertIn('Pencil ticks', prompts[0][1])
+        self.assertIn('Game::interface', prompts[1][1])
+        self.assertIn('identity_assessment', prompts[2][1])
+        self.assertIn('audio_assessment', prompts[2][2]['required'])
+
     def test_three_dimensional_requirement_blocks_a_flat_package(self):
         self.native_game()
         self.state["idea"]["dimension"] = "3d"
@@ -107,6 +143,7 @@ class SupervisorTests(unittest.TestCase):
         (self.engine / "games").mkdir()
         concept = idea()
         del concept["dimension"]
+        del concept["creative_identity"]
         supplied = self.directory / "supplied.json"
         forge.atomic_json(supplied, concept)
         self.state["idea_input"] = str(supplied)

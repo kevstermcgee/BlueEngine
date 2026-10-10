@@ -1,0 +1,16 @@
+{
+  "ok": true,
+  "presentations": 3,
+  "sizes": [
+    "960x540",
+    "640x360",
+    "800x800"
+  ],
+  "same_authority_hashes": true,
+  "shared_click_start_pause_resume_save_load_restart_win_loss": true,
+  "named_audio_submitted": true,
+  "missing_effect_and_binding_fail": true,
+  "mute_bypass": true,
+  "missing_invalid_fonts_fail": true,
+  "physical_audio_controller_verified": false
+}

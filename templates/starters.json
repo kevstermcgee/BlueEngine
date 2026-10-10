@@ -20,7 +20,10 @@
         "windows"
       ],
       "use": "Flexible offline 2D rules with hybrid drawing; CLI default",
-      "collision": "2D"
+      "collision": "2D",
+      "cameras": [
+        "fixed-camera"
+      ]
     },
     "two-d": {
       "runtime": "portable",
@@ -39,7 +42,10 @@
         "windows"
       ],
       "use": "Offline 2D Rust rules, including enemies, projectiles and scoring",
-      "collision": "2D"
+      "collision": "2D",
+      "cameras": [
+        "top-down"
+      ]
     },
     "three-d": {
       "runtime": "portable",
@@ -58,7 +64,10 @@
         "windows"
       ],
       "use": "3D drawing over a planar simulation; use custom-sim for 3D enemies/AI/physics",
-      "collision": "2D"
+      "collision": "2D",
+      "cameras": [
+        "fixed-camera"
+      ]
     },
     "hybrid": {
       "runtime": "portable",
@@ -77,7 +86,10 @@
         "windows"
       ],
       "use": "2D rules with 2D/3D drawing; use custom-sim for spatial 3D mechanics",
-      "collision": "2D"
+      "collision": "2D",
+      "cameras": [
+        "fixed-camera"
+      ]
     },
     "stock": {
       "runtime": "game-document",
@@ -97,7 +109,10 @@
         "windows"
       ],
       "use": "Declarative GameDocument counters, interactables, timers, triggers and movers",
-      "collision": "3D"
+      "collision": "3D",
+      "cameras": [
+        "first-person"
+      ]
     },
     "custom-sim": {
       "runtime": "custom-simulation",
@@ -117,7 +132,10 @@
         "windows"
       ],
       "use": "Game-owned fixed-step rules, spatial 3D enemies/AI/physics or native netplay",
-      "collision": "Game-owned 3D"
+      "collision": "Game-owned 3D",
+      "cameras": [
+        "first-person"
+      ]
     }
   }
 }

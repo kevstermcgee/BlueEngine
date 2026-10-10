@@ -90,3 +90,11 @@ mark the overall creative task complete merely because tests passed.
 Input identity version 2 invalidates legacy reports conservatively. Native helpers do not
 import browser release code. The first-use Cargo.lock exception excludes only that lock;
 changes to any tested file during metadata/check execution still invalidate the result.
+
+Camera intent is preserved by start routing: first-person uses custom-sim (stock for
+GameDocument), and unsupported sample cameras remain explicit implementation gaps.
+See [camera and interaction](GAME_PRESENTATION.md#camera-and-interaction),
+[custom interface/fonts](GAME_PRESENTATION.md#portable-interface-ownership) and
+[named shared-client sounds](AUDIO.md#portable-shared-client) before copying starter
+presentation conventions. Make a short identity brief (camera/input, art/palette,
+typography/UI, motion, sound/music/silence and consistency) and implement it deliberately.

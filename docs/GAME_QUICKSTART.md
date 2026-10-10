@@ -254,3 +254,11 @@ challenge-response, session tokens and replay protection; development UDP does n
 encrypt payloads. For deployment use `--transport production` on both peers, set
 `BLUE_TLS_CERT_FILE` to their shared public DER certificate, and set
 `BLUE_TLS_KEY_FILE` to the server's matching PKCS#8 DER private key.
+
+Camera intent is preserved by start routing: first-person uses custom-sim (stock for
+GameDocument), and unsupported sample cameras remain explicit implementation gaps.
+See [camera and interaction](GAME_PRESENTATION.md#camera-and-interaction),
+[custom interface/fonts](GAME_PRESENTATION.md#portable-interface-ownership) and
+[named shared-client sounds](AUDIO.md#portable-shared-client) before copying starter
+presentation conventions. Make a short identity brief (camera/input, art/palette,
+typography/UI, motion, sound/music/silence and consistency) and implement it deliberately.

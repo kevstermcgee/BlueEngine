@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "seed": 310,
+  "effects": {
+    "tick": {
+      "gain": 0.5,
+      "source": {
+        "kind": "wav",
+        "file": "pencil.wav"
+      }
+    },
+    "gesture": {
+      "gain": 0.65,
+      "source": {
+        "kind": "wav",
+        "file": "pencil.wav"
+      }
+    },
+    "open": {
+      "gain": 0.5,
+      "source": {
+        "kind": "wav",
+        "file": "page.wav"
+      }
+    },
+    "reject": {
+      "gain": 0.4,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "triangle",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.3,
+                  "midi": 50,
+                  "pan": 0
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "resolve": {
+      "gain": 0.5,
+      "source": {
+        "kind": "score",
+        "score": {
+          "bpm": 120,
+          "beats": 2,
+          "layers": [
+            {
+              "name": "voice",
+              "gain": 0.32,
+              "instrument": {
+                "wave": "triangle",
+                "attack": 0.006,
+                "decay": 0.05,
+                "sustain": 0.2,
+                "release": 0.12
+              },
+              "notes": [
+                {
+                  "at": 0,
+                  "beats": 0.4,
+                  "midi": 62,
+                  "pan": -0.2
+                },
+                {
+                  "at": 0.5,
+                  "beats": 0.8,
+                  "midi": 69,
+                  "pan": 0.2
+                }
+              ]
+            }
+          ]
+        }
+      }
+    }
+  },
+  "music": {
+    "kind": "clips",
+    "seconds": 4,
+    "crossfade_seconds": 0.04,
+    "layers": {
+      "air": {
+        "file": "room-air.wav",
+        "gain": 0.5
+      }
+    }
+  }
+}

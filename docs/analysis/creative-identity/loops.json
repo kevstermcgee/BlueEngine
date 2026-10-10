@@ -1,0 +1,128 @@
+{
+  "files": [
+    {
+      "path": "examples/identity-lab/assets/audio/notebook/music-air.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 176400,
+      "duration_ms": 4000.0,
+      "peak_dbfs": -32.47,
+      "peak_dbfs_channels": [
+        -32.47,
+        -32.47
+      ],
+      "rms_dbfs": -45.28,
+      "crest_db": 12.81,
+      "loudness_lufs_approx": -40.76,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": 5e-05,
+      "dc_offset_channels": [
+        5e-05,
+        5e-05
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.00345,
+      "last_sample": -0.0011,
+      "loop": {
+        "enabled": true,
+        "seam_jump": 0.004547,
+        "scan_available": true,
+        "suspected_click": false
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 0.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 172,
+        "centroid_hz": 2921.1,
+        "rolloff85_hz": 5447.9,
+        "dominant_hz": 239.2,
+        "band_energy_pct": {
+          "sub": 1.9,
+          "bass": 9.17,
+          "low_mid": 50.74,
+          "high_mid": 28.49,
+          "air": 9.7
+        }
+      },
+      "issues": [
+        "too quiet: peak -32.5 dBFS (below -24 dBFS)"
+      ],
+      "issue_codes": [
+        "too quiet"
+      ]
+    },
+    {
+      "path": "examples/identity-lab/assets/audio/arcade/music-bounce.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 160364,
+      "duration_ms": 3636.372,
+      "peak_dbfs": -15.44,
+      "peak_dbfs_channels": [
+        -15.44,
+        -15.44
+      ],
+      "rms_dbfs": -30.24,
+      "crest_db": 14.81,
+      "loudness_lufs_approx": -28.24,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": -3e-05,
+      "dc_offset_channels": [
+        -2e-05,
+        -3e-05
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": true,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": false
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 26.4,
+        "longest_internal_ms": 30.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 156,
+        "centroid_hz": 239.7,
+        "rolloff85_hz": 323.0,
+        "dominant_hz": 196.0,
+        "band_energy_pct": {
+          "sub": 0.02,
+          "bass": 52.02,
+          "low_mid": 47.92,
+          "high_mid": 0.03,
+          "air": 0.0
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    }
+  ],
+  "errors": [],
+  "purpose": "Actual rendered asset measurements; physical listening not verified."
+}

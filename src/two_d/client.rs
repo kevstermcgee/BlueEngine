@@ -1,13 +1,16 @@
-//! One recommended offline client: fixed-step input, native storage, audio, HUD and verification.
+//! Shared lifecycle and devices; games own interface appearance and semantic sounds.
+use super::audio::Audio;
 use super::draw::{GOLD, PINK, WHITE};
-use super::{draw::*, Intent, Point, Rect};
+use super::{
+    draw::*,
+    ui::{Action, Layout, Lifecycle, Screen},
+    Intent, Point, Rect,
+};
 use crate::runtime::{
-    storage::{self, PlatformStorage},
+    storage::{self, PlatformStorage, Storage},
     FixedStepper, InputAccumulator,
 };
-use macroquad::audio::{
-    load_sound_from_bytes, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
-};
+use crate::viewer::devkit::{MenuNav, Timeline};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -25,180 +28,191 @@ impl Default for Settings {
         }
     }
 }
-#[derive(Default, Serialize)]
-pub struct AudioEvidence {
-    pub loaded: u32,
-    pub submitted: u32,
-    pub enabled: bool,
-    pub activated: bool,
+
+/// Prototype defaults remain convenient; games can change these or replace Game::interface.
+pub struct Theme {
+    pub background: Color,
+    pub panel: Color,
+    pub text: Color,
+    pub accent: Color,
+    pub font: Option<&'static str>,
+    pub panel_bounds: Rect,
+    pub padding: i32,
+    pub heading_size: f32,
+    pub body_size: f32,
+    /// Optional cosmetic pulse, seconds per cycle; zero disables it.
+    pub pulse_seconds: f32,
 }
-#[derive(Default, Serialize)]
-struct LoopEvidence {
-    loaded: usize,
-    submitted: usize,
-    playing: bool,
-    active_layers: usize,
-}
-struct LoopSound {
-    bank: &'static str,
-    layer: String,
-    music: bool,
-    sound: Sound,
-    volume: f32,
-}
-struct Audio {
-    sounds: Vec<Sound>,
-    evidence: AudioEvidence,
-    muted: bool,
-    loops: Vec<LoopSound>,
-    loop_evidence: LoopEvidence,
-}
-impl Audio {
-    async fn new<G: Game>(muted: bool) -> Result<Self, String> {
-        if muted {
-            return Ok(Self {
-                sounds: vec![],
-                evidence: AudioEvidence::default(),
-                muted,
-                loops: vec![],
-                loop_evidence: LoopEvidence::default(),
-            });
+impl Default for Theme {
+    fn default() -> Self {
+        Self {
+            background: INK,
+            panel: Color::new(0.1, 0.16, 0.22, 0.96),
+            text: WHITE,
+            accent: GOLD,
+            font: None,
+            panel_bounds: Rect::new(145, 135, 510, 180),
+            padding: 35,
+            heading_size: 34.,
+            body_size: 22.,
+            pulse_seconds: 0.,
         }
-        use crate::runtime::synth::{self, Preset};
-        let mut sounds = Vec::new();
-        for preset in [Preset::Coin, Preset::Hit, Preset::Success] {
-            let bytes = synth::wav_bytes(&synth::render(preset, 0, 7), synth::RATE);
-            sounds.push(
-                load_sound_from_bytes(&bytes)
-                    .await
-                    .map_err(|e| format!("Audio decode failed: {e}"))?,
-            );
-        }
-        let mut loops = Vec::new();
-        let mut ids = std::collections::BTreeSet::new();
-        for bank in G::audio_banks() {
-            if !ids.insert(bank.id) {
-                return Err(format!("Duplicate audio bank ID {}", bank.id));
-            }
-            let bytes = macroquad::file::load_file(&format!("{}/bank.json", bank.root))
-                .await
-                .map_err(|e| {
-                    format!(
-                        "Audio bank {} unavailable: {e}; declare it in identity.package",
-                        bank.id
-                    )
-                })?;
-            let metadata = crate::runtime::audio_project::AudioBundle::parse(&bytes)?;
-            if !metadata.effects.is_empty() {
-                return Err(
-                    "Portable loop banks must contain only music/ambience; effects use take_cues"
-                        .into(),
-                );
-            }
-            for (layer, info) in metadata.music {
-                let path = format!("{}/{}", bank.root, info.file);
-                let bytes = macroquad::file::load_file(&path)
-                    .await
-                    .map_err(|e| format!("Audio asset {path} unavailable: {e}"))?;
-                crate::runtime::audio_project::AudioBundle::verify_file(&info, &bytes)?;
-                let sound = load_sound_from_bytes(&bytes)
-                    .await
-                    .map_err(|e| format!("Audio asset {path} failed decoding: {e}"))?;
-                loops.push(LoopSound {
-                    bank: bank.id,
-                    layer,
-                    music: bank.music,
-                    sound,
-                    volume: 0.,
-                });
-                next_frame().await;
-            }
-        }
-        Ok(Self {
-            loop_evidence: LoopEvidence {
-                loaded: loops.len(),
-                ..Default::default()
-            },
-            loops,
-            evidence: AudioEvidence {
-                loaded: 3,
-                ..Default::default()
-            },
-            sounds,
-            muted,
-        })
     }
-    fn update<G: Game>(
-        &mut self,
-        game: &G,
-        active: bool,
-        settings: &Settings,
-        dt: f32,
-    ) -> Result<(), String> {
-        let active = active && !self.muted && platform::audio_active();
-        if active && !self.loop_evidence.playing && !self.loops.is_empty() {
-            for track in &self.loops {
-                play_sound(
-                    &track.sound,
-                    PlaySoundParams {
-                        looped: true,
-                        volume: 0.,
-                    },
-                );
-            }
-            self.loop_evidence.submitted += self.loops.len();
-            self.loop_evidence.playing = true;
-        } else if !active && self.loop_evidence.playing {
-            for track in &mut self.loops {
-                stop_sound(&track.sound);
-                track.volume = 0.;
-            }
-            self.loop_evidence.playing = false;
+}
+/// Read-only presentation frame. All coordinates and font metrics use logical pixels.
+pub struct UiFrame<'a> {
+    pub screen: Screen,
+    pub focused: bool,
+    pub pointer: Option<Point>,
+    pub selected: usize,
+    pub elapsed: f32,
+    pub canvas: [f32; 2],
+    pub sound: bool,
+    pub music: bool,
+    pub notice: &'a str,
+    pub status: &'a str,
+    pub fonts: &'a Renderer,
+}
+pub fn default_interface<G: Game>(_: &G, scene: &mut Scene, frame: &UiFrame) -> Layout {
+    let theme = G::theme();
+    let text = |scene: &mut Scene, layer, label: &str, p, size, color| {
+        if let Some(font) = theme.font {
+            scene.text_with_font(layer, label, p, size, color, font);
+        } else {
+            scene.text(layer, label, p, size, color);
         }
-        self.loop_evidence.active_layers = 0;
-        for track in &mut self.loops {
-            let level = game.audio_level(track.bank, &track.layer);
-            if !level.is_finite() || !(0. ..=1.).contains(&level) {
-                return Err(format!(
-                    "Audio level {}/{} must be finite 0..1",
-                    track.bank, track.layer
-                ));
-            }
-            let enabled = if track.music {
-                settings.music
+    };
+    if G::show_hud() {
+        text(scene, 100, G::TITLE, Point::new(24, 30), 26., theme.text);
+        text(
+            scene,
+            100,
+            G::CONTROLS,
+            Point::new(24, 428),
+            16.,
+            theme.text,
+        );
+        text(
+            scene,
+            100,
+            "Esc pause · M sound · K save · L load · R restart",
+            Point::new(24, 448),
+            14.,
+            theme.accent,
+        );
+    }
+    if !frame.notice.is_empty() {
+        text(
+            scene,
+            101,
+            frame.notice,
+            Point::new(24, 395),
+            19.,
+            theme.accent,
+        );
+    }
+    let mut layout = Layout::default();
+    if frame.screen != Screen::Playing {
+        let panel = theme.panel_bounds;
+        scene.rect(200, panel, theme.panel);
+        let (heading, action) = match frame.screen {
+            Screen::Start => ("CLICK OR ENTER TO START", Action::Start),
+            Screen::Paused => ("RESUME", Action::Resume),
+            Screen::Won => ("COMPLETE! · RESTART", Action::Restart),
+            _ => ("TRY AGAIN", Action::Restart),
+        };
+        let mut accent = theme.accent;
+        if theme.pulse_seconds > 0. {
+            accent.a *=
+                0.85 + 0.15 * (frame.elapsed * std::f32::consts::TAU / theme.pulse_seconds).cos();
+        }
+        text(
+            scene,
+            201,
+            heading,
+            Point::new(panel.x + theme.padding, panel.y + 55),
+            theme.heading_size,
+            accent,
+        );
+        text(
+            scene,
+            201,
+            "R restarts · K saves · L loads",
+            Point::new(panel.x + theme.padding, panel.y + 103),
+            theme.body_size,
+            theme.text,
+        );
+        text(
+            scene,
+            201,
+            frame.status,
+            Point::new(panel.x + theme.padding, panel.y + 139),
+            theme.body_size,
+            theme.text,
+        );
+        layout.button(Rect::new(panel.x, panel.y, panel.w, 80), action);
+    }
+    layout
+}
+
+fn execute_action<G: Game>(
+    action: Action,
+    game: &mut G,
+    ui: &mut Lifecycle,
+    settings: &mut Settings,
+    notice: &mut String,
+    store: &impl Storage,
+) -> Option<&'static str> {
+    if !ui.apply(action, game.outcome()) {
+        return None;
+    }
+    let event = match action {
+        Action::Start => "ui.start",
+        Action::Resume => "ui.resume",
+        Action::TogglePause => {
+            if ui.screen(game.outcome()) == Screen::Paused {
+                "ui.pause"
             } else {
-                settings.sound
+                "ui.resume"
+            }
+        }
+        Action::Restart => {
+            game.restart();
+            notice.clear();
+            "ui.restart"
+        }
+        Action::Save => {
+            *notice = match storage::save(store, game) {
+                Ok(()) => "Game saved. L resumes it.".into(),
+                Err(e) => e,
             };
-            let target = if active && enabled { level } else { 0. };
-            // Disable immediately; ordinary day/night transitions fade.
-            track.volume = if !enabled {
-                0.
+            "ui.save"
+        }
+        Action::Load => {
+            *notice = match storage::load(store, game) {
+                Ok(true) => "Game resumed".into(),
+                Ok(false) => "No save yet. K saves.".into(),
+                Err(e) => e,
+            };
+            "ui.load"
+        }
+        Action::ToggleSound | Action::ToggleMusic => {
+            let (label, enabled) = if action == Action::ToggleSound {
+                settings.sound = !settings.sound;
+                ("Sound", settings.sound)
             } else {
-                track.volume + (target - track.volume) * (dt * 3.).clamp(0., 1.)
+                settings.music = !settings.music;
+                ("Music", settings.music)
             };
-            set_sound_volume(&track.sound, track.volume);
-            if track.volume > 0.001 {
-                self.loop_evidence.active_layers += 1;
-            }
+            *notice = match storage::write_settings(store, settings) {
+                Ok(()) => format!("{label} {} — saved", if enabled { "on" } else { "off" }),
+                Err(e) => e,
+            };
+            "ui.settings"
         }
-        Ok(())
-    }
-    fn play(&mut self, cue: usize, enabled: bool) {
-        self.evidence.enabled = enabled && !self.muted;
-        self.evidence.activated = platform::audio_active();
-        if self.evidence.enabled && self.evidence.activated {
-            if let Some(sound) = self.sounds.get(cue) {
-                play_sound(
-                    sound,
-                    PlaySoundParams {
-                        looped: false,
-                        volume: 0.3,
-                    },
-                );
-                self.evidence.submitted += 1;
-            }
-        }
-    }
+        Action::Quit => "ui.quit",
+    };
+    Some(event)
 }
 pub fn config(title: &str) -> macroquad::conf::Conf {
     #[allow(unused_mut)]
@@ -227,60 +241,74 @@ pub fn config(title: &str) -> macroquad::conf::Conf {
     }
 }
 pub async fn run<G: Game>() {
-    if let Err(error) = run_inner::<G>().await {
+    run_with_focus::<G>(platform::focused).await;
+}
+/// Native hosts can supply their existing foreground query, without placing OS calls in game rules.
+pub async fn run_with_focus<G: Game>(focused: fn() -> bool) {
+    if let Err(error) = run_inner::<G>(focused).await {
         platform::error(&error);
         std::process::exit(1);
     }
 }
-async fn run_inner<G: Game>() -> Result<(), String> {
-    let capture = {
-        let args: Vec<_> = std::env::args().collect();
-        let plan =
-            crate::runtime::playback::CapturePlan::from_args(&args).map_err(|e| e.to_string())?;
-        if let Some(plan) = &plan {
-            plan.create_dir().map_err(|e| e.to_string())?;
+async fn run_inner<G: Game>(focused: fn() -> bool) -> Result<(), String> {
+    let args: Vec<_> = std::env::args().collect();
+    let capture =
+        crate::runtime::playback::CapturePlan::from_args(&args).map_err(|e| e.to_string())?;
+    if let Some(plan) = &capture {
+        plan.create_dir().map_err(|e| e.to_string())?;
+    }
+    let script = match crate::runtime::playback::flag_value(&args, "--script") {
+        Some(text) => Some(Timeline::parse(
+            text,
+            &[
+                "start", "resume", "pause", "restart", "save", "load", "sound", "music", "quit",
+                "left", "right", "up", "down", "action", "pointer", "click", "focus",
+            ],
+        )?),
+        None if crate::runtime::playback::has_flag(&args, "--script") => {
+            return Err("--script requires a timeline".into())
         }
-        plan
+        None => None,
     };
     let store = PlatformStorage::new(G::ID)?;
     let (mut settings, mut notice) = match storage::read_settings::<Settings>(&store) {
-        Ok(settings) => (settings, String::new()),
-        Err(error) => (
+        Ok(s) => (s, String::new()),
+        Err(e) => (
             Settings::default(),
-            format!("{error}; playing with session defaults"),
+            format!("{e}; playing with session defaults"),
         ),
     };
-    let mut game = G::new(7);
     let verification = platform::verify_mode();
-    #[allow(unused_mut)]
-    let mut persist_progress = !verification;
-    {
-        persist_progress &= capture.is_none();
+    if verification && script.is_some() {
+        return Err("Choose --verify or --script, not both".into());
     }
+    let persist_progress = !verification && capture.is_none() && script.is_none();
+    let unattended = verification || capture.is_some() || script.is_some();
+    let mut game = G::new(7);
     if persist_progress {
         match storage::load_slot(&store, "progress", &mut game) {
             Ok(true) => notice = "Progress restored. Start to continue.".into(),
             Ok(false) => {}
-            Err(error) => notice = error,
+            Err(e) => notice = e,
         }
     }
-    let mut autosave_time = 0.;
-    let mut autosave_hash = None;
-    let mut started = verification;
-    {
-        started |= capture.is_some();
-    }
-    let mut verification_tick = 0;
-    let mut paused = false;
+    let mut ui = Lifecycle::new(verification || (capture.is_some() && script.is_none()));
     let mut audio = Audio::new::<G>(platform::muted()).await?;
+    let mut renderer = Renderer::default();
+    renderer.load_fonts(G::fonts()).await?;
     let mut stepper = FixedStepper::new();
     let mut inputs = InputAccumulator::<Intent>::new();
     let mut pointer_actions = ActionPointer::default();
     let mut particles = Particles::new(8);
-    let mut renderer = Renderer::default();
+    let mut nav = MenuNav::default();
+    let mut selected = 0;
+    let mut verification_tick = 0;
     let mut frame = 0;
+    let mut elapsed = 0.;
     let mut last_pointer = None;
     let mut fullscreen = false;
+    let mut autosave_time = 0.;
+    let mut autosave_hash = None;
     #[cfg(feature = "gamepad")]
     let mut pads = crate::viewer::gamepad::Gamepads::new().ok();
     loop {
@@ -289,115 +317,204 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             fullscreen = !fullscreen;
             macroquad::miniquad::window::set_fullscreen(fullscreen);
         }
-        let dt = get_frame_time().clamp(0., 0.1);
+        let dt = if capture.is_some() || script.is_some() {
+            1. / 60.
+        } else {
+            get_frame_time().clamp(0., 0.1)
+        };
+        elapsed += dt;
         let view = Viewport::fit(800., 450., screen_width().max(1.), screen_height().max(1.));
         let (mx, my) = mouse_position();
-        #[allow(unused_mut)]
         let mut pointer = view.pointer(mx, my);
-        #[allow(unused_mut)]
-        let mut digital = platform::touch();
-        if let Some(point) = digital.pointer {
-            pointer = Some(point);
-        }
-        #[allow(unused_mut)]
         let mut x = i32::from(is_key_down(KeyCode::D) || is_key_down(KeyCode::Right))
-            - i32::from(is_key_down(KeyCode::A) || is_key_down(KeyCode::Left))
-            + digital.x;
-        #[allow(unused_mut)]
+            - i32::from(is_key_down(KeyCode::A) || is_key_down(KeyCode::Left));
         let mut y = i32::from(is_key_down(KeyCode::S) || is_key_down(KeyCode::Down))
-            - i32::from(is_key_down(KeyCode::W) || is_key_down(KeyCode::Up))
-            + digital.y;
+            - i32::from(is_key_down(KeyCode::W) || is_key_down(KeyCode::Up));
+        let mut click = is_mouse_button_pressed(MouseButton::Left);
+        let mut action = platform::primary_key() || click;
+        let mut select = is_key_pressed(KeyCode::Enter) || platform::primary_key();
         #[allow(unused_mut)]
-        let mut action = platform::primary_key() || is_mouse_button_pressed(MouseButton::Left);
+        let mut stick = [0.; 2];
         #[allow(unused_mut)]
-        let mut start =
-            platform::command_key(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left);
-        action |= digital.action;
-        start |= digital.commands & 1 != 0;
+        let mut dpad = [
+            is_key_down(KeyCode::Up),
+            is_key_down(KeyCode::Down),
+            is_key_down(KeyCode::Left),
+            is_key_down(KeyCode::Right),
+        ];
         #[allow(unused_mut)]
-        let mut look_native = [0.; 2];
+        let mut pad_look = [0.; 2];
         #[cfg(feature = "gamepad")]
         if let Some(pads) = pads.as_mut() {
-            let pad = pads.poll(true);
+            let pad = pads.poll(focused());
             x += (pad.left_stick[0] * 1.5) as i32;
             y -= (pad.left_stick[1] * 1.5) as i32;
             action |= pad.menu_select();
-            start |= pad.menu_select();
+            select |= pad.menu_select();
+            stick = pad.left_stick;
+            for (key, pad) in dpad.iter_mut().zip(pad.dpad()) {
+                *key |= pad;
+            }
             if G::drag_look() {
-                look_native = [pad.right_stick[0] * dt * 2., pad.right_stick[1] * dt * 2.];
+                pad_look = [pad.right_stick[0] * dt * 2., pad.right_stick[1] * dt * 2.];
             }
         }
-        let mut look = [0.; 2];
-        if G::drag_look() && is_mouse_button_down(MouseButton::Left) && pointer.is_some() {
-            if let Some((x, y)) = last_pointer {
-                look = [(mx - x) * 0.003, (y - my) * 0.003];
+        let mut command = [
+            (KeyCode::R, Action::Restart),
+            (KeyCode::Escape, Action::TogglePause),
+            (KeyCode::M, Action::ToggleSound),
+            (KeyCode::N, Action::ToggleMusic),
+            (KeyCode::K, Action::Save),
+            (KeyCode::L, Action::Load),
+        ]
+        .into_iter()
+        .find(|(key, _)| platform::command_key(*key))
+        .map(|(_, a)| a);
+        // Script/capture runs use the same action path without depending on which
+        // CI window owns foreground. The focus cue still exercises focus gating.
+        let mut has_focus = unattended || focused();
+        if let Some(script) = &script {
+            let held = |name| script.active(frame).any(|c| c.name == name);
+            let edge = |name| script.starting(frame).any(|c| c.name == name);
+            x = i32::from(held("right")) - i32::from(held("left"));
+            y = i32::from(held("down")) - i32::from(held("up"));
+            action = edge("action");
+            click = edge("click");
+            select = false;
+            if let Some(cue) = script
+                .active(frame)
+                .find(|c| c.name == "pointer" || c.name == "click")
+            {
+                pointer = Some(Point::new(
+                    cue.values.first().copied().unwrap_or(0.) as i32,
+                    cue.values.get(1).copied().unwrap_or(0.) as i32,
+                ));
+            }
+            if let Some(cue) = script.active(frame).find(|c| c.name == "focus") {
+                has_focus = cue.values.first().is_none_or(|v| *v != 0.);
+            }
+            command = [
+                ("start", Action::Start),
+                ("resume", Action::Resume),
+                ("pause", Action::TogglePause),
+                ("restart", Action::Restart),
+                ("save", Action::Save),
+                ("load", Action::Load),
+                ("sound", Action::ToggleSound),
+                ("music", Action::ToggleMusic),
+                ("quit", Action::Quit),
+            ]
+            .into_iter()
+            .find(|(name, _)| edge(name))
+            .map(|(_, a)| a);
+        }
+        action |= click;
+        let prior_screen = ui.screen(game.outcome());
+        ui.focus(has_focus);
+        let status = game.menu_status();
+        let ui_frame = UiFrame {
+            screen: ui.screen(game.outcome()),
+            focused: has_focus,
+            pointer,
+            selected,
+            elapsed,
+            canvas: [800., 450.],
+            sound: settings.sound,
+            music: settings.music,
+            notice: &notice,
+            status: &status,
+            fonts: &renderer,
+        };
+        let layout = game.interface(&mut Scene::default(), &ui_frame);
+        let menu_step = nav.update(dt, stick, dpad);
+        if ui_frame.screen != Screen::Playing && !layout.is_empty() {
+            if menu_step.up || menu_step.left {
+                selected = (selected + layout.len() - 1) % layout.len();
+            }
+            if menu_step.down || menu_step.right {
+                selected = (selected + 1) % layout.len();
+            }
+            selected = selected.min(layout.len() - 1);
+            command = command.or_else(|| {
+                if click {
+                    pointer.and_then(|p| layout.hit(p))
+                } else if select {
+                    layout.selected(selected)
+                } else {
+                    None
+                }
+            });
+        } else {
+            selected = 0;
+            // Custom playing HUDs may expose pause/settings buttons too.
+            command = command.or_else(|| {
+                if click {
+                    pointer.and_then(|p| layout.hit(p))
+                } else {
+                    None
+                }
+            });
+        }
+        let mut consumed = false;
+        if let Some(command) = command {
+            if let Some(event) = execute_action(
+                command,
+                &mut game,
+                &mut ui,
+                &mut settings,
+                &mut notice,
+                &store,
+            ) {
+                consumed = true;
+                inputs.clear();
+                pointer_actions.clear();
+                last_pointer = None;
+                stepper = FixedStepper::new();
+                audio.event::<G>(
+                    event,
+                    if command == Action::Start {
+                        Some(0)
+                    } else {
+                        None
+                    },
+                    settings.sound,
+                )?;
+                if command == Action::Restart {
+                    verification_tick = 0;
+                }
+                if command == Action::Quit {
+                    break;
+                }
+            }
+        }
+        let accepting = ui.accepting_input(game.outcome()) && !consumed;
+        if prior_screen != ui.screen(game.outcome()) {
+            selected = 0;
+            nav.reset();
+        }
+        let mut look = pad_look;
+        if accepting
+            && G::drag_look()
+            && is_mouse_button_down(MouseButton::Left)
+            && pointer.is_some()
+        {
+            if let Some((last_x, last_y)) = last_pointer {
+                look[0] += (mx - last_x) * 0.003;
+                look[1] += (last_y - my) * 0.003;
             }
             last_pointer = Some((mx, my));
         } else {
             last_pointer = None;
         }
-        look[0] += look_native[0];
-        look[1] += look_native[1];
-        if !started && start {
-            started = true;
-            audio.play(0, settings.sound);
-        }
-        if platform::command_key(KeyCode::R) || digital.commands & 4 != 0 {
-            game.restart();
-            inputs.clear();
-            pointer_actions.clear();
-            verification_tick = 0;
-            started = true;
-            notice.clear();
-        }
-        if platform::command_key(KeyCode::Escape) || digital.commands & 2 != 0 {
-            paused = !paused;
-        }
-        if platform::command_key(KeyCode::M) || digital.commands & 8 != 0 {
-            settings.sound = !settings.sound;
-            match storage::write_settings(&store, &settings) {
-                Ok(()) => {
-                    notice = format!(
-                        "Sound {} — saved",
-                        if settings.sound { "on" } else { "off" }
-                    )
-                }
-                Err(e) => notice = e,
-            }
-        }
-        if platform::command_key(KeyCode::N) || digital.commands & 64 != 0 {
-            settings.music = !settings.music;
-            notice = match storage::write_settings(&store, &settings) {
-                Ok(()) => format!(
-                    "Music {} — saved",
-                    if settings.music { "on" } else { "off" }
-                ),
-                Err(e) => e,
-            };
-        }
-        if platform::command_key(KeyCode::K) || digital.commands & 16 != 0 {
-            notice = match storage::save(&store, &game) {
-                Ok(()) => "Game saved. L resumes it.".into(),
-                Err(e) => e,
-            };
-        }
-        if platform::command_key(KeyCode::L) || digital.commands & 32 != 0 {
-            notice = match storage::load(&store, &mut game) {
-                Ok(true) => {
-                    inputs.clear();
-                    pointer_actions.clear();
-                    "Game resumed".into()
-                }
-                Ok(false) => "No save yet. K saves.".into(),
-                Err(e) => e,
-            };
-        }
-        let focused = platform::focused();
-        let mut intent = if focused && started && !paused {
+        let mut intent = if accepting {
             game.device_input(Intent {
                 x: x.clamp(-1, 1),
                 y: y.clamp(-1, 1),
-                pointer,
+                pointer: if G::pointer_target_only_on_press() && !click {
+                    None
+                } else {
+                    pointer
+                },
                 action,
                 sprint: platform::sprint_key(),
                 look: [0.; 2],
@@ -410,35 +527,24 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             pointer_actions.feed(
                 action,
                 intent.pointer,
-                is_mouse_button_pressed(MouseButton::Left) || intent.pointer != pointer,
-                digital.action && digital.pointer.is_some(),
+                click || intent.pointer != pointer,
+                false,
             );
         }
         intent.action = false;
-        if !focused || paused || !started {
+        if !accepting {
             inputs.clear();
             pointer_actions.clear();
-            last_pointer = None;
         }
         inputs.feed(
             intent,
-            u32::from(action && focused && started && !paused),
-            if focused && started && !paused {
-                look
-            } else {
-                [0.; 2]
-            },
+            u32::from(action && accepting),
+            if accepting { look } else { [0.; 2] },
         );
-        let ticks = if verification && started {
-            // Replay uses the same fixed steps; graphics need not redraw after every eight ticks.
-            // Real-device verification below runs normal timing independently.
+        let ticks = if verification && accepting {
             60
         } else {
-            stepper.advance(if focused && started && !paused {
-                dt
-            } else {
-                0.
-            })
+            stepper.advance(if accepting { dt } else { 0. })
         };
         for _ in 0..ticks {
             if verification && verification_tick >= G::VERIFY_TICKS {
@@ -447,86 +553,77 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             let tick = inputs.take_tick();
             let mut intent = tick.held;
             intent.action = tick.pressed(1);
+            intent.look = tick.look;
             if G::pointer_target_only_on_press() {
                 intent.pointer = pointer_actions.take(intent.action);
             }
-            intent.look = tick.look;
             if verification {
                 intent = G::verification_input(verification_tick);
                 verification_tick += 1;
             }
             game.step(&intent);
+            // Consume events per tick, preserving catch-up transitions and their location.
+            for cue in game.take_cues() {
+                audio.event::<G>(
+                    G::cue_event(cue).unwrap_or("legacy"),
+                    Some(cue),
+                    settings.sound,
+                )?;
+                if G::cue_particles() {
+                    particles.burst(game.cue_point(cue), if cue == 1 { PINK } else { GOLD });
+                }
+            }
+            for event in game.take_audio_events() {
+                audio.event::<G>(event, None, settings.sound)?;
+            }
+            if game.outcome() != "playing" {
+                break;
+            }
         }
-        for cue in game.take_cues() {
-            audio.play(cue, settings.sound);
-            particles.burst(game.cue_point(cue), if cue == 1 { PINK } else { GOLD });
-        }
-        audio.update(&game, started && !paused && focused, &settings, dt)?;
+        audio.update(
+            &game,
+            ui.accepting_input(game.outcome()),
+            settings.sound,
+            settings.music,
+            dt,
+        )?;
         autosave_time += dt;
         if persist_progress
-            && started
+            && ui.started()
             && game.tick() > 0
-            && (autosave_time >= 1. || !focused || paused || game.outcome() != "playing")
+            && (autosave_time >= 1. || !ui.accepting_input(game.outcome()))
         {
             autosave_time = 0.;
             let hash = game.state_hash();
             if autosave_hash != Some(hash) {
                 match storage::save_slot(&store, "progress", &game) {
-                    Ok(()) => autosave_hash = Some(hash),
-                    Err(error) => {
-                        notice = format!("Autosave failed: {error}");
-                        autosave_hash = Some(hash);
-                    }
+                    Ok(()) => {}
+                    Err(e) => notice = format!("Autosave failed: {e}"),
                 }
+                autosave_hash = Some(hash);
             }
         }
         let mut scene = Scene::default();
-        scene.rect(-100, Rect::new(0, 0, 800, 450), INK);
+        scene.rect(-100, Rect::new(0, 0, 800, 450), G::theme().background);
         game.draw(&mut scene);
         particles.update(dt, &mut scene);
-        if G::show_hud() {
-            scene.text(100, G::TITLE, Point::new(24, 30), 26., WHITE);
-            scene.text(100, G::CONTROLS, Point::new(24, 428), 16., WHITE);
-            scene.text(
-                100,
-                "Esc pause · M sound · K save · L load · R restart",
-                Point::new(24, 448),
-                14.,
-                TEAL,
-            );
-        }
-        if !notice.is_empty() {
-            scene.text(101, &notice, Point::new(24, 395), 19., GOLD);
-        }
-        if !started || paused || game.outcome() != "playing" {
-            scene.rect(
-                200,
-                Rect::new(145, 135, 510, 180),
-                Color::new(0.1, 0.16, 0.22, 0.96),
-            );
-            let title = if !started {
-                "CLICK OR ENTER TO START"
-            } else if paused {
-                "PAUSED"
-            } else if game.outcome() == "won" {
-                "COMPLETE!"
-            } else {
-                "TRY AGAIN"
-            };
-            scene.text(201, title, Point::new(180, 190), 34., GOLD);
-            scene.text(201, game.menu_status(), Point::new(180, 274), 22., WHITE);
-            scene.text(
-                201,
-                if !started {
-                    "Sound activates with your input."
-                } else {
-                    "R restarts · K saves · L resumes"
-                },
-                Point::new(180, 238),
-                22.,
-                WHITE,
-            );
-        }
+        let status = game.menu_status();
+        game.interface(
+            &mut scene,
+            &UiFrame {
+                screen: ui.screen(game.outcome()),
+                focused: has_focus,
+                pointer,
+                selected,
+                elapsed,
+                canvas: [800., 450.],
+                sound: settings.sound,
+                music: settings.music,
+                notice: &notice,
+                status: &status,
+                fonts: &renderer,
+            },
+        );
         clear_background(BLACK);
         scene.draw(view, Point::default(), &mut renderer)?;
         if let Some(plan) = &capture {
@@ -535,29 +632,24 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 get_screen_data().export_png(path.to_str().ok_or("Capture path must be UTF-8")?);
                 println!(
                     "{}",
-                    serde_json::json!({"frame":frame,"path":path,"width":screen_width(),"height":screen_height()})
+                    serde_json::json!({"frame":frame,"path":path,"width":screen_width(),"height":screen_height(),"screen":ui.screen(game.outcome()),"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"audio":audio.evidence()})
                 );
             }
         }
-        audio.evidence.enabled = settings.sound && !audio.muted;
-        audio.evidence.activated = platform::audio_active();
-
+        if capture.as_ref().is_some_and(|c| c.finished(frame))
+            || (capture.is_none()
+                && verification
+                && (verification_tick >= G::VERIFY_TICKS || game.outcome() != "playing"))
         {
-            if capture.as_ref().is_some_and(|c| c.finished(frame))
-                || (capture.is_none() && verification && verification_tick >= G::VERIFY_TICKS)
-            {
-                println!(
-                    "{}",
-                    serde_json::json!({"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome()})
-                );
-                break;
-            }
+            println!(
+                "{}",
+                serde_json::json!({"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"audio":audio.evidence()})
+            );
+            break;
         }
         next_frame().await;
     }
-    {
-        Ok(())
-    }
+    Ok(())
 }
 /// The action target travels with its press edge across frames with no fixed tick.
 #[derive(Default)]
@@ -583,17 +675,6 @@ impl ActionPointer {
 }
 
 mod platform {
-    #[derive(Default)]
-    pub struct Digital {
-        pub x: i32,
-        pub y: i32,
-        pub action: bool,
-        pub commands: i32,
-        pub pointer: Option<super::Point>,
-    }
-    pub fn touch() -> Digital {
-        Digital::default()
-    }
     pub fn muted() -> bool {
         let args: Vec<_> = std::env::args().collect();
         crate::runtime::playback::has_flag(&args, "--mute")
@@ -618,9 +699,6 @@ mod platform {
     pub fn focused() -> bool {
         true
     }
-    pub fn audio_active() -> bool {
-        true
-    }
     pub fn error(error: &str) {
         eprintln!("2D client: {error}");
     }
@@ -629,6 +707,133 @@ mod platform {
 #[cfg(test)]
 mod pointer_action_tests {
     use super::*;
+    use crate::runtime::{Simulation, Snapshot};
+    #[derive(Default)]
+    struct Memory(std::cell::RefCell<std::collections::BTreeMap<String, Vec<u8>>>);
+    impl Storage for Memory {
+        fn read(&self, key: &str) -> Result<Option<Vec<u8>>, String> {
+            Ok(self.0.borrow().get(key).cloned())
+        }
+        fn write(&self, key: &str, bytes: &[u8]) -> Result<(), String> {
+            self.0.borrow_mut().insert(key.into(), bytes.to_vec());
+            Ok(())
+        }
+    }
+    struct Counter(u32);
+    impl Simulation for Counter {
+        type Input = Intent;
+        fn step(&mut self, _: &Intent) {
+            self.0 += 1;
+        }
+        fn state_hash(&self) -> u64 {
+            self.0 as u64
+        }
+    }
+    impl Snapshot for Counter {
+        const KIND: &'static str = "ui-counter";
+        type State = u32;
+        fn capture(&self) -> u32 {
+            self.0
+        }
+        fn restore(&mut self, state: u32) -> Result<(), String> {
+            self.0 = state;
+            Ok(())
+        }
+    }
+    impl super::super::GameLogic for Counter {
+        const ID: &'static str = "ui-counter";
+        const TITLE: &'static str = "Counter";
+        const CONTROLS: &'static str = "Count";
+        const VERIFY_TICKS: u32 = 1;
+        fn new(_: u64) -> Self {
+            Self(0)
+        }
+        fn tick(&self) -> u32 {
+            self.0
+        }
+        fn outcome(&self) -> &'static str {
+            "playing"
+        }
+        fn verification_input(_: u32) -> Intent {
+            Intent::default()
+        }
+        fn probe_input() -> Intent {
+            Intent::default()
+        }
+        fn probe_success(&self) -> bool {
+            self.0 > 0
+        }
+    }
+    impl Game for Counter {
+        fn draw<'a>(&'a self, _: &mut Scene<'a>) {}
+    }
+    #[test]
+    fn custom_interface_actions_use_shared_snapshots_settings_and_restart() {
+        let store = Memory::default();
+        let mut game = Counter(12);
+        let mut ui = Lifecycle::new(true);
+        let mut settings = Settings::default();
+        let mut notice = String::new();
+        for bounds in [Rect::new(20, 30, 90, 40), Rect::new(610, 350, 140, 60)] {
+            let mut layout = Layout::default();
+            layout.button(bounds, Action::Save);
+            let action = layout.hit(Point::new(bounds.x + 1, bounds.y + 1)).unwrap();
+            assert_eq!(
+                execute_action(
+                    action,
+                    &mut game,
+                    &mut ui,
+                    &mut settings,
+                    &mut notice,
+                    &store
+                ),
+                Some("ui.save")
+            );
+            game.0 = 99;
+            execute_action(
+                Action::Load,
+                &mut game,
+                &mut ui,
+                &mut settings,
+                &mut notice,
+                &store,
+            );
+            assert_eq!(game.0, 12);
+        }
+        execute_action(
+            Action::ToggleSound,
+            &mut game,
+            &mut ui,
+            &mut settings,
+            &mut notice,
+            &store,
+        );
+        assert!(!storage::read_settings::<Settings>(&store).unwrap().sound);
+        execute_action(
+            Action::Restart,
+            &mut game,
+            &mut ui,
+            &mut settings,
+            &mut notice,
+            &store,
+        );
+        assert_eq!(game.0, 0);
+        assert!(notice.is_empty());
+        store
+            .0
+            .borrow_mut()
+            .insert("quick".into(), b"corrupt snapshot".to_vec());
+        execute_action(
+            Action::Load,
+            &mut game,
+            &mut ui,
+            &mut settings,
+            &mut notice,
+            &store,
+        );
+        assert_eq!(game.0, 0);
+        assert!(!notice.is_empty());
+    }
     #[test]
     fn mapped_device_command_survives_a_frame_without_a_tick_and_fires_once() {
         let hover = Some(Point::new(400, 200));

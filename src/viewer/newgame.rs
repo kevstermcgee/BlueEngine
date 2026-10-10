@@ -572,6 +572,7 @@ fn scaffold_two_d(project: &Project, template: Template) -> Result<Identity> {
     for (path,template) in [
         ("Cargo.toml",include_str!("../../templates/two-d/Cargo.toml.tmpl")),
         ("src/main.rs",include_str!("../../templates/two-d/main.rs")),
+        ("src/platform.rs",include_str!("../../templates/native_focus.rs")),
         ("src/lib.rs",include_str!("../../templates/two-d/lib.rs")),
         ("AGENTS.md",include_str!("../../templates/two-d/AGENTS.md")),
         ("README.md","# {{title}}\nCollect the four lanterns, avoid the pink patrol and reach the teal exit.\nWASD/arrows move. Click/Enter starts. K saves, L resumes, M toggles sound, R restarts.\n"),

@@ -137,6 +137,28 @@ class SpringboardTests(unittest.TestCase):
         self.assertTrue(calls)
         self.assertLess(len(json.dumps(packet).encode()), 12000)
 
+    def test_camera_intent_is_preserved_and_unsupported_samples_are_explicit(self):
+        route = springboard.select(self.root, 'Create a first-person 3D exploration game',
+                                   'new-game', None, ['windows'], None, None)
+        self.assertEqual(route['template'], 'custom-sim')
+        self.assertEqual(route['requested']['cameras'], ['first-person'])
+        self.assertFalse(route['gaps'])
+        route = springboard.select(self.root, 'Create a first person 3D exploration game',
+                                   'new-game', None, ['windows'], 'three-d', None)
+        self.assertEqual(route['template'], 'three-d')
+        self.assertTrue(any(g['kind'] == 'camera_implementation_required' for g in route['gaps']))
+        for perspective in ('third-person following', 'orbit camera', 'orthographic/isometric',
+                            'side-scrolling', 'custom game-owned camera'):
+            with self.subTest(perspective=perspective):
+                route = springboard.select(self.root, 'Create a game with ' + perspective,
+                                           'new-game', None, ['windows'], None, None)
+                self.assertTrue(route['requested']['cameras'])
+                self.assertTrue(any(g['kind'] == 'camera_implementation_required' for g in route['gaps']))
+        for perspective, starter in [('fixed-camera cinematic', 'three-d'), ('top-down', 'two-d')]:
+            route = springboard.select(self.root, 'Create a game with ' + perspective,
+                                       'new-game', None, ['windows'], starter, None)
+            self.assertFalse(any(g['kind'] == 'camera_implementation_required' for g in route['gaps']))
+
     def test_no_save_is_read_only(self):
         self.start(persist=False)
         self.assertFalse((self.root / '.be2-work').exists())

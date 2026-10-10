@@ -51,6 +51,16 @@ def text_schema(limit=400):
     return {"type": "string", "minLength": 1, "maxLength": limit}
 
 
+IDENTITY_SCHEMA = object_schema({
+    "camera": text_schema(250),
+    "visual_medium": text_schema(250),
+    "palette_contrast": text_schema(250),
+    "typography_interface": text_schema(350),
+    "motion": text_schema(250),
+    "sound_music_silence": text_schema(350),
+    "coherence": text_schema(250),
+    "difference": text_schema(350),
+})
 IDEA_SCHEMA = object_schema({
     "dimension": {"type": "string", "enum": ["2d", "3d"]},
     "title": text_schema(70), "slug": {"type": "string", "pattern": "^" + SLUG + "$", "maxLength": 60},
@@ -60,10 +70,13 @@ IDEA_SCHEMA = object_schema({
     "win_condition": text_schema(300), "lose_condition": text_schema(300),
     "why_fun": text_schema(600), "prototype": text_schema(1200),
     "novelty_check": text_schema(1000), "playtest_risk": text_schema(500),
+    "creative_identity": IDENTITY_SCHEMA,
     "story": {"anyOf": [text_schema(800), {"type": "null"}]},
 })
 LEGACY_IDEA_SCHEMA = object_schema({k: v for k, v in IDEA_SCHEMA["properties"].items()
-                                    if k != "dimension"})
+                                    if k not in ("dimension", "creative_identity")})
+MECHANIC_IDEA_SCHEMA = object_schema({k: v for k, v in IDEA_SCHEMA["properties"].items()
+                                    if k != "creative_identity"})
 FINDING_SCHEMA = object_schema({
     "area": {"type": "string", "enum": list(learn.AREAS)},
     "severity": {"type": "string", "enum": ["low", "medium", "high"]},
@@ -77,6 +90,7 @@ BUILD_SCHEMA = object_schema({"summary": text_schema(1200), "findings": FINDINGS
 REVIEW_SCHEMA = object_schema({
     "approved": {"type": "boolean"}, "mechanic_assessment": text_schema(1200),
     "visual_assessment": text_schema(1200),
+    "identity_assessment": text_schema(1200), "audio_assessment": text_schema(1200),
     "blockers": {"type": "array", "items": text_schema(800), "maxItems": 15},
     "findings": FINDINGS,
 })
@@ -405,11 +419,11 @@ class Forge:
         prior = []
         catalog = self.engine / "games/idea-forge/assets/ideas.json"
         if catalog.exists():
-            prior.extend({"title": i["title"], "mechanic": i["mechanic"]} for i in load_json(catalog))
+            prior.extend({"title": i["title"], "mechanic": i["mechanic"], "creative_identity": i.get("creative_identity")} for i in load_json(catalog))
         for path in self.directory.parent.glob("*/idea.json"):
             if path.parent != self.directory:
                 idea = load_json(path)
-                prior.append({"title": idea["title"], "mechanic": idea["mechanic"]})
+                prior.append({"title": idea["title"], "mechanic": idea["mechanic"], "creative_identity": idea.get("creative_identity")})
         known = [p.name for p in (self.engine / "games").iterdir() if p.is_dir()]
         prompt = f"""Generate one FRESH game concept centered on an unusual, engaging PLAYABLE MECHANIC.
 This is an automatic game-building pipeline, not a list picker. Brainstorm several distinct
@@ -430,10 +444,17 @@ comparison and the concrete difference in novelty_check; worldwide originality a
 cannot be certified. Do not reuse a previous mechanic or an existing slug. Do not edit files.
 Existing game slugs: {json.dumps(known)}.
 Prior mechanics: {json.dumps(prior)}.
+Choose a concise creative_identity independently unless the requested direction specifies it:
+camera AND interaction convention, visual medium, palette/contrast, typography and interface
+metaphor/layout, motion, sound effects and music/ambience/silence, consistency through menus
+and outcomes, and concrete differences from the prior presentations. These are design choices,
+not mandatory novelty or engine presets. Small games need a few actionable sentences.
+Read docs/GAME_PRESENTATION.md and docs/AUDIO.md for existing capabilities. Ambient pads
+are one option; authored melodic/percussive scores, environmental clips and silence are valid.
 Return only the schema-constrained concept. No credentials or environment identifiers."""
         if self.state.get("idea_input"):
             idea = load_json(self.state["idea_input"])
-            validate(idea, IDEA_SCHEMA if "dimension" in idea else LEGACY_IDEA_SCHEMA)
+            validate(idea, IDEA_SCHEMA if "creative_identity" in idea else MECHANIC_IDEA_SCHEMA if "dimension" in idea else LEGACY_IDEA_SCHEMA)
         else:
             idea = self.agent("concept-candidate", prompt, IDEA_SCHEMA)
         required = self.state.get("dimension", "any")
@@ -463,7 +484,17 @@ Return only the schema-constrained concept. No credentials or environment identi
             prompt = f"""Build the actual game described below in this BlueEngine checkout.
 Read root AGENTS.md, use tools/be2.py start and its selected documentation, and use the
 fresh canonical map scaffold/icon tooling. The game lives at games/{idea['slug']}.
-Implement the distinctive mechanic, real player input, a clear goal and loss/retry loop,
+Implement creative_identity as an actual presentation contract, preserving explicit user direction.
+Read docs/GAME_PRESENTATION.md for camera/input, themes, replaceable interface actions and
+runtime fonts; docs/AUDIO.md for named event bindings and data-authored sound palettes.
+Do not silently substitute a starter camera. If the starter reports a camera implementation
+requirement, implement and verify it. Use Game::interface/Theme/fonts and AudioBank bindings
+for custom menus and sounds while retaining shared lifecycle and Snapshot behavior.
+For older concepts without creative_identity, make a short deliberate identity brief yourself
+and record it in the game README. Avoid copying sample HUD/menu/music conventions by habit.
+Capture gameplay, start, pause and result at a small and normal window size, and retain named
+sound loading/playback evidence. Assess actual PCM or audible captures when available;
+physical listening remains a separate limitation. Implement the distinctive mechanic, real player input, a clear goal and loss/retry loop,
 several escalating challenges, instructions, polished native visuals and its own icon.
 Follow the concept's outcome rules: if it has no terminal loss, preserve that choice
 and implement its undo/retry behavior instead of adding hazards or a move budget.
@@ -506,7 +537,14 @@ inspect the attached actual isolated native-package capture. Identify whether th
 rule is implemented and understandable, whether its specified outcome/retry loop works,
 and whether its declared dimension is real: 3D requires a rendered 3D world with
 meaningful depth in the mechanic, while 2D requires a two-dimensional playable space.
-and any broken input, layout or fabricated verification shortcut. Do not edit files.
+Assess creative_identity against actual gameplay, menu, pause and outcome captures, including
+small-window typography and contrast. Inspect the other retained package captures too.
+identity_assessment must connect the brief to implemented camera/input, UI metaphor,
+typography, motion and consistency; palette changes alone are insufficient evidence of a
+new layout. audio_assessment must identify the named sound bindings, music/silence choice
+and actual available audio evidence; never equate decoder submission with listening.
+Report unjustified departures from explicit camera/presentation requirements as blockers.
+Identify any broken input, layout or fabricated verification shortcut. Do not edit files.
 approved must be false when there are blockers. Compilation/automated tests cannot prove
 subjective fun or global novelty. This is the LOCAL IMPLEMENTATION review, before
 Windows CI and installer publication. Assess the implementation and the native evidence
@@ -628,6 +666,8 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                  "## Generated mechanic", "", idea["mechanic"], "", "## Novelty and playtesting", "",
                  idea["novelty_check"], "", idea["playtest_risk"], "",
                  "## Findings from the AI that developed and reviewed the game", ""]
+        if idea.get("creative_identity"):
+            lines.extend(["## Creative identity", "", *[f"- {key}: {value}" for key, value in idea["creative_identity"].items()], ""])
         measured = self.measurements()
         cost_file = self.engine / "docs/learning/forge-runs.jsonl"
         cost_file.parent.mkdir(parents=True, exist_ok=True)

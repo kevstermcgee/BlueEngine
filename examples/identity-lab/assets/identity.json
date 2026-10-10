@@ -1,0 +1,7 @@
+{
+  "title": "Identity Lab",
+  "tagline": "Four lights. Three identities. One reliable game.",
+  "controls": "Arrows select; Space or click flips neighbours; Esc pause; K save; L load; R restart; M sound.",
+  "package": ["assets"],
+  "engine_revision": "2354e5079755"
+}

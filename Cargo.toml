@@ -25,7 +25,7 @@ default = ["client"]
 # Historical name: cinematic scene export, unrelated to offline gameplay.
 offline = ["dep:png", "dep:ctrlc"]
 presentation = ["dep:macroquad"]
-two-d = ["dep:macroquad"]
+two-d = ["presentation"]
 portable = ["two-d"]
 model-import = ["presentation", "dep:gltf", "dep:base64", "dep:image"]
 schema-generation = ["dep:schemars"]

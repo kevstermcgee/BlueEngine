@@ -104,3 +104,11 @@ Ship verifies the game's own icon/resources, complete assets and package integri
 then launches an isolated package. Desktop-wide icon comparison is optional advisory.
 Other declared OS gates need their own evidence; engine changes retain full
 Linux/Windows CI and headless boundaries. BlueEngineGames offers EXE downloads only.
+
+Camera intent is preserved by start routing: first-person uses custom-sim (stock for
+GameDocument), and unsupported sample cameras remain explicit implementation gaps.
+See [camera and interaction](GAME_PRESENTATION.md#camera-and-interaction),
+[custom interface/fonts](GAME_PRESENTATION.md#portable-interface-ownership) and
+[named shared-client sounds](AUDIO.md#portable-shared-client) before copying starter
+presentation conventions. Make a short identity brief (camera/input, art/palette,
+typography/UI, motion, sound/music/silence and consistency) and implement it deliberately.

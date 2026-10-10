@@ -462,7 +462,13 @@ def context(root, query, limit=3, level=2):
         # The best-matching file by its own summary leads (so a module inside a large feature is found by what it
         # does); the curated entry points follow. Without a file match this is exactly the curated list.
         picked = module_picks(summaries, feature, query_words, rarity)[:max(1, allowance - 1)]
-        read_first = (picked + [path for path in curated if path not in picked])[:allowance]
+        # Authoring capabilities may nominate one public contract. Keep routine
+        # camera/UI/audio questions on that guide; level 3 still leads with ownership.
+        authoring_words = learned_words(' '.join(feature.get('authoring_keywords', [])))
+        authoring = not authoring_words or query.lower() == name or bool(query_words & authoring_words)
+        guide = [feature['authoring_guide']] if level < 3 and authoring and feature.get('authoring_guide') else []
+        leading = guide + [path for path in picked if path not in guide]
+        read_first = (leading + [path for path in curated if path not in leading])[:allowance]
         item = {'id': name, 'read_first': read_first,
                 'contract': feature.get('contract', feature['note']),
                 'tests': feature['checks'][:2]}
@@ -579,6 +585,10 @@ def full_commands(test_profile='itest'):
         commands.extend([['cargo','fmt','--manifest-path',manifest,'--check'],
                          ['cargo','test','--locked','--manifest-path',manifest,'--no-default-features'],
                          ['cargo','test','--locked','--manifest-path',manifest]])
+    identity='examples/identity-lab/Cargo.toml'
+    commands.extend([['cargo','fmt','--manifest-path',identity,'--check'],
+                     ['cargo','test','--locked','--manifest-path',identity,'--no-default-features'],
+                     ['cargo','test','--locked','--manifest-path',identity]])
     commands.append([sys.executable, 'tools/check_docs.py'])
     leo='assets/games/leo/Cargo.toml'
     commands.extend([['cargo','fmt','--manifest-path',leo,'--check'],

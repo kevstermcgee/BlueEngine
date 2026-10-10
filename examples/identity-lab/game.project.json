@@ -1,0 +1,23 @@
+{
+  "complexity": "low",
+  "description": "One switch puzzle with notebook, instrument and arcade presentation; identical lifecycle and rules.",
+  "id": "identity-lab",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "mobile_controls": {
+    "action_label": null,
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 1,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

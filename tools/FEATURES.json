@@ -649,7 +649,10 @@
         "start task",
         "next step",
         "resume task",
-        "readiness"
+        "readiness",
+        "first-person starter",
+        "camera intent",
+        "camera requirement"
       ],
       "constraints": [
         {
@@ -894,18 +897,22 @@
         "templates/two-d/web.py",
         "docs/PORTABLE_GAMES.md",
         "templates/two-d/world.rs",
-        "tests/portable_storage.rs"
+        "tests/portable_storage.rs",
+        "src/two_d/audio.rs",
+        "src/two_d/ui.rs",
+        "examples/identity-lab/",
+        "examples/identity-lab/scripts/presentation_smoke.py"
       ],
       "read_first": [
-        "docs/PORTABLE_GAMES.md",
-        "templates/two-d/AGENTS.md",
-        "templates/two-d/lib.rs"
+        "docs/TWO_D.md",
+        "docs/GAME_PRESENTATION.md",
+        "docs/AUDIO.md"
       ],
       "checks": [
         "cargo test --locked --lib two_d --no-default-features --features two-d",
         "python -m unittest tools.test_browser_retirement"
       ],
-      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native installation. Choose elements by gameplay value; no legacy renderer exploration.",
+      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native installation. Choose elements by gameplay value; no legacy renderer exploration. Shared interfaces are replaceable through read-only UiFrame + action hit regions; themes and named runtime fonts use logical metrics. Game-owned effect/loop banks use AudioBank with semantic events and optional legacy fallbacks. Identity Lab has three contrasting clients over identical rules.",
       "keywords": [
         "2d",
         "2D",
@@ -933,7 +940,29 @@
         "two_d::draw::Scene",
         "two_d::client::run",
         "portable::draw::World",
-        "portable::draw::Scene::world"
+        "portable::draw::Scene::world",
+        "Game::interface",
+        "Game::theme",
+        "Game::fonts",
+        "UiFrame",
+        "ui::Layout",
+        "ui::Action",
+        "GameLogic::audio_bindings",
+        "GameLogic::take_audio_events",
+        "client::run_with_focus"
+      ],
+      "authoring_guide": "docs/TWO_D.md",
+      "authoring_keywords": [
+        "2d",
+        "portable",
+        "starter",
+        "interface",
+        "theme",
+        "font",
+        "camera",
+        "audio",
+        "sound",
+        "game"
       ]
     },
     "performance_regression_budgets": {
@@ -1933,14 +1962,18 @@
         "assets/ui/LICENSE_LIBERATION",
         "src/viewer/stock_presentation.rs",
         "src/viewer/playable.rs",
-        "tests/stock_observatory.rs"
+        "tests/stock_observatory.rs",
+        "src/two_d/ui.rs",
+        "src/two_d/draw.rs",
+        "src/two_d/client.rs",
+        "examples/identity-lab/"
       ],
       "checks": [
         "presentation module tests",
         "BlueDM movement UDP regression",
         "game still/menu captures and live controls"
       ],
-      "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation. GameShell::local_menu_with_audio adds a non-breaking fourth pause-menu entry, Settings (music/sound toggles, a download-music button); local_menu is unchanged.",
+      "note": "Shared F fullscreen, compact Escape menu, neutral gameplay input, cached shaded static primitives, minimal HUD policy and bounded snapshot smoothing. Static-only worlds avoid invisible movable-prop physics. Immutable font atlas, cached beveled firearm viewmodels, cosmetic shot feedback, world materials/signs, and swept local camera presentation. GameShell::local_menu_with_audio adds a non-breaking fourth pause-menu entry, Settings (music/sound toggles, a download-music button); local_menu is unchanged. Portable Game::interface replaces all overlays while the client owns actions/input/storage/focus; Theme and FontAsset/Scene::text_with_font support typography and measured logical layout. Explicit starter camera capabilities preserve intent or report implementation requirements; existing camera APIs are documented with input conventions.",
       "depends_on": [
         "simulation_contract"
       ],
@@ -1975,13 +2008,60 @@
         "palette",
         "counter labels",
         "clock",
-        "presentation"
+        "presentation",
+        "custom interface",
+        "custom UI",
+        "font",
+        "fonts",
+        "typography",
+        "notebook",
+        "menu layout",
+        "creative identity",
+        "first-person",
+        "third-person",
+        "orbit camera",
+        "fixed-camera",
+        "orthographic",
+        "isometric",
+        "side-scrolling",
+        "camera perspective"
       ],
       "read_first": [
         "src/viewer/game_client.rs",
         "docs/GAME_PRESENTATION.md",
+        "docs/TWO_D.md",
         "src/viewer/stock_presentation.rs",
         "src/viewer/playable.rs"
+      ],
+      "public_api": [
+        "Game::interface",
+        "Game::theme",
+        "Game::fonts",
+        "UiFrame",
+        "ui::Layout",
+        "ui::Action",
+        "Renderer::measure",
+        "client::run_with_focus"
+      ],
+      "canonical_example": "examples/identity-lab/src/presentation.rs",
+      "authoring_guide": "docs/GAME_PRESENTATION.md",
+      "authoring_keywords": [
+        "camera",
+        "perspective",
+        "first-person",
+        "third-person",
+        "orthographic",
+        "isometric",
+        "side-scrolling",
+        "interface",
+        "ui",
+        "hud",
+        "menu",
+        "theme",
+        "font",
+        "typography",
+        "presentation",
+        "identity"
       ]
     },
     "save_state": {
@@ -2382,7 +2462,7 @@
         "crossfade",
         "loop"
       ],
-      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream. Imported clips support exact-length adaptive looping ambience with a bounded wrap crossfade, stereo preservation and worst-subset headroom. Leo uses recorded nature and a separate original score, driven by authoritative day/night state; edits need rendering, not a Rust rebuild.",
+      "note": "Named audio projects: be2-tools audio describe/validate/render/check. JSON effect cues (23 presets and variants, authored stereo scores, imported 44.1kHz PCM16 WAV), music (authored scores, generated base/melodic/lead stems or ambient), MIDI notes, equal-power pan, ADSR and optional lowpass. Strict ranges, bounded synthesis, wrapped releases, shared attenuation protects any adaptive layer subset, peak/RMS/DC/seam evidence and checked content hashes. AudioBank::load loads reusable rendered bundles on a worker; named play/music, explicit Loading/Ready/Muted/Empty/Failed states and errors. Edit data and rerender without Rust rebuild or music regeneration at startup. Native audio_preview provides cue controls and layer fades. audio_report.py --loop evaluates actual wrapped continuity instead of one-shot zero endpoints; clipping, silence, DC, loudness, spectrograms remain measured. No live voice pitch/spatial API, device audibility acknowledgement or sample-clock synchronization claim. Existing SoundBank and synthesis APIs remain supported. Stock GameDocument presentation.audio binds counter changes/threshold crossings, success/failure/restart to cues, and authoritative counters to adaptive music levels. Loaded game paths resolve assets without cwd dependence; --mute skips asset/device loading; settings toggles persist. Local fixed-tick observation preserves catch-up transitions; online snapshots are observed state, not a reliable event stream. Imported clips support exact-length adaptive looping ambience with a bounded wrap crossfade, stereo preservation and worst-subset headroom. Leo uses recorded nature and a separate original score, driven by authoritative day/night state; edits need rendering, not a Rust rebuild. Shared 2D clients now accept effects in banks, map arbitrary semantic events with per-effect volume, and preserve optional numeric fallbacks. Choose score, clips, rhythm, ambience or silence deliberately.",
       "contract": {
         "owns": "Data-authored effects and music, crossfaded imported ambience loops, reusable checked PCM bundles, named presentation playback and numeric quality evidence",
         "inputs": "Versioned AudioProject JSON, seed, optional imported WAV and read-only game events, optional presentation.audio state bindings",
@@ -2410,11 +2490,28 @@
         "checked_wav",
         "StockAudio",
         "AudioCursor",
-        "GameSession::advance_observed"
+        "GameSession::advance_observed",
+        "GameLogic::audio_banks",
+        "GameLogic::audio_bindings",
+        "GameLogic::take_audio_events",
+        "AudioBinding"
       ],
       "depends_on": [
         "custom_simulation",
         "client_kit"
+      ],
+      "authoring_guide": "docs/AUDIO.md",
+      "authoring_keywords": [
+        "audio",
+        "sound",
+        "effect",
+        "bank",
+        "music",
+        "score",
+        "ambience",
+        "cue",
+        "binding",
+        "event"
       ]
     },
     "movement": {

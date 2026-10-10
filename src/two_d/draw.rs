@@ -161,7 +161,7 @@ enum Shape<'a> {
     World(Rect, World),
     Rect(Rect, Color),
     Circle(Point, f32, Color),
-    Text(String, Point, f32, Color),
+    Text(String, Point, f32, Color, Option<&'static str>),
     Sprite(
         Texture2D,
         Transform,
@@ -174,7 +174,48 @@ enum Shape<'a> {
 /// Keeps decoded embedded textures across frames. Construct after the graphics context starts.
 #[derive(Default)]
 pub struct Renderer {
+    fonts: std::collections::BTreeMap<&'static str, Font>,
     textures: std::collections::BTreeMap<&'static str, (Texture2D, u64)>,
+}
+/// Runtime font assets, loaded once after window creation and included in the game's package.
+pub struct FontAsset {
+    pub id: &'static str,
+    pub file: &'static str,
+}
+impl Renderer {
+    pub async fn load_fonts(&mut self, assets: &[FontAsset]) -> Result<(), String> {
+        for asset in assets {
+            if asset.id.is_empty() || self.fonts.contains_key(asset.id) {
+                return Err(format!("Empty or duplicate font ID {:?}", asset.id));
+            }
+            let font = load_ttf_font(asset.file)
+                .await
+                .map_err(|e| format!("Font {} ({}) failed: {e}", asset.id, asset.file))?;
+            self.fonts.insert(asset.id, font);
+        }
+        Ok(())
+    }
+    /// Logical-pixel metrics using the exact same font, raster size and scale as drawing.
+    pub fn measure(
+        &self,
+        text: &str,
+        font: Option<&str>,
+        size: f32,
+    ) -> Result<TextDimensions, String> {
+        if !size.is_finite() || size <= 0. {
+            return Err("Text size must be positive and finite".into());
+        }
+        match font {
+            Some(id) => {
+                let font = self
+                    .fonts
+                    .get(id)
+                    .ok_or_else(|| format!("Unknown font {id:?}; declare Game::fonts()"))?;
+                Ok(measure_text(text, Some(font), 64, size / 64.))
+            }
+            None => Ok(measure_text(text, None, 64, size / 64.)),
+        }
+    }
 }
 #[derive(Default)]
 pub struct Scene<'a> {
@@ -206,7 +247,20 @@ impl<'a> Scene<'a> {
     }
     pub fn text(&mut self, layer: i32, text: impl Into<String>, p: Point, size: f32, c: Color) {
         self.items
-            .push((layer, Shape::Text(text.into(), p, size, c)));
+            .push((layer, Shape::Text(text.into(), p, size, c, None)));
+    }
+    /// Game-owned TTF/OTF selected by an ID from Game::fonts(). Position is a baseline.
+    pub fn text_with_font(
+        &mut self,
+        layer: i32,
+        text: impl Into<String>,
+        p: Point,
+        size: f32,
+        c: Color,
+        font: &'static str,
+    ) {
+        self.items
+            .push((layer, Shape::Text(text.into(), p, size, c, Some(font))));
     }
     pub fn sprite(
         &mut self,
@@ -241,11 +295,11 @@ impl<'a> Scene<'a> {
         renderer: &mut Renderer,
     ) -> Result<(), String> {
         self.items.sort_by_key(|(layer, _)| *layer);
-        // Atlas growth can replace its GL texture. Populate every glyph before queuing draw calls,
-        // so a later notice cannot invalidate text already submitted in this same frame.
+        // Populate all glyphs before any draw batches: later atlas growth must not
+        // invalidate text already queued. Custom fonts rasterize at a fixed 64px.
         for (_, shape) in &self.items {
-            if let Shape::Text(text, _, size, _) = shape {
-                measure_text(text, None, (size * view.scale) as u16, 1.);
+            if let Shape::Text(text, _, size, _, font) = shape {
+                renderer.measure(text, *font, *size * view.scale)?;
             }
         }
         let p = |x: f32, y: f32| {
@@ -276,9 +330,34 @@ impl<'a> Scene<'a> {
                     let xy = p(pos.x as f32, pos.y as f32);
                     draw_circle(xy[0], xy[1], r * view.scale, c);
                 }
-                Shape::Text(text, pos, size, c) => {
+                Shape::Text(text, pos, size, c, font) => {
                     let xy = p(pos.x as f32, pos.y as f32);
-                    draw_text(&text, xy[0], xy[1], size * view.scale, c);
+                    if let Some(id) = font {
+                        draw_text_ex(
+                            &text,
+                            xy[0],
+                            xy[1],
+                            TextParams {
+                                font: Some(&renderer.fonts[id]),
+                                font_size: 64,
+                                font_scale: size * view.scale / 64.,
+                                color: c,
+                                ..Default::default()
+                            },
+                        );
+                    } else {
+                        draw_text_ex(
+                            &text,
+                            xy[0],
+                            xy[1],
+                            TextParams {
+                                font_size: 64,
+                                font_scale: size * view.scale / 64.,
+                                color: c,
+                                ..Default::default()
+                            },
+                        );
+                    }
                 }
                 Shape::Sprite(texture, t, size, source, c) => {
                     let xy = p(t.position[0], t.position[1]);
@@ -395,6 +474,20 @@ pub trait Game: super::GameLogic {
     /// Optional third-person look: drag inside the canvas or use the controller's right stick.
     fn drag_look() -> bool {
         false
+    }
+    fn fonts() -> &'static [FontAsset] {
+        &[]
+    }
+    fn theme() -> super::client::Theme {
+        super::client::Theme::default()
+    }
+    /// Replace every overlay with game-owned drawing and action hit regions. The shared
+    /// client still owns pause, saves, focus, timing, input gating and restart.
+    fn interface(&self, scene: &mut Scene, frame: &super::client::UiFrame) -> super::ui::Layout {
+        super::client::default_interface::<Self>(self, scene, frame)
+    }
+    fn cue_particles() -> bool {
+        true
     }
     fn show_hud() -> bool {
         true

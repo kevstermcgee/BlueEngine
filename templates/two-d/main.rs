@@ -1,4 +1,5 @@
 use vesper3d::two_d::{client,GameLogic};
+mod platform;
 fn config()->macroquad::conf::Conf {
     let identity=vesper3d::viewer::identity::Identity::parse(include_str!("../assets/identity.json")).unwrap();
     let mut config=client::config(&identity.title);
@@ -11,4 +12,4 @@ fn config()->macroquad::conf::Conf {
     config
 }
 #[macroquad::main(config)]
-async fn main() { client::run::<{{lib}}::Garden>().await; }
+async fn main() { platform::attach_console(); client::run_with_focus::<{{lib}}::Garden>(platform::focused).await; }

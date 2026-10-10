@@ -6,7 +6,7 @@ Every playable BlueEngine game should meet this baseline before delivery:
 - Escape opens a compact Resume / Controls / Quit menu. Opening it releases the mouse
   and suppresses movement, fire, reload, weapon selection and look. Resume clicks must
   not fire. An online match continues; label that explicitly. Losing focus releases capture.
-- HUD defaults to a small crosshair, health, ammo/weapon and match objective/score.
+- Choose a HUD that serves the game. First-person combat prototypes default to a small crosshair, health, ammo/weapon and match objective/score.
   Put controls in the menu, secondary stats on Tab and diagnostics on F3. No permanent
   connection banner after joining and no persistent performance, FOV or control text.
 - Give floors, walls, cover and landmarks different value/material roles. Use coherent
@@ -109,3 +109,112 @@ with the title from `assets/identity.json`, the same text as its desktop shortcu
 miniquad's logo as the window icon, which is fine for a prototype and wrong for a game that ships.
 
 Shared standalone-game infrastructure: [gameplay kit](SHARED_GAMEPLAY.md). Generated games call `playable::run_game_with_options` for shared local/online gameplay. `MapPlayer` remains a static viewer; custom presentation can use the graphics-free `GameSession`.
+
+## Camera and interaction
+
+`be2.py start` preserves explicit camera requirements in `workflow.requested.cameras`.
+First-person selects **custom-sim**, whose existing sample uses `View::first_person`,
+`ClientInput::look_delta_with`, captured mouse/right-stick look and camera-relative movement.
+Declarative first-person uses **stock**. Explicit incompatible starters are retained with a
+`camera_implementation_required` gap. A gap is required engineering, never a fulfilled request.
+`three-d` is a fixed oblique view of planar rules; it has no first-person controller.
+
+| Intended view | Existing building blocks and input convention |
+|---|---|
+| First-person | `custom-sim` main; `devkit::{FpsCamera, MouseLook}`, `kit::View::first_person`; capture while playing, release in menus, aim from the eye |
+| Third-person follow/orbit | `World::new(eye, target)` or `kit::View`; `Game::drag_look()` supplies accumulated `Intent.look`; `camera::sweep_boom` keeps the boom outside walls; choose camera-relative or world-relative movement deliberately |
+| Fixed cinematic | `World::new` with game-owned shot selection; retain world-space interaction targets when changing shots; `three-d` already has a fixed view |
+| Top-down | `two-d` logical Scene coordinates and `Viewport::pointer`; cursor targets and keyboard/controller focus can coexist |
+| Orthographic/isometric | `world.camera.projection = macroquad::camera::Projection::Orthographics`; `fovy` is the visible world height; world depth/collision remains the game's choice |
+| Side-scrolling | Game-owned drawing offset following the player, bounded by the level; transform pointer positions back to game coordinates; `Scene::draw(view, camera, renderer)` is available to custom clients |
+| Custom | Own `World.camera` or `Scene::render_view`; reuse `GameShell`/`Lifecycle`, fixed input accumulation and saves; test camera changes and menu gating |
+
+For example, a fixed orthographic view needs no new controller framework:
+
+```rust,ignore
+let mut world = World::new([8., 10., 8.], [0., 0., 0.]);
+world.camera.projection = macroquad::camera::Projection::Orthographics;
+world.camera.fovy = 12.; // world height, not radians in orthographic mode
+scene.world(0, Rect::new(0, 0, 800, 450), world);
+```
+
+Following, orbit, side-scrolling and custom views require game-owned behavior; the
+coordinator reports that implementation step when the sample does not supply it.
+A change to perspective must include appropriate look, movement, picking and focus tests.
+
+## Portable interface ownership
+
+`two_d::client::run` retains prototype overlays. Three levels use the same client:
+
+1. Keep `Game::interface` and `Theme` defaults for a prototype.
+2. Override `Game::theme()` for background/panel/text/accent colors, a named font,
+   panel bounds, padding, heading/body sizes and an optional pulse period. Override
+   `interface` to add artwork through Scene sprites/geometry or motion via `UiFrame.elapsed`.
+3. Replace `Game::interface(&self, scene, frame) -> ui::Layout` entirely. Draw any
+   layout and register its logical hit rectangles with `layout.button(rect, ui::Action)`.
+
+`UiFrame` exposes `screen` (Start/Playing/Paused/Won/Lost), focus, pointer, selected
+navigation index, elapsed presentation seconds, canvas size, sound/music toggles,
+notices, `menu_status()` and font metrics. Register buttons in keyboard/controller
+navigation order; arrows/stick/D-pad move focus, Enter/Space/South activates, and
+clicks hit rectangles. Draw the focus indicator using `frame.selected`.
+Available actions are Start, Resume, TogglePause, Restart, Save, Load, ToggleSound,
+ToggleMusic and Quit. R/K/L/Esc/M/N remain shared shortcuts. A playing HUD may expose
+buttons too. The game owns appearance; the client executes every action, storage
+error notice and restart and consumes that frame's gameplay input. Outcome screens
+freeze gameplay. Focus loss pauses; regaining focus needs Resume. Pending input and
+look are cleared at transitions. `run_with_focus::<G>(platform::focused)` uses a native
+host's foreground callback; the new starter includes the Windows host hook. Legacy
+`run` retains its old default callback, so existing hosts should adopt the focus hook.
+Unattended captures/scripts use a focused baseline; the `focus:0@FROM-TO` script cue exercises focus loss without depending on a CI foreground window. No UI action or animation becomes part of authoritative simulation.
+
+```rust,ignore
+fn interface(&self, scene: &mut Scene, frame: &UiFrame) -> ui::Layout {
+    let mut layout = ui::Layout::default();
+    if frame.screen == ui::Screen::Paused {
+        scene.text_with_font(210, "Continue observations", Point::new(65, 180),
+                             24., paper_ink, "notebook");
+        layout.button(Rect::new(55, 150, 290, 45), ui::Action::Resume);
+    }
+    // Draw your own notices, settings state and other screens as needed.
+    layout
+}
+```
+
+Fully replaced interfaces own notice placement too; keep save/load errors visible.
+`show_hud()` still controls the default labels; `cue_particles()` disables prototype
+bursts independently of sound. All overlays use an 800×450 logical canvas, letterboxed
+by the shared viewport; layout positions and hit tests scale together.
+
+## Portable fonts
+
+Declare runtime assets with `Game::fonts() -> &'static [draw::FontAsset]`, for example
+`&[FontAsset { id: "notebook", file: "assets/fonts/Notebook.ttf" }]`.
+`Scene::text_with_font(layer, text, baseline, size, color, "notebook")` selects it.
+`frame.fonts.measure(text, Some("notebook"), size)?` returns logical width/height/baseline
+metrics using the exact draw font and scale. Use `None` for the prototype font.
+Fonts load once; invalid files, duplicate IDs and undeclared font names fail explicitly.
+All queued glyphs are measured before any draw batch; the raster size stays 64px while
+window scaling changes, preventing atlas replacement from invalidating earlier text.
+TTF/OTF support and glyph coverage depend on the bundled font; ship its license and
+verify the actual characters, contrast and small-window layout. This is text measurement,
+not complex-script shaping or an independent UI framework.
+Put fonts under `assets/fonts` and add `"package": ["assets"]` to `assets/identity.json`
+for runtime assets (the embedded-only starter does not need this declaration).
+The normal package manifest then includes fonts, licenses and nested audio files.
+Resolve an asset root with `devkit::runtime_assets` in native glue when launching from
+another directory, as [Identity Lab](../examples/identity-lab/README.md) demonstrates.
+
+Identity Lab shares one switch-puzzle simulation between a notebook index, a relay
+instrument and a toy arcade. Its [presentation module](../examples/identity-lab/src/presentation.rs)
+is a working example of full custom layouts, fonts, motion and identical actions;
+its named audio bindings use the [audio contract](AUDIO.md#portable-shared-client).
+
+The shared client accepts `--script` through the existing Timeline parser for reproducible
+presentation inspection: `start`, `resume`, `pause`, `restart`, `save`, `load`, `sound`,
+`music`, `quit`, `left/right/up/down`, `action`, `pointer:X/Y`, `click:X/Y`, `focus:0/1`.
+For example `--script "start@2,pause@14,resume@20" --capture NEW_DIR --frames 1,10,16,22`.
+Coordinates are logical; clicks use the renderer's registered hit regions and game device
+mapping, then the same fixed-step intentions. Scripts/captures disable progress autosave
+and use deterministic frame seconds, but save/load actions use normal Snapshot storage.
+Set `BLUEENGINE_DATA_DIR` to a scratch directory for unattended storage tests.

@@ -189,7 +189,9 @@ class FindToolsTests(unittest.TestCase):
             (self.game / 'Cargo.toml').write_text('[dependencies]\n' + dependency + '\n')
             for modules in ({}, {'tomllib': None}):
                 with self.subTest(dependency=dependency, modules=modules), patch.dict(sys.modules, modules):
-                    self.assertEqual(Path(game_check.find_tools(self.game)), Path(built))
+                    # Windows temp roots can use RUNNER~1 while discovery expands
+                    # the same existing file to runneradmin. Compare file identity.
+                    self.assertTrue(Path(game_check.find_tools(self.game)).samefile(built))
 
     def test_packaged_tools_and_path_remain_available(self):
         built = self.build('itest')

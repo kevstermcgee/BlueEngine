@@ -83,6 +83,18 @@ def select(root, task, kind, project, targets, template, networking):
     two_d = bool(re.search(r'\b2[ -]?d\b|two[ -]dimensional', text))
     three_d = bool(re.search(r'\b3[ -]?d\b|three[ -]dimensional', text))
     presentation = 'hybrid' if 'hybrid' in text or two_d and three_d else '2d' if two_d else '3d' if three_d else None
+    camera_patterns = {
+        'first-person': r'\bfirst[ -]person\b|\bfps\b',
+        'third-person': r'\bthird[ -]person\b|\bfollow(?:ing)? camera\b|\borbit(?:ing)? camera\b',
+        'fixed-camera': r'\bfixed[ -]camera\b|\bcinematic camera\b',
+        'top-down': r'\btop[ -]down\b',
+        'isometric': r'\bisometric\b|\borthographic\b',
+        'side-scrolling': r'\bside[ -]scroll(?:ing|er)?\b',
+        'custom': r'\bcustom (?:game[ -]owned )?camera\b|\bgame[ -]owned camera\b',
+    }
+    cameras = [name for name, pattern in camera_patterns.items() if re.search(pattern, text)]
+    if presentation is None and cameras:
+        presentation = '3d' if 'first-person' in cameras or 'third-person' in cameras else '2d' if 'top-down' in cameras or 'side-scrolling' in cameras else None
     declarative = bool(re.search(r'\b(gamedocument|declarative)\b', text))
     mechanics = [name for name in ('enemies', 'projectiles', 'physics', 'scoring', 'ai', 'timers', 'counters', 'interactables')
                  if re.search(r'\b' + name + r'\b', text)]
@@ -122,6 +134,8 @@ def select(root, task, kind, project, targets, template, networking):
         if template is None:
             if declarative:
                 template = 'stock'
+            elif 'first-person' in cameras:
+                template = 'custom-sim'
             elif network != 'offline' or native_physics or (presentation != '2d' and set(mechanics) & {'enemies', 'projectiles', 'physics', 'scoring', 'ai'}):
                 template = 'custom-sim'
             elif presentation:
@@ -159,6 +173,12 @@ def select(root, task, kind, project, targets, template, networking):
         if native_physics and starter['runtime'] == 'portable':
             gaps.append({'kind': 'unsupported_combination', 'detail': 'Portable built-in collision is 2D; requested native physics/world APIs need a custom simulation/client.',
                          'extension': 'docs/CUSTOM_SIM_CHEATSHEET.md', 'next': 'Select custom-sim and implement the requested presentation deliberately.'})
+        for camera in cameras:
+            if camera not in starter['cameras']:
+                gaps.append({'kind': 'camera_implementation_required',
+                             'detail': f'{template} does not implement the requested {camera} camera/input behavior. The camera requirement is retained.',
+                             'extension': 'docs/GAME_PRESENTATION.md#camera-and-interaction',
+                             'next': 'Implement and verify that camera and its input/interaction conventions using the documented existing APIs; do not claim the sample satisfies it.'})
         runtime, feature = starter['runtime'], starter['feature']
     else:
         runtime, feature = None, None
@@ -183,7 +203,7 @@ def select(root, task, kind, project, targets, template, networking):
     limitations = [] if coordinated else ['This route delegates to existing tools; portable project and engine checks supply coordinated stages.']
     return {'kind': kind, 'template': template, 'runtime': runtime, 'targets': targets,
             'networking': network, 'feature': feature,
-            'requested': {'presentation': presentation, 'mechanics': mechanics, 'authoring': 'GameDocument' if declarative else None}, 'uncertainty': uncertainty, 'gaps': gaps,
+            'requested': {'presentation': presentation, 'cameras': cameras, 'mechanics': mechanics, 'authoring': 'GameDocument' if declarative else None}, 'uncertainty': uncertainty, 'gaps': gaps,
             'coordinated': coordinated, 'limitations': limitations}
 
 

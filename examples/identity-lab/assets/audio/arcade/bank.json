@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {
+    "gesture": [
+      {
+        "file": "sfx-gesture-0.wav",
+        "checksum": "81154ba3fb3ad86e",
+        "frames": 44100,
+        "peak": 0.14082144,
+        "rms": 0.014692866,
+        "dc": 7.6224615e-7,
+        "seam_jump": 0.0
+      }
+    ],
+    "open": [
+      {
+        "file": "sfx-open-0.wav",
+        "checksum": "7b72ba766401e4b7",
+        "frames": 44100,
+        "peak": 0.14092991,
+        "rms": 0.017823864,
+        "dc": 0.0000020165155,
+        "seam_jump": 0.0
+      }
+    ],
+    "reject": [
+      {
+        "file": "sfx-reject-0.wav",
+        "checksum": "1862de385e58316a",
+        "frames": 44100,
+        "peak": 0.099910595,
+        "rms": 0.01355934,
+        "dc": 0.00003308969,
+        "seam_jump": 0.0
+      }
+    ],
+    "resolve": [
+      {
+        "file": "sfx-resolve-0.wav",
+        "checksum": "b7cd08f700285f1c",
+        "frames": 44982,
+        "peak": 0.16220257,
+        "rms": 0.024571575,
+        "dc": 0.0000011213817,
+        "seam_jump": 0.0
+      }
+    ],
+    "tick": [
+      {
+        "file": "sfx-tick-0.wav",
+        "checksum": "547f4df030efa2ee",
+        "frames": 44100,
+        "peak": 0.10180859,
+        "rms": 0.015987845,
+        "dc": 4.8157744e-7,
+        "seam_jump": 0.0
+      }
+    ]
+  },
+  "music": {
+    "bounce": {
+      "file": "music-bounce.wav",
+      "checksum": "bcdd79c298ffca6e",
+      "frames": 160364,
+      "peak": 0.16913506,
+      "rms": 0.030767197,
+      "dc": 0.000028331833,
+      "seam_jump": 0.0
+    }
+  },
+  "music_scale": 1.0
+}

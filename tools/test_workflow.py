@@ -335,6 +335,25 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertEqual(ci.count('run: python tools/be2.py check'), 1)
 
 
+class AuthoringGuideTests(unittest.TestCase):
+    def test_authoring_contract_precedes_implementation_until_level_three(self):
+        with patch.object(workflow, 'module_picks', return_value=['src/viewer/game_visuals.rs']):
+            packet = workflow.context(ROOT, 'game_presentation', level=2)
+            self.assertEqual(packet['matches'][0]['read_first'][0], 'docs/GAME_PRESENTATION.md')
+            packet = workflow.context(ROOT, 'game_presentation', level=3)
+            self.assertEqual(packet['matches'][0]['read_first'][0], 'src/viewer/game_visuals.rs')
+        for query, guide in [('How do I supply a completely custom interface and load game-specific fonts?', 'docs/GAME_PRESENTATION.md'),
+                             ('How do I assign sounds to gameplay events?', 'docs/AUDIO.md'),
+                             ('How do I change the camera perspective to first-person?', 'docs/GAME_PRESENTATION.md')]:
+            with self.subTest(query=query):
+                self.assertEqual(workflow.context(ROOT, query)['matches'][0]['read_first'][0], guide)
+
+    def test_low_level_window_queries_retain_source_discovery(self):
+        packet = workflow.context(ROOT, 'window config for a game that draws a very large mesh')
+        match = next(m for m in packet['matches'] if m['id'] == 'game_presentation')
+        self.assertIn('src/viewer/game_client.rs', match['read_first'])
+
+
 class DiskTests(unittest.TestCase):
     def test_low_space_warns_with_the_variables_that_move_cargo(self):
         usage = lambda path: SimpleNamespace(free=3e9 if 'small' in Path(path).parts else 900e9)

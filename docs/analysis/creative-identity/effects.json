@@ -1,0 +1,183 @@
+{
+  "files": [
+    {
+      "path": "examples/identity-lab/assets/audio/notebook/sfx-gesture-0.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 5733,
+      "duration_ms": 130.0,
+      "peak_dbfs": -17.17,
+      "peak_dbfs_channels": [
+        -17.17,
+        -17.17
+      ],
+      "rms_dbfs": -27.71,
+      "crest_db": 10.54,
+      "loudness_lufs_approx": -21.42,
+      "loudness_method": "one block: the file is shorter than 400 ms",
+      "dc_offset": 0.0,
+      "dc_offset_channels": [
+        0.0,
+        0.0
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": -3e-05,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 3.1e-05,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 0.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 5,
+        "centroid_hz": 12172.2,
+        "rolloff85_hz": 19250.7,
+        "dominant_hz": 13646.2,
+        "band_energy_pct": {
+          "sub": 0.0,
+          "bass": 0.02,
+          "low_mid": 2.81,
+          "high_mid": 26.5,
+          "air": 70.67
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "examples/identity-lab/assets/audio/instrument/sfx-gesture-0.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 13230,
+      "duration_ms": 300.0,
+      "peak_dbfs": -14.89,
+      "peak_dbfs_channels": [
+        -14.89,
+        -14.89
+      ],
+      "rms_dbfs": -30.8,
+      "crest_db": 15.91,
+      "loudness_lufs_approx": -28.74,
+      "loudness_method": "one block: the file is shorter than 400 ms",
+      "dc_offset": -7e-05,
+      "dc_offset_channels": [
+        -7e-05,
+        -7e-05
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 120.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 12,
+        "centroid_hz": 236.5,
+        "rolloff85_hz": 193.8,
+        "dominant_hz": 184.6,
+        "band_energy_pct": {
+          "sub": 0.02,
+          "bass": 98.36,
+          "low_mid": 0.9,
+          "high_mid": 0.53,
+          "air": 0.19
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    },
+    {
+      "path": "examples/identity-lab/assets/audio/arcade/sfx-gesture-0.wav",
+      "format": "PCM 16-bit",
+      "sample_rate": 44100,
+      "channels": 2,
+      "frames": 44100,
+      "duration_ms": 1000.0,
+      "peak_dbfs": -17.03,
+      "peak_dbfs_channels": [
+        -17.37,
+        -17.03
+      ],
+      "rms_dbfs": -36.71,
+      "crest_db": 19.68,
+      "loudness_lufs_approx": -32.34,
+      "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+      "dc_offset": 0.0,
+      "dc_offset_channels": [
+        0.0,
+        -0.0
+      ],
+      "clipped_samples": 0,
+      "clipped_pct": 0.0,
+      "clipped_longest_run": 0,
+      "first_sample": 0.0,
+      "last_sample": 0.0,
+      "loop": {
+        "enabled": false,
+        "seam_jump": 0.0,
+        "scan_available": true,
+        "suspected_click": null
+      },
+      "silence": {
+        "threshold_dbfs": -60.0,
+        "leading_ms": 0.0,
+        "trailing_ms": 720.0,
+        "longest_internal_ms": 0.0
+      },
+      "clicks": {
+        "count": 0,
+        "min_jump": 0.02,
+        "first": []
+      },
+      "spectrum": {
+        "frames": 43,
+        "centroid_hz": 701.7,
+        "rolloff85_hz": 796.7,
+        "dominant_hz": 784.1,
+        "band_energy_pct": {
+          "sub": 0.0,
+          "bass": 0.0,
+          "low_mid": 99.05,
+          "high_mid": 0.94,
+          "air": 0.01
+        }
+      },
+      "issues": [],
+      "issue_codes": []
+    }
+  ],
+  "errors": [],
+  "purpose": "Actual rendered asset measurements; physical listening not verified."
+}

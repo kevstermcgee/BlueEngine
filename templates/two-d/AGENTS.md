@@ -26,11 +26,13 @@ scripts/blue ship                     # native desktop distribution
 From the engine checkout, `python3 tools/be2.py check --game GAME_DIR --loop inner`
 records focused test evidence without engine dependency tests. Use `--loop integration`
 for native presentation compilation and `--loop shipping` for declared final targets.
-New games default to Windows EXE delivery; game.project.json can explicitly declare native development targets. The shared client already draws title/controls at (24,30)/(24,428)
-and notices at (24,395); reserve those HUD areas (logical 800×450).
-It owns start/pause/win/loss panels in (145,135,510,180); customize `menu_status()`
-instead of drawing an overlapping terminal panel. R restarts, K saves, L loads,
-Esc pauses and M toggles sound. Use a custom client when the game needs different UI.
+New games default to Windows EXE delivery; game.project.json can explicitly declare native development targets.
+For camera/input, custom themes, fully replaced interface layouts and fonts, read the
+engine docs/GAME_PRESENTATION.md contract. Use `Game::interface` and `ui::Action` to
+retain the shared lifecycle; draw notices and focus indicators in your own layout.
+For named semantic sound bindings, read docs/AUDIO.md. Starter colors, HUD/panels,
+particles and numeric sounds are optional prototype conventions, not game identity.
+R/K/L/Esc/M/N stay shared actions. Native hosts should use `run_with_focus` and the generated platform hook.
 
 Browser gameplay/WASM is retired. Do not install browser dependencies or add web targets.
 Inspect native captures and controls; compiler/tests do not prove audible hardware playback.

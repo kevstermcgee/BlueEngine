@@ -108,6 +108,57 @@ in a few calls, and measure what came out (`peak`, `rms`, `spectral_centroid`, .
 to it. `kit::audio::SoundBank` plays it: sound effects by index, and looping music stems that fade with
 the action (`start_music`/`update_music`).
 
+## Portable shared client
+
+`GameLogic::audio_banks()` accepts **effects and loops** through the existing `AudioBank`.
+Banks are loaded/checked on its worker and decoded in bounded batches before gameplay.
+`AudioBankSpec { id: "paper", root: "assets/audio/paper", music: false }` makes its loops
+follow Sound; `music: true` makes loops follow Music. All effects follow Sound.
+`audio_level(bank, layer)` still supplies read-only loop targets. Focus/menu/outcome transitions
+stop loops; resuming restarts them, matching the previous portable behavior.
+
+Bind arbitrary semantic events with `GameLogic::audio_bindings()`:
+
+```rust,ignore
+&[AudioBinding { event: "item.selected", bank: "paper", cue: "pencil", volume: 0.45 },
+  AudioBinding { event: "objective", bank: "paper", cue: "page_turn", volume: 0.65 }]
+```
+
+Drain your own event names through `take_audio_events() -> Vec<&'static str>`.
+The client consumes them after each executed fixed tick, preserving catch-up events.
+Keep transient presentation events out of saved/hash authority. The client also emits
+`ui.start`, `ui.pause`, `ui.resume`, `ui.restart`, `ui.save`, `ui.load`, `ui.settings`
+and `ui.quit` for accepted shared actions. Storage errors remain visible notices;
+save/load events mean the action was attempted, not that it succeeded.
+Multiple distinct bindings can accompany one event. Volumes are finite 0–1; variants
+cycle through AudioBank's existing round-robin. Pitch/pan are authored in PCM; live
+spatial/pitch or sample-clock synchronisation are not added here.
+
+Existing `take_cues()` indices 0/1/2 map to `pickup`/`damage`/`success` via `cue_event()`.
+Bindings override those defaults; override `cue_event` to preserve a game's own enum.
+`default_sounds() -> false` disables built-in Coin/Hit/Success synthesis entirely.
+Unbound numeric events use optional defaults; a missing configured bank/file/cue,
+duplicate binding or invalid volume is an error, never a disguised fallback.
+`--mute` explicitly bypasses bank/file/device loading and consumes events without backlog.
+Capture JSON records bank readiness and submitted **event:bank/cue** counts; it does not
+certify physical listening. Custom banks are client-side; headless simulation does no asset/device IO.
+
+Put bank directories under `assets/audio` so the standard project checker discovers
+`bank.json`. Declare `"package": ["assets"]` in `assets/identity.json` so native packaging
+includes every nested WAV; verify the isolated package smoke. Resolve the runtime root in
+native glue (`runtime_assets`) when needed. Edit source JSON, render/check a fresh directory,
+then replace the data bundle between runs: no Rust rebuild or new audio runtime is required.
+[Identity Lab](../examples/identity-lab/README.md) demonstrates imported synthetic pencil/relay
+clips, authored effects, sparse ambience, a percussive melodic loop and an intentionally
+music-free instrument. Its semantic bindings are identical; the PCM identities differ.
+
+Choose the audio identity before selecting a generator: melodic phrases, percussive
+rhythm, atmospheric texture, environmental sound, sparse punctuations or silence.
+`music.kind=score` authors notes/instruments/rhythm; `clips` imports ambience or authored
+loops; `generated` supplies rhythmic stems; `ambient` intentionally supplies pads/air.
+Changing only an ambient seed changes notes and timbre within that same ambient idiom.
+It cannot stand in for choosing a musical style. Silence and a few authored cues are valid.
+
 ## Stock GameDocument audio
 
 The stock runner and generated stock games now load checked named bundles. Opt in with

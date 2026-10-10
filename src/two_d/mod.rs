@@ -2,9 +2,12 @@
 pub use crate::runtime::{Simulation, Snapshot, StateHasher};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "two-d")]
+mod audio;
+#[cfg(feature = "two-d")]
 pub mod client;
 #[cfg(feature = "two-d")]
 pub mod draw;
+pub mod ui;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Point {
@@ -110,12 +113,20 @@ pub struct Intent {
     #[serde(default)]
     pub sprint: bool,
 }
-/// Checked authored loop bank, shared by native presentation clients.
+/// Checked authored effects and loop bank, shared by native presentation clients.
 pub struct AudioBankSpec {
     pub id: &'static str,
     pub root: &'static str,
     /// Music toggle controls score banks; Sound controls ambience banks and effects.
     pub music: bool,
+}
+/// A game-owned semantic event mapped to a named effect in a checked bank.
+/// Missing configured assets/names are errors; optional defaults apply only to unbound events.
+pub struct AudioBinding {
+    pub event: &'static str,
+    pub bank: &'static str,
+    pub cue: &'static str,
+    pub volume: f32,
 }
 /// A game only owns rules and read-only presentation. The client owns devices, storage and timing.
 pub trait GameLogic: Snapshot<Input = Intent> + Sized {
@@ -146,6 +157,20 @@ pub trait GameLogic: Snapshot<Input = Intent> + Sized {
     }
     fn audio_banks() -> &'static [AudioBankSpec] {
         &[]
+    }
+    fn audio_bindings() -> &'static [AudioBinding] {
+        &[]
+    }
+    fn default_sounds() -> bool {
+        true
+    }
+    /// Drain semantic presentation events after each fixed tick. Never affect game rules.
+    fn take_audio_events(&mut self) -> Vec<&'static str> {
+        Vec::new()
+    }
+    /// Existing numeric cues can opt into named bindings without changing their simulation.
+    fn cue_event(cue: usize) -> Option<&'static str> {
+        ["pickup", "damage", "success"].get(cue).copied()
     }
     fn audio_level(&self, _bank: &str, _layer: &str) -> f32 {
         0.25
