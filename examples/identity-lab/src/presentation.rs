@@ -34,7 +34,7 @@ fn lamp(style: u8, n: i32) -> Rect {
     match style {
         0 => Rect::new(400 + (n % 2) * 140, 155 + (n / 2) * 125, 110, 90),
         1 => Rect::new(75 + n * 175, 145, 135, 125),
-        _ => Rect::new(335 + (n % 2) * 210, 70 + (n / 2) * 165, 185, 140),
+        _ => Rect::new(335 + (n % 2) * 210, 70 + (n / 2) * 165, 185, 120),
     }
 }
 fn text(s: &mut Scene, label: impl Into<String>, x: i32, y: i32, size: f32, c: Color) {
@@ -130,8 +130,8 @@ impl<const S: u8> draw::Game for Lab<S> {
                     18.,
                     accent,
                 );
-                s.rect(2, Rect::new(55, 290, 690, 25), bg);
-                text(s, "SELECT CHANNEL / CLOSE RELAY", 70, 309, 17., ink);
+                s.rect(2, Rect::new(55, 300, 690, 20), bg);
+                text(s, "SELECT CHANNEL / CLOSE RELAY", 70, 315, 16., ink);
             }
             _ => {
                 for n in 0..7 {
@@ -222,7 +222,9 @@ impl<const S: u8> draw::Game for Lab<S> {
                 s,
                 format!("{} {}", n + 1, if on { "ON" } else { "OFF" }),
                 r.x + 16,
-                r.y + r.h - 5,
+                // Text is positioned by its baseline; leave room for glyphs below
+                // the button, its shadow and the keyboard selection marker.
+                r.y + r.h + 24,
                 19.,
                 ink,
             );
