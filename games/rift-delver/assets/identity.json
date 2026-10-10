@@ -1,0 +1,16 @@
+{
+  "title": "Rift Delver",
+  "tagline": "Descend into a lost machine world. Build powerful circuits, defeat Wardens and extract your salvage.",
+  "controls": "WASD move, mouse aim, LMB fire, Shift dash, RMB shockwave, Space jump, Q weapon, E enter/descend, 1-4 choices/workshop, F5/F9 save/load, Esc settings",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,180",
+    "--exit-after",
+    "190",
+    "--script",
+    "enter@2,fire:3-190"
+  ],
+  "engine_revision": "9189d68aabf0"
+}

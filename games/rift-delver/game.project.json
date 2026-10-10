@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "id": "rift-delver",
+  "runtime": "legacy-native",
+  "presentation": "3d",
+  "targets": [
+    "windows",
+    "linux"
+  ],
+  "networking": "offline",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "complexity": "high",
+  "session_minutes": 45,
+  "description": "Spatial 3D expedition combat with flying enemies and projectiles, seeded upgrade drafts, extraction risk, persistent workshop and exact saves."
+}

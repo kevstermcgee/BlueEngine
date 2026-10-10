@@ -306,6 +306,10 @@
       {
         "source": "games/corkscrew-key",
         "destination": "corkscrew-key"
+      },
+      {
+        "source": "games/rift-delver",
+        "destination": "rift-delver"
       }
     ],
     "prototypes": [
