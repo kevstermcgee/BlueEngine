@@ -44,7 +44,7 @@ def main():
         def tap(name):
             key(name,True);time.sleep(0.12);key(name,False);time.sleep(0.12)
         with (out/'game.log').open('w') as log:
-            game=subprocess.Popen([str(Path(args.binary).resolve()),'--capture',str(out/'frames'),'--frames','90,350','--exit-after','380','--size','1280x720','--mute','--save-dir',str(out/'saves')],env={**os.environ,'DISPLAY':display,'LIBGL_ALWAYS_SOFTWARE':'1','ALSA_CONFIG_PATH':str(out/'asound.conf')},stdout=log,stderr=log)
+            game=subprocess.Popen([str(Path(args.binary).resolve()),'--capture',str(out/'frames'),'--frames','30,80','--exit-after','100','--size','1280x720','--mute','--save-dir',str(out/'saves')],env={**os.environ,'DISPLAY':display,'LIBGL_ALWAYS_SOFTWARE':'1','ALSA_CONFIG_PATH':str(out/'asound.conf')},stdout=log,stderr=log)
             time.sleep(2)
             tap('e');time.sleep(0.5);tap('F5');time.sleep(0.25)
             key('w',True);time.sleep(1.2);tap('Shift_L');time.sleep(0.4);key('w',False)
