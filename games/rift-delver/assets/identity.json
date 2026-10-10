@@ -6,11 +6,11 @@
     "--capture",
     "{dir}",
     "--frames",
-    "30,180",
+    "12,45",
     "--exit-after",
-    "190",
+    "50",
     "--script",
-    "enter@2,fire:3-190"
+    "enter@2,fire:3-50"
   ],
   "engine_revision": "9189d68aabf0"
 }

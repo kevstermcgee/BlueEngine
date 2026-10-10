@@ -266,7 +266,7 @@ impl Sim {
     fn begin_wave(&mut self) {
         self.s.phase = Phase::Combat;
         self.s.remaining = 7 + self.s.depth * 2 + self.s.wave * 3;
-        self.s.spawn_cd = 75;
+        self.s.spawn_cd = 30;
         self.s.combat_ticks = 0;
         self.s.bolts.clear();
         self.walls = obstacles(self.s.depth);
