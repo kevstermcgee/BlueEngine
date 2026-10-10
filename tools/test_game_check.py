@@ -122,6 +122,11 @@ class GameCheckTests(unittest.TestCase):
 class FindToolsTests(unittest.TestCase):
     """A game finds a built be2-tools in the engine checkout it depends on, without BE2_TOOLS."""
 
+    def assert_same_file(self, actual, expected):
+        # Windows temp roots may use RUNNER~1 while discovery expands runneradmin.
+        # Both paths must name the same existing file, regardless of spelling.
+        self.assertTrue(Path(actual).samefile(expected), f'{actual!r} is not {expected!r}')
+
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
         self.addCleanup(temp.cleanup)
@@ -151,19 +156,19 @@ class FindToolsTests(unittest.TestCase):
 
     def test_a_binary_in_the_engine_target_dir_is_found(self):
         built = self.build('fast')
-        self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), Path(built).resolve())
+        self.assert_same_file(game_check.find_tools(self.game), built)
 
     def test_release_is_preferred_over_debug(self):
         self.build('debug')
         release = self.build('release')
-        self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), Path(release).resolve())
+        self.assert_same_file(game_check.find_tools(self.game), release)
 
     def test_itest_is_preferred_over_old_profiles_and_path(self):
         self.build('release')
         self.build('fast')
         built = self.build('itest')
         with patch.object(game_check.shutil, 'which', return_value='/old/be2-tools'):
-            self.assertEqual(Path(game_check.find_tools(self.game)), Path(built))
+            self.assert_same_file(game_check.find_tools(self.game), built)
 
     def test_selected_absolute_and_relative_target_match_authoring_discovery(self):
         from tools import author
@@ -175,8 +180,8 @@ class FindToolsTests(unittest.TestCase):
                 built = base / 'itest' / name
                 built.parent.mkdir(parents=True)
                 built.write_bytes(b'current tools')
-                self.assertEqual(Path(game_check.find_tools(self.game)), built)
-                self.assertEqual(author.native_binary(self.engine), built)
+                self.assert_same_file(game_check.find_tools(self.game), built)
+                self.assert_same_file(author.native_binary(self.engine), built)
                 built.unlink()
                 # Do not substitute the engine's default target when Cargo selected another one.
                 self.assertIsNone(game_check.find_tools(self.game))
@@ -189,16 +194,14 @@ class FindToolsTests(unittest.TestCase):
             (self.game / 'Cargo.toml').write_text('[dependencies]\n' + dependency + '\n')
             for modules in ({}, {'tomllib': None}):
                 with self.subTest(dependency=dependency, modules=modules), patch.dict(sys.modules, modules):
-                    # Windows temp roots can use RUNNER~1 while discovery expands
-                    # the same existing file to runneradmin. Compare file identity.
-                    self.assertTrue(Path(game_check.find_tools(self.game)).samefile(built))
+                    self.assert_same_file(game_check.find_tools(self.game), built)
 
     def test_packaged_tools_and_path_remain_available(self):
         built = self.build('itest')
         packaged = self.engine / 'bin' / Path(built).name
         packaged.parent.mkdir()
         packaged.write_bytes(b'packaged')
-        self.assertEqual(Path(game_check.find_tools(self.game)), packaged)
+        self.assert_same_file(game_check.find_tools(self.game), packaged)
         (self.game / 'Cargo.toml').unlink()
         with patch.object(game_check.shutil, 'which', return_value='/packaged/be2-tools'):
             self.assertEqual(game_check.find_tools(self.game), '/packaged/be2-tools')
