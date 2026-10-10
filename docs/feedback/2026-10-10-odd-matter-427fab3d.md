@@ -1,7 +1,7 @@
 # Odd Matter: AI development feedback
 
 Run: `427fab3d`.
-Project: `games/odd-matter`. State: running.
+Project: `games/odd-matter`. State: published.
 
 ## Generated mechanic
 
@@ -94,6 +94,16 @@ software rendering do not certify physical devices or audible hardware output.
 - game-tests: exit 0, 0.343 seconds.
 - game-clippy: exit 0, 0.265 seconds.
 - native-package: exit 0, 7.77 seconds.
+- generated-game-linux-windows: https://github.com/kevstermcgee/BlueEngine/actions/runs/38084464078 (exact source `f75ed9d70cff`).
+- engine-checks: https://github.com/kevstermcgee/BlueEngine/actions/runs/38084463884 (exact source `f75ed9d70cff`).
+- windows-installer-review: https://github.com/kevstermcgee/BlueEngineGames/actions/runs/38085831974 (exact source `cb574c634088`).
+- production-release: https://github.com/kevstermcgee/BlueEngineGames/actions/runs/38086050522 (exact source `cb574c634088`).
+- download-page: https://github.com/kevstermcgee/BlueEngineGames/actions/runs/38087892209 (exact source `cb574c634088`).
+
+Published game: https://kevstermcgee.github.io/BlueEngineGames/games/odd-matter/
+Immutable release: https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-f75ed9d70cff-games-cb574c634088-38086050522-1
+Installer SHA-256: `5bd9aff0a38211fd19f40455bbe66135e723e566c14a78deb8d14e7c5556d042`.
+ZIP SHA-256: `5f5b43a785932aa7b483440845b2009fd4addeaf4f8be176731ad3ec8c0df69c`.
 
 ## Supervisor-observed failed attempts
 
