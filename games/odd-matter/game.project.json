@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "odd-matter",
+  "presentation": "3d",
+  "runtime": "legacy-native",
+  "targets": [
+    "windows",
+    "linux"
+  ],
+  "networking": "offline",
+  "input": [
+    "keyboard",
+    "mouse"
+  ],
+  "description": "Native spatial parity puzzle. Slide overlapping volumes to relocate empty passages through six three-dimensional vaults. Windows x64 installer delivery; Linux development verification.",
+  "session_minutes": 20,
+  "complexity": "medium"
+}

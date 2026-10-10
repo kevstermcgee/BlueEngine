@@ -310,6 +310,10 @@
       {
         "source": "games/rift-delver",
         "destination": "rift-delver"
+      },
+      {
+        "source": "games/odd-matter",
+        "destination": "odd-matter"
       }
     ],
     "prototypes": [

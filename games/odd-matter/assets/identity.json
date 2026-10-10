@@ -1,0 +1,20 @@
+{
+  "title": "Odd Matter",
+  "tagline": "More matter. Less wall.",
+  "controls": "1 drone / 2-4 bars, WASD depth + sideways, Q/E down + up, right-drag orbit / wheel zoom, hold C cutaway, Shift + direction preview, Z undo / R retry, Enter next vault, F5/F9 save/load, Esc pause",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--script",
+    "bar1@5,up@15,drone@25,right@35,right@45,cut:0-100"
+  ],
+  "engine_revision": "91322d988d4b",
+  "package": [
+    "assets/font-license.txt",
+    "README.md"
+  ]
+}
