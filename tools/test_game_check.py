@@ -1,5 +1,6 @@
 """Exercise the shipped game runner's failure behavior and validation boundary."""
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -157,6 +158,87 @@ class FindToolsTests(unittest.TestCase):
         release = self.build('release')
         self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), Path(release).resolve())
 
+    def test_itest_is_preferred_over_old_profiles_and_path(self):
+        self.build('release')
+        self.build('fast')
+        built = self.build('itest')
+        with patch.object(game_check.shutil, 'which', return_value='/old/be2-tools'):
+            self.assertEqual(Path(game_check.find_tools(self.game)), Path(built))
+
+    def test_selected_absolute_and_relative_target_match_authoring_discovery(self):
+        from tools import author
+        self.build('itest')
+        name = 'be2-tools.exe' if os.name == 'nt' else 'be2-tools'
+        for target in (self.engine.parent / 'shared target', Path('relative target')):
+            with self.subTest(target=target), patch.dict(os.environ, {'CARGO_TARGET_DIR': str(target)}):
+                base = target if target.is_absolute() else self.engine / target
+                built = base / 'itest' / name
+                built.parent.mkdir(parents=True)
+                built.write_bytes(b'current tools')
+                self.assertEqual(Path(game_check.find_tools(self.game)), built)
+                self.assertEqual(author.native_binary(self.engine), built)
+                built.unlink()
+                # Do not substitute the engine's default target when Cargo selected another one.
+                self.assertIsNone(game_check.find_tools(self.game))
+
+    def test_dependency_spellings_and_python_3_10_find_tools(self):
+        built = self.build('itest')
+        for dependency in ('be2 = { path = "../BlueEngine" }',
+                           'vesper3d = { path = "../BlueEngine" }',
+                           'engine = { package = "be2", path = "../BlueEngine" }'):
+            (self.game / 'Cargo.toml').write_text('[dependencies]\n' + dependency + '\n')
+            for modules in ({}, {'tomllib': None}):
+                with self.subTest(dependency=dependency, modules=modules), patch.dict(sys.modules, modules):
+                    self.assertEqual(Path(game_check.find_tools(self.game)), Path(built))
+
+    def test_packaged_tools_and_path_remain_available(self):
+        built = self.build('itest')
+        packaged = self.engine / 'bin' / Path(built).name
+        packaged.parent.mkdir()
+        packaged.write_bytes(b'packaged')
+        self.assertEqual(Path(game_check.find_tools(self.game)), packaged)
+        (self.game / 'Cargo.toml').unlink()
+        with patch.object(game_check.shutil, 'which', return_value='/packaged/be2-tools'):
+            self.assertEqual(game_check.find_tools(self.game), '/packaged/be2-tools')
+
+    def test_project_refresh_preserves_metadata_and_other_scripts(self):
+        source = self.engine / 'templates/game_project.py'
+        source.parent.mkdir()
+        source.write_bytes(b'canonical validator')
+        (self.game / 'game.project.json').write_bytes(b'authored requirements')
+        scripts = self.game / 'scripts'
+        scripts.mkdir()
+        (scripts / 'check.py').write_bytes(b'custom checker')
+        for previous in (None, b'old validator'):
+            if previous is not None:
+                (scripts / 'project.py').write_bytes(previous)
+            self.assertEqual(game_check.refresh_project(self.game), scripts / 'project.py')
+            self.assertEqual((scripts / 'project.py').read_bytes(), source.read_bytes())
+            self.assertEqual((self.game / 'game.project.json').read_bytes(), b'authored requirements')
+            self.assertEqual((scripts / 'check.py').read_bytes(), b'custom checker')
+
+    def test_unavailable_refresh_leaves_existing_validator_intact(self):
+        scripts = self.game / 'scripts'
+        scripts.mkdir()
+        (scripts / 'project.py').write_bytes(b'local validator')
+        with self.assertRaisesRegex(ValueError, 'source engine dependency'):
+            game_check.refresh_project(self.game)
+        self.assertEqual((scripts / 'project.py').read_bytes(), b'local validator')
+
+    def test_failed_refresh_preserves_completed_validator_and_cleans_temporary_file(self):
+        source = self.engine / 'templates/game_project.py'
+        source.parent.mkdir()
+        source.write_bytes(b'canonical validator')
+        scripts = self.game / 'scripts'
+        scripts.mkdir()
+        validator = scripts / 'project.py'
+        validator.write_bytes(b'local validator')
+        with patch.object(game_check.os, 'replace', side_effect=OSError('write failed')):
+            with self.assertRaisesRegex(OSError, 'write failed'):
+                game_check.refresh_project(self.game)
+        self.assertEqual(validator.read_bytes(), b'local validator')
+        self.assertEqual(list(scripts.iterdir()), [validator])
+
     def test_the_environment_variable_still_wins(self):
         self.build('release')
         with patch.dict(os.environ, {'BE2_TOOLS': '/somewhere/be2-tools'}):
@@ -170,6 +252,67 @@ class FindToolsTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('BE2_TOOLS'), 'Real native integration runs through check_authoring.py')
 class GeneratedGameIntegrationTests(unittest.TestCase):
+    def test_all_starters_validate_plan_and_use_the_fresh_authoring_binary(self):
+        from tools import workflow
+        engine = Path(__file__).resolve().parents[1]
+        requirements = workflow.project_module(engine)
+        native = Path(os.environ['BE2_TOOLS']).resolve()
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+        env = os.environ.copy()
+        env.pop('BE2_TOOLS', None)
+        env['CARGO_TARGET_DIR'] = str(native.parent.parent)
+        if native.parent.name == 'debug':
+            # --profile dev is an explicit verification override. Canonical map authoring uses itest.
+            env['BE2_TOOLS'] = str(native)
+        with tempfile.TemporaryDirectory() as directory:
+            for starter, presentation in [('stock', '3d'), ('custom-sim', '3d'), ('two-d', '2d'),
+                                          ('three-d', '3d'), ('hybrid', 'hybrid'), ('portable', 'hybrid')]:
+                with self.subTest(starter=starter):
+                    project = Path(directory) / starter
+                    subprocess.run([str(native), 'new-game', 'scaffold-' + starter, str(project),
+                                    str(engine), starter], check=True, capture_output=True, creationflags=flags)
+                    declaration = requirements.validate_project(project)
+                    self.assertEqual(declaration['presentation'], presentation)
+                    self.assertEqual(declaration['runtime'],
+                                     'legacy-native' if starter in ('stock', 'custom-sim') else 'portable')
+                    self.assertIn('CLI starter: `' + starter + '`; project runtime: `' + declaration['runtime'] + '`',
+                                  (project / 'STATUS.md').read_text())
+                    self.assertEqual(declaration['targets'], ['windows'])
+                    declaration['targets'] = ['linux', 'windows']
+                    (project / 'game.project.json').write_text(json.dumps(declaration))
+                    self.assertEqual((project / 'scripts/project.py').read_bytes(),
+                                     (engine / 'templates/game_project.py').read_bytes())
+                    for loop in ('inner', 'integration', 'shipping'):
+                        plan = workflow.game_plan(engine, project, loop)
+                        self.assertEqual(plan['requirements']['native_packaging'], ['linux', 'windows'])
+                        self.assertTrue(plan['commands'])
+                    self.assertEqual(game_check.engine_path(project), engine)
+                    command = [sys.executable, str(project / 'scripts/check.py'), '--skip-ship']
+                    if starter not in ('stock', 'custom-sim'):
+                        command.append('--content-only')
+                    checked = subprocess.run(command, cwd=directory, env=env, capture_output=True,
+                                             text=True, timeout=600, creationflags=flags)
+                    self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+                    summary = json.loads(checked.stdout)
+                    report = json.loads(Path(summary['report']).read_text())
+                    self.assertTrue(report['ok'])
+                    self.assertEqual(report['native_sha256'], hashlib.sha256(native.read_bytes()).hexdigest())
+                    if starter in ('stock', 'custom-sim'):
+                        self.assertIn('test', [item['command'][1] for item in report['checks']])
+                    if starter == 'custom-sim':
+                        (project / 'scripts/project.py').unlink()
+                        missing = subprocess.run(command, env=env, capture_output=True, text=True,
+                                                 creationflags=flags)
+                        self.assertNotEqual(missing.returncode, 0)
+                        self.assertIn('--refresh-project', missing.stderr)
+                        refreshed = subprocess.run([sys.executable, str(project / 'scripts/check.py'),
+                                                    '--refresh-project'], env=env, capture_output=True,
+                                                   text=True, creationflags=flags)
+                        self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
+                        self.assertEqual(requirements.validate_project(project), declaration)
+                        self.assertEqual((project / 'scripts/project.py').read_bytes(),
+                                         (engine / 'templates/game_project.py').read_bytes())
+
     def test_generated_content_passes_and_invalid_map_fails(self):
         native = str(Path(os.environ['BE2_TOOLS']).resolve())
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)

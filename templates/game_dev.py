@@ -55,7 +55,7 @@ def main(argv):
         import importlib.util
         helper = ROOT / 'scripts/project.py'
         if not helper.is_file():
-            sys.exit('game.project.json needs scripts/project.py; refresh generated project tooling')
+            sys.exit('game.project.json needs scripts/project.py; run python scripts/check.py --refresh-project')
         spec = importlib.util.spec_from_file_location('game_requirements', helper)
         requirements = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(requirements)

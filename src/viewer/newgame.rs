@@ -207,12 +207,6 @@ pub fn scaffold_new_game_with(
     };
     write_shipping_files(&project, identity, template)?;
     write_scripts(&project)?;
-    if template.is_portable() {
-        project.write(
-            "scripts/project.py",
-            include_str!("../../templates/game_project.py"),
-        )?;
-    }
     fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
     Ok(())
 }
@@ -345,6 +339,58 @@ fn write_shipping_files(
     project.write(
         "scripts/dev.py",
         include_str!("../../templates/game_dev.py"),
+    )?;
+    project.write(
+        "scripts/project.py",
+        include_str!("../../templates/game_project.py"),
+    )?;
+    // Starter names describe code generation; project runtimes describe the native client route.
+    // Keep the public Cargo-name contract, including uppercase/underscores and long names, while
+    // giving the requirements document its own canonical ID.
+    let mut id = project.name.to_ascii_lowercase().replace('_', "-");
+    if !id.as_bytes()[0].is_ascii_alphabetic() {
+        id.insert_str(0, "game-");
+    }
+    id.truncate(48);
+    let presentation = match template {
+        Template::TwoD => "2d",
+        Template::Hybrid | Template::Portable => "hybrid",
+        _ => "3d",
+    };
+    let runtime = if template.is_portable() {
+        "portable"
+    } else {
+        "legacy-native"
+    };
+    let mut requirements = serde_json::json!({
+        "schema_version": 1,
+        "id": id,
+        "presentation": presentation,
+        "runtime": runtime,
+        "targets": starter_catalog()["starters"][template.name()]["default_targets"],
+        "networking": "offline",
+        "input": ["keyboard", "mouse", "controller"],
+        "description": identity.tagline,
+        "session_minutes": 1,
+        "complexity": "low",
+    });
+    if template.is_portable() {
+        requirements["mobile_controls"] =
+            serde_json::json!({"layout": "dpad", "action_label": null});
+    }
+    project.write(
+        "game.project.json",
+        serde_json::to_string_pretty(&requirements)?,
+    )?;
+    let status = fs::read_to_string(project.dir.join("STATUS.md"))?;
+    project.write(
+        "STATUS.md",
+        format!(
+            "{status}\nProject requirements: `game.project.json`, checked by `scripts/project.py`.\n\
+             CLI starter: `{}`; project runtime: `{runtime}`; presentation: `{presentation}`.\n\
+             Update the declared targets deliberately before running project checks.\n",
+            template.name()
+        ),
     )?;
     if !template.is_portable() {
         project.write(
@@ -562,7 +608,6 @@ fn scaffold_two_d(project: &Project, template: Template) -> Result<Identity> {
             format!("{}{}{}", &original[..start], draw, &original[end..]),
         )?;
     }
-    project.write("game.project.json",serde_json::to_string_pretty(&serde_json::json!({"schema_version":1,"id":project.name,"presentation":presentation,"runtime":"portable","mobile_controls":{"layout":"dpad","action_label":null},"targets":starter_catalog()["starters"][template.name()]["default_targets"],"networking":"offline","input":["keyboard","mouse","controller"],"description":identity.tagline,"session_minutes":1,"complexity":"low"}))?)?;
     Ok(identity)
 }
 

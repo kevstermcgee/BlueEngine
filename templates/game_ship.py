@@ -1852,7 +1852,7 @@ def load_project(root, platform_name=None):
     if (root / 'game.project.json').exists():
         import importlib.util
         helper=root/'scripts/project.py'
-        if not helper.is_file(): raise ConfigError('game.project.json requires scripts/project.py; refresh generated project tooling')
+        if not helper.is_file(): raise ConfigError('game.project.json requires scripts/project.py; run python scripts/check.py --refresh-project')
         spec=importlib.util.spec_from_file_location('be2_project_requirements',helper)
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         try: module.native_target(root, platform_name or host_platform())

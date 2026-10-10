@@ -35,6 +35,29 @@ directory or `Cargo.toml` fails before creating output. Omitting `ENGINE_PATH`
 retains the project-relative `../BlueEngine` default. The public Rust
 `scaffold_new_game` / `scaffold_new_game_with` APIs still take project-relative paths.
 
+Every starter emits `game.project.json` and the canonical `scripts/project.py`
+validator. Update the declared targets and requirements before checking the game;
+the initial target is Windows. CLI starter names and project runtimes are distinct:
+`stock` and `custom-sim` declare `runtime: legacy-native`, `presentation: 3d`;
+the other starters declare `runtime: portable`. Cargo package names remain unchanged;
+the requirements ID is lowercase, uses hyphens for underscores, gains `game-` when
+needed to start with a letter, and is limited to 48 characters.
+
+The generated checker finds the authoring tools in the game's engine dependency,
+including `target/itest/be2-tools` and a selected `CARGO_TARGET_DIR`. Relative target
+directories resolve from that engine checkout, as in `be2.py map`. Packaged engine
+tools are preferred when present; PATH is a fallback. `BE2_TOOLS` and `--tools`
+remain explicit overrides. Discovery checks presence; run `python3 tools/be2.py map
+help` in the engine checkout to ensure Cargo has built fresh tooling (`python` on
+Windows). Scaffolding through `be2.py map new-game` already performs that step.
+
+If the validator is missing or needs updating, the current checker supports
+`python scripts/check.py --refresh-project`. It copies only the canonical validator
+from the source engine dependency and exits without running checks; it preserves
+authored metadata and other scripts. Older checkers need updating from
+`templates/game_check.py` before using this option. Packaged tool users without an
+engine source checkout must obtain the matching validator from their engine package.
+
 For multiplayer, use the **custom-sim** project plus the tiny `ToyGame`/`ToyView` and
 `be2-toy-server` assembly in [NETPLAY.md](NETPLAY.md). The old multiplayer template is archived.
 

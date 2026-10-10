@@ -119,9 +119,11 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
 }
 
 #[test]
-fn portable_starters_emit_native_requirements_and_no_browser_execution_path() {
+fn all_starters_emit_native_requirements_and_no_browser_execution_path() {
     use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
     for (template, presentation) in [
+        (Template::Stock, "3d"),
+        (Template::CustomSim, "3d"),
         (Template::TwoD, "2d"),
         (Template::ThreeD, "3d"),
         (Template::Hybrid, "hybrid"),
@@ -140,16 +142,25 @@ fn portable_starters_emit_native_requirements_and_no_browser_execution_path() {
         let project: serde_json::Value =
             serde_json::from_slice(&std::fs::read(dir.join("game.project.json")).unwrap()).unwrap();
         assert_eq!(project["presentation"], presentation);
-        assert_eq!(project["runtime"], "portable");
+        assert_eq!(
+            project["runtime"],
+            if template.is_portable() {
+                "portable"
+            } else {
+                "legacy-native"
+            }
+        );
         assert_eq!(project["targets"], serde_json::json!(["windows"]));
         assert!(!dir.join("scripts/web.py").exists());
         assert!(dir.join("scripts/project.py").is_file());
         let guide = std::fs::read_to_string(dir.join("AGENTS.md")).unwrap();
         assert!(guide.contains("ship --no-install"));
         assert!(!guide.contains("scripts/blue web build"));
-        assert!(std::fs::read_to_string(dir.join("src/lib.rs"))
-            .unwrap()
-            .contains("impl GameLogic"));
+        if template.is_portable() {
+            assert!(std::fs::read_to_string(dir.join("src/lib.rs"))
+                .unwrap()
+                .contains("impl GameLogic"));
+        }
         #[cfg(unix)]
         {
             let rejected = std::process::Command::new(dir.join("scripts/blue"))
@@ -161,6 +172,37 @@ fn portable_starters_emit_native_requirements_and_no_browser_execution_path() {
             assert!(String::from_utf8_lossy(&rejected.stderr).contains("retired"));
             assert!(!dir.join("dist").exists());
         }
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[test]
+fn requirements_ids_preserve_the_public_cargo_name_contract() {
+    use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
+    for (template, name, id) in [
+        (Template::Stock, "My_Game", "my-game"),
+        (Template::CustomSim, "_hidden", "game--hidden"),
+        (
+            Template::Portable,
+            "abcdefghijklmnopqrstuvwxyz-abcdefghijklmnopqrstuvwxyz",
+            "abcdefghijklmnopqrstuvwxyz-abcdefghijklmnopqrstu",
+        ),
+    ] {
+        let dir = std::env::temp_dir().join(format!(
+            "blueengine-cargo-name-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        scaffold_new_game_with(name, &dir, None, template).unwrap();
+        let project: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(dir.join("game.project.json")).unwrap()).unwrap();
+        assert_eq!(project["id"], id);
+        assert!(std::fs::read_to_string(dir.join("Cargo.toml"))
+            .unwrap()
+            .contains(&format!("name = \"{name}\"")));
         std::fs::remove_dir_all(dir).unwrap();
     }
 }

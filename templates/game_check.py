@@ -248,32 +248,54 @@ def run(root, native, content_only=False, scenarios=(), skip_ship=False, ship_fo
 
 
 def find_tools(root):
-    """A built be2-tools: BE2_TOOLS, then PATH, then the engine checkout this game depends on (its target
-    directory, release/fast/debug). Returns None when there is none, so the caller can say how to build one."""
-    found = os.environ.get('BE2_TOOLS') or shutil.which('be2-tools')
-    if found:
-        return found
-    manifest = (Path(root) / 'Cargo.toml')
-    if not manifest.is_file():
-        return None
-    match = re.search(r'^vesper3d\s*=\s*\{[^}]*?path\s*=\s*"([^"]+)"', manifest.read_text(encoding='utf-8'), re.M)
-    if not match:
-        return None
-    engine = (Path(root) / match.group(1)).resolve()
-    suffix = '.exe' if os.name == 'nt' else ''
-    targets = [Path(os.environ['CARGO_TARGET_DIR'])] if os.environ.get('CARGO_TARGET_DIR') else []
-    for base in targets + [engine / 'target']:
-        for profile in ('release', 'fast', 'debug', 'be2-headless/release'):
-            candidate = base / profile / ('be2-tools' + suffix)
+    """Match tools/author.py discovery in the game's engine dependency; PATH is a packaged fallback.
+    Discovery checks presence only. The coordinator's map command uses Cargo to ensure freshness."""
+    explicit = os.environ.get('BE2_TOOLS')
+    if explicit:
+        return explicit
+    engine = engine_path(root)
+    name = 'be2-tools.exe' if os.name == 'nt' else 'be2-tools'
+    if engine is not None:
+        packaged = engine / 'bin' / name
+        if packaged.is_file():
+            return str(packaged)
+        base = Path(os.environ.get('CARGO_TARGET_DIR') or engine / 'target')
+        if not base.is_absolute():
+            base = engine / base
+        for profile in ('itest', 'be2-tools/release', 'fast', 'release', 'debug', 'be2-headless/release'):
+            candidate = base / profile / name
             if candidate.is_file():
                 return str(candidate)
-    return None
+    return shutil.which('be2-tools')
+
+
+def refresh_project(root):
+    """Explicitly replace only the generated requirements validator, preserving authored metadata."""
+    engine = engine_path(root)
+    source = engine / 'templates/game_project.py' if engine is not None else None
+    if source is None or not source.is_file():
+        raise ValueError('Project refresh needs a source engine dependency with templates/game_project.py')
+    payload = source.read_bytes()
+    destination = Path(root) / 'scripts/project.py'
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix='.project-', delete=False) as output:
+            temporary = Path(output.name)
+            output.write(payload)
+        os.replace(temporary, destination)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+    return destination
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tools', default=find_tools(Path(__file__).resolve().parents[1]),
-                        help='Matching be2-tools binary (default: BE2_TOOLS, PATH, then the engine checkout target dir)')
+                        help='Matching be2-tools binary (default: BE2_TOOLS, engine dependency including itest, then PATH)')
+    parser.add_argument('--refresh-project', action='store_true',
+                        help='Replace scripts/project.py from the source engine dependency, then exit without checking')
     parser.add_argument('--content-only', action='store_true',
                         help='Iteration check only; does not certify Rust changes')
     parser.add_argument('--scenario', action='append', default=[], help='Additional behavioral scenario')
@@ -282,11 +304,17 @@ def main():
     parser.add_argument('--ship-folder', help='Also verify requested installation in this private folder')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
+    if args.refresh_project:
+        try:
+            print(json.dumps({'refreshed': str(refresh_project(root))}))
+        except (ValueError, OSError) as error:
+            parser.error(str(error))
+        return 0
     if (root / 'game.project.json').exists():
         import importlib.util
         helper = root / 'scripts/project.py'
         if not helper.is_file():
-            parser.error('game.project.json needs scripts/project.py; refresh generated project tooling')
+            parser.error('game.project.json needs scripts/project.py; run python scripts/check.py --refresh-project')
         spec = importlib.util.spec_from_file_location('game_requirements', helper)
         requirements = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(requirements)
@@ -295,9 +323,8 @@ def main():
         except (ValueError, OSError) as error:
             parser.error(str(error))
     if not args.tools:
-        parser.error('No be2-tools found. Build one in the engine checkout, then rerun (it is found there '
-                     'automatically): cargo build --profile fast --no-default-features --bin be2-tools '
-                     '(or python tools/be2.py build tools). Or set BE2_TOOLS to its path.')
+        parser.error('No be2-tools found. Run python3 tools/be2.py map help in the engine checkout '
+                     '(python on Windows), then rerun. Or set BE2_TOOLS or --tools to the matching binary.')
     return 0 if run(Path(__file__).resolve().parents[1], args.tools,
                     args.content_only, args.scenario, args.skip_ship, args.ship_folder) else 1
 
