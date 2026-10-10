@@ -119,13 +119,15 @@ class GameCheckTests(unittest.TestCase):
         self.assertEqual((second.parent / '1.log').read_text(), 'later success')
 
 
-class FindToolsTests(unittest.TestCase):
-    """A game finds a built be2-tools in the engine checkout it depends on, without BE2_TOOLS."""
-
+class PathIdentityAssertions(unittest.TestCase):
     def assert_same_file(self, actual, expected):
-        # Windows temp roots may use RUNNER~1 while discovery expands runneradmin.
-        # Both paths must name the same existing file, regardless of spelling.
+        # Windows may expand RUNNER~1 or add the native canonical \\?\ prefix.
+        # Compare existing files/directories by identity, regardless of spelling.
         self.assertTrue(Path(actual).samefile(expected), f'{actual!r} is not {expected!r}')
+
+
+class FindToolsTests(PathIdentityAssertions):
+    """A game finds a built be2-tools in the engine checkout it depends on, without BE2_TOOLS."""
 
     def setUp(self):
         temp = tempfile.TemporaryDirectory()
@@ -206,6 +208,17 @@ class FindToolsTests(unittest.TestCase):
         with patch.object(game_check.shutil, 'which', return_value='/packaged/be2-tools'):
             self.assertEqual(game_check.find_tools(self.game), '/packaged/be2-tools')
 
+    @unittest.skipUnless(os.name == 'nt', 'Windows canonical path prefix')
+    def test_native_canonical_dependency_path_finds_the_same_engine_and_tools(self):
+        built = self.build('itest')
+        extended = Path('\\\\?\\' + str(self.engine.resolve()))
+        (self.game / 'Cargo.toml').write_text(
+            '[dependencies]\nbe2 = { path = ' + json.dumps(extended.as_posix()) + ' }\n')
+        for modules in ({}, {'tomllib': None}):
+            with self.subTest(modules=modules), patch.dict(sys.modules, modules):
+                self.assert_same_file(game_check.engine_path(self.game), self.engine)
+                self.assert_same_file(game_check.find_tools(self.game), built)
+
     def test_project_refresh_preserves_metadata_and_other_scripts(self):
         source = self.engine / 'templates/game_project.py'
         source.parent.mkdir()
@@ -217,7 +230,7 @@ class FindToolsTests(unittest.TestCase):
         for previous in (None, b'old validator'):
             if previous is not None:
                 (scripts / 'project.py').write_bytes(previous)
-            self.assertEqual(game_check.refresh_project(self.game), scripts / 'project.py')
+            self.assert_same_file(game_check.refresh_project(self.game), scripts / 'project.py')
             self.assertEqual((scripts / 'project.py').read_bytes(), source.read_bytes())
             self.assertEqual((self.game / 'game.project.json').read_bytes(), b'authored requirements')
             self.assertEqual((scripts / 'check.py').read_bytes(), b'custom checker')
@@ -256,7 +269,7 @@ class FindToolsTests(unittest.TestCase):
 
 
 @unittest.skipUnless(os.environ.get('BE2_TOOLS'), 'Real native integration runs through check_authoring.py')
-class GeneratedGameIntegrationTests(unittest.TestCase):
+class GeneratedGameIntegrationTests(PathIdentityAssertions):
     def test_all_starters_validate_plan_and_use_the_fresh_authoring_binary(self):
         from tools import workflow
         engine = Path(__file__).resolve().parents[1]
@@ -291,7 +304,7 @@ class GeneratedGameIntegrationTests(unittest.TestCase):
                         plan = workflow.game_plan(engine, project, loop)
                         self.assertEqual(plan['requirements']['native_packaging'], ['linux', 'windows'])
                         self.assertTrue(plan['commands'])
-                    self.assertEqual(game_check.engine_path(project), engine)
+                    self.assert_same_file(game_check.engine_path(project), engine)
                     command = [sys.executable, str(project / 'scripts/check.py'), '--skip-ship']
                     if starter not in ('stock', 'custom-sim'):
                         command.append('--content-only')
@@ -351,7 +364,7 @@ class GeneratedGameIntegrationTests(unittest.TestCase):
             self.assertIn('definitely-missing-object', log.read_text())
 
 
-class RunnerCase(unittest.TestCase):
+class RunnerCase(PathIdentityAssertions):
     """A temp project plus helpers to run the runner in-process with the tool commands faked."""
 
     def setUp(self):
@@ -729,7 +742,7 @@ class EngineRevisionTests(RunnerCase):
     def test_python_3_10_style_manifest_reading_finds_the_engine_too(self):
         self.identity({'engine_revision': 'deadbeef0000'})
         with patch.dict(sys.modules, {'tomllib': None}):  # `import tomllib` raises ImportError
-            self.assertEqual(game_check.engine_path(self.game), self.engine.resolve())
+            self.assert_same_file(game_check.engine_path(self.game), self.engine)
             self.assertEqual(len(game_check.engine_warnings(self.game)), 1)
 
     def test_nothing_to_compare_means_no_warning(self):
