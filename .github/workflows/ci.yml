@@ -392,12 +392,14 @@ jobs:
           os.environ.update(GALLIUM_DRIVER='llvmpipe', LIBGL_ALWAYS_SOFTWARE='1')
           sys.argv = ['games/sway/scripts/ship.py', 'ship', '--no-install']
           try:
+              ship_result = 0
               try:
                   runpy.run_path(sys.argv[0], run_name='__main__')
               except SystemExit as result:
-                  if result.code not in (None, 0):
-                      raise
+                  ship_result = result.code or 0
               subprocess.run([sys.executable, 'games/sway/scripts/native_controls.py', '--exe', str(pathlib.Path(os.environ['CARGO_TARGET_DIR']) / 'release' / 'sway.exe')], check=True)
+              if ship_result:
+                  sys.exit(ship_result)
           finally:
               if not set_directory(None):
                   raise ctypes.WinError(ctypes.get_last_error())
