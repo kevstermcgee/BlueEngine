@@ -1,0 +1,6 @@
+/target/
+/dist/
+/.blue-check/
+/assets/audio/
+*.log
+/installers/

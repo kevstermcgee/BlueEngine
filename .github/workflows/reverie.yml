@@ -1,0 +1,84 @@
+name: Reverie native build
+on:
+  push:
+    branches: [game/reverie]
+    paths: ['games/reverie/**', '.github/workflows/reverie.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: reverie-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: engine-checks-test
+          save-if: false
+      - name: Compose and verify all eight musical movements
+        shell: bash
+        run: |
+          cargo build --locked --profile itest --no-default-features --bin be2-tools
+          python games/reverie/scripts/compose.py target/itest/be2-tools.exe
+      - name: Rules, deterministic snapshots and presentation checks
+        shell: bash
+        run: |
+          cargo fmt --manifest-path games/reverie/Cargo.toml --check
+          cargo test --locked --manifest-path games/reverie/Cargo.toml
+          cargo clippy --locked --all-targets --manifest-path games/reverie/Cargo.toml -- -D warnings
+      - name: Prepare pinned software OpenGL for isolated Windows smoke
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'mesa-ci.7z'
+          $mesa = Join-Path $env:RUNNER_TEMP 'mesa-ci'
+          Invoke-WebRequest 'https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695') { throw 'Mesa checksum mismatch' }
+          & 7z x $archive "-o$mesa" 'x64/*' -y
+          if ($LASTEXITCODE -ne 0) { throw 'Mesa extraction failed' }
+          "BE2_CI_OPENGL_DIR=$(Join-Path $mesa 'x64')" >> $env:GITHUB_ENV
+      - name: Package resources and run isolated native Windows smoke
+        shell: python
+        run: |
+          import ctypes, os, runpy, sys
+          kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+          set_directory = kernel.SetDllDirectoryW
+          set_directory.argtypes = [ctypes.c_wchar_p]
+          set_directory.restype = ctypes.c_int
+          if not set_directory(os.environ['BE2_CI_OPENGL_DIR']): raise ctypes.WinError(ctypes.get_last_error())
+          os.environ.update(GALLIUM_DRIVER='llvmpipe', LIBGL_ALWAYS_SOFTWARE='1')
+          sys.argv = ['games/reverie/scripts/ship.py', 'ship', '--no-install']
+          try: runpy.run_path(sys.argv[0], run_name='__main__')
+          finally: set_directory(None)
+      - name: Build per-user Windows x64 installer
+        shell: pwsh
+        run: |
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) { choco install innosetup --no-progress -y }
+          if (!(Test-Path $iscc)) { throw 'Inno Setup compiler missing' }
+          & $iscc 'games/reverie/scripts/installer.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          Get-FileHash games/reverie/installers/reverie-setup-windows-x64.exe -Algorithm SHA256 | Format-List | Out-File games/reverie/installers/SHA256.txt
+      - name: Verify installation, shortcuts, upgrades and save retention
+        shell: pwsh
+        run: games/reverie/scripts/test-installer.ps1
+      - name: Retain installer, complete package and verification captures
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reverie-windows-x64
+          path: |
+            games/reverie/installers/
+            games/reverie/dist/
+            games/reverie/.blue-check/
+          include-hidden-files: true
