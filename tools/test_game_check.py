@@ -287,7 +287,8 @@ class GeneratedGameIntegrationTests(unittest.TestCase):
                         plan = workflow.game_plan(engine, project, loop)
                         self.assertEqual(plan['requirements']['native_packaging'], ['linux', 'windows'])
                         self.assertTrue(plan['commands'])
-                    self.assertEqual(game_check.engine_path(project), engine)
+                    # Native Windows scaffolds may use the extended \\?\ path prefix.
+                    self.assertTrue(game_check.engine_path(project).samefile(engine))
                     command = [sys.executable, str(project / 'scripts/check.py'), '--skip-ship']
                     if starter not in ('stock', 'custom-sim'):
                         command.append('--content-only')
