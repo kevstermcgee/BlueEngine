@@ -22,12 +22,10 @@ mod native {
         },
     };
     use windows_sys::Win32::{
-        Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM},
+        Foundation::{GlobalFree, HWND, LPARAM, LRESULT, POINT, WPARAM},
         System::{
             DataExchange::COPYDATASTRUCT,
-            Memory::{
-                GlobalAlloc, GlobalFree, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT,
-            },
+            Memory::{GlobalAlloc, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT},
         },
         UI::{
             Input::KeyboardAndMouse::GetActiveWindow,
@@ -49,7 +47,7 @@ mod native {
             let data = &*(l as *const COPYDATASTRUCT);
             if data.dwData == 0x53574159
                 && (4..=65536).contains(&data.cbData)
-                && data.cbData % 2 == 0
+                && data.cbData.is_multiple_of(2)
                 && !data.lpData.is_null()
             {
                 let header = std::mem::size_of::<DROPFILES>();
