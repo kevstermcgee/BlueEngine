@@ -25,6 +25,7 @@ impl Visuals {
     }
     pub fn draw(&self, model: &Sway, viewport: (i32, i32, i32, i32)) {
         let mut camera = Camera2D::from_display_rect(Rect::new(0., 0., 1280., 720.));
+        camera.zoom.y = camera.zoom.y.abs();
         camera.viewport = Some(viewport);
         set_camera(&camera);
         let chapter = (self.time / 37.) as u64;

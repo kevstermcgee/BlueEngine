@@ -113,6 +113,8 @@ pub fn options(model: &Sway, list: &Playlist, error: &str, picking: bool) -> Act
     let oy = (h - ph) / 2.;
     // Logical panel keeps all choices reachable on small windows and high DPI displays.
     let mut cam = Camera2D::from_display_rect(Rect::new(0., 0., 900., 610.));
+    // This pinned backend flips screen-camera Y; keep text and hit boxes aligned.
+    cam.zoom.y = cam.zoom.y.abs();
     let dpi = screen_dpi_scale();
     cam.viewport = Some((
         (ox * dpi) as i32,
