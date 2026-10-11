@@ -44,4 +44,4 @@ python3 tools/xcapture.py target/debug/reverie --frames 30,330 --out /tmp/reveri
 
 `--seed N` generates another museum; the designed first visit defaults to seed 3. Procedural art recombines a curated narrative vocabulary and geometric motifs, rather than depending on an online generation service. Geometry is bounded to the current scene; the archive grows with places actually visited.
 
-Windows delivery is a per-user x64 installer. The `Reverie native build` workflow produces an installer and package evidence without publishing a release or changing the public game catalog. Linux is a development and verification target.
+Windows delivery is a per-user x64 installer through the BlueEngineGames download catalog. Packaging a clean checkout automatically builds the shared authoring tool and renders any missing musical movements. The `Reverie native build` workflow retains standalone installer and package verification evidence. Linux is a development and verification target.
