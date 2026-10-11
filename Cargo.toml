@@ -24,8 +24,9 @@ required-features = ["client"]
 default = ["client"]
 # Historical name: cinematic scene export, unrelated to offline gameplay.
 offline = ["dep:png", "dep:ctrlc"]
-presentation = ["dep:macroquad"]
-two-d = ["dep:macroquad"]
+presentation = ["dep:macroquad", "macroquad/audio"]
+two-d-draw = ["dep:macroquad"]
+two-d = ["two-d-draw", "macroquad/audio"]
 portable = ["two-d"]
 model-import = ["presentation", "dep:gltf", "dep:base64", "dep:image"]
 schema-generation = ["dep:schemars"]
@@ -89,7 +90,7 @@ serde = { version = "=1.0.219", features = ["derive"] }
 serde_json = "=1.0.140"
 png = { version = "=0.17.16", optional = true }
 ctrlc = { version = "=3.4.5", optional = true }
-macroquad = { version = "=0.4.14", default-features = false, features = ["audio"], optional = true }
+macroquad = { version = "=0.4.14", default-features = false, optional = true }
 schemars = { version = "=1.2.2", optional = true }
 jsonschema = { version = "=0.34.0", default-features = false, optional = true }
 gltf = { version = "=1.4.1", default-features = false, features = ["utils", "names", "KHR_materials_unlit"], optional = true }

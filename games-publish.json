@@ -315,6 +315,10 @@
       {
         "source": "games/wormhole",
         "destination": "wormhole"
+      },
+      {
+        "source": "games/sway",
+        "destination": "sway"
       }
     ],
     "prototypes": [

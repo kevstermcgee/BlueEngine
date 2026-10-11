@@ -1,0 +1,17 @@
+{
+  "complexity": "low",
+  "description": "A music visualizer with drag-and-drop playlists, real audio-reactive shapes and a fresh look on every listen.",
+  "id": "sway",
+  "input": [
+    "keyboard",
+    "mouse"
+  ],
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 30,
+  "targets": [
+    "windows"
+  ]
+}

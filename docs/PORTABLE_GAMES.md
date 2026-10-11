@@ -78,6 +78,12 @@ saved Music/Sound toggles are N/M. Loops require audio activation, stop during p
 or focus loss, and fade ordinary transitions. Submission evidence cannot prove human listening.
 Older Sound-only settings retain their value and default Music on. The shared cue bank stays small.
 
+Custom native clients that supply their own audio backend can select `two-d-draw`
+instead of `two-d`. This exports the same `draw::Scene`, `Renderer` and viewport
+composition without enabling Macroquad audio. `two-d`, `portable`, `presentation`
+and the shared client retain their existing audio behavior. Sway uses this path
+for local streaming media, live sample analysis and native file import.
+
 Open-ended games need no artificial win: headless evidence may use outcome `playing`, with positive
 `ticks`, a nonempty `purpose` and the complete state hash. Tests must assert mechanics were exercised.
 Native tests and captures exercise that public-input route; input, audio, storage and packaged launch

@@ -3,7 +3,7 @@ pub use crate::runtime::{Simulation, Snapshot, StateHasher};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "two-d")]
 pub mod client;
-#[cfg(feature = "two-d")]
+#[cfg(feature = "two-d-draw")]
 pub mod draw;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
