@@ -266,7 +266,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     }
     let mut autosave_time = 0.;
     let mut autosave_hash = None;
-    let mut started = verification;
+    let mut started = verification || G::start_automatically();
     {
         started |= capture.is_some();
     }
@@ -495,10 +495,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 TEAL,
             );
         }
-        if !notice.is_empty() {
+        if G::show_overlays() && !notice.is_empty() {
             scene.text(101, &notice, Point::new(24, 395), 19., GOLD);
         }
-        if !started || paused || game.outcome() != "playing" {
+        if G::show_overlays() && (!started || paused || game.outcome() != "playing") {
             scene.rect(
                 200,
                 Rect::new(145, 135, 510, 180),

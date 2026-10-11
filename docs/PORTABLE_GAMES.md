@@ -54,6 +54,11 @@ entire framebuffer, and keep rendering read-only. Native kit geometry/materials/
 and the existing native worker/network APIs remain available. Controller, chunks and day clocks are rendering-free.
 Leo retains its optional native portable presentation with the same authoritative state.
 
+`Game::show_overlays()` defaults to true; return false to hide shared start/pause panels and notices.
+`Game::start_automatically()` defaults to false; return true to start a simulation immediately.
+These preserve pause/input/audio/storage behavior. `show_hud()` independently controls title/control labels.
+Fatal runtime errors still reach stderr. Wormhole demonstrates a fully unobstructed experience.
+
 `Game::drag_look()` opts into canvas dragging/right-stick look. Intent carries accumulated `look`
 radians and `sprint`; look and press edges are consumed once per fixed tick. F toggles fullscreen in
 portable native players. Unsupported device operations produce an explicit notice.

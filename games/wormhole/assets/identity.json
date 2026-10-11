@@ -1,0 +1,19 @@
+{
+  "title": "Wormhole",
+  "tagline": "An endless journey through light.",
+  "controls": "Drag / WASD / arrows / right stick look; Space / A pace; F fullscreen; Esc pause; N music; K save; L load; R new journey",
+  "engine_revision": "ac7f759f8887",
+  "package": [
+    "assets/audio"
+  ],
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "1,15,45",
+    "--exit-after",
+    "60",
+    "--verify",
+    "--mute"
+  ]
+}
