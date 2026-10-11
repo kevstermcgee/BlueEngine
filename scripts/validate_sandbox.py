@@ -6,6 +6,17 @@ import subprocess
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
+def destination_document(destination, directory):
+    """Audit the same map/spawn combination used by sandbox load_destination."""
+    if destination.get('spawn') is None:
+        return destination['path']
+    document=json.loads((ROOT/destination['path']).read_text())
+    document['default_spawn']=destination['spawn']
+    directory.mkdir(parents=True,exist_ok=True)
+    effective=directory/f"{destination['id']}.json"
+    effective.write_text(json.dumps(document)+'\n')
+    return str(effective.resolve())
+
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--tool',type=Path,default=ROOT/'target/release/be2-tools.exe')
@@ -21,9 +32,10 @@ def main():
     for a in catalog['assets']:run('audit',a['map'])
     for m in catalog['maps']:
         if m['path'].startswith('builtin:'):continue
-        run('audit',m['path'])
+        effective=destination_document(m,args.report.parent/'sandbox-audit-inputs')
+        run('audit',effective)
         route=ROOT/'assets/games/blueengine-sandbox/routes'/f"{m['id']}.json"
-        if route.is_file():run('route',m['path'],str(route))
+        if route.is_file():run('route',effective,str(route))
     args.report.parent.mkdir(parents=True,exist_ok=True)
     args.report.write_text(json.dumps(results,indent=2)+'\n')
     failed=[r for r in results if not r['passed']]
