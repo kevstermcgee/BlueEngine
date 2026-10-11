@@ -53,7 +53,7 @@ mod native {
                 let header = std::mem::size_of::<DROPFILES>();
                 let handle =
                     GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, header + data.cbData as usize);
-                if handle == 0 {
+                if handle.is_null() {
                     return 0;
                 }
                 let pointer = GlobalLock(handle);
