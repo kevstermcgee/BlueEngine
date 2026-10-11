@@ -149,6 +149,17 @@ impl Sim {
     pub fn art(&self, slot: usize) -> Exhibit {
         exhibit(self.seed(), slot, 0)
     }
+    pub fn entered_art(&self) -> Exhibit {
+        if self.depth() <= 1 {
+            self.art(self.archive.inside.first().copied().unwrap_or(0) as usize)
+        } else {
+            exhibit(
+                room_seed(self.seed() ^ 0x8cb92baa3f3d8dd7, &self.archive.inside[..self.depth() - 1]),
+                0,
+                self.depth() - 1,
+            )
+        }
+    }
     pub fn inner_art(&self) -> Exhibit {
         exhibit(self.world_seed(), 0, self.depth())
     }

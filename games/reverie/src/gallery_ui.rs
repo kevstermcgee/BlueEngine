@@ -121,7 +121,14 @@ impl Ui {
             format!("INSIDE A MEMORY  /  LAYER {:02}", sim.depth())
         };
         self.text(&title, 30. * s, 64. * s, 15. * s, BRASS, false);
-        self.text(MOTTO[sim.emotion()], 30. * s, 88. * s, 13. * s, MUTED, false);
+        self.text(
+            MOTTO[if sim.depth() == 0 { sim.emotion() } else { sim.world_emotion() }],
+            30. * s,
+            88. * s,
+            13. * s,
+            MUTED,
+            false,
+        );
         self.text(
             &format!("{:02} KEYS     {:02} ROOMS", sim.archive.keys.len(), sim.archive.visited.len()),
             w - 250. * s,
@@ -147,7 +154,11 @@ impl Ui {
                 ),
                 Target::Nested => (sim.inner_art().name, "E  Enter the smaller painting    Q  Read the story"),
                 Target::Door(b) => (
-                    format!("The {} passage", if b == 0 { "left" } else { "right" }),
+                    {
+                        let mut next = sim.archive.room.clone();
+                        next.push(b);
+                        format!("The {} gallery", THEMES[theme(room_seed(sim.archive.seed, &next))])
+                    },
                     if sim.has_key() {
                         "E  Open the next gallery"
                     } else {

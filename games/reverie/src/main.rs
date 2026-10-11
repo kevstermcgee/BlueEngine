@@ -215,7 +215,7 @@ async fn main() {
                     }
                     Event::Entered => {
                         transition = 1.;
-                        ui.announce(format!("{}  /  {}", sim.inner_art().name, MOTTO[mood(&sim)]));
+                        ui.announce(format!("{}  /  {}", sim.entered_art().name, MOTTO[mood(&sim)]));
                         Some(("enter", 0.5))
                     }
                     Event::Returned => {
