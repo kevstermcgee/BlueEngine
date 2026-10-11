@@ -341,7 +341,7 @@ async fn run() -> Result<(), String> {
             assets.join("check-tone.wav"),
         ]);
     }
-    dropfiles::install()?;
+    dropfiles::install(flag(&args, "--verify-native-controls"))?;
     let mut renderer = Renderer::default();
     let mut stepper = FixedStepper::new();
     let mut frame = 0_u32;

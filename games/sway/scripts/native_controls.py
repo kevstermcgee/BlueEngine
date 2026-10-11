@@ -24,11 +24,12 @@ def fixture(path):
 class Windows:
     def __init__(self, pid):
         self.u=c.WinDLL('user32',use_last_error=True)
-        self.k=c.WinDLL('kernel32',use_last_error=True)
         self.u.GetWindowThreadProcessId.argtypes=[c.c_void_p,c.POINTER(c.c_ulong)]
         self.u.SendMessageW.argtypes=[c.c_void_p,c.c_uint,c.c_size_t,c.c_ssize_t]
         self.u.SendMessageW.restype=c.c_ssize_t
         self.u.GetWindowTextW.argtypes=[c.c_void_p,c.c_wchar_p,c.c_int]
+        self.u.MapVirtualKeyW.argtypes=[c.c_uint,c.c_uint]
+        self.u.MapVirtualKeyW.restype=c.c_uint
         callback=c.WINFUNCTYPE(c.c_int,c.c_void_p,c.c_ssize_t)
         self.u.EnumWindows.argtypes=[callback,c.c_ssize_t]
         found=[]
@@ -40,25 +41,21 @@ class Windows:
         self.u.EnumWindows(callback(visit),0)
         if not found: raise RuntimeError('Sway native window missing')
         self.hwnd=found[0]
-        self.k.GlobalAlloc.argtypes=[c.c_uint,c.c_size_t];self.k.GlobalAlloc.restype=c.c_void_p
-        self.k.GlobalLock.argtypes=[c.c_void_p];self.k.GlobalLock.restype=c.c_void_p
-        self.k.GlobalUnlock.argtypes=[c.c_void_p]
     def key(self,name):
         code={'Space':0x20,'Right':0x27}[name]
-        self.u.SendMessageW(self.hwnd,0x100,code,0)
-        self.u.SendMessageW(self.hwnd,0x101,code,0)
+        scan=self.u.MapVirtualKeyW(code,0)
+        flags=1|(scan<<16)|(1<<24 if name=='Right' else 0)
+        self.u.SendMessageW(self.hwnd,0x100,code,flags)
+        self.u.SendMessageW(self.hwnd,0x101,code,flags|(1<<30)|(1<<31))
     def drop(self, paths):
-        import struct
-        # Real DROPFILES layout and double-NUL-terminated UTF-16 paths. Ownership
-        # transfers to the receiving window, which calls DragFinish.
+        # WM_COPYDATA marshals bytes across processes. The QA-enabled receiver
+        # owns the HDROP allocation, then sends its actual WM_DROPFILES message.
+        class CopyData(c.Structure):
+            _fields_=[('tag',c.c_size_t),('size',c.c_uint32),('data',c.c_void_p)]
         text=('\0'.join(str(p.resolve()) for p in paths)+'\0\0').encode('utf-16-le')
-        data=struct.pack('<IiiII',20,0,0,0,1)+text
-        handle=self.k.GlobalAlloc(0x42,len(data))
-        if not handle: raise c.WinError(c.get_last_error())
-        pointer=self.k.GlobalLock(handle)
-        if not pointer: raise c.WinError(c.get_last_error())
-        c.memmove(pointer,data,len(data));self.k.GlobalUnlock(handle)
-        self.u.SendMessageW(self.hwnd,0x233,handle,0)
+        buffer=c.create_string_buffer(text)
+        data=CopyData(0x53574159,len(text),c.addressof(buffer))
+        assert self.u.SendMessageW(self.hwnd,0x4a,0,c.addressof(data))==1,'Native drop bridge was not acknowledged'
 
 class Linux:
     def __init__(self,pid):
@@ -85,7 +82,8 @@ def main():
     cli=[str(Path(args.exe).resolve()),'--capture',str(qa/'frames'),'--frames','1,60,120,180,240,300,360',
          '--exit-after','361','--size','960x540','--mute','--seed','7']
     windows=sys.platform=='win32'
-    if not windows: cli+=['--file',str(first),'--file',str(second),'--file',str(first)]
+    if windows: cli+=['--verify-native-controls']
+    else: cli+=['--file',str(first),'--file',str(second),'--file',str(first)]
     game=subprocess.Popen(cli,cwd=root,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,encoding='utf-8',errors='replace')
     records={};controller=None
     try:

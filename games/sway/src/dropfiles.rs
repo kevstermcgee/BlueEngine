@@ -1,6 +1,6 @@
 //! Native Windows path-only drop handling; avoids the renderer's eager file-byte copies.
 #[cfg(not(target_os = "windows"))]
-pub fn install() -> Result<(), String> {
+pub fn install(_verify: bool) -> Result<(), String> {
     Ok(())
 }
 #[cfg(not(target_os = "windows"))]
@@ -17,24 +17,71 @@ mod native {
         os::windows::ffi::OsStringExt,
         path::PathBuf,
         sync::{
-            atomic::{AtomicIsize, Ordering},
+            atomic::{AtomicBool, AtomicIsize, Ordering},
             Mutex, OnceLock,
         },
     };
     use windows_sys::Win32::{
-        Foundation::{HWND, LPARAM, LRESULT, WPARAM},
+        Foundation::{HWND, LPARAM, LRESULT, POINT, WPARAM},
+        System::{
+            DataExchange::COPYDATASTRUCT,
+            Memory::{
+                GlobalAlloc, GlobalFree, GlobalLock, GlobalUnlock, GMEM_MOVEABLE, GMEM_ZEROINIT,
+            },
+        },
         UI::{
             Input::KeyboardAndMouse::GetActiveWindow,
-            Shell::{DragAcceptFiles, DragFinish, DragQueryFileW},
+            Shell::{DragAcceptFiles, DragFinish, DragQueryFileW, DROPFILES},
             WindowsAndMessaging::{
-                CallWindowProcW, GetWindowThreadProcessId, SetWindowLongPtrW, GWLP_WNDPROC,
-                WM_DROPFILES,
+                CallWindowProcW, GetWindowThreadProcessId, SendMessageW, SetWindowLongPtrW,
+                GWLP_WNDPROC, WM_COPYDATA, WM_DROPFILES,
             },
         },
     };
     static ORIGINAL: AtomicIsize = AtomicIsize::new(0);
+    static VERIFY: AtomicBool = AtomicBool::new(false);
     static QUEUE: OnceLock<Mutex<Vec<PathBuf>>> = OnceLock::new();
     unsafe extern "system" fn window_proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
+        // QA-only IPC bridge: GlobalAlloc handles belong to their allocating process.
+        // Marshal test paths, then allocate a real HDROP in this receiver and exercise
+        // the ordinary WM_DROPFILES procedure. Normal launches never enable this.
+        if msg == WM_COPYDATA && VERIFY.load(Ordering::Acquire) && l != 0 {
+            let data = &*(l as *const COPYDATASTRUCT);
+            if data.dwData == 0x53574159
+                && (4..=65536).contains(&data.cbData)
+                && data.cbData % 2 == 0
+                && !data.lpData.is_null()
+            {
+                let header = std::mem::size_of::<DROPFILES>();
+                let handle =
+                    GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, header + data.cbData as usize);
+                if handle == 0 {
+                    return 0;
+                }
+                let pointer = GlobalLock(handle);
+                if pointer.is_null() {
+                    GlobalFree(handle);
+                    return 0;
+                }
+                std::ptr::write(
+                    pointer as *mut DROPFILES,
+                    DROPFILES {
+                        pFiles: header as u32,
+                        pt: POINT { x: 0, y: 0 },
+                        fNC: 0,
+                        fWide: 1,
+                    },
+                );
+                std::ptr::copy_nonoverlapping(
+                    data.lpData as *const u8,
+                    (pointer as *mut u8).add(header),
+                    data.cbData as usize,
+                );
+                GlobalUnlock(handle);
+                SendMessageW(hwnd, WM_DROPFILES, handle as usize, 0);
+                return 1;
+            }
+        }
         if msg == WM_DROPFILES {
             let drop = w as isize;
             let count = DragQueryFileW(drop, u32::MAX, std::ptr::null_mut(), 0);
@@ -68,8 +115,9 @@ mod native {
             l,
         )
     }
-    pub fn install() -> Result<(), String> {
+    pub fn install(verify: bool) -> Result<(), String> {
         QUEUE.get_or_init(|| Mutex::new(Vec::new()));
+        VERIFY.store(verify, Ordering::Release);
         unsafe {
             let hwnd = GetActiveWindow();
             let mut pid = 0;
