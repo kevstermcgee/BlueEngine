@@ -24,10 +24,11 @@ mod native {
     use windows_sys::Win32::{
         Foundation::{HWND, LPARAM, LRESULT, WPARAM},
         UI::{
+            Input::KeyboardAndMouse::GetActiveWindow,
             Shell::{DragAcceptFiles, DragFinish, DragQueryFileW},
             WindowsAndMessaging::{
-                CallWindowProcW, GetActiveWindow, GetWindowThreadProcessId, SetWindowLongPtrW,
-                GWLP_WNDPROC, WM_DROPFILES,
+                CallWindowProcW, GetWindowThreadProcessId, SetWindowLongPtrW, GWLP_WNDPROC,
+                WM_DROPFILES,
             },
         },
     };
