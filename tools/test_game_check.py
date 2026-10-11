@@ -163,7 +163,8 @@ class FindToolsTests(unittest.TestCase):
         self.build('fast')
         built = self.build('itest')
         with patch.object(game_check.shutil, 'which', return_value='/old/be2-tools'):
-            self.assertEqual(Path(game_check.find_tools(self.game)), Path(built))
+            # Windows temp paths can use an 8.3 alias while discovery resolves it.
+            self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), Path(built).resolve())
 
     def test_selected_absolute_and_relative_target_match_authoring_discovery(self):
         from tools import author
@@ -175,8 +176,8 @@ class FindToolsTests(unittest.TestCase):
                 built = base / 'itest' / name
                 built.parent.mkdir(parents=True)
                 built.write_bytes(b'current tools')
-                self.assertEqual(Path(game_check.find_tools(self.game)), built)
-                self.assertEqual(author.native_binary(self.engine), built)
+                self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), built.resolve())
+                self.assertEqual(author.native_binary(self.engine).resolve(), built.resolve())
                 built.unlink()
                 # Do not substitute the engine's default target when Cargo selected another one.
                 self.assertIsNone(game_check.find_tools(self.game))
@@ -189,14 +190,14 @@ class FindToolsTests(unittest.TestCase):
             (self.game / 'Cargo.toml').write_text('[dependencies]\n' + dependency + '\n')
             for modules in ({}, {'tomllib': None}):
                 with self.subTest(dependency=dependency, modules=modules), patch.dict(sys.modules, modules):
-                    self.assertEqual(Path(game_check.find_tools(self.game)), Path(built))
+                    self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), Path(built).resolve())
 
     def test_packaged_tools_and_path_remain_available(self):
         built = self.build('itest')
         packaged = self.engine / 'bin' / Path(built).name
         packaged.parent.mkdir()
         packaged.write_bytes(b'packaged')
-        self.assertEqual(Path(game_check.find_tools(self.game)), packaged)
+        self.assertEqual(Path(game_check.find_tools(self.game)).resolve(), packaged.resolve())
         (self.game / 'Cargo.toml').unlink()
         with patch.object(game_check.shutil, 'which', return_value='/packaged/be2-tools'):
             self.assertEqual(game_check.find_tools(self.game), '/packaged/be2-tools')
