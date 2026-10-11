@@ -319,6 +319,10 @@
       {
         "source": "games/sway",
         "destination": "sway"
+      },
+      {
+        "source": "games/reverie",
+        "destination": "reverie"
       }
     ],
     "prototypes": [
