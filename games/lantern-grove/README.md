@@ -1,6 +1,6 @@
 # Lantern Grove
 
-Collect four golden lanterns and reach the teal exit, avoiding the pink patrol. The 3D garden and a 2D minimap share one deterministic simulation. Windows: arrows/WASD/controller. Progress saves automatically; K/L use a separate manual checkpoint. Install the native Windows EXE to play offline.
+Collect four golden lanterns and reach the teal exit, avoiding the pink patrol. The optional Echo Terrace sits in the lower right of the garden: press Space near its golden switch to open the gate, then explore the enclosed terrace. The original lantern win route remains available. The 3D garden and a 2D minimap share one deterministic simulation. Windows: arrows/WASD/controller. Progress saves automatically; K/L use a separate manual checkpoint. Install the native Windows EXE to play offline.
 
 Read ../../docs/PORTABLE_GAMES.md and AGENTS.md for the supported workflow.
 
@@ -25,3 +25,5 @@ payload in the per-game EXE installer. Browser gameplay is retired; native Linux
 For package-only delivery use `python scripts/ship.py ship --no-install`; it keeps the
 isolated smoke and never accesses the desktop. Plain `ship` additionally installs and
 verifies this game's shortcut. Other applications' icon similarity cannot fail shipping.
+
+Version-two saves include the terrace gate state. Version-one saves migrate through the engine snapshot API; players already in the new section get an open gate so they can leave.

@@ -1,6 +1,6 @@
 {
   "complexity": "low",
-  "description": "Collect four lanterns and reach the garden exit.",
+  "description": "Collect four lanterns; activate the Echo Terrace switch to open an optional garden section.",
   "id": "lantern-grove",
   "input": [
     "keyboard",
