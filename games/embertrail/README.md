@@ -6,9 +6,9 @@
 
 ## Play
 
-[Play Embertrail in your browser](https://kevstermcgee.github.io/Embertrail/embertrail/).
+[Download the Windows x64 installer](https://github.com/kevstermcgee/Embertrail/releases/latest/download/embertrail-setup-windows-x64.exe).
 
-Run the Linux package with `./dist/embertrail`, or use the **Embertrail** desktop shortcut. For browser play, run `scripts/blue web serve` and open the localhost URL it prints. The browser package is `dist/web/`; serve it over HTTP, rather than opening its HTML file directly. The first complete load enables offline play and browser installation.
+Run `embertrail-setup-windows-x64.exe`. It installs the native game and original score for your Windows account, adds an Embertrail Start Menu shortcut, and offers a desktop shortcut. No browser or WASM runtime is used. Progress and settings are stored in `%LOCALAPPDATA%\BlueEngine` and survive upgrades and uninstall.
 
 | Control | Action |
 | --- | --- |
@@ -24,7 +24,7 @@ Run the Linux package with `./dist/embertrail`, or use the **Embertrail** deskto
 | M / N | Toggle sound / music |
 | F | Fullscreen |
 
-Touch uses the D-pad and Jump button. Hold Up to extend jumps. The shared runtime also supports standard controllers. Touch/controller movement uses the same simulation. Normal play saves automatically on this device; K/L use a separate manual slot.
+The shared runtime supports standard controllers. Normal play saves automatically; K/L use a separate manual slot.
 
 ## Field guide
 
@@ -43,14 +43,14 @@ There is no character, artwork, music, or level layout from Nintendo's games in 
 
 ## Develop and verify
 
-This source lives in `games/embertrail` in the BlueEngine repository; the engine path is `../..`. Rust and Python 3 are required; browser checks additionally use Node, ws, and Chromium. Art generation uses BlueEngine's standard-library pixel art exporter.
+This source lives in `games/embertrail` in the BlueEngine repository; the engine path is `../..`. Rust, Python 3, the MSVC build tools and Windows SDK are required for native Windows development. Inno Setup 6 builds the single-file installer. Art generation uses BlueEngine's pixel art exporter.
 
-```
-python3 ../../tools/be2.py check --game . --loop inner
-scripts/blue web preview
-CARGO_TARGET_DIR=../../target python3 ../../tools/be2.py check --game . --loop shipping
+```powershell
+cargo test --locked
+.\scripts\blue.ps1 ship
+& 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' scripts/installer.iss
 ```
 
 `src/lib.rs` owns fixed 60 Hz integer rules and engine snapshots. `src/levels.rs` owns the 32 explicit course sequences; `src/art.rs` is read-only presentation. `src/tests.rs` covers deterministic input replay, exact save continuation, power-ups, jumps, shell behavior, secrets, checkpoints, campaign progression, and invalid saves. `scripts/make_art.py` authors original sprites, icons, and the score; its rendered runtime audio lives in `assets/audio/trail/`.
 
-The dedicated [Embertrail release repository](https://github.com/kevstermcgee/Embertrail) hosts browser releases. Create a verified artifact with `scripts/blue publish --backend directory --destination /path/to/release`. BlueEngine retrieves the public source and rebuilds in a clean checkout. Copy the complete verified `/path/to/release/` library into the release repository's `public/` directory, preserving the `embertrail/` subdirectory and library navigation and push it; its Pages workflow checks all runtime hashes before deployment. Confirm the live manifest and file hashes after deployment.
+The dedicated [Embertrail release repository](https://github.com/kevstermcgee/Embertrail) builds the committed public source on Windows, checks the game rules and score, verifies the native package, shortcut, window icon and isolated graphical launch, and tests installer installation, upgrade and save-preserving uninstall. Only the verified Windows installer is published.

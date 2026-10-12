@@ -10,8 +10,6 @@ fi
 
 cmd="${1:-help}"
 case "$cmd" in
-  web) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py "$@" ;;
-  publish) shift; [ -f scripts/web.py ] || { echo "This game has no web target; use the portable starter." >&2; exit 1; }; "$PY" scripts/web.py publish "$@" ;;
   check)
     shift
     "$PY" scripts/check.py "$@"
@@ -39,6 +37,6 @@ case "$cmd" in
     "$PY" scripts/ship.py ship "$@"
     ;;
   *)
-    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship|web|publish}"
+    echo "Usage: scripts/blue {check|build-all|dev|play|package|shortcut|ship}"
     ;;
 esac
