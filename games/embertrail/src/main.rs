@@ -1,3 +1,5 @@
+#![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
+
 use vesper3d::two_d::{client, GameLogic};
 fn config() -> macroquad::conf::Conf {
     let identity =

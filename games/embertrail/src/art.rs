@@ -44,6 +44,7 @@ const PALETTES: [[u32; 8]; 8] = [
         0x201f32, 0x5c455a, 0x3d3449, 0x282b3b, 0x928597, 0x2e303c, 0x565165, 0xffbd75,
     ],
 ];
+#[allow(clippy::too_many_arguments)] // Sprite placement keeps the renderer's explicit layer/geometry/tint parameters.
 fn sprite(
     s: &mut Scene,
     layer: i32,
@@ -57,7 +58,7 @@ fn sprite(
 ) {
     use std::cell::RefCell;
     use std::collections::BTreeMap;
-    thread_local! {static TEXTURES: RefCell<BTreeMap<&'static str,Texture2D>>=RefCell::new(BTreeMap::new());}
+    thread_local! {static TEXTURES: RefCell<BTreeMap<&'static str,Texture2D>>=const { RefCell::new(BTreeMap::new()) };}
     TEXTURES.with(|textures| {
         let mut textures = textures.borrow_mut();
         let texture = textures.entry(id).or_insert_with(|| {
@@ -295,7 +296,7 @@ impl Embertrail {
                         }
                     }
                 }
-                2 | 3 | 4 => {
+                2..=4 => {
                     let base = if t.kind == 3 {
                         0xd4a55f
                     } else if t.kind == 2 {
@@ -366,13 +367,13 @@ impl Embertrail {
             if !(-40..840).contains(&x) {
                 continue;
             }
-            let bob = if (tick / 14 + pickup.r.x as u32 / 16) % 2 == 0 {
+            let bob = if (tick / 14 + pickup.r.x as u32 / 16).is_multiple_of(2) {
                 0
             } else {
                 2
             };
             if pickup.kind == 0 {
-                let width = if tick / 8 % 4 == 0 { 4 } else { 10 };
+                let width = if (tick / 8).is_multiple_of(4) { 4 } else { 10 };
                 s.rect(
                     10,
                     Rect::new(x + 8 - width / 2, y + bob + 3, width, 14),
@@ -423,7 +424,7 @@ impl Embertrail {
                     "mite",
                     include_bytes!("../assets/sprites/mite.png"),
                     x - 2,
-                    y + if tick / 12 % 2 == 0 { 0 } else { -1 },
+                    y + if (tick / 12).is_multiple_of(2) { 0 } else { -1 },
                     32.,
                     26.,
                     c,

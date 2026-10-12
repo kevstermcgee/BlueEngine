@@ -17,6 +17,9 @@ $data = Join-Path $env:LOCALAPPDATA 'BlueEngine'
 New-Item $data -ItemType Directory -Force | Out-Null
 $save = Join-Path $data 'blueengine_embertrail_v1_quick'
 $settings = Join-Path $data 'blueengine_embertrail_v1_settings'
+# Refuse to overwrite any existing player files when this verifier is run outside CI.
+Assert (!(Test-Path $save)) 'Existing save data present; use a clean Windows test account'
+Assert (!(Test-Path $settings)) 'Existing settings present; use a clean Windows test account'
 # Test retention at the runtime's actual save/settings paths without launching over fixture data.
 Set-Content $save 'installer-retention-fixture'
 Set-Content $settings '{"sound":true,"music":true}'
