@@ -6,7 +6,7 @@
 
 ## Play
 
-[Play Embertrail in your browser](https://kevstermcgee.github.io/BlueEngineGames/web/embertrail/).
+[Play Embertrail in your browser](https://kevstermcgee.github.io/Embertrail/).
 
 Run the Linux package with `./dist/embertrail`, or use the **Embertrail** desktop shortcut. For browser play, run `scripts/blue web serve` and open the localhost URL it prints. The browser package is `dist/web/`; serve it over HTTP, rather than opening its HTML file directly. The first complete load enables offline play and browser installation.
 
@@ -53,4 +53,4 @@ CARGO_TARGET_DIR=../../target python3 ../../tools/be2.py check --game . --loop s
 
 `src/lib.rs` owns fixed 60 Hz integer rules and engine snapshots. `src/levels.rs` owns the 32 explicit course sequences; `src/art.rs` is read-only presentation. `src/tests.rs` covers deterministic input replay, exact save continuation, power-ups, jumps, shell behavior, secrets, checkpoints, campaign progression, and invalid saves. `scripts/make_art.py` authors original sprites, icons, and the score; its rendered runtime audio lives in `assets/audio/trail/`.
 
-Publish a release with `scripts/blue publish --backend github-pages --repository kevstermcgee/BlueEngineGames`. BlueEngine retrieves the public source, rebuilds in a clean checkout, and verifies the deployed package before issuing a publication receipt.
+The dedicated [Embertrail release repository](https://github.com/kevstermcgee/Embertrail) hosts browser releases. Create a verified artifact with `scripts/blue publish --backend directory --destination /path/to/release`. BlueEngine retrieves the public source and rebuilds in a clean checkout. Copy the verified `/path/to/release/embertrail` package to the release repository's `public/` directory and push it; its Pages workflow checks all runtime hashes before deployment. Confirm the live manifest and file hashes after deployment.
