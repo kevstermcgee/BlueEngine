@@ -678,35 +678,30 @@ impl Embertrail {
     fn hud(&self, s: &mut Scene) {
         let st = &self.state;
         let world = st.course / 4;
-        s.rect(60, Rect::new(0, 0, 800, 53), rgb(0x182d38));
-        s.rect(61, Rect::new(0, 51, 800, 2), rgb(0x526b69));
-        label(s, 65, "EMBERTRAIL", 18, 26, 23., PAPER);
+        s.rect(60, Rect::new(8, 8, 232, 24), alpha(0x142a36, 0.72));
         label(
             s,
             65,
-            format!(
-                "{}-{}  {}",
-                world + 1,
-                st.course % 4 + 1,
-                levels::WORLDS[world]
-            ),
-            20,
-            44,
-            12.,
-            MINT,
+            format!("{}-{}", world + 1, st.course % 4 + 1),
+            18,
+            25,
+            14.,
+            PAPER,
         );
-        label(s, 65, "SPARKS", 260, 19, 11., 0x8ba69f);
-        label(s, 65, format!("{:03}", st.sparks), 275, 42, 21., GOLDEN);
-        label(s, 65, "LIGHTS", 355, 19, 11., 0x8ba69f);
-        label(s, 65, format!("{:02}", st.lives), 369, 42, 21., PAPER);
-        label(s, 65, "SHARDS", 446, 19, 11., 0x8ba69f);
+        star(s, 65, 63, 20, 3, rgb(GOLDEN));
+        label(s, 65, format!("{:03}", st.sparks), 74, 25, 14., GOLDEN);
+        // A little lantern identifies remaining lights without a second label row.
+        s.rect(65, Rect::new(124, 13, 6, 2), rgb(MINT));
+        s.rect(65, Rect::new(122, 16, 10, 11), rgb(MINT));
+        s.rect(66, Rect::new(125, 18, 4, 6), rgb(0x142a36));
+        label(s, 65, format!("{:02}", st.lives), 140, 25, 14., PAPER);
         for n in 0..3 {
             star(
                 s,
                 66,
-                458 + n * 18,
-                34,
-                5,
+                184 + n * 18,
+                20,
+                3,
                 rgb(if n < (st.relics as i32) {
                     MINT
                 } else {
@@ -714,36 +709,37 @@ impl Embertrail {
                 }),
             );
         }
-        label(s, 65, "TIME", 537, 19, 11., 0x8ba69f);
-        label(s, 65, format!("{}", st.timer / 60), 541, 42, 21., PAPER);
-        label(s, 65, "SCORE", 616, 19, 11., 0x8ba69f);
-        label(s, 65, format!("{:06}", st.score), 610, 42, 17., GOLDEN);
-        s.rect(65, Rect::new(708, 10, 80, 32), rgb(0x345451));
-        label(s, 66, "ATLAS", 724, 31, 15., MINT);
-        s.rect(60, Rect::new(0, 419, 800, 31), rgb(0x182d38));
-        s.rect(61, Rect::new(0, 419, 800, 1), rgb(0x526b69));
-        label(
-            s,
-            65,
-            "MOVE  < >    JUMP  SPACE/UP    RUN  SHIFT    CAST  DOWN+SPACE",
-            17,
-            440,
-            12.,
-            0xb9ccbe,
-        );
-        label(s, 65, "ESC PAUSE", 697, 440, 11., 0x8ba69f);
+        s.rect(60, Rect::new(500, 8, 216, 24), alpha(0x142a36, 0.72));
+        label(s, 65, "TIME", 509, 24, 10., 0xb9ccbe);
+        label(s, 65, format!("{}", st.timer / 60), 541, 25, 14., PAPER);
+        label(s, 65, "SCORE", 585, 24, 10., 0xb9ccbe);
+        label(s, 65, format!("{:06}", st.score), 625, 25, 14., GOLDEN);
+        s.rect(65, ATLAS_BUTTON, alpha(0x345451, 0.88));
+        label(s, 66, "ATLAS", 743, 24, 12., MINT);
+        if st.tick == 0 {
+            label(
+                s,
+                65,
+                "MOVE  ARROWS/WASD    JUMP  SPACE/UP    RUN  SHIFT    CAST  DOWN+SPACE    ESC PAUSE",
+                17,
+                437,
+                12.,
+                0xb9ccbe,
+            );
+        }
         if st.banner_ticks > 0 && st.transition == 0 {
-            s.rect(50, Rect::new(16, 64, 768, 28), alpha(0x142a36, 0.85));
-            label(s, 51, &st.banner, 28, 83, 14., PAPER);
+            let width = (st.banner.chars().count() as i32 * 8 + 24).min(768);
+            s.rect(50, Rect::new(16, 40, width, 22), alpha(0x142a36, 0.72));
+            label(s, 51, &st.banner, 26, 56, 13., PAPER);
         }
         let progress = if st.secret_inside {
             0
         } else {
             (self.player().x * 800 / st.level.width).clamp(0, 800)
         };
-        s.rect(63, Rect::new(0, 416, progress, 3), rgb(MINT));
+        s.rect(63, Rect::new(0, 448, progress, 2), alpha(MINT, 0.7));
         if st.transition > 0 {
-            s.rect(75, Rect::new(0, 52, 800, 367), alpha(0x142936, 0.65));
+            s.rect(75, Rect::new(0, 38, 800, 410), alpha(0x142936, 0.65));
             label(s, 76, "A LITTLE BRIGHTER", 190, 189, 34., GOLDEN);
             label(
                 s,
@@ -770,7 +766,7 @@ impl Embertrail {
     }
     fn atlas_art(&self, s: &mut Scene) {
         let st = &self.state;
-        s.rect(80, Rect::new(0, 52, 800, 367), rgb(0x182d38));
+        s.rect(80, Rect::new(0, 38, 800, 410), rgb(0x182d38));
         label(s, 81, "THE LANTERN ISLES", 28, 76, 21., PAPER);
         for world in 0..8 {
             let y = 86 + world * 35;
@@ -825,7 +821,7 @@ impl Embertrail {
             81,
             "CLICK AN UNLOCKED COURSE TO REPLAY  |  ATLAS TO RETURN",
             28,
-            401,
+            431,
             13.,
             MINT,
         );
@@ -841,7 +837,7 @@ impl draw::Game for Embertrail {
         } else if self.state.lives == 0 {
             "Restart keeps your discoveries.".into()
         } else {
-            "Space jumps. Hold Up for height.".into()
+            "Space/Up jump - Shift run - Down+Space cast".into()
         }
     }
     fn draw(&self, s: &mut Scene) {

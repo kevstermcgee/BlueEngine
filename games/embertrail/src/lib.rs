@@ -10,6 +10,7 @@ mod tests;
 pub const SUB: i32 = 256;
 pub const COURSES: usize = 32;
 pub const FLOOR: i32 = 368;
+const ATLAS_BUTTON: Rect = Rect::new(732, 8, 60, 24);
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Tile {
     pub r: Rect,
@@ -221,12 +222,12 @@ impl Embertrail {
         }
         self.cue(0);
     }
-    fn map_input(&mut self, i: &Intent) {
+    fn map_input(&mut self, i: &Intent) -> bool {
         if i.action {
             if let Some(p) = i.pointer {
-                if Rect::new(708, 8, 82, 36).contains(p) {
+                if ATLAS_BUTTON.contains(p) {
                     self.state.atlas = !self.state.atlas;
-                    return;
+                    return true;
                 }
                 if self.state.atlas {
                     for n in 0..COURSES {
@@ -238,7 +239,7 @@ impl Embertrail {
                         );
                         if r.contains(p) && n <= self.state.unlocked {
                             self.enter_course(n);
-                            return;
+                            return true;
                         }
                     }
                 }
@@ -255,8 +256,10 @@ impl Embertrail {
             self.state.up_held = i.y != 0;
             if i.action {
                 self.enter_course(self.state.map_selection);
+                return true;
             }
         }
+        false
     }
     fn bump(&mut self, before: Rect, after: Rect) {
         let mut rewards = Vec::new();
@@ -778,8 +781,7 @@ impl Simulation for Embertrail {
             return;
         }
         self.state.tick += 1;
-        self.map_input(i);
-        if self.state.atlas {
+        if self.map_input(i) || self.state.atlas {
             return;
         }
         self.state.banner_ticks = self.state.banner_ticks.saturating_sub(1);
@@ -830,9 +832,7 @@ impl Simulation for Embertrail {
             }
         }
         let up = i.y < 0;
-        if (up && !self.state.up_held)
-            || (i.action && i.y <= 0 && !i.pointer.is_some_and(|p| p.y < 52))
-        {
+        if (up && !self.state.up_held) || (i.action && i.y <= 0) {
             self.state.jump_buffer = 8;
         }
         self.state.up_held = up;

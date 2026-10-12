@@ -26,6 +26,10 @@ Run `embertrail-setup-windows-x64.exe`. It installs the native game and original
 
 The shared runtime supports standard controllers. Normal play saves automatically; K/L use a separate manual slot.
 
+The compact HUD keeps course, sparks, lights, moon shards, time, score and Atlas
+in small translucent panels along the top edge. Control hints appear before play
+and in the pause menu, leaving the bottom of the playfield clear.
+
 ## Field guide
 
 - **Sparks:** collect 100 for an extra life. Three optional **moon shards** reward exploration in each course.

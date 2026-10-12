@@ -6,6 +6,33 @@ fn step(g: &mut Embertrail, n: u32, i: Intent) {
     }
 }
 #[test]
+fn compact_atlas_button_opens_replays_and_closes_without_jumping() {
+    let mut game = Embertrail::new(7);
+    let timer = game.state.timer;
+    let click = |x, y| Intent {
+        action: true,
+        pointer: Some(Point::new(x, y)),
+        ..Default::default()
+    };
+    game.step(&click(760, 20));
+    assert!(game.state.atlas);
+    assert_eq!(game.state.timer, timer);
+    game.step(&click(320, 100));
+    assert!(!game.state.atlas);
+    assert_eq!(game.state.course, 0);
+    assert!(game.state.grounded);
+    game.step(&click(760, 20));
+    assert!(game.state.atlas);
+    game.step(&click(790, 30));
+    assert!(!game.state.atlas);
+    assert!(game.state.grounded);
+    game.step(&click(710, 40));
+    assert!(
+        !game.state.atlas,
+        "The old oversized hit area must not open Atlas"
+    );
+}
+#[test]
 fn public_route_is_deterministic_and_saves_resume_exactly() {
     let inputs: Vec<_> = (0..Embertrail::VERIFY_TICKS)
         .map(Embertrail::verification_input)
