@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "bass": {
+      "file": "music-bass.wav",
+      "checksum": "221605d9a97bb3ef",
+      "frames": 1227130,
+      "peak": 0.114052676,
+      "rms": 0.033207532,
+      "dc": 0.000031638967,
+      "seam_jump": 0.0
+    },
+    "glimmer": {
+      "file": "music-glimmer.wav",
+      "checksum": "47541f937f58cb17",
+      "frames": 1227130,
+      "peak": 0.06403983,
+      "rms": 0.0099561205,
+      "dc": 8.243327e-7,
+      "seam_jump": 0.0
+    },
+    "melody": {
+      "file": "music-melody.wav",
+      "checksum": "d02479d89b2f18c3",
+      "frames": 1227130,
+      "peak": 0.15030533,
+      "rms": 0.045617364,
+      "dc": 3.2416446e-7,
+      "seam_jump": 0.00019013137
+    }
+  },
+  "music_scale": 1.0
+}

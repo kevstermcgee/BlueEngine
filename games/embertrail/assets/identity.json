@@ -1,0 +1,9 @@
+{
+  "title": "Embertrail",
+  "tagline": "A little light. A very big adventure.",
+  "controls": "Arrows/WASD move; Space/Up jump; Shift run; Down + Space cast; Esc pause; K save; L load; R retry",
+  "engine_revision": "76743a0ced2f",
+  "package": [
+    "assets/audio/trail"
+  ]
+}

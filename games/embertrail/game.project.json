@@ -1,0 +1,23 @@
+{
+  "complexity": "high",
+  "description": "Mote the lantern spirit rekindles dawn across 32 authored courses in eight worlds. Run, jump, find secrets and outwit the Hollow Keepers.",
+  "id": "embertrail",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "mobile_controls": {
+    "action_label": "Jump",
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 60,
+  "targets": [
+    "web",
+    "linux"
+  ]
+}
