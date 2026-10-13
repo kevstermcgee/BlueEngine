@@ -61,3 +61,4 @@ For a new decision, add the next numbered file with Status, Context, Decision an
 - [0047: Task evidence binds every project input](0047-task-evidence-input-freshness.md)
 - [0048: Requirement-preserving native starter routing](0048-requirement-preserving-native-routing.md)
 - [0049: Retire browser gameplay, preserve native composition](0049-retire-browser-gameplay.md)
+- [0051: The next phase: thin games, optional layers, useful authoring output (proposed)](0051-the-next-phase.md)
