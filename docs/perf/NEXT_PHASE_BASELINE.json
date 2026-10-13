@@ -999,13 +999,2864 @@
           "tools/test_learn.py:879-895"
         ],
         "query": "learning hint real packet brittle assertion"
+      },
+      {
+        "id": "L-177",
+        "topic": "redundant-ci-trigger-cancelled-guards",
+        "selected_bytes": 1081,
+        "estimate": 271,
+        "inputs": [
+          ".github/workflows/ci.yml:1-2",
+          ".github/workflows/ci.yml:84-108",
+          "Observed push 38416523391 cancellation guards; log bytes not included in estimate"
+        ],
+        "query": "redundant push pull request trigger cancellation guards"
       }
     ],
     "actual_cli_retrieval": {
-      "queries": 34,
-      "retrieved": 34,
+      "queries": 35,
+      "retrieved": 35,
       "method": "Actual CLI learned strings contain unique first50 characters of each recorded hint; frontend omits IDs."
     }
   },
-  "phase0_pr_ci": "Pending at documentation source freeze; report actual run/SHA separately. Main success is not this PR verification."
+  "phase0_pr_ci": {
+    "read_method": "Read-only gh api run/jobs/job logs; no dispatch or workflow/source edits",
+    "observed_at": "2026-10-13T15:23:08.991319+00:00",
+    "run": {
+      "id": 38416714540,
+      "head_sha": "518d6c053f3a69bb28473fa427ab3065305f8936",
+      "head_branch": "docs/next-phase",
+      "event": "pull_request",
+      "run_attempt": 1,
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-13T14:49:40Z",
+      "run_started_at": "2026-10-13T14:49:40Z",
+      "updated_at": "2026-10-13T15:23:03Z",
+      "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540"
+    },
+    "created_to_updated_seconds": 2003.0,
+    "sum_job_elapsed_seconds": 7077.0,
+    "unweighted_job_minutes": 117.95,
+    "not_billed_minutes": true,
+    "excluded_duplicate_run": {
+      "id": 38416523391,
+      "event": "push",
+      "head_sha": "518d6c053f3a69bb28473fa427ab3065305f8936",
+      "conclusion": "cancelled",
+      "reason": "Root cancelled redundant same-head push run to free capacity; its cancellation and expected failed dependency guards are excluded from this required PR probe timing and duration totals",
+      "evidence": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416523391"
+    },
+    "measurement_caveats": [
+      "Single documentation-only pre-optimization PR probe with unchanged workflows; no speed improvement claim",
+      "Job elapsed is started_at to completed_at; creation-to-update includes workflow scheduling/queue/tail effects",
+      "Raw summed job time is unweighted and excludes billing minimums, platform multipliers, plan terms and cancelled duplicate-run work",
+      "Cache hit means restoration; it does not establish freshness of every feature/profile artifact",
+      "Hosted images and stable toolchain are recorded; physical controls/audio, subjective quality and every GPU remain outside this CI result"
+    ],
+    "jobs": [
+      {
+        "id": 115362982583,
+        "name": "sway (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:42Z",
+        "completed_at": "2026-10-13T14:55:15Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362982583",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "elapsed_seconds": 333.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Ubuntu",
+              "24.04.5",
+              "LTS"
+            ],
+            "Runner Image": [
+              "Image: ubuntu-24.04",
+              "Version: 20261004.327.1",
+              "Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [
+            "74ab9451c617f53a00329cc8b81ee3b52e87905a"
+          ],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Linux-x64-b1d7e903",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Linux-x64-b1d7e903-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Linux-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-unknown-linux-gnu b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TARGET_DIR",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.lock",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.toml"
+            ],
+            "outcome_lines": [
+              "No cache found."
+            ],
+            "restore_outcome": "miss",
+            "restore_key": "v0-rust-engine-checks-test-Linux-x64-b1d7e903",
+            "cache_key": "v0-rust-engine-checks-test-Linux-x64-b1d7e903-3aa4dcce"
+          },
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:43Z",
+            "completed_at": "2026-10-13T14:49:44Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:50Z",
+            "elapsed_seconds": 6.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:50Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:49:59Z",
+            "elapsed_seconds": 8.0
+          },
+          {
+            "name": "Media analysis, variation rules, presentation and lint",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:59Z",
+            "completed_at": "2026-10-13T14:53:44Z",
+            "elapsed_seconds": 225.0
+          },
+          {
+            "name": "Prepare pinned software OpenGL for Windows CI",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:44Z",
+            "completed_at": "2026-10-13T14:53:44Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Windows package resources and isolated smoke",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:44Z",
+            "completed_at": "2026-10-13T14:53:44Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Linux development presentation and synchronized controls",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:53:44Z",
+            "completed_at": "2026-10-13T14:55:11Z",
+            "elapsed_seconds": 87.0
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:55:11Z",
+            "completed_at": "2026-10-13T14:55:12Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:55:12Z",
+            "completed_at": "2026-10-13T14:55:12Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:55:12Z",
+            "completed_at": "2026-10-13T14:55:12Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:55:12Z",
+            "completed_at": "2026-10-13T14:55:12Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:55:12Z",
+            "completed_at": "2026-10-13T14:55:12Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983010,
+        "name": "leo (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:42Z",
+        "completed_at": "2026-10-13T14:59:53Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983010",
+        "labels": [
+          "windows-latest"
+        ],
+        "elapsed_seconds": 611.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Microsoft Windows Server 2025",
+              "10.0.26100",
+              "Datacenter"
+            ],
+            "Runner Image": [
+              "Image: windows-2025-vs2026",
+              "Version: 20260925.250.1",
+              "Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Windows_NT-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-pc-windows-msvc b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.lock",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.toml"
+            ],
+            "outcome_lines": [
+              "Cache hit for: v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce",
+              "Cache Size: ~1073 MB (1124991657 B)",
+              "Cache restored successfully",
+              "Restored from cache key \"v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce\" full match: true."
+            ],
+            "restore_outcome": "hit",
+            "restore_key": "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45",
+            "cache_key": "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce"
+          },
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:43Z",
+            "completed_at": "2026-10-13T14:49:44Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:54Z",
+            "elapsed_seconds": 10.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:54Z",
+            "completed_at": "2026-10-13T14:50:15Z",
+            "elapsed_seconds": 21.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:15Z",
+            "completed_at": "2026-10-13T14:50:16Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:16Z",
+            "completed_at": "2026-10-13T14:50:42Z",
+            "elapsed_seconds": 26.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:50:42Z",
+            "completed_at": "2026-10-13T14:50:42Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Build and package Leo",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:42Z",
+            "completed_at": "2026-10-13T14:53:31Z",
+            "elapsed_seconds": 169.0
+          },
+          {
+            "name": "Leo offscreen day, save and audio verification (Linux)",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:31Z",
+            "completed_at": "2026-10-13T14:53:31Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Early Leo pictures (Linux)",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:31Z",
+            "completed_at": "2026-10-13T14:53:31Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Leo headless and client verification",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:53:31Z",
+            "completed_at": "2026-10-13T14:59:47Z",
+            "elapsed_seconds": 376.0
+          },
+          {
+            "name": "Leo rendered and packaged evidence",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:59:47Z",
+            "completed_at": "2026-10-13T14:59:49Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:59:49Z",
+            "completed_at": "2026-10-13T14:59:49Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:59:49Z",
+            "completed_at": "2026-10-13T14:59:49Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:59:49Z",
+            "completed_at": "2026-10-13T14:59:51Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:59:51Z",
+            "completed_at": "2026-10-13T14:59:52Z",
+            "elapsed_seconds": 1.0
+          }
+        ]
+      },
+      {
+        "id": 115362983062,
+        "name": "idea-forge (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:43Z",
+        "completed_at": "2026-10-13T14:54:54Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983062",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "elapsed_seconds": 311.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Ubuntu",
+              "24.04.5",
+              "LTS"
+            ],
+            "Runner Image": [
+              "Image: ubuntu-24.04",
+              "Version: 20261004.327.1",
+              "Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [
+            "74ab9451c617f53a00329cc8b81ee3b52e87905a"
+          ],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Linux-x64-b1d7e903",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Linux-x64-b1d7e903-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Linux-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-unknown-linux-gnu b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TARGET_DIR",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.lock",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.toml"
+            ],
+            "outcome_lines": [
+              "No cache found."
+            ],
+            "restore_outcome": "miss",
+            "restore_key": "v0-rust-engine-checks-test-Linux-x64-b1d7e903",
+            "cache_key": "v0-rust-engine-checks-test-Linux-x64-b1d7e903-3aa4dcce"
+          },
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:46Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:46Z",
+            "completed_at": "2026-10-13T14:49:52Z",
+            "elapsed_seconds": 6.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:52Z",
+            "completed_at": "2026-10-13T14:49:53Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:53Z",
+            "completed_at": "2026-10-13T14:49:53Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:53Z",
+            "completed_at": "2026-10-13T14:49:55Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:55Z",
+            "completed_at": "2026-10-13T14:50:04Z",
+            "elapsed_seconds": 9.0
+          },
+          {
+            "name": "Utility rules, exports, presentation and lint",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:04Z",
+            "completed_at": "2026-10-13T14:53:32Z",
+            "elapsed_seconds": 208.0
+          },
+          {
+            "name": "Prepare pinned software OpenGL for Windows CI",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:32Z",
+            "completed_at": "2026-10-13T14:53:32Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Windows package resources and isolated smoke",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:32Z",
+            "completed_at": "2026-10-13T14:53:32Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Linux package and isolated smoke",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:53:32Z",
+            "completed_at": "2026-10-13T14:54:49Z",
+            "elapsed_seconds": 77.0
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:49Z",
+            "completed_at": "2026-10-13T14:54:50Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:50Z",
+            "completed_at": "2026-10-13T14:54:50Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:50Z",
+            "completed_at": "2026-10-13T14:54:51Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:51Z",
+            "completed_at": "2026-10-13T14:54:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:51Z",
+            "completed_at": "2026-10-13T14:54:51Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983072,
+        "name": "container",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:43Z",
+        "completed_at": "2026-10-13T14:52:18Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983072",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "elapsed_seconds": 155.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Ubuntu",
+              "24.04.5",
+              "LTS"
+            ],
+            "Runner Image": [
+              "Image: ubuntu-24.04",
+              "Version: 20261004.327.1",
+              "Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327"
+            ]
+          },
+          "visible_tool_versions": [],
+          "checkout_commit_hashes": [
+            "74ab9451c617f53a00329cc8b81ee3b52e87905a"
+          ],
+          "cache": {
+            "configured": false,
+            "configuration_lines": [],
+            "outcome_lines": [],
+            "restore_outcome": "not_configured"
+          },
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:43Z",
+            "completed_at": "2026-10-13T14:49:44Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:49Z",
+            "elapsed_seconds": 5.0
+          },
+          {
+            "name": "Build locked headless server and tooling",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:49Z",
+            "completed_at": "2026-10-13T14:52:16Z",
+            "elapsed_seconds": 147.0
+          },
+          {
+            "name": "Tooling and bounded dedicated server smoke",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:16Z",
+            "completed_at": "2026-10-13T14:52:16Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Production QUIC server with an ephemeral identity",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:16Z",
+            "completed_at": "2026-10-13T14:52:17Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:17Z",
+            "completed_at": "2026-10-13T14:52:17Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:17Z",
+            "completed_at": "2026-10-13T14:52:17Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983082,
+        "name": "wormhole (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:43Z",
+        "completed_at": "2026-10-13T14:54:38Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983082",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "elapsed_seconds": 295.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Ubuntu",
+              "24.04.5",
+              "LTS"
+            ],
+            "Runner Image": [
+              "Image: ubuntu-24.04",
+              "Version: 20261004.327.1",
+              "Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [
+            "74ab9451c617f53a00329cc8b81ee3b52e87905a"
+          ],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Linux-x64-b1d7e903",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Linux-x64-b1d7e903-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Linux-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-unknown-linux-gnu b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TARGET_DIR",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.lock",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.toml"
+            ],
+            "outcome_lines": [
+              "No cache found."
+            ],
+            "restore_outcome": "miss",
+            "restore_key": "v0-rust-engine-checks-test-Linux-x64-b1d7e903",
+            "cache_key": "v0-rust-engine-checks-test-Linux-x64-b1d7e903-3aa4dcce"
+          },
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:45Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:45Z",
+            "completed_at": "2026-10-13T14:49:49Z",
+            "elapsed_seconds": 4.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:49Z",
+            "completed_at": "2026-10-13T14:49:50Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:50Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:49:52Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:52Z",
+            "completed_at": "2026-10-13T14:50:01Z",
+            "elapsed_seconds": 9.0
+          },
+          {
+            "name": "Journey rules, presentation and lint",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:01Z",
+            "completed_at": "2026-10-13T14:53:13Z",
+            "elapsed_seconds": 192.0
+          },
+          {
+            "name": "Prepare pinned software OpenGL for Windows CI",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:13Z",
+            "completed_at": "2026-10-13T14:53:13Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Windows package resources and isolated smoke",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:13Z",
+            "completed_at": "2026-10-13T14:53:13Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Linux package and isolated smoke",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:53:13Z",
+            "completed_at": "2026-10-13T14:54:34Z",
+            "elapsed_seconds": 81.0
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:34Z",
+            "completed_at": "2026-10-13T14:54:35Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:35Z",
+            "completed_at": "2026-10-13T14:54:35Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:35Z",
+            "completed_at": "2026-10-13T14:54:35Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:35Z",
+            "completed_at": "2026-10-13T14:54:35Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:54:35Z",
+            "completed_at": "2026-10-13T14:54:35Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983109,
+        "name": "wormhole (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:43Z",
+        "completed_at": "2026-10-13T14:58:59Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983109",
+        "labels": [
+          "windows-latest"
+        ],
+        "elapsed_seconds": 556.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Microsoft Windows Server 2025",
+              "10.0.26100",
+              "Datacenter"
+            ],
+            "Runner Image": [
+              "Image: windows-2025-vs2026",
+              "Version: 20260925.250.1",
+              "Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Windows_NT-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-pc-windows-msvc b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TARGET_DIR",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.lock",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.toml"
+            ],
+            "outcome_lines": [
+              "No cache found."
+            ],
+            "restore_outcome": "miss",
+            "restore_key": "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101",
+            "cache_key": "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101-3aa4dcce"
+          },
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:46Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:46Z",
+            "completed_at": "2026-10-13T14:49:55Z",
+            "elapsed_seconds": 9.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:55Z",
+            "completed_at": "2026-10-13T14:50:15Z",
+            "elapsed_seconds": 20.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:15Z",
+            "completed_at": "2026-10-13T14:50:15Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:15Z",
+            "completed_at": "2026-10-13T14:50:17Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:50:17Z",
+            "completed_at": "2026-10-13T14:50:17Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Journey rules, presentation and lint",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:17Z",
+            "completed_at": "2026-10-13T14:56:28Z",
+            "elapsed_seconds": 371.0
+          },
+          {
+            "name": "Prepare pinned software OpenGL for Windows CI",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:56:28Z",
+            "completed_at": "2026-10-13T14:56:31Z",
+            "elapsed_seconds": 3.0
+          },
+          {
+            "name": "Windows package resources and isolated smoke",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:56:31Z",
+            "completed_at": "2026-10-13T14:58:53Z",
+            "elapsed_seconds": 142.0
+          },
+          {
+            "name": "Linux package and isolated smoke",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:58:53Z",
+            "completed_at": "2026-10-13T14:58:53Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:58:53Z",
+            "completed_at": "2026-10-13T14:58:55Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:58:55Z",
+            "completed_at": "2026-10-13T14:58:55Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:58:55Z",
+            "completed_at": "2026-10-13T14:58:55Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:58:55Z",
+            "completed_at": "2026-10-13T14:58:57Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:58:57Z",
+            "completed_at": "2026-10-13T14:58:57Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983119,
+        "name": "engine (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:43Z",
+        "completed_at": "2026-10-13T15:22:55Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983119",
+        "labels": [
+          "windows-latest"
+        ],
+        "elapsed_seconds": 1992.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Microsoft Windows Server 2025",
+              "10.0.26100",
+              "Datacenter"
+            ],
+            "Runner Image": [
+              "Image: windows-2025-vs2026",
+              "Version: 20260925.250.1",
+              "Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Windows_NT-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-pc-windows-msvc b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.lock",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.toml"
+            ],
+            "outcome_lines": [
+              "Cache hit for: v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce",
+              "Cache Size: ~1073 MB (1124991657 B)",
+              "Cache restored successfully",
+              "Restored from cache key \"v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce\" full match: true."
+            ],
+            "restore_outcome": "hit",
+            "restore_key": "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45",
+            "cache_key": "v0-rust-engine-checks-test-Windows_NT-x64-63f58d45-3aa4dcce"
+          },
+          "workflow_group_commands": [
+            "python tools/be2.py check",
+            "cargo build --release --locked",
+            "cargo build --release --locked --no-default-features --bin be2-headless"
+          ],
+          "canonical_check_stages": [
+            {
+              "step": 1,
+              "command": "cargo fmt --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 3.05
+            },
+            {
+              "step": 2,
+              "command": "cargo rustdoc --locked --lib --profile itest -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 16.529
+            },
+            {
+              "step": 3,
+              "command": "cargo test --locked --profile itest",
+              "outcome": "PASS",
+              "elapsed_seconds": 252.876
+            },
+            {
+              "step": 4,
+              "command": "cargo clippy --all-targets --locked --profile itest -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 23.279
+            },
+            {
+              "step": 5,
+              "command": "cargo rustdoc --locked --lib --profile itest --no-default-features -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 5.341
+            },
+            {
+              "step": 6,
+              "command": "cargo test --locked --profile itest --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 228.793
+            },
+            {
+              "step": 7,
+              "command": "cargo clippy --all-targets --locked --profile itest --no-default-features -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 14.865
+            },
+            {
+              "step": 8,
+              "command": "cargo rustdoc --locked --lib --profile itest --no-default-features --features offline -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 4.588
+            },
+            {
+              "step": 9,
+              "command": "cargo test --locked --profile itest --no-default-features --features offline",
+              "outcome": "PASS",
+              "elapsed_seconds": 211.395
+            },
+            {
+              "step": 10,
+              "command": "cargo clippy --all-targets --locked --profile itest --no-default-features --features offline -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 16.196
+            },
+            {
+              "step": 11,
+              "command": "cargo fmt --manifest-path games/signal-garden/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.164
+            },
+            {
+              "step": 12,
+              "command": "cargo test --locked --manifest-path games/signal-garden/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 74.07
+            },
+            {
+              "step": 13,
+              "command": "cargo test --locked --manifest-path games/signal-garden/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 93.511
+            },
+            {
+              "step": 14,
+              "command": "cargo test --locked --profile itest --no-default-features --features two-d --lib",
+              "outcome": "PASS",
+              "elapsed_seconds": 53.37
+            },
+            {
+              "step": 15,
+              "command": "cargo clippy --locked --no-default-features --features two-d --lib -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 10.139
+            },
+            {
+              "step": 16,
+              "command": "cargo rustdoc --locked --no-default-features --features two-d --lib -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 5.114
+            },
+            {
+              "step": 17,
+              "command": "cargo test --locked --profile itest --no-default-features --features model-import --lib model_import",
+              "outcome": "PASS",
+              "elapsed_seconds": 26.195
+            },
+            {
+              "step": 18,
+              "command": "cargo clippy --locked --profile itest --no-default-features --features model-import,portable --all-targets -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 18.738
+            },
+            {
+              "step": 19,
+              "command": "cargo test --locked --profile itest --no-default-features --features schema-validation --test authoring_schemas",
+              "outcome": "PASS",
+              "elapsed_seconds": 26.274
+            },
+            {
+              "step": 20,
+              "command": "cargo clippy --locked --profile itest --no-default-features --features schema-validation --all-targets -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 16.747
+            },
+            {
+              "step": 21,
+              "command": "cargo fmt --manifest-path games/lantern-run/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.167
+            },
+            {
+              "step": 22,
+              "command": "cargo test --locked --manifest-path games/lantern-run/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 99.068
+            },
+            {
+              "step": 23,
+              "command": "cargo test --locked --manifest-path games/lantern-run/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 93.211
+            },
+            {
+              "step": 24,
+              "command": "cargo fmt --manifest-path games/pocket-breaker/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.135
+            },
+            {
+              "step": 25,
+              "command": "cargo test --locked --manifest-path games/pocket-breaker/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 4.95
+            },
+            {
+              "step": 26,
+              "command": "cargo test --locked --manifest-path games/pocket-breaker/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 9.165
+            },
+            {
+              "step": 27,
+              "command": "cargo fmt --manifest-path games/orchard-watch/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.136
+            },
+            {
+              "step": 28,
+              "command": "cargo test --locked --manifest-path games/orchard-watch/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 5.093
+            },
+            {
+              "step": 29,
+              "command": "cargo test --locked --manifest-path games/orchard-watch/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 9.479
+            },
+            {
+              "step": 30,
+              "command": "cargo fmt --manifest-path games/lantern-grove/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.139
+            },
+            {
+              "step": 31,
+              "command": "cargo test --locked --manifest-path games/lantern-grove/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 4.69
+            },
+            {
+              "step": 32,
+              "command": "cargo test --locked --manifest-path games/lantern-grove/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 9.132
+            },
+            {
+              "step": 33,
+              "command": "C:\\hostedtoolcache\\windows\\Python\\3.13.15\\x64\\python.exe tools/check_docs.py",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.186
+            },
+            {
+              "step": 34,
+              "command": "cargo fmt --manifest-path assets/games/leo/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.184
+            },
+            {
+              "step": 35,
+              "command": "cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 7.477
+            },
+            {
+              "step": 36,
+              "command": "cargo test --locked --manifest-path assets/games/leo/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 14.649
+            },
+            {
+              "step": 37,
+              "command": "cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features --features portable-client",
+              "outcome": "PASS",
+              "elapsed_seconds": 78.535
+            },
+            {
+              "step": 38,
+              "command": "C:\\hostedtoolcache\\windows\\Python\\3.13.15\\x64\\python.exe tools/check_headless.py",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.226
+            },
+            {
+              "step": 39,
+              "command": "C:\\hostedtoolcache\\windows\\Python\\3.13.15\\x64\\python.exe tools/check_authoring.py",
+              "outcome": "PASS",
+              "elapsed_seconds": 75.845
+            },
+            {
+              "step": 40,
+              "command": "C:\\hostedtoolcache\\windows\\Python\\3.13.15\\x64\\python.exe -m unittest tools.test_workflow tools.test_assets tools.test_model_import tools.test_schemas scripts.test_publish_games tools.test_game_check tools.test_game_ship tools.test_media_tools tools.test_xcapture tools.test_upgrade tools.test_learn tools.test_hub_deploy tools.test_browser_retirement tools.test_springboard tools.test_machine_utilities tools.test_idea_forge tools.test_engine_fix",
+              "outcome": "PASS",
+              "elapsed_seconds": 431.711
+            }
+          ],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:46Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:47Z",
+            "completed_at": "2026-10-13T14:49:57Z",
+            "elapsed_seconds": 10.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:57Z",
+            "completed_at": "2026-10-13T14:50:21Z",
+            "elapsed_seconds": 24.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:21Z",
+            "completed_at": "2026-10-13T14:50:21Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:21Z",
+            "completed_at": "2026-10-13T14:50:48Z",
+            "elapsed_seconds": 27.0
+          },
+          {
+            "name": "Install FFmpeg (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:50:48Z",
+            "completed_at": "2026-10-13T14:50:48Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Install FFmpeg (Windows)",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:48Z",
+            "completed_at": "2026-10-13T14:51:10Z",
+            "elapsed_seconds": 22.0
+          },
+          {
+            "name": "Full engine verification",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:10Z",
+            "completed_at": "2026-10-13T15:16:26Z",
+            "elapsed_seconds": 1516.0,
+            "command": "python tools/be2.py check",
+            "command_evidence": [
+              "python tools/be2.py check",
+              "cargo build --release --locked",
+              "cargo build --release --locked --no-default-features --bin be2-headless"
+            ]
+          },
+          {
+            "name": "Run cargo build --release --locked",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:16:26Z",
+            "completed_at": "2026-10-13T15:20:36Z",
+            "elapsed_seconds": 250.0,
+            "command": "cargo build --release --locked"
+          },
+          {
+            "name": "Run cargo build --release --locked --no-default-features --bin be2-headless",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:20:36Z",
+            "completed_at": "2026-10-13T15:22:49Z",
+            "elapsed_seconds": 133.0,
+            "command": "cargo build --release --locked --no-default-features --bin be2-headless"
+          },
+          {
+            "name": "Stock audio offscreen verification (Linux)",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T15:22:49Z",
+            "completed_at": "2026-10-13T15:22:49Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Verification evidence",
+            "number": 12,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:49Z",
+            "completed_at": "2026-10-13T15:22:51Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Stock audio rendered evidence",
+            "number": 13,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T15:22:51Z",
+            "completed_at": "2026-10-13T15:22:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 24,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:51Z",
+            "completed_at": "2026-10-13T15:22:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 25,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:51Z",
+            "completed_at": "2026-10-13T15:22:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 26,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:51Z",
+            "completed_at": "2026-10-13T15:22:53Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Complete job",
+            "number": 27,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:53Z",
+            "completed_at": "2026-10-13T15:22:53Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983157,
+        "name": "leo (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:43Z",
+        "completed_at": "2026-10-13T14:56:33Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983157",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "elapsed_seconds": 410.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Ubuntu",
+              "24.04.5",
+              "LTS"
+            ],
+            "Runner Image": [
+              "Image: ubuntu-24.04",
+              "Version: 20261004.327.1",
+              "Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [
+            "74ab9451c617f53a00329cc8b81ee3b52e87905a"
+          ],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Linux-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-unknown-linux-gnu b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.lock",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.toml"
+            ],
+            "outcome_lines": [
+              "Cache hit for: v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce",
+              "Cache Size: ~1259 MB (1319753716 B)",
+              "Cache restored successfully",
+              "Restored from cache key \"v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce\" full match: true."
+            ],
+            "restore_outcome": "hit",
+            "restore_key": "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d",
+            "cache_key": "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce"
+          },
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:45Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:45Z",
+            "completed_at": "2026-10-13T14:49:50Z",
+            "elapsed_seconds": 5.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:50Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:50:10Z",
+            "elapsed_seconds": 19.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:10Z",
+            "completed_at": "2026-10-13T14:50:20Z",
+            "elapsed_seconds": 10.0
+          },
+          {
+            "name": "Build and package Leo",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:20Z",
+            "completed_at": "2026-10-13T14:51:53Z",
+            "elapsed_seconds": 93.0
+          },
+          {
+            "name": "Leo offscreen day, save and audio verification (Linux)",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:53Z",
+            "completed_at": "2026-10-13T14:53:01Z",
+            "elapsed_seconds": 68.0
+          },
+          {
+            "name": "Early Leo pictures (Linux)",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:53:01Z",
+            "completed_at": "2026-10-13T14:53:02Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Leo headless and client verification",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:53:02Z",
+            "completed_at": "2026-10-13T14:56:26Z",
+            "elapsed_seconds": 204.0
+          },
+          {
+            "name": "Leo rendered and packaged evidence",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:56:26Z",
+            "completed_at": "2026-10-13T14:56:30Z",
+            "elapsed_seconds": 4.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:56:30Z",
+            "completed_at": "2026-10-13T14:56:30Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:56:30Z",
+            "completed_at": "2026-10-13T14:56:30Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:56:30Z",
+            "completed_at": "2026-10-13T14:56:30Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:56:30Z",
+            "completed_at": "2026-10-13T14:56:30Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983228,
+        "name": "engine (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:49:43Z",
+        "completed_at": "2026-10-13T15:08:38Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983228",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "elapsed_seconds": 1135.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Ubuntu",
+              "24.04.5",
+              "LTS"
+            ],
+            "Runner Image": [
+              "Image: ubuntu-24.04",
+              "Version: 20261004.327.1",
+              "Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [
+            "74ab9451c617f53a00329cc8b81ee3b52e87905a"
+          ],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Linux-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-unknown-linux-gnu b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.lock",
+              "- /home/runner/work/BlueEngine/BlueEngine/Cargo.toml"
+            ],
+            "outcome_lines": [
+              "Cache hit for: v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce",
+              "Cache Size: ~1259 MB (1319753716 B)",
+              "Cache restored successfully",
+              "Restored from cache key \"v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce\" full match: true."
+            ],
+            "restore_outcome": "hit",
+            "restore_key": "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d",
+            "cache_key": "v0-rust-engine-checks-test-Linux-x64-c7b3ef7d-3aa4dcce"
+          },
+          "workflow_group_commands": [
+            "python tools/be2.py check",
+            "cargo build --release --locked",
+            "cargo build --release --locked --no-default-features --bin be2-headless"
+          ],
+          "canonical_check_stages": [
+            {
+              "step": 1,
+              "command": "cargo fmt --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 3.809
+            },
+            {
+              "step": 2,
+              "command": "cargo rustdoc --locked --lib --profile itest -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 9.416
+            },
+            {
+              "step": 3,
+              "command": "cargo test --locked --profile itest",
+              "outcome": "PASS",
+              "elapsed_seconds": 154.977
+            },
+            {
+              "step": 4,
+              "command": "cargo clippy --all-targets --locked --profile itest -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 9.949
+            },
+            {
+              "step": 5,
+              "command": "cargo rustdoc --locked --lib --profile itest --no-default-features -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 2.42
+            },
+            {
+              "step": 6,
+              "command": "cargo test --locked --profile itest --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 137.459
+            },
+            {
+              "step": 7,
+              "command": "cargo clippy --all-targets --locked --profile itest --no-default-features -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 7.535
+            },
+            {
+              "step": 8,
+              "command": "cargo rustdoc --locked --lib --profile itest --no-default-features --features offline -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 2.355
+            },
+            {
+              "step": 9,
+              "command": "cargo test --locked --profile itest --no-default-features --features offline",
+              "outcome": "PASS",
+              "elapsed_seconds": 137.442
+            },
+            {
+              "step": 10,
+              "command": "cargo clippy --all-targets --locked --profile itest --no-default-features --features offline -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 8.066
+            },
+            {
+              "step": 11,
+              "command": "cargo fmt --manifest-path games/signal-garden/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.045
+            },
+            {
+              "step": 12,
+              "command": "cargo test --locked --manifest-path games/signal-garden/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 34.089
+            },
+            {
+              "step": 13,
+              "command": "cargo test --locked --manifest-path games/signal-garden/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 39.916
+            },
+            {
+              "step": 14,
+              "command": "cargo test --locked --profile itest --no-default-features --features two-d --lib",
+              "outcome": "PASS",
+              "elapsed_seconds": 31.452
+            },
+            {
+              "step": 15,
+              "command": "cargo clippy --locked --no-default-features --features two-d --lib -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 5.52
+            },
+            {
+              "step": 16,
+              "command": "cargo rustdoc --locked --no-default-features --features two-d --lib -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 2.72
+            },
+            {
+              "step": 17,
+              "command": "cargo test --locked --profile itest --no-default-features --features model-import --lib model_import",
+              "outcome": "PASS",
+              "elapsed_seconds": 11.964
+            },
+            {
+              "step": 18,
+              "command": "cargo clippy --locked --profile itest --no-default-features --features model-import,portable --all-targets -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 8.833
+            },
+            {
+              "step": 19,
+              "command": "cargo test --locked --profile itest --no-default-features --features schema-validation --test authoring_schemas",
+              "outcome": "PASS",
+              "elapsed_seconds": 11.516
+            },
+            {
+              "step": 20,
+              "command": "cargo clippy --locked --profile itest --no-default-features --features schema-validation --all-targets -- -D warnings",
+              "outcome": "PASS",
+              "elapsed_seconds": 8.354
+            },
+            {
+              "step": 21,
+              "command": "cargo fmt --manifest-path games/lantern-run/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.038
+            },
+            {
+              "step": 22,
+              "command": "cargo test --locked --manifest-path games/lantern-run/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 42.42
+            },
+            {
+              "step": 23,
+              "command": "cargo test --locked --manifest-path games/lantern-run/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 44.682
+            },
+            {
+              "step": 24,
+              "command": "cargo fmt --manifest-path games/pocket-breaker/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.037
+            },
+            {
+              "step": 25,
+              "command": "cargo test --locked --manifest-path games/pocket-breaker/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 1.828
+            },
+            {
+              "step": 26,
+              "command": "cargo test --locked --manifest-path games/pocket-breaker/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 3.828
+            },
+            {
+              "step": 27,
+              "command": "cargo fmt --manifest-path games/orchard-watch/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.144
+            },
+            {
+              "step": 28,
+              "command": "cargo test --locked --manifest-path games/orchard-watch/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 1.879
+            },
+            {
+              "step": 29,
+              "command": "cargo test --locked --manifest-path games/orchard-watch/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 4.008
+            },
+            {
+              "step": 30,
+              "command": "cargo fmt --manifest-path games/lantern-grove/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.055
+            },
+            {
+              "step": 31,
+              "command": "cargo test --locked --manifest-path games/lantern-grove/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 1.775
+            },
+            {
+              "step": 32,
+              "command": "cargo test --locked --manifest-path games/lantern-grove/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 3.84
+            },
+            {
+              "step": 33,
+              "command": "/opt/hostedtoolcache/Python/3.13.16/x64/bin/python tools/check_docs.py",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.638
+            },
+            {
+              "step": 34,
+              "command": "cargo fmt --manifest-path assets/games/leo/Cargo.toml --check",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.266
+            },
+            {
+              "step": 35,
+              "command": "cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features",
+              "outcome": "PASS",
+              "elapsed_seconds": 4.011
+            },
+            {
+              "step": 36,
+              "command": "cargo test --locked --manifest-path assets/games/leo/Cargo.toml",
+              "outcome": "PASS",
+              "elapsed_seconds": 6.726
+            },
+            {
+              "step": 37,
+              "command": "cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features --features portable-client",
+              "outcome": "PASS",
+              "elapsed_seconds": 38.55
+            },
+            {
+              "step": 38,
+              "command": "/opt/hostedtoolcache/Python/3.13.16/x64/bin/python tools/check_headless.py",
+              "outcome": "PASS",
+              "elapsed_seconds": 0.092
+            },
+            {
+              "step": 39,
+              "command": "/opt/hostedtoolcache/Python/3.13.16/x64/bin/python tools/check_authoring.py",
+              "outcome": "PASS",
+              "elapsed_seconds": 32.927
+            },
+            {
+              "step": 40,
+              "command": "/opt/hostedtoolcache/Python/3.13.16/x64/bin/python -m unittest tools.test_workflow tools.test_assets tools.test_model_import tools.test_schemas scripts.test_publish_games tools.test_game_check tools.test_game_ship tools.test_media_tools tools.test_xcapture tools.test_upgrade tools.test_learn tools.test_hub_deploy tools.test_browser_retirement tools.test_springboard tools.test_machine_utilities tools.test_idea_forge tools.test_engine_fix",
+              "outcome": "PASS",
+              "elapsed_seconds": 123.865
+            }
+          ],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:44Z",
+            "completed_at": "2026-10-13T14:49:45Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:45Z",
+            "completed_at": "2026-10-13T14:49:50Z",
+            "elapsed_seconds": 5.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:50Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:49:51Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:49:51Z",
+            "completed_at": "2026-10-13T14:50:20Z",
+            "elapsed_seconds": 29.0
+          },
+          {
+            "name": "Install FFmpeg (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:20Z",
+            "completed_at": "2026-10-13T14:50:42Z",
+            "elapsed_seconds": 22.0
+          },
+          {
+            "name": "Install FFmpeg (Windows)",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:50:42Z",
+            "completed_at": "2026-10-13T14:50:42Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Full engine verification",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:50:42Z",
+            "completed_at": "2026-10-13T15:04:19Z",
+            "elapsed_seconds": 817.0,
+            "command": "python tools/be2.py check",
+            "command_evidence": [
+              "python tools/be2.py check",
+              "cargo build --release --locked",
+              "cargo build --release --locked --no-default-features --bin be2-headless"
+            ]
+          },
+          {
+            "name": "Run cargo build --release --locked",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:04:19Z",
+            "completed_at": "2026-10-13T15:06:28Z",
+            "elapsed_seconds": 129.0,
+            "command": "cargo build --release --locked"
+          },
+          {
+            "name": "Run cargo build --release --locked --no-default-features --bin be2-headless",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:06:28Z",
+            "completed_at": "2026-10-13T15:07:32Z",
+            "elapsed_seconds": 64.0,
+            "command": "cargo build --release --locked --no-default-features --bin be2-headless"
+          },
+          {
+            "name": "Stock audio offscreen verification (Linux)",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:07:32Z",
+            "completed_at": "2026-10-13T15:08:33Z",
+            "elapsed_seconds": 61.0
+          },
+          {
+            "name": "Verification evidence",
+            "number": 12,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:08:33Z",
+            "completed_at": "2026-10-13T15:08:35Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Stock audio rendered evidence",
+            "number": 13,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:08:35Z",
+            "completed_at": "2026-10-13T15:08:36Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 24,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:08:36Z",
+            "completed_at": "2026-10-13T15:08:36Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 25,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:08:36Z",
+            "completed_at": "2026-10-13T15:08:36Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 26,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:08:36Z",
+            "completed_at": "2026-10-13T15:08:36Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 27,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:08:36Z",
+            "completed_at": "2026-10-13T15:08:36Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983363,
+        "name": "idea-forge (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:52:20Z",
+        "completed_at": "2026-10-13T15:02:50Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983363",
+        "labels": [
+          "windows-latest"
+        ],
+        "elapsed_seconds": 630.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Microsoft Windows Server 2025",
+              "10.0.26100",
+              "Datacenter"
+            ],
+            "Runner Image": [
+              "Image: windows-2025-vs2026",
+              "Version: 20260925.250.1",
+              "Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Windows_NT-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-pc-windows-msvc b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TARGET_DIR",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.lock",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.toml"
+            ],
+            "outcome_lines": [
+              "No cache found."
+            ],
+            "restore_outcome": "miss",
+            "restore_key": "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101",
+            "cache_key": "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101-3aa4dcce"
+          },
+          "workflow_group_commands": [],
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:21Z",
+            "completed_at": "2026-10-13T14:52:22Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:22Z",
+            "completed_at": "2026-10-13T14:52:34Z",
+            "elapsed_seconds": 12.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:34Z",
+            "completed_at": "2026-10-13T14:52:58Z",
+            "elapsed_seconds": 24.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:58Z",
+            "completed_at": "2026-10-13T14:52:59Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:52:59Z",
+            "completed_at": "2026-10-13T14:53:01Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:53:01Z",
+            "completed_at": "2026-10-13T14:53:01Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Utility rules, exports, presentation and lint",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:53:01Z",
+            "completed_at": "2026-10-13T14:59:38Z",
+            "elapsed_seconds": 397.0
+          },
+          {
+            "name": "Prepare pinned software OpenGL for Windows CI",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:59:38Z",
+            "completed_at": "2026-10-13T14:59:41Z",
+            "elapsed_seconds": 3.0
+          },
+          {
+            "name": "Windows package resources and isolated smoke",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:59:41Z",
+            "completed_at": "2026-10-13T15:02:46Z",
+            "elapsed_seconds": 185.0
+          },
+          {
+            "name": "Linux package and isolated smoke",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T15:02:46Z",
+            "completed_at": "2026-10-13T15:02:46Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:02:46Z",
+            "completed_at": "2026-10-13T15:02:46Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:02:46Z",
+            "completed_at": "2026-10-13T15:02:47Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:02:47Z",
+            "completed_at": "2026-10-13T15:02:47Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:02:47Z",
+            "completed_at": "2026-10-13T15:02:49Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:02:49Z",
+            "completed_at": "2026-10-13T15:02:49Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115362983671,
+        "name": "sway (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T14:51:03Z",
+        "completed_at": "2026-10-13T15:01:44Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115362983671",
+        "labels": [
+          "windows-latest"
+        ],
+        "elapsed_seconds": 641.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Microsoft Windows Server 2025",
+              "10.0.26100",
+              "Datacenter"
+            ],
+            "Runner Image": [
+              "Image: windows-2025-vs2026",
+              "Version: 20260925.250.1",
+              "Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250"
+            ]
+          },
+          "visible_tool_versions": [
+            "rustc 1.99.0 (b940084d7 2026-09-28)"
+          ],
+          "checkout_commit_hashes": [],
+          "cache": {
+            "configured": true,
+            "configuration_lines": [
+              "Restore Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101",
+              "Cache Key:",
+              "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101-3aa4dcce",
+              ".. Prefix:",
+              "- v0-rust-engine-checks-test-Windows_NT-x64",
+              ".. Environment considered:",
+              "- Rust Versions:",
+              "- 1.99.0 x86_64-pc-windows-msvc b940084d7eb6a299eb4bfeb8e34901bc051e7ac4",
+              "- CARGO_HOME",
+              "- CARGO_INCREMENTAL",
+              "- CARGO_TARGET_DIR",
+              "- CARGO_TERM_COLOR",
+              ".. Lockfiles considered:",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.lock",
+              "- D:\\a\\BlueEngine\\BlueEngine\\Cargo.toml"
+            ],
+            "outcome_lines": [
+              "No cache found."
+            ],
+            "restore_outcome": "miss",
+            "restore_key": "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101",
+            "cache_key": "v0-rust-engine-checks-test-Windows_NT-x64-d95a3101-3aa4dcce"
+          },
+          "workflow_group_commands": [],
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:04Z",
+            "completed_at": "2026-10-13T14:51:07Z",
+            "elapsed_seconds": 3.0
+          },
+          {
+            "name": "Run actions/checkout@v4",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:07Z",
+            "completed_at": "2026-10-13T14:51:19Z",
+            "elapsed_seconds": 12.0
+          },
+          {
+            "name": "Run dtolnay/rust-toolchain@stable",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:19Z",
+            "completed_at": "2026-10-13T14:51:40Z",
+            "elapsed_seconds": 21.0
+          },
+          {
+            "name": "Run actions/setup-python@v6",
+            "number": 4,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:40Z",
+            "completed_at": "2026-10-13T14:51:40Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run Swatinem/rust-cache@v2",
+            "number": 5,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:40Z",
+            "completed_at": "2026-10-13T14:51:44Z",
+            "elapsed_seconds": 4.0
+          },
+          {
+            "name": "Install native dependencies (Linux)",
+            "number": 6,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T14:51:44Z",
+            "completed_at": "2026-10-13T14:51:44Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Media analysis, variation rules, presentation and lint",
+            "number": 7,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:51:44Z",
+            "completed_at": "2026-10-13T14:58:43Z",
+            "elapsed_seconds": 419.0
+          },
+          {
+            "name": "Prepare pinned software OpenGL for Windows CI",
+            "number": 8,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:58:43Z",
+            "completed_at": "2026-10-13T14:58:46Z",
+            "elapsed_seconds": 3.0
+          },
+          {
+            "name": "Windows package resources and isolated smoke",
+            "number": 9,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T14:58:46Z",
+            "completed_at": "2026-10-13T15:01:39Z",
+            "elapsed_seconds": 173.0
+          },
+          {
+            "name": "Linux development presentation and synchronized controls",
+            "number": 10,
+            "status": "completed",
+            "conclusion": "skipped",
+            "started_at": "2026-10-13T15:01:39Z",
+            "completed_at": "2026-10-13T15:01:39Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Run actions/upload-artifact@v4",
+            "number": 11,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:01:39Z",
+            "completed_at": "2026-10-13T15:01:40Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run Swatinem/rust-cache@v2",
+            "number": 20,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:01:40Z",
+            "completed_at": "2026-10-13T15:01:40Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Post Run actions/setup-python@v6",
+            "number": 21,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:01:40Z",
+            "completed_at": "2026-10-13T15:01:41Z",
+            "elapsed_seconds": 1.0
+          },
+          {
+            "name": "Post Run actions/checkout@v4",
+            "number": 22,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:01:41Z",
+            "completed_at": "2026-10-13T15:01:43Z",
+            "elapsed_seconds": 2.0
+          },
+          {
+            "name": "Complete job",
+            "number": 23,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:01:43Z",
+            "completed_at": "2026-10-13T15:01:43Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115379937368,
+        "name": "test (windows-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T15:22:58Z",
+        "completed_at": "2026-10-13T15:23:02Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115379937368",
+        "labels": [
+          "windows-latest"
+        ],
+        "elapsed_seconds": 4.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Microsoft Windows Server 2025",
+              "10.0.26100",
+              "Datacenter"
+            ],
+            "Runner Image": [
+              "Image: windows-2025-vs2026",
+              "Version: 20260925.250.1",
+              "Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250"
+            ]
+          },
+          "visible_tool_versions": [],
+          "checkout_commit_hashes": [],
+          "cache": {
+            "configured": false,
+            "configuration_lines": [],
+            "outcome_lines": [],
+            "restore_outcome": "not_configured"
+          },
+          "workflow_group_commands": [],
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:59Z",
+            "completed_at": "2026-10-13T15:22:59Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Require all engine and game gates",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:59Z",
+            "completed_at": "2026-10-13T15:22:59Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:59Z",
+            "completed_at": "2026-10-13T15:22:59Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      },
+      {
+        "id": 115379937381,
+        "name": "test (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success",
+        "started_at": "2026-10-13T15:22:58Z",
+        "completed_at": "2026-10-13T15:23:02Z",
+        "html_url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540/job/115379937381",
+        "labels": [
+          "ubuntu-latest"
+        ],
+        "elapsed_seconds": 4.0,
+        "log_metadata": {
+          "read_method": "gh api /actions/jobs/ID/logs after completion; only selected metadata retained",
+          "runner_metadata": {
+            "Operating System": [
+              "Ubuntu",
+              "24.04.5",
+              "LTS"
+            ],
+            "Runner Image": [
+              "Image: ubuntu-24.04",
+              "Version: 20261004.327.1",
+              "Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261004.327/images/ubuntu/Ubuntu2404-Readme.md",
+              "Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261004.327"
+            ]
+          },
+          "visible_tool_versions": [],
+          "checkout_commit_hashes": [],
+          "cache": {
+            "configured": false,
+            "configuration_lines": [],
+            "outcome_lines": [],
+            "restore_outcome": "not_configured"
+          },
+          "workflow_group_commands": [],
+          "canonical_check_stages": [],
+          "redaction": "Only selected runner/cache/version/public-command fields retained; credential-like cache lines excluded"
+        },
+        "steps": [
+          {
+            "name": "Set up job",
+            "number": 1,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:59Z",
+            "completed_at": "2026-10-13T15:22:59Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Require all engine and game gates",
+            "number": 2,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:59Z",
+            "completed_at": "2026-10-13T15:22:59Z",
+            "elapsed_seconds": 0.0
+          },
+          {
+            "name": "Complete job",
+            "number": 3,
+            "status": "completed",
+            "conclusion": "success",
+            "started_at": "2026-10-13T15:22:59Z",
+            "completed_at": "2026-10-13T15:22:59Z",
+            "elapsed_seconds": 0.0
+          }
+        ]
+      }
+    ],
+    "all_13_jobs_success": true,
+    "both_required_test_guards_success": true,
+    "purpose": "Completed pre-optimization probe at 518d6c0; final metadata/ledger freeze requires its own later full verification, linked from PR #24.",
+    "aggregate_check_caveat": "Cancelled push guard failures remained visible in aggregate PR checks at this source SHA despite all 13 required-PR probe jobs succeeding. Let both normal runs finish at the final revision; no workflow changes."
+  }
 }

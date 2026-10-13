@@ -168,6 +168,18 @@ took 1,360 seconds (full check 1,000), Windows 1,946 (full check 1,443); contain
 154. These are one run, not a paired optimization result. Raw timestamp methods
 are in [the baseline data](perf/NEXT_PHASE_BASELINE.json).
 
+The documentation-only pre-optimization [PR probe 38416714540](https://github.com/kevstermcgee/BlueEngine/actions/runs/38416714540)
+passed all 13 jobs at source `518d6c053f3a69bb28473fa427ab3065305f8936`;
+CI checked out merge `74ab9451c617f53a00329cc8b81ee3b52e87905a`.
+Creation→updated was 2,003 seconds (33m23s), summed job duration 7,077 seconds
+(117.95 unweighted minutes, not billed). Linux engine took 1,135 seconds, full
+check 817; Windows 1,992, full check 1,516. Both engine/Leo caches hit; all six
+IdeaForge/Wormhole/Sway caches missed. Ubuntu 24.04.5 image 20261004.327.1 and
+Windows Server 2025 image 20260925.250.1 used rustc 1.99.0. The baseline records
+exact stage commands, timestamps, runner/toolchain metadata and cache keys.
+This is one unchanged-workflow observation, not a paired speed result.
+Cancelled duplicate push run 38416523391 is excluded from these totals.
+
 Action logs show an actual cache-key mismatch: engine/Leo cache setup omits
 CARGO_TARGET_DIR, IdeaForge includes it in the hashed environment; identical
 lock/shared-key suffixes still produce incompatible prefixes and IdeaForge misses.
@@ -271,7 +283,10 @@ python3 tools/be2.py check --changed --base 579b908 --plan
 These audit/plan commands are not a new passing engine check. The documentation PR
 must run the existing full Linux/Windows CI before a merge request; main's green
 run does not certify the changed documents/ledger. No visual/control/audio/package
-behavior changed in Phase 0. New CI outcomes are reported against their exact SHA.
+behavior changed in Phase 0. The completed probe covers its source SHA above,
+including all 40 canonical stages on each platform; it does not certify the
+subsequent measurement/ledger freeze. Final full-CI outcomes are linked against
+their exact source SHA in PR #24, without a timing-update/commit loop.
 
 Every distinct encountered friction is recorded through tools/learn.py with a
 representative retrieval query. Numeric annotations for new records are
@@ -282,11 +297,17 @@ L-142 is reserved by the pending replication branch; this PR's new IDs start at
 L-143 so the two append-only histories can later reconcile without duplicate IDs.
 
 Executed local Phase 0 checks: Markdown file links passed;
-`python3 -m unittest tools.test_learn` passed 55 tests in 4.318 seconds; all 34
+`python3 -m unittest tools.test_learn` passed 55 tests in 3.900 seconds; all 35
 new records retrieved through actual representative context commands. The first
 learning run failed the historical assumption that movement has no hints after a
 native-search record used that broad keyword. Search-specific metadata was
 narrowed and the test friction recorded; no tests or implementation were changed.
+The final record covers duplicate push/PR CI triggers: cancelling the redundant
+push run makes its always-run guards fail on cancelled prerequisites. Those
+failures are distinct from the required PR run, and duplicate work is excluded
+from the probe's timing totals. The failed cancelled guards remain visible in
+aggregate checks. Both normal workflow runs will finish at the final revision;
+the trigger policy is deferred to the measured CI item.
 These focused results do not replace full CI or certify the proposed future work.
 
 Phase 0 stops after showing this proposed plan and its actual verification state
