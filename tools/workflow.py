@@ -238,7 +238,12 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     exercised_suites = suites if native else []
     if native:
         groups = suite_feature_groups(root, suites)
-        owned_features = owner_features(features, affected['owners'], paths)
+        manifest = root / 'Cargo.toml'
+        definitions = tomllib.loads(manifest.read_text(encoding='utf-8')) if manifest.is_file() else {}
+        binaries = {target['name']: set(target.get('required-features', []))
+                    for target in definitions.get('bin', []) if target.get('path') in paths}
+        owned_features = set(owner_features(features, affected['owners'], paths))
+        owned_features.update(flag for required in binaries.values() for flag in required)
         portable = bool({'two_dimensional'} & set(affected['affected']))
         presentation = portable or bool({'graphics', 'game_presentation', 'client_kit', 'native_controllers',
                                          'offline_renderer', 'sandbox'} & set(affected['owners']))
@@ -246,10 +251,30 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
         requested = sorted(set(owned_features) | ({'two-d'} if portable else set()))
         if requested:
             narrow += ['--features', ','.join(requested)]
+        # Explicit path ownership takes priority over the historical broad-client
+        # heuristic. Defaults need not contain every gated module (for example
+        # cinematic output), and a custom input/UI edit can use its own boundary.
         modes = ([[], ['--no-default-features', '--features', 'physics,networking']]
-                 if loop == 'integration' else [[]] if presentation and not portable else [narrow])
+                 if loop == 'integration' else [[]] if presentation and not portable and not requested and not binaries else [narrow])
+
+        def library_targets(flags):
+            # An explicit --lib does not compile changed executable mains. Only
+            # select a binary when this mode actually enables its Cargo contract;
+            # the owned narrow mode supplies optional features absent from defaults.
+            enabled = set() if '--no-default-features' in flags else {'default'}
+            if '--features' in flags:
+                enabled.update(flags[flags.index('--features') + 1].split(','))
+            pending = list(enabled)
+            while pending:
+                for dependency in definitions.get('features', {}).get(pending.pop(), []):
+                    if dependency in definitions.get('features', {}) and dependency not in enabled:
+                        enabled.add(dependency)
+                        pending.append(dependency)
+            return ['--lib', *[arg for name, required in binaries.items() if required <= enabled
+                               for arg in ('--bin', name)]]
+
         for flags in modes:
-            add(['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, '--lib',
+            add(['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, *library_targets(flags),
                  *[arg for suite in groups.get((), []) for arg in ('--test', suite)], '--message-format=json'], 'rust')
         for required, selected in groups.items():
             if required:
@@ -258,7 +283,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
                      *[arg for suite in selected for arg in ('--test', suite)], '--message-format=json'], 'rust')
         if loop == 'integration' and set(requested) != {'physics', 'networking'}:
             add(['cargo', 'test', '--locked', *profile_flags(test_profile), *narrow,
-                 '--lib', '--message-format=json'], 'rust')
+                 *library_targets(narrow), '--message-format=json'], 'rust')
         if loop == 'integration':
             add([sys.executable, 'tools/check_headless.py'])
     if guides:
@@ -284,7 +309,12 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
         return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
                 'reason': 'Ownership is known but executable behavioral evidence is missing: full checks required.',
                 'commands': full_commands(test_profile), 'fallback_paths': paths}
-    content = any(p.startswith('assets/') for p in paths)
+    # Exact reviewed compatibility manifests use the current-pin Python suite,
+    # including Leo's manifest under assets/. This exception does not classify
+    # surrounding game content, hooks or unknown project pins as tooling.
+    tooling_pins = {p for p in features.get('game_scaffolding', {}).get('files', [])
+                    if p.endswith('/scripts/tooling.json')}
+    content = any(p.startswith('assets/') and p not in tooling_pins for p in paths)
     if content and not native:
         # Content can encode mechanics/assets; the incomplete index cannot infer an exercised route.
         return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
@@ -784,7 +814,9 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
         if not any(path.startswith('src/') for path in feature['files']):
             raise ValueError('No engine source indexed here; use the feature checks from context.')
         owned_features = owner_features(features, [feature_id])
-        if feature_mode == 'headless' and owned_features:
+        # Default client features do not include optional schema/model-import or
+        # cinematic modules. A selected feature's library must actually compile.
+        if owned_features:
             flags += ['--features', ','.join(owned_features)]
         commands = [['cargo', 'check', '--locked', '--lib', *flags, '--message-format=json']]
         proves = 'Engine library type-check only; no linking or behavior tests.'

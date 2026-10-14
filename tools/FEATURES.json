@@ -518,6 +518,19 @@
     },
     "game_scaffolding": {
       "files": [
+        "games/corkscrew-key/scripts/tooling.json",
+        "games/gap-flip/scripts/tooling.json",
+        "games/idea-forge/scripts/tooling.json",
+        "games/lantern-grove/scripts/tooling.json",
+        "games/lantern-run/scripts/tooling.json",
+        "games/orchard-watch/scripts/tooling.json",
+        "games/pocket-breaker/scripts/tooling.json",
+        "games/reverie/scripts/tooling.json",
+        "games/rift-delver/scripts/tooling.json",
+        "games/signal-garden/scripts/tooling.json",
+        "games/sway/scripts/tooling.json",
+        "games/wormhole/scripts/tooling.json",
+        "assets/games/leo/scripts/tooling.json",
         "src/viewer/newgame.rs",
         "templates/custom-sim",
         "templates/game_ship.py",
@@ -653,7 +666,12 @@
         "offline export"
       ],
       "note": "Optional cinematic exporter, separate from native offline gameplay. Explicit: python3 tools/be2.py build cinematic (Cargo offline feature). Defaults and packages omit vesper3d executable; shared scene/geometry/math and public library remain compatible.",
-      "depends_on": []
+      "depends_on": [],
+      "path_features": {
+        "src/main.rs": ["offline"],
+        "src/render.rs": ["offline"],
+        "src/output.rs": ["offline"]
+      }
     },
     "change_workflow": {
       "files": [
@@ -785,6 +803,17 @@
         "GameSession::advance",
         "playable::run_game_with_options"
       ],
+      "path_features": {
+        "src/viewer/game_input.rs": ["native-client"],
+        "src/viewer/game_ui.rs": ["presentation"],
+        "src/viewer/character_skins.rs": ["presentation"],
+        "src/viewer/character.rs": ["presentation"],
+        "src/viewer/wrench_view.rs": ["presentation"],
+        "src/viewer/local_client.rs": ["client"],
+        "src/viewer/playable.rs": ["client"],
+        "src/viewer/game_session.rs": ["physics"],
+        "src/viewer/prop_view.rs": ["presentation", "physics"]
+      },
       "keywords": [
         "restart",
         "restart_requested",

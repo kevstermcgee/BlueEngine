@@ -314,6 +314,116 @@ class AutomaticLoopTests(unittest.TestCase):
             self.assertEqual(len([error for error in result['errors']
                                   if error['error'] == 'unknown Cargo feature']), 2)
 
+    def test_gated_gameplay_and_cinematic_paths_are_compiled_in_inner_loop(self):
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())['features']
+        cases = {
+            'src/viewer/game_input.rs': {'native-client'},
+            'src/viewer/game_ui.rs': {'presentation'},
+            'src/viewer/character_skins.rs': {'presentation'},
+            'src/viewer/character.rs': {'presentation'},
+            'src/viewer/wrench_view.rs': {'presentation'},
+            'src/viewer/local_client.rs': {'client', 'physics'},
+            'src/viewer/playable.rs': {'client', 'physics'},
+            'src/viewer/game_session.rs': {'physics'},
+            'src/viewer/prop_view.rs': {'presentation', 'physics'},
+            'src/main.rs': {'offline'},
+            'src/render.rs': {'offline'},
+            'src/output.rs': {'offline'},
+        }
+        for path, required in cases.items():
+            with self.subTest(path=path):
+                plan = workflow.change_plan(ROOT, [path])
+                self.assertEqual(plan['scope'], 'focused')
+                units = next(command for command in plan['commands']
+                             if command[:2] == ['cargo', 'test'] and '--lib' in command)
+                self.assertIn('--no-default-features', units)
+                enabled = set(units[units.index('--features') + 1].split(','))
+                pending = list(enabled)
+                while pending:
+                    for dependency in manifest.get(pending.pop(), []):
+                        if dependency in manifest and dependency not in enabled:
+                            enabled.add(dependency)
+                            pending.append(dependency)
+                self.assertFalse(required - enabled, f'{path} excluded from selected library build')
+                self.assertIn('Other feature configurations and undeclared downstream consumers.',
+                              plan['not_verified'])
+        for path, expected in [('src/viewer/game_input.rs', 'native-client'),
+                               ('src/viewer/game_ui.rs', 'presentation'),
+                               ('src/render.rs', 'offline')]:
+            command = workflow.change_plan(ROOT, [path])['commands'][0]
+            self.assertEqual(command[command.index('--features') + 1], expected)
+
+    def test_optional_library_modules_are_enabled_for_default_typecheck(self):
+        for feature, required in [('offline_renderer', 'offline'),
+                                  ('asset_library', 'schema-generation'),
+                                  ('shared_gameplay', 'native-client')]:
+            with self.subTest(feature=feature):
+                command = workflow.iteration_plan(ROOT, feature, typecheck=True)['commands'][0]
+                self.assertNotIn('--no-default-features', command)
+                self.assertIn(required, command[command.index('--features') + 1].split(','))
+
+    def test_changed_optional_binary_mains_are_selected_with_their_cargo_features(self):
+        for path, name, required in [('src/bin/be2-schema.rs', 'be2-schema', 'schema-generation'),
+                                     ('src/main.rs', 'vesper3d', 'offline')]:
+            for loop in ('inner', 'integration'):
+                with self.subTest(path=path, loop=loop):
+                    plan = workflow.change_plan(ROOT, [path], loop=loop)
+                    binaries = [command for command in plan['commands']
+                                if '--bin' in command and name in command]
+                    self.assertTrue(binaries, f'{path} must compile before focused success')
+                    for command in binaries:
+                        self.assertIn('--lib', command)
+                        self.assertIn(required, command[command.index('--features') + 1].split(','))
+
+    def test_focused_binary_plan_detects_an_executable_error_despite_passing_library(self):
+        # Execute a dependency-free external project: passing library units cannot
+        # conceal a broken main behind an optional Cargo feature.
+        with tempfile.TemporaryDirectory(prefix='be2-plan-binary ') as temporary:
+            root = Path(temporary)
+            (root / 'src/bin').mkdir(parents=True)
+            (root / 'Cargo.toml').write_text(
+                '[package]\nname="plan-binary"\nversion="0.0.0"\nedition="2021"\n'
+                '[features]\ndefault=[]\nauthoring=[]\n'
+                '[[bin]]\nname="authoring"\npath="src/bin/authoring.rs"\nrequired-features=["authoring"]\n')
+            (root / 'src/lib.rs').write_text('#[test] fn working_rules() { assert_eq!(2 + 2, 4); }\n')
+            (root / 'src/bin/authoring.rs').write_text(
+                'compile_error!("changed executable must be compiled");\nfn main() {}\n')
+            subprocess.run(['cargo', 'generate-lockfile', '--offline'], cwd=root,
+                           check=True, capture_output=True, text=True)
+            owned = {'authoring': {'files': ['src/bin/authoring.rs'], 'checks': []}}
+            with patch.object(workflow, 'index', return_value=owned):
+                plan = workflow.change_plan(root, ['src/bin/authoring.rs'], test_profile='dev')
+            command = next(command for command in plan['commands'] if command[:2] == ['cargo', 'test'])
+            env = {**os.environ, 'CARGO_TARGET_DIR': str(root / 'target')}
+            rules = subprocess.run(['cargo', 'test', '--locked', '--offline', '--lib'], cwd=root,
+                                   capture_output=True, text=True, env=env)
+            self.assertEqual(rules.returncode, 0, rules.stdout + rules.stderr)
+            self.assertIn('1 passed', rules.stdout)
+            result = subprocess.run(command, cwd=root, capture_output=True, text=True,
+                                    env=env)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('changed executable must be compiled', result.stdout + result.stderr)
+            (root / 'src/bin/authoring.rs').write_text('fn main() {}\n')
+            repaired = subprocess.run(command, cwd=root, capture_output=True, text=True, env=env)
+            self.assertEqual(repaired.returncode, 0, repaired.stdout + repaired.stderr)
+            self.assertIn('1 passed', repaired.stdout)
+
+    def test_reviewed_consumer_pin_changes_use_compatibility_checks_without_cargo(self):
+        inventory = json.loads((ROOT / 'tools/game_tooling_inventory.json').read_text())
+        paths = [item['game'] + '/scripts/tooling.json' for item in inventory['projects']]
+        plan = workflow.change_plan(ROOT, paths)
+        self.assertEqual(plan['scope'], 'focused')
+        self.assertFalse(plan['requirements']['unit'])
+        self.assertTrue(all(command[0] != 'cargo' for command in plan['commands']))
+        self.assertTrue(any('tools.test_game_tooling' in command for command in plan['commands']))
+        # Ownership of the inventoried pin does not classify game content or a
+        # new project's policy as independent Python tooling.
+        for path in ('games/unreviewed/scripts/tooling.json', 'games/reverie/game.json',
+                     'assets/games/leo/assets/identity.json'):
+            with self.subTest(path=path):
+                self.assertEqual(workflow.change_plan(ROOT, [path])['scope'], 'full')
+
     def test_unknown_build_and_content_inputs_fail_closed(self):
         for path in ('src/new.rs', 'Cargo.toml', 'tools/FEATURES.json', '.github/workflows/ci.yml',
                      'assets/games/observatory/content/game.json', 'tools/place_interior.py',
