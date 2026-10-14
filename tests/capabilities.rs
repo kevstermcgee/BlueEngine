@@ -14,6 +14,9 @@ fn discovery_and_parser_share_command_signatures() {
     let output = native(&["describe"]);
     assert!(output.status.success());
     let doc: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let indexed = features().unwrap();
+    let names: Vec<_> = indexed["features"].as_object().unwrap().keys().collect();
+    assert_eq!(doc["features"], serde_json::to_value(names).unwrap());
     assert_eq!(doc["commands"].as_array().unwrap().len(), COMMANDS.len());
     for (name, signature) in COMMANDS {
         let command = doc["commands"]
@@ -49,7 +52,11 @@ fn discovery_and_parser_share_command_signatures() {
             "{name}"
         );
     }
-    assert!(output.stdout.len() < 6000);
+    assert!(
+        output.stdout.len() < 6000,
+        "describe orientation exceeded its UTF-8 byte budget: {}",
+        output.stdout.len()
+    );
 }
 
 #[test]
@@ -72,6 +79,11 @@ fn native_search_uses_public_answers_and_labels_retirement() {
             "Understand the limits of replicating a larger custom world",
             "netplay",
         ),
+        ("shared inventory transactions", "resource_transactions"),
+        ("machine production", "automation_workshop"),
+        ("blocked outputs", "automation_workshop"),
+        ("save migration", "automation_workshop"),
+        ("online workshop support", "automation_workshop"),
     ] {
         let packet = search(query).unwrap();
         assert_eq!(packet["matches"][0]["feature"], feature, "{query}");

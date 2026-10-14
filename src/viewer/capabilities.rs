@@ -69,7 +69,7 @@ pub fn runtime_support() -> Value {
     json!({
         "stock_server": {
             "available_in_this_build": cfg!(all(feature = "physics", feature = "networking")),
-            "what": "be2-headless --server: stock authority",
+            "what": "be2-headless --server",
             "players": {
                 "default": simulation::DEFAULT_MAX_PLAYERS,
                 "configurable_up_to": simulation::MAX_PLAYERS_LIMIT,
@@ -81,7 +81,7 @@ pub fn runtime_support() -> Value {
             "replication": {
                 "partial_world_updates": true,
                 "records_per_peer": net::replication::MAX_REPLICATED_ENTITIES,
-                "note": "acknowledged updates; nearest records first",
+                "note": "acknowledged; nearest records first",
             },
             "interest_management": "snapshot_for_player: room relevance",
             "prediction": "PredictionBuffer",
@@ -95,16 +95,16 @@ pub fn runtime_support() -> Value {
         },
         "custom_sim_netplay": {
             "production_transport_available_in_this_build": cfg!(feature = "networking"),
-            "what": "NetGame + ClientView; cli::serve owns loop",
+            "what": "NetGame + ClientView; loop: cli::serve",
             "datagram_bytes": netplay::wire::MAX_DATAGRAM,
-            "datagram_budget": "min(transport payload_limit, datagram_bytes), framing included",
-            "players": "MAX_SEATS; lobby_capacity/minimum_players: configuration, not measured capacity",
+            "datagram_budget": "min(transport payload_limit, datagram_bytes), with framing",
+            "players": "MAX_SEATS/lobby_capacity/minimum_players: configuration, not measured capacity",
             "replication": "snapshot_with_budget: trim optional state; no fragmentation/stock partial replication/interest scheduler",
             "prediction": "your ClientView",
-            "graceful_shutdown": "cli::serve installs shutdown handlers; NetGame::release owns bots",
+            "graceful_shutdown": "cli::serve installs shutdown handlers; bots: NetGame::release",
             "transport": "UDP; QUIC/TLS needs networking; hub rooms: UDP",
-            "delivery": "queue acceptance is local, not remote acknowledgement",
-            "saving": format!("devkit::Snapshot: {} bytes; no stock --autosave", savestate::MAX_PAYLOAD_BYTES),
+            "delivery": "local queue acceptance, not remote acknowledgement",
+            "saving": format!("devkit::Snapshot: {}B; no stock --autosave", savestate::MAX_PAYLOAD_BYTES),
         },
     })
 }
@@ -138,7 +138,7 @@ pub fn describe() -> Result<Value> {
         "runtime_support": runtime_support(),
         "start": ["python3 tools/be2.py start TASK --compact", "be2-tools search TOPIC", "docs/GAME_AUTHORING_ENTRY.md"],
         "unsupported": ["arbitrary gameplay scripts", "runtime mesh import"],
-        "metadata": "Curated native index."
+        "metadata": "Curated index."
     }))
 }
 

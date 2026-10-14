@@ -1,0 +1,289 @@
+{
+  "schema_version": 1,
+  "evidence": "actual Codex CLI model completion; one instrumented trial, no comparison cohort",
+  "execution": {
+    "exit_code": 0,
+    "wall_seconds": 718.9422956689959,
+    "prompt_utf8_bytes": 3639,
+    "model_override": null,
+    "config": "existing user configuration",
+    "ephemeral": true,
+    "cwd": "trial-game",
+    "codex_cli_version": "codex-cli 0.160.1"
+  },
+  "usage": {
+    "usage": {
+      "input_tokens": 1238498,
+      "cached_input_tokens": 1159680,
+      "output_tokens": 22130
+    },
+    "turns": 1,
+    "usage_note": null
+  },
+  "tool_items": {
+    "command_execution": 47,
+    "file_change": 6
+  },
+  "tool_call_count": 53,
+  "explicit_source_doc_read_operations": 22,
+  "explicit_source_doc_utf8_bytes": 129895,
+  "known_automatic_instruction_utf8_bytes": 11917,
+  "automatic_instruction_measurement": "Configured ancestor/root and project AGENTS byte counts; automatic injection is not independently visible in JSON events and may duplicate explicit reads. Excludes hidden system/plugin material.",
+  "verification_command_count": 20,
+  "verification_wall_seconds": 20.6574257647153,
+  "build_slot_wait_seconds": 2.1921005100011826e-05,
+  "failed_verification_attempts": [
+    {
+      "command_name": "cargo",
+      "exit_code": 2,
+      "wall_seconds": 0.022084531956352293
+    },
+    {
+      "command_name": "env",
+      "exit_code": 101,
+      "wall_seconds": 1.7878864869708195
+    },
+    {
+      "command_name": "sha256sum",
+      "exit_code": 1,
+      "wall_seconds": 0.002893276046961546
+    },
+    {
+      "command_name": "python3",
+      "exit_code": 1,
+      "wall_seconds": 0.0406639400171116
+    }
+  ],
+  "baseline_intervention": {
+    "at_unix_seconds": 1792004783.8089142,
+    "note": "Root requested base correction before Cargo checks; public APIs unchanged. Prior model reads remain recorded without retroactive replacement.",
+    "files": [
+      {
+        "path": "trial/src/lib.rs",
+        "status": "synchronized_preflight_base",
+        "sha256_before": "0d653bb51ceffe0d6ce024512be58bfa4fafbeeedf40a18b242aa4c5f165caee",
+        "sha256_after": "a7e09c30ee326b632e7a3773eea4b9db9f4e8440c099e8fc75463b06e897f78d",
+        "utf8_bytes": 17818,
+        "public_api": "unchanged; derived diagnostics/private migration regression base updates"
+      },
+      {
+        "path": "trial/src/persistence.rs",
+        "status": "synchronized_preflight_base",
+        "sha256_before": "5d4c802bdb4873479f821837119b71af0f14c0a7004d51bcb58c42f00178efb6",
+        "sha256_after": "5d4c802bdb4873479f821837119b71af0f14c0a7004d51bcb58c42f00178efb6",
+        "utf8_bytes": 6509,
+        "public_api": "unchanged; derived diagnostics/private migration regression base updates"
+      },
+      {
+        "path": "trial/tests/migration.rs",
+        "status": "synchronized_preflight_base",
+        "sha256_before": "70f7bb5762e8606b829cd7e305e653cfd82e7f7b99addc806d47a9c10b23142e",
+        "sha256_after": "f4aa50ce9bcb30a6f5212980557d0a44f2d070eb6082b6c6d969d56ceaedf47f",
+        "utf8_bytes": 8491,
+        "public_api": "unchanged; derived diagnostics/private migration regression base updates"
+      },
+      {
+        "path": "trial/tests/transactions.rs",
+        "status": "synchronized_preflight_base",
+        "sha256_before": "b082b450937378e39fbe3e4049ee35709c09b36265eee81f1896870bd793a69d",
+        "sha256_after": "7339a9d773596136741924374a0ae17e6239d6993d540c556a3e6215b2694cba",
+        "utf8_bytes": 18767,
+        "public_api": "unchanged; derived diagnostics/private migration regression base updates"
+      }
+    ]
+  },
+  "steering_guidance_delivered": false,
+  "limitations": [
+    "Root preflight synchronized base files after initial model reads; prior reads/failures remain logged.",
+    "The model repaired game-owned migration-test fixture assumptions; this is broader than content/new-test edits.",
+    "No shipping, Windows runtime, physical-device or subjective gameplay-quality claim.",
+    "Source/doc bytes are reading-volume proxies, not model tokens or billed cost.",
+    "A single model run does not establish improved cost or completion probability."
+  ],
+  "executed_game_checks": [
+    {
+      "program": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--bin",
+        "workshop",
+        "--",
+        "edit",
+        "assets/workshop.json",
+        "trial-input/additions.json"
+      ],
+      "exit_code": 2,
+      "wall_seconds": 0.022084531956352293
+    },
+    {
+      "program": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--bin",
+        "workshop",
+        "--",
+        "edit",
+        "assets/workshop.json",
+        "trial-input/additions.json"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 2.0603707989212126
+    },
+    {
+      "program": "cargo",
+      "args": [
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--test",
+        "draw_wire"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.47726631292607635
+    },
+    {
+      "program": "cargo",
+      "args": [
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features"
+      ],
+      "exit_code": 101,
+      "wall_seconds": 1.7878864869708195
+    },
+    {
+      "program": "cargo",
+      "args": [
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--bin",
+        "workshop",
+        "--",
+        "validate"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 0.09509142604656518
+    },
+    {
+      "program": "cargo",
+      "args": [
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features"
+      ],
+      "exit_code": 0,
+      "wall_seconds": 15.917516265064478
+    }
+  ],
+  "verification_measurement": "20 instrumented verification/metadata commands; sum includes 4 failed attempts and ledger/integrity checks. Cargo checks are listed separately.",
+  "controller_source_sync": "Copied only unmodified base lib/persistence/migration/transactions files before Cargo checks; prior model reads/hashes are retained. This was a controller-assisted baseline update, not a model-authored authority change.",
+  "root_guidance": "Extra fixture/timestamp guidance was queued but never delivered. The model independently repaired fixture ID collisions and timestamp-sensitive game-test assertions.",
+  "successful_domain_change": {
+    "recipe": {
+      "id": "workshop:draw-wire",
+      "inputs": [
+        [
+          "workshop:plate",
+          2
+        ],
+        [
+          "workshop:coal",
+          1
+        ]
+      ],
+      "outputs": [
+        [
+          "workshop:wire",
+          3
+        ]
+      ],
+      "duration_ticks": 10,
+      "requires": "workshop:wire-tools"
+    },
+    "upgrade": {
+      "id": "workshop:wire-tools",
+      "cost": [
+        [
+          "workshop:plate",
+          1
+        ],
+        [
+          "workshop:coal",
+          1
+        ]
+      ],
+      "duration_divisor": 2
+    },
+    "authored_paths": [
+      "trial/assets/workshop.json",
+      "trial/tests/draw_wire.rs"
+    ],
+    "test_repairs": [
+      "trial/tests/migration.rs"
+    ],
+    "model_edited_authority": false,
+    "model_read_engine_implementation": false,
+    "offline_test_executions_passed_at_trial_finish": 25
+  },
+  "failure_classes": [
+    "Nested sandbox rejected inherited compiler-cache wrapper; model used RUSTC_WRAPPER= fallback.",
+    "Initial whole-game migration tests exposed fixture-ID collision and wall-clock save-frame assertion; model repaired game tests.",
+    "Immutable-source hash check detected controller baseline synchronization after initial reads.",
+    "Read instrumentation denied a temporary-file integrity read outside declared roots."
+  ],
+  "engine_implementation_read_measurement": "Explicit read ledger has no engine/src, engine/tools or engine/scripts entries; transcript command audit found no implementation-content read. Engine tool execution itself may read implementation internally; those bytes are not model-visible source intake.",
+  "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "host": {
+    "os": "Linux",
+    "architecture": "x86_64",
+    "logical_cpus": 4,
+    "cpu_model": "Intel(R) N97"
+  },
+  "cache_conditions": {
+    "target": "shared-target",
+    "state": "warm dependencies; scratch root crate and genuinely new test/source inputs compiled as required",
+    "compiler_wrapper": "model explicitly disabled inherited RUSTC_WRAPPER after nested-sandbox failure",
+    "competing_load": "controller disk cleanup removed only stale pre-resources root artifacts and disabled incremental cache under Cargo profile locks; no other Cargo verification ran concurrently"
+  },
+  "model": "Inherited Codex CLI user default; no explicit model/reasoning override. Resolved model identifier was not emitted in captured JSON events.",
+  "source_doc_read_ledger": "docs/perf/workshop/authoring-read-ledger.json",
+  "source": {
+    "base_engine_revision": "d7e4188898e184747ac3456c897cd3dfd98c2a8c",
+    "base_engine_working_tree_dirty": true,
+    "source_game": "games/automation-workshop",
+    "trial_project": "trial-game",
+    "source_freeze": "Copied working V2 game plus explicitly recorded controller base corrections before verification. Trial-authored content/test changes and failed attempts were retained.",
+    "final_trial_input_sha256": {
+      "Cargo.toml": "6e878c90d5d25bfe4cd5cbcd15bfea10d933e7c154bf20a8ea22f7ca9a45a378",
+      "assets/workshop.json": "60e20152990fc94c24eca47f765eea1ca344eeaed0b1bc3a68d949847572a27f",
+      "assets/content-v1.json": "aec59b007ff51f2368a8002e0cc50f0419168520c9862c7501ad9cbb11b2476a",
+      "src/lib.rs": "a7e09c30ee326b632e7a3773eea4b9db9f4e8440c099e8fc75463b06e897f78d",
+      "src/content.rs": "17a1f326bba104ef9710192ab07fa040374bc18f5fbe62231c0983a5d8d1324d",
+      "src/persistence.rs": "5d4c802bdb4873479f821837119b71af0f14c0a7004d51bcb58c42f00178efb6",
+      "tests/draw_wire.rs": "806bb1183765363635a1f996ef3c2c751dc190cd3436b0dca828672d158946b9",
+      "tests/migration.rs": "a6682793cf12759afc0fe8c0c114c88cf7c4e70603d07549b8a406e4cfab87cf"
+    }
+  },
+  "explicit_source_read_audit": {
+    "engine_implementation_read_commands": 0,
+    "read_wrapper_engine_implementation_entries": 0,
+    "method": "Reviewed command events and explicit path/range read ledger; a regex false positive was the ledger assertion itself, not an implementation read."
+  }
+}

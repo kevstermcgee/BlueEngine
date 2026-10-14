@@ -34,8 +34,8 @@ class SharedToolingTests(unittest.TestCase):
         (content / 'art.txt').write_text('original artwork')
         tooling.migrate(self.game)
         tooling.check(self.game)
-        self.assertEqual(hook.read_text(), 'def prepare_package(project): pass\n')
-        self.assertEqual((content / 'art.txt').read_text(), 'original artwork')
+        self.assertEqual(hook.read_text(encoding='utf-8'), 'def prepare_package(project): pass\n')
+        self.assertEqual((content / 'art.txt').read_text(encoding='utf-8'), 'original artwork')
         for command in ('check', 'ship'):
             done = subprocess.run([sys.executable, str(self.game / f'scripts/{command}.py'), '--help'],
                                   cwd=self.scratch.name, capture_output=True, text=True)
@@ -120,9 +120,9 @@ class SharedToolingTests(unittest.TestCase):
                               cwd=self.scratch.name, env=env, capture_output=True, text=True)
         self.assertNotEqual(done.returncode, 0)
         self.assertIn('Restore the engine checkout', done.stderr)
-        self.assertEqual(preserved.read_text(), 'completed package')
+        self.assertEqual(preserved.read_text(encoding='utf-8'), 'completed package')
         pin = self.game / 'scripts/tooling.json'
-        recorded = json.loads(pin.read_text())
+        recorded = json.loads(pin.read_text(encoding='utf-8'))
         recorded['sha256'] = '0' * 64
         pin.write_text(json.dumps(recorded))
         with self.assertRaisesRegex(ValueError, 'stale tooling pin'):
@@ -133,14 +133,14 @@ class SharedToolingTests(unittest.TestCase):
         (self.game / 'scripts/tooling_hooks.py').write_text('def prepare_package(project): pass\n')
         tooling.check(self.game)
         path = self.game / 'scripts/dev.py'
-        path.write_text(path.read_text() + '# accidental copied implementation\n')
+        path.write_text(path.read_text(encoding='utf-8') + '# accidental copied implementation\n')
         with self.assertRaisesRegex(ValueError, 'drift'):
             tooling.check(self.game)
 
     def test_unavailable_engine_at_scaffold_requires_explicit_pin_upgrade(self):
         tooling.migrate(self.game)
         path = self.game / 'scripts/tooling.json'
-        recorded = json.loads(path.read_text())
+        recorded = json.loads(path.read_text(encoding='utf-8'))
         recorded['sha256'] = None
         path.write_text(json.dumps(recorded))
         result = subprocess.run([sys.executable, str(self.game / 'scripts/check.py'), '--help'],
@@ -157,7 +157,7 @@ class SharedToolingTests(unittest.TestCase):
         cargo = subprocess.CompletedProcess([], 0, json.dumps({'reason': 'compiler-artifact',
             'target': {'name': 'be2-tools'}, 'executable': str(binary)}) + '\n', '')
         with patch.object(tooling.subprocess, 'run', return_value=cargo) as invoke:
-            self.assertEqual(tooling.fresh_tools(self.engine, explicit), str(explicit))
+            self.assertEqual(tooling.fresh_tools(self.engine, explicit), str(explicit.resolve()))
             self.assertEqual(invoke.call_args.kwargs['cwd'], self.engine)
             self.assertIn('--locked', invoke.call_args.args[0])
             explicit.write_bytes(b'stale artifact')
@@ -252,13 +252,13 @@ class SharedToolingTests(unittest.TestCase):
         self.assertEqual(invoke.call_args.kwargs['env']['BLUEENGINE_DEV_EXE'], str(exe))
 
     def test_all_migrated_consumers_use_current_pin(self):
-        inventory = json.loads((self.engine / 'tools/game_tooling_inventory.json').read_text())
+        inventory = json.loads((self.engine / 'tools/game_tooling_inventory.json').read_text(encoding='utf-8'))
         for item in inventory['projects']:
             with self.subTest(game=item['game']):
                 tooling.check(self.engine / item['game'])
 
     def test_historical_preparation_inventory_names_matching_reviewed_hooks(self):
-        inventory = json.loads((self.engine / 'tools/game_tooling_inventory.json').read_text())
+        inventory = json.loads((self.engine / 'tools/game_tooling_inventory.json').read_text(encoding='utf-8'))
         for command, variants in inventory['required_hooks'].items():
             for digest, required in variants.items():
                 with self.subTest(command=command, preparation=required['preparation']):

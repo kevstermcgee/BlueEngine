@@ -560,6 +560,12 @@
       "required_features": [
         "physics",
         "networking"
+      ],
+      "keywords": [
+        "scaffold",
+        "scaffolding",
+        "starter",
+        "new-game"
       ]
     },
     "native_discovery": {
@@ -668,9 +674,15 @@
       "note": "Optional cinematic exporter, separate from native offline gameplay. Explicit: python3 tools/be2.py build cinematic (Cargo offline feature). Defaults and packages omit vesper3d executable; shared scene/geometry/math and public library remain compatible.",
       "depends_on": [],
       "path_features": {
-        "src/main.rs": ["offline"],
-        "src/render.rs": ["offline"],
-        "src/output.rs": ["offline"]
+        "src/main.rs": [
+          "offline"
+        ],
+        "src/render.rs": [
+          "offline"
+        ],
+        "src/output.rs": [
+          "offline"
+        ]
       }
     },
     "change_workflow": {
@@ -804,15 +816,34 @@
         "playable::run_game_with_options"
       ],
       "path_features": {
-        "src/viewer/game_input.rs": ["native-client"],
-        "src/viewer/game_ui.rs": ["presentation"],
-        "src/viewer/character_skins.rs": ["presentation"],
-        "src/viewer/character.rs": ["presentation"],
-        "src/viewer/wrench_view.rs": ["presentation"],
-        "src/viewer/local_client.rs": ["client"],
-        "src/viewer/playable.rs": ["client"],
-        "src/viewer/game_session.rs": ["physics"],
-        "src/viewer/prop_view.rs": ["presentation", "physics"]
+        "src/viewer/game_input.rs": [
+          "native-client"
+        ],
+        "src/viewer/game_ui.rs": [
+          "presentation"
+        ],
+        "src/viewer/character_skins.rs": [
+          "presentation"
+        ],
+        "src/viewer/character.rs": [
+          "presentation"
+        ],
+        "src/viewer/wrench_view.rs": [
+          "presentation"
+        ],
+        "src/viewer/local_client.rs": [
+          "client"
+        ],
+        "src/viewer/playable.rs": [
+          "client"
+        ],
+        "src/viewer/game_session.rs": [
+          "physics"
+        ],
+        "src/viewer/prop_view.rs": [
+          "presentation",
+          "physics"
+        ]
       },
       "keywords": [
         "restart",
@@ -1526,8 +1557,15 @@
             "GameDocument::validate"
           ],
           "when": [
-            ["stock", "declarative"],
-            ["game", "rules", "document"]
+            [
+              "stock",
+              "declarative"
+            ],
+            [
+              "game",
+              "rules",
+              "document"
+            ]
           ],
           "summary": "Use the stock starter for declarative GameDocument counters, interactions, triggers, timers and movers. Edit validated game/map JSON; stock clients and the authoritative server share the same rules.",
           "signature": "pub fn load(path: &Path) -> Result<LoadedGame>; pub fn validate(&self, map: &MapDocument) -> Result<()>",
@@ -3045,6 +3083,300 @@
         "ideaforge status",
         "ideaforge daily",
         "ideaforge schedule"
+      ]
+    },
+    "resource_transactions": {
+      "note": "Optional deterministic bounded integer resource transactions for game-owned inventory, crafting costs and escrow; validates the complete debit/credit result before committing. Recipes and machine state remain game-owned.",
+      "files": [
+        "src/runtime/resources.rs",
+        "tests/resources.rs",
+        "docs/RESOURCES.md"
+      ],
+      "checks": [
+        "cargo test --locked --profile itest --no-default-features --features resources --test resources",
+        "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features"
+      ],
+      "required_features": [
+        "resources"
+      ],
+      "depends_on": [],
+      "keywords": [
+        "inventory",
+        "inventories",
+        "atomic transaction",
+        "resource costs",
+        "crafting",
+        "escrow",
+        "refund"
+      ],
+      "read_first": [
+        "docs/RESOURCES.md"
+      ],
+      "entry_guide": "docs/RESOURCES.md",
+      "canonical_example": "games/automation-workshop/src/lib.rs",
+      "public_api": [
+        "runtime::resources::Inventory",
+        "Inventory::new",
+        "Inventory::transact",
+        "TransactionError",
+        "TransactionReceipt"
+      ],
+      "runtime": "Optional rendering-free resource transactions; game-owned custom simulation",
+      "contract": {
+        "owns": "Validated bounded inventory balances and atomic debit/credit commit with sorted diagnostic receipts",
+        "inputs": "Namespaced persistent resource IDs, capacities and integer debit/credit lists",
+        "outputs": "One complete committed TransactionReceipt or an actionable TransactionError with no mutation",
+        "may_depend_on": [
+          "deterministic integer arithmetic",
+          "serde"
+        ],
+        "must_not_depend_on": [
+          "physics",
+          "networking",
+          "presentation",
+          "game recipes",
+          "a scheduler"
+        ],
+        "performance": "At most 64 resource definitions and 128 debit/credit entries per transaction; lexicographic ID order",
+        "consumers": [
+          "automation-workshop machines",
+          "tiny headless ability cost/refund/cooldown fixture"
+        ]
+      },
+      "limitations": [
+        "64 resource definitions; 128 combined debit/credit entries. Integer overflow, unknown IDs and full capacities reject all mutations.",
+        "The game owns sources, sinks, recipes and escrow; conservation cannot be inferred from a transaction alone. Inventory schema version 1 is independent of the game save schema.",
+        "No networking, clocks or entity lifecycle are added; a receipt is not a remote acknowledgement."
+      ],
+      "answers": [
+        {
+          "when": [
+            [
+              "inventory",
+              "inventories",
+              "transaction",
+              "transactions"
+            ]
+          ],
+          "identifiers": [
+            "Inventory::transact",
+            "runtime::resources::Inventory",
+            "runtime::resources::Inventory::transact",
+            "TransactionReceipt",
+            "TransactionError"
+          ],
+          "summary": "Use optional resources for atomic validated integer inventory costs/credits; keep recipes and escrow in your existing Simulation/Snapshot.",
+          "signature": "pub fn transact(&mut self, debits: &[(String, u64)], credits: &[(String, u64)]) -> Result<TransactionReceipt, TransactionError>",
+          "source": "src/runtime/resources.rs",
+          "example": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+          "verify": "cargo test --locked --profile itest --no-default-features --features resources --test resources",
+          "runtime": "Optional rendering-free resource transactions; game-owned custom simulation",
+          "warnings": [
+            "Enable the resources feature explicitly. Costs are validated before credits; a full result commits nothing. Preserve escrow until a complete output/refund commit succeeds.",
+            "Limits: 64 resource IDs, 128 combined entries; receipts are local commits, not delivery acknowledgements."
+          ]
+        }
+      ]
+    },
+    "automation_workshop": {
+      "note": "External versioned custom-simulation reference: independently owned machines, shared inventory escrow, logical-time production, blocked output/cancellation recovery, game-owned indexed item/recipe/upgrade content and engine Snapshot migrations.",
+      "files": [
+        "games/automation-workshop/",
+        "docs/WORKSHOP.md"
+      ],
+      "checks": [
+        "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+        "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features --features online --test netplay",
+        "python -m unittest tools.test_discovery"
+      ],
+      "required_features": [
+        "resources"
+      ],
+      "depends_on": [
+        "resource_transactions",
+        "save_state",
+        "netplay"
+      ],
+      "keywords": [
+        "workshop",
+        "machine production",
+        "blocked outputs",
+        "full destination",
+        "recipe definitions",
+        "save migration",
+        "online workshop",
+        "automation"
+      ],
+      "read_first": [
+        "docs/WORKSHOP.md",
+        "games/automation-workshop/AGENTS.md"
+      ],
+      "entry_guide": "docs/WORKSHOP.md",
+      "canonical_example": "games/automation-workshop/src/lib.rs",
+      "public_api": [
+        "Workshop",
+        "Workshop::standard",
+        "Workshop::inspect",
+        "Command",
+        "Envelope",
+        "Simulation::step"
+      ],
+      "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+      "contract": {
+        "owns": "Game rules, recipes, machine queues/escrow, upgrade balance and presentation; composes engine resources, Simulation, Snapshot and supported netplay",
+        "inputs": "Validated authored definitions and numbered player Command intentions in Envelope",
+        "outputs": "Deterministic production, inspectable blockage, exact saved continuation and bounded complete online snapshots",
+        "may_depend_on": [
+          "resource_transactions",
+          "save_state",
+          "netplay"
+        ],
+        "must_not_depend_on": [
+          "stock GameDocument rules",
+          "rendering authority",
+          "a parallel server"
+        ],
+        "performance": "Declared 10/100/1000-machine probes stop at the resource budget; online snapshots must fit active transport framing budget",
+        "consumers": [
+          "one native automation workshop",
+          "public headless behavior/recovery tests"
+        ]
+      },
+      "limitations": [
+        "Probe sizes 10/100/1000 are measured workloads, not supported capacity promises. Native device and Windows shipping evidence remain separate gates.",
+        "Custom netplay uses a complete fixture snapshot within min(active transport limit, 1100 bytes), including framing. It does not inherit stock partial replication, interest scheduling or capacity controls.",
+        "Exact-content checks remain enabled. Frozen v1 or compatible append-only v2 imports require exact source definitions; unsupported tuning/removal fails and preserves original save/state.",
+        "Online late join and fresh connection after seat timeout are unsupported during the running match; short interruption recovery is a different tested behavior."
+      ],
+      "answers": [
+        {
+          "when": [
+            [
+              "machine",
+              "machines",
+              "workshop",
+              "automation"
+            ],
+            [
+              "production",
+              "produce",
+              "queue",
+              "queues",
+              "recipe",
+              "recipes"
+            ]
+          ],
+          "identifiers": [
+            "Workshop",
+            "Workshop::standard",
+            "Command::Queue"
+          ],
+          "summary": "Queue a game-owned recipe on one machine; inputs move into saved escrow and production advances in logical ticks. Definitions are validated/indexed once and new recipes are content edits.",
+          "signature": "Command::Queue { machine: String, recipe: String }; Simulation::step(&mut self, input: &Vec<Envelope>)",
+          "source": "games/automation-workshop/src/lib.rs",
+          "example": "cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin workshop -- inspect",
+          "verify": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+          "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+          "warnings": [
+            "Machine ordering is stable by instance ID; authority advances at fixed 60 Hz. Presentation submits commands and reads state only.",
+            "Inspect one machine to trace queue, duration and blocking rule to its authored definition."
+          ]
+        },
+        {
+          "when": [
+            [
+              "blocked",
+              "blocking",
+              "full",
+              "cancel",
+              "cancellation"
+            ],
+            [
+              "output",
+              "outputs",
+              "destination",
+              "destinations",
+              "machine",
+              "production",
+              "refund",
+              "cancel",
+              "cancellation"
+            ]
+          ],
+          "identifiers": [
+            "Workshop::inspect",
+            "Command::Cancel"
+          ],
+          "summary": "A full output or refund transaction keeps the job/escrow intact. Inspect the machine diagnostic and deliver inventory through player commands to free space and recover.",
+          "signature": "pub fn inspect(&self, id: &str) -> Result<serde_json::Value, String>",
+          "source": "games/automation-workshop/src/lib.rs",
+          "example": "cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin workshop -- inspect",
+          "verify": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+          "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+          "warnings": [
+            "RESOURCE-CAPACITY or RESOURCE-BUDGET identifies the responsible item/total bound. A failed transaction changes no inventory counts.",
+            "Cancellation refunds escrow coherently; a blocked refund remains pending. Inspection is read-only, not privileged mutation."
+          ]
+        },
+        {
+          "when": [
+            [
+              "save",
+              "saves",
+              "state",
+              "content"
+            ],
+            [
+              "migration",
+              "migrate",
+              "migrations",
+              "versioned"
+            ]
+          ],
+          "identifiers": [
+            "automation_workshop::persistence::migrate_content",
+            "persistence::migrate_content",
+            "persistence::migrate_v1"
+          ],
+          "summary": "Use the explicit frozen-v1-to-v2 or append-only-v2 content import around engine-owned Snapshot saves; migrate and validate a copy before accepting progress.",
+          "signature": "pub fn migrate_content(live: &mut Workshop, original: &[u8], source: Definitions, destination: &Path, slot: &str) -> Result<(), String>",
+          "source": "games/automation-workshop/src/persistence.rs",
+          "example": "automation_workshop::persistence::migrate_content(&mut sim, &original_bytes, exact_source_definitions, new_output_dir, \"migrated\")?;",
+          "verify": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+          "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+          "warnings": [
+            "Require the exact old content fingerprint; normal exact-content checks are not globally weakened. V2 recipe/upgrade tuning and removals need another explicit migration.",
+            "Keep original files and live state intact on failure. Queues, escrow, upgrades, logical time and command serials must survive."
+          ]
+        },
+        {
+          "when": [
+            [
+              "workshop",
+              "automation",
+              "support"
+            ],
+            [
+              "online",
+              "multiplayer",
+              "netplay"
+            ]
+          ],
+          "identifiers": [
+            "WorkshopNet"
+          ],
+          "summary": "The fixture implements NetGame over the same authoritative Workshop rules and uses cli::serve. Run its own payload/reconnect tests, not the built-in stock net-test.",
+          "signature": "NetGame + ClientView; netplay::cli::serve::<WorkshopNet>(&ServeSpec)",
+          "source": "games/automation-workshop/src/net.rs",
+          "example": "cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin workshop -- inspect",
+          "verify": "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features --features online --test netplay",
+          "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+          "warnings": [
+            "Custom netplay does not inherit stock partial replication/interest scheduling or capacity controls. Complete snapshots must fit min(transport limit, 1100 bytes), including framing.",
+            "Queue acceptance is local, not remote delivery. Production QUIC/TLS requires networking; hub rooms use development UDP. Larger-state replication is a separate milestone.",
+            "Brief packet interruptions recover from a complete snapshot. Late join and a fresh connection after seat timeout are rejected during the running match; there is no persistent-room reconnect claim."
+          ]
+        }
       ]
     }
   },

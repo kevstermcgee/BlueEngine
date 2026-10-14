@@ -1,0 +1,354 @@
+{
+  "status": "passed",
+  "baseline": {
+    "executable_sha256": "c4309987a74a342a37fde00f4633b1a2c970712f41cf6e64cf053c90ab7a4912",
+    "content_sha256": "60e20152990fc94c24eca47f765eea1ca344eeaed0b1bc3a68d949847572a27f"
+  },
+  "events": [
+    {
+      "event": "key-press",
+      "key": "space",
+      "keycode": 65,
+      "purpose": "attempt default draw-wire without required upgrade",
+      "elapsed_seconds": 0.362045
+    },
+    {
+      "event": "key-release",
+      "key": "space",
+      "elapsed_seconds": 0.46579
+    },
+    {
+      "event": "key-press",
+      "key": "2",
+      "keycode": 11,
+      "purpose": "select machine B",
+      "elapsed_seconds": 1.236109
+    },
+    {
+      "event": "key-release",
+      "key": "2",
+      "elapsed_seconds": 1.336254
+    },
+    {
+      "event": "key-press",
+      "key": "Right",
+      "keycode": 114,
+      "purpose": "select gears after draw-wire",
+      "elapsed_seconds": 1.456411
+    },
+    {
+      "event": "key-release",
+      "key": "Right",
+      "elapsed_seconds": 1.556565
+    },
+    {
+      "event": "key-press",
+      "key": "Right",
+      "keycode": 114,
+      "purpose": "select smelt after gears",
+      "elapsed_seconds": 1.676733
+    },
+    {
+      "event": "key-release",
+      "key": "Right",
+      "elapsed_seconds": 1.776905
+    },
+    {
+      "event": "key-press",
+      "key": "space",
+      "keycode": 65,
+      "purpose": "queue smelt on machine B through keyboard",
+      "elapsed_seconds": 1.897103
+    },
+    {
+      "event": "key-release",
+      "key": "space",
+      "elapsed_seconds": 1.997273
+    },
+    {
+      "event": "mouse-press",
+      "button": 1,
+      "window_coordinates": [
+        517,
+        546
+      ],
+      "purpose": "queue selected smelt on machine A through its Queue button",
+      "elapsed_seconds": 2.167714
+    },
+    {
+      "event": "mouse-release",
+      "button": 1,
+      "elapsed_seconds": 2.267892
+    },
+    {
+      "event": "key-press",
+      "key": "F5",
+      "keycode": 71,
+      "purpose": "engine-owned quick save after both machines complete",
+      "elapsed_seconds": 2.988155
+    },
+    {
+      "event": "key-release",
+      "key": "F5",
+      "elapsed_seconds": 3.088304
+    },
+    {
+      "event": "key-press",
+      "key": "2",
+      "keycode": 11,
+      "purpose": "select machine B after engine-owned restore for public inspection",
+      "elapsed_seconds": 17.126905
+    },
+    {
+      "event": "key-release",
+      "key": "2",
+      "elapsed_seconds": 17.227052
+    }
+  ],
+  "window_title": "Automation Workshop",
+  "window_size": [
+    1200,
+    760
+  ],
+  "argv": [
+    "games/automation-workshop/dist/automation-workshop",
+    "--size",
+    "1200x760",
+    "--capture",
+    "private-evidence/plug-null/production",
+    "--frames",
+    "60,180,900",
+    "--exit-after",
+    "960",
+    "--save-dir",
+    "private-evidence/plug-null/saves"
+  ],
+  "restore_argv": [
+    "games/automation-workshop/dist/automation-workshop",
+    "--size",
+    "1200x760",
+    "--capture",
+    "private-evidence/plug-null/restore-machine-b",
+    "--frames",
+    "180",
+    "--exit-after",
+    "240",
+    "--save-dir",
+    "private-evidence/plug-null/saves",
+    "--load",
+    "private-evidence/plug-null/saves/quick.be2save"
+  ],
+  "production_public_inspection": {
+    "authority": "fixed-tick game-owned Workshop::step",
+    "capacity": 12,
+    "definition": null,
+    "game": "blueengine:automation-workshop",
+    "instance": "workshop:world-0001",
+    "inventory": {
+      "workshop:coal": 2,
+      "workshop:gear": 0,
+      "workshop:ore": 4,
+      "workshop:plate": 4,
+      "workshop:wire": 0
+    },
+    "machine": {
+      "id": "workshop:machine-a",
+      "queue": [],
+      "upgrades": []
+    },
+    "queued_work": 0,
+    "reason": null,
+    "release": "0.1.0",
+    "rule": null,
+    "tick": 960,
+    "total_units": 10
+  },
+  "restore_public_inspection": {
+    "authority": "fixed-tick game-owned Workshop::step",
+    "capacity": 12,
+    "definition": null,
+    "game": "blueengine:automation-workshop",
+    "instance": "workshop:world-0001",
+    "inventory": {
+      "workshop:coal": 2,
+      "workshop:gear": 0,
+      "workshop:ore": 4,
+      "workshop:plate": 4,
+      "workshop:wire": 0
+    },
+    "machine": {
+      "id": "workshop:machine-b",
+      "queue": [],
+      "upgrades": []
+    },
+    "queued_work": 0,
+    "reason": null,
+    "release": "0.1.0",
+    "rule": null,
+    "tick": 406,
+    "total_units": 10
+  },
+  "save": {
+    "path": "private-evidence/plug-null/saves/quick.be2save",
+    "sha256": "a12f98be4c383db5134417759af27725456a962d4c2997554e1ea4c2b1f92ab0",
+    "bytes": 852,
+    "original_unchanged_after_load": true
+  },
+  "captures": [
+    {
+      "path": "private-evidence/plug-null/production/shot_00060.png",
+      "sha256": "bfdd6d15a81864f2231836d0552612cf458457f03f899358255ff9c3ecad685c",
+      "bytes": 106484
+    },
+    {
+      "path": "private-evidence/plug-null/production/shot_00180.png",
+      "sha256": "208e637a76221d7a129b8c3061f35bd74daf419f210e8751ff8a44fd73d9eb4f",
+      "bytes": 100345
+    },
+    {
+      "path": "private-evidence/plug-null/production/shot_00900.png",
+      "sha256": "7303972449b1ae8958dac17aaaede288afab67f833779040a6ee6eb73989972e",
+      "bytes": 100380
+    },
+    {
+      "path": "private-evidence/plug-null/restore-machine-b/shot_00180.png",
+      "sha256": "4d535f9513fe98699639f393453cecd5298a96e0d29b89179dea3110a8f94458",
+      "bytes": 104526
+    }
+  ],
+  "elapsed_seconds": 21.183991,
+  "schema_version": 1,
+  "check": "packaged-native-synthetic-input-private-ALSA-plug-null-repeat",
+  "scope": {
+    "runtime": "external custom Rust Workshop authoritative rules, offline native Linux client",
+    "engine_head_at_start": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+    "engine_head_at_receipt": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+    "package_engine_revision": "d7314ec8122e",
+    "package_review_source_sha256": "0284079206b9e0d21ea01eb7712e0f8e4ac0a4fed79a57fc7646577de084905a",
+    "working_tree_at_start": "dirty; existing milestone inputs preserved",
+    "package_manifest_matches_all_files": true,
+    "implementation_changes_for_check": false,
+    "cargo_invocations": 0
+  },
+  "method": {
+    "display": "Xvfb 1280x800x24",
+    "window": "1200x760 X11 window; checked IsViewable before focus",
+    "input": "system libX11.so.6 + libXtst.so.6 through temporary Python ctypes; XTestFakeKeyEvent, XTestFakeMotionEvent, XTestFakeButtonEvent, XSetInputFocus",
+    "renderer_environment": {
+      "LIBGL_ALWAYS_SOFTWARE": "1",
+      "GALLIUM_DRIVER": "llvmpipe"
+    },
+    "command": "env ALSA_CONFIG_PATH=PRIVATE_ALSA_CONFIG LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe xvfb-run -a -s \"-screen 0 1280x800x24\" python3 PRIVATE_HELPER",
+    "script_flag_used": false,
+    "keyboard_press_seconds": 0.1,
+    "keyboard_release_gap_seconds": 0.12,
+    "mouse_press_seconds": 0.1,
+    "mouse_release_gap_seconds": 0.12,
+    "helper": "ephemeral under ignored .be2-work; no new maintained command",
+    "ALSA_CONFIG_PATH": "private-evidence/plug-null.conf",
+    "private_ALSA_configuration": "pcm.!default {\n  type plug\n  slave.pcm { type null }\n}\n"
+  },
+  "negative_action": {
+    "action": "Space on default draw-wire recipe with no upgrades",
+    "visible_diagnostic": "WORKSHOP_UPGRADE_REQUIRED: workshop:draw-wire needs workshop:wire-tools",
+    "inspection_method": "Viewed repeat shot_00060.png: WORKSHOP_UPGRADE_REQUIRED; ore8/coal4/plate0, both machines idle.",
+    "asserted_no_charge": true,
+    "evidence": "private-evidence/plug-null/production/shot_00060.png"
+  },
+  "measurement_limits": [
+    "One synthetic-input functional run with one restore; elapsed time is harness wall time, not authoring/rebuild performance or a statistical benchmark.",
+    "Synthetic X11 events and software-rendered Xvfb screenshots are not physical-device input, Windows runtime, sound playback, internet multiplayer, or crash-free evidence.",
+    "Capture mode uses existing Lifecycle fixed ticks; rendering does not own production.",
+    "Saved files and raw logs remain ignored private evidence; only logical paths, digests, public inspection, input events and selected screenshots are committed."
+  ],
+  "recorded_at_utc": "2026-10-14T19:43:17.266160+00:00",
+  "comparison": {
+    "original_receipt": "docs/perf/workshop/native-synthetic-input.json",
+    "executable_and_content_match_original": true,
+    "gameplay_input_sequence_unchanged": true,
+    "normal_keyboard_mouse_path": true,
+    "engine_or_game_source_modified_for_repeat": false,
+    "audio_change": "explicit private ALSA default PCM plug-to-null; no engine fix",
+    "conclusion": "The observed default-device rate-negotiation panic was absent with a plug-to-null sink. This does not establish audio-device compatibility or audible output."
+  },
+  "audio_environment": {
+    "initialization": "passed with private plug-to-null configuration",
+    "sink": "null; no audible playback",
+    "launches": [
+      {
+        "label": "production",
+        "main_exit_code": 0,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "label": "restore-machine-b",
+        "main_exit_code": 0,
+        "stderr_bytes": 0,
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "crash_free_claim": false
+  },
+  "evidence_ledger": [
+    {
+      "claim": "normal keyboard command queues smelt on B",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "Key2, Right, Right, Space events; A final then B restored public inspections"
+    },
+    {
+      "claim": "normal mouse Queue button queues smelt on A",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "XTest button1 at window(517,546), final A empty queue and shared plate4"
+    },
+    {
+      "claim": "missing required upgrade rejects without resource charge",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "viewed missing-upgrade capture with exact diagnostic and initial inventory"
+    },
+    {
+      "claim": "both queues finish; ore4 coal2 plate4",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "two public machine inspections with exact inventory and empty queues"
+    },
+    {
+      "claim": "F5 save restores B; original file unchanged",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "engine-owned quick slot, --load launch, SHA256 before/after matches"
+    },
+    {
+      "claim": "physical keyboard/mouse or Windows native runtime",
+      "planned": false,
+      "executed": false,
+      "status": "unverified"
+    },
+    {
+      "claim": "audio output or audio-device reliability",
+      "planned": false,
+      "executed": false,
+      "status": "unverified"
+    },
+    {
+      "claim": "ALSA worker initialization with explicit plug-to-null default PCM",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "Both repeated launches exited0 with empty stderr; no audio output claim."
+    }
+  ],
+  "limitations": [
+    "This was one environment-isolation repeat, not a benchmark or a physical audio test.",
+    "The first failed default-device initialization and first harness failure remain in the original receipt.",
+    "Raw logs, saves and repeat captures remain ignored private evidence; screenshot hashes are retained."
+  ]
+}

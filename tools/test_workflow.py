@@ -169,7 +169,7 @@ class ContextTests(unittest.TestCase):
         self.assertEqual(len(calls), len(check_headless.CONFIGURATIONS))
         self.assertTrue(all('--edges' in command and 'normal' in command for command in calls))
         self.assertNotIn('--features', calls[0])
-        self.assertIn('physics,networking', calls[1])
+        self.assertTrue(any('physics,networking' in command for command in calls))
         with self.assertRaisesRegex(SystemExit, 'rules.*quinn'):
             check_headless.check_boundaries(lambda *a, **k: SimpleNamespace(stdout='quinn v0.11\n'))
 
@@ -508,6 +508,108 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertFalse(any('web' in command for command in ship['commands']))
         self.assertNotIn(['cargo', 'test', '--locked', '--profile', 'itest'], ship['commands'])
 
+    def test_optional_resources_have_independent_required_gates(self):
+        commands = workflow.full_commands()
+        resource = [command for command in commands if '--features' in command
+                    and command[command.index('--features') + 1] == 'resources']
+        self.assertEqual(len(resource), 4)
+        self.assertTrue(all('--no-default-features' in command for command in resource))
+        self.assertTrue(any('--test' in command and command[command.index('--test') + 1] == 'resources'
+                            for command in resource))
+        self.assertTrue(any('--doc' in command for command in resource))
+        self.assertTrue(any(command[1] == 'rustdoc' and '--lib' in command for command in resource))
+        self.assertTrue(any(command[1] == 'clippy' and '--all-targets' in command for command in resource))
+        workshop = [command for command in commands if '--manifest-path' in command
+                    and command[command.index('--manifest-path') + 1] == 'games/automation-workshop/Cargo.toml']
+        self.assertEqual(len(workshop), 2)
+        self.assertTrue(all('--no-default-features' in command for command in workshop))
+        self.assertTrue(any('--features' in command and command[command.index('--features') + 1] == 'online'
+                            and '--test' in command for command in workshop))
+
+    def test_resource_integration_closes_over_workshop_without_widening_inner(self):
+        inner = workflow.change_plan(ROOT, ['src/runtime/resources.rs'])
+        self.assertFalse(any('--manifest-path' in command for command in inner['commands']))
+        integration = workflow.change_plan(ROOT, ['src/runtime/resources.rs'], loop='integration')
+        projects = [command for command in integration['commands'] if '--manifest-path' in command]
+        self.assertEqual(len(projects), 2)
+        self.assertTrue(all('--no-default-features' in command for command in projects))
+        self.assertTrue(any('--features' in command and command[command.index('--features') + 1] == 'online'
+                            for command in projects))
+        self.assertTrue(all(integration['command_harnesses'][integration['commands'].index(command)] == 'rust_project'
+                            for command in projects))
+        direct = workflow.change_plan(ROOT, ['games/automation-workshop/src/lib.rs'])
+        cargo = [command for command in direct['commands'] if command[0] == 'cargo']
+        self.assertEqual(len(cargo), 1)
+        self.assertIn('games/automation-workshop/Cargo.toml', cargo[0])
+        self.assertNotIn('--features', cargo[0])
+        client = workflow.change_plan(ROOT, ['games/automation-workshop/src/main.rs'])
+        command = next(command for command in client['commands'] if command[0] == 'cargo')
+        self.assertEqual(command[command.index('--features') + 1], 'client')
+        server = workflow.change_plan(ROOT, ['games/automation-workshop/src/bin/server.rs'])
+        command = next(command for command in server['commands'] if command[0] == 'cargo')
+        self.assertEqual(command[command.index('--features') + 1], 'online')
+        unknown = workflow.change_plan(ROOT, ['src/runtime/unclassified-rule.rs'])
+        self.assertEqual(unknown['scope'], 'full')
+        self.assertEqual(unknown['commands'], workflow.full_commands())
+
+    def test_missing_external_consumer_escalates_instead_of_claiming_integration(self):
+        features = workflow.index(ROOT)
+        features['automation_workshop']['checks'] = [
+            'cargo test --locked --manifest-path missing-workshop/Cargo.toml --no-default-features']
+        with patch.object(workflow, 'index', return_value=features):
+            plan = workflow.change_plan(ROOT, ['src/runtime/resources.rs'], loop='integration')
+        self.assertEqual(plan['scope'], 'full')
+        self.assertIn('missing-workshop/Cargo.toml', plan['fallback_paths'])
+
+    def test_declared_game_integration_features_are_checked_but_inner_stays_narrow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            game = Path(directory)
+            shutil.copyfile(ROOT / 'games/lantern-run/game.project.json', game / 'game.project.json')
+            (game / 'Cargo.toml').write_text(
+                '[package]\nname="capability-game"\nversion="0.1.0"\n'
+                '[package.metadata.blueengine]\nintegration-features=["online"]\n'
+                '[features]\nonline=[]\n')
+            (game / 'Cargo.lock').write_text('[[package]]\nname="capability-game"\nversion="0.1.0"\n')
+            (game / 'scripts').mkdir()
+            for name in ('check.py', 'ship.py'):
+                (game / 'scripts' / name).write_text('')
+            inner = workflow.game_plan(ROOT, game)
+            self.assertEqual(len(inner['commands']), 1)
+            self.assertNotIn('--features', inner['commands'][0])
+            self.assertIn('online', ' '.join(inner['not_verified']))
+            for loop in ('integration', 'shipping'):
+                plan = workflow.game_plan(ROOT, game, loop)
+                optional = [command for command in plan['commands'] if '--features' in command]
+                self.assertEqual(len(optional), 1)
+                self.assertIn('--no-default-features', optional[0])
+                self.assertEqual(optional[0][optional[0].index('--features') + 1], 'online')
+                self.assertEqual(plan['command_roles'][plan['commands'].index(optional[0])], 'integration_features')
+                self.assertFalse(any('--lib' in command for command in plan['commands']))
+        for value in ('online', ['missing'], ['online', 'online'], [False], ['online'] * 9):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                workflow.game_integration_features({'package': {'metadata': {'blueengine': {'integration-features': value}}},
+                                                    'features': {'online': []}})
+
+    def test_resources_isolated_graph_guard_refuses_network_runtime(self):
+        from tools import check_dependency_boundaries as boundaries
+        configurations = {'resource_transactions': boundaries.CASES['resource_transactions']}
+        observed = []
+        def resolved(command, **kwargs):
+            manifest = Path(command[command.index('--manifest-path') + 1])
+            import tomllib
+            document = tomllib.loads(manifest.read_text())
+            self.assertIn('workspace', document)
+            self.assertFalse(document['dependencies']['vesper3d']['default-features'])
+            self.assertEqual(document['dependencies']['vesper3d']['features'], ['resources'])
+            observed.append(command)
+            return SimpleNamespace(returncode=0)
+        with patch.dict(boundaries.CASES, configurations, clear=True), \
+                patch.object(boundaries.subprocess, 'run', side_effect=resolved), \
+                patch.object(boundaries.subprocess, 'check_output', return_value='be2 v0.2.0\nserde v1.0.219\nquinn v0.11.8\n'):
+            with self.assertRaisesRegex(SystemExit, 'resource_transactions.*quinn'):
+                boundaries.main(['--target', 'x86_64-unknown-linux-gnu'])
+        self.assertEqual(len(observed), 1)
+
     def test_progressive_context_and_index_validation(self):
         small = workflow.context(ROOT, 'two_dimensional', level=1)
         full = workflow.context(ROOT, 'two_dimensional')
@@ -604,6 +706,25 @@ class AutomaticLoopTests(unittest.TestCase):
         # Both platform and native/headless/portable checks remain in full_commands.
         self.assertIn('os: [ubuntu-latest, windows-latest]', ci)
         self.assertEqual(ci.count('run: python tools/be2.py check'), 1)
+
+    def test_native_game_matrix_adds_workshop_and_preserves_required_os_gates(self):
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        job = ci.split('\n  idea-forge:\n', 1)[1].split('\n  wormhole:\n', 1)[0]
+        self.assertIn('os: [ubuntu-latest, windows-latest]', job)
+        self.assertIn('game: [idea-forge, automation-workshop]', job)
+        self.assertNotIn('games/idea-forge', job)
+        self.assertIn('games/${{ matrix.game }}/Cargo.toml', job)
+        self.assertIn('games/${{ matrix.game }}/scripts/ship.py', job)
+        self.assertIn('name: ${{ matrix.game }}-native-${{ runner.os }}', job)
+        self.assertIn('games/${{ matrix.game }}/.blue-check/', job)
+        for gate in ('cargo fmt', 'cargo test --locked', 'cargo clippy --locked --all-targets',
+                     'Prepare pinned software OpenGL for Windows CI',
+                     'Mesa archive checksum mismatch', 'Windows package resources and isolated smoke',
+                     'Linux package and isolated smoke', 'ship --no-install'):
+            self.assertIn(gate, job)
+        self.assertIn('needs: [engine, leo, idea-forge, wormhole, sway, container]', ci)
+        self.assertIn('FORGE_RESULT: ${{ needs.idea-forge.result }}', ci)
+        self.assertIn('test "$FORGE_RESULT" = success', ci)
 
 
 class DiskTests(unittest.TestCase):

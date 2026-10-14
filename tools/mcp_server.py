@@ -7,36 +7,19 @@ Ensures seamless compatibility with Claude Desktop, Cursor, Cline, and any MCP s
 
 import os
 import sys
-import shutil
 import subprocess
 from pathlib import Path
+try:
+    from tools.game_tooling import fresh_tools
+except ModuleNotFoundError:
+    from game_tooling import fresh_tools
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 
 def find_or_build_binary() -> Path:
-    ext = ".exe" if sys.platform == "win32" else ""
-    release_bin = REPO_ROOT / "target" / "release" / f"be2-tools{ext}"
-    debug_bin = REPO_ROOT / "target" / "debug" / f"be2-tools{ext}"
-
-    if release_bin.exists():
-        return release_bin
-    if debug_bin.exists():
-        return debug_bin
-
-    which = shutil.which(f"be2-tools{ext}")
-    if which:
-        return Path(which)
-
-    # Build debug binary on first run if cargo is present
-    cargo = shutil.which("cargo")
-    if cargo:
-        sys.stderr.write("[be2-mcp] be2-tools binary not found, compiling with cargo...\n")
-        sys.stderr.flush()
-        res = subprocess.run([cargo, "build", "--bin", "be2-tools"], cwd=REPO_ROOT)
-        if res.returncode == 0 and debug_bin.exists():
-            return debug_bin
-
-    raise RuntimeError("Could not find or build `be2-tools` binary. Run `cargo build --bin be2-tools` first.")
+    # Share Cargo invalidation, explicit-override validation and target discovery with game tooling.
+    # A stale release executable must not hide newly indexed public contracts from MCP clients.
+    return Path(fresh_tools(REPO_ROOT, os.environ.get('BE2_TOOLS')))
 
 def main():
     try:

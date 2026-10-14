@@ -1,7 +1,9 @@
 """Public authoring answers, runtime limits and measured UTF-8 intake budgets."""
 import json
+import os
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from tools import learn, springboard, workflow
 
@@ -25,6 +27,78 @@ def compact_bytes(packet):
 
 
 class PublicDiscoveryTests(unittest.TestCase):
+    def test_mcp_launcher_uses_shared_freshness_and_validates_explicit_override(self):
+        from tools import mcp_server
+        expected = ROOT / 'shared target with spaces' / 'itest' / 'be2-tools'
+        with patch.dict(os.environ, {'BE2_TOOLS': str(expected)}), \
+                patch.object(mcp_server, 'fresh_tools', return_value=str(expected)) as fresh:
+            self.assertEqual(mcp_server.find_or_build_binary(), expected)
+            fresh.assert_called_once_with(ROOT, str(expected))
+        with patch.object(mcp_server, 'fresh_tools', side_effect=ValueError('incompatible or stale')):
+            with self.assertRaisesRegex(ValueError, 'incompatible or stale'):
+                mcp_server.find_or_build_binary()
+
+    def test_workshop_questions_find_the_existing_optional_public_route(self):
+        cases = (
+            ('inventories', 'resource_transactions', 'pub fn transact'),
+            ('atomic inventory transactions', 'resource_transactions', 'pub fn transact'),
+            ('machine production', 'automation_workshop', 'Command::Queue'),
+            ('blocked outputs', 'automation_workshop', 'pub fn inspect'),
+            ('full destination', 'automation_workshop', 'pub fn inspect'),
+            ('save migration', 'automation_workshop', 'pub fn migrate_content'),
+            ('online workshop support', 'automation_workshop', 'NetGame'),
+            ('online support', 'automation_workshop', 'NetGame'),
+        )
+        for query, feature_id, signature_part in cases:
+            with self.subTest(query=query):
+                packet = workflow.context(ROOT, query, level=1)
+                self.assertEqual([item['id'] for item in packet['matches']], [feature_id])
+                self.assertFalse(packet['confidence'].startswith('low'))
+                answer = packet['matches'][0]['answer']
+                self.assertIn(signature_part, answer['signature'])
+                self.assertIn('game-owned', answer['runtime'])
+                self.assertTrue('automation-workshop/Cargo.toml' in answer['example'] or
+                                'automation_workshop::persistence::migrate_content' in answer['example'])
+                self.assertTrue(answer['verify'].startswith('cargo test --locked'))
+                guide = 'docs/RESOURCES.md' if feature_id == 'resource_transactions' else 'docs/WORKSHOP.md'
+                self.assertEqual(packet['matches'][0]['read_first'], [guide])
+                self.assertLessEqual(compact_bytes(packet), 3600)
+                full = workflow.context(ROOT, query, level=2)
+                self.assertEqual(full['matches'][0]['answer'], answer)
+                self.assertEqual(full['matches'][0]['limitations'], packet['matches'][0]['limitations'])
+                self.assertLessEqual(compact_bytes(full), 8000)
+
+    def test_workshop_discovery_preserves_failure_and_runtime_boundaries(self):
+        resource = workflow.context(ROOT, 'Inventory::transact', level=1)['matches'][0]
+        self.assertEqual(resource['id'], 'resource_transactions')
+        self.assertIn('resources feature', ' '.join(resource['answer']['warnings']))
+        self.assertIn('64 resource', json.dumps(resource))
+        self.assertIn('128 combined', json.dumps(resource))
+        blocked = workflow.context(ROOT, 'blocked outputs', level=1)['matches'][0]['answer']
+        self.assertIn('RESOURCE-CAPACITY', ' '.join(blocked['warnings']))
+        self.assertIn('pending', ' '.join(blocked['warnings']))
+        migration = workflow.context(ROOT, 'save migration', level=1)['matches'][0]['answer']
+        self.assertIn('not globally weakened', ' '.join(migration['warnings']))
+        self.assertIn('original files', ' '.join(migration['warnings']))
+        online = workflow.context(ROOT, 'online workshop support', level=1)['matches'][0]['answer']
+        for required in ('1100', 'stock', 'local', 'not remote delivery', 'QUIC/TLS', 'development UDP'):
+            self.assertIn(required, json.dumps(online))
+        # Native CLI search and MCP search consume the same compile-time feature index.
+        native = (ROOT / 'src/viewer/capabilities.rs').read_text()
+        mcp = (ROOT / 'src/viewer/mcp.rs').read_text()
+        self.assertIn('../../tools/FEATURES.json', native)
+        self.assertIn('capabilities::search(q)', mcp)
+
+    def test_workshop_author_intake_counts_complete_instructions_and_warnings(self):
+        # UTF-8 reading bytes, not model tokens; authored game source/content are separate inputs.
+        required = ['AGENTS.md', 'games/automation-workshop/AGENTS.md', 'docs/WORKSHOP.md']
+        self.assertLessEqual((ROOT / required[1]).stat().st_size, 3000)
+        self.assertLessEqual((ROOT / required[2]).stat().st_size, 8000)
+        for query in ('machine production', 'blocked outputs', 'save migration', 'online workshop support'):
+            packet = workflow.context(ROOT, query, level=1)
+            reading_bytes = compact_bytes(packet) + sum((ROOT / path).stat().st_size for path in required)
+            self.assertLessEqual(reading_bytes, 30000, query)
+
     def test_real_authoring_tasks_find_supported_public_contracts(self):
         for query, expected in TASKS:
             with self.subTest(query=query):
