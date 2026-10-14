@@ -122,6 +122,8 @@ def feature_map(root, name, features=None):
 
 def validate_index(root):
     features = index(root)
+    manifest = root / 'Cargo.toml'
+    cargo_features = set(tomllib.loads(manifest.read_text(encoding='utf-8')).get('features', {})) if manifest.is_file() else set()
     errors = []
     for name, feature in features.items():
         for path in set(feature['files'] + feature.get('read_first', []) +
@@ -131,6 +133,9 @@ def validate_index(root):
         for dependency in feature.get('depends_on', []):
             if dependency not in features:
                 errors.append({'feature': name, 'dependency': dependency, 'error': 'unknown dependency'})
+        for requirement in feature.get('required_features', []):
+            if cargo_features and requirement not in cargo_features:
+                errors.append({'feature': name, 'required_feature': requirement, 'error': 'unknown Cargo feature'})
         for suite in feature_suites(feature):
             if not re.fullmatch(r'[\w-]+', suite) or not (root / 'tests' / (suite + '.rs')).is_file():
                 errors.append({'feature': name, 'suite': suite, 'error': 'missing integration suite'})
@@ -147,6 +152,17 @@ def suite_feature_groups(root, suites):
     for suite in suites:
         groups.setdefault(requirements.get(suite, ()), []).append(suite)
     return groups
+
+
+# Reviewed guides consumed as runtime text by doc_drift, not compiled source,
+# generated schema, fixture or build input. This is an exact ownership list:
+# adding a file requires reviewing its consumers. In particular AI_QUICKSTART.md
+# and archive/AI_REFERENCE.md are include_str! inputs and are intentionally absent.
+ITERATION_GUIDES = frozenset({
+    'docs/CHANGE_WORKFLOW.md', 'docs/AI_SPRINGBOARD.md', 'docs/NETPLAY.md',
+    'docs/CUSTOM_SIM_CHEATSHEET.md', 'docs/GAME_QUICKSTART.md', 'docs/AUDIO.md',
+    'docs/BROWSER_WORKFLOW.md', 'docs/GAME_AUTHORING_ENTRY.md',
+})
 
 
 def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
@@ -166,6 +182,11 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     invalid = [s for s in suites if not re.fullmatch(r'[\w-]+', s) or not (root / 'tests' / (s + '.rs')).is_file()]
     boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json') or
                 p.startswith('.github/') or p.endswith('build.rs')]
+    # A Markdown suffix is not proof of independence. Keep executable docs and
+    # unknown recipes conservative; only exact guides and existing reviewed
+    # independent Python/data scopes can narrow an iteration plan.
+    boundary += [p for p in paths if p.endswith('.md') and p not in ITERATION_GUIDES
+                 and validation_plan([p], base, test_profile)['scope'] == 'full']
     fallback = sorted(set(affected['unmapped'] + boundary + invalid))
     common = {'loop': loop, 'base': base, 'changed_paths': paths, 'impact': affected,
               'remaining': 'Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/package gates.',
@@ -179,20 +200,31 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     commands, harnesses = [], []
 
     def add(command, harness=None):
+        if '--features' in command:
+            command = list(command)
+            position = command.index('--features') + 1
+            command[position] = ','.join(sorted(set(command[position].split(','))))
         if command not in commands:
             commands.append(command)
             harnesses.append(harness)
 
     native = any(p.startswith(('src/', 'tests/')) and p.endswith('.rs') for p in paths)
     native = native or any(p.startswith('templates/') and p.endswith(('.rs', '.tmpl')) for p in paths)
+    guides = sorted(set(paths) & ITERATION_GUIDES)
+    exercised_suites = suites if native else []
     if native:
         groups = suite_feature_groups(root, suites)
+        owned_features = sorted({flag for name in affected['owners']
+                                 for flag in features[name].get('required_features', [])})
         portable = bool({'two_dimensional'} & set(affected['affected']))
         presentation = portable or bool({'graphics', 'game_presentation', 'client_kit', 'native_controllers',
                                          'offline_renderer', 'sandbox'} & set(affected['owners']))
-        modes = ([[] , ['--no-default-features']] if loop == 'integration' else
-                 ([['--no-default-features', '--features', 'two-d']] if portable else
-                  [[]] if presentation else [['--no-default-features']]))
+        narrow = ['--no-default-features']
+        requested = sorted(set(owned_features) | ({'two-d'} if portable else set()))
+        if requested:
+            narrow += ['--features', ','.join(requested)]
+        modes = ([[], ['--no-default-features', '--features', 'physics,networking']]
+                 if loop == 'integration' else [[]] if presentation and not portable else [narrow])
         for flags in modes:
             add(['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, '--lib',
                  *[arg for suite in groups.get((), []) for arg in ('--test', suite)], '--message-format=json'], 'rust')
@@ -201,11 +233,18 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
                 add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
                      '--features', ','.join(required),
                      *[arg for suite in selected for arg in ('--test', suite)], '--message-format=json'], 'rust')
-        if loop == 'integration' and portable:
-            add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
-                 '--features', 'two-d', '--lib', '--message-format=json'], 'rust')
+        if loop == 'integration' and set(requested) != {'physics', 'networking'}:
+            add(['cargo', 'test', '--locked', *profile_flags(test_profile), *narrow,
+                 '--lib', '--message-format=json'], 'rust')
         if loop == 'integration':
             add([sys.executable, 'tools/check_headless.py'])
+    if guides:
+        # Cargo validates source/feature/profile freshness, then the test reads
+        # today's content on every invocation. No saved test result is reused.
+        add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
+             '--test', 'doc_drift', '--message-format=json'], 'rust')
+        exercised_suites = sorted(set(exercised_suites) | {'doc_drift'})
+        add([sys.executable, 'tools/check_docs.py'])
     for name in affected['affected']:
         for check in features[name]['checks']:
             match = re.fullmatch(r'python -m unittest ((?:[\w]+\.[\w.]+)(?: [\w]+\.[\w.]+)*)', check)
@@ -218,7 +257,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     if reviewed['scope'] not in ('full', 'no_changes'):
         for command in reviewed['commands']:
             add(command, 'python' if command[1:3] == ['-m', 'unittest'] else None)
-    if paths and not native and len(commands) == 1 and not all(p.endswith('.md') for p in paths):
+    if paths and not native and len(commands) == 1:
         return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
                 'reason': 'Ownership is known but executable behavioral evidence is missing: full checks required.',
                 'commands': full_commands(test_profile), 'fallback_paths': paths}
@@ -228,11 +267,21 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
         return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
                 'reason': 'Content requires authored scenario/asset closure evidence; no automatic route is declared.',
                 'commands': full_commands(test_profile), 'fallback_paths': paths}
-    return {**common, 'scope': 'focused', 'reason': 'Whole-library units plus declared consumer suites and tooling checks.',
+    return {**common, 'scope': 'focused',
+            'reason': ('Whole-library units plus declared consumer suites and tooling checks.' if native else
+                       'Current-content guide checks and reviewed tooling checks only.' if guides else
+                       'Reviewed tooling checks only.'),
             'commands': commands, 'command_harnesses': harnesses,
             'proves': 'Executed selected behavioral checks only; final shipping verification remains outstanding.',
-            'requirements': {'unit': native, 'integration_suites': suites,
-                             'networking': 'selected suites' if {'multiplayer', 'netplay', 'netplay_hub'} & set(affected['affected']) else 'deferred to shipping',
+            'not_verified': ['Other feature configurations and undeclared downstream consumers.',
+                             'Native package launch, physical controls, graphics and audio devices.'] +
+                            (['Gameplay and compiled Rust examples in documentation.'] if guides else []),
+            'requirements': {'unit': native, 'integration_suites': exercised_suites,
+                             'documentation': ('Current links, registered CLI invocations and embedded JSON; '
+                                               'Rust examples and gameplay contracts still require shipping checks.'
+                                               if guides else 'deferred to shipping'),
+                             'networking': ('selected suites' if native and {'multiplayer', 'netplay', 'netplay_hub'} & set(affected['affected'])
+                                            else 'deferred to shipping'),
                              'packaging': 'affected game package gate before shipping' if {'game_shipping'} & set(affected['affected']) else 'deferred to shipping',
                              'full_suite': 'before merge'}}
 
@@ -549,12 +598,20 @@ def full_commands(test_profile='itest'):
     # Group feature modes to avoid repeatedly rebuilding the same binary with a
     # different feature set. Keep every pre-existing engine gate.
     commands = [['cargo', 'fmt', '--check']]
-    for features in ([], ['--no-default-features'], ['--no-default-features', '--features', 'offline']):
+    for features in ([], ['--no-default-features', '--features', 'physics,networking'],
+                     ['--no-default-features', '--features', 'offline,physics,networking']):
         commands.extend([
             ['cargo', 'rustdoc', '--locked', '--lib', *profile_flags(test_profile), *features, '--', '-D', 'warnings'],
             ['cargo', 'test', '--locked', *profile_flags(test_profile), *features],
             ['cargo', 'clippy', '--all-targets', '--locked', *profile_flags(test_profile), *features, '--', '-D', 'warnings'],
         ])
+    # Test the genuinely narrow rules build independently; the stock/default
+    # configurations above must not mask missing feature gates by unification.
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib', '--', '-D', 'warnings'],
+        ['cargo', 'rustdoc', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib', '--', '-D', 'warnings'],
+    ])
     # Keep the maintained game on the real authoring path. Its own final ship check is exercised
     # separately with a display; CI still compiles presentation and proves headless rules/saves.
     game_manifest = 'games/signal-garden/Cargo.toml'
@@ -565,8 +622,8 @@ def full_commands(test_profile='itest'):
     ])
     commands.extend([
         ['cargo','test','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib'],
-        ['cargo','clippy','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
-        ['cargo','rustdoc','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
+        ['cargo','clippy','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib','--','-D','warnings'],
+        ['cargo','rustdoc','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib','--','-D','warnings'],
     ])
     commands.extend([
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'model-import', '--lib', 'model_import'],
@@ -593,7 +650,8 @@ def full_commands(test_profile='itest'):
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
          'tools.test_hub_deploy','tools.test_browser_retirement','tools.test_springboard',
-         'tools.test_machine_utilities', 'tools.test_idea_forge', 'tools.test_engine_fix'],
+         'tools.test_machine_utilities', 'tools.test_idea_forge', 'tools.test_engine_fix',
+         'tools.test_game_tooling', 'tools.test_discovery'],
     ]
 
 
@@ -632,7 +690,7 @@ def windows_plan(which=shutil.which, run=subprocess.run):
     return {'scope': 'windows_typecheck',
             'reason': 'Windows-only code is invisible to Linux builds; type-check it for ' + WINDOWS_TARGET + '.',
             'proves': WINDOWS_PROVES, 'env': env,
-            'commands': [base, [*base, '--no-default-features']]}
+            'commands': [base, [*base, '--no-default-features', '--features', 'physics,networking']]}
 
 
 def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode='default', _features=None,
@@ -654,6 +712,8 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
     if typecheck:
         if not any(path.startswith('src/') for path in feature['files']):
             raise ValueError('No engine source indexed here; use the feature checks from context.')
+        if feature_mode == 'headless' and feature.get('required_features'):
+            flags += ['--features', ','.join(sorted(set(feature['required_features'])))]
         commands = [['cargo', 'check', '--locked', '--lib', *flags, '--message-format=json']]
         proves = 'Engine library type-check only; no linking or behavior tests.'
     elif suites:

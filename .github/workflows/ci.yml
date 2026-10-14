@@ -55,7 +55,7 @@ jobs:
       - name: Full engine verification
         run: python tools/be2.py check
       - run: cargo build --release --locked
-      - run: cargo build --release --locked --no-default-features --bin be2-headless
+      - run: cargo build --release --locked --no-default-features --features physics,networking --bin be2-headless
 
       # Rustdoc, headless boundaries, authoring, Python and maintained-game gates
       # already ran in the canonical checker above. Repeating them changed Cargo
@@ -160,7 +160,7 @@ jobs:
         run: |
           cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features
           cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --all-targets -- -D warnings
-          cargo build --release --locked --bin be2-tools
+          cargo build --release --locked --no-default-features --features physics,networking --bin be2-tools
           python assets/games/leo/scripts/check.py --ship-folder .be2-work/leo-launchers
       - name: Leo rendered and packaged evidence
         if: always()

@@ -29,7 +29,7 @@ jobs:
       - name: Compose and verify all eight musical movements
         shell: bash
         run: |
-          cargo build --locked --profile itest --no-default-features --bin be2-tools
+          cargo build --locked --profile itest --no-default-features --features physics,networking --bin be2-tools
           python games/reverie/scripts/compose.py target/itest/be2-tools.exe
       - name: Rules, deterministic snapshots and presentation checks
         shell: bash

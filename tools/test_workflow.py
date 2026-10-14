@@ -120,6 +120,20 @@ class ContextTests(unittest.TestCase):
                 runpy.run_path(str(ROOT / 'tools/check_headless.py'), run_name='__main__')
         self.assertIn('python tools/be2.py context ARCH-HEADLESS-001', str(error.exception))
 
+    def test_each_dependency_boundary_resolves_separately_and_rejects_heavy_edges(self):
+        from tools import check_headless
+        calls = []
+        def run(command, **kwargs):
+            calls.append(command)
+            return SimpleNamespace(stdout='serde v1.0\nring v0.17\n')
+        check_headless.check_boundaries(run)
+        self.assertEqual(len(calls), len(check_headless.CONFIGURATIONS))
+        self.assertTrue(all('--edges' in command and 'normal' in command for command in calls))
+        self.assertNotIn('--features', calls[0])
+        self.assertIn('physics,networking', calls[1])
+        with self.assertRaisesRegex(SystemExit, 'rules.*quinn'):
+            check_headless.check_boundaries(lambda *a, **k: SimpleNamespace(stdout='quinn v0.11\n'))
+
     def test_index_contracts_resolve_and_annotations_stay_queryable(self):
         features = workflow.index(ROOT)
         kinds = {'AI-INVARIANT', 'AI-BOUNDARY', 'AI-WARNING', 'AI-HOTPATH',
@@ -195,8 +209,11 @@ class AutomaticLoopTests(unittest.TestCase):
         plan = workflow.change_plan(ROOT, ['src/viewer/net/replication.rs'])
         self.assertEqual(plan['scope'], 'focused')
         command = plan['commands'][0]
-        for arg in ('--lib', '--no-default-features', 'replication_budget', 'hub', 'netplay', 'shared_gameplay'):
+        for arg in ('--lib', '--no-default-features'):
             self.assertIn(arg, command)
+        selected = [arg for command in plan['commands'] if command[:2] == ['cargo', 'test'] for arg in command]
+        for suite in ('replication_budget', 'hub', 'netplay', 'shared_gameplay'):
+            self.assertIn(suite, selected)
         self.assertNotIn('audio_project', command)
         self.assertEqual(plan['requirements']['full_suite'], 'before merge')
         self.assertEqual(len(plan['commands']), len(plan['command_harnesses']))
@@ -223,15 +240,65 @@ class AutomaticLoopTests(unittest.TestCase):
         exact = workflow.iteration_plan(ROOT, 'game_documents', test='authoring_schemas')
         self.assertIn('schema-validation', exact['commands'][0])
 
+    def test_feature_ownership_exercises_gated_modules_and_retains_narrow_rules(self):
+        physics = workflow.change_plan(ROOT, ['src/viewer/prop_physics.rs'])
+        first = physics['commands'][0]
+        self.assertEqual(first[first.index('--features') + 1], 'physics')
+        self.assertNotIn('networking', first)
+        rules = workflow.change_plan(ROOT, ['src/viewer/devkit/sim.rs'])
+        self.assertIn('--no-default-features', rules['commands'][0])
+        # This feature intentionally also owns stock example files; exact devkit
+        # simulation units remain narrow unless Cargo suites require a feature.
+        typecheck = workflow.iteration_plan(ROOT, 'simulation_contract', typecheck=True,
+                                            feature_mode='headless')['commands'][0]
+        self.assertIn('physics', typecheck)
+
     def test_unknown_build_and_content_inputs_fail_closed(self):
         for path in ('src/new.rs', 'Cargo.toml', 'tools/FEATURES.json', '.github/workflows/ci.yml',
-                     'assets/games/observatory/content/game.json', 'tools/place_interior.py'):
+                     'assets/games/observatory/content/game.json', 'tools/place_interior.py',
+                     'docs/AI_QUICKSTART.md', 'docs/archive/AI_REFERENCE.md',
+                     'docs/perf/hot-reload/measure_content.py',
+                     'docs/perf/model-import/cases/final-1.rs', 'docs/new-recipe.md'):
             plan = workflow.change_plan(ROOT, [path])
             self.assertEqual(plan['scope'], 'full', path)
             self.assertEqual(plan['commands'], workflow.full_commands())
         mixed = workflow.change_plan(ROOT, ['tools/assets.py', 'unknown.py'])
         self.assertEqual(mixed['scope'], 'full')
         self.assertEqual(workflow.change_plan(ROOT, [])['commands'], [])
+
+    def test_reviewed_guides_execute_current_content_without_whole_library_units(self):
+        for loop in ('inner', 'integration'):
+            plan = workflow.change_plan(ROOT, ['docs/NETPLAY.md'], loop=loop)
+            self.assertEqual(plan['scope'], 'focused')
+            cargo = [c for c in plan['commands'] if c[0] == 'cargo']
+            self.assertEqual(len(cargo), 1)
+            self.assertIn('doc_drift', cargo[0])
+            self.assertNotIn('--lib', cargo[0])
+            self.assertEqual(plan['requirements']['integration_suites'], ['doc_drift'])
+            self.assertIn('Rust examples', plan['requirements']['documentation'])
+            self.assertEqual(plan['requirements']['networking'], 'deferred to shipping')
+            self.assertTrue(plan['not_verified'])
+            self.assertIn([sys.executable, 'tools/check_docs.py'], plan['commands'])
+            self.assertIn('shipping', plan['remaining'])
+        self.assertEqual(workflow.change_plan(ROOT, ['docs/NETPLAY.md'], loop='shipping')['scope'], 'full')
+        self.assertEqual(workflow.change_plan(ROOT, ['docs/NETPLAY.md', 'docs/new-recipe.md'])['scope'], 'full')
+
+    def test_known_markdown_with_no_behavioral_evidence_fails_closed(self):
+        with patch.object(workflow, 'index', return_value={'guide': {
+                'files': ['docs/recipe.md'], 'checks': [], 'evidence': []}}):
+            self.assertEqual(workflow.change_plan(ROOT, ['docs/recipe.md'])['scope'], 'full')
+
+    def test_content_link_gate_reads_current_files_on_every_run(self):
+        from tools.check_docs import broken_links
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            guide = root / 'guide.md'
+            (root / 'target.md').write_text('A reviewed destination.\n', encoding='utf-8')
+            guide.write_text('[Destination](target.md)\n', encoding='utf-8')
+            self.assertEqual(broken_links(root), [])
+            guide.write_text('[Destination](missing-current.md)\n', encoding='utf-8')
+            self.assertEqual(broken_links(root), ['guide.md: missing missing-current.md'])
 
     def test_shipping_selection_is_unchanged_and_python_needs_no_cargo(self):
         self.assertEqual(workflow.change_plan(ROOT, ['tools/assets.py'], loop='shipping'),
@@ -416,7 +483,7 @@ class SelectionTests(unittest.TestCase):
     def test_all_original_engine_gates_remain(self):
         commands = workflow.full_commands()
         self.assertIn(['cargo', 'fmt', '--check'], commands)
-        for features in ([], ['--no-default-features']):
+        for features in ([], ['--no-default-features', '--features', 'physics,networking']):
             self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', *features], commands)
             self.assertIn(['cargo', 'test', '--locked', *features], workflow.full_commands('dev'))
             self.assertIn(['cargo', 'clippy', '--all-targets', '--locked', '--profile', 'itest', *features,
@@ -434,6 +501,24 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(plan['independent_commands'], [len(commands) - 1])
         self.assertEqual(commands[-1][1:3], ['-m', 'unittest'])
         self.assertNotIn('tools.test_author', commands[-1])
+        self.assertIn('tools.test_game_tooling', commands[-1])
+        self.assertIn('tools.test_discovery', commands[-1])
+        self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', '--no-default-features', '--lib'], commands)
+
+    def test_engine_test_lint_and_docs_share_profile_in_every_feature_mode(self):
+        # Standalone games retain their own profiles; engine commands must not
+        # accidentally produce a second dependency graph under dev.
+        for profile in workflow.TEST_PROFILES:
+            for command in workflow.full_commands(profile):
+                if command[:2] not in (['cargo', 'test'], ['cargo', 'clippy'], ['cargo', 'rustdoc']):
+                    continue
+                if '--manifest-path' in command:
+                    continue
+                if profile == 'itest':
+                    self.assertIn('--profile', command, command)
+                    self.assertEqual(command[command.index('--profile') + 1], 'itest')
+                else:
+                    self.assertNotIn('--profile', command)
 
     def test_iteration_tests_use_the_fast_profile_unless_dev_is_asked_for(self):
         command = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
