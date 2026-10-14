@@ -10,12 +10,13 @@
 //!
 //! `verify` runs all checks in one shot and produces an objective PASS/FAIL report.
 
+#[cfg(feature = "physics")]
+use super::scenario::run_scenario;
 use super::{
     authoring::MapDocument,
     lint::lint_map,
     pathing::{execute_walk, Waypoint},
     reach::analyze_reach,
-    scenario::run_scenario,
 };
 use crate::math::V;
 use serde::{Deserialize, Serialize};
@@ -254,9 +255,13 @@ pub fn verify_map(
     // 5. Scenario check if specified
     if let Some(scen_path) = &checks.scenario {
         let t_start = Instant::now();
+        #[cfg(feature = "physics")]
         let res = super::scenario::load_scenario(std::path::Path::new(scen_path))
             .map_err(|e| format!("failed to load scenario {scen_path}: {e}"))
             .and_then(|scen| run_scenario(&scen).map(|_| ()).map_err(|e| e.to_string()));
+
+        #[cfg(not(feature = "physics"))]
+        let res: std::result::Result<(), String> = Err("scenario verification requires the engine physics feature; rerun with --features physics".into());
 
         let (ok, detail) = match res {
             Ok(()) => (true, format!("scenario '{scen_path}' passed")),
@@ -282,5 +287,27 @@ pub fn verify_map(
         failed,
         total_ms: t0.elapsed().as_millis() as u64,
         checks: outcomes,
+    }
+}
+
+#[cfg(all(test, not(feature = "physics")))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn a_requested_scenario_is_a_failed_check_without_physics() {
+        let checks = ChecksBlock {
+            scenario: Some("scenario.json".into()),
+            ..Default::default()
+        };
+        let report = verify_map(&MapDocument::house().unwrap(), &checks, "fixture");
+        let scenario = report
+            .checks
+            .iter()
+            .find(|check| check.name == "scenario:scenario.json")
+            .unwrap();
+        assert!(!report.ok);
+        assert!(!scenario.ok);
+        assert!(scenario.detail.contains("--features physics"));
     }
 }

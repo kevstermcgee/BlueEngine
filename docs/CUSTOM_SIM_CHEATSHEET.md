@@ -126,7 +126,7 @@ rebase previous/current poses together, save authoritative origin/seed/tick with
 
 Prefer a named JSON audio project: `be2-tools audio describe`, then `audio validate PROJECT`,
 `audio render PROJECT NEW_BUNDLE`, `audio check NEW_BUNDLE`. Reference: `assets/audio/observatory/project.json`,
-full contracts: `docs/AUDIO.md`. `kit::AudioBank::load(BUNDLE, false, sfx, music).await?`; poll
+full contracts: `docs/AUDIO.md`. `kit::AudioBank::load(BUNDLE, muted, sfx_volume, music_volume).await?` (`muted: bool`, volumes: `f32` in 0..=1); poll
 `audio.sounds.poll().await` each frame, inspect `state()`/`errors()`, then `audio.play("cue", volume)?`
 on confirmed events and `audio.music(dt, &[("layer", level)])?`. Omitted layers fade to zero.
 Preset variants, imported PCM16 WAV, stereo MIDI scores/ADSR/filter/pan and adaptive music can change
@@ -192,7 +192,7 @@ is slow; capture a few frames, not a whole match.
   that should face a specific landmark, `yaw_facing(spawn, landmark)` is one call with no sign to get backwards —
   two real games have shipped a spawn yaw of `0.` or `PI` chosen by guessing, and guessed wrong both times.
 - A game's `scripts/blue` needs `python3` or `python`; `scripts/check.py` finds a built `be2-tools` in the engine
-  checkout by itself (build it with `cargo build --profile fast --no-default-features --bin be2-tools`).
+  checkout by itself (build it with `cargo build --profile fast --no-default-features --features physics,networking --bin be2-tools`).
 - `ClientView::prediction()` defaults to all zeros: a view that never overrides it shows "0 corrections" and looks perfect
   (it warns once on stderr). Override it, even if only with `PredictionStats::default()`.
 - Two surfaces in the same plane z-fight (kerb stripes drawn at the road's own y flickered in Spooky Kart): lift one clear of

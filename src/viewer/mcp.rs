@@ -13,6 +13,8 @@
 //! - Headless UI auditing (`ui_check`)
 //! - Performance budgeting and netcode validation (`perf_inspect`, `validate_budget`, `net_test`)
 
+#[cfg(feature = "physics")]
+use super::scenario::{run_scenario, verify_replay_trace, Scenario, SimulationTrace};
 use super::{
     authoring::MapDocument,
     blueprint::{compile_blueprint, BlueprintSpec},
@@ -21,7 +23,6 @@ use super::{
     lint::lint_map,
     pathing::execute_walk,
     reach::analyze_reach,
-    scenario::{run_scenario, verify_replay_trace, Scenario, SimulationTrace},
     symbols::SourceIndex,
     ui_check::audit_all_screens,
     verify::{verify_map, ChecksBlock},
@@ -142,7 +143,7 @@ fn list_mcp_tools() -> Vec<Value> {
         ("src_lookup", "Navigate and inspect BlueEngine Rust symbols, signatures, and modules without dumping whole files."),
         ("ui_check", "Audit BlueEngine UI screens (menu, lobby, HUD, pause) across 9 window resolutions."),
     ];
-    tools.into_iter().map(|(name, description)| json!({
+    tools.into_iter().filter(|(name, _)| cfg!(feature = "physics") || !matches!(*name, "sim" | "replay_trace")).map(|(name, description)| json!({
         "name":name,"description":description,
         "inputSchema":schemas.get(name).expect("generated input schema covers every MCP tool")
     })).collect()
@@ -286,6 +287,12 @@ mod arguments {
 
 fn call_tool(name: &str, args: &Value) -> Value {
     match name {
+        #[cfg(not(feature = "physics"))]
+        "sim" | "replay_trace" => json!({
+            "ok": false,
+            "error": "Simulation/replay tools require the engine physics feature",
+            "next": "Build be2-tools with --no-default-features --features physics,networking"
+        }),
         "describe" => capabilities::describe()
             .unwrap_or_else(|e| json!({"ok": false, "error": e.to_string()})),
         "search" => {
@@ -435,6 +442,7 @@ fn call_tool(name: &str, args: &Value) -> Value {
                 Err(e) => json!({"ok": false, "error": e.to_string()}),
             }
         }
+        #[cfg(feature = "physics")]
         "sim" => {
             let scen_p = args
                 .get("scenario_path")
@@ -456,6 +464,7 @@ fn call_tool(name: &str, args: &Value) -> Value {
                 Err(e) => json!({"ok": false, "error": format!("Read error: {e}")}),
             }
         }
+        #[cfg(feature = "physics")]
         "replay_trace" => {
             let trace_p = args.get("trace_path").and_then(Value::as_str).unwrap_or("");
             let game_p = args.get("game_path").and_then(Value::as_str);

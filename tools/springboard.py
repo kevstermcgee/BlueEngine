@@ -64,6 +64,23 @@ def action(root, *args, expected, kind='command', files=None):
             'expected': expected, **({'files': files} if files else {})}
 
 
+def project_files(project, route):
+    """Known authoring entry files, predicted only for a project still to scaffold."""
+    if project is None:
+        return []
+    common = ['AGENTS.md', 'game.project.json']
+    if project.exists():
+        candidates = common + ['game.json', 'maps/main.json', 'src/lib.rs', 'src/main.rs']
+        existing = [path for path in candidates if (project / path).is_file()]
+        if existing or (project / 'Cargo.toml').is_file() or route['kind'] != 'new-game':
+            return existing
+    if route['kind'] != 'new-game':
+        return []
+    if route['template'] == 'stock':
+        return common + ['game.json', 'maps/main.json', 'src/main.rs']
+    return common + ['src/lib.rs', 'src/main.rs']
+
+
 def git_state(root, calls, detail=False):
     rev = task_inputs.probe(['git', 'rev-parse', 'HEAD'], root, calls)
     status = task_inputs.probe(['git', 'status', '--porcelain', '--untracked-files=all'], root, calls)
@@ -326,12 +343,22 @@ def refresh(root, state, *, detail=False, observed=None):
                    selectors['targets'], selectors['template'], selectors['networking'])
     state['route'] = route
     owners = workflow.impact(root, state['paths'])['owners'] if state['paths'] else []
-    query = route.get('feature') or (owners[0] if len(owners) == 1 else ' '.join(state['objective'].split())[:500])
+    query = ' '.join(state['objective'].split())[:500]
     context = workflow.context(root, query, limit=1, level=3 if detail else 1)
+    fallback_feature = route.get('feature') or (owners[0] if len(owners) == 1 else None)
+    if context['confidence'].startswith('low') and fallback_feature:
+        # A known starter remains useful when its task wording has no curated API answer.
+        hints = context.get('learned', [])
+        query = fallback_feature
+        context = workflow.context(root, query, limit=1, level=3 if detail else 1)
+        context['learned'] = hints
     refs = list(dict.fromkeys(p for m in context['matches'] for p in m.get('read_first', [])))
-    if route.get('template'):
+    if route.get('template') and detail:
         refs.insert(0, catalog(root)['starters'][route['template']]['guide'])
-    if route['networking'] != 'offline':
+    elif route.get('template'):
+        # One bounded game-facing contract; full task guides remain opt-in references.
+        refs = ['docs/GAME_AUTHORING_ENTRY.md']
+    if route['networking'] != 'offline' and detail:
         refs.insert(0, 'docs/NETPLAY.md')
     refs = list(dict.fromkeys(refs))[:3]
     stages, history = report_status(root, state, inputs)
@@ -433,7 +460,7 @@ def refresh(root, state, *, detail=False, observed=None):
                                'browser': {'supported': False, 'status': 'retired', 'migration': 'docs/BROWSER_WORKFLOW.md'},
                                'extension': 'Custom code/clients remain available; runtime/target gaps require engineering, not dropping requested mechanics.'},
               'context': {'references': refs, 'paths': state['paths'],
-                          'project_files': ['AGENTS.md', 'game.project.json', 'src/lib.rs'] if project else [],
+                          'project_files': project_files(project, route),
                           'matches': context['matches'],
                           'confidence': context['confidence'], 'traps': context.get('learned', [])},
               'next_action': next_action, 'iteration': iteration, 'completion': final,

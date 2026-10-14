@@ -4,9 +4,10 @@ To start or resume work, use `python3 tools/be2.py start "<task>" --project GAME
 in the engine checkout (`python` on Windows); `next`/`resume TASK_ID` refreshes the packet.
 
 A game with its own simulation on BlueEngine (path dependency `vesper3d`, see Cargo.toml). Read this
-file and `src/lib.rs`. Missing engine capability is engine work, not permission to invent an API: in the
-engine checkout run `python tools/be2.py context "<need>"`, and read docs/CUSTOM_CLIENT.md (the kit and
-the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
+file, the selected public contract, and the relevant `Sim::step`/state methods in `src/lib.rs`.
+Missing engine capability is engine work, not permission to invent an API: in the engine checkout
+run `python tools/be2.py context "<need>" --level 1 --compact`. Start with docs/GAME_AUTHORING_ENTRY.md;
+retrieve the relevant detailed guide/API section with context --level 2 before exploring source.
 
 ## Architecture (do not break)
 - `src/lib.rs` is the game: pure, seeded (`devkit::Rng`), fixed 60 Hz `Sim::step(&Input)`. No window,
@@ -83,4 +84,6 @@ Without keywords a record is archive-only. Do not copy session logs or credentia
    `scripts/blue ship` additionally creates a shortcut and checks its target and icon;
    on Windows it checks the launched window. Icon similarity is optional advisory only.
    Never point a shortcut at `target/`.
-3. You looked at real frames of the shipped exe and exercised the controls; say what you did not verify.
+3. Declare game-owned checks in `assets/native-review.json`; `python scripts/ship.py review`
+   records exact-package controls/camera/audio observations. State unverified devices.
+   Windows installers: `python scripts/ship.py installer prepare`; engine docs/NATIVE_DELIVERY.md.

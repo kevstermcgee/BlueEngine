@@ -9,7 +9,7 @@ COPY templates ./templates
 COPY assets ./assets
 COPY deploy ./deploy
 COPY docs ./docs
-RUN cargo build --locked --release --no-default-features --bin be2-headless --bin be2-tools
+RUN cargo build --locked --release --no-default-features --features physics,networking --bin be2-headless --bin be2-tools
 
 FROM debian:bookworm-slim AS runtime
 RUN groupadd -g 1000 blueengine && useradd -u 1000 -g blueengine -m blueengine

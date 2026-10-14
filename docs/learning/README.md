@@ -68,6 +68,7 @@ One JSON object per line. `record` fills `id` and `date`.
 | `workaround` | text, optional | what the agent did instead, or the engine feature that now solves it |
 | `duplicated` | list of paths, optional | code the agent had to write or copy that other games will too |
 | `trap` | text, optional | the silent failure to warn the next agent about (shown by `be2.py context`) |
+| `scope` | optional `retired-workflow` | historical lesson remains inspectable; excluded from active context hints |
 | `status` | `open` / `promoted` / `wontfix` / `duplicate` | `promoted` means the engine now provides it |
 | `duplicate_of` | learning ID, required for duplicate status | canonical L-NNN; original report metadata stays intact |
 | `ref` | text, optional (required when promoted) | the commit, ADR or tracking note: `1e2d2bc`, `ADR 0036` |

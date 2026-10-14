@@ -66,6 +66,13 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     let main = std::fs::read_to_string(dir.join("src/main.rs")).unwrap();
     assert!(main.contains("playable::run_game_with_options"));
     assert!(!main.contains("src/bin/sandbox"));
+    let installer: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("scripts/installer.json")).unwrap())
+            .unwrap();
+    assert_eq!(installer["app_id"], "BlueEngineGames.shared-starter");
+    assert!(std::fs::read_to_string(dir.join(".gitignore"))
+        .unwrap()
+        .contains("/installers/"));
     let guide = std::fs::read_to_string(dir.join("AGENTS.md")).unwrap();
     assert!(guide.len() < 3000);
     assert!(guide.contains("--content-only"));
@@ -75,11 +82,11 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     );
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/check.py")).unwrap(),
-        include_str!("../templates/game_check.py")
+        vesper3d::viewer::newgame::tooling_entry("check")
     );
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/ship.py")).unwrap(),
-        include_str!("../templates/game_ship.py")
+        vesper3d::viewer::newgame::tooling_entry("ship")
     );
     assert_eq!(
         std::fs::read_to_string(dir.join("build.rs")).unwrap(),
@@ -112,7 +119,15 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     }
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/dev.py")).unwrap(),
-        include_str!("../templates/game_dev.py")
+        vesper3d::viewer::newgame::tooling_entry("dev")
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("scripts/project.py")).unwrap(),
+        vesper3d::viewer::newgame::tooling_entry("project")
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("scripts/tooling.py")).unwrap(),
+        include_str!("../templates/game_entry.py")
     );
     assert!(scaffold_new_game("shared-starter", &dir, None).is_err());
     std::fs::remove_dir_all(dir).unwrap();

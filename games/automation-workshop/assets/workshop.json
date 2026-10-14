@@ -1,0 +1,139 @@
+{
+  "content_version": 2,
+  "deliverable": [
+    "workshop:ore",
+    "workshop:coal",
+    "workshop:plate",
+    "workshop:gear",
+    "workshop:wire"
+  ],
+  "game_id": "blueengine:automation-workshop",
+  "initial": {
+    "workshop:coal": 4,
+    "workshop:ore": 8
+  },
+  "inventory_capacity": 12,
+  "items": [
+    {
+      "capacity": 64,
+      "id": "workshop:ore",
+      "label": "Ore"
+    },
+    {
+      "capacity": 64,
+      "id": "workshop:coal",
+      "label": "Coal"
+    },
+    {
+      "capacity": 64,
+      "id": "workshop:plate",
+      "label": "Plate"
+    },
+    {
+      "capacity": 64,
+      "id": "workshop:gear",
+      "label": "Gear"
+    },
+    {
+      "capacity": 64,
+      "id": "workshop:wire",
+      "label": "Wire"
+    }
+  ],
+  "recipes": [
+    {
+      "duration_ticks": 6,
+      "id": "workshop:smelt",
+      "inputs": [
+        [
+          "workshop:ore",
+          2
+        ],
+        [
+          "workshop:coal",
+          1
+        ]
+      ],
+      "label": "Smelt plates",
+      "outputs": [
+        [
+          "workshop:plate",
+          2
+        ]
+      ],
+      "required_upgrade": null
+    },
+    {
+      "duration_ticks": 8,
+      "id": "workshop:gears",
+      "inputs": [
+        [
+          "workshop:plate",
+          2
+        ]
+      ],
+      "label": "Press gear",
+      "outputs": [
+        [
+          "workshop:gear",
+          1
+        ]
+      ],
+      "required_upgrade": null
+    },
+    {
+      "duration_ticks": 10,
+      "id": "workshop:draw-wire",
+      "inputs": [
+        [
+          "workshop:plate",
+          2
+        ],
+        [
+          "workshop:coal",
+          1
+        ]
+      ],
+      "label": "Draw wire",
+      "outputs": [
+        [
+          "workshop:wire",
+          3
+        ]
+      ],
+      "required_upgrade": "workshop:wire-tools"
+    }
+  ],
+  "sources": {
+    "workshop:coal": 1000000,
+    "workshop:ore": 1000000
+  },
+  "upgrades": [
+    {
+      "cost": [
+        [
+          "workshop:plate",
+          1
+        ]
+      ],
+      "duration_divisor": 2,
+      "id": "workshop:fast-tools",
+      "label": "Fast tools"
+    },
+    {
+      "cost": [
+        [
+          "workshop:plate",
+          1
+        ],
+        [
+          "workshop:coal",
+          1
+        ]
+      ],
+      "duration_divisor": 2,
+      "id": "workshop:wire-tools",
+      "label": "Wire tools"
+    }
+  ]
+}

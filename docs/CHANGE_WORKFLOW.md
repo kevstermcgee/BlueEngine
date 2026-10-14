@@ -19,9 +19,24 @@ tests and integration suites from every declared transitive consumer. Python too
 uses indexed tests and reviewed validators without Cargo. Unknown paths, build manifests,
 CI/index changes, undeclared content routes or missing behavioral evidence require full
 checks. `--path FILE` is an explicit iteration-only selection; it cannot certify a whole diff.
-`--loop integration` covers default/headless configurations and portable units where relevant.
+`--loop integration` covers default/stock-headless configurations and the affected
+narrow feature configuration. Owner `required_features` in the existing feature
+index selects gated implementation; Cargo test `required-features` selects guarded
+suites separately. Mixed owners use indexed `path_features` so an import/schema
+change exercises its optional module without enabling that feature for a static
+asset change. Unknown ownership/build inputs still require full checks.
 Browser, package and real-device obligations appear separately in the JSON requirements.
 The graph remains partial: neither loop can replace shipping/CI.
+
+Guide-only iteration uses an exact reviewed list: this guide, AI_SPRINGBOARD.md,
+NETPLAY.md, CUSTOM_SIM_CHEATSHEET.md, GAME_QUICKSTART.md, AUDIO.md,
+BROWSER_WORKFLOW.md and GAME_AUTHORING_ENTRY.md. It executes `doc_drift` against current files plus the link
+checker, with Cargo checking source, feature and profile freshness. It does not run
+whole-library units or certify Rust examples and gameplay contracts. Other Markdown,
+Rust examples, schemas, recipes and fixtures under docs/ remain conservative full
+inputs unless a reviewed independent Python scope below owns them. In particular,
+AI_QUICKSTART.md and archive/AI_REFERENCE.md are compiled `include_str!` inputs.
+Every focused plan lists evidence still outstanding; guide-only shipping remains full.
 
 For a standalone game, `check --game DIR --loop inner` runs its own headless tests.
 Integration adds formatting/presentation tests; shipping runs its declared native package gates. Native cross-platform evidence still requires those hosts. Changed
@@ -52,7 +67,8 @@ cannot bypass engine checks. No-change output is explicitly not baseline certifi
 Ignored scratch/build files are not change inputs; do not put shipped inputs there.
 
 `check` without flags retains every existing gate: formatting, rustdoc, tests and
-Clippy in both feature configurations, the headless dependency boundary and native
+Clippy in default, stock-headless and cinematic configurations, pure rules units,
+the dependency boundaries and native
 authoring integration. It also runs workflow, asset, publishing, game-ship, game-check,
 upgrade, learning, hub deployment and media-tools Python tests.
 Feature configurations are grouped to avoid repeated binary rebuilds. CI still runs
@@ -60,6 +76,15 @@ the full Linux/Windows matrix, independent of local scope selection. Both use th
 command plan on `itest`: dev assertions with optimized physics/math dependencies. Tests,
 Clippy, rustdoc and native authoring share the profile; `--profile dev` opts out. Native
 authoring always asks Cargo to check freshness before executing its tool.
+The graph checker resolves rules, stock server, spatial rules, custom networking,
+offline 2D and schema-authoring configurations independently. Rules/2D/schema paths
+must exclude physics and QUIC; the stock headless server must exclude graphics,
+window and audio devices. These are resolved normal dependency graphs on the
+current Cargo target, not a count of Cargo.lock entries. Full verification also
+compiles and executes isolated external consumers through the same check front
+door: custom rules/save continuation, offline 2D collision, spatial physics,
+native netplay and schema generation. Their matching `itest` dependency profile
+can reuse compatible engine artifacts; the consumers still execute each time.
 The reviewed independent Python batch overlaps the serial Cargo lane. Its fixtures use
 temporary projects; native authoring stays after the headless build. Reports wait for
 all started work, including after failure, and retain failures from either lane.

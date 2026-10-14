@@ -49,6 +49,7 @@ pub struct LintReport {
 
 /// Keep initial static findings, resolving only targets physically reached in a successful
 /// shared-simulation scenario for these exact game/map contents. Other movers/targets remain unresolved.
+#[cfg(feature = "physics")]
 pub fn lint_game(
     doc: &MapDocument,
     game: &super::game::LoadedGame,

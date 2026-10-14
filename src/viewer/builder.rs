@@ -1,5 +1,6 @@
 //! Declarative authoring over the existing validated map contract, without borrowed handles.
 use super::authoring::{Edit, MapDocument, MapSpawn};
+#[cfg(feature = "physics")]
 use super::simulation::HeadlessWorld;
 use crate::{math::V, scene::Scene, Result};
 use std::collections::BTreeMap;
@@ -107,6 +108,7 @@ impl SceneBuilder {
     }
 
     /// Construct a simulation, reporting physics initialization failures to the caller.
+    #[cfg(feature = "physics")]
     pub fn world(self) -> Result<HeadlessWorld> {
         HeadlessWorld::try_with_room(self.build()?.build()?)
     }

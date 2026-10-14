@@ -1,0 +1,160 @@
+{
+  "schema_version": 1,
+  "compatible": {
+    "check": [
+      "85546301a036293eac24a0aca571ce800481514a4d2e79d79dda3b8e845b2560",
+      "86a1b62476b7a8a08af97a999e697445423a58d153a26d14dc5cb57a9d258d34",
+      "e141b41bfed255a723bc698e2d4a5d7916bffd00561e77b692751297867f56fe"
+    ],
+    "ship": [
+      "91f23a551a67668b4d0b946eb095668122b94e3b3049ef4e441d1e283ec10e4e",
+      "a435897abf12ea4c4bd17f1930256848ce44919785adb1125a6a0b12ba1b483a",
+      "c2181d6c2adc256b614a35bc53ac51c0ccece4f0cd5f1551800823800f4a0e93",
+      "c6a9f8a17242385421e7a11de5b0249dd46c19bcad90cbac5edcf847fc9aca34",
+      "d5c3e9c849984e859b359222b4aed85f6b56eed31156bef58706be10431118f6"
+    ],
+    "dev": [
+      "1bec17290d11c532b269b9b819173c86c4ec11cb2316b6c8be59e6e9b47e9825",
+      "1ec74470bafba23a42ad134347fd905010704cc8d1e0e4ae6ed783474edad211",
+      "7dedab3e3222803933ebc86f6c97aaa84e3197cf173737e9f93dabdf1ddb6c39",
+      "a96503799fa1714679a22313ede3b57133fb17810a3dbf8f22a751e3e45cc75a"
+    ],
+    "project": [
+      "678f0f9974d8a410274b8345c6505ffe645a6abb29f414d1d5bc2147b619bd0d",
+      "cf702b5f2a54ea3cb17d3f875a48cc860c26921e532ea0727f82ed5378689376"
+    ]
+  },
+  "required_hooks": {
+    "ship": {
+      "c2181d6c2adc256b614a35bc53ac51c0ccece4f0cd5f1551800823800f4a0e93": {
+        "preparation": "prepare_soundtrack(project)",
+        "reference": "games/reverie/scripts/tooling_hooks.py",
+        "sha256": "afef55354be69f29b623b156b67ac9843f23bdb591c7f126d7e39a5f6c49cbaa"
+      },
+      "91f23a551a67668b4d0b946eb095668122b94e3b3049ef4e441d1e283ec10e4e": {
+        "preparation": "ensure_audio(project.root)",
+        "reference": "assets/games/leo/scripts/tooling_hooks.py",
+        "sha256": "2173e31c492af185d878d73d67a5ad129dbd9fe3fd05c37dc23036aa23bc6930"
+      }
+    }
+  },
+  "projects": [
+    {
+      "game": "games/corkscrew-key",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/gap-flip",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/idea-forge",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/lantern-grove",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/lantern-run",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/orchard-watch",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/pocket-breaker",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/reverie",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "soundtrack preparation hook",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/rift-delver",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/signal-garden",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "historical generated drift",
+        "dev": "historical generated drift",
+        "project": "missing historical helper"
+      }
+    },
+    {
+      "game": "games/sway",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "canonical",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "games/wormhole",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "canonical",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    },
+    {
+      "game": "assets/games/leo",
+      "differences": {
+        "check": "historical generated drift",
+        "ship": "audio preparation hook",
+        "dev": "historical generated drift",
+        "project": "canonical"
+      }
+    }
+  ]
+}

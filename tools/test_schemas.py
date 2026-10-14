@@ -21,12 +21,12 @@ class SchemaToolTests(unittest.TestCase):
             path.write_bytes(b'{"previous":true}\n')
             path.chmod(0o644)
         self.calls = []
-        self.binary = str(self.root / 'custom-target' / 'be2-tools')
+        self.binary = str(self.root / 'custom-target' / 'be2-schema')
 
     def run_command(self, argv, **kwargs):
         self.calls.append(argv)
         if argv[0] == 'cargo':
-            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'be2-tools', 'kind': ['bin']},
+            artifact = {'reason': 'compiler-artifact', 'target': {'name': 'be2-schema', 'kind': ['bin']},
                         'executable': self.binary}
             return subprocess.CompletedProcess(argv, 0, json.dumps(artifact) + '\n', '')
         self.assertEqual(argv[0], self.binary)
@@ -50,6 +50,8 @@ class SchemaToolTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(packet['status'], 'planned')
         self.assertEqual(packet['builds_triggered'], 0)
+        self.assertIn('be2-schema', packet['argv'])
+        self.assertEqual(packet['argv'][packet['argv'].index('--features') + 1], 'schema-generation')
 
     def test_cargo_artifact_selects_exact_executable_and_preserves_canonical_bytes(self):
         code, packet = self.invoke(['--write'])

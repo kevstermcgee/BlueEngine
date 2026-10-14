@@ -10,6 +10,8 @@ pub mod input;
 pub mod playback;
 #[path = "../viewer/devkit/procedural.rs"]
 pub mod procedural;
+#[cfg(feature = "resources")]
+pub mod resources;
 #[path = "../viewer/devkit/rng.rs"]
 pub mod rng;
 #[path = "../viewer/devkit/sim.rs"]

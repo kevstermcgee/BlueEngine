@@ -8,7 +8,7 @@
 | Movement | Intent rather than a position update. Jump is a press edge; other actions/axes persist in the headless world until replaced. |
 | Tick | One 1/60-second simulation update. A render frame may contain zero or several ticks. |
 | PlayerStepper | Client accumulator and pose interpolation; reset when discarding timing debt. |
-| HeadlessWorld | Local room and up to eight player states; exposes join/input/step/player/leave without sockets. |
+| HeadlessWorld | Rendering-free room; defaults to eight player states, configurable with set_max_players up to 1024. This limit is not measured game capacity. Exposes join/input/step/player/leave without sockets. |
 | Room | Compiled scene geometry, collision proxies and semantic entities. |
 | Node | Visual scene object; its ID need not equal a collider or entity ID. |
 | Collider | Axis-aligned collision proxy, independent of visible geometry. |
@@ -20,6 +20,6 @@
 | Development transport | Raw unencrypted UDP, retained for local work, compatibility tests and the impairment proxy. |
 | Production transport | QUIC datagrams over TLS 1.3 with a pinned server certificate; selected explicitly with `--transport production`. |
 | PulseNet | The transport boundary implemented by `DatagramTransport`; both executable profiles use the same packet/server path. |
-| Orchestrator / match server | Future deployment concepts; BE2 currently implements neither a matchmaking orchestrator nor an online match server. |
+| Orchestrator / match server | be2-headless supplies stock authority; netplay::cli::serve supplies custom-game match servers; be2-hub discovers/starts native rooms. Their replication and capacity contracts differ (NETPLAY.md / HOSTING.md). |
 
 Coordinates are metres with Y up; sizes named `half_extents` are half the full dimensions. Prop origins are at their bottoms. Consult each API for orientation and bounds conventions.

@@ -55,7 +55,7 @@ jobs:
       - name: Full engine verification
         run: python tools/be2.py check
       - run: cargo build --release --locked
-      - run: cargo build --release --locked --no-default-features --bin be2-headless
+      - run: cargo build --release --locked --no-default-features --features physics,networking --bin be2-headless
 
       # Rustdoc, headless boundaries, authoring, Python and maintained-game gates
       # already ran in the canonical checker above. Repeating them changed Cargo
@@ -160,7 +160,7 @@ jobs:
         run: |
           cargo test --locked --manifest-path assets/games/leo/Cargo.toml --no-default-features
           cargo clippy --locked --manifest-path assets/games/leo/Cargo.toml --all-targets -- -D warnings
-          cargo build --release --locked --bin be2-tools
+          cargo build --release --locked --no-default-features --features physics,networking --bin be2-tools
           python assets/games/leo/scripts/check.py --ship-folder .be2-work/leo-launchers
       - name: Leo rendered and packaged evidence
         if: always()
@@ -179,6 +179,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        game: [idea-forge, automation-workshop]
     runs-on: ${{ matrix.os }}
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
@@ -200,9 +201,9 @@ jobs:
       - name: Utility rules, exports, presentation and lint
         shell: bash
         run: |
-          cargo fmt --manifest-path games/idea-forge/Cargo.toml --check
-          cargo test --locked --manifest-path games/idea-forge/Cargo.toml
-          cargo clippy --locked --all-targets --manifest-path games/idea-forge/Cargo.toml -- -D warnings
+          cargo fmt --manifest-path games/${{ matrix.game }}/Cargo.toml --check
+          cargo test --locked --manifest-path games/${{ matrix.game }}/Cargo.toml
+          cargo clippy --locked --all-targets --manifest-path games/${{ matrix.game }}/Cargo.toml -- -D warnings
       - name: Prepare pinned software OpenGL for Windows CI
         if: runner.os == 'Windows'
         shell: pwsh
@@ -232,25 +233,33 @@ jobs:
           if not set_directory(os.environ['BE2_CI_OPENGL_DIR']):
               raise ctypes.WinError(ctypes.get_last_error())
           os.environ.update(GALLIUM_DRIVER='llvmpipe', LIBGL_ALWAYS_SOFTWARE='1')
-          sys.argv = ['games/idea-forge/scripts/ship.py', 'ship', '--no-install']
+          sys.argv = ['games/${{ matrix.game }}/scripts/ship.py', 'ship', '--no-install']
           try:
               runpy.run_path(sys.argv[0], run_name='__main__')
           finally:
               if not set_directory(None):
                   raise ctypes.WinError(ctypes.get_last_error())
+      - name: Workshop Windows x64 installer
+        if: runner.os == 'Windows' && matrix.game == 'automation-workshop'
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $compiler)) { throw 'Inno Setup compiler missing; Windows x64 installer gate is unverified.' }
+          python games/automation-workshop/scripts/ship.py installer build --iscc $compiler
+          if ($LASTEXITCODE -ne 0) { throw 'Workshop Windows x64 installer build failed; completed packages retained.' }
       - name: Linux package and isolated smoke
         if: runner.os == 'Linux'
         shell: bash
         run: |
           printf 'pcm.!default { type null }\nctl.!default { type null }\n' > "$RUNNER_TEMP/forge-asound.conf"
-          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSA_CONFIG_PATH="$RUNNER_TEMP/forge-asound.conf" python games/idea-forge/scripts/ship.py ship --no-install
+          xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSA_CONFIG_PATH="$RUNNER_TEMP/forge-asound.conf" python games/${{ matrix.game }}/scripts/ship.py ship --no-install
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: idea-forge-native-${{ runner.os }}
+          name: ${{ matrix.game }}-native-${{ runner.os }}
           path: |
-            games/idea-forge/dist/ship.json
-            games/idea-forge/.blue-check/
+            games/${{ matrix.game }}/dist/ship.json
+            games/${{ matrix.game }}/.blue-check/
           include-hidden-files: true
 
   wormhole:

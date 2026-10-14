@@ -95,6 +95,11 @@ input accumulator, deterministic-replay and capture helpers, saves, screen-feel,
 3. You exercised the changed controls and looked at real frames of the shipped program, and you say what
    you did not verify.
 
+After Windows package verification, use the shared `scripts/ship.py installer`
+commands for a per-user x64 installer and `scripts/ship.py review` for authored
+device observations. See [NATIVE_DELIVERY.md](NATIVE_DELIVERY.md); software smoke,
+physical attestations and installer lifecycle checks remain separate evidence.
+
 `python scripts/ship.py verify --json` verifies the package without a display: the manifest's
 portable relative paths, declared files, every recorded SHA-256, and stock `GameDocument.map`
 dependencies. A directory existing in dist is insufficient; missing nested files fail even when

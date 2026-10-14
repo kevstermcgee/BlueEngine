@@ -36,8 +36,9 @@ For an engine update, from the engine root run:
 python3 tools/be2.py upgrade plan games/signal-garden --to TARGET --out /tmp/garden-upgrade.json
 ```
 
-Read that packet, update `Cargo.toml` if relocating the engine, and copy newer shared shipping
-infrastructure when required: `cp templates/game_ship.py games/signal-garden/scripts/ship.py`.
+Read that packet and update `Cargo.toml` if relocating the engine. After reviewing shared
+tooling changes, use `python tools/game_tooling.py migrate games/signal-garden` in the
+engine checkout; keep game-specific preparation in `scripts/tooling_hooks.py`.
 Rebuild/reverify before changing `engine_revision` in identity. A revision warning is not test evidence.
 This bundled source omits the optional historical engine_revision in identity; dist/ship.json records
 the exact engine commit actually packaged. The default dependency is the surrounding engine checkout

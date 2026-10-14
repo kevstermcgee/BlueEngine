@@ -1153,7 +1153,7 @@ REF_RE = re.compile(r'^[A-Za-z0-9 ._#:/,+\-]{1,80}$')
 WORD_LIST_RE = re.compile(r'^[a-z0-9][a-z0-9 _.\-]{0,39}$')
 HASH_TOKEN_RE = re.compile(r'\b[0-9a-f]{7,40}\b')
 ENTRY_FIELDS = ('id', 'date', 'game', 'area', 'tokens', 'note', 'workaround', 'duplicated', 'trap', 'hint', 'status',
-                'ref', 'keywords', 'features', 'wall_seconds', 'measurement_ref', 'duplicate_of')
+                'ref', 'keywords', 'features', 'wall_seconds', 'measurement_ref', 'duplicate_of', 'scope')
 MAX_HINT = 110
 
 
@@ -1205,6 +1205,8 @@ def validate_entry(entry):
         errors.append('ref may only hold a commit, ADR or short reference (letters, digits, space and . _ # : / , + -)')
     if entry.get('status') not in STATUSES:
         errors.append('status must be one of: ' + ', '.join(STATUSES))
+    if entry.get('scope') not in (None, 'retired-workflow'):
+        errors.append('scope, when present, must be retired-workflow (archive only; no active context hints)')
     if entry.get('status') == 'promoted' and not entry.get('ref'):
         errors.append('a promoted entry needs --ref (the commit or ADR that did it)')
     duplicate = entry.get('duplicate_of')

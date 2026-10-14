@@ -14,7 +14,22 @@ fn discovery_and_parser_share_command_signatures() {
     let output = native(&["describe"]);
     assert!(output.status.success());
     let doc: Value = serde_json::from_slice(&output.stdout).unwrap();
+    let indexed = features().unwrap();
+    let names: Vec<_> = indexed["features"].as_object().unwrap().keys().collect();
+    assert_eq!(doc["features"], serde_json::to_value(names).unwrap());
     assert_eq!(doc["commands"].as_array().unwrap().len(), COMMANDS.len());
+    for (name, signature) in COMMANDS {
+        let command = doc["commands"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|command| command["name"] == *name)
+            .unwrap();
+        assert_eq!(
+            command["arguments"], *signature,
+            "complete signature: {name}"
+        );
+    }
     let starters = vesper3d::viewer::newgame::starter_catalog();
     assert_eq!(doc["starters"]["cli_default"], starters["cli_default"]);
     assert_eq!(
@@ -37,7 +52,70 @@ fn discovery_and_parser_share_command_signatures() {
             "{name}"
         );
     }
-    assert!(output.stdout.len() < 6000);
+    assert!(
+        output.stdout.len() < 6000,
+        "describe orientation exceeded its UTF-8 byte budget: {}",
+        output.stdout.len()
+    );
+}
+
+#[test]
+fn native_search_uses_public_answers_and_labels_retirement() {
+    use vesper3d::viewer::capabilities::search;
+    for (query, feature) in [
+        ("Make the player jump higher", "movement"),
+        ("jump_height", "movement"),
+        (
+            "Build an offline 2D game with enemies and scoring",
+            "two_dimensional",
+        ),
+        (
+            "Build spatial 3D enemies with custom rules",
+            "custom_simulation",
+        ),
+        ("Save and restore a custom simulation", "save_state"),
+        ("Add multiplayer to a custom simulation", "netplay"),
+        (
+            "Understand the limits of replicating a larger custom world",
+            "netplay",
+        ),
+        ("shared inventory transactions", "resource_transactions"),
+        ("machine production", "automation_workshop"),
+        ("blocked outputs", "automation_workshop"),
+        ("save migration", "automation_workshop"),
+        ("online workshop support", "automation_workshop"),
+    ] {
+        let packet = search(query).unwrap();
+        assert_eq!(packet["matches"][0]["feature"], feature, "{query}");
+        assert_eq!(packet["total"], 1, "{query}");
+        assert!(packet["matches"][0]["details"]["answers"].is_array());
+    }
+    let retired = search("Determine whether browser gameplay is supported").unwrap();
+    assert_eq!(retired["matches"][0]["details"]["status"], "retired");
+    let installer = search("Package a Windows installer").unwrap();
+    assert_eq!(installer["matches"][0]["feature"], "game_shipping");
+    assert!(!installer["matches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|hit| hit["details"]["status"] == "retired"));
+    let presentation = search("Create a distinctive HUD and original audio").unwrap();
+    assert_eq!(presentation["total"], 2);
+    assert!(presentation["matches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|hit| hit["feature"] == "client_kit"));
+    assert!(presentation["matches"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|hit| hit["feature"] == "audio_authoring"));
+    assert_eq!(search("???").unwrap()["total"], 0);
+    assert!(search("unknown-zqx-interface").unwrap()["confidence"]
+        .as_str()
+        .unwrap()
+        .contains("low"));
 }
 
 #[test]

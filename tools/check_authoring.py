@@ -13,7 +13,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1]
     subprocess.run(['cargo', 'build', '--locked', *workflow.profile_flags(args.profile),
-                    '--no-default-features', '--bin', 'be2-tools'],
+                    '--no-default-features', '--features', 'physics,networking', '--bin', 'be2-tools'],
                    cwd=root, check=True, stdout=sys.stdout, stderr=sys.stderr,
                    **workflow.console_options())
     metadata = subprocess.run(['cargo', 'metadata', '--locked', '--no-deps', '--format-version', '1'],
