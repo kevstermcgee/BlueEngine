@@ -2,6 +2,7 @@
 import json
 import os
 import runpy
+import shlex
 from pathlib import Path
 import shutil
 import subprocess
@@ -80,6 +81,44 @@ class WindowsLauncherTests(unittest.TestCase):
 
 
 class ContextTests(unittest.TestCase):
+    def test_declared_cargo_commands_enable_required_targets_and_have_one_filter(self):
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
+        requirements = {kind: {target['name']: set(target.get('required-features', []))
+                              for target in manifest.get(kind, [])}
+                        for kind in ('test', 'bin', 'example')}
+        for feature_id, feature in workflow.index(ROOT).items():
+            checks = [*feature['checks'], *[rule.get('verify', '') for rule in feature.get('constraints', [])]]
+            for check in checks:
+                if not isinstance(check, str) or not check.startswith('cargo '):
+                    continue
+                argv = shlex.split(check)
+                if argv[1] not in ('test', 'check', 'run'):
+                    continue
+                selected = set() if '--no-default-features' in argv else {'default'}
+                required, consumed = set(), set()
+                for i, argument in enumerate(argv):
+                    if argument == '--features':
+                        selected.update(argv[i + 1].replace(',', ' ').split())
+                        consumed.add(i + 1)
+                    if argument in ('--test', '--bin', '--example'):
+                        required.update(requirements[argument[2:]].get(argv[i + 1], set()))
+                        consumed.add(i + 1)
+                    if argument in ('--profile', '--manifest-path', '--target'):
+                        consumed.add(i + 1)
+                pending = list(selected)
+                while pending:
+                    for dependency in manifest['features'].get(pending.pop(), []):
+                        if dependency in manifest['features'] and dependency not in selected:
+                            selected.add(dependency)
+                            pending.append(dependency)
+                self.assertFalse(required - selected, f'{feature_id}: {check} silently skips a required target')
+                if argv[1] == 'test':
+                    before_harness = argv[:argv.index('--')] if '--' in argv else argv
+                    filters = [value for i, value in enumerate(before_harness) if i > 1
+                               and i not in consumed and not value.startswith('-')]
+                    self.assertLessEqual(len(filters), 1, f'{feature_id}: {check}: Cargo accepts one filter')
+
     def test_stock_audio_pipeline_and_bindings_are_discoverable(self):
         packet = workflow.context(ROOT, 'stock GameDocument audio pipeline cues and adaptive music')
         feature = packet['matches'][0]

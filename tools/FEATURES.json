@@ -175,7 +175,7 @@
       ],
       "checks": [
         "headless simulation scenarios and replay trace verification",
-        "cargo test --locked --no-default-features --test game_failure_paths"
+        "cargo test --locked --no-default-features --features physics --test game_failure_paths"
       ],
       "note": "External behavioral driver with scenario-relative game paths, timestamped public inputs, structured state assertions, and deterministic replay divergence diagnostics. walk_to/face inputs (held until arrival), final player positions in sim output, and game-explore --scenario generation of a verified winning scenario (ADR 0025). route:true plans walk_to around current colliders with the active body profile, waits and replans while gates move. wait_ticks:1 executes repeated presses on separate steps after blocking walks. Observatory loss/restart/win and never-opening gate fixtures distinguish abstract wins from physical proof. Stock --scenario --capture renders verified local single-player steps. Game-aware lint MAP --game=GAME --scenario=WIN retains initial static findings and resolves only individually observed authoritative targets; failed, mismatched or spawn-overriding proof is refused.",
       "evidence": [
@@ -308,9 +308,9 @@
         "docs/HOSTING.md"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift",
-        "cargo test --locked --no-default-features --test replication_budget --test replication_sockets",
-        "cargo test --locked --no-default-features --test server_ctl"
+        "cargo test --locked --no-default-features --features networking,physics --test multiplayer_transport --test content_handshake --test secure_net --test transport_profiles --test doc_drift",
+        "cargo test --locked --no-default-features --features networking,physics --test replication_budget --test replication_sockets",
+        "cargo test --locked --no-default-features --features networking,physics --test server_ctl"
       ],
       "note": "Transport-agnostic authoritative server with explicit development/raw-UDP and production/QUIC-TLS profiles, 60 Hz authority, 20 Hz acknowledged deltas/keyframes, prediction, ownership, and combat. Protocol 8 rejects mismatched content; optional HMAC supplies client authentication on either profile. One authoritative registry owns session tokens and timeout cleanup; secure-random failures fail closed and keyed disconnects require credentials. GameState includes restart round and authoritative mover tick positions; sequenced commands from old rounds are discarded. Bounded partial-world replication retains one acknowledged baseline and one retryable packet per peer, respects active payload limits, rotates fair/priority records and peers, and exposes queue/delivery counters. Supports 1024 relevant records with individually budgeted records; replication and resync are bound to sessions (since protocol 7). See HOSTING.md for limits and RTT tradeoffs. Server capacity is configurable (with_max_players, --max-players); replication sizes candidates by arithmetic and prepares peers on several threads (with_network_threads, --network-threads) with identical bytes at any thread count (ADR 0027). Replication prioritises nearby records and measures freshness (mean_wait); the server takes time from a Clock so timeouts/reconnect are testable without sleeping; viewer::spans + be2-headless --profile report where a tick goes (ADR 0028). World updates (Snapshot/Delta) are a compact exact binary form, protocol 8, about 5x smaller per player record (ADR 0029). be2-headless stops cleanly on SIGINT/SIGTERM/SIGHUP (final autosave, exit 0; a second signal forces exit 130) without the ctrlc crate (ADR 0030). Stock protocol and shared transport/replication support remain for existing clients and hosts. New custom multiplayer games start with netplay (NetGame, ClientView, netplay::cli::serve), not the archived template.",
       "evidence": [
@@ -420,7 +420,7 @@
           "kind": "AI-INVARIANT",
           "text": "Commit only exactly acknowledged represented state; budget each packet against the active transport limit. Queued bytes are not delivery.",
           "source": "src/viewer/net/replication.rs",
-          "verify": "cargo test --locked --no-default-features --test replication_budget --test replication_sockets"
+          "verify": "cargo test --locked --no-default-features --features networking,physics --test replication_budget --test replication_sockets"
         }
       ],
       "decisions": [
@@ -554,8 +554,8 @@
         "tests/net_test_command.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test capabilities",
-        "cargo test --locked --no-default-features --test capacity_limits --test net_test_command"
+        "cargo test --locked --no-default-features --features networking,physics --test capabilities",
+        "cargo test --locked --no-default-features --features networking,physics --test capacity_limits --test net_test_command"
       ],
       "note": "describe and bounded search use the CLI command registry and embedded feature index. export-lab creates a validated authoring starter. Evidence names and files must resolve; their tests run in the ordinary CI suite.",
       "evidence": [
@@ -748,7 +748,7 @@
         "tests/game_runtime.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test game_runtime --test shared_gameplay",
+        "cargo test --locked --no-default-features --features networking,physics --test game_runtime --test shared_gameplay",
         "default and headless full check",
         "generated external Cargo game test/build, release world/win/reset/menu captures"
       ],
@@ -1070,7 +1070,7 @@
         "tests/benchmarks.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test benchmarks",
+        "cargo test --locked --no-default-features --features physics --test benchmarks",
         "be2-tools bench"
       ],
       "note": "Canonical headless measurements are checked against shared absolute service ceilings; tests and the CLI fail nonzero on regression. Thresholds include heterogeneous CI headroom and are not hardware-normalized baselines."
@@ -1165,8 +1165,8 @@
         "tests/prop_api.rs"
       ],
       "checks": [
-        "cargo test --locked --no-default-features --test prototype --test prop_api",
-        "cargo run --locked --no-default-features --example prototype"
+        "cargo test --locked --no-default-features --features physics --test prototype --test prop_api",
+        "cargo run --locked --no-default-features --features physics --example prototype"
       ],
       "note": "SceneBuilder requires an explicit spawn (or without_spawn for a props-only world) and batches ordinary map edits; box_body includes a semantic ID while structural_box creates visual collision without a reachability target. World prop accessors use IDs (position/origin, centre of mass, mass, half extents, rotation, velocities, sleep, holder, hit_prop) with prop_index bridging to the index-based PropPhysics API; throw releases a carried prop at an exact velocity; set_prop_floor moves or removes the implicit y = 0 ground under props. vesper3d::rapier re-exports the pinned physics crate. HeadlessWorld supports transactional map/game replacement with player respawn; network hosts must coordinate content changes. No generic scripting or arbitrary dynamic mesh builder.",
       "keywords": [
@@ -1228,7 +1228,7 @@
           "kind": "AI-COMPAT",
           "text": "External games compile against the supported vesper3d prelude; do not invent private APIs.",
           "source": "src/prelude.rs",
-          "verify": "cargo test --locked --no-default-features --test prototype --test shared_gameplay"
+          "verify": "cargo test --locked --no-default-features --features physics --test prototype --test shared_gameplay"
         }
       ],
       "required_features": [
@@ -1487,7 +1487,8 @@
         "cargo test --locked --lib devkit::look",
         "cargo test --locked --lib devkit::scale",
         "cargo test --locked --lib devkit::menu",
-        "cargo test --locked --lib devkit::text_field devkit::net_address"
+        "cargo test --locked --lib devkit::text_field",
+        "cargo test --locked --lib devkit::net_address"
       ],
       "files": [
         "src/viewer/devkit/mod.rs",
@@ -1846,7 +1847,7 @@
       ],
       "checks": [
         "cargo test --locked --profile itest --test hub",
-        "cargo test --locked --profile itest --no-default-features --lib netplay::",
+        "cargo test --locked --profile itest --no-default-features --features networking --lib netplay::",
         "python -m unittest tools.test_hub_deploy",
         "python tools/check_headless.py"
       ],
@@ -1984,7 +1985,8 @@
       ],
       "checks": [
         "cargo test --locked --profile itest --test netplay",
-        "cargo test --locked --lib net::codec net::loopback",
+        "cargo test --locked --lib net::codec",
+        "cargo test --locked --lib net::loopback",
         "python tools/check_headless.py",
         "cargo test --locked --profile itest --test netplay_event_delivery"
       ],
@@ -2262,7 +2264,8 @@
         "docs/GAME_AUTHORING_ENTRY.md"
       ],
       "checks": [
-        "cargo test --locked --lib savestate devkit::snapshot",
+        "cargo test --locked --lib savestate",
+        "cargo test --locked --lib devkit::snapshot",
         "cargo test --locked --test save_state --test save_session --test physics_saves",
         "generated custom-sim project: cargo test (resume exactly from any tick) and a real-window --script \"save@N,load@M\" capture"
       ],
@@ -2487,7 +2490,8 @@
     "game_shipping": {
       "note": "Every game ships as a package with its own identity, by script: assets/identity.json (title, tagline, controls, packaging), a title-seeded icon set (be2-tools icon TITLE DIR [VARIANT] [--replace]) used as the exe resource icon (build.rs + rc.exe), the window icon, dist/<exe>.ico and the shortcut icon, scripts/ship.py package/shortcut/verify/ship, an optional requested desktop shortcut named after the game that targets dist/ (never target/), tooltip = tagline + controls, verified by reading it back, rendering the shell icon, optionally advising on icon similarity, and launching through it. scripts/check.py ends with display-independent package integrity/resources without desktop access; ship or verify --smoke runs isolated graphical verification; --skip-ship iterates without it, no desktop is reported as skipped, never as a pass. Package verification is display-independent: strict portable manifest paths, every SHA-256, complete declared source inventory when available, and GameDocument.map closure. Graphical smoke copies only declarations outside the checkout and saves full stdout/stderr; mutable player files are preserved in dist but excluded from smoke. Package-only ship --no-install; verify --folder or --check-shortcut requests installation. verify --icon-similarity is advisory only; unrelated installed applications cannot fail shipping.",
       "checks": [
-        "cargo test --locked --lib identity icon",
+        "cargo test --locked --lib identity",
+        "cargo test --locked --lib icon",
         "python -m unittest tools.test_game_ship tools.test_game_check",
         "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)",
         "python -m unittest tools.test_game_tooling"
