@@ -39,7 +39,9 @@ Physics and QUIC dependencies were confirmed unconditional for narrow consumers.
 Optional `physics` and `networking` boundaries now preserve shared types, existing
 serialization, math and default client capabilities. Additive `native-client`
 supports custom presentation/input without selecting stock physics/networking;
-new custom-sim scaffolds use it. Existing explicit no-default consumers that use
+new custom-sim scaffolds and the representative migrated Signal Garden client use it.
+Signal Garden retains its own rules, camera, HUD, music and controls. Existing explicit
+no-default consumers that use
 rigid bodies must add `physics`; production transport requires `networking` and
 fails explicitly when absent. Schema generation now uses a small internal native
 helper behind the existing command. See [DEPENDENCY_BOUNDARIES.md](../DEPENDENCY_BOUNDARIES.md).

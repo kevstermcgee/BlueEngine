@@ -11,7 +11,7 @@ path = "src/lib.rs"
 
 [features]
 default = ["client"]
-client = ["vesper3d/client", "dep:macroquad", "dep:windows-sys"]
+client = ["vesper3d/native-client", "dep:macroquad", "dep:windows-sys"]
 
 [[bin]]
 name = "signal-garden"
