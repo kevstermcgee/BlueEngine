@@ -112,7 +112,15 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     }
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/dev.py")).unwrap(),
-        include_str!("../templates/game_dev.py")
+        vesper3d::viewer::newgame::tooling_entry("dev")
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("scripts/project.py")).unwrap(),
+        vesper3d::viewer::newgame::tooling_entry("project")
+    );
+    assert_eq!(
+        std::fs::read_to_string(dir.join("scripts/tooling.py")).unwrap(),
+        include_str!("../templates/game_entry.py")
     );
     assert!(scaffold_new_game("shared-starter", &dir, None).is_err());
     std::fs::remove_dir_all(dir).unwrap();
