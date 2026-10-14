@@ -13,6 +13,7 @@ CONFIGURATIONS = (
     ('spatial-rules', ('physics',), FORBIDDEN | {'quinn', 'tokio', 'rustls'}),
     ('custom-networking', ('networking',), FORBIDDEN | {'rapier3d'}),
     ('offline-2d', ('two-d',), HEAVY_RULES),
+    ('custom-presentation', ('presentation',), HEAVY_RULES),
     ('schema-authoring', ('schema-validation',), FORBIDDEN | HEAVY_RULES),
 )
 

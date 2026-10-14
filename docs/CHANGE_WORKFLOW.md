@@ -22,7 +22,9 @@ checks. `--path FILE` is an explicit iteration-only selection; it cannot certify
 `--loop integration` covers default/stock-headless configurations and the affected
 narrow feature configuration. Owner `required_features` in the existing feature
 index selects gated implementation; Cargo test `required-features` selects guarded
-suites separately. Unknown ownership/build inputs still require full checks.
+suites separately. Mixed owners use indexed `path_features` so an import/schema
+change exercises its optional module without enabling that feature for a static
+asset change. Unknown ownership/build inputs still require full checks.
 Browser, package and real-device obligations appear separately in the JSON requirements.
 The graph remains partial: neither loop can replace shipping/CI.
 
@@ -78,7 +80,11 @@ The graph checker resolves rules, stock server, spatial rules, custom networking
 offline 2D and schema-authoring configurations independently. Rules/2D/schema paths
 must exclude physics and QUIC; the stock headless server must exclude graphics,
 window and audio devices. These are resolved normal dependency graphs on the
-current Cargo target, not a count of Cargo.lock entries.
+current Cargo target, not a count of Cargo.lock entries. Full verification also
+compiles and executes isolated external consumers through the same check front
+door: custom rules/save continuation, offline 2D collision, spatial physics,
+native netplay and schema generation. Their matching `itest` dependency profile
+can reuse compatible engine artifacts; the consumers still execute each time.
 The reviewed independent Python batch overlaps the serial Cargo lane. Its fixtures use
 temporary projects; native authoring stays after the headless build. Reports wait for
 all started work, including after failure, and retain failures from either lane.

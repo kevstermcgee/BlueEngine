@@ -252,11 +252,34 @@ class AutomaticLoopTests(unittest.TestCase):
         typecheck = workflow.iteration_plan(ROOT, 'simulation_contract', typecheck=True,
                                             feature_mode='headless')['commands'][0]
         self.assertIn('physics', typecheck)
+        self.assertEqual(workflow.feature_map(ROOT, 'simulation_contract')['required_features'], ['physics'])
+        model = workflow.change_plan(ROOT, ['src/model_import.rs'])['commands'][0]
+        self.assertIn('model-import', model)
+        schema = workflow.change_plan(ROOT, ['src/authoring_schemas.rs'])['commands'][0]
+        self.assertIn('schema-generation', schema)
+        static = workflow.change_plan(ROOT, ['src/asset_model.rs'])['commands'][0]
+        self.assertNotIn('--features', static)
+
+    def test_path_feature_ownership_is_exact_and_unknown_features_are_rejected(self):
+        features = {'owned': {'required_features': ['physics'], 'path_features': {
+            'src/schema': ['schema-generation'], 'src/import.rs': ['model-import']}}}
+        self.assertEqual(workflow.owner_features(features, ['owned'], ['src/schema/type.rs']),
+                         ['physics', 'schema-generation'])
+        self.assertEqual(workflow.owner_features(features, ['owned'], ['src/schema-other.rs']), ['physics'])
+        self.assertEqual(workflow.owner_features(features, ['owned']), ['model-import', 'physics', 'schema-generation'])
+        with patch.object(workflow, 'index', return_value={'owned': {
+                'files': ['Cargo.toml'], 'checks': [], 'required_features': ['unknown-feature'],
+                'path_features': {'Cargo.toml': ['unknown-path-feature']}}}):
+            result = workflow.validate_index(ROOT)
+            self.assertFalse(result['ok'])
+            self.assertEqual(len([error for error in result['errors']
+                                  if error['error'] == 'unknown Cargo feature']), 2)
 
     def test_unknown_build_and_content_inputs_fail_closed(self):
         for path in ('src/new.rs', 'Cargo.toml', 'tools/FEATURES.json', '.github/workflows/ci.yml',
                      'assets/games/observatory/content/game.json', 'tools/place_interior.py',
                      'docs/AI_QUICKSTART.md', 'docs/archive/AI_REFERENCE.md',
+                     'tools/check_dependency_boundaries.py',
                      'docs/perf/hot-reload/measure_content.py',
                      'docs/perf/model-import/cases/final-1.rs', 'docs/new-recipe.md'):
             plan = workflow.change_plan(ROOT, [path])
@@ -462,6 +485,20 @@ class WindowsPlanTests(unittest.TestCase):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_perf_preserves_stock_scope_when_dependencies_become_optional(self):
+        from tools import perf
+        self.assertEqual(perf.HEADLESS, ['--no-default-features', '--features', 'physics,networking',
+                                         '--bin', 'be2-headless'])
+        calls = []
+        def timed(command, env):
+            calls.append(command)
+            return (0.1, SimpleNamespace(returncode=0, stdout='', stderr=''))
+        with tempfile.TemporaryDirectory() as directory, patch.object(perf, 'target_dir', return_value=Path(directory)), \
+                patch.object(perf, 'timed', side_effect=timed):
+            perf.test_rows('itest')
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all('physics,networking' in command for command in calls))
+
     def test_iteration_reuses_index_and_never_claims_final_validation(self):
         plan = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
                                        test='replication_budget::oversized_world_makes_wire_progress')
@@ -492,6 +529,9 @@ class SelectionTests(unittest.TestCase):
                            '--', '-D', 'warnings'], commands)
         for script in ['tools/check_headless.py', 'tools/check_authoring.py']:
             self.assertIn([sys.executable, script], commands)
+        self.assertIn([sys.executable, 'tools/check_dependency_boundaries.py', '--run'], commands)
+        self.assertIn([sys.executable, 'tools/check_dependency_boundaries.py', '--run', '--profile', 'dev'],
+                      workflow.full_commands('dev'))
         self.assertIn([sys.executable, 'tools/check_authoring.py', '--profile', 'dev'],
                       workflow.full_commands('dev'))
         for command in workflow.full_commands('dev'):

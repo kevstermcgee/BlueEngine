@@ -103,6 +103,16 @@ def feature_suites(feature):
                   {path[6:-3] for path in feature['files'] if re.fullmatch(r'tests/[\w-]+\.rs', path)})
 
 
+def owner_features(features, owners, paths=None):
+    """Cargo feature ownership stays beside file ownership in the existing index."""
+    selected = {flag for name in owners for flag in features[name].get('required_features', [])}
+    for name in owners:
+        for owned, flags in features[name].get('path_features', {}).items():
+            if paths is None or any(path == owned or path.startswith(owned.rstrip('/') + '/') for path in paths):
+                selected.update(flags)
+    return sorted(selected)
+
+
 def feature_map(root, name, features=None):
     """Derive roles from the existing index; never create a second ownership registry."""
     features = index(root) if features is None else features
@@ -116,6 +126,7 @@ def feature_map(root, name, features=None):
             'examples': [p for p in feature['files'] if p.startswith(('examples/', 'templates/', 'assets/'))],
             'depends_on': feature.get('depends_on', []),
             'required_features': feature.get('required_features', []),
+            'path_features': feature.get('path_features', {}),
             'used_by': sorted(k for k, v in features.items() if name in v.get('depends_on', [])),
             'extension_point': feature.get('canonical_example') or (feature.get('read_first') or feature['files'])[0],
             'ownership': 'Declared discovery relationships; final verification does not rely on completeness.'}
@@ -137,6 +148,13 @@ def validate_index(root):
         for requirement in feature.get('required_features', []):
             if cargo_features and requirement not in cargo_features:
                 errors.append({'feature': name, 'required_feature': requirement, 'error': 'unknown Cargo feature'})
+        for path, requirements in feature.get('path_features', {}).items():
+            if path not in feature['files']:
+                errors.append({'feature': name, 'path': path, 'error': 'feature path lacks indexed ownership'})
+            for requirement in requirements:
+                if cargo_features and requirement not in cargo_features:
+                    errors.append({'feature': name, 'path': path, 'required_feature': requirement,
+                                   'error': 'unknown Cargo feature'})
         for suite in feature_suites(feature):
             if not re.fullmatch(r'[\w-]+', suite) or not (root / 'tests' / (suite + '.rs')).is_file():
                 errors.append({'feature': name, 'suite': suite, 'error': 'missing integration suite'})
@@ -181,7 +199,8 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     features = index(root)
     suites = sorted({suite for name in affected['affected'] for suite in feature_suites(features[name])})
     invalid = [s for s in suites if not re.fullmatch(r'[\w-]+', s) or not (root / 'tests' / (s + '.rs')).is_file()]
-    boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json') or
+    boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json',
+                                        'tools/check_dependency_boundaries.py') or
                 p.startswith('.github/') or p.endswith('build.rs')]
     # A Markdown suffix is not proof of independence. Keep executable docs and
     # unknown recipes conservative; only exact guides and existing reviewed
@@ -215,8 +234,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     exercised_suites = suites if native else []
     if native:
         groups = suite_feature_groups(root, suites)
-        owned_features = sorted({flag for name in affected['owners']
-                                 for flag in features[name].get('required_features', [])})
+        owned_features = owner_features(features, affected['owners'], paths)
         portable = bool({'two_dimensional'} & set(affected['affected']))
         presentation = portable or bool({'graphics', 'game_presentation', 'client_kit', 'native_controllers',
                                          'offline_renderer', 'sandbox'} & set(affected['owners']))
@@ -670,6 +688,7 @@ def full_commands(test_profile='itest'):
         ['cargo','test','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib'],
         ['cargo','clippy','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib','--','-D','warnings'],
         ['cargo','rustdoc','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib','--','-D','warnings'],
+        ['cargo','clippy','--locked',*profile_flags(test_profile),'--no-default-features','--features','presentation','--lib','--','-D','warnings'],
     ])
     commands.extend([
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'model-import', '--lib', 'model_import'],
@@ -760,8 +779,9 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
     if typecheck:
         if not any(path.startswith('src/') for path in feature['files']):
             raise ValueError('No engine source indexed here; use the feature checks from context.')
-        if feature_mode == 'headless' and feature.get('required_features'):
-            flags += ['--features', ','.join(sorted(set(feature['required_features'])))]
+        owned_features = owner_features(features, [feature_id])
+        if feature_mode == 'headless' and owned_features:
+            flags += ['--features', ','.join(owned_features)]
         commands = [['cargo', 'check', '--locked', '--lib', *flags, '--message-format=json']]
         proves = 'Engine library type-check only; no linking or behavior tests.'
     elif suites:

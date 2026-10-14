@@ -39,7 +39,8 @@ ROOT = Path(__file__).resolve().parent.parent
 METRICS = ROOT / 'docs' / 'perf' / 'metrics.jsonl'
 PROBE_FILE = ROOT / 'src' / 'viewer' / 'lint.rs'
 PROBE = '\n#[allow(dead_code)]\npub fn __perf_probe() -> u64 { 0x%x }\n'
-HEADLESS = ['--no-default-features', '--bin', 'be2-headless']
+STOCK_HEADLESS = ['--no-default-features', '--features', 'physics,networking']
+HEADLESS = [*STOCK_HEADLESS, '--bin', 'be2-headless']
 
 
 def run(cmd, **kw):
@@ -151,7 +152,7 @@ def test_rows(profile):
     shutil.rmtree(tdir, ignore_errors=True)
     env = {**os.environ, 'CARGO_TARGET_DIR': str(tdir)}
     base = ['cargo', 'test', '--locked', *(['--profile', profile] if profile != 'dev' else []),
-            '--no-default-features']
+            *STOCK_HEADLESS]
     secs, res = timed(base + ['--no-run'], env)
     if res.returncode:
         sys.exit(res.stderr[-2000:])
@@ -201,8 +202,8 @@ def server_rows(profile):
     tdir = target_dir(f'build-{profile}')
     env = {**os.environ, 'CARGO_TARGET_DIR': str(tdir)}
     exe = tdir / ('release' if profile == 'release' else profile) / 'be2-headless'
-    build = run(['cargo', 'build', '--locked', *profile_args(profile), '--no-default-features',
-                 '--bin', 'be2-headless', '--example', 'server_load'], env=env)
+    build = run(['cargo', 'build', '--locked', *profile_args(profile), *HEADLESS,
+                 '--example', 'server_load'], env=env)
     if build.returncode:
         sys.exit(build.stderr[-2000:])
     load = exe.parent / 'examples' / 'server_load'

@@ -455,7 +455,10 @@
         "assets/model-sources.json",
         "docs/SCHEMAS.md",
         "tests/authoring_schemas.rs",
-        "tools/schemas.py"
+        "tools/schemas.py",
+        "src/authoring_schemas",
+        "src/authoring_schemas.rs",
+        "src/bin/be2-schema.rs"
       ],
       "checks": [
         "python tools/assets.py validate",
@@ -494,7 +497,24 @@
         "asset_model::ColliderMetadata",
         "tools/assets.py import-model",
         "tools/assets.py search --compact"
-      ]
+      ],
+      "path_features": {
+        "src/model_import.rs": [
+          "model-import"
+        ],
+        "src/bin/be2-model-import.rs": [
+          "model-import"
+        ],
+        "src/authoring_schemas": [
+          "schema-generation"
+        ],
+        "src/authoring_schemas.rs": [
+          "schema-generation"
+        ],
+        "src/bin/be2-schema.rs": [
+          "schema-generation"
+        ]
+      }
     },
     "game_scaffolding": {
       "files": [
@@ -646,7 +666,8 @@
         "tools/task_inputs.py",
         "tools/test_springboard.py",
         "docs/AI_SPRINGBOARD.md",
-        "tools/test_discovery.py"
+        "tools/test_discovery.py",
+        "tools/check_dependency_boundaries.py"
       ],
       "checks": [
         "python -m unittest tools.test_workflow tools.test_game_check tools.test_springboard",
@@ -2091,7 +2112,7 @@
           "warnings": [
             "Custom netplay does not inherit stock be2-headless partial-world replication, stock interest management or --max-players/--network-threads controls.",
             "Snapshots must fit min(active transport payload_limit, 1100 bytes) including framing; snapshot_with_budget adapts game state but does not fragment a large world.",
-            "NetGame::MAX_SEATS is clamped to 1..=16; lobby_capacity/minimum_players configure rooms, not demonstrated game/server capacity.",
+            "NetGame::MAX_SEATS must be 1..=16; lobby_capacity/minimum_players configure clamped room seats, not demonstrated game/server capacity.",
             "Queue acceptance is local, not remote delivery. RELIABLE_EVENTS is opt-in, bounded and can report gaps; choose QUIC/TLS explicitly for encryption.",
             "Use netplay::cli::serve for shared signal handling; match release/bot behavior is game-owned. Hub rooms use development UDP and reject production transport.",
             "ClientView::prediction() defaults to zero statistics; override it before using corrections as evidence."
@@ -2123,7 +2144,7 @@
           "warnings": [
             "Custom netplay does not inherit stock be2-headless partial-world replication, stock interest management or --max-players/--network-threads controls.",
             "Snapshots must fit min(active transport payload_limit, 1100 bytes) including framing; snapshot_with_budget adapts game state but does not fragment a large world.",
-            "NetGame::MAX_SEATS is clamped to 1..=16; lobby_capacity/minimum_players configure rooms, not demonstrated game/server capacity.",
+            "NetGame::MAX_SEATS must be 1..=16; lobby_capacity/minimum_players configure clamped room seats, not demonstrated game/server capacity.",
             "Queue acceptance is local, not remote delivery. RELIABLE_EVENTS is opt-in, bounded and can report gaps; choose QUIC/TLS explicitly for encryption.",
             "Use netplay::cli::serve for shared signal handling; match release/bot behavior is game-owned. Hub rooms use development UDP and reject production transport.",
             "ClientView::prediction() defaults to zero statistics; override it before using corrections as evidence."
@@ -2134,7 +2155,7 @@
       "limitations": [
         "Custom netplay does not inherit stock be2-headless partial-world replication, stock interest management or --max-players/--network-threads controls.",
         "Snapshots must fit min(active transport payload_limit, 1100 bytes) including framing; snapshot_with_budget adapts game state but does not fragment a large world.",
-        "NetGame::MAX_SEATS is clamped to 1..=16; lobby_capacity/minimum_players configure rooms, not demonstrated game/server capacity.",
+        "NetGame::MAX_SEATS must be 1..=16; lobby_capacity/minimum_players configure clamped room seats, not demonstrated game/server capacity.",
         "Queue acceptance is local, not remote delivery. RELIABLE_EVENTS is opt-in, bounded and can report gaps; choose QUIC/TLS explicitly for encryption.",
         "Use netplay::cli::serve for shared signal handling; match release/bot behavior is game-owned. Hub rooms use development UDP and reject production transport.",
         "ClientView::prediction() defaults to zero statistics; override it before using corrections as evidence."
@@ -3104,6 +3125,9 @@
     "tools/model_import.py": "CC0-only static model authoring; Cargo owns converter freshness, packs are atomic.",
     "tools/schemas.py": "Generate/check committed authoring schemas through opt-in native Rust tooling.",
     "tools/springboard.py": "Thin, build-free task coordinator; existing commands remain the execution front door.",
-    "tools/task_inputs.py": "Stateless input identity and read-only probes for canonical task/check reports."
+    "tools/task_inputs.py": "Stateless input identity and read-only probes for canonical task/check reports.",
+    "src/authoring_schemas.rs": "Opt-in authoring schemas.",
+    "src/bin/be2-schema.rs": "Internal generator for the existing schemas maintenance command.",
+    "tools/check_dependency_boundaries.py": "Check selected native graphs in isolated external consumers, without feature unification."
   }
 }
