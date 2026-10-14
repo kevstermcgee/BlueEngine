@@ -91,6 +91,37 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(result['unverified'])
         self.assertIsNone(result['package_shipping_evidence'])
 
+    def test_prepared_outputs_do_not_enter_whole_project_source_exports(self):
+        from scripts import publish_games
+        authored = self.root / 'scripts/installer.iss'
+        authored.write_text('authored custom Inno configuration')
+        self.config({'app_id': 'Stable.AuthoredId'})
+        legacy = self.root / 'installers/authored-options.iss'
+        legacy.parent.mkdir()
+        legacy.write_text('preserved legacy delivery source')
+        result = installer.prepare(self.project, ship)
+        stage = Path(result['stage'])
+        (stage / 'output').mkdir()
+        (stage / 'output/distinct-game-setup-windows-x64.exe').write_bytes(pe(0x14c, 0x10b))
+        self.assertTrue(stage.is_relative_to(self.root / '.blue-check/installers'))
+        observed = {relative.as_posix() for _, relative in publish_games.files_under(self.root)}
+        self.assertIn('scripts/installer.iss', observed)
+        self.assertIn('scripts/installer.json', observed)
+        self.assertIn('installers/authored-options.iss', observed)
+        self.assertFalse(any(name.startswith('.blue-check/') for name in observed))
+        manifest = {'source_repository': 'fixture', 'target_repository': 'fixture',
+                    'collections': {category: [] for category in publish_games.CATEGORIES},
+                    'playables': [{'entry': 'games/native/Cargo.toml', 'files': ['games/native/scripts/installer.iss']}]}
+        manifest['collections']['games'] = [{'source': self.root.name, 'destination': 'native'}]
+        with tempfile.TemporaryDirectory(prefix='installer-export-fixture-') as temp:
+            catalog = publish_games.export_tree(self.root.parent, Path(temp), manifest, 'fixture-only-no-publication')
+            exported = {entry['path'] for entry in catalog['files']}
+            self.assertIn('games/native/scripts/installer.iss', exported)
+            self.assertIn('games/native/scripts/installer.json', exported)
+            self.assertIn('games/native/installers/authored-options.iss', exported)
+            self.assertFalse(any('/.blue-check/' in name for name in exported))
+            self.assertFalse(any('/prepared-' in name or name.endswith('.exe') for name in exported))
+
     def test_inno_compile_paths_and_runtime_literals_are_distinct(self):
         self.config({'publisher': 'Studio "星"; {#danger} #literal'})
         result = installer.prepare(self.project, ship)
@@ -124,7 +155,7 @@ class InstallerTests(unittest.TestCase):
                 self.config(config)
                 with self.assertRaises(ship.ConfigError):
                     installer.prepare(self.project, ship)
-                self.assertFalse((self.root / 'installers').exists())
+                self.assertFalse((self.root / '.blue-check/installers').exists())
 
     def test_declared_player_files_fail_without_affecting_existing_outputs(self):
         prepared = installer.prepare(self.project, ship)
@@ -176,7 +207,7 @@ class InstallerTests(unittest.TestCase):
                 with self.assertRaisesRegex(ship.ShipError, 'native Windows'):
                     installer.build(self.project, ship, compiler)
             self.assertEqual(Path(prior['script']).read_bytes(), prior_script)
-            self.assertEqual(len(list((self.root / 'installers').glob('prepared-*'))), 1)
+            self.assertEqual(len(list((self.root / '.blue-check/installers').glob('prepared-*'))), 1)
 
     def compiled(self, command, **options):
         self.assertIsInstance(command, list)
@@ -205,7 +236,7 @@ class InstallerTests(unittest.TestCase):
                 with self.assertRaisesRegex(ship.ShipError, 'preserved'):
                     installer.build(self.project, ship, self.iscc)
         self.assertEqual(Path(prior['script']).read_bytes(), prior_bytes)
-        self.assertEqual(len(list((self.root / 'installers').glob('prepared-*'))), 3)
+        self.assertEqual(len(list((self.root / '.blue-check/installers').glob('prepared-*'))), 3)
 
     def test_package_change_while_compiling_rejects_success(self):
         self.iscc = self.compiler()
@@ -216,7 +247,7 @@ class InstallerTests(unittest.TestCase):
         with mock.patch.object(ship, 'host_platform', return_value='windows'), mock.patch.object(ship, 'run_process', side_effect=changed):
             with self.assertRaisesRegex(ship.ShipError, 'modified or damaged'):
                 installer.build(self.project, ship, self.iscc)
-        self.assertFalse(list((self.root / 'installers').glob('*/built.json')))
+        self.assertFalse(list((self.root / '.blue-check/installers').glob('*/built.json')))
 
     def test_prepared_script_payload_and_config_freshness_are_checked(self):
         for kind in ('script', 'payload', 'config'):
@@ -264,7 +295,7 @@ class InstallerTests(unittest.TestCase):
         with mock.patch.object(ship, 'host_platform', return_value='windows'), mock.patch.object(ship, 'run_process', side_effect=timeout):
             with self.assertRaisesRegex(ship.ShipError, 'timed out after 600 seconds'):
                 installer.build(self.project, ship, self.iscc)
-        logs = list((self.root / 'installers').glob('*/compiler.stdout'))
+        logs = list((self.root / '.blue-check/installers').glob('*/compiler.stdout'))
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].read_text(encoding='utf-8'), 'partial output\ufffd')
         self.assertEqual(logs[0].with_name('compiler.stderr').read_text(), 'partial diagnostic')
@@ -274,14 +305,14 @@ class InstallerTests(unittest.TestCase):
     def test_stage_report_and_output_symlinks_are_rejected_before_install(self):
         result = self.built()
         stage = Path(result['stage'])
-        alias = self.root / 'installers/stage-alias'
+        alias = self.root / '.blue-check/installers/stage-alias'
         try:
             alias.symlink_to(stage, target_is_directory=True)
         except OSError as error:
             self.skipTest(str(error))
         with self.assertRaisesRegex(ship.ShipError, 'symlinks'):
             installer._validate_stage(self.project, ship, alias)
-        parent_alias = self.root / 'installers/parent-alias'
+        parent_alias = self.root / '.blue-check/installers/parent-alias'
         parent_alias.symlink_to(stage.parent, target_is_directory=True)
         with self.assertRaisesRegex(ship.ShipError, 'symlinks'):
             installer._validate_stage(self.project, ship, parent_alias / stage.name)
@@ -356,7 +387,7 @@ class InstallerTests(unittest.TestCase):
             with self.assertRaisesRegex(ship.ShipError, 'requires Windows'):
                 installer.build(self.project, ship, 'ISCC.exe')
             with self.assertRaisesRegex(ship.ShipError, 'requires an isolated Windows'):
-                installer.test_install(self.project, ship, self.root / 'installers')
+                installer.test_install(self.project, ship, self.root / '.blue-check/installers')
 
 
 if __name__ == '__main__':

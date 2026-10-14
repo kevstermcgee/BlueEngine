@@ -164,9 +164,10 @@ def prepare(project, ship):
         if _player_path(name):
             raise ship.ConfigError(f'{name}: player saves/settings/logs must not be installer-owned; remove from identity.package and package again')
     binding = _binding(project, ship, config)
-    parent = project.root / 'installers'
-    if parent.is_symlink():
-        raise ship.ShipError(f'{parent}: installer output directory must not be a symlink')
+    # The existing source exporter excludes .blue-check at Cargo roots. Keep
+    # generated payloads/compiler outputs there, separate from authored Inno
+    # sources and established game-owned delivery directories.
+    parent = ship.package_file(project.root, '.blue-check/installers')
     parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix='prepared-', dir=parent))
     try:
@@ -202,18 +203,19 @@ def _validate_stage(project, ship, stage):
     stage = Path(stage)
     if not stage.is_absolute():
         stage = project.root / stage
-    if stage.is_symlink() or (project.root / 'installers').is_symlink():
+    parent = ship.package_file(project.root, '.blue-check/installers')
+    if stage.is_symlink():
         raise ship.ShipError('installer stage/output selectors must be regular directories, not symlinks')
     try:
-        relative = stage.relative_to(project.root / 'installers').as_posix()
+        relative = stage.relative_to(parent).as_posix()
     except ValueError as error:
-        raise ship.ShipError('installer stage must be a prepared directory inside this game\'s installers/') from error
+        raise ship.ShipError('installer stage must be inside .blue-check/installers/; prepare/build again (older completed outputs remain untouched)') from error
     # Reuse the package path checker before resolving: an intermediate symlink
     # must not become invisible through Path.resolve().
-    ship.package_file(project.root / 'installers', relative)
+    ship.package_file(parent, relative)
     stage = stage.resolve()
-    if not ship.inside(stage, project.root / 'installers'):
-        raise ship.ShipError('installer stage must be a prepared directory inside this game\'s installers/')
+    if not ship.inside(stage, parent):
+        raise ship.ShipError('installer stage must be a prepared directory inside this game\'s .blue-check/installers/')
     for path in (stage / 'prepared.json', stage / 'built.json', stage / 'output'):
         if path.is_symlink():
             raise ship.ShipError(f'{path}: installer reports/output must not be symlinks')

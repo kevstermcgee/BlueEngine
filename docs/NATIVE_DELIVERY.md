@@ -19,7 +19,9 @@ python scripts/ship.py installer test --stage "ABSOLUTE PREPARED STAGE PATH"
 
 `prepare` also works on Linux with an existing Windows package. It validates
 the AMD64 PE header and manifest hashes, copies only declared files into a new
-`installers/prepared-*` directory, and emits a Unicode Inno script and `prepared.json`.
+`.blue-check/installers/prepared-*` directory, and emits a Unicode Inno script and `prepared.json`.
+Generated stages stay outside source exports. Authored installer scripts and existing
+game-owned delivery directories keep their current paths and publication policy.
 It does not certify execution. `build` requires Windows and an explicit Inno Setup
 6 compiler; it records compiler, input and output hashes in `built.json`. Failed
 preparation/builds preserve prior generations and completed outputs, including logs.
