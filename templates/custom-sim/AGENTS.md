@@ -4,9 +4,10 @@ To start or resume work, use `python3 tools/be2.py start "<task>" --project GAME
 in the engine checkout (`python` on Windows); `next`/`resume TASK_ID` refreshes the packet.
 
 A game with its own simulation on BlueEngine (path dependency `vesper3d`, see Cargo.toml). Read this
-file and `src/lib.rs`. Missing engine capability is engine work, not permission to invent an API: in the
-engine checkout run `python tools/be2.py context "<need>"`, and read docs/CUSTOM_CLIENT.md (the kit and
-the loop) and docs/SHARED_GAMEPLAY.md ("Custom loops").
+file, the selected public contract, and the relevant `Sim::step`/state methods in `src/lib.rs`.
+Missing engine capability is engine work, not permission to invent an API: in the engine checkout
+run `python tools/be2.py context "<need>" --level 1 --compact`. Start with docs/GAME_AUTHORING_ENTRY.md;
+retrieve the relevant detailed guide/API section with context --level 2 before exploring source.
 
 ## Architecture (do not break)
 - `src/lib.rs` is the game: pure, seeded (`devkit::Rng`), fixed 60 Hz `Sim::step(&Input)`. No window,

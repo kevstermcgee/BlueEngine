@@ -12,7 +12,7 @@ By ID too: `prop_mass` (kg), `prop_half_extents`, `prop_rotation`, `prop_linear_
 `set_prop_floor(None)` removes the implicit y = 0 ground under props (pits, voids; `Some(y)` moves it), as `Controller::set_floor` does for players.
 `SceneBuilder::without_spawn()` builds a props-only world (no player can join). `vesper3d::rapier` is the engine's `rapier3d`, re-exported.
 IDs are owned; unknown IDs fail. Jump is an edge; movement persists.
-Run: `cargo run --no-default-features --example prototype`.
+Run: `cargo run --no-default-features --features physics --example prototype`.
 For a nonstandard window or renderer, continue with [CUSTOM_CLIENT.md](CUSTOM_CLIENT.md).
 For input-driven acceptance tests, use the existing scenario driver in
 [BEHAVIORAL_TESTING.md](BEHAVIORAL_TESTING.md) instead of building a shell harness.

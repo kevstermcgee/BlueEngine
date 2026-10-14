@@ -115,6 +115,7 @@ def feature_map(root, name, features=None):
             'tests': feature_suites(feature), 'checks': feature['checks'],
             'examples': [p for p in feature['files'] if p.startswith(('examples/', 'templates/', 'assets/'))],
             'depends_on': feature.get('depends_on', []),
+            'required_features': feature.get('required_features', []),
             'used_by': sorted(k for k, v in features.items() if name in v.get('depends_on', [])),
             'extension_point': feature.get('canonical_example') or (feature.get('read_first') or feature['files'])[0],
             'ownership': 'Declared discovery relationships; final verification does not rely on completeness.'}
@@ -373,6 +374,8 @@ def learned_line(entry):
     ref = f" ({entry['ref']})" if entry.get('ref') else ''
     if entry.get('status') == 'promoted':
         head, body = 'solved: ', entry.get('hint') or entry.get('workaround') or entry.get('note') or ''
+    elif entry.get('status') == 'wontfix' and 'retired' in entry.get('workaround', '').lower():
+        head, body = 'retired: ', entry['workaround']
     elif entry.get('trap'):
         head, body = 'trap: ', entry.get('hint') or entry['trap']
     else:
@@ -406,7 +409,8 @@ def ledger_hints(root, query, selected=()):
             entry = json.loads(line)
         except ValueError:
             continue
-        if isinstance(entry, dict) and isinstance(entry.get('note'), str) and entry.get('status') != 'duplicate':
+        if (isinstance(entry, dict) and isinstance(entry.get('note'), str)
+                and entry.get('status') != 'duplicate' and entry.get('scope') != 'retired-workflow'):
             entries.append(entry)
     keyword_sets = [learned_words(' '.join(w for w in entry.get('keywords', []) if isinstance(w, str)))
                     if isinstance(entry.get('keywords', []), list) else set() for entry in entries]
@@ -460,6 +464,24 @@ def module_picks(summaries, feature, query_words, rarity=None):
     return [path for *_, path in sorted(picks)]
 
 
+def identifier(text):
+    """Keep Rust qualification and field separators; prose does not become an identifier."""
+    return text.strip().strip('`').lower()
+
+
+def public_answers(feature, query):
+    """Curated public contracts use synonym groups, rather than exact task sentences."""
+    words = set(re.findall(r'[a-z0-9_-]+', query.lower()))
+    exact, matched = [], []
+    for answer in feature.get('answers', []):
+        if identifier(query) in [identifier(api) for api in answer.get('identifiers', [])]:
+            exact.append(answer)
+        elif answer.get('when') and all(words.intersection(group) for group in answer['when']):
+            matched.append(answer)
+    # One complete answer per feature keeps repeated limitations/signatures out of intake.
+    return (exact or sorted(matched, key=lambda answer: -len(answer['when'])))[:1], bool(exact)
+
+
 def context(root, query, limit=3, level=2):
     if level not in (1, 2, 3):
         raise ValueError('Context level must be 1, 2 or 3')
@@ -484,20 +506,32 @@ def context(root, query, limit=3, level=2):
     # it is across the index (inverse document frequency), so a generic word cannot outvote a specific one.
     weight = {term: math.log(1 + len(bags) / sum(term in words for words in bags.values()))
               for term in terms if any(term in words for words in bags.values())}
-    ranked = []
+    ranked, answers = [], {}
     for name, feature in features.items():
         words = bags[name]
         title = set(re.findall(r'[a-z0-9]+', name.lower()))
         keywords = set(re.findall(r'[a-z0-9]+', ' '.join(feature.get('keywords', [])).lower()))
         diagnostic = any(query.upper() == item['id'] for item in
                          feature.get('constraints', []) + feature.get('decisions', []))
-        score = 1000 if query.lower() == name or diagnostic else round(sum(
+        answers[name], exact_answer = public_answers(feature, query)
+        exact_api = identifier(query) in [identifier(api) for api in feature.get('public_api', [])]
+        score = 2000 if exact_answer else 1000 if query.lower() == name or diagnostic or exact_api else round(sum(
             weight[term] * (4 if term in title | keywords else 2 if term in described[name] else 1)
             for term in terms & words), 3)
+        if answers[name] and not exact_answer:
+            score += 100
+        # Retired paths only answer an explicit browser/WASM question or exact identifier.
+        if feature.get('status') == 'retired' and score < 1000:
+            if not terms.intersection({'browser', 'web', 'wasm'}):
+                score = 0
+            else:
+                score += 100
         if score:
             ranked.append((score, name, feature))
     ranked.sort(key=lambda item: (-item[0], item[1]))
-    selected = ranked[:1] if ranked and ranked[0][0] >= 1000 else ranked[:limit]
+    selected = (ranked[:1] if ranked and ranked[0][0] >= 1000 else
+                [item for item in ranked if item[0] >= 100][:limit]
+                if ranked and ranked[0][0] >= 100 else ranked[:limit])
     matches = []
     query_words = learned_words(query)
     frequency = {}
@@ -518,6 +552,11 @@ def context(root, query, limit=3, level=2):
         for field in ('constraints', 'canonical_example', 'decisions', 'traps', 'depends_on', 'public_api'):
             if feature.get(field):
                 item[field] = feature[field]
+        for field in ('status', 'runtime', 'limitations', 'replacement'):
+            if feature.get(field):
+                item[field] = feature[field]
+        if answers[name]:
+            item['answer'] = {k: v for k, v in answers[name][0].items() if k not in ('when', 'identifiers')}
         item['used_by'] = sorted(key for key, value in features.items() if name in value.get('depends_on', []))
         for typecheck in (False, True):
             try:
@@ -533,11 +572,14 @@ def context(root, query, limit=3, level=2):
         omitted.insert(0, matches.pop()['id'])
     related = closure(features, [item['id'] for item in matches])
     candidates = ['graphics', 'offline_renderer', 'asset_library', 'map_geometry']
-    learned = ledger_hints(root, query, [item['id'] for item in matches])
+    # Output limits must not change hint retrieval for an equivalent query.
+    learned = ledger_hints(root, query, [name for _, name, _ in ranked[:3]])
     packet = {'query': query, 'total': len(ranked), 'limit': limit,
             'matches': matches,
             'omitted_matches': omitted,
-            'confidence': 'high' if selected and selected[0][0] >= 1000 else 'low: keyword ranking; confirm read_first before editing',
+            'confidence': ('high: exact indexed identifier' if selected and selected[0][0] >= 1000 else
+                           'guided: public contract matched; confirm runtime and warnings' if selected and selected[0][0] >= 100 else
+                           'low: keyword ranking; confirm read_first before editing'),
             'probably_unnecessary': [name for name in candidates if name not in related] if selected else [],
             'exclusion_basis': 'Declared dependencies only; advisory, never a reason to skip validation.',
             'expected_scope': 'Small task: 1-4 source files; subsystem: 3-8. Above 10, recheck impact.',
@@ -556,11 +598,15 @@ def context(root, query, limit=3, level=2):
             guides = [p for p in feature.get('read_first', []) if p.endswith('.md')]
             if not guides:
                 guides = [p for p in feature['files'] if p.endswith('.md') and '/adr/' not in p]
-            item['read_first'] = (guides or item['read_first'])[:2]
+            item['read_first'] = [feature['entry_guide']] if feature.get('entry_guide') else (guides or item['read_first'])[:2]
             for key in list(item):
-                if key not in ('id', 'read_first', 'public_api', 'iterate', 'canonical_example'):
+                if key not in ('id', 'read_first', 'public_api', 'iterate', 'canonical_example',
+                               'answer', 'status', 'runtime', 'limitations', 'replacement'):
                     del item[key]
-        packet['next'] = 'Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.'
+            if item.get('answer'):
+                item['public_api'] = answers[item['id']][0].get('identifiers', []) or item.get('public_api', [])[:2]
+        packet['next'] = ('Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership. '
+                          'Low confidence: name the runtime and mechanic, or use an exact public identifier.')
         if learned:
             packet['learned'] = learned
     elif level == 3:
@@ -644,6 +690,8 @@ def full_commands(test_profile='itest'):
                      ['cargo','test','--locked','--manifest-path',leo,'--no-default-features','--features','portable-client']])
     return commands + [
         [sys.executable, 'tools/check_headless.py'],
+        [sys.executable, 'tools/check_dependency_boundaries.py', '--run',
+         *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, 'tools/check_authoring.py', *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'tools.test_model_import', 'tools.test_schemas', 'scripts.test_publish_games',
