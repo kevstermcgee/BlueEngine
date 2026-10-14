@@ -19,7 +19,7 @@ math, simulation, snapshot and save payload types have one definition; this chan
 does not introduce another simulation or save format. Pure rules and static map
 authoring do not compile Rapier. The schema coordinator uses an internal native
 `be2-schema` binary so generating schemas does not select stock-world or transport
-dependencies; `be2-tools schema-generate` remains available in the full authoring tool.
+dependencies; `be2-tools schema-generate game` remains available in the full authoring tool.
 
 `networking` selects QUIC, Rustls and Tokio. Lightweight protocol data, authenticated
 development UDP and in-memory test transport remain available without it. Selecting
