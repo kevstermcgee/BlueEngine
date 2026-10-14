@@ -2,7 +2,11 @@
   "title": "Automation Workshop",
   "tagline": "Two machines. One store. Every item has a job.",
   "controls": "1/2 select machine; arrows select recipe; Tab upgrade; Down item; Space queue; O/C gather ore/coal; D deliver; Backspace cancel; U upgrade; F5/F9 save/load; Esc menu",
-  "package": ["assets/workshop.json", "assets/content-v1.json", "README.md"],
+  "package": [
+    "assets/workshop.json",
+    "assets/content-v1.json",
+    "README.md"
+  ],
   "smoke_args": [
     "--capture",
     "{dir}",
@@ -15,5 +19,5 @@
     "--save-dir",
     "{dir}/saves"
   ],
-  "engine_revision": "0f5a3e2ef088"
+  "engine_revision": "f3c2f226bdfc2ed546d8a1698a3115ef95029db6"
 }
