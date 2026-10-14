@@ -125,8 +125,11 @@ Hardware: Intel N97, four cores, Linux x64; Rust/Cargo 1.98.1. The root filesyst
 had under 200 MB free. Two early scratch builds ran out of space before their
 requested checks completed; those failures are retained, and only this task's
 partial output was removed. Final artifacts/temp/logs use the mounted USB drive.
-Final runs disable incremental state (`CARGO_INCREMENTAL=0`) to fit the available
-storage while retaining assertions, profiles and actual test execution.
+Final runs disable incremental state (`CARGO_INCREMENTAL=0`) and engine itest
+debug symbols (`CARGO_PROFILE_ITEST_DEBUG=0`) to fit the available storage.
+Assertions, optimization levels, feature coverage and actual test execution remain
+enabled. Standalone consumers retain their own profiles. These build inputs differ
+from earlier line-table runs, so no timing speedup is inferred.
 
 Implementation evidence includes 479 narrow library tests, feature-disabled
 production/scenario rejection tests, external game-owned dash scoring and engine
