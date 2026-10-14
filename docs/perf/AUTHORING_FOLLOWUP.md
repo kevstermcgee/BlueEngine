@@ -138,6 +138,28 @@ the receipts when executed. Plan size and selected dependencies alone do not
 demonstrate faster compilation. Local summed stage duration is not billed CI
 runner time. No universal performance or AI-cost reduction is claimed.
 
+The initial full Linux gate passed at `51de597`: 45 stages, 1,420.921 seconds
+wall-clock completion, 1,563.697 summed stage seconds, and 4,589 reported test
+executions across configurations. The independent Python batch ran 758 tests
+with 60 declared skips; real scaffold integration executes in its separate gate.
+The final-revision gate runs again after committing these measured results.
+
+| Measured inner loop | Observed seconds | Evidence and limitation |
+| --- | ---: | --- |
+| New rules fixture, warm dependencies | 0.2905 | One game artifact built; engine setup was already warm |
+| No-change rules, three runs | 0.0369–0.0373 | Program and snapshot assertions execute; zero built artifacts |
+| Fresh dash scores 19/23/29 | 0.273–0.286 | Each new source hash builds one game artifact and runs assertions |
+| Fresh JSON jump heights 0.71/0.72/0.73 | 0.0077–0.0079 | Current game/map validation; no build, visual or device evidence |
+| Current-content discovery, three runs | 0.0829–0.087 | No Rust/device/shipping verification |
+| Inventoried tooling-pin inner check | 22.624 | Six Python commands, 354 reported test executions; full gates pending |
+
+The pin-only plan formerly fell back to 45 full commands and now selects six
+compatibility commands. This compares scope, not equivalent coverage or a
+before/after speed ratio. Nested fixture builds are not counted by the direct
+Cargo artifact counter. The scoring fixture reuses the maintained public-rules
+example and engine save/restore continuation checks; it introduces no second
+simulation or save format in the engine.
+
 Linux package smoke uses Xvfb/software OpenGL. It does not certify physical
 graphics, input or audio devices. This Linux session cannot execute Windows
 installers or Windows CI; those final platform/resource/launch gates remain
