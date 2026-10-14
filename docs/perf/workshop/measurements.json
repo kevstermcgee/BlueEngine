@@ -1,0 +1,603 @@
+{
+  "schema_version": 1,
+  "starting_revision": "0f5a3e2ef088161fe51cef330c06149dc6a91817",
+  "implemented_code_revision": "9edea6b16221be01072512ff1a81546b622bb1e7",
+  "hardware": {
+    "cpu": "Intel N97, four cores/four threads",
+    "memory": "16 GiB installed; kernel reports 15 GiB usable",
+    "os": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+    "toolchain": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8",
+    "target": "x86_64-unknown-linux-gnu",
+    "competing_load": "Resident services and other idle agent sessions; no other task Cargo compilation scheduled during probes. Not a controlled dedicated machine."
+  },
+  "environment": {
+    "CARGO_TARGET_DIR": "shared target reused from authoring follow-up",
+    "CARGO_BUILD_JOBS": "2",
+    "CARGO_INCREMENTAL": "0",
+    "CARGO_PROFILE_ITEST_DEBUG": "0",
+    "RUSTC_WRAPPER": "disabled: host sccache returned Operation not permitted",
+    "RUSTFLAGS": null,
+    "profile": "itest, game/engine opt-level 0, dependencies opt-level 3; debug assertions enabled"
+  },
+  "cold_setup": {
+    "status": "unverified",
+    "seconds": null,
+    "reason": "Existing registry/dependency caches reused; no honest cold setup measurement performed."
+  },
+  "probe_runs": [
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--features",
+        "online",
+        "--bin",
+        "workshop",
+        "--",
+        "probe"
+      ],
+      "revision": "1c310b8437ae5beb9d1c7636d74773a8d5873303",
+      "working_tree_state": "dirty recorded source inputs",
+      "wall_seconds": 9.012798,
+      "data": {
+        "allocation_measurement": "System allocator requested sizes including reallocations; excludes allocator metadata and GPU; RSS is Linux process resident size",
+        "authority": "same Workshop::step as offline and custom netplay",
+        "budgets": {
+          "commands_per_tick": 32,
+          "jobs_per_machine": 2,
+          "machines": 1024,
+          "p99_tick_us": 16667,
+          "save_bytes": 2097152
+        },
+        "capacity_claim": false,
+        "profile": "debug assertions enabled",
+        "results": [
+          {
+            "allocation_calls_51_ticks": 10201,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 4349952,
+            "load_us": 287,
+            "machines": 10,
+            "online_snapshot_bytes": 1538,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 1231956,
+            "requested_live_bytes_before_ticks": 36823,
+            "requested_peak_bytes_during_ticks": 39119,
+            "samples": 51,
+            "save_bytes": 3538,
+            "save_us": 496,
+            "setup_us": 2243,
+            "tick_ns": {
+              "p50": 83122,
+              "p95": 90827,
+              "p99": 101485
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          },
+          {
+            "allocation_calls_51_ticks": 102001,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 5074944,
+            "load_us": 2095,
+            "machines": 100,
+            "online_snapshot_bytes": 14590,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 12312216,
+            "requested_live_bytes_before_ticks": 117033,
+            "requested_peak_bytes_during_ticks": 119329,
+            "samples": 51,
+            "save_bytes": 29371,
+            "save_us": 3612,
+            "setup_us": 91469,
+            "tick_ns": {
+              "p50": 821792,
+              "p95": 847777,
+              "p99": 940409
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          },
+          {
+            "allocation_calls_51_ticks": 1020001,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 11800576,
+            "load_us": 20643,
+            "machines": 1000,
+            "online_snapshot_bytes": 145091,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 123114816,
+            "requested_live_bytes_before_ticks": 752437,
+            "requested_peak_bytes_during_ticks": 754733,
+            "samples": 51,
+            "save_bytes": 287674,
+            "save_us": 38307,
+            "setup_us": 8243202,
+            "tick_ns": {
+              "p50": 8281482,
+              "p95": 11111917,
+              "p99": 11487187
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--features",
+        "online",
+        "--bin",
+        "workshop",
+        "--",
+        "probe"
+      ],
+      "revision": "1c310b8437ae5beb9d1c7636d74773a8d5873303",
+      "working_tree_state": "dirty recorded source inputs",
+      "wall_seconds": 10.219384,
+      "data": {
+        "allocation_measurement": "System allocator requested sizes including reallocations; excludes allocator metadata and GPU; RSS is Linux process resident size",
+        "authority": "same Workshop::step as offline and custom netplay",
+        "budgets": {
+          "commands_per_tick": 32,
+          "jobs_per_machine": 2,
+          "machines": 1024,
+          "p99_tick_us": 16667,
+          "save_bytes": 2097152
+        },
+        "capacity_claim": false,
+        "profile": "debug assertions enabled",
+        "results": [
+          {
+            "allocation_calls_51_ticks": 10201,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 4378624,
+            "load_us": 283,
+            "machines": 10,
+            "online_snapshot_bytes": 1538,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 1231956,
+            "requested_live_bytes_before_ticks": 36823,
+            "requested_peak_bytes_during_ticks": 39119,
+            "samples": 51,
+            "save_bytes": 3538,
+            "save_us": 492,
+            "setup_us": 2272,
+            "tick_ns": {
+              "p50": 82688,
+              "p95": 92399,
+              "p99": 99141
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          },
+          {
+            "allocation_calls_51_ticks": 102001,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 5103616,
+            "load_us": 2075,
+            "machines": 100,
+            "online_snapshot_bytes": 14590,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 12312216,
+            "requested_live_bytes_before_ticks": 117033,
+            "requested_peak_bytes_during_ticks": 119329,
+            "samples": 51,
+            "save_bytes": 29371,
+            "save_us": 3589,
+            "setup_us": 91382,
+            "tick_ns": {
+              "p50": 819302,
+              "p95": 830925,
+              "p99": 837569
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          },
+          {
+            "allocation_calls_51_ticks": 1020001,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 11829248,
+            "load_us": 20299,
+            "machines": 1000,
+            "online_snapshot_bytes": 145091,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 123114816,
+            "requested_live_bytes_before_ticks": 752437,
+            "requested_peak_bytes_during_ticks": 754733,
+            "samples": 51,
+            "save_bytes": 287674,
+            "save_us": 37976,
+            "setup_us": 8261553,
+            "tick_ns": {
+              "p50": 8153699,
+              "p95": 8347567,
+              "p99": 9655523
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          }
+        ]
+      }
+    },
+    {
+      "command": [
+        "cargo",
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--features",
+        "online",
+        "--bin",
+        "workshop",
+        "--",
+        "probe"
+      ],
+      "revision": "1c310b8437ae5beb9d1c7636d74773a8d5873303",
+      "working_tree_state": "dirty recorded source inputs",
+      "wall_seconds": 8.915701,
+      "data": {
+        "allocation_measurement": "System allocator requested sizes including reallocations; excludes allocator metadata and GPU; RSS is Linux process resident size",
+        "authority": "same Workshop::step as offline and custom netplay",
+        "budgets": {
+          "commands_per_tick": 32,
+          "jobs_per_machine": 2,
+          "machines": 1024,
+          "p99_tick_us": 16667,
+          "save_bytes": 2097152
+        },
+        "capacity_claim": false,
+        "profile": "debug assertions enabled",
+        "results": [
+          {
+            "allocation_calls_51_ticks": 10201,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 4333568,
+            "load_us": 282,
+            "machines": 10,
+            "online_snapshot_bytes": 1538,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 1231956,
+            "requested_live_bytes_before_ticks": 36823,
+            "requested_peak_bytes_during_ticks": 39119,
+            "samples": 51,
+            "save_bytes": 3538,
+            "save_us": 490,
+            "setup_us": 2204,
+            "tick_ns": {
+              "p50": 83389,
+              "p95": 89528,
+              "p99": 99985
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          },
+          {
+            "allocation_calls_51_ticks": 102001,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 5058560,
+            "load_us": 2052,
+            "machines": 100,
+            "online_snapshot_bytes": 14590,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 12312216,
+            "requested_live_bytes_before_ticks": 117033,
+            "requested_peak_bytes_during_ticks": 119329,
+            "samples": 51,
+            "save_bytes": 29371,
+            "save_us": 3595,
+            "setup_us": 91476,
+            "tick_ns": {
+              "p50": 821749,
+              "p95": 831189,
+              "p99": 837825
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          },
+          {
+            "allocation_calls_51_ticks": 1020001,
+            "budget_exceeded": false,
+            "linux_resident_bytes": 11784192,
+            "load_us": 20580,
+            "machines": 1000,
+            "online_snapshot_bytes": 145091,
+            "online_snapshot_fits_1100_bytes": false,
+            "requested_allocation_bytes_51_ticks": 123114816,
+            "requested_live_bytes_before_ticks": 752437,
+            "requested_peak_bytes_during_ticks": 754733,
+            "samples": 51,
+            "save_bytes": 287674,
+            "save_us": 38050,
+            "setup_us": 8189274,
+            "tick_ns": {
+              "p50": 8150602,
+              "p95": 8264774,
+              "p99": 8444747
+            },
+            "workload": "all machines have real paid smelt escrow; completed outputs blocked by a full shared destination"
+          }
+        ]
+      }
+    }
+  ],
+  "iteration": [
+    {
+      "name": "final-focused-offline-2",
+      "category": "warm dependencies after actual authoritative diagnostic fix/new game test",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features"
+      ],
+      "revision": "1c310b8437ae5beb9d1c7636d74773a8d5873303",
+      "seconds": 14.552812,
+      "exit_code": 0,
+      "status": "passed"
+    },
+    {
+      "name": "final-focused-online",
+      "category": "focused actual online gameplay",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--features",
+        "online"
+      ],
+      "revision": "1c310b8437ae5beb9d1c7636d74773a8d5873303",
+      "seconds": 4.222612,
+      "exit_code": 0,
+      "status": "passed"
+    },
+    {
+      "name": "warm-no-change-1",
+      "category": "warm dependencies after genuine CLI/identity source edits; not a no-change measurement",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "revision": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+      "seconds": 2.776181,
+      "exit_code": 0,
+      "status": "passed",
+      "cargo_artifacts": {
+        "fresh": 28,
+        "built": 10
+      }
+    },
+    {
+      "name": "warm-no-change-2",
+      "category": "warm no-change",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "revision": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+      "seconds": 0.524671,
+      "exit_code": 0,
+      "status": "passed",
+      "cargo_artifacts": {
+        "fresh": 38,
+        "built": 0
+      }
+    },
+    {
+      "name": "warm-no-change-3",
+      "category": "warm no-change",
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "games/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "revision": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+      "seconds": 0.515212,
+      "exit_code": 0,
+      "status": "passed",
+      "cargo_artifacts": {
+        "fresh": 38,
+        "built": 0
+      }
+    },
+    {
+      "name": "native-ship-2",
+      "category": "shipping after package creation: failed missing runtime assets",
+      "command": [
+        "xvfb-run",
+        "-a",
+        "env",
+        "LIBGL_ALWAYS_SOFTWARE=1",
+        "ALSA_CONFIG_PATH=/home/kevin/.cache/blueengine-authoring-followup-tmp/asound-null.conf",
+        "python3",
+        "games/automation-workshop/scripts/ship.py",
+        "ship",
+        "--no-install"
+      ],
+      "revision": "1c310b8437ae5beb9d1c7636d74773a8d5873303",
+      "seconds": 60.530564,
+      "exit_code": 1,
+      "status": "failed"
+    },
+    {
+      "name": "native-ship-3",
+      "category": "shipping gate passed, visual inspection subsequently failed inverted camera",
+      "command": [
+        "xvfb-run",
+        "-a",
+        "env",
+        "LIBGL_ALWAYS_SOFTWARE=1",
+        "ALSA_CONFIG_PATH=/home/kevin/.cache/blueengine-authoring-followup-tmp/asound-null.conf",
+        "python3",
+        "games/automation-workshop/scripts/ship.py",
+        "ship",
+        "--no-install"
+      ],
+      "revision": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+      "seconds": 33.71956,
+      "exit_code": 0,
+      "status": "passed"
+    },
+    {
+      "name": "native-ship-4",
+      "category": "shipping after genuine camera/source correction",
+      "command": [
+        "xvfb-run",
+        "-a",
+        "env",
+        "LIBGL_ALWAYS_SOFTWARE=1",
+        "ALSA_CONFIG_PATH=/home/kevin/.cache/blueengine-authoring-followup-tmp/asound-null.conf",
+        "python3",
+        "games/automation-workshop/scripts/ship.py",
+        "ship",
+        "--no-install"
+      ],
+      "revision": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+      "seconds": 33.588064,
+      "exit_code": 0,
+      "status": "passed"
+    },
+    {
+      "name": "native-state-capture",
+      "category": "software-rendered native gameplay script",
+      "command": [
+        "python3",
+        "tools/xcapture.py",
+        "games/automation-workshop/dist/automation-workshop",
+        "--frames",
+        "8,13,17,21,26,90",
+        "--out",
+        ".be2-work/workshop/captures",
+        "--",
+        "--script",
+        "smelt@0,recipe@0,machine@1,recipe@1,queue@2,full@3,save@11,cancel@12,recovery@16,load@20,recovery@24,upgrade@25,gear@27",
+        "--save-dir",
+        "/home/kevin/BlueEngine-workshop/.be2-work/workshop/capture-saves"
+      ],
+      "revision": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+      "seconds": 1.929379,
+      "exit_code": 0,
+      "status": "passed"
+    }
+  ],
+  "content_only": {
+    "status": "passed",
+    "method": "Post-model scripted tuning variant added to the existing isolated trial game through semantic edit, then all25 real headless tests executed against current runtime content; no Rust sources changed or restored. Separate workflow evidence, not model completion.",
+    "revision": "9edea6b16221be01072512ff1a81546b622bb1e7",
+    "variant": "workshop:draw-wire-steady,14 logical ticks,existing wire-tools reference",
+    "runs": [
+      {
+        "name": "content-loop-before",
+        "seconds": 0.538689,
+        "exit_code": 0,
+        "built_artifacts": 0,
+        "fresh_artifacts": 38
+      },
+      {
+        "name": "content-semantic-edit",
+        "seconds": 0.106693,
+        "exit_code": 0,
+        "built_artifacts": 0,
+        "fresh_artifacts": 0
+      },
+      {
+        "name": "content-loop-after",
+        "seconds": 0.513385,
+        "exit_code": 0,
+        "built_artifacts": 0,
+        "fresh_artifacts": 38
+      }
+    ],
+    "limitation": "One genuine changed-content run and one no-change baseline with warm existing caches; no cold or general speed claim."
+  },
+  "limits": [
+    "Timings include requested-allocation instrumentation overhead. p99 is the largest of 51 samples per run, not a long-session tail guarantee.",
+    "1,024 machines/2 jobs/32 commands are declared bounds; passing 1,000 offline probes is not supported commercial capacity.",
+    "2 MiB is the migration/probe save budget, not a newly enforced global Snapshot limit.",
+    "Requested allocator bytes exclude metadata/GPU; Linux RSS is process-resident size, not total system memory.",
+    "Online encoder probes are separate from actual online sessions; blocked ten-machine state exceeds 1,100-byte ceiling.",
+    "No comparison cohort, actual bill/cost savings, cold setup, physical device or subjective fun claim."
+  ],
+  "verification_ledger": {
+    "planned": [
+      "required engine full gate at final clean revision",
+      "final native package and synthetic input receipt",
+      "Windows CI/package gate"
+    ],
+    "executed_passed": [
+      "resources 10 tests/exhaustive 8125 cases + timed ability reuse",
+      "workshop 25 offline tests",
+      "workshop 32 online-feature tests including 7 real netplay regressions",
+      "actual native CLI and 5 actual MCP search queries",
+      "native all-feature Clippy",
+      "3 offline load ladders with exact save recovery",
+      "Linux packaged launch with declared asset manifest and software captures",
+      "synthetic X11 keyboard/mouse/F5 restore using same packaged binary"
+    ],
+    "executed_failed_then_corrected": [
+      "initial Resource Clippy style error",
+      "incorrect SaveSlots constructor compilation",
+      "incorrect native Conf/control signature compilation",
+      "discovery recall floor after new records; added scaffold keywords without lowering floor",
+      "future-content fixture ID collision",
+      "timestamped-frame equality assertion",
+      "host sccache sandbox initialization",
+      "Linux packaging target not declared; explicitly declared development target",
+      "missing packaged runtime assets; declared exact package entries",
+      "native upside-down camera observed after passing capture gate; corrected and re-inspected",
+      "private X11 helper focused before mapping; waited for viewable window",
+      "default ALSA rate negotiation; identical synthetic proof passes with plug-to-null"
+    ],
+    "skipped": [
+      "desktop installation/shortcuts intentionally --no-install",
+      "Windows exe resource inspection on Linux"
+    ],
+    "unverified": [
+      "physical input/GPU/audio",
+      "Windows runtime until actual matching CI completes",
+      "two-version secure player updater, production signing/publication",
+      "crash-free/long-session operation",
+      "durable timed-out seat reclaim and late join: explicitly unsupported"
+    ]
+  }
+}
