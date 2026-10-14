@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2021"
 description = "Versioned, bounded automation workshop reference"
 
+[package.metadata.blueengine]
+integration-features = ["online"]
+
 # The rules are a plain library so they can be tested without a window; the window is the binary.
 [lib]
 name = "automation_workshop"

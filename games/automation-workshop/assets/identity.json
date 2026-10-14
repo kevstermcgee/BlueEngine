@@ -1,0 +1,16 @@
+{
+  "title": "Automation Workshop",
+  "tagline": "Two machines. One store. Every item has a job.",
+  "controls": "1/2 select machine; arrows select recipe; Tab upgrade; Down item; Space queue; O/C gather ore/coal; D deliver; Backspace cancel; U upgrade; F5/F9 save/load; Esc menu",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--script",
+    "smelt@0,recipe@0,machine@1,recipe@1,queue@2,full@3,save@11,cancel@12,recovery@16,load@20,recovery@24,upgrade@25,gear@27"
+  ],
+  "engine_revision": "0f5a3e2ef088"
+}
