@@ -24,6 +24,8 @@ def load(command, root):
         pin = json.loads((root / 'scripts/tooling.json').read_text(encoding='utf-8'))
         if pin.get('schema_version') != 1:
             raise ValueError('unsupported tooling pin schema (expected 1)')
+        if not isinstance(pin.get('sha256'), str):
+            raise ValueError('tooling pin is unverified; the engine dependency was unavailable during scaffolding')
         engine = (root / os.environ.get('BE2_TOOLING_ROOT', pin['engine'])).resolve()
         if tooling_digest(engine) != pin['sha256']:
             raise ValueError(f'tooling content differs from the pin for {pin.get("revision", "unknown revision")}')

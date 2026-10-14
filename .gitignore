@@ -3,7 +3,7 @@ target/
 /bin/
 *.partial.*
 
-/.be2-work/
+/.be2-work
 __pycache__/
 .learning/
 

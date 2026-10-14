@@ -75,6 +75,18 @@ class SharedToolingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'drift'):
             tooling.check(self.game)
 
+    def test_unavailable_engine_at_scaffold_requires_explicit_pin_upgrade(self):
+        tooling.migrate(self.game)
+        path = self.game / 'scripts/tooling.json'
+        recorded = json.loads(path.read_text())
+        recorded['sha256'] = None
+        path.write_text(json.dumps(recorded))
+        result = subprocess.run([sys.executable, str(self.game / 'scripts/check.py'), '--help'],
+                                capture_output=True, text=True)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('unverified', result.stderr)
+        self.assertIn('migrate GAME', result.stderr)
+
     def test_binary_override_requires_fresh_cargo_artifact_identity(self):
         binary = self.game / 'fresh tool'
         binary.write_bytes(b'verified source artifact')

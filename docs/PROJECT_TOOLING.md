@@ -24,7 +24,11 @@ must match that fresh artifact byte-for-byte; a mismatched or stale override fai
 with the correct path. An exported engine package can instead provide its existing
 `PACKAGE-MANIFEST.json`: every declared input and the packaged native executable
 must match its recorded hash. Missing or unverifiable inputs fail with instructions
-to restore the package or use a source checkout. `--help` never compiles.
+to restore the package or use a source checkout. `--help` never compiles. Shared Python implementation edits do not change Rust
+build inputs; the generator reads their content pin at runtime. If the legacy
+library scaffolds before its engine dependency exists, the pin is unverified
+(`sha256: null`); restore the dependency and run the explicit migration before
+using project commands.
 
 Migration is explicit. After reviewing the engine update, run:
 

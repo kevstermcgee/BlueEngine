@@ -331,13 +331,19 @@ fn write_shipping_files(
     for command in ["check", "ship", "dev", "project"] {
         project.write(&format!("scripts/{command}.py"), tooling_entry(command))?;
     }
-    project.write("scripts/tooling.py", include_str!("../../templates/game_entry.py"))?;
-    project.write("scripts/tooling.json", serde_json::to_string_pretty(&serde_json::json!({
-        "schema_version": 1,
-        "engine": serde_json::from_str::<String>(&project.engine_toml)?,
-        "revision": identity.engine_revision,
-        "sha256": tooling_digest(&project.engine_dir),
-    }))?)?;
+    project.write(
+        "scripts/tooling.py",
+        include_str!("../../templates/game_entry.py"),
+    )?;
+    project.write(
+        "scripts/tooling.json",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "engine": serde_json::from_str::<String>(&project.engine_toml)?,
+            "revision": identity.engine_revision,
+            "sha256": tooling_digest(&project.engine_dir),
+        }))?,
+    )?;
     // Starter names describe code generation; project runtimes describe the native client route.
     // Keep the public Cargo-name contract, including uppercase/underscores and long names, while
     // giving the requirements document its own canonical ID.
@@ -426,23 +432,34 @@ pub fn tooling_entry(command: &str) -> String {
 
 /// Content pin also supports a checked-out revision with local, reviewed tooling edits.
 /// A recorded Git revision alone cannot identify a dirty source checkout.
-fn tooling_digest(engine: &Path) -> String {
+fn tooling_digest(engine: &Path) -> Option<String> {
     let mut digest = ring::digest::Context::new(&ring::digest::SHA256);
-    for (name, embedded) in [
-        ("templates/game_check.py", include_bytes!("../../templates/game_check.py").as_slice()),
-        ("templates/game_dev.py", include_bytes!("../../templates/game_dev.py").as_slice()),
-        ("templates/game_project.py", include_bytes!("../../templates/game_project.py").as_slice()),
-        ("templates/game_ship.py", include_bytes!("../../templates/game_ship.py").as_slice()),
-        ("templates/game_entry.py", include_bytes!("../../templates/game_entry.py").as_slice()),
-        ("tools/game_tooling.py", include_bytes!("../../tools/game_tooling.py").as_slice()),
+    for name in [
+        "templates/game_check.py",
+        "templates/game_dev.py",
+        "templates/game_project.py",
+        "templates/game_ship.py",
+        "templates/game_entry.py",
+        "tools/game_tooling.py",
     ] {
         digest.update(name.as_bytes());
         digest.update(&[0]);
-        let content = fs::read(engine.join(name)).unwrap_or_else(|_| embedded.to_vec());
+        // The implementation is distributed with the engine, not embedded in
+        // this Rust binary. Editing Python tooling must not rebuild the engine.
+        // The legacy API can scaffold before its dependency exists; that project
+        // needs an explicit tooling migration after restoring the dependency.
+        let content = fs::read(engine.join(name)).ok()?;
         digest.update(&content);
         digest.update(&[0]);
     }
-    digest.finish().as_ref().iter().map(|byte| format!("{byte:02x}")).collect()
+    Some(
+        digest
+            .finish()
+            .as_ref()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect(),
+    )
 }
 
 fn write_scripts(project: &Project) -> Result<()> {
