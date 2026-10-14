@@ -253,12 +253,18 @@ fn parse_symbols(rel: &str, lines: &[String], symbols: &mut Vec<Symbol>) {
             }
         }
 
-        let is_public = line.starts_with("pub ");
-        let line_no_pub = if is_public {
+        let is_public = line.starts_with("pub ") || line.starts_with("pub(");
+        let declaration = if line.starts_with("pub(") {
+            line.split_once(')').map_or(line, |(_, rest)| rest.trim())
+        } else if is_public {
             line.trim_start_matches("pub ").trim()
         } else {
             line
         };
+        let line_no_pub = declaration
+            .strip_prefix("async ")
+            .unwrap_or(declaration)
+            .trim_start_matches("unsafe ");
 
         let kinds = ["fn", "struct", "enum", "trait", "type", "const", "static"];
         for &kind in &kinds {
@@ -278,28 +284,7 @@ fn parse_symbols(rel: &str, lines: &[String], symbols: &mut Vec<Symbol>) {
                     .trim();
 
                 if !sym_name.is_empty() {
-                    // Find symbol end line
-                    let mut end_line = idx + 1;
-                    if line.ends_with(';') {
-                        end_line = idx + 1;
-                    } else {
-                        let mut brace_depth = 0;
-                        let mut started = false;
-                        for (scan_i, s) in lines.iter().enumerate().take(idx + 100).skip(idx) {
-                            for ch in s.chars() {
-                                if ch == '{' {
-                                    brace_depth += 1;
-                                    started = true;
-                                } else if ch == '}' {
-                                    brace_depth -= 1;
-                                }
-                            }
-                            if started && brace_depth <= 0 {
-                                end_line = scan_i + 1;
-                                break;
-                            }
-                        }
-                    }
+                    let (end_line, signature) = definition_span(lines, idx);
 
                     symbols.push(Symbol {
                         file: rel.to_string(),
@@ -309,7 +294,7 @@ fn parse_symbols(rel: &str, lines: &[String], symbols: &mut Vec<Symbol>) {
                         name: sym_name.to_string(),
                         container: current_container.clone(),
                         is_public,
-                        signature: line.trim_end_matches('{').trim().to_string(),
+                        signature,
                         doc: last_doc.clone(),
                     });
                 }
@@ -319,5 +304,183 @@ fn parse_symbols(rel: &str, lines: &[String], symbols: &mut Vec<Symbol>) {
 
         last_doc.clear();
         idx += 1;
+    }
+}
+
+/// Scan to the real definition end, ignoring delimiters in Rust comments and literals.
+/// This is a source navigator, not a Rust parser: unsupported declarations remain unindexed.
+fn definition_span(lines: &[String], start: usize) -> (usize, String) {
+    let mut depth = 0usize;
+    let mut block_comment = 0usize;
+    let mut quoted = false;
+    let mut raw_hashes = None;
+    let mut body = false;
+    let mut signature = String::new();
+    for (line_index, line) in lines.iter().enumerate().skip(start) {
+        let bytes = line.as_bytes();
+        let mut i = 0;
+        let mut header_end = bytes.len();
+        while i < bytes.len() {
+            let rest = &bytes[i..];
+            if block_comment > 0 {
+                if rest.starts_with(b"/*") {
+                    block_comment += 1;
+                    i += 2;
+                } else if rest.starts_with(b"*/") {
+                    block_comment -= 1;
+                    i += 2;
+                } else {
+                    i += 1;
+                }
+                continue;
+            }
+            if let Some(hashes) = raw_hashes {
+                if bytes[i] == b'"'
+                    && rest
+                        .get(1..1 + hashes)
+                        .is_some_and(|tail| tail.iter().all(|c| *c == b'#'))
+                {
+                    raw_hashes = None;
+                    i += hashes + 1;
+                } else {
+                    i += 1;
+                }
+                continue;
+            }
+            if quoted {
+                if bytes[i] == b'\\' {
+                    i += 2;
+                } else {
+                    if bytes[i] == b'"' {
+                        quoted = false;
+                    }
+                    i += 1;
+                }
+                continue;
+            }
+            if rest.starts_with(b"//") {
+                break;
+            }
+            if rest.starts_with(b"/*") {
+                block_comment = 1;
+                i += 2;
+                continue;
+            }
+            if bytes[i] == b'r' {
+                let hashes = rest.iter().skip(1).take_while(|c| **c == b'#').count();
+                if rest.get(hashes + 1) == Some(&b'"') {
+                    raw_hashes = Some(hashes);
+                    i += hashes + 2;
+                    continue;
+                }
+            }
+            if bytes[i] == b'"' {
+                quoted = true;
+            } else if bytes[i] == b'\'' {
+                // A char literal closes immediately after one character or escape; lifetimes do not.
+                let char_len = line[i + 1..].chars().next().map_or(0, char::len_utf8);
+                let closing = if rest.get(1) == Some(&b'\\') {
+                    rest.iter()
+                        .skip(2)
+                        .position(|c| *c == b'\'')
+                        .map(|offset| offset + 2)
+                } else {
+                    Some(char_len + 1)
+                };
+                if let Some(end) = closing.filter(|end| rest.get(*end) == Some(&b'\'')) {
+                    i += end + 1;
+                    continue;
+                }
+            } else if bytes[i] == b'{' {
+                if !body {
+                    header_end = i;
+                    body = true;
+                }
+                depth += 1;
+            } else if bytes[i] == b'}' && body {
+                depth = depth.saturating_sub(1);
+                if depth == 0 {
+                    if header_end != bytes.len() {
+                        if !signature.is_empty() {
+                            signature.push(' ');
+                        }
+                        signature.push_str(line[..header_end].trim());
+                    }
+                    return (line_index + 1, signature);
+                }
+            } else if bytes[i] == b';' && !body {
+                if !signature.is_empty() {
+                    signature.push(' ');
+                }
+                signature.push_str(line[..i].trim());
+                return (line_index + 1, signature);
+            }
+            i += 1;
+        }
+        if !body || header_end != bytes.len() {
+            if !signature.is_empty() {
+                signature.push(' ');
+            }
+            signature.push_str(line[..header_end].trim());
+        }
+    }
+    (lines.len(), signature)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn long_async_definition_has_complete_span_and_signature() {
+        let mut lines = vec![
+            "pub async fn load(".to_string(),
+            "    path: &str,".into(),
+            ") -> Result<()> {".into(),
+        ];
+        lines.extend((0..150).map(|_| "    let brace = r#\"} {\"#; // }".to_string()));
+        lines.extend([
+            "    /* { nested /* } */ { */".into(),
+            "    let raw = r\"}\";".into(),
+            "    let text = \"escaped \\\" }\";".into(),
+            "    let c = '}';".into(),
+            "    Ok(())".into(),
+            "}".into(),
+        ]);
+        let mut symbols = Vec::new();
+        parse_symbols("src/moved/loading.rs", &lines, &mut symbols);
+        let symbol = &symbols[0];
+        assert_eq!(symbol.name, "load");
+        assert!(symbol.is_public);
+        assert_eq!(symbol.end_line, lines.len());
+        assert_eq!(
+            symbol.signature,
+            "pub async fn load( path: &str, ) -> Result<()>"
+        );
+        let index = SourceIndex {
+            root: PathBuf::new(),
+            files: vec![(symbol.file.clone(), lines)],
+            symbols,
+        };
+        assert!(index.show("load").unwrap().ends_with("}\n"));
+    }
+
+    #[test]
+    fn multiline_trait_declarations_and_scoped_visibility_are_indexed() {
+        let lines = [
+            "pub(crate) async fn fetch(",
+            "    x: &'static str,",
+            ") -> Result<()>;",
+            "pub fn after() {}",
+        ]
+        .map(String::from);
+        let mut symbols = Vec::new();
+        parse_symbols("src/api.rs", &lines, &mut symbols);
+        assert_eq!(symbols[0].end_line, 3);
+        assert_eq!(
+            symbols[0].signature,
+            "pub(crate) async fn fetch( x: &'static str, ) -> Result<()>"
+        );
+        assert_eq!(symbols[1].end_line, 4);
     }
 }
