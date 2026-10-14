@@ -158,8 +158,10 @@ commit does not certify a currently running check or a later source revision.
 | Genuine model recipe/upgrade task | Frozen trial plus disclosed controller baseline synchronization | Executed/passed 25 offline tests; assisted baseline, not an untouched-base trial |
 | Genuine content-only edit | Trial variant at `9edea6b`; current-content tests | Executed/passed 25 tests; zero rebuilt Cargo artifacts |
 | Linux native package/input/save | `d7314ec` working inputs, matching package/content digests | Executed/passed isolated software launch, captures, synthetic X11 input and negative upgrade-cost check; shipping 33.588 s |
-| Final required Linux gate, external fixtures and package | Final clean revision required; current 51-stage run began at `7663498` and formatting inputs subsequently changed | Planned; final receipts supplied in PR/CI and local `.be2-work`; current run is not immutable final evidence |
-| Matching Windows native/installer CI | Exact final source revision required | Planned/unverified until matching CI receipt; Linux does not establish Windows runtime |
+| Required Linux preflight, including external fixtures | 51-stage run began at `7663498`; game formatting, report and CI inputs subsequently changed | Executed/passed: 1,454.241 s wall, 1,586.535 s summed stages, 4,669 test executions; 633 built/3,156 fresh artifacts; not immutable final-revision evidence |
+| Final required Linux gate, external fixtures and package | Final clean revision required after reporting/platform fixes | Planned; final receipts supplied in PR/CI and local `.be2-work` |
+| Windows native package | Exact `945f21d`; six declared files, executable resources and two software captures | Executed/passed; `--no-install`; separate installer build was not part of this receipt |
+| Final Windows engine/native/installer CI | Exact final source revision required; existing installer builder added to the required workshop job in `25f1508` | Planned/unverified until matching CI receipt; Linux does not establish Windows runtime |
 | Desktop installation/shortcuts | Package command used `--no-install` | Skipped intentionally; package evidence retained |
 | Cold setup; physical GPU/input/audio; internet/long sessions | Existing caches; no matching device/session experiments | Unverified, not zero; no crash-free or commercial-capacity claim |
 | Secure two-version player update | Required next release milestone | Planned/deferred; no updater, credentials, publication or deployment added here |
@@ -178,6 +180,12 @@ native launches; the same package passed with a private plug-to-null sink. That
 repeat isolates an environment failure; it is not an engine audio fix or audible
 hardware evidence. See [original](perf/workshop/native-synthetic-input.json) and
 [null-sink](perf/workshop/native-synthetic-input-plug-null.json) receipts.
+
+Windows engine CI at `945f21d` exposed 15 UTF-8 decoding errors and nine short/long
+path-alias assertions in test fixtures. The narrow correction uses explicit UTF-8
+source/JSON reads and compares canonical paths, retaining all assertions. The
+three focused Linux Python suites passed 56 tests; actual Windows re-execution
+remains a required final gate. This changes test portability, not game behavior.
 
 [Measurements](perf/workshop/measurements.json) retain exact commands, configurations,
 intermediate scopes and failures; [graphs](perf/workshop/dependency-graphs.json)

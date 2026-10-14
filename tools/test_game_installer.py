@@ -87,7 +87,7 @@ class InstallerTests(unittest.TestCase):
         self.assertNotIn('*', text)
         self.assertNotIn('[UninstallDelete]', text)
         self.assertNotIn('[InstallDelete]', text)
-        self.assertEqual(authored.read_text(), 'custom Inno path')
+        self.assertEqual(authored.read_text(encoding='utf-8'), 'custom Inno path')
         self.assertTrue(result['unverified'])
         self.assertIsNone(result['package_shipping_evidence'])
 
@@ -103,7 +103,7 @@ class InstallerTests(unittest.TestCase):
         stage = Path(result['stage'])
         (stage / 'output').mkdir()
         (stage / 'output/distinct-game-setup-windows-x64.exe').write_bytes(pe(0x14c, 0x10b))
-        self.assertTrue(stage.is_relative_to(self.root / '.blue-check/installers'))
+        self.assertTrue(stage.is_relative_to((self.root / '.blue-check/installers').resolve()))
         observed = {relative.as_posix() for _, relative in publish_games.files_under(self.root)}
         self.assertIn('scripts/installer.iss', observed)
         self.assertIn('scripts/installer.json', observed)
@@ -212,7 +212,7 @@ class InstallerTests(unittest.TestCase):
     def compiled(self, command, **options):
         self.assertIsInstance(command, list)
         self.assertNotIn('shell', options)
-        self.assertEqual(command[0], str(self.iscc))
+        self.assertEqual(command[0], str(self.iscc.resolve()))
         stage = Path(command[-1]).parent
         self.assertEqual(Path(options['cwd']), stage)
         (stage / 'output/distinct-game-setup-windows-x64.exe').write_bytes(pe(0x14c, 0x10b))
@@ -298,7 +298,7 @@ class InstallerTests(unittest.TestCase):
         logs = list((self.root / '.blue-check/installers').glob('*/compiler.stdout'))
         self.assertEqual(len(logs), 1)
         self.assertEqual(logs[0].read_text(encoding='utf-8'), 'partial output\ufffd')
-        self.assertEqual(logs[0].with_name('compiler.stderr').read_text(), 'partial diagnostic')
+        self.assertEqual(logs[0].with_name('compiler.stderr').read_text(encoding='utf-8'), 'partial diagnostic')
         self.assertEqual(Path(prior['script']).read_bytes(), prior_script)
 
     @unittest.skipUnless(hasattr(os, 'symlink'), 'requires symlink support')
@@ -367,15 +367,15 @@ class InstallerTests(unittest.TestCase):
             tested = installer.test_install(self.project, ship, stage)
         self.assertTrue(tested['ok'])
         self.assertEqual(len(calls), 3)
-        self.assertEqual((installation / 'saves/installer-retention.txt').read_text(), 'preserve player state')
-        self.assertEqual((installation / 'settings.json').read_text(), '{"retain":true}')
+        self.assertEqual((installation / 'saves/installer-retention.txt').read_text(encoding='utf-8'), 'preserve player state')
+        self.assertEqual((installation / 'settings.json').read_text(encoding='utf-8'), '{"retain":true}')
         self.assertFalse((installation / 'distinct-game.exe').exists())
         self.assertEqual(len(list(stage.glob('lifecycle-*.stdout'))), 3)
 
     def test_lifecycle_rejects_output_from_another_package_even_with_same_script(self):
         result = self.built()
         stage = Path(result['stage'])
-        built = json.loads((stage / 'built.json').read_text())
+        built = json.loads((stage / 'built.json').read_text(encoding='utf-8'))
         built['package_binding']['ship_manifest_sha256'] = 'f' * 64
         (stage / 'built.json').write_text(json.dumps(built))
         with mock.patch.object(ship, 'host_platform', return_value='windows'), mock.patch.object(ship, 'run_process', side_effect=AssertionError('must not install')):

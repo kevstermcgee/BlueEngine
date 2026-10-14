@@ -71,7 +71,7 @@ class ReviewTests(unittest.TestCase):
         return review.prepare(self.project, ship, **kwargs)
 
     def observations(self):
-        receipt = json.loads((self.root / review.RECEIPT).read_text())
+        receipt = json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))
         observation = receipt['observation_template']
         observation.update(reviewer='Fixture reviewer', attested=True, context='Fresh package; overhead camera; authored bell',
                            launched_package=True, used_bound_settings=True)
@@ -95,7 +95,7 @@ class ReviewTests(unittest.TestCase):
         self.assertEqual(result['state'], 'pending')
         self.assertEqual(set(result['checks']), {'turn', 'camera', 'bell'})
         self.assertNotIn('crosshair', json.dumps(result))
-        self.assertFalse(json.loads((self.root / review.RECEIPT).read_text())['observation_template']['attested'])
+        self.assertFalse(json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))['observation_template']['attested'])
 
     def test_all_authored_physical_observations_can_pass_but_do_not_certify_other_gates(self):
         self.prepare()
@@ -112,10 +112,10 @@ class ReviewTests(unittest.TestCase):
         observation['notes'] = 'Keep the original overhead camera; repair the clipping.'
         result = self.record(observation)
         self.assertEqual(result['state'], 'failed')
-        saved = json.loads((self.root / review.RECEIPT).read_text())
+        saved = json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))
         self.assertEqual(saved['records'][0]['observations']['notes'], observation['notes'])
         self.assertTrue(self.record(self.observations())['manual'])
-        self.assertEqual(len(json.loads((self.root / review.RECEIPT).read_text())['records']), 2)
+        self.assertEqual(len(json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))['records']), 2)
 
     def test_empty_observation_or_missing_check_cannot_pass(self):
         self.prepare()
@@ -129,7 +129,7 @@ class ReviewTests(unittest.TestCase):
         result = self.record(observation)
         self.assertFalse(result['manual'])
         self.assertIn('bell', result['pending'])
-        self.assertEqual(len(json.loads((self.root / review.RECEIPT).read_text())['records']), 2)
+        self.assertEqual(len(json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))['records']), 2)
 
     def test_partial_physical_checks_accumulate_and_software_failures_stay_visible(self):
         self.prepare()
@@ -159,7 +159,7 @@ class ReviewTests(unittest.TestCase):
         with patch.dict(os.environ, {'LIBGL_ALWAYS_SOFTWARE': '1'}):
             self.assertFalse(self.record(self.observations())['manual'])
         self.assertTrue(self.record(self.observations())['manual'])
-        self.assertGreater(len(json.loads((self.root / review.RECEIPT).read_text())['records']), 5)
+        self.assertGreater(len(json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))['records']), 5)
         observation = self.observations()
         observation['environment']['audio_output'] = 'Fixture physical speakers with virtual surround'
         self.assertTrue(self.record(observation)['manual'])
@@ -201,7 +201,7 @@ class ReviewTests(unittest.TestCase):
         capture.write_bytes(b'fixture software screenshot, not physical evidence')
         self.prepare(settings=settings, artifacts=[capture])
         self.assertTrue(self.record(self.observations())['manual'])
-        receipt = (self.root / review.RECEIPT).read_text()
+        receipt = (self.root / review.RECEIPT).read_text(encoding='utf-8')
         self.assertNotIn('do not copy', receipt)
         for path in (settings, capture):
             before = path.read_bytes()
@@ -250,7 +250,7 @@ class ReviewTests(unittest.TestCase):
         self.prepare()
         self.record(self.observations())
         path = self.root / review.RECEIPT
-        value = json.loads(path.read_text())
+        value = json.loads(path.read_text(encoding='utf-8'))
         value['checks'] = value['checks'][:1]
         path.write_text(json.dumps(value))
         self.assertFalse(review.status(self.project, ship)['manual'])
@@ -271,14 +271,14 @@ class ReviewTests(unittest.TestCase):
 
     def test_nonobject_records_and_observations_are_actionable_and_preserved(self):
         self.prepare()
-        saved = json.loads((self.root / review.RECEIPT).read_text())
+        saved = json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))
         for records in ([0], [{'observations': 42}], [{'observations': []}]):
             with self.subTest(records=records):
                 self.assert_invalid_receipt_preserved({**saved, 'records': records}, 'invalid receipt record 1')
 
     def test_malformed_declared_checks_are_actionable_and_preserved(self):
         self.prepare()
-        saved = json.loads((self.root / review.RECEIPT).read_text())
+        saved = json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))
         first = saved['checks'][0]
         for checks in ([None], [first, first], [{**first, 'id': 'Not stable!'}],
                        [{**first, 'area': []}], [{**first, 'area': 'unknown'}],
@@ -289,7 +289,7 @@ class ReviewTests(unittest.TestCase):
     def test_malformed_observed_environments_are_actionable_and_preserved(self):
         self.prepare()
         self.record(self.observations())
-        saved = json.loads((self.root / review.RECEIPT).read_text())
+        saved = json.loads((self.root / review.RECEIPT).read_text(encoding='utf-8'))
         for environment in (42, None, [], 'Windows'):
             value = copy.deepcopy(saved)
             value['records'][0]['observed_environment'] = environment
@@ -344,7 +344,7 @@ class ReviewTests(unittest.TestCase):
         import re
         roots = [Path(path) for path in review.ENGINE_INPUTS]
         for source in (ROOT / 'src').rglob('*.rs'):
-            for match in re.finditer(r'include_(?:str|bytes)!\s*\(\s*"([^"]+)"', source.read_text()):
+            for match in re.finditer(r'include_(?:str|bytes)!\s*\(\s*"([^"]+)"', source.read_text(encoding='utf-8')):
                 embedded = (source.parent / match[1]).resolve().relative_to(ROOT)
                 self.assertTrue(any(embedded == known or known in embedded.parents for known in roots),
                                 f'{source}: unbound embedded input {embedded}')
