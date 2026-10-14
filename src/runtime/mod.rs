@@ -4,6 +4,8 @@ pub mod audio_project;
 #[path = "../viewer/devkit/clock.rs"]
 pub mod clock;
 pub mod hash;
+#[cfg(feature = "resources")]
+pub mod resources;
 #[path = "../viewer/devkit/input.rs"]
 pub mod input;
 #[path = "../viewer/devkit/playback.rs"]

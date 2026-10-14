@@ -26,6 +26,8 @@ default = ["client"]
 # Rules, snapshots, integer 2D collision and static authoring remain rendering-free.
 physics = ["dep:rapier3d"]
 networking = ["dep:rustls", "dep:tokio", "dep:quinn"]
+# Optional bounded resource transactions; recipes and rules stay game-owned.
+resources = []
 # Historical name: cinematic scene export, unrelated to offline gameplay.
 offline = ["dep:png", "dep:ctrlc"]
 presentation = ["dep:macroquad", "macroquad/audio"]
@@ -364,6 +366,11 @@ required-features = ["physics", "networking"]
 name = "virtual_time"
 path = "tests/virtual_time.rs"
 required-features = ["physics"]
+
+[[test]]
+name = "resources"
+path = "tests/resources.rs"
+required-features = ["resources"]
 
 # Used by tools/schemas.py; generation does not need the stock simulation or transports.
 [[bin]]
