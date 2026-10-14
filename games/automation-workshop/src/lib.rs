@@ -54,7 +54,6 @@ pub struct State {
     pub instance_id: String,
     pub inventory: Inventory,
     pub supply: BTreeMap<String, u64>,
-    #[serde(rename = "shipped")]
     pub delivered: BTreeMap<String, u64>,
     pub machines: BTreeMap<String, Machine>,
     pub last_command: BTreeMap<u8, u64>,
@@ -282,6 +281,8 @@ impl Workshop {
         )
     }
 }
+/// Command batches order by `(seat, serial)`. Identical identities deduplicate; conflicting commands
+/// sharing an identity reject the entire batch. Production still advances one logical tick.
 impl Simulation for Workshop {
     type Input = Vec<Envelope>;
     fn step(&mut self, inputs: &Self::Input) {
@@ -350,6 +351,9 @@ impl Simulation for Workshop {
                 }
             }
         }
+        // A later machine may change the shared store after an earlier machine was refused. Keep
+        // inspection/recovery requirements tied to the final store without changing gameplay order.
+        self.recompute_blocked();
     }
     fn state_hash(&self) -> u64 {
         let mut h = StateHasher::new();

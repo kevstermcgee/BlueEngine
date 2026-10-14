@@ -1,6 +1,6 @@
 {
   "game_id": "blueengine:automation-workshop",
-  "content_version": 1,
+  "content_version": 2,
   "inventory_capacity": 12,
   "items": [
     {
@@ -33,7 +33,7 @@
     {
       "id": "workshop:smelt",
       "label": "Smelt plates",
-      "duration_ticks": 4,
+      "duration_ticks": 6,
       "inputs": [
         [
           "workshop:ore",
@@ -55,7 +55,7 @@
     {
       "id": "workshop:gears",
       "label": "Press gear",
-      "duration_ticks": 6,
+      "duration_ticks": 8,
       "inputs": [
         [
           "workshop:plate",
