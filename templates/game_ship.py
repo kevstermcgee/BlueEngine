@@ -2058,6 +2058,19 @@ def package_integrity(project, plat=None):
 def cmd_package(project, no_build=False):
     identity = project.identity
     require_icon(project)  # fail before a long build
+    hook = project.root / 'scripts/tooling_hooks.py'
+    if hook.is_file():
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('be2_game_preparation', hook)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        prepare = getattr(module, 'prepare_package', None)
+        if not callable(prepare):
+            raise ConfigError(f'{hook}: define prepare_package(project) for game-owned preparation')
+        try:
+            prepare(project)
+        except Exception as error:
+            raise ShipError(f'{hook}: preparation failed: {error}; completed package outputs were preserved') from error
     built = locate_built_exe(project) if no_build else cargo_build_release(project)
     plan = package_plan(project, built)
     # dist/ also holds what the game writes beside its exe (saves, settings, records, logs). Only the files

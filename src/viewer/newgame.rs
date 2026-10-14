@@ -328,22 +328,16 @@ fn write_shipping_files(
         false,
     )?;
     project.write("build.rs", include_str!("../../templates/game_build.rs"))?;
-    project.write(
-        "scripts/check.py",
-        include_str!("../../templates/game_check.py"),
-    )?;
-    project.write(
-        "scripts/ship.py",
-        include_str!("../../templates/game_ship.py"),
-    )?;
-    project.write(
-        "scripts/dev.py",
-        include_str!("../../templates/game_dev.py"),
-    )?;
-    project.write(
-        "scripts/project.py",
-        include_str!("../../templates/game_project.py"),
-    )?;
+    for command in ["check", "ship", "dev", "project"] {
+        project.write(&format!("scripts/{command}.py"), tooling_entry(command))?;
+    }
+    project.write("scripts/tooling.py", include_str!("../../templates/game_entry.py"))?;
+    project.write("scripts/tooling.json", serde_json::to_string_pretty(&serde_json::json!({
+        "schema_version": 1,
+        "engine": serde_json::from_str::<String>(&project.engine_toml)?,
+        "revision": identity.engine_revision,
+        "sha256": tooling_digest(&project.engine_dir),
+    }))?)?;
     // Starter names describe code generation; project runtimes describe the native client route.
     // Keep the public Cargo-name contract, including uppercase/underscores and long names, while
     // giving the requirements document its own canonical ID.
@@ -411,6 +405,44 @@ fn write_shipping_files(
         project.write("Cargo.lock", lock)?;
     }
     Ok(())
+}
+
+/// Thin Python compatibility entry point; implementation remains in the engine.
+pub fn tooling_entry(command: &str) -> String {
+    let tail = match command {
+        "dev" => "    sys.exit(_impl.main(sys.argv[1:]))\n",
+        "check" | "ship" => "    sys.exit(_impl.main(root=Path(__file__).resolve().parents[1]))\n",
+        _ => "    print(\"Project requirements are checked by scripts/check.py\")\n",
+    };
+    format!("#!/usr/bin/env python3\n\
+        \"\"\"Compatibility entry point; shared implementation is pinned in tooling.json.\"\"\"\n\
+        from pathlib import Path\nimport importlib.util\n\
+        _spec = importlib.util.spec_from_file_location(\"be2_bootstrap\", Path(__file__).with_name(\"tooling.py\"))\n\
+        _bootstrap = importlib.util.module_from_spec(_spec)\n_spec.loader.exec_module(_bootstrap)\n\
+        _impl = _bootstrap.load('{command}', Path(__file__).resolve().parents[1])\n\
+        globals().update({{k: v for k, v in vars(_impl).items() if not k.startswith(\"__\")}})\n\
+        if __name__ == \"__main__\":\n    import sys\n{tail}")
+}
+
+/// Content pin also supports a checked-out revision with local, reviewed tooling edits.
+/// A recorded Git revision alone cannot identify a dirty source checkout.
+fn tooling_digest(engine: &Path) -> String {
+    let mut digest = ring::digest::Context::new(&ring::digest::SHA256);
+    for (name, embedded) in [
+        ("templates/game_check.py", include_bytes!("../../templates/game_check.py").as_slice()),
+        ("templates/game_dev.py", include_bytes!("../../templates/game_dev.py").as_slice()),
+        ("templates/game_project.py", include_bytes!("../../templates/game_project.py").as_slice()),
+        ("templates/game_ship.py", include_bytes!("../../templates/game_ship.py").as_slice()),
+        ("templates/game_entry.py", include_bytes!("../../templates/game_entry.py").as_slice()),
+        ("tools/game_tooling.py", include_bytes!("../../tools/game_tooling.py").as_slice()),
+    ] {
+        digest.update(name.as_bytes());
+        digest.update(&[0]);
+        let content = fs::read(engine.join(name)).unwrap_or_else(|_| embedded.to_vec());
+        digest.update(&content);
+        digest.update(&[0]);
+    }
+    digest.finish().as_ref().iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
 fn write_scripts(project: &Project) -> Result<()> {
@@ -637,7 +669,7 @@ path = "src/main.rs"
 required-features = ["client"]
 
 [dependencies]
-vesper3d = {{ package = "be2", path = {engine_path_str}, default-features = false }}
+vesper3d = {{ package = "be2", path = {engine_path_str}, default-features = false, features = ["physics"] }}
 macroquad = {{ optional = true, version = "=0.4.14", default-features = false, features = ["audio"] }}
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"

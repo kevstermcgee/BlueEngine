@@ -75,11 +75,11 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     );
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/check.py")).unwrap(),
-        include_str!("../templates/game_check.py")
+        vesper3d::viewer::newgame::tooling_entry("check")
     );
     assert_eq!(
         std::fs::read_to_string(dir.join("scripts/ship.py")).unwrap(),
-        include_str!("../templates/game_ship.py")
+        vesper3d::viewer::newgame::tooling_entry("ship")
     );
     assert_eq!(
         std::fs::read_to_string(dir.join("build.rs")).unwrap(),

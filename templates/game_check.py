@@ -272,6 +272,13 @@ def find_tools(root):
 def refresh_project(root):
     """Explicitly replace only the generated requirements validator, preserving authored metadata."""
     engine = engine_path(root)
+    if (Path(root) / 'scripts/tooling.json').is_file() and engine is not None:
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('be2_project_migration', engine / 'tools/game_tooling.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        module.migrate(Path(root), engine)
+        return Path(root) / 'scripts/project.py'
     source = engine / 'templates/game_project.py' if engine is not None else None
     if source is None or not source.is_file():
         raise ValueError('Project refresh needs a source engine dependency with templates/game_project.py')
@@ -290,20 +297,20 @@ def refresh_project(root):
     return destination
 
 
-def main():
+def main(argv=None, root=None):
+    root = Path(root) if root is not None else Path(__file__).resolve().parents[1]
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--tools', default=find_tools(Path(__file__).resolve().parents[1]),
-                        help='Matching be2-tools binary (default: BE2_TOOLS, engine dependency including itest, then PATH)')
+    parser.add_argument('--tools', default=None,
+                        help='Matching be2-tools override; pinned projects verify Cargo freshness or package hashes')
     parser.add_argument('--refresh-project', action='store_true',
-                        help='Replace scripts/project.py from the source engine dependency, then exit without checking')
+                        help='Refresh the project validator (pinned projects refresh compatible launchers), then exit')
     parser.add_argument('--content-only', action='store_true',
                         help='Iteration check only; does not certify Rust changes')
     parser.add_argument('--scenario', action='append', default=[], help='Additional behavioral scenario')
     parser.add_argument('--skip-ship', action='store_true',
                         help='Full check without the ship gate (shortcut, package and icon verification)')
     parser.add_argument('--ship-folder', help='Also verify requested installation in this private folder')
-    args = parser.parse_args()
-    root = Path(__file__).resolve().parents[1]
+    args = parser.parse_args(argv)
     if args.refresh_project:
         try:
             print(json.dumps({'refreshed': str(refresh_project(root))}))
@@ -322,10 +329,17 @@ def main():
             requirements.validate_project(root)
         except (ValueError, OSError) as error:
             parser.error(str(error))
+    try:
+        if 'ensure_tools' in globals():
+            args.tools = ensure_tools(args.tools or os.environ.get('BE2_TOOLS'))
+        else:
+            args.tools = args.tools or find_tools(root)
+    except (ValueError, OSError) as error:
+        parser.error(str(error))
     if not args.tools:
         parser.error('No be2-tools found. Run python3 tools/be2.py map help in the engine checkout '
                      '(python on Windows), then rerun. Or set BE2_TOOLS or --tools to the matching binary.')
-    return 0 if run(Path(__file__).resolve().parents[1], args.tools,
+    return 0 if run(root, args.tools,
                     args.content_only, args.scenario, args.skip_ship, args.ship_folder) else 1
 
 

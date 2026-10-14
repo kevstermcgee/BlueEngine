@@ -281,8 +281,8 @@ class GeneratedGameIntegrationTests(unittest.TestCase):
                     self.assertEqual(declaration['targets'], ['windows'])
                     declaration['targets'] = ['linux', 'windows']
                     (project / 'game.project.json').write_text(json.dumps(declaration))
-                    self.assertEqual((project / 'scripts/project.py').read_bytes(),
-                                     (engine / 'templates/game_project.py').read_bytes())
+                    self.assertEqual((project / 'scripts/project.py').read_text(),
+                                     __import__('tools.game_tooling', fromlist=['entry']).entry('project'))
                     for loop in ('inner', 'integration', 'shipping'):
                         plan = workflow.game_plan(engine, project, loop)
                         self.assertEqual(plan['requirements']['native_packaging'], ['linux', 'windows'])
@@ -312,15 +312,15 @@ class GeneratedGameIntegrationTests(unittest.TestCase):
                                                    text=True, creationflags=flags)
                         self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
                         self.assertEqual(requirements.validate_project(project), declaration)
-                        self.assertEqual((project / 'scripts/project.py').read_bytes(),
-                                         (engine / 'templates/game_project.py').read_bytes())
+                        self.assertEqual((project / 'scripts/project.py').read_text(),
+                                         __import__('tools.game_tooling', fromlist=['entry']).entry('project'))
 
     def test_generated_content_passes_and_invalid_map_fails(self):
         native = str(Path(os.environ['BE2_TOOLS']).resolve())
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
         with tempfile.TemporaryDirectory() as directory:
             project = Path(directory) / 'game with spaces'
-            subprocess.run([native, 'new-game', 'workflow-test', str(project), 'stock'],
+            subprocess.run([native, 'new-game', 'workflow-test', str(project), str(Path(__file__).resolve().parents[1]), 'stock'],
                            check=True, capture_output=True, creationflags=flags)
             command = [sys.executable, str(project / 'scripts/check.py'),
                        '--tools', native, '--content-only']
