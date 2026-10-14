@@ -353,7 +353,8 @@ class AutomaticLoopTests(unittest.TestCase):
     def test_shared_python_tools_execute_compatibility_tests_without_rust_rebuild(self):
         for path in ('tools/game_tooling.py', 'tools/game_tooling_inventory.json',
                      'templates/game_ship.py', 'templates/game_check.py',
-                     'templates/game_dev.py', 'templates/game_project.py'):
+                     'templates/game_dev.py', 'templates/game_project.py',
+                     'templates/game_installer.py', 'templates/game_review.py'):
             plan = workflow.change_plan(ROOT, [path])
             self.assertEqual(plan['scope'], 'focused', path)
             self.assertFalse(any(command[0] == 'cargo' for command in plan['commands']), path)

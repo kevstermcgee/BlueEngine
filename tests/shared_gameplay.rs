@@ -66,6 +66,13 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
     let main = std::fs::read_to_string(dir.join("src/main.rs")).unwrap();
     assert!(main.contains("playable::run_game_with_options"));
     assert!(!main.contains("src/bin/sandbox"));
+    let installer: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(dir.join("scripts/installer.json")).unwrap())
+            .unwrap();
+    assert_eq!(installer["app_id"], "BlueEngineGames.shared-starter");
+    assert!(std::fs::read_to_string(dir.join(".gitignore"))
+        .unwrap()
+        .contains("/installers/"));
     let guide = std::fs::read_to_string(dir.join("AGENTS.md")).unwrap();
     assert!(guide.len() < 3000);
     assert!(guide.contains("--content-only"));

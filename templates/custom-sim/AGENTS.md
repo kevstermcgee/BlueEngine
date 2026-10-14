@@ -84,4 +84,6 @@ Without keywords a record is archive-only. Do not copy session logs or credentia
    `scripts/blue ship` additionally creates a shortcut and checks its target and icon;
    on Windows it checks the launched window. Icon similarity is optional advisory only.
    Never point a shortcut at `target/`.
-3. You looked at real frames of the shipped exe and exercised the controls; say what you did not verify.
+3. Declare game-owned checks in `assets/native-review.json`; `python scripts/ship.py review`
+   records exact-package controls/camera/audio observations. State unverified devices.
+   Windows installers: `python scripts/ship.py installer prepare`; engine docs/NATIVE_DELIVERY.md.

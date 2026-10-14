@@ -70,8 +70,18 @@ class PublicDiscoveryTests(unittest.TestCase):
         self.assertNotIn('...', net['answer']['signature'])
         shipping = workflow.context(ROOT, 'Package a Windows installer', level=1)['matches'][0]['answer']
         self.assertIn('does not build an installer', ' '.join(shipping['warnings']))
-        self.assertIn('installer.iss', shipping['example'])
-        self.assertIn('test-installer.ps1', shipping['example'])
+        self.assertIn('installer build --iscc', shipping['example'])
+        self.assertIn('installer test --stage', shipping['example'])
+        self.assertEqual(shipping['source'], 'templates/game_installer.py')
+
+    def test_native_review_finds_the_shared_command_and_preserves_evidence_limits(self):
+        for query in ('scripts/ship.py review', 'Review physical controls and audio devices'):
+            packet = workflow.context(ROOT, query, level=1)
+            answer = next(match['answer'] for match in packet['matches'] if match['id'] == 'game_shipping')
+            self.assertEqual(answer['source'], 'templates/game_review.py')
+            self.assertIn('review record --observations', answer['signature'])
+            self.assertIn('not independent measurement', ' '.join(answer['warnings']))
+            self.assertIn('cannot certify physical devices', ' '.join(answer['warnings']))
 
     def test_start_and_context_retrieve_the_same_natural_language_learning_hints(self):
         for query, _ in TASKS:

@@ -4,6 +4,8 @@ target/
 *.partial.*
 
 /.be2-work
+/games/*/installers/
+/assets/games/*/installers/
 __pycache__/
 .learning/
 

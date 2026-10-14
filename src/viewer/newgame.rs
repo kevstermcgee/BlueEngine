@@ -322,6 +322,13 @@ fn write_shipping_files(
 ) -> Result<()> {
     identity.engine_revision = engine_revision(&project.engine_dir);
     project.write("assets/identity.json", identity.to_json())?;
+    // Installer identity stays stable when a game later renames its Cargo package.
+    project.write(
+        "scripts/installer.json",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "app_id": format!("BlueEngineGames.{}", project.name),
+        }))?,
+    )?;
     write_icon_set(
         &IconSpec::new(&identity.title),
         &project.dir.join("assets"),
@@ -402,7 +409,10 @@ fn write_shipping_files(
         "tests/identity.rs",
         include_str!("../../templates/game_identity_test.rs"),
     )?;
-    project.write(".gitignore", "/target/\n/.blue-check/\n/dist/\n")?;
+    project.write(
+        ".gitignore",
+        "/target/\n/.blue-check/\n/dist/\n/installers/\n",
+    )?;
     // Seed the lock file from the engine's so the game builds against the versions the engine was
     // tested with (and offline builds work). The first Cargo command settles it: it adds this game's
     // entry and drops crates only the engine's own tests need. `scripts/check.py` does that before
@@ -439,6 +449,8 @@ fn tooling_digest(engine: &Path) -> Option<String> {
         "templates/game_dev.py",
         "templates/game_project.py",
         "templates/game_ship.py",
+        "templates/game_installer.py",
+        "templates/game_review.py",
         "templates/game_entry.py",
         "tools/game_tooling.py",
     ] {
@@ -896,9 +908,8 @@ this game's files first; do not load engine source or run engine-wide checks for
 Start in the engine checkout: `python3 tools/be2.py start "<task>" --project GAME_DIR`
 (`python` on Windows); `next`/`resume TASK_ID` refreshes context. Missing capability needs engine work; never invent APIs.
 
-Rules that do not fit counters/interactables/timers (enemies, projectiles, scoring, AI, per-frame
-physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its simulation
-(engine docs/SHARED_GAMEPLAY.md "Custom loops", docs/CUSTOM_CLIENT.md).
+Custom enemies/projectiles/scoring/AI need `new-game NAME DIR ENGINE_PATH custom-sim`;
+use `context custom_simulation` for its public contract.
 
 ## Working with Maps
 - Edit `blueprints/main.blueprint.json` (rooms, doors, props); compile into a NEW map file,
@@ -927,7 +938,8 @@ physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its sim
 2. Set title/tagline/controls in `assets/identity.json`; regenerate changed title art:
    `be2-tools icon TITLE assets --replace`. `scripts/blue ship --no-install` verifies package/smoke
    without desktop access; plain `ship` also installs and verifies its own shortcut.
-3. You exercised changed controls and looked at real frames; state what you did not verify.
+3. Record authored controls/camera/audio with `python scripts/ship.py review`; state unverified devices.
+   Windows installers: `python scripts/ship.py installer prepare`; engine docs/NATIVE_DELIVERY.md.
 "#
     );
     project.write("AGENTS.md", agents_md)?;

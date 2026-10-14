@@ -2055,6 +2055,34 @@ def package_integrity(project, plat=None):
     return files
 
 
+def _delivery_helper(name):
+    """Load one maintained delivery helper beside this pinned implementation."""
+    import importlib.util
+    import types
+    path = Path(__file__).with_name(f'game_{name}.py')
+    if not path.is_file():
+        raise ShipError(f'{path}: shared tooling is missing; restore the pinned engine or migrate '
+                        'with ENGINE/tools/game_tooling.py. Completed outputs were preserved.')
+    spec = importlib.util.spec_from_file_location(f'be2_shared_game_{name}', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module, types.SimpleNamespace(**globals())
+
+
+def _review_source(project, warnings):
+    # Legacy/non-engine packages remain supported, but cannot acquire source
+    # provenance merely by hashing an existing executable.
+    if not project.engine():
+        warnings.append('Native review source provenance is unavailable: restore the pinned engine source checkout.')
+        return None
+    review, shipping = _delivery_helper('review')
+    try:
+        return review.source_binding(project, shipping)['sha256']
+    except review.ReviewError as error:
+        warnings.append(f'Native review source provenance is unavailable: {error}')
+        return None
+
+
 def cmd_package(project, no_build=False):
     identity = project.identity
     require_icon(project)  # fail before a long build
@@ -2087,7 +2115,13 @@ def cmd_package(project, no_build=False):
                 sys.modules.pop(module_name, None)
             else:
                 sys.modules[module_name] = previous_module
-    built = locate_built_exe(project) if no_build else cargo_build_release(project)
+    warnings = []
+    if no_build:
+        built = locate_built_exe(project)
+        source_before = None  # An existing executable alone cannot prove its source.
+    else:
+        source_before = _review_source(project, warnings)
+        built = cargo_build_release(project)
     plan = package_plan(project, built)
     # dist/ also holds what the game writes beside its exe (saves, settings, records, logs). Only the files
     # this tool installed are ever replaced or removed, and they are known from the stamp of the last run
@@ -2095,6 +2129,7 @@ def cmd_package(project, no_build=False):
     stamp = project.read_stamp() or {}
     previous = stamp.get('files') if isinstance(stamp.get('files'), list) else []
     previous_hashes = stamp.get('file_sha256') if isinstance(stamp.get('file_sha256'), dict) else {}
+    previous_source, previous_exe = stamp.get('review_source_sha256'), stamp.get('exe_sha256')
     project.dist.mkdir(parents=True, exist_ok=True)
     for source, name in plan:
         _copy_file(source, project.dist / name)
@@ -2121,13 +2156,25 @@ def cmd_package(project, no_build=False):
                   'engine_revision': engine_head(project.engine()) or identity.engine_revision,
                   'files': sorted(wanted), 'file_sha256': {name: sha256_file(project.dist / name) for name in sorted(wanted)}})
     stamp.pop('verified', None)  # evidence about an older exe says nothing about this one
+    source_after = _review_source(project, warnings)
+    stamp.pop('review_source_sha256', None)
+    if source_before and source_before == source_after:
+        stamp['review_source_sha256'] = source_after
+    elif no_build and source_after and source_after == previous_source and stamp['exe_sha256'] == previous_exe:
+        stamp['review_source_sha256'] = previous_source
+    else:
+        warnings.append('Manual native review remains pending: rebuild/package stable source inputs to record provenance.')
     project.write_stamp(stamp)
+    if source_before and source_after and source_before != source_after:
+        raise ShipError('Source inputs changed during the build/package; completed package outputs were preserved. '
+                        'Rebuild/package stable inputs before verification or manual native review.')
     log(f'packaged {project.exe_file()} ({human_size(project.dist_exe.stat().st_size)}) into {project.display(project.dist)}/'
         f' ({len(wanted)} file(s){f", removed {len(removed)}" if removed else ""}'
         f'{f", left {len(kept)} changed file(s) alone" if kept else ""})')
     return {'ok': True, 'command': 'package', 'dist': str(project.dist), 'exe': str(project.dist_exe),
             'built_from': str(built), 'files': sorted(wanted), 'removed': removed, 'kept_modified': kept,
-            'stamp': str(project.stamp_path)}
+            'stamp': str(project.stamp_path), 'warnings': sorted(set(warnings)),
+            'review_source_bound': 'review_source_sha256' in stamp}
 
 
 # --------------------------------------------------------------------------------------------------
@@ -3347,6 +3394,24 @@ def build_parser():
     ship.add_argument('--no-launch', action='store_true', help='skip the launch check')
     ship.add_argument('--no-smoke', action='store_true', help='skip the smoke run')
     ship.add_argument('--no-install', action='store_true', help='verify package and isolated smoke without desktop access')
+    installer = sub.add_parser('installer', help='prepare/build an exact-manifest Windows x64 Inno installer')
+    installer_actions = installer.add_subparsers(dest='installer_action', required=True)
+    installer_actions.add_parser('prepare', help='stage exact Windows package files and a reviewable Inno script (any host)')
+    installer_build = installer_actions.add_parser('build', help='compile on Windows without installing or publishing')
+    installer_build.add_argument('--iscc', required=True, help='explicit path to the Inno Setup 6 ISCC.exe compiler')
+    installer_test = installer_actions.add_parser('test', help='explicit install/upgrade/uninstall test on an isolated Windows account')
+    installer_test.add_argument('--stage', required=True, help='prepared directory containing a bound built.json installer receipt')
+    review = sub.add_parser('review', help='record package-bound native device observations')
+    review_actions = review.add_subparsers(dest='review_action', required=True)
+    review_prepare = review_actions.add_parser('prepare', help='prepare an authored review and observation template')
+    review_prepare.add_argument('--spec', help='authored checks JSON (default assets/native-review.json)')
+    review_prepare.add_argument('--settings', help='exact settings file used for this review')
+    review_prepare.add_argument('--artifact', action='append', default=[], help='retained capture/audio artifact; repeat as needed')
+    review_record = review_actions.add_parser('record', help='retain explicit reviewer observations from JSON')
+    review_record.add_argument('--observations', required=True, help='completed observation template JSON')
+    review_status = review_actions.add_parser('status', help='recheck current inputs and report pending/stale/attested coverage')
+    for command in (review_prepare, review_record, review_status):
+        command.add_argument('--receipt', help='receipt path (default .blue-check/native-review.json)')
     return parser
 
 
@@ -3364,7 +3429,7 @@ def main(argv=None, root=None):
     args = build_parser().parse_args(argv)
     root = Path(root) if root else Path(__file__).resolve().parents[1]
     try:
-        project = load_project(root, getattr(args, 'platform', None))
+        project = load_project(root, 'windows' if args.command == 'installer' else getattr(args, 'platform', None))
         if args.command == 'info':
             info = cmd_info(project)
             if args.json:
@@ -3379,6 +3444,25 @@ def main(argv=None, root=None):
         elif args.command == 'verify':
             result = cmd_verify(project, args.folder, args.platform, args.launch, args.smoke, args.skip_package,
                                 quiet=args.json, check_shortcut=args.check_shortcut, icon_similarity=args.icon_similarity)
+        elif args.command == 'installer':
+            module, shipping = _delivery_helper('installer')
+            if args.installer_action == 'prepare':
+                result = module.prepare(project, shipping)
+            elif args.installer_action == 'build':
+                result = module.build(project, shipping, args.iscc)
+            else:
+                result = module.test_install(project, shipping, args.stage)
+        elif args.command == 'review':
+            module, shipping = _delivery_helper('review')
+            try:
+                if args.review_action == 'prepare':
+                    result = module.prepare(project, shipping, args.spec, args.receipt, args.settings, args.artifact)
+                elif args.review_action == 'record':
+                    result = module.record(project, shipping, args.observations, args.receipt)
+                else:
+                    result = module.status(project, shipping, args.receipt)
+            except module.ReviewError as error:
+                raise ShipError(str(error)) from error
         else:
             result = cmd_ship(project, args.folder, args.force, args.no_build, args.no_launch, args.no_smoke,
                               no_install=args.no_install)

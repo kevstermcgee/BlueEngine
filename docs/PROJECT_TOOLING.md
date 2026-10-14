@@ -6,6 +6,12 @@ Generated projects use the engine's maintained `templates/game_check.py`,
 (PowerShell: `scripts/blue.ps1`). Launchers resolve their project from their own
 location, so callers can use absolute paths from any directory.
 
+The same shipping entry point supplies `installer prepare/build/test` and
+`review prepare/record/status`; their maintained helpers are included in the
+content pin. See [NATIVE_DELIVERY.md](NATIVE_DELIVERY.md) for Inno preparation,
+stable installer IDs and game-owned physical review criteria. Existing custom
+installer scripts remain game-owned. Preparation never installs or publishes.
+
 `scripts/tooling.json` records the engine location relative to the game, the
 revision provenance and a SHA-256 content pin for the complete shared Python
 implementation. Moving a project also requires keeping its Cargo engine path and

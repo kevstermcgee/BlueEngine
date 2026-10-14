@@ -528,11 +528,16 @@
         "tools/test_game_tooling.py",
         "templates/game_entry.py",
         "templates/game_dev.py",
-        "templates/game_project.py"
+        "templates/game_project.py",
+        "templates/game_installer.py",
+        "templates/game_review.py",
+        "tools/test_game_installer.py",
+        "tools/test_game_review.py"
       ],
       "checks": [
         "new standalone game project scaffolding",
-        "python -m unittest tools.test_game_tooling"
+        "python -m unittest tools.test_game_tooling",
+        "python -m unittest tools.test_game_installer tools.test_game_review"
       ],
       "note": "Scaffolds independent game projects with a vesper3d path dependency, the stock starter (blueprint, map, game.json) or the custom-sim starter (pure simulation library + window binary on devkit and kit), a launcher, compact AGENTS.md, identity, icon set, build script, ship tooling and the shared content/project check runner. Cargo.lock is seeded from the engine's (versions match what the engine was tested with; the first Cargo command settles it) and the engine commit is recorded in assets/identity.json. Path dependencies are not revision pins.",
       "depends_on": [
@@ -2494,7 +2499,8 @@
         "cargo test --locked --lib icon",
         "python -m unittest tools.test_game_ship tools.test_game_check",
         "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)",
-        "python -m unittest tools.test_game_tooling"
+        "python -m unittest tools.test_game_tooling",
+        "python -m unittest tools.test_game_installer tools.test_game_review"
       ],
       "files": [
         "src/viewer/identity.rs",
@@ -2512,7 +2518,12 @@
         "tools/test_game_tooling.py",
         "templates/game_entry.py",
         "templates/game_dev.py",
-        "templates/game_project.py"
+        "templates/game_project.py",
+        "templates/game_installer.py",
+        "templates/game_review.py",
+        "tools/test_game_installer.py",
+        "tools/test_game_review.py",
+        "docs/NATIVE_DELIVERY.md"
       ],
       "keywords": [
         "ship",
@@ -2540,7 +2551,11 @@
         "release",
         "missing runtime assets",
         "isolated package",
-        "source fallback"
+        "source fallback",
+        "physical device review",
+        "native review receipt",
+        "Inno Setup",
+        "app_id"
       ],
       "depends_on": [
         "game_scaffolding"
@@ -2550,7 +2565,9 @@
         "icon::write_icon_set",
         "icon::IconSpec",
         "game_client::window_config_with_icon",
-        "devkit::runtime_assets"
+        "devkit::runtime_assets",
+        "scripts/ship.py installer",
+        "scripts/ship.py review"
       ],
       "read_first": [
         "docs/GAME_QUICKSTART.md",
@@ -2573,16 +2590,42 @@
               "package"
             ]
           ],
-          "summary": "First run the native package gate on Windows: identity/icon, executable resources, asset closure and isolated packaged-game smoke. Building a distribution installer is a separate game-owned step; Reverie has the existing Inno Setup path.",
-          "signature": "python scripts/ship.py ship --no-install",
-          "source": "templates/game_ship.py",
-          "example": "After Reverie package verification, from repository root on Windows: ISCC.exe games/reverie/scripts/installer.iss; powershell -File games/reverie/scripts/test-installer.ps1 (see .github/workflows/reverie.yml).",
+          "summary": "After native Windows package verification, prepare/build a per-user x64 Inno installer through the pinned shared shipping entry point. New scaffolds keep a stable AppId; existing custom Inno scripts remain game-owned.",
+          "signature": "python scripts/ship.py installer prepare; installer build --iscc PATH; installer test --stage PATH",
+          "source": "templates/game_installer.py",
+          "example": "python scripts/ship.py ship --no-install; python scripts/ship.py installer build --iscc \"C:/Program Files (x86)/Inno Setup 6/ISCC.exe\"; python scripts/ship.py installer test --stage PREPARED_STAGE",
           "verify": "python tools/be2.py check --game DIR --loop shipping",
           "warnings": [
-            "Linux development checks do not verify a Windows installer or physical input/audio. Do not publish or deploy without explicit authorization.",
-            "ship --no-install verifies dist; it does not build an installer. New scaffolds need installer configuration/review before distribution. Installer install/upgrade/uninstall checks need Windows."
+            "ship --no-install verifies dist; it does not build an installer. prepare also works on Linux with an existing Windows package; build and isolated install/upgrade/uninstall test require Windows.",
+            "Installer preparation/build do not certify installed-game launch or physical input/audio. Do not publish or deploy without explicit authorization."
           ],
-          "runtime": "Native Windows x64 package + game-owned installer"
+          "runtime": "Native Windows x64 package + shared Inno installer; custom installer escape hatch"
+        },
+        {
+          "identifiers": [
+            "scripts/ship.py review"
+          ],
+          "when": [
+            [
+              "review",
+              "verify"
+            ],
+            [
+              "physical",
+              "device",
+              "controls"
+            ]
+          ],
+          "summary": "Declare game-owned control/camera/UI/audio criteria, prepare a package-bound observation template, and record explicit reviewer results. Software captures remain pending physical review.",
+          "signature": "python scripts/ship.py review prepare [--spec FILE] [--settings FILE] [--artifact FILE]; review record --observations FILE; review status",
+          "source": "templates/game_review.py",
+          "example": "assets/native-review.json; python scripts/ship.py review prepare; python scripts/ship.py review status",
+          "verify": "python -m unittest tools.test_game_review tools.test_game_tooling",
+          "warnings": [
+            "Receipts bind package/source/spec/settings/artifacts; changed inputs are stale. --no-build cannot invent source provenance.",
+            "manual: true means explicit physical reviewer attestations for declared checks, not independent measurement. Software/scripted/counter evidence cannot certify physical devices. Installer/platform gates remain separate."
+          ],
+          "runtime": "Native packaged client; game-owned review criteria"
         }
       ]
     },
@@ -3155,6 +3198,11 @@
     "src/bin/be2-schema.rs": "Internal generator for the existing schemas maintenance command.",
     "tools/check_dependency_boundaries.py": "Check selected native graphs in isolated external consumers, without feature unification.",
     "templates/game_entry.py": "Small standalone bootstrap for the game's pinned BlueEngine project tooling.",
-    "tools/game_tooling.py": "Shared project tooling."
+    "tools/game_tooling.py": "Shared project tooling.",
+    "templates/game_installer.py": "Prepare exact-manifest per-user Windows x64 Inno installers with preserved outputs and package binding.",
+    "templates/game_review.py": "Bind authored native controls, camera and audio review observations to exact package, settings and artifacts.",
+    "tools/test_game_installer.py": "Verify installer preparation, literal metadata, exact inventory and failed-build output preservation.",
+    "tools/test_game_review.py": "Verify native-review staleness and distinguish physical observations from software capture evidence.",
+    "docs/NATIVE_DELIVERY.md": "Pinned native installer preparation and game-owned package-bound physical review receipts; platform limitations and exact commands."
   }
 }

@@ -7,7 +7,8 @@ from pathlib import Path
 import sys
 
 FILES = ('templates/game_check.py', 'templates/game_dev.py', 'templates/game_project.py',
-         'templates/game_ship.py', 'templates/game_entry.py', 'tools/game_tooling.py')
+         'templates/game_ship.py', 'templates/game_installer.py', 'templates/game_review.py',
+         'templates/game_entry.py', 'tools/game_tooling.py')
 
 
 def tooling_digest(engine):

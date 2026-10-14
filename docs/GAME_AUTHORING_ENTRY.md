@@ -22,7 +22,7 @@ examples and focused checks; level 3 supplies implementation ownership.
   `state_hash(&self) -> u64` covers authoritative state. Use `Lifecycle` for
   fixed ticks/input and your own presentation. Start with `templates/custom-sim/src/lib.rs`.
   Enable `physics` for spatial physics and `networking` for production QUIC/TLS;
-  enable `presentation` only for devices/drawing. Task reference: [CUSTOM_SIM_CHEATSHEET.md](CUSTOM_SIM_CHEATSHEET.md).
+  enable `native-client` for native devices/drawing. Task reference: [CUSTOM_SIM_CHEATSHEET.md](CUSTOM_SIM_CHEATSHEET.md).
 
 Controls, camera, fonts, art, HUD and audio belong to your game. Custom clients
 remain supported. Authority is fixed-step and rendering-free; presentation reads
@@ -74,11 +74,15 @@ encryption; hub rooms use development UDP. Details: [NETPLAY.md](NETPLAY.md).
 `--loop integration` checks integration. These do not certify shipping.
 `python scripts/ship.py ship --no-install` on Windows builds and checks the
 native package in `dist`: resources, identity/icon, asset closure and isolated
-packaged-game launch. It does not build an installer. New scaffolds need a game-owned
-installer configuration/review before Windows x64 EXE distribution. The existing
-Reverie path runs `ISCC.exe games/reverie/scripts/installer.iss` from the repository
-root, then `powershell -File games/reverie/scripts/test-installer.ps1`; see
-`.github/workflows/reverie.yml` for Windows install/upgrade/uninstall evidence.
+packaged-game launch. It does not build an installer. Use `python scripts/ship.py
+installer prepare`, then `installer build --iscc PATH` and explicit `installer test
+--stage PATH` on an isolated Windows account. New scaffolds keep a stable AppId in
+`scripts/installer.json`; existing custom installer scripts remain supported.
+Declare game-owned device criteria in `assets/native-review.json`, then use
+`python scripts/ship.py review prepare`, `review record --observations FILE`, and
+`review status`. Review receipts bind package/source/settings/artifacts and keep
+software captures distinct from physical attestations. Commands and examples:
+[NATIVE_DELIVERY.md](NATIVE_DELIVERY.md).
 Linux development checks cannot certify Windows installers or physical devices. Full engine Linux/Windows gates
 remain required after engine changes. Publish/deploy only when explicitly authorized.
 Browser gameplay/WASM is retired: [BROWSER_WORKFLOW.md](BROWSER_WORKFLOW.md).

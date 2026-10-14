@@ -138,7 +138,8 @@ class SharedToolingTests(unittest.TestCase):
                 registered = {name: value for name, value in sys.modules.items()
                               if name.startswith('be2_game_preparation_')}
                 project = type('Project', (), {'root': self.game, 'identity': object()})()
-                with patch.object(ship, 'require_icon'), patch.object(ship, 'cargo_build_release',
+                with patch.object(ship, 'require_icon'), patch.object(ship, '_review_source', return_value=None), \
+                        patch.object(ship, 'cargo_build_release',
                                                                      side_effect=RuntimeError('stop before build')):
                     with self.assertRaisesRegex(RuntimeError, 'stop before build'):
                         ship.cmd_package(project)
