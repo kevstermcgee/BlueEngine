@@ -4,14 +4,14 @@ pub mod audio_project;
 #[path = "../viewer/devkit/clock.rs"]
 pub mod clock;
 pub mod hash;
-#[cfg(feature = "resources")]
-pub mod resources;
 #[path = "../viewer/devkit/input.rs"]
 pub mod input;
 #[path = "../viewer/devkit/playback.rs"]
 pub mod playback;
 #[path = "../viewer/devkit/procedural.rs"]
 pub mod procedural;
+#[cfg(feature = "resources")]
+pub mod resources;
 #[path = "../viewer/devkit/rng.rs"]
 pub mod rng;
 #[path = "../viewer/devkit/sim.rs"]
