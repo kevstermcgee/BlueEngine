@@ -1,0 +1,339 @@
+{
+  "status": "passed-input-save-checks; failed-default-audio-environment",
+  "baseline": {
+    "executable_sha256": "c4309987a74a342a37fde00f4633b1a2c970712f41cf6e64cf053c90ab7a4912",
+    "content_sha256": "60e20152990fc94c24eca47f765eea1ca344eeaed0b1bc3a68d949847572a27f"
+  },
+  "events": [
+    {
+      "event": "key-press",
+      "key": "space",
+      "keycode": 65,
+      "purpose": "attempt default draw-wire without required upgrade",
+      "elapsed_seconds": 0.361932
+    },
+    {
+      "event": "key-release",
+      "key": "space",
+      "elapsed_seconds": 0.462107
+    },
+    {
+      "event": "key-press",
+      "key": "2",
+      "keycode": 11,
+      "purpose": "select machine B",
+      "elapsed_seconds": 1.2325
+    },
+    {
+      "event": "key-release",
+      "key": "2",
+      "elapsed_seconds": 1.332667
+    },
+    {
+      "event": "key-press",
+      "key": "Right",
+      "keycode": 114,
+      "purpose": "select gears after draw-wire",
+      "elapsed_seconds": 1.452839
+    },
+    {
+      "event": "key-release",
+      "key": "Right",
+      "elapsed_seconds": 1.552999
+    },
+    {
+      "event": "key-press",
+      "key": "Right",
+      "keycode": 114,
+      "purpose": "select smelt after gears",
+      "elapsed_seconds": 1.673172
+    },
+    {
+      "event": "key-release",
+      "key": "Right",
+      "elapsed_seconds": 1.773307
+    },
+    {
+      "event": "key-press",
+      "key": "space",
+      "keycode": 65,
+      "purpose": "queue smelt on machine B through keyboard",
+      "elapsed_seconds": 1.893473
+    },
+    {
+      "event": "key-release",
+      "key": "space",
+      "elapsed_seconds": 1.997755
+    },
+    {
+      "event": "mouse-press",
+      "button": 1,
+      "window_coordinates": [
+        517,
+        546
+      ],
+      "purpose": "queue selected smelt on machine A through its Queue button",
+      "elapsed_seconds": 2.169585
+    },
+    {
+      "event": "mouse-release",
+      "button": 1,
+      "elapsed_seconds": 2.269727
+    },
+    {
+      "event": "key-press",
+      "key": "F5",
+      "keycode": 71,
+      "purpose": "engine-owned quick save after both machines complete",
+      "elapsed_seconds": 2.992939
+    },
+    {
+      "event": "key-release",
+      "key": "F5",
+      "elapsed_seconds": 3.093067
+    },
+    {
+      "event": "key-press",
+      "key": "2",
+      "keycode": 11,
+      "purpose": "select machine B after engine-owned restore for public inspection",
+      "elapsed_seconds": 13.600389
+    },
+    {
+      "event": "key-release",
+      "key": "2",
+      "elapsed_seconds": 13.700562
+    }
+  ],
+  "window_title": "Automation Workshop",
+  "window_size": [
+    1200,
+    760
+  ],
+  "argv": [
+    "games/automation-workshop/dist/automation-workshop",
+    "--size",
+    "1200x760",
+    "--capture",
+    "private-evidence/production",
+    "--frames",
+    "60,180,900",
+    "--exit-after",
+    "960",
+    "--save-dir",
+    "private-evidence/saves"
+  ],
+  "restore_argv": [
+    "games/automation-workshop/dist/automation-workshop",
+    "--size",
+    "1200x760",
+    "--capture",
+    "private-evidence/restore-machine-b",
+    "--frames",
+    "180",
+    "--exit-after",
+    "240",
+    "--save-dir",
+    "private-evidence/saves",
+    "--load",
+    "private-evidence/saves/quick.be2save"
+  ],
+  "production_public_inspection": {
+    "authority": "fixed-tick game-owned Workshop::step",
+    "capacity": 12,
+    "definition": null,
+    "game": "blueengine:automation-workshop",
+    "instance": "workshop:world-0001",
+    "inventory": {
+      "workshop:coal": 2,
+      "workshop:gear": 0,
+      "workshop:ore": 4,
+      "workshop:plate": 4,
+      "workshop:wire": 0
+    },
+    "machine": {
+      "id": "workshop:machine-a",
+      "queue": [],
+      "upgrades": []
+    },
+    "queued_work": 0,
+    "reason": null,
+    "release": "0.1.0",
+    "rule": null,
+    "tick": 960,
+    "total_units": 10
+  },
+  "restore_public_inspection": {
+    "authority": "fixed-tick game-owned Workshop::step",
+    "capacity": 12,
+    "definition": null,
+    "game": "blueengine:automation-workshop",
+    "instance": "workshop:world-0001",
+    "inventory": {
+      "workshop:coal": 2,
+      "workshop:gear": 0,
+      "workshop:ore": 4,
+      "workshop:plate": 4,
+      "workshop:wire": 0
+    },
+    "machine": {
+      "id": "workshop:machine-b",
+      "queue": [],
+      "upgrades": []
+    },
+    "queued_work": 0,
+    "reason": null,
+    "release": "0.1.0",
+    "rule": null,
+    "tick": 449,
+    "total_units": 10
+  },
+  "save": {
+    "path": "private-evidence/saves/quick.be2save",
+    "sha256": "f89e31f159ac97def65573261ddd6e6fc254866fca5d3212f8e6b57302905544",
+    "bytes": 852,
+    "original_unchanged_after_load": true
+  },
+  "captures": [
+    {
+      "path": "docs/perf/workshop/native-input-missing-upgrade.png",
+      "sha256": "bfdd6d15a81864f2231836d0552612cf458457f03f899358255ff9c3ecad685c",
+      "bytes": 106484,
+      "viewed": true
+    },
+    {
+      "path": "docs/perf/workshop/native-input-completed-machines.png",
+      "sha256": "7303972449b1ae8958dac17aaaede288afab67f833779040a6ee6eb73989972e",
+      "bytes": 100380,
+      "viewed": true
+    }
+  ],
+  "elapsed_seconds": 16.816528,
+  "schema_version": 1,
+  "check": "packaged-native-synthetic-keyboard-mouse-save-restore",
+  "scope": {
+    "runtime": "external custom Rust Workshop authoritative rules, offline native Linux client",
+    "engine_head_at_start": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+    "engine_head_at_receipt": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+    "package_engine_revision": "d7314ec8122e",
+    "package_review_source_sha256": "0284079206b9e0d21ea01eb7712e0f8e4ac0a4fed79a57fc7646577de084905a",
+    "working_tree_at_start": "dirty; existing milestone inputs preserved",
+    "package_manifest_matches_all_files": true,
+    "implementation_changes_for_check": false,
+    "cargo_invocations": 0
+  },
+  "method": {
+    "display": "Xvfb 1280x800x24",
+    "window": "1200x760 X11 window; checked IsViewable before focus",
+    "input": "system libX11.so.6 + libXtst.so.6 through temporary Python ctypes; XTestFakeKeyEvent, XTestFakeMotionEvent, XTestFakeButtonEvent, XSetInputFocus",
+    "renderer_environment": {
+      "LIBGL_ALWAYS_SOFTWARE": "1",
+      "GALLIUM_DRIVER": "llvmpipe"
+    },
+    "command": "env LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe xvfb-run -a -s \"-screen 0 1280x800x24\" python3 PRIVATE_HELPER",
+    "script_flag_used": false,
+    "keyboard_press_seconds": 0.1,
+    "keyboard_release_gap_seconds": 0.12,
+    "mouse_press_seconds": 0.1,
+    "mouse_release_gap_seconds": 0.12,
+    "helper": "ephemeral under ignored .be2-work; no new maintained command"
+  },
+  "negative_action": {
+    "action": "Space on default draw-wire recipe with no upgrades",
+    "visible_diagnostic": "WORKSHOP_UPGRADE_REQUIRED: workshop:draw-wire needs workshop:wire-tools",
+    "inspection_method": "viewed Lifecycle shot_00060.png; visible ore8/coal4/plate0, both machines idle with empty queues",
+    "asserted_no_charge": true,
+    "evidence": "docs/perf/workshop/native-input-missing-upgrade.png"
+  },
+  "failures": [
+    {
+      "attempt": 1,
+      "stage": "private harness before gameplay",
+      "result": "failed",
+      "diagnostic": "XSetInputFocus BadMatch before window was mapped",
+      "repair": "wait for XGetWindowAttributes map_state IsViewable, then assert exact window size and focus",
+      "retained": "ignored private attempt-1-focus-before-map"
+    },
+    {
+      "stage": "audio worker on both executed launches",
+      "diagnostic": "quad-snd ALSA thread panic: Can't set rate",
+      "game_main_exit_codes": [
+        0,
+        0
+      ],
+      "impact": "silent game remained responsive; audio device/playback and crash-free behavior unverified",
+      "retained": "ignored private production.stderr and restore-machine-b.stderr"
+    }
+  ],
+  "evidence_ledger": [
+    {
+      "claim": "normal keyboard command queues smelt on B",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "Key2, Right, Right, Space events; A final then B restored public inspections"
+    },
+    {
+      "claim": "normal mouse Queue button queues smelt on A",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "XTest button1 at window(517,546), final A empty queue and shared plate4"
+    },
+    {
+      "claim": "missing required upgrade rejects without resource charge",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "viewed missing-upgrade capture with exact diagnostic and initial inventory"
+    },
+    {
+      "claim": "both queues finish; ore4 coal2 plate4",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "two public machine inspections with exact inventory and empty queues"
+    },
+    {
+      "claim": "F5 save restores B; original file unchanged",
+      "planned": true,
+      "executed": true,
+      "status": "passed",
+      "evidence": "engine-owned quick slot, --load launch, SHA256 before/after matches"
+    },
+    {
+      "claim": "physical keyboard/mouse or Windows native runtime",
+      "planned": false,
+      "executed": false,
+      "status": "unverified"
+    },
+    {
+      "claim": "audio output or audio-device reliability",
+      "planned": false,
+      "executed": false,
+      "status": "unverified"
+    },
+    {
+      "claim": "default ALSA audio-worker initialization",
+      "planned": false,
+      "executed": true,
+      "status": "failed",
+      "evidence": "Both launches reported quad-snd ALSA thread panic: Can't set rate; main input/save checks still exited0."
+    }
+  ],
+  "measurement_limits": [
+    "One synthetic-input functional run with one restore; elapsed time is harness wall time, not authoring/rebuild performance or a statistical benchmark.",
+    "Synthetic X11 events and software-rendered Xvfb screenshots are not physical-device input, Windows runtime, sound playback, internet multiplayer, or crash-free evidence.",
+    "Capture mode uses existing Lifecycle fixed ticks; rendering does not own production.",
+    "Saved files and raw logs remain ignored private evidence; only logical paths, digests, public inspection, input events and selected screenshots are committed."
+  ],
+  "recorded_at_utc": "2026-10-14T19:41:44.637315+00:00",
+  "audio_environment_repeat": {
+    "receipt": "docs/perf/workshop/native-synthetic-input-plug-null.json",
+    "same_package": true,
+    "same_gameplay_checks": "passed",
+    "private_plug_null_initialization": "passed; both stderr files empty",
+    "original_failures_retained": true,
+    "audio_playback": "unverified"
+  }
+}

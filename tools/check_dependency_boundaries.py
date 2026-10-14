@@ -87,8 +87,55 @@ fn main() {
     let _look = vesper3d::viewer::devkit::FpsCamera::default();
 }
 '''
+RESOURCES = r'''
+use std::collections::BTreeMap;
+use vesper3d::runtime::{resources::Inventory, Simulation, Snapshot, StateHasher, snapshot};
+struct Craft { inventory: Inventory }
+impl Simulation for Craft {
+    type Input = bool;
+    fn step(&mut self, craft: &bool) {
+        if *craft {
+            self.inventory.transact(&[("probe:ore".into(), 2)], &[("probe:plate".into(), 1)]).unwrap();
+        }
+    }
+    fn state_hash(&self) -> u64 {
+        let mut hash = StateHasher::new();
+        hash.u64(self.inventory.max_units());
+        for (id, capacity) in self.inventory.capacities() { hash.str(id).u64(*capacity); }
+        for (id, count) in self.inventory.counts() { hash.str(id).u64(*count); }
+        hash.finish()
+    }
+}
+impl Snapshot for Craft {
+    const KIND: &'static str = "boundary-resource-craft";
+    type State = Inventory;
+    fn capture(&self) -> Inventory { self.inventory.clone() }
+    fn restore(&mut self, inventory: Inventory) -> Result<(), String> {
+        inventory.validate().map_err(|error| error.to_string())?;
+        self.inventory = inventory;
+        Ok(())
+    }
+}
+fn main() {
+    let mut inventory = Inventory::new(8, BTreeMap::from([
+        ("probe:ore".into(), 8), ("probe:plate".into(), 8),
+    ])).unwrap();
+    inventory.transact(&[], &[("probe:ore".into(), 4)]).unwrap(); // declared source
+    let mut game = Craft { inventory };
+    game.step(&true);
+    assert_eq!((game.inventory.quantity("probe:ore"), game.inventory.quantity("probe:plate")), (2, 1));
+    let saved = snapshot::save(&game, "in-flight craft").unwrap();
+    game.step(&true);
+    snapshot::restore(&mut game, &saved).unwrap();
+    assert_eq!((game.inventory.quantity("probe:ore"), game.inventory.quantity("probe:plate")), (2, 1));
+    let before = game.state_hash();
+    assert!(game.inventory.transact(&[("probe:ore".into(), 3)], &[("probe:plate".into(), 1)]).is_err());
+    assert_eq!(game.state_hash(), before);
+}
+'''
 CASES = {
     'pure_rules': ([], set(), HEAVY | DEVICES, RULES),
+    'resource_transactions': (['resources'], {'serde'}, HEAVY | DEVICES | {'alsa-sys'}, RESOURCES),
     'offline_2d': (['two-d'], {'macroquad'}, HEAVY, TWO_D),
     'spatial_3d': (['physics'], {'rapier3d', 'parry3d'}, {'quinn', 'tokio', 'rustls'} | DEVICES, PHYSICS),
     'native_multiplayer': (['networking'], {'quinn', 'tokio', 'rustls'}, {'rapier3d', 'parry3d'} | DEVICES, NETPLAY),

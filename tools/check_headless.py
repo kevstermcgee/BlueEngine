@@ -9,6 +9,7 @@ HEAVY_RULES = {'rapier3d', 'quinn', 'tokio', 'rustls'}
 # an accidental edge in a narrow consumer. Lock membership is never the evidence.
 CONFIGURATIONS = (
     ('rules', (), FORBIDDEN | HEAVY_RULES),
+    ('resource-transactions', ('resources',), FORBIDDEN | HEAVY_RULES),
     ('stock-server', ('physics', 'networking'), FORBIDDEN),
     ('spatial-rules', ('physics',), FORBIDDEN | {'quinn', 'tokio', 'rustls'}),
     ('custom-networking', ('networking',), FORBIDDEN | {'rapier3d'}),

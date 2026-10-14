@@ -4,6 +4,7 @@ import importlib.util
 import math
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -113,6 +114,52 @@ def owner_features(features, owners, paths=None):
     return sorted(selected)
 
 
+def external_consumer_tests(root, features, affected, paths, loop):
+    """Reuse indexed Cargo checks for affected standalone consumers, without workspace unification.
+
+    Integration closes over affected consumers. Inner checks only exercise a consumer whose own
+    files changed, in its declared defaults-disabled configuration; downstream optional modes wait.
+    """
+    commands, missing = [], []
+    native_inputs = any(path.startswith(('src/', 'tests/', 'templates/')) and
+                        path.endswith(('.rs', '.tmpl')) for path in paths)
+    native_inputs = native_inputs or bool(set(paths) & COMPILED_TEMPLATE_INPUTS)
+    for name in sorted(affected):
+        for check in features[name].get('checks', []):
+            if not isinstance(check, str) or not check.startswith('cargo test '):
+                continue
+            command = shlex.split(check)
+            if '--manifest-path' not in command:
+                continue
+            index = command.index('--manifest-path') + 1
+            if index == len(command):
+                missing.append(f'{name}: missing external Cargo manifest argument')
+                continue
+            manifest = Path(command[index])
+            manifest = manifest if manifest.is_absolute() else Path(root) / manifest
+            game_path = manifest.parent.relative_to(Path(root)).as_posix() if manifest.is_relative_to(Path(root)) else None
+            direct = game_path is not None and any(path == game_path or path.startswith(game_path + '/') for path in paths)
+            if loop == 'integration' and not native_inputs and not direct:
+                continue  # Reviewed prose runs current-content checks, not downstream compilation.
+            if loop != 'integration' and (not direct or '--no-default-features' not in command or '--features' in command):
+                continue
+            if not manifest.is_file():
+                missing.append(command[index])
+                continue
+            if direct and loop == 'inner':
+                document = tomllib.loads(manifest.read_text(encoding='utf-8'))
+                required = {flag for target in document.get('bin', [])
+                            if target.get('path') and game_path + '/' + target['path'] in paths
+                            for flag in target.get('required-features', [])}
+                if required:
+                    command += ['--features', ','.join(sorted(required))]
+            if not any(argument.startswith('--message-format') for argument in command):
+                command.append('--message-format=json')
+            if command not in commands:
+                commands.append(command)
+    return commands, missing
+
+
 def feature_map(root, name, features=None):
     """Derive roles from the existing index; never create a second ownership registry."""
     features = index(root) if features is None else features
@@ -200,6 +247,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     paths = sorted(set(paths))
     affected = impact(root, paths)
     features = index(root)
+    external_tests, missing_consumers = external_consumer_tests(root, features, affected['affected'], paths, loop)
     suites = sorted({suite for name in affected['affected'] for suite in feature_suites(features[name])})
     invalid = [s for s in suites if not re.fullmatch(r'[\w-]+', s) or not (root / 'tests' / (s + '.rs')).is_file()]
     boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json',
@@ -210,7 +258,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     # independent Python/data scopes can narrow an iteration plan.
     boundary += [p for p in paths if p.endswith('.md') and p not in ITERATION_GUIDES
                  and validation_plan([p], base, test_profile)['scope'] == 'full']
-    fallback = sorted(set(affected['unmapped'] + boundary + invalid))
+    fallback = sorted(set(affected['unmapped'] + boundary + invalid + missing_consumers))
     common = {'loop': loop, 'base': base, 'changed_paths': paths, 'impact': affected,
               'remaining': 'Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/package gates.',
               'required_before_merge': ['python tools/be2.py check', 'Linux/Windows CI',
@@ -286,6 +334,8 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
                  *library_targets(narrow), '--message-format=json'], 'rust')
         if loop == 'integration':
             add([sys.executable, 'tools/check_headless.py'])
+    for command in external_tests:
+        add(command, 'rust_project')
     if guides:
         # Cargo validates source/feature/profile freshness, then the test reads
         # today's content on every invocation. No saved test result is reused.
@@ -330,6 +380,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
                              'Native package launch, physical controls, graphics and audio devices.'] +
                             (['Gameplay and compiled Rust examples in documentation.'] if guides else []),
             'requirements': {'unit': native, 'integration_suites': exercised_suites,
+                             'external_consumers': [command[command.index('--manifest-path') + 1] for command in external_tests],
                              'documentation': ('Current links, registered CLI invocations and embedded JSON; '
                                                'Rust examples and gameplay contracts still require shipping checks.'
                                                if guides else 'deferred to shipping'),
@@ -347,6 +398,26 @@ def project_module(root):
     return module
 
 
+def game_integration_features(manifest):
+    """One explicit optional capability configuration, declared in standard Cargo metadata.
+
+    Defaults-disabled rule checks remain the inner loop. These local feature names select an
+    additional required integration/shipping run, never arbitrary commands or engine test suites.
+    """
+    package = manifest.get('package', {})
+    metadata = package.get('metadata', {})
+    settings = metadata.get('blueengine', {}) if isinstance(metadata, dict) else None
+    if not isinstance(settings, dict):
+        raise ValueError('package.metadata.blueengine must be a table')
+    features = settings.get('integration-features', [])
+    if (not isinstance(features, list) or len(features) > 8 or
+            any(not isinstance(flag, str) or not flag or len(flag) > 128 for flag in features)):
+        raise ValueError('package.metadata.blueengine.integration-features must be a list of at most eight local feature names')
+    if len(features) != len(set(features)) or any(flag not in manifest.get('features', {}) for flag in features):
+        raise ValueError('integration-features must name unique declared local Cargo features; add an explicit feature alias first')
+    return sorted(features)
+
+
 def game_plan(root, game, loop='inner'):
     """Reuse standalone project gates; never run the dependency's engine tests for a game edit."""
     if loop not in ('inner', 'integration', 'shipping'):
@@ -361,6 +432,7 @@ def game_plan(root, game, loop='inner'):
     # once before locked iteration/shipping can work. Existing game locks stay locked.
     import tomllib
     manifest = tomllib.loads((game / 'Cargo.toml').read_text(encoding='utf-8'))
+    integration_features = game_integration_features(manifest)
     lock = game / 'Cargo.lock'
     locked = tomllib.loads(lock.read_text(encoding='utf-8')) if lock.is_file() else {}
     if not any(p.get('name') == manifest['package']['name'] for p in locked.get('package', [])):
@@ -375,6 +447,9 @@ def game_plan(root, game, loop='inner'):
                          [arg for arg in command if arg != '--no-default-features']]
             harnesses += [None, 'rust_project']
             roles += ['format', 'tests']
+            if integration_features:
+                commands.append([*command[:-1], '--features', ','.join(integration_features), command[-1]])
+                harnesses.append('rust_project'); roles.append('integration_features')
     else:
         if project['targets']:
             script = game / 'scripts/check.py'
@@ -387,13 +462,22 @@ def game_plan(root, game, loop='inner'):
                          [sys.executable, str(ship), 'ship', '--no-install']]
             harnesses += ['game_check', 'game_ship']
             roles += ['game_check', 'game_ship']
+            if integration_features:
+                commands.insert(-2, ['cargo', 'test', '--locked', '--manifest-path', str(game / 'Cargo.toml'),
+                                     '--no-default-features', '--features', ','.join(integration_features),
+                                     '--message-format=json'])
+                harnesses.insert(-2, 'rust_project'); roles.insert(-2, 'integration_features')
     return {'scope': 'game_shipping' if loop == 'shipping' else 'focused', 'loop': loop,
             'game': str(game), 'commands': commands, 'command_harnesses': harnesses, 'command_roles': roles,
             'proves': 'Game checks in selected loop only; engine dependency tests are excluded.',
             'remaining': ('Declared game gates on this host; other declared native platforms still need their own evidence.'
                           if loop == 'shipping' else 'Run check --game GAME --loop shipping; engine source edits also require engine check --changed.'),
             'requirements': {'native_packaging': sorted(project['targets']),
-                             'networking': project['networking'], 'engine_suite': 'required only when engine inputs change'}}
+                             'networking': project['networking'],
+                             'integration_features': integration_features,
+                             'engine_suite': 'required only when engine inputs change'},
+            'not_verified': ([f'Optional integration features: {", ".join(integration_features)}']
+                             if loop == 'inner' and integration_features else [])}
 
 
 # Words that say nothing about which feature a task needs (kept narrow: "game", "custom" and "kit" do).
@@ -709,6 +793,21 @@ def full_commands(test_profile='itest'):
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib'],
         ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib', '--', '-D', 'warnings'],
         ['cargo', 'rustdoc', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib', '--', '-D', 'warnings'],
+    ])
+    # Optional resources are absent from defaults: test/document/lint this exact boundary separately.
+    # The doctest executes the public Inventory example, not only rustdoc rendering.
+    resource_flags = ['--no-default-features', '--features', 'resources']
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), *resource_flags, '--test', 'resources'],
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), *resource_flags, '--doc'],
+        ['cargo', 'rustdoc', '--locked', *profile_flags(test_profile), *resource_flags, '--lib', '--', '-D', 'warnings'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), *resource_flags, '--all-targets', '--', '-D', 'warnings'],
+    ])
+    workshop_manifest = 'games/automation-workshop/Cargo.toml'
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest, '--no-default-features'],
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest,
+         '--no-default-features', '--features', 'online', '--test', 'netplay'],
     ])
     # Keep the maintained game on the real authoring path. Its own final ship check is exercised
     # separately with a display; CI still compiles presentation and proves headless rules/saves.

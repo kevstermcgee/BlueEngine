@@ -1,0 +1,141 @@
+{
+  "schema_version": 1,
+  "kind": "instrumented model-visible source/doc read ledger; UTF-8 bytes, not token measurements",
+  "records": [
+    {
+      "path": "engine/AGENTS.md",
+      "start_line": 1,
+      "end_line": 113,
+      "utf8_bytes": 8924
+    },
+    {
+      "path": "trial/AGENTS.md",
+      "start_line": 1,
+      "end_line": 49,
+      "utf8_bytes": 2993
+    },
+    {
+      "path": "engine/docs/WORKSHOP.md",
+      "start_line": 1,
+      "end_line": 127,
+      "utf8_bytes": 7725
+    },
+    {
+      "path": "trial/assets/workshop.json",
+      "start_line": 1,
+      "end_line": 102,
+      "utf8_bytes": 1719
+    },
+    {
+      "path": "trial/tests/transactions.rs",
+      "start_line": 1,
+      "end_line": 240,
+      "utf8_bytes": 10520
+    },
+    {
+      "path": "trial/src/lib.rs",
+      "start_line": 1,
+      "end_line": 260,
+      "utf8_bytes": 11650
+    },
+    {
+      "path": "engine/docs/GAME_AUTHORING_ENTRY.md",
+      "start_line": 1,
+      "end_line": 88,
+      "utf8_bytes": 5501
+    },
+    {
+      "path": "trial/Cargo.toml",
+      "start_line": 1,
+      "end_line": 68,
+      "utf8_bytes": 1833
+    },
+    {
+      "path": "trial/src/bin/workshop.rs",
+      "start_line": 1,
+      "end_line": 170,
+      "utf8_bytes": 8697
+    },
+    {
+      "path": "trial/src/lib.rs",
+      "start_line": 261,
+      "end_line": 394,
+      "utf8_bytes": 5935
+    },
+    {
+      "path": "engine/docs/SAVE_STATE.md",
+      "start_line": 1,
+      "end_line": 160,
+      "utf8_bytes": 11338
+    },
+    {
+      "path": "trial/src/content.rs",
+      "start_line": 280,
+      "end_line": 340,
+      "utf8_bytes": 3172
+    },
+    {
+      "path": "trial/tests/draw_wire.rs",
+      "start_line": 1,
+      "end_line": 195,
+      "utf8_bytes": 9183
+    },
+    {
+      "path": "trial/assets/workshop.json",
+      "start_line": 1,
+      "end_line": 139,
+      "utf8_bytes": 2353
+    },
+    {
+      "path": "trial/tests/migration.rs",
+      "start_line": 85,
+      "end_line": 161,
+      "utf8_bytes": 4483
+    },
+    {
+      "path": "trial/tests/migration.rs",
+      "start_line": 118,
+      "end_line": 156,
+      "utf8_bytes": 2352
+    },
+    {
+      "path": "trial/.be2-content-original.json",
+      "start_line": 1,
+      "end_line": 102,
+      "utf8_bytes": 1719
+    },
+    {
+      "path": "trial/assets/workshop.json",
+      "start_line": 1,
+      "end_line": 139,
+      "utf8_bytes": 2353
+    },
+    {
+      "path": "trial/tests/transactions.rs",
+      "start_line": 241,
+      "end_line": 390,
+      "utf8_bytes": 7178
+    },
+    {
+      "path": "trial/src/lib.rs",
+      "start_line": 1,
+      "end_line": 220,
+      "utf8_bytes": 9496
+    },
+    {
+      "path": "trial/src/lib.rs",
+      "start_line": 221,
+      "end_line": 397,
+      "utf8_bytes": 8322
+    },
+    {
+      "path": "trial-harness/friction.json",
+      "start_line": 1,
+      "end_line": 38,
+      "utf8_bytes": 2449
+    }
+  ],
+  "operations": 22,
+  "utf8_bytes": 129895,
+  "limitations": "Explicit wrapper reads include repeats. Automatically injected instruction counts are separate inferred metadata in authoring-trial.json. Executing validators/compiler/hash tools may read files internally without exposing their source content to the model."
+}

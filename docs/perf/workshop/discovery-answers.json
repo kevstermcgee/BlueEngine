@@ -1,0 +1,253 @@
+{
+  "method": "actual native MCP search over stdio, launcher called from /tmp with shared target and Cargo freshness verification",
+  "exit_code": 0,
+  "seconds": 0.6156305479817092,
+  "revision": "d7314ec8122e2231d33845623bd9aea4d0a3472d",
+  "answers": [
+    {
+      "query": "inventories",
+      "mcp_search_first": "resource_transactions",
+      "confidence": "curated public contract; confirm runtime",
+      "native_response_utf8_bytes": 3686,
+      "compact_context": {
+        "query": "inventories",
+        "confidence": "guided: public contract matched; confirm runtime and warnings",
+        "matches": [
+          {
+            "id": "resource_transactions",
+            "read_first": [
+              "docs/RESOURCES.md"
+            ],
+            "canonical_example": "games/automation-workshop/src/lib.rs",
+            "public_api": [
+              "Inventory::transact",
+              "runtime::resources::Inventory",
+              "runtime::resources::Inventory::transact",
+              "TransactionReceipt",
+              "TransactionError"
+            ],
+            "runtime": "Optional rendering-free resource transactions; game-owned custom simulation",
+            "limitations": [
+              "64 resource definitions; 128 combined debit/credit entries. Integer overflow, unknown IDs and full capacities reject all mutations.",
+              "The game owns sources, sinks, recipes and escrow; conservation cannot be inferred from a transaction alone. Inventory schema version 1 is independent of the game save schema.",
+              "No networking, clocks or entity lifecycle are added; a receipt is not a remote acknowledgement."
+            ],
+            "answer": {
+              "summary": "Use optional resources for atomic validated integer inventory costs/credits; keep recipes and escrow in your existing Simulation/Snapshot.",
+              "signature": "pub fn transact(&mut self, debits: &[(String, u64)], credits: &[(String, u64)]) -> Result<TransactionReceipt, TransactionError>",
+              "source": "src/runtime/resources.rs",
+              "example": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+              "verify": "cargo test --locked --profile itest --no-default-features --features resources --test resources",
+              "runtime": "Optional rendering-free resource transactions; game-owned custom simulation",
+              "warnings": [
+                "Enable the resources feature explicitly. Costs are validated before credits; a full result commits nothing. Preserve escrow until a complete output/refund commit succeeds.",
+                "Limits: 64 resource IDs, 128 combined entries; receipts are local commits, not delivery acknowledgements."
+              ]
+            },
+            "iterate": "python tools/be2.py check --iterate resource_transactions --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership. Low confidence: name the runtime and mechanic, or use an exact public identifier.",
+        "level": 1
+      }
+    },
+    {
+      "query": "machine production",
+      "mcp_search_first": "automation_workshop",
+      "confidence": "curated public contract; confirm runtime",
+      "native_response_utf8_bytes": 8085,
+      "compact_context": {
+        "query": "machine production",
+        "confidence": "guided: public contract matched; confirm runtime and warnings",
+        "matches": [
+          {
+            "id": "automation_workshop",
+            "read_first": [
+              "docs/WORKSHOP.md"
+            ],
+            "canonical_example": "games/automation-workshop/src/lib.rs",
+            "public_api": [
+              "Workshop",
+              "Workshop::standard",
+              "Command::Queue"
+            ],
+            "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+            "limitations": [
+              "Probe sizes 10/100/1000 are measured workloads, not supported capacity promises. Native device and Windows shipping evidence remain separate gates.",
+              "Custom netplay uses a complete fixture snapshot within min(active transport limit, 1100 bytes), including framing. It does not inherit stock partial replication, interest scheduling or capacity controls.",
+              "Exact-content checks remain enabled. Frozen v1 or compatible append-only v2 imports require exact source definitions; unsupported tuning/removal fails and preserves original save/state.",
+              "Online late join and fresh connection after seat timeout are unsupported during the running match; short interruption recovery is a different tested behavior."
+            ],
+            "answer": {
+              "summary": "Queue a game-owned recipe on one machine; inputs move into saved escrow and production advances in logical ticks. Definitions are validated/indexed once and new recipes are content edits.",
+              "signature": "Command::Queue { machine: String, recipe: String }; Simulation::step(&mut self, input: &Vec<Envelope>)",
+              "source": "games/automation-workshop/src/lib.rs",
+              "example": "cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin workshop -- inspect",
+              "verify": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+              "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+              "warnings": [
+                "Machine ordering is stable by instance ID; authority advances at fixed 60 Hz. Presentation submits commands and reads state only.",
+                "Inspect one machine to trace queue, duration and blocking rule to its authored definition."
+              ]
+            },
+            "iterate": "python tools/be2.py check --iterate automation_workshop --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership. Low confidence: name the runtime and mechanic, or use an exact public identifier.",
+        "learned": [
+          "open: Custom netplay: save one-shot command IDs; timed-out match seat reclaim needs another milestone."
+        ],
+        "level": 1
+      }
+    },
+    {
+      "query": "blocked outputs",
+      "mcp_search_first": "automation_workshop",
+      "confidence": "curated public contract; confirm runtime",
+      "native_response_utf8_bytes": 8085,
+      "compact_context": {
+        "query": "blocked outputs",
+        "confidence": "guided: public contract matched; confirm runtime and warnings",
+        "matches": [
+          {
+            "id": "automation_workshop",
+            "read_first": [
+              "docs/WORKSHOP.md"
+            ],
+            "canonical_example": "games/automation-workshop/src/lib.rs",
+            "public_api": [
+              "Workshop::inspect",
+              "Command::Cancel"
+            ],
+            "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+            "limitations": [
+              "Probe sizes 10/100/1000 are measured workloads, not supported capacity promises. Native device and Windows shipping evidence remain separate gates.",
+              "Custom netplay uses a complete fixture snapshot within min(active transport limit, 1100 bytes), including framing. It does not inherit stock partial replication, interest scheduling or capacity controls.",
+              "Exact-content checks remain enabled. Frozen v1 or compatible append-only v2 imports require exact source definitions; unsupported tuning/removal fails and preserves original save/state.",
+              "Online late join and fresh connection after seat timeout are unsupported during the running match; short interruption recovery is a different tested behavior."
+            ],
+            "answer": {
+              "summary": "A full output or refund transaction keeps the job/escrow intact. Inspect the machine diagnostic and deliver inventory through player commands to free space and recover.",
+              "signature": "pub fn inspect(&self, id: &str) -> Result<serde_json::Value, String>",
+              "source": "games/automation-workshop/src/lib.rs",
+              "example": "cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin workshop -- inspect",
+              "verify": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+              "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+              "warnings": [
+                "RESOURCE-CAPACITY or RESOURCE-BUDGET identifies the responsible item/total bound. A failed transaction changes no inventory counts.",
+                "Cancellation refunds escrow coherently; a blocked refund remains pending. Inspection is read-only, not privileged mutation."
+              ]
+            },
+            "iterate": "python tools/be2.py check --iterate automation_workshop --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership. Low confidence: name the runtime and mechanic, or use an exact public identifier.",
+        "level": 1
+      }
+    },
+    {
+      "query": "save migration",
+      "mcp_search_first": "automation_workshop",
+      "confidence": "curated public contract; confirm runtime",
+      "native_response_utf8_bytes": 8085,
+      "compact_context": {
+        "query": "save migration",
+        "confidence": "guided: public contract matched; confirm runtime and warnings",
+        "matches": [
+          {
+            "id": "automation_workshop",
+            "read_first": [
+              "docs/WORKSHOP.md"
+            ],
+            "canonical_example": "games/automation-workshop/src/lib.rs",
+            "public_api": [
+              "automation_workshop::persistence::migrate_content",
+              "persistence::migrate_content",
+              "persistence::migrate_v1"
+            ],
+            "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+            "limitations": [
+              "Probe sizes 10/100/1000 are measured workloads, not supported capacity promises. Native device and Windows shipping evidence remain separate gates.",
+              "Custom netplay uses a complete fixture snapshot within min(active transport limit, 1100 bytes), including framing. It does not inherit stock partial replication, interest scheduling or capacity controls.",
+              "Exact-content checks remain enabled. Frozen v1 or compatible append-only v2 imports require exact source definitions; unsupported tuning/removal fails and preserves original save/state.",
+              "Online late join and fresh connection after seat timeout are unsupported during the running match; short interruption recovery is a different tested behavior."
+            ],
+            "answer": {
+              "summary": "Use the explicit frozen-v1-to-v2 or append-only-v2 content import around engine-owned Snapshot saves; migrate and validate a copy before accepting progress.",
+              "signature": "pub fn migrate_content(live: &mut Workshop, original: &[u8], source: Definitions, destination: &Path, slot: &str) -> Result<(), String>",
+              "source": "games/automation-workshop/src/persistence.rs",
+              "example": "automation_workshop::persistence::migrate_content(&mut sim, &original_bytes, exact_source_definitions, new_output_dir, \"migrated\")?;",
+              "verify": "cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
+              "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+              "warnings": [
+                "Require the exact old content fingerprint; normal exact-content checks are not globally weakened. V2 recipe/upgrade tuning and removals need another explicit migration.",
+                "Keep original files and live state intact on failure. Queues, escrow, upgrades, logical time and command serials must survive."
+              ]
+            },
+            "iterate": "python tools/be2.py check --iterate automation_workshop --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership. Low confidence: name the runtime and mechanic, or use an exact public identifier.",
+        "learned": [
+          "solved: Bump Snapshot::VERSION and migrate when state_hash changes, even with serde default. (ad03fb6)",
+          "solved: Workshop save migration validates exact legacy content/hash before writing and activating a... (1c310b8437ae)"
+        ],
+        "level": 1
+      }
+    },
+    {
+      "query": "online support",
+      "mcp_search_first": "automation_workshop",
+      "confidence": "curated public contract; confirm runtime",
+      "native_response_utf8_bytes": 8085,
+      "compact_context": {
+        "query": "online support",
+        "confidence": "guided: public contract matched; confirm runtime and warnings",
+        "matches": [
+          {
+            "id": "automation_workshop",
+            "read_first": [
+              "docs/WORKSHOP.md"
+            ],
+            "canonical_example": "games/automation-workshop/src/lib.rs",
+            "public_api": [
+              "WorkshopNet"
+            ],
+            "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+            "limitations": [
+              "Probe sizes 10/100/1000 are measured workloads, not supported capacity promises. Native device and Windows shipping evidence remain separate gates.",
+              "Custom netplay uses a complete fixture snapshot within min(active transport limit, 1100 bytes), including framing. It does not inherit stock partial replication, interest scheduling or capacity controls.",
+              "Exact-content checks remain enabled. Frozen v1 or compatible append-only v2 imports require exact source definitions; unsupported tuning/removal fails and preserves original save/state.",
+              "Online late join and fresh connection after seat timeout are unsupported during the running match; short interruption recovery is a different tested behavior."
+            ],
+            "answer": {
+              "summary": "The fixture implements NetGame over the same authoritative Workshop rules and uses cli::serve. Run its own payload/reconnect tests, not the built-in stock net-test.",
+              "signature": "NetGame + ClientView; netplay::cli::serve::<WorkshopNet>(&ServeSpec)",
+              "source": "games/automation-workshop/src/net.rs",
+              "example": "cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin workshop -- inspect",
+              "verify": "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features --features online --test netplay",
+              "runtime": "External game-owned Workshop custom simulation; fixed 60 Hz, no GameDocument",
+              "warnings": [
+                "Custom netplay does not inherit stock partial replication/interest scheduling or capacity controls. Complete snapshots must fit min(transport limit, 1100 bytes), including framing.",
+                "Queue acceptance is local, not remote delivery. Production QUIC/TLS requires networking; hub rooms use development UDP. Larger-state replication is a separate milestone.",
+                "Brief packet interruptions recover from a complete snapshot. Late join and a fresh connection after seat timeout are rejected during the running match; there is no persistent-room reconnect claim."
+              ]
+            },
+            "iterate": "python tools/be2.py check --iterate automation_workshop --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership. Low confidence: name the runtime and mechanic, or use an exact public identifier.",
+        "learned": [
+          "solved: Implement NetGame + ClientView on viewer::netplay (docs/NETPLAY.md); do not write a server or lo... (ADR 0022)",
+          "solved: Player cap: NetGame::MAX_SEATS. Server: netplay::cli::serve; rooms: netplay::hub (ADR 0037). (f0e41c8)"
+        ],
+        "level": 1
+      }
+    }
+  ]
+}
