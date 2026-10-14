@@ -1,0 +1,253 @@
+{
+  "method": "BlueEngine audio_report.py --loop --fail-on-issues on full authored mix; checked bundle verifies every stem",
+  "tracks": [
+    {
+      "bank": "morning",
+      "measurement": {
+        "path": "games/harvest-hollow/assets/audio/morning/preview-mix.wav",
+        "format": "PCM 16-bit",
+        "sample_rate": 44100,
+        "channels": 2,
+        "frames": 1628308,
+        "duration_ms": 36923.084,
+        "peak_dbfs": -8.9,
+        "peak_dbfs_channels": [
+          -8.9,
+          -9.65
+        ],
+        "rms_dbfs": -25.99,
+        "crest_db": 17.09,
+        "loudness_lufs_approx": -24.17,
+        "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+        "dc_offset": 0.0,
+        "dc_offset_channels": [
+          0.0,
+          0.0
+        ],
+        "clipped_samples": 0,
+        "clipped_pct": 0.0,
+        "clipped_longest_run": 0,
+        "first_sample": 0.01733,
+        "last_sample": 0.01736,
+        "loop": {
+          "enabled": true,
+          "seam_jump": 9.2e-05,
+          "scan_available": true,
+          "suspected_click": false
+        },
+        "silence": {
+          "threshold_dbfs": -60.0,
+          "leading_ms": 0.0,
+          "trailing_ms": 0.0,
+          "longest_internal_ms": 0.0
+        },
+        "clicks": {
+          "count": 0,
+          "min_jump": 0.02,
+          "first": []
+        },
+        "spectrum": {
+          "frames": 600,
+          "centroid_hz": 338.2,
+          "rolloff85_hz": 581.4,
+          "dominant_hz": 87.5,
+          "band_energy_pct": {
+            "sub": 1.27,
+            "bass": 40.15,
+            "low_mid": 58.5,
+            "high_mid": 0.08,
+            "air": 0.0
+          }
+        },
+        "issues": [],
+        "issue_codes": []
+      }
+    },
+    {
+      "bank": "afternoon",
+      "measurement": {
+        "path": "games/harvest-hollow/assets/audio/afternoon/preview-mix.wav",
+        "format": "PCM 16-bit",
+        "sample_rate": 44100,
+        "channels": 2,
+        "frames": 1512000,
+        "duration_ms": 34285.714,
+        "peak_dbfs": -8.9,
+        "peak_dbfs_channels": [
+          -10.36,
+          -8.9
+        ],
+        "rms_dbfs": -26.05,
+        "crest_db": 17.14,
+        "loudness_lufs_approx": -24.13,
+        "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+        "dc_offset": 0.0,
+        "dc_offset_channels": [
+          0.0,
+          0.0
+        ],
+        "clipped_samples": 0,
+        "clipped_pct": 0.0,
+        "clipped_longest_run": 0,
+        "first_sample": 0.00479,
+        "last_sample": 0.00519,
+        "loop": {
+          "enabled": true,
+          "seam_jump": 0.000397,
+          "scan_available": true,
+          "suspected_click": false
+        },
+        "silence": {
+          "threshold_dbfs": -60.0,
+          "leading_ms": 0.0,
+          "trailing_ms": 0.0,
+          "longest_internal_ms": 0.0
+        },
+        "clicks": {
+          "count": 0,
+          "min_jump": 0.02,
+          "first": []
+        },
+        "spectrum": {
+          "frames": 600,
+          "centroid_hz": 393.6,
+          "rolloff85_hz": 689.1,
+          "dominant_hz": 91.4,
+          "band_energy_pct": {
+            "sub": 1.17,
+            "bass": 42.45,
+            "low_mid": 56.16,
+            "high_mid": 0.23,
+            "air": 0.0
+          }
+        },
+        "issues": [],
+        "issue_codes": []
+      }
+    },
+    {
+      "bank": "rain",
+      "measurement": {
+        "path": "games/harvest-hollow/assets/audio/rain/preview-mix.wav",
+        "format": "PCM 16-bit",
+        "sample_rate": 44100,
+        "channels": 2,
+        "frames": 2016000,
+        "duration_ms": 45714.286,
+        "peak_dbfs": -8.57,
+        "peak_dbfs_channels": [
+          -8.57,
+          -10.02
+        ],
+        "rms_dbfs": -25.4,
+        "crest_db": 16.83,
+        "loudness_lufs_approx": -23.37,
+        "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+        "dc_offset": 0.0,
+        "dc_offset_channels": [
+          0.0,
+          0.0
+        ],
+        "clipped_samples": 0,
+        "clipped_pct": 0.0,
+        "clipped_longest_run": 0,
+        "first_sample": -0.00357,
+        "last_sample": 0.00253,
+        "loop": {
+          "enabled": true,
+          "seam_jump": 0.002625,
+          "scan_available": true,
+          "suspected_click": false
+        },
+        "silence": {
+          "threshold_dbfs": -60.0,
+          "leading_ms": 0.0,
+          "trailing_ms": 0.0,
+          "longest_internal_ms": 0.0
+        },
+        "clicks": {
+          "count": 0,
+          "min_jump": 0.02,
+          "first": []
+        },
+        "spectrum": {
+          "frames": 600,
+          "centroid_hz": 453.6,
+          "rolloff85_hz": 710.6,
+          "dominant_hz": 90.0,
+          "band_energy_pct": {
+            "sub": 0.73,
+            "bass": 33.11,
+            "low_mid": 66.16,
+            "high_mid": 0.0,
+            "air": 0.0
+          }
+        },
+        "issues": [],
+        "issue_codes": []
+      }
+    },
+    {
+      "bank": "evening",
+      "measurement": {
+        "path": "games/harvest-hollow/assets/audio/evening/preview-mix.wav",
+        "format": "PCM 16-bit",
+        "sample_rate": 44100,
+        "channels": 2,
+        "frames": 1924364,
+        "duration_ms": 43636.372,
+        "peak_dbfs": -7.96,
+        "peak_dbfs_channels": [
+          -10.08,
+          -7.96
+        ],
+        "rms_dbfs": -25.12,
+        "crest_db": 17.17,
+        "loudness_lufs_approx": -23.12,
+        "loudness_method": "BS.1770-4 gating: 400 ms blocks, -70 LUFS absolute and -10 LU relative gate",
+        "dc_offset": -0.0,
+        "dc_offset_channels": [
+          -0.0,
+          -0.0
+        ],
+        "clipped_samples": 0,
+        "clipped_pct": 0.0,
+        "clipped_longest_run": 0,
+        "first_sample": 0.02338,
+        "last_sample": 0.02182,
+        "loop": {
+          "enabled": true,
+          "seam_jump": 0.001556,
+          "scan_available": true,
+          "suspected_click": false
+        },
+        "silence": {
+          "threshold_dbfs": -60.0,
+          "leading_ms": 0.0,
+          "trailing_ms": 0.0,
+          "longest_internal_ms": 0.0
+        },
+        "clicks": {
+          "count": 0,
+          "min_jump": 0.02,
+          "first": []
+        },
+        "spectrum": {
+          "frames": 600,
+          "centroid_hz": 408.8,
+          "rolloff85_hz": 667.5,
+          "dominant_hz": 94.5,
+          "band_energy_pct": {
+            "sub": 0.85,
+            "bass": 32.04,
+            "low_mid": 67.11,
+            "high_mid": 0.0,
+            "air": 0.0
+          }
+        },
+        "issues": [],
+        "issue_codes": []
+      }
+    }
+  ]
+}
