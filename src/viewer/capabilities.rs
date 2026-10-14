@@ -69,24 +69,25 @@ pub fn runtime_support() -> Value {
     json!({
         "stock_server": {
             "available_in_this_build": cfg!(all(feature = "physics", feature = "networking")),
-            "what": "be2-headless --server: authoritative GameDocument/map server for the stock client",
+            "what": "be2-headless --server: stock authority",
             "players": {
                 "default": simulation::DEFAULT_MAX_PLAYERS,
                 "configurable_up_to": simulation::MAX_PLAYERS_LIMIT,
-                "how": "--max-players N (also raises the session and handshake limits)",
+                "how": "--max-players N",
+                "capacity_evidence": "configured limit, not measured capacity",
             },
             "datagram_bytes": net::MAX_PACKET_BYTES,
-            "world_updates": format!("compact binary since protocol {}; every other packet is JSON", net::PROTOCOL_VERSION),
+            "world_updates": format!("protocol {}: binary world, JSON elsewhere", net::PROTOCOL_VERSION),
             "replication": {
                 "partial_world_updates": true,
                 "records_per_peer": net::replication::MAX_REPLICATED_ENTITIES,
-                "note": "a world larger than one packet arrives over several acknowledged updates, nearest records first",
+                "note": "acknowledged updates; nearest records first",
             },
-            "interest_management": "room-graph relevance per player (HeadlessWorld::snapshot_for_player)",
-            "prediction": "stock client (PredictionBuffer + reconciliation)",
-            "graceful_shutdown": "SIGINT/SIGTERM/SIGHUP: finish tick, final autosave, exit 0; second signal exits immediately. Unix runtime-tested; Windows console path compile-only.",
+            "interest_management": "snapshot_for_player: room relevance",
+            "prediction": "PredictionBuffer",
+            "graceful_shutdown": "SIGINT/SIGTERM/SIGHUP: finish tick, final save, exit 0; second signal forces exit. Unix tested; Windows compile-only.",
             "saving": {
-                "autosave": "--autosave SECONDS (and once at shutdown); resume with --load auto",
+                "autosave": "--autosave SECONDS; --load auto; shutdown save",
                 "players_in_a_save": savestate::world::MAX_PLAYERS,
                 "payload_bytes": savestate::MAX_PAYLOAD_BYTES,
             },
@@ -94,13 +95,16 @@ pub fn runtime_support() -> Value {
         },
         "custom_sim_netplay": {
             "production_transport_available_in_this_build": cfg!(feature = "networking"),
-            "what": "viewer::netplay: NetGame + ClientView with the game's own server loop",
+            "what": "NetGame + ClientView; cli::serve owns loop",
             "datagram_bytes": netplay::wire::MAX_DATAGRAM,
-            "players": "NetGame::MAX_SEATS, chosen by each game",
-            "replication": "one snapshot format for everyone: no partial updates and no interest management",
+            "datagram_budget": "min(transport payload_limit, datagram_bytes), framing included",
+            "players": "MAX_SEATS; lobby_capacity/minimum_players: configuration, not measured capacity",
+            "replication": "snapshot_with_budget: trim optional state; no fragmentation/stock partial replication/interest scheduler",
             "prediction": "your ClientView",
-            "graceful_shutdown": "not provided by the kit; the game's own server binary must stop its loop",
-            "saving": format!("devkit::Snapshot into the same save file ({} byte payload limit); the dedicated server's --autosave does not apply", savestate::MAX_PAYLOAD_BYTES),
+            "graceful_shutdown": "cli::serve installs shutdown handlers; NetGame::release owns bots",
+            "transport": "UDP; QUIC/TLS needs networking; hub rooms: UDP",
+            "delivery": "queue acceptance is local, not remote acknowledgement",
+            "saving": format!("devkit::Snapshot: {} bytes; no stock --autosave", savestate::MAX_PAYLOAD_BYTES),
         },
     })
 }
@@ -117,7 +121,7 @@ pub fn describe() -> Result<Value> {
     Ok(json!({
         "ok": true, "engine": "BlueEngine", "version": env!("CARGO_PKG_VERSION"),
         "protocol_version": super::net::PROTOCOL_VERSION, "map_schema_version": 1, "game_schema_version": 1,
-        "units": "metres; +Y up; yaw/pitch radians; yaw 0 faces -Z; boxes use half extents; prop origins are bottoms",
+        "units": "metres; +Y up; angles radians; yaw 0=-Z; box half extents; prop bottom origins",
         "default_map": "Blue Test Lab",
         "commands": COMMANDS.iter().map(|(name, args)| json!({"name":name,"arguments":args})).collect::<Vec<_>>(),
         "features": names,
@@ -128,38 +132,104 @@ pub fn describe() -> Result<Value> {
         "limits": {
             "packet_bytes": super::net::MAX_PACKET_BYTES,
             "players": super::simulation::DEFAULT_MAX_PLAYERS,
-            "players_note": "Default admission; runtime_support lists per-path configurable limits",
+        "players_note": "Default admission; per-path runtime_support",
             "map_bytes": super::game::MAX_MAP_BYTES, "patch_operations": 1000, "search_results": 10
         },
         "runtime_support": runtime_support(),
-        "start": ["python3 tools/be2.py start TASK --compact", "be2-tools search TOPIC", "docs/AI_QUICKSTART.md"],
+        "start": ["python3 tools/be2.py start TASK --compact", "be2-tools search TOPIC", "docs/GAME_AUTHORING_ENTRY.md"],
         "unsupported": ["arbitrary gameplay scripts", "runtime mesh import"],
-        "metadata": "Native commands; curated feature index."
+        "metadata": "Curated native index."
     }))
 }
 
-/// Case-insensitive feature/file/check search, capped at ten hits and 100 query bytes.
+/// Curated public API and case-insensitive feature search, capped at ten hits and 100 query bytes.
 /// Empty, oversized and control-character queries are errors; zero matches is valid.
 pub fn search(query: &str) -> Result<Value> {
     if query.trim().is_empty() || query.len() > 100 || query.chars().any(char::is_control) {
         return Err("Search requires 1..100 bytes without control characters".into());
     }
     let data = features()?;
-    let query = query.to_lowercase();
-    let words: Vec<_> = query.split_whitespace().collect();
-    let mut matches = Vec::new();
-    let mut total = 0;
+    let query = query.trim().trim_matches('`').to_lowercase();
+    let words: Vec<_> = query
+        .split(|c: char| !c.is_alphanumeric() && c != '_' && c != '-')
+        .filter(|word| !word.is_empty())
+        .collect();
+    let browser = words
+        .iter()
+        .any(|word| matches!(*word, "browser" | "web" | "wasm"))
+        && !words
+            .iter()
+            .any(|word| matches!(*word, "room" | "rooms" | "lobby"));
+    let mut ranked = Vec::new();
     for (name, feature) in data["features"]
         .as_object()
         .ok_or("Invalid feature index")?
     {
-        let haystack = format!("{name} {feature}").to_lowercase();
-        if words.iter().all(|word| haystack.contains(word)) {
-            total += 1;
-            if matches.len() < 10 {
-                matches.push(json!({"feature": name, "details": feature}));
+        let exact_api = feature["public_api"].as_array().is_some_and(|apis| {
+            apis.iter()
+                .any(|api| api.as_str().is_some_and(|api| api.to_lowercase() == query))
+        });
+        let mut score = if *name == query || exact_api { 2000 } else { 0 };
+        if let Some(answers) = feature["answers"].as_array() {
+            for answer in answers {
+                if answer["identifiers"].as_array().is_some_and(|apis| {
+                    apis.iter()
+                        .any(|api| api.as_str().is_some_and(|api| api.to_lowercase() == query))
+                }) {
+                    score = 2000;
+                } else if let Some(groups) = answer["when"].as_array() {
+                    if !groups.is_empty()
+                        && groups.iter().all(|group| {
+                            group.as_array().is_some_and(|aliases| {
+                                aliases.iter().any(|alias| {
+                                    alias.as_str().is_some_and(|alias| words.contains(&alias))
+                                })
+                            })
+                        })
+                    {
+                        score = score.max(100 + groups.len());
+                    }
+                }
             }
         }
+        if feature["status"] == "retired" && score < 2000 {
+            if !browser {
+                continue;
+            }
+            score = score.max(100);
+        }
+        if score == 0 {
+            let haystack = format!("{name} {feature}").to_lowercase();
+            if !words.is_empty() && words.iter().all(|word| haystack.contains(word)) {
+                score = 1;
+            }
+        }
+        if score > 0 {
+            ranked.push((score, name, feature));
+        }
     }
-    Ok(json!({"ok":true,"matches":matches,"total":total,"limit":10,"engine_source_read":false}))
+    ranked.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(b.1)));
+    let best = ranked.first().map_or(0, |item| item.0);
+    let selected: Vec<_> = ranked
+        .iter()
+        .filter(|item| {
+            if best >= 2000 {
+                item.0 >= 2000
+            } else if best >= 100 {
+                item.0 >= 100
+            } else {
+                true
+            }
+        })
+        .collect();
+    let matches: Vec<_> = selected
+        .iter()
+        .take(10)
+        .map(|(_, name, feature)| json!({"feature":name,"details":feature}))
+        .collect();
+    Ok(
+        json!({"ok":true,"matches":matches,"total":selected.len(),"limit":10,"engine_source_read":false,
+        "confidence": if best >= 2000 { "exact indexed identifier" } else if best >= 100 { "curated public contract; confirm runtime" } else { "low: uncurated text match" },
+        "next": "Use be2.py context TASK --level 1 --compact for a small answer; refine by runtime or exact API identifier."}),
+    )
 }
