@@ -64,6 +64,23 @@ def action(root, *args, expected, kind='command', files=None):
             'expected': expected, **({'files': files} if files else {})}
 
 
+def project_files(project, route):
+    """Known authoring entry files, predicted only for a project still to scaffold."""
+    if project is None:
+        return []
+    common = ['AGENTS.md', 'game.project.json']
+    if project.exists():
+        candidates = common + ['game.json', 'maps/main.json', 'src/lib.rs', 'src/main.rs']
+        existing = [path for path in candidates if (project / path).is_file()]
+        if existing or (project / 'Cargo.toml').is_file() or route['kind'] != 'new-game':
+            return existing
+    if route['kind'] != 'new-game':
+        return []
+    if route['template'] == 'stock':
+        return common + ['game.json', 'maps/main.json', 'src/main.rs']
+    return common + ['src/lib.rs', 'src/main.rs']
+
+
 def git_state(root, calls, detail=False):
     rev = task_inputs.probe(['git', 'rev-parse', 'HEAD'], root, calls)
     status = task_inputs.probe(['git', 'status', '--porcelain', '--untracked-files=all'], root, calls)
@@ -443,7 +460,7 @@ def refresh(root, state, *, detail=False, observed=None):
                                'browser': {'supported': False, 'status': 'retired', 'migration': 'docs/BROWSER_WORKFLOW.md'},
                                'extension': 'Custom code/clients remain available; runtime/target gaps require engineering, not dropping requested mechanics.'},
               'context': {'references': refs, 'paths': state['paths'],
-                          'project_files': ['AGENTS.md', 'game.project.json', 'src/lib.rs'] if project else [],
+                          'project_files': project_files(project, route),
                           'matches': context['matches'],
                           'confidence': context['confidence'], 'traps': context.get('learned', [])},
               'next_action': next_action, 'iteration': iteration, 'completion': final,

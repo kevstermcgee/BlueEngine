@@ -1510,6 +1510,36 @@
       "canonical_example": "src/viewer/game_example.rs",
       "required_features": [
         "physics"
+      ],
+      "entry_guide": "docs/GAME_AUTHORING_ENTRY.md",
+      "public_api": [
+        "GameDocument",
+        "GameDocument::load",
+        "GameDocument::validate"
+      ],
+      "answers": [
+        {
+          "identifiers": [
+            "GameDocument",
+            "viewer::game::GameDocument",
+            "GameDocument::load",
+            "GameDocument::validate"
+          ],
+          "when": [
+            ["stock", "declarative"],
+            ["game", "rules", "document"]
+          ],
+          "summary": "Use the stock starter for declarative GameDocument counters, interactions, triggers, timers and movers. Edit validated game/map JSON; stock clients and the authoritative server share the same rules.",
+          "signature": "pub fn load(path: &Path) -> Result<LoadedGame>; pub fn validate(&self, map: &MapDocument) -> Result<()>",
+          "source": "src/viewer/game.rs",
+          "example": "python tools/be2.py map new-game NAME DIR ENGINE_PATH stock",
+          "verify": "python tools/be2.py check --game DIR --loop inner",
+          "warnings": [
+            "GameDocument has bounded declarative rules and no scripting; custom enemies, projectiles or AI belong in game-owned Rust rules through two-d or custom-sim.",
+            "Validate the game and map together; interactable/mover IDs and visual/collision bounds must agree. Authored presentation and assets remain game-owned."
+          ],
+          "runtime": "Stock GameDocument / authoritative fixed-step server"
+        }
       ]
     },
     "custom_simulation": {
@@ -2420,6 +2450,38 @@
             "Keep KIND stable; bump VERSION and supply MIGRATIONS when layout or state-hash meaning changes. Keep all authoritative RNG/tick state."
           ],
           "runtime": "Custom simulation / portable GameLogic"
+        },
+        {
+          "identifiers": [
+            "Lifecycle::quick_save",
+            "devkit::Lifecycle::quick_save"
+          ],
+          "summary": "Save your existing Snapshot simulation into Lifecycle's engine-owned quick slot; present the returned Notice and inspect ok/detail for failure.",
+          "signature": "pub fn quick_save<S: Snapshot>(&self, sim: &S, label: &str) -> Notice",
+          "source": "src/viewer/devkit/lifecycle.rs",
+          "example": "let notice = lifecycle.quick_save(&sim, \"Checkpoint\");",
+          "verify": "python tools/be2.py check --iterate save_state --plan",
+          "warnings": [
+            "Keep Snapshot::KIND stable; version and migrate layout or state-hash changes. Retain authoritative RNG/tick state and test the declared save/load continuation policy.",
+            "Notice.ok reports whether the save completed; display Notice.detail when it fails. Save errors preserve the previous good file."
+          ],
+          "runtime": "Rendering-free custom simulation with devkit::Lifecycle"
+        },
+        {
+          "identifiers": [
+            "Lifecycle::quick_load",
+            "devkit::Lifecycle::quick_load"
+          ],
+          "summary": "Restore the engine-owned quick slot into the same Snapshot simulation; Lifecycle validates it, reports the result in Notice, and resets pending input on success.",
+          "signature": "pub fn quick_load<S: Snapshot>(&mut self, sim: &mut S) -> Notice",
+          "source": "src/viewer/devkit/lifecycle.rs",
+          "example": "let notice = lifecycle.quick_load(&mut sim);",
+          "verify": "python tools/be2.py check --iterate save_state --plan",
+          "warnings": [
+            "Keep Snapshot::KIND stable; version and migrate layout or state-hash changes. Retain authoritative RNG/tick state and test the declared save/load continuation policy.",
+            "Inspect Notice.ok/detail; a damaged primary can restore the previous good save. Reset game-owned presentation effects after a successful load."
+          ],
+          "runtime": "Rendering-free custom simulation with devkit::Lifecycle"
         }
       ]
     },
@@ -2805,7 +2867,9 @@
           "identifiers": [
             "AudioProject",
             "kit::AudioBank",
-            "AudioBank"
+            "AudioBank",
+            "AudioBank::load",
+            "kit::AudioBank::load"
           ],
           "when": [
             [

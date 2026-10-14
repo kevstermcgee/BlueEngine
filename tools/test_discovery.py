@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TASKS = (
     ('Make the player jump higher', ['movement']),
     ('Build an offline 2D game with enemies and scoring', ['two_dimensional']),
+    ('Build a stock declarative game', ['game_documents']),
     ('Build spatial 3D enemies with custom rules', ['custom_simulation']),
     ('Save and restore a custom simulation', ['save_state']),
     ('Create a distinctive HUD and original audio', ['client_kit', 'audio_authoring']),
@@ -46,11 +47,41 @@ class PublicDiscoveryTests(unittest.TestCase):
     def test_exact_identifiers_resolve_fields_and_qualified_public_apis(self):
         for query, feature in [('jump_height', 'movement'), ('ControllerProfile::jump_height', 'movement'),
                                ('two_d::GameLogic', 'two_dimensional'), ('NetGame', 'netplay'),
-                               ('devkit::Snapshot', 'save_state'), ('hud::text_outlined', 'client_kit')]:
+                               ('devkit::Snapshot', 'save_state'), ('hud::text_outlined', 'client_kit'),
+                               ('GameDocument', 'game_documents'),
+                               ('viewer::game::GameDocument', 'game_documents'),
+                               ('GameDocument::load', 'game_documents'),
+                               ('GameDocument::validate', 'game_documents'),
+                               ('AudioBank::load', 'audio_authoring'),
+                               ('kit::AudioBank::load', 'audio_authoring'),
+                               ('Lifecycle::quick_save', 'save_state'),
+                               ('devkit::Lifecycle::quick_save', 'save_state'),
+                               ('Lifecycle::quick_load', 'save_state'),
+                               ('devkit::Lifecycle::quick_load', 'save_state')]:
             packet = workflow.context(ROOT, query, level=1)
             self.assertEqual([m['id'] for m in packet['matches']], [feature])
             self.assertTrue(packet['confidence'].startswith('high'))
             self.assertIn('signature', packet['matches'][0]['answer'])
+
+    def test_stock_entry_and_exact_save_methods_expose_their_runtime_contracts(self):
+        stock = workflow.context(ROOT, 'Build a stock declarative game', level=1)['matches'][0]
+        self.assertEqual(stock['read_first'], ['docs/GAME_AUTHORING_ENTRY.md'])
+        self.assertIn('stock', stock['answer']['example'])
+        self.assertEqual(stock['answer']['runtime'], 'Stock GameDocument / authoritative fixed-step server')
+        self.assertIn('no scripting', ' '.join(stock['answer']['warnings']))
+        self.assertIn('visual/collision bounds must agree', ' '.join(stock['answer']['warnings']))
+        for method, signature in (
+                ('quick_save', 'pub fn quick_save<S: Snapshot>(&self, sim: &S, label: &str) -> Notice'),
+                ('quick_load', 'pub fn quick_load<S: Snapshot>(&mut self, sim: &mut S) -> Notice')):
+            packet = workflow.context(ROOT, f'Lifecycle::{method}', level=1)
+            answer = packet['matches'][0]['answer']
+            self.assertEqual(answer['source'], 'src/viewer/devkit/lifecycle.rs')
+            self.assertEqual(answer['signature'], signature)
+            self.assertIn(f'lifecycle.{method}', answer['example'])
+            self.assertEqual(answer['runtime'], 'Rendering-free custom simulation with devkit::Lifecycle')
+            self.assertIn('Notice.ok', ' '.join(answer['warnings']))
+            self.assertIn('Snapshot::KIND', ' '.join(answer['warnings']))
+            self.assertLessEqual(compact_bytes(packet), 3600)
 
     def test_compact_packets_keep_complete_required_api_and_network_warnings(self):
         for query, _ in TASKS:
@@ -122,6 +153,24 @@ class PublicDiscoveryTests(unittest.TestCase):
         self.assertIn('retired', ' '.join(hints))
         self.assertTrue(learn.validate_entry({**retired[0], 'scope': 'anything'}))
 
+    def test_repaired_scaffold_hints_preserve_history_and_stop_recommending_copies(self):
+        entries = {e['id']: e for e in (json.loads(line) for line in
+                   (ROOT / 'docs/learning/ledger.jsonl').read_text().splitlines())}
+        for entry_id in ('L-131', 'L-132'):
+            entry = entries[entry_id]
+            self.assertFalse(learn.validate_entry(entry))
+            self.assertEqual(entry['status'], 'promoted')
+            self.assertEqual(entry['ref'], '03c3ba8')
+        # The original friction remains evidence; only current guidance changes.
+        self.assertIn('omitted game.project.json', entries['L-131']['note'])
+        self.assertIn('could not discover', entries['L-132']['note'])
+        metadata = workflow.context(ROOT, 'custom-sim scaffold project metadata', level=1).get('learned', [])
+        tools = workflow.context(ROOT, 'custom-sim checker itest tool discovery', level=1).get('learned', [])
+        self.assertIn('solved: Custom-sim now emits metadata/shared tooling', ' '.join(metadata))
+        self.assertNotIn('game_project.py copied', ' '.join(metadata))
+        self.assertIn('solved: Pinned checks find itest/shared-target tools', ' '.join(tools))
+        self.assertIn('explicit --tools remains validated', ' '.join(tools))
+
     def test_low_confidence_remains_honest_and_suggests_refinement(self):
         packet = workflow.context(ROOT, 'zyxquantumunknown', level=1)
         self.assertEqual(packet['matches'], [])
@@ -136,6 +185,13 @@ class PublicDiscoveryTests(unittest.TestCase):
         self.assertIn('jump_height: 0.35', profile)
         snapshot = (ROOT / 'src/viewer/devkit/snapshot.rs').read_text()
         self.assertIn('fn restore(&mut self, state: Self::State) -> Result<(), String>', snapshot)
+        game = (ROOT / 'src/viewer/game.rs').read_text()
+        self.assertIn('pub fn load(path: &Path) -> Result<LoadedGame>', game)
+        self.assertIn('pub fn validate(&self, map: &MapDocument) -> Result<()>', game)
+        lifecycle = (ROOT / 'src/viewer/devkit/lifecycle.rs').read_text()
+        for method in ('quick_save', 'quick_load'):
+            answer = workflow.context(ROOT, f'Lifecycle::{method}', level=1)['matches'][0]['answer']
+            self.assertIn(answer['signature'], lifecycle)
         audio = (ROOT / 'src/viewer/kit/audio.rs').read_text()
         for part in ('pub async fn load(', 'muted: bool', 'sfx_volume: f32', 'music_volume: f32'):
             self.assertIn(part, audio)
