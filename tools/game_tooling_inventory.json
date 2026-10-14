@@ -24,6 +24,20 @@
       "cf702b5f2a54ea3cb17d3f875a48cc860c26921e532ea0727f82ed5378689376"
     ]
   },
+  "required_hooks": {
+    "ship": {
+      "c2181d6c2adc256b614a35bc53ac51c0ccece4f0cd5f1551800823800f4a0e93": {
+        "preparation": "prepare_soundtrack(project)",
+        "reference": "games/reverie/scripts/tooling_hooks.py",
+        "sha256": "afef55354be69f29b623b156b67ac9843f23bdb591c7f126d7e39a5f6c49cbaa"
+      },
+      "91f23a551a67668b4d0b946eb095668122b94e3b3049ef4e441d1e283ec10e4e": {
+        "preparation": "ensure_audio(project.root)",
+        "reference": "assets/games/leo/scripts/tooling_hooks.py",
+        "sha256": "2173e31c492af185d878d73d67a5ad129dbd9fe3fd05c37dc23036aa23bc6930"
+      }
+    }
+  },
   "projects": [
     {
       "game": "games/corkscrew-key",

@@ -134,7 +134,8 @@ def check(game, engine=ROOT):
 def migrate(game, engine=ROOT):
     """Only replace reviewed canonical copies, common historical drift, or launchers.
 
-    Unknown customization is rejected before writing any project file.
+    Unknown customization and unextracted historical preparation are rejected
+    before writing any project file.
     """
     for command in ('check', 'ship', 'dev', 'project'):
         destination = game / f'scripts/{command}.py'
@@ -148,8 +149,21 @@ def migrate(game, engine=ROOT):
         # project code is not silently overwritten by a synchronization command.
         import hashlib
         inventory = json.loads((engine / 'tools/game_tooling_inventory.json').read_text(encoding='utf-8'))
-        if hashlib.sha256(existing.encode('utf-8')).hexdigest() not in inventory['compatible'][command]:
+        digest = hashlib.sha256(existing.encode('utf-8')).hexdigest()
+        if digest not in inventory['compatible'][command]:
             raise ValueError(f'{destination}: unreviewed customization; extract an explicit hook before migration')
+        required = inventory.get('required_hooks', {}).get(command, {}).get(digest)
+        if required is not None:
+            hook = game / 'scripts/tooling_hooks.py'
+            hook_digest = (hashlib.sha256(hook.read_text(encoding='utf-8').encode('utf-8')).hexdigest()
+                           if hook.is_file() else None)
+            if hook_digest != required['sha256']:
+                raise ValueError(
+                    f'{destination}: migration would remove {required["preparation"]}; '
+                    'extract it into scripts/tooling_hooks.py:prepare_package before migration. '
+                    f'Reviewed hook: {engine / required["reference"]} '
+                    f'(SHA-256 {required["sha256"]}). Preserve helper scripts; '
+                    'review a different hook explicitly instead of overwriting it. No files changed.')
     scripts = game / 'scripts'
     scripts.mkdir(parents=True, exist_ok=True)
     payloads = {f'{command}.py': entry(command).encode('utf-8') for command in ('check', 'ship', 'dev', 'project')}

@@ -52,6 +52,14 @@ on migrated projects it refreshes compatible launchers. A stale bootstrap pin mu
 be upgraded through the engine command above. The inventory names all 13 migrated
 consumers and distinguishes historical drift from intentional audio preparation.
 
+Older Reverie and Leo shipping scripts contain preparation inside `ship.py`.
+Migration requires extracting that preparation into the matching reviewed
+`scripts/tooling_hooks.py` before replacing the script. Its diagnostic names the
+original call and reviewed hook to inspect. Missing or different hooks fail before
+any project file is written; migration never installs or overwrites game-owned
+code. Review a different extraction explicitly before updating the inventory.
+Already migrated projects may customize their hooks freely.
+
 Game-owned preparation belongs in `scripts/tooling_hooks.py`:
 
 ```python

@@ -1,5 +1,6 @@
 """Public project entry points, pinned distribution, safe migration and hooks."""
 import contextlib
+import hashlib
 import importlib.util
 import io
 import json
@@ -48,6 +49,66 @@ class SharedToolingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unreviewed customization'):
             tooling.migrate(self.game)
         self.assertEqual(before, {p.name: p.read_bytes() for p in (self.game / 'scripts').iterdir()})
+
+    def legacy_preparation_fixture(self):
+        """A bounded historical script with an inventoried, game-owned preparation call."""
+        engine = Path(self.scratch.name) / 'migration engine'
+        bootstrap = tooling.module_from(self.engine / 'templates/game_entry.py', 'be2_fixture_bootstrap')
+        for name in bootstrap.FILES:
+            destination = engine / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(self.engine / name, destination)
+        legacy = ('def prepare_soundtrack(project):\n    project.prepared.append("authored soundtrack")\n'
+                  'def cmd_package(project):\n    prepare_soundtrack(project)\n')
+        hook = 'def prepare_package(project):\n    project.prepared.append("authored soundtrack")\n'
+        digest = hashlib.sha256(legacy.encode('utf-8')).hexdigest()
+        inventory = {'compatible': {'ship': [digest]}, 'required_hooks': {'ship': {digest: {
+            'preparation': 'prepare_soundtrack(project)', 'reference': 'reviewed/tooling_hooks.py',
+            'sha256': hashlib.sha256(hook.encode('utf-8')).hexdigest()}}}}
+        (engine / 'reviewed').mkdir()
+        (engine / 'reviewed/tooling_hooks.py').write_text(hook, encoding='utf-8')
+        (engine / 'tools/game_tooling_inventory.json').write_text(json.dumps(inventory), encoding='utf-8')
+        (engine / 'PACKAGE-MANIFEST.json').write_text(json.dumps({'commit': 'historical-fixture'}), encoding='utf-8')
+        (self.game / 'scripts/ship.py').write_text(legacy, encoding='utf-8')
+        return engine, hook
+
+    def test_legacy_preparation_needs_reviewed_hook_before_any_writes(self):
+        engine, reviewed = self.legacy_preparation_fixture()
+        completed = self.game / 'dist/completed.txt'
+        completed.parent.mkdir()
+        completed.write_text('completed native package', encoding='utf-8')
+        hook = self.game / 'scripts/tooling_hooks.py'
+        for existing in (None, 'def prepare_package(project): pass\n'):
+            with self.subTest(existing_hook=existing):
+                if existing is not None:
+                    hook.write_text(existing, encoding='utf-8')
+                before = {p.relative_to(self.game): p.read_bytes() for p in self.game.rglob('*') if p.is_file()}
+                with self.assertRaisesRegex(ValueError, 'remove prepare_soundtrack.*extract it.*No files changed'):
+                    tooling.migrate(self.game, engine)
+                self.assertEqual(before, {p.relative_to(self.game): p.read_bytes()
+                                          for p in self.game.rglob('*') if p.is_file()})
+        hook.write_text(reviewed, encoding='utf-8')
+        tooling.migrate(self.game, engine)
+        tooling.check(self.game, engine)
+        self.assertEqual(hook.read_text(encoding='utf-8'), reviewed)
+        self.assertEqual(completed.read_text(encoding='utf-8'), 'completed native package')
+
+    def test_migrated_legacy_preparation_keeps_behavior_before_build(self):
+        engine, hook = self.legacy_preparation_fixture()
+        project = type('Project', (), {'root': self.game, 'identity': object(), 'prepared': []})()
+        legacy = tooling.module_from(self.game / 'scripts/ship.py', 'be2_historical_preparation')
+        legacy.cmd_package(project)
+        expected = project.prepared[:]
+        project.prepared.clear()
+        (self.game / 'scripts/tooling_hooks.py').write_bytes(hook.replace('\n', '\r\n').encode('utf-8'))
+        tooling.migrate(self.game, engine)
+        ship = runpy.run_path(str(self.game / 'scripts/ship.py'), run_name='be2_migrated_preparation')
+        implementation = sys.modules['be2_shared_ship']
+        with patch.object(implementation, 'require_icon'), patch.object(implementation, '_review_source', return_value=None), \
+                patch.object(implementation, 'cargo_build_release', side_effect=RuntimeError('stop before build')):
+            with self.assertRaisesRegex(RuntimeError, 'stop before build'):
+                ship['cmd_package'](project)
+        self.assertEqual(project.prepared, expected)
 
     def test_override_and_pin_fail_before_execution_or_output_replacement(self):
         tooling.migrate(self.game)
@@ -195,6 +256,15 @@ class SharedToolingTests(unittest.TestCase):
         for item in inventory['projects']:
             with self.subTest(game=item['game']):
                 tooling.check(self.engine / item['game'])
+
+    def test_historical_preparation_inventory_names_matching_reviewed_hooks(self):
+        inventory = json.loads((self.engine / 'tools/game_tooling_inventory.json').read_text())
+        for command, variants in inventory['required_hooks'].items():
+            for digest, required in variants.items():
+                with self.subTest(command=command, preparation=required['preparation']):
+                    self.assertIn(digest, inventory['compatible'][command])
+                    reviewed = (self.engine / required['reference']).read_text(encoding='utf-8')
+                    self.assertEqual(hashlib.sha256(reviewed.encode('utf-8')).hexdigest(), required['sha256'])
 
 
 if __name__ == '__main__':
