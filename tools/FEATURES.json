@@ -3203,6 +3203,6 @@
     "templates/game_review.py": "Bind authored native controls, camera and audio review observations to exact package, settings and artifacts.",
     "tools/test_game_installer.py": "Verify installer preparation, literal metadata, exact inventory and failed-build output preservation.",
     "tools/test_game_review.py": "Verify native-review staleness and distinguish physical observations from software capture evidence.",
-    "docs/NATIVE_DELIVERY.md": "Pinned native installer preparation and game-owned package-bound physical review receipts; platform limitations and exact commands."
+    "docs/NATIVE_DELIVERY.md": "Pinned native installers and game-owned package/device review; exact commands and platform limits."
   }
 }
