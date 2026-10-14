@@ -311,6 +311,19 @@ class AutomaticLoopTests(unittest.TestCase):
                 'files': ['docs/recipe.md'], 'checks': [], 'evidence': []}}):
             self.assertEqual(workflow.change_plan(ROOT, ['docs/recipe.md'])['scope'], 'full')
 
+    def test_shared_python_tools_execute_compatibility_tests_without_rust_rebuild(self):
+        for path in ('tools/game_tooling.py', 'tools/game_tooling_inventory.json',
+                     'templates/game_ship.py', 'templates/game_check.py',
+                     'templates/game_dev.py', 'templates/game_project.py'):
+            plan = workflow.change_plan(ROOT, [path])
+            self.assertEqual(plan['scope'], 'focused', path)
+            self.assertFalse(any(command[0] == 'cargo' for command in plan['commands']), path)
+            self.assertIn([sys.executable, '-m', 'unittest', 'tools.test_game_tooling'], plan['commands'])
+        embedded = workflow.change_plan(ROOT, ['templates/game_entry.py'])
+        self.assertEqual(embedded['scope'], 'focused')
+        self.assertTrue(embedded['requirements']['unit'])
+        self.assertTrue(any(command[:2] == ['cargo', 'test'] for command in embedded['commands']))
+
     def test_content_link_gate_reads_current_files_on_every_run(self):
         from tools.check_docs import broken_links
         with tempfile.TemporaryDirectory() as directory:

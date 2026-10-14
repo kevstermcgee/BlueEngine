@@ -182,6 +182,9 @@ ITERATION_GUIDES = frozenset({
     'docs/CUSTOM_SIM_CHEATSHEET.md', 'docs/GAME_QUICKSTART.md', 'docs/AUDIO.md',
     'docs/BROWSER_WORKFLOW.md', 'docs/GAME_AUTHORING_ENTRY.md',
 })
+# The bootstrap is embedded in newgame.rs. Maintained canonical Python tools are
+# loaded at runtime and deliberately absent so changing them does not rebuild Rust.
+COMPILED_TEMPLATE_INPUTS = frozenset({'templates/game_entry.py'})
 
 
 def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
@@ -230,6 +233,7 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
 
     native = any(p.startswith(('src/', 'tests/')) and p.endswith('.rs') for p in paths)
     native = native or any(p.startswith('templates/') and p.endswith(('.rs', '.tmpl')) for p in paths)
+    native = native or bool(set(paths) & COMPILED_TEMPLATE_INPUTS)
     guides = sorted(set(paths) & ITERATION_GUIDES)
     exercised_suites = suites if native else []
     if native:
