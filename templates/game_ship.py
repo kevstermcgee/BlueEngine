@@ -2061,16 +2061,32 @@ def cmd_package(project, no_build=False):
     hook = project.root / 'scripts/tooling_hooks.py'
     if hook.is_file():
         import importlib.util
-        spec = importlib.util.spec_from_file_location('be2_game_preparation', hook)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        prepare = getattr(module, 'prepare_package', None)
-        if not callable(prepare):
-            raise ConfigError(f'{hook}: define prepare_package(project) for game-owned preparation')
+        # runpy and programmatic callers do not add the game's scripts directory
+        # to sys.path. Keep its helper imports available through the preparation
+        # call, including lazy imports, then restore the caller's import context.
+        previous_path = sys.path[:]
+        module_name = 'be2_game_preparation_' + hashlib.sha256(str(hook.resolve()).encode('utf-8')).hexdigest()
+        absent = object()
+        previous_module = sys.modules.get(module_name, absent)
         try:
+            sys.path.insert(0, str(hook.parent))
+            spec = importlib.util.spec_from_file_location(module_name, hook)
+            module = importlib.util.module_from_spec(spec)
+            sys.modules[module_name] = module  # dataclasses resolve annotations here
+            spec.loader.exec_module(module)
+            prepare = getattr(module, 'prepare_package', None)
+            if not callable(prepare):
+                raise ConfigError('define prepare_package(project) for game-owned preparation')
             prepare(project)
         except Exception as error:
-            raise ShipError(f'{hook}: preparation failed: {error}; completed package outputs were preserved') from error
+            raise ShipError(f'{hook}: preparation failed: {type(error).__name__}: {error}; '
+                            'completed package outputs were preserved') from error
+        finally:
+            sys.path[:] = previous_path
+            if previous_module is absent:
+                sys.modules.pop(module_name, None)
+            else:
+                sys.modules[module_name] = previous_module
     built = locate_built_exe(project) if no_build else cargo_build_release(project)
     plan = package_plan(project, built)
     # dist/ also holds what the game writes beside its exe (saves, settings, records, logs). Only the files

@@ -5,6 +5,7 @@ import io
 import json
 import os
 from pathlib import Path
+import runpy
 import shutil
 import subprocess
 import sys
@@ -113,6 +114,53 @@ class SharedToolingTests(unittest.TestCase):
             with self.assertRaisesRegex(ship.ShipError, 'render failed.*preserved'):
                 ship.cmd_package(project)
             build.assert_not_called()
+
+    def test_hook_helpers_and_dataclasses_work_from_direct_and_runpy_callers(self):
+        helper_name = f'be2_hook_helper_{id(self):x}'
+        self.addCleanup(sys.modules.pop, helper_name, None)
+        (self.game / f'scripts/{helper_name}.py').write_text(
+            'def prepare(project, value):\n    project.prepared = value\n', encoding='utf-8')
+        (self.game / 'scripts/tooling_hooks.py').write_text(
+            'from __future__ import annotations\nfrom dataclasses import dataclass\n'
+            '@dataclass\nclass Recipe:\n    value: int = 7\n'
+            f'def prepare_package(project):\n    from {helper_name} import prepare\n'
+            '    prepare(project, Recipe().value)\n', encoding='utf-8')
+        tooling.migrate(self.game)
+        original_path = sys.path[:]
+        for caller in ('direct', 'runpy'):
+            with self.subTest(caller=caller):
+                sys.modules.pop(helper_name, None)
+                if caller == 'runpy':
+                    runpy.run_path(str(self.game / 'scripts/ship.py'), run_name='be2_review_runpy')
+                    ship = sys.modules['be2_shared_ship']
+                else:
+                    ship = tooling.module_from(self.engine / 'templates/game_ship.py', 'be2_context_test_ship')
+                registered = {name: value for name, value in sys.modules.items()
+                              if name.startswith('be2_game_preparation_')}
+                project = type('Project', (), {'root': self.game, 'identity': object()})()
+                with patch.object(ship, 'require_icon'), patch.object(ship, 'cargo_build_release',
+                                                                     side_effect=RuntimeError('stop before build')):
+                    with self.assertRaisesRegex(RuntimeError, 'stop before build'):
+                        ship.cmd_package(project)
+                self.assertEqual(project.prepared, 7)
+                self.assertEqual(sys.path, original_path)
+                self.assertEqual({name: value for name, value in sys.modules.items()
+                                  if name.startswith('be2_game_preparation_')}, registered)
+
+    def test_hook_import_failure_is_actionable_and_restores_caller_context(self):
+        ship = tooling.module_from(self.engine / 'templates/game_ship.py', 'be2_import_error_ship')
+        (self.game / 'scripts/tooling_hooks.py').write_text('import be2_missing_hook_dependency\n', encoding='utf-8')
+        preserved = self.game / 'dist/completed.txt'
+        preserved.parent.mkdir()
+        preserved.write_text('completed package', encoding='utf-8')
+        project = type('Project', (), {'root': self.game, 'identity': object()})()
+        original_path = sys.path[:]
+        with patch.object(ship, 'require_icon'), patch.object(ship, 'cargo_build_release') as build:
+            with self.assertRaisesRegex(ship.ShipError, 'ModuleNotFoundError.*be2_missing_hook_dependency.*preserved'):
+                ship.cmd_package(project)
+            build.assert_not_called()
+        self.assertEqual(preserved.read_text(encoding='utf-8'), 'completed package')
+        self.assertEqual(sys.path, original_path)
 
     def test_packaged_binary_requires_verified_current_inputs(self):
         import hashlib
