@@ -163,8 +163,20 @@ class InstallerTests(unittest.TestCase):
     def compiler(self):
         path = self.root / 'Inno Setup 星河' / 'ISCC.exe'
         path.parent.mkdir()
-        path.write_bytes(b'fake compiler, not execution evidence')
+        path.write_bytes(pe(0x14c, 0x10b))  # Synthetic PE; subprocess execution remains mocked.
         return path
+
+    def test_batch_or_script_compiler_overrides_fail_before_staging_or_processes(self):
+        prior = installer.prepare(self.project, ship)
+        prior_script = Path(prior['script']).read_bytes()
+        for name, content in (('ISCC.cmd', b'@echo dangerous wrapper'), ('ISCC.bat', pe(0x14c, 0x10b)), ('ISCC.exe', b'@echo renamed wrapper')):
+            compiler = self.root / name
+            compiler.write_bytes(content)
+            with self.subTest(name=name), mock.patch.object(ship, 'host_platform', return_value='windows'), mock.patch.object(ship, 'run_process', side_effect=AssertionError('must not invoke a shell/process')):
+                with self.assertRaisesRegex(ship.ShipError, 'native Windows'):
+                    installer.build(self.project, ship, compiler)
+            self.assertEqual(Path(prior['script']).read_bytes(), prior_script)
+            self.assertEqual(len(list((self.root / 'installers').glob('prepared-*'))), 1)
 
     def compiled(self, command, **options):
         self.assertIsInstance(command, list)

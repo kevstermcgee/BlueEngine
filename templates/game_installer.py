@@ -246,9 +246,18 @@ def _compiler_logs(stage, stdout, stderr):
 def build(project, ship, iscc):
     if ship.host_platform() != 'windows':
         raise ship.ShipError('installer build requires Windows and Inno Setup 6; installer prepare can run on Linux')
-    compiler = Path(iscc).expanduser().resolve()
+    selected = Path(iscc).expanduser()
+    if selected.suffix.casefold() != '.exe':
+        raise ship.ShipError('ISCC override must be a native Windows .exe, not a .bat/.cmd wrapper; pass the explicit Inno Setup compiler path')
+    compiler = selected.resolve()
     if not compiler.is_file() or compiler.is_symlink():
         raise ship.ShipError(f'{compiler}: ISCC.exe is missing; pass --iscc with the explicit Inno Setup 6 compiler path')
+    # Windows may invoke cmd.exe implicitly for batch files even with an argv
+    # list. Require a native image before constructing any game/stage arguments.
+    try:
+        _pe_executable(compiler, ship, installer=True)
+    except ship.ShipError as error:
+        raise ship.ShipError(f'{compiler}: ISCC override must be a native Windows x86/x64 PE .exe ({error})') from error
     compiler_hash = ship.sha256_file(compiler)
     report = prepare(project, ship)
     stage = Path(report['stage'])
