@@ -239,6 +239,14 @@ jobs:
           finally:
               if not set_directory(None):
                   raise ctypes.WinError(ctypes.get_last_error())
+      - name: Workshop Windows x64 installer
+        if: runner.os == 'Windows' && matrix.game == 'automation-workshop'
+        shell: pwsh
+        run: |
+          $compiler = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $compiler)) { throw 'Inno Setup compiler missing; Windows x64 installer gate is unverified.' }
+          python games/automation-workshop/scripts/ship.py installer build --iscc $compiler
+          if ($LASTEXITCODE -ne 0) { throw 'Workshop Windows x64 installer build failed; completed packages retained.' }
       - name: Linux package and isolated smoke
         if: runner.os == 'Linux'
         shell: bash
