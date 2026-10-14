@@ -256,6 +256,49 @@ class ReviewTests(unittest.TestCase):
         self.assertFalse(review.status(self.project, ship)['manual'])
         self.assertEqual(review.status(self.project, ship)['state'], 'stale')
 
+    def assert_invalid_receipt_preserved(self, value, diagnostic):
+        path = self.root / review.RECEIPT
+        # Deliberate formatting verifies rejection preserves the exact input bytes.
+        path.write_text(json.dumps(value, indent=3) + '\n')
+        before = path.read_bytes()
+        observations = self.root / '.blue-check/rejected-observations.json'
+        observations.write_text(json.dumps({'schema_version': 1, 'notes': 'Retain these notes'}))
+        for action in (lambda: review.status(self.project, ship),
+                       lambda: review.record(self.project, ship, observations)):
+            with self.assertRaisesRegex(review.ReviewError, diagnostic):
+                action()
+            self.assertEqual(path.read_bytes(), before)
+
+    def test_nonobject_records_and_observations_are_actionable_and_preserved(self):
+        self.prepare()
+        saved = json.loads((self.root / review.RECEIPT).read_text())
+        for records in ([0], [{'observations': 42}], [{'observations': []}]):
+            with self.subTest(records=records):
+                self.assert_invalid_receipt_preserved({**saved, 'records': records}, 'invalid receipt record 1')
+
+    def test_malformed_declared_checks_are_actionable_and_preserved(self):
+        self.prepare()
+        saved = json.loads((self.root / review.RECEIPT).read_text())
+        first = saved['checks'][0]
+        for checks in ([None], [first, first], [{**first, 'id': 'Not stable!'}],
+                       [{**first, 'area': []}], [{**first, 'area': 'unknown'}],
+                       [{**first, 'instructions': ' '}], []):
+            with self.subTest(checks=checks):
+                self.assert_invalid_receipt_preserved({**saved, 'checks': checks}, 'invalid receipt checklist')
+
+    def test_malformed_observed_environments_are_actionable_and_preserved(self):
+        self.prepare()
+        self.record(self.observations())
+        saved = json.loads((self.root / review.RECEIPT).read_text())
+        for environment in (42, None, [], 'Windows'):
+            value = copy.deepcopy(saved)
+            value['records'][0]['observed_environment'] = environment
+            with self.subTest(environment=environment):
+                self.assert_invalid_receipt_preserved(value, 'observed_environment must be JSON objects')
+        value = copy.deepcopy(saved)
+        del value['records'][0]['observed_environment']
+        self.assert_invalid_receipt_preserved(value, 'observed_environment must be JSON objects')
+
     def packaged(self, *, no_build=False, during_build=None):
         built = self.base / 'build/review-fixture.exe'
         built.parent.mkdir(exist_ok=True)

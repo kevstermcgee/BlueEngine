@@ -128,19 +128,24 @@ def source_binding(project, ship):
                       'engine': list(ENGINE_INPUTS), 'excluded_game_outputs': sorted(OUTPUTS)}}
 
 
-def _spec(path):
-    spec = _read(path)
-    checks = spec.get('checks')
+def _checks(checks, path):
     if not isinstance(checks, list) or not checks:
         raise ReviewError(f'{path}: declare a nonempty checks list with game-owned id, area and instructions')
     identifiers = set()
     for check in checks:
         if (not isinstance(check, dict) or not isinstance(check.get('id'), str)
                 or not re.fullmatch(r'[a-z][a-z0-9_-]{0,63}', check['id'])
-                or check['id'] in identifiers or check.get('area') not in AREAS
+                or check['id'] in identifiers or not isinstance(check.get('area'), str)
+                or check['area'] not in AREAS
                 or not _text(check.get('instructions'))):
             raise ReviewError(f'{path}: each check needs a unique stable id, a supported area and nonempty instructions')
         identifiers.add(check['id'])
+    return checks
+
+
+def _spec(path):
+    spec = _read(path)
+    _checks(spec.get('checks'), path)
     return spec
 
 
@@ -189,13 +194,17 @@ def _load(project, receipt):
     path = _receipt_path(project, receipt)
     data = _read(path)
     if (not isinstance(data.get('binding'), dict) or not isinstance(data.get('records'), list)
-            or data.get('binding_sha256') != _json_hash(data['binding'])
-            or not isinstance(data.get('checks'), list) or not data['checks']
-            or any(not isinstance(check, dict) or not isinstance(check.get('id'), str)
-                   for check in data['checks'])
-            or any(not isinstance(record, dict) or not isinstance(record.get('observations'), dict)
-                   for record in data['records'])):
+            or data.get('binding_sha256') != _json_hash(data['binding'])):
         raise ReviewError(f'{path}: invalid receipt; preserve it and prepare a new receipt')
+    try:
+        _checks(data.get('checks'), path)
+    except ReviewError as error:
+        raise ReviewError(f'{error}; invalid receipt checklist, preserve it and prepare a new receipt') from error
+    for number, record in enumerate(data['records'], 1):
+        if (not isinstance(record, dict) or not isinstance(record.get('observations'), dict)
+                or not isinstance(record.get('observed_environment'), dict)):
+            raise ReviewError(f'{path}: invalid receipt record {number}; observations and observed_environment '
+                              'must be JSON objects; preserve it and prepare a new receipt')
     return path, data
 
 
