@@ -141,8 +141,8 @@ fn append_only_content_update_migrates_exact_source_without_engine_relaxation() 
         &std::fs::read_to_string(concat!(env!("CARGO_MANIFEST_DIR"), "/assets/workshop.json")).unwrap(),
     )
     .unwrap();
-    document["upgrades"].as_array_mut().unwrap().push(serde_json::json!({"id":"workshop:wire-tools","label":"Wire tools","cost":[["workshop:plate",1]],"duration_divisor":1}));
-    document["recipes"].as_array_mut().unwrap().push(serde_json::json!({"id":"workshop:draw-wire","label":"Draw wire","duration_ticks":5,"inputs":[["workshop:plate",1]],"outputs":[["workshop:wire",2]],"required_upgrade":"workshop:wire-tools"}));
+    document["upgrades"].as_array_mut().unwrap().push(serde_json::json!({"id":"workshop:fixture-wire-tools","label":"Wire tools","cost":[["workshop:plate",1]],"duration_divisor":1}));
+    document["recipes"].as_array_mut().unwrap().push(serde_json::json!({"id":"workshop:fixture-draw-wire","label":"Draw wire","duration_ticks":5,"inputs":[["workshop:plate",1]],"outputs":[["workshop:wire",2]],"required_upgrade":"workshop:fixture-wire-tools"}));
     let defs = Definitions::from_json(&document.to_string(), "extended").unwrap();
     let mut extended = Workshop::new(defs, 2).unwrap();
     assert!(snapshot::restore(&mut extended, &bytes).is_err());

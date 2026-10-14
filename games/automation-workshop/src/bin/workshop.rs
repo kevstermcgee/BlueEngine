@@ -213,6 +213,6 @@ fn probe() -> Result<serde_json::Value, String> {
         }
     }
     Ok(
-        serde_json::json!({"authority":"same Workshop::step as offline and custom netplay","profile":if cfg!(debug_assertions){"debug assertions enabled"}else{"release"},"budgets":{"machines":1024,"jobs_per_machine":2,"commands_per_tick":32,"save_bytes":MAX_STATE_BYTES,"p99_tick_us":TICK_BUDGET_US},"allocation_measurement":"System allocator requested sizes including reallocations; excludes allocator metadata and GPU; RSS is Linux process resident size","capacity_claim":false,"results":results}),
+        serde_json::json!({"authority":"same Workshop::step as offline and custom netplay","runtime":"offline load ladder; online sizes are encoder-only diagnostics, with no network sends or supported-capacity claim","profile":if cfg!(debug_assertions){"debug assertions enabled"}else{"release"},"budgets":{"machines":1024,"jobs_per_machine":2,"commands_per_tick":32,"save_bytes":MAX_STATE_BYTES,"p99_tick_us":TICK_BUDGET_US},"allocation_measurement":"System allocator requested sizes including reallocations; excludes allocator metadata and GPU; RSS is Linux process resident size","capacity_claim":false,"results":results}),
     )
 }
