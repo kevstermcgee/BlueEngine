@@ -45,7 +45,7 @@ class InstallerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='installer test 星河 ')
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         (self.root / 'scripts').mkdir()
         (self.root / 'assets').mkdir()
         (self.root / 'Cargo.toml').write_text('[package]\nname = "distinct-game"\nversion = "0.1.0"\n', encoding='utf-8')
