@@ -1,0 +1,6 @@
+/target/
+/.blue-check/
+/dist/
+/assets/audio/
+/installers/
+/native-release-proof.json

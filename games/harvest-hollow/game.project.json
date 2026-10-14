@@ -1,0 +1,21 @@
+{
+  "complexity": "medium",
+  "description": "A cozy farm to make your own: plant, water, harvest, clear trees and rocks, and build useful improvements.",
+  "id": "harvest-hollow",
+  "input": [
+    "keyboard",
+    "mouse"
+  ],
+  "mobile_controls": {
+    "action_label": null,
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 20,
+  "targets": [
+    "windows"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "title": "Harvest Hollow",
+  "tagline": "A little land. A slower life. Grow your own kind of happy.",
+  "controls": "WASD move; click walk/work; E work; 1-7 tools; Tab crops; I farm drawer; K save; L load; Esc pause; N music; M sound",
+  "engine_revision": "cb19b58e5c95",
+  "package": [
+    "assets/audio",
+    "README.md",
+    "assets/audio-source/README.txt"
+  ]
+}
