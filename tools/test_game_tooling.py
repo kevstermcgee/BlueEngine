@@ -102,6 +102,24 @@ class SharedToolingTests(unittest.TestCase):
                 ship.cmd_package(project)
             build.assert_not_called()
 
+    def test_packaged_binary_requires_verified_current_inputs(self):
+        import hashlib
+        engine = Path(self.scratch.name) / 'packaged engine'
+        binary = engine / 'bin' / ('be2-tools.exe' if os.name == 'nt' else 'be2-tools')
+        binary.parent.mkdir(parents=True)
+        binary.write_bytes(b'packaged native tool')
+        source = engine / 'Cargo.toml'
+        source.write_bytes(b'package inputs')
+        records = {'be2/' + str(p.relative_to(engine)).replace('\\', '/'):
+                   hashlib.sha256(p.read_bytes()).hexdigest() for p in (binary, source)}
+        (engine / 'PACKAGE-MANIFEST.json').write_text(json.dumps({'format': 1, 'sha256': records}))
+        with patch.object(tooling.subprocess, 'run') as build:
+            self.assertEqual(tooling.fresh_tools(engine), str(binary))
+            build.assert_not_called()
+            source.write_bytes(b'changed source')
+            with self.assertRaisesRegex(ValueError, 'Packaged tooling input changed'):
+                tooling.fresh_tools(engine)
+
     def test_windows_process_paths_are_data_not_powershell_source(self):
         dev = tooling.module_from(self.engine / 'templates/game_dev.py', 'be2_dev_test')
         exe = self.game / "name'$(anything).exe"
