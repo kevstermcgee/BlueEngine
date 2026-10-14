@@ -166,7 +166,11 @@ fn draw_workshop(sim: &Workshop, choice: &mut Selection, interactive: bool, stat
     let (mx, my) = mouse_position();
     let mouse = vec2(mx * WIDTH / screen_width(), my * HEIGHT / screen_height());
     let clicked = interactive && is_mouse_button_pressed(MouseButton::Left);
-    set_camera(&Camera2D::from_display_rect(Rect::new(0., 0., WIDTH, HEIGHT)));
+    set_camera(&Camera2D {
+        target: vec2(WIDTH / 2., HEIGHT / 2.),
+        zoom: vec2(2. / WIDTH, 2. / HEIGHT),
+        ..Default::default()
+    });
     clear_background(PAPER);
     draw_rectangle(0., 0., WIDTH, 110., INK);
     text("THE LITTLE AUTOMATION WORKSHOP", 24., 44., 30., PAPER);
@@ -207,7 +211,7 @@ fn draw_workshop(sim: &Workshop, choice: &mut Selection, interactive: bool, stat
     if button("Deliver 1", Rect::new(174., 616., 138., 34.), item.is_some(), mouse, clicked) {
         commands.push(Command::Deliver { item: item.unwrap(), amount: 1 });
     }
-    text("Source/sink permission is game-owned.", 24., 681., 16., INK);
+    text("Gather ore/coal; deliver to free space.", 24., 681., 16., INK);
 
     let recipe = selected(&sim.definitions.recipes, choice.recipe);
     let upgrade = selected(&sim.definitions.upgrades, choice.upgrade);
@@ -453,7 +457,7 @@ async fn main() {
             }
             sim.step(&intentions);
             if let Some(outcome) = sim.outcomes.last() {
-                status = outcome.detail.clone();
+                status = if outcome.ok { "Action accepted.".into() } else { outcome.detail.clone() };
             }
         }
         pending.extend(draw_workshop(&sim, &mut choice, accepting && life.script().is_none(), &status));
