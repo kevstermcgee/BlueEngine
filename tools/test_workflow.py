@@ -463,6 +463,22 @@ class AutomaticLoopTests(unittest.TestCase):
                 self.assertTrue(any(path == source or path.startswith(source + '/') for source in sources),
                                 'Cargo parses declared targets even when only selected binaries build')
 
+    def test_container_build_selects_required_binary_features(self):
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
+        builds = [shlex.split(line)[1:] for line in (ROOT / 'Dockerfile').read_text().splitlines()
+                  if line.startswith('RUN cargo build ')]
+        self.assertTrue(builds)
+        targets = {target['name']: target for target in manifest['bin']}
+        for command in builds:
+            self.assertIn('--no-default-features', command)
+            selected = set(command[command.index('--features') + 1].split(','))
+            for index, word in enumerate(command):
+                if word == '--bin':
+                    name = command[index + 1]
+                    self.assertTrue(set(targets[name].get('required-features', [])) <= selected,
+                                    f'Container binary {name} is missing its required features')
+
     def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertIn('run: python tools/be2.py check', ci)
