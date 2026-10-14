@@ -28,20 +28,14 @@ fn main() {
     {
         return;
     }
-    let manifest =
-        PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"));
+    let manifest = PathBuf::from(env::var("CARGO_MANIFEST_DIR").expect("cargo sets CARGO_MANIFEST_DIR"));
     let icon = manifest.join(ICON);
     if !icon.is_file() {
-        println!(
-            "cargo:warning={} is missing: the exe will have no embedded icon",
-            icon.display()
-        );
+        println!("cargo:warning={} is missing: the exe will have no embedded icon", icon.display());
         return;
     }
     let Some(rc) = find_rc() else {
-        println!(
-            "cargo:warning=rc.exe (Windows SDK) not found: the exe will have no embedded icon"
-        );
+        println!("cargo:warning=rc.exe (Windows SDK) not found: the exe will have no embedded icon");
         return;
     };
     let out = PathBuf::from(env::var("OUT_DIR").expect("cargo sets OUT_DIR"));
@@ -54,12 +48,7 @@ fn main() {
         println!("cargo:warning=could not write {}: {e}", rc_file.display());
         return;
     }
-    match Command::new(&rc)
-        .args(["/nologo", "/fo"])
-        .arg(&res_file)
-        .arg(&rc_file)
-        .output()
-    {
+    match Command::new(&rc).args(["/nologo", "/fo"]).arg(&res_file).arg(&rc_file).output() {
         Ok(o) if o.status.success() => println!("cargo:rustc-link-arg-bins={}", res_file.display()),
         Ok(o) => println!(
             "cargo:warning=rc.exe failed ({}): {}{}",
@@ -86,32 +75,21 @@ fn identity_text(manifest: &Path) -> String {
 fn resource_script(icon: &Path, identity: &str) -> String {
     let package = |name: &str| env::var(name).unwrap_or_default();
     let number = |name: &str| package(name).parse::<u16>().unwrap_or(0);
-    let (major, minor, patch) = (
-        number("CARGO_PKG_VERSION_MAJOR"),
-        number("CARGO_PKG_VERSION_MINOR"),
-        number("CARGO_PKG_VERSION_PATCH"),
-    );
+    let (major, minor, patch) =
+        (number("CARGO_PKG_VERSION_MAJOR"), number("CARGO_PKG_VERSION_MINOR"), number("CARGO_PKG_VERSION_PATCH"));
     let version = match package("CARGO_PKG_VERSION") {
         v if v.is_empty() => format!("{major}.{minor}.{patch}"),
         v => v,
     };
-    let title = json_string(identity, "title")
-        .filter(|t| !t.trim().is_empty())
-        .unwrap_or_else(|| package("CARGO_PKG_NAME"));
-    let tagline =
-        json_string(identity, "tagline").unwrap_or_else(|| package("CARGO_PKG_DESCRIPTION"));
-    let exe = json_string(identity, "exe")
-        .filter(|e| !e.trim().is_empty())
-        .unwrap_or_else(|| package("CARGO_PKG_NAME"));
+    let title =
+        json_string(identity, "title").filter(|t| !t.trim().is_empty()).unwrap_or_else(|| package("CARGO_PKG_NAME"));
+    let tagline = json_string(identity, "tagline").unwrap_or_else(|| package("CARGO_PKG_DESCRIPTION"));
+    let exe =
+        json_string(identity, "exe").filter(|e| !e.trim().is_empty()).unwrap_or_else(|| package("CARGO_PKG_NAME"));
     let tagline: String = tagline.chars().take(500).collect();
     // rc.exe reads backslashes in strings as escapes; forward slashes are fine on Windows.
     let icon = rc_escape(&icon.display().to_string().replace('\\', "/"));
-    let (title, tagline, exe, version) = (
-        rc_escape(&title),
-        rc_escape(&tagline),
-        rc_escape(&exe),
-        rc_escape(&version),
-    );
+    let (title, tagline, exe, version) = (rc_escape(&title), rc_escape(&tagline), rc_escape(&exe), rc_escape(&version));
     format!(
         r#"1 ICON "{icon}"
 
@@ -179,11 +157,7 @@ fn json_string(text: &str, wanted: &str) -> Option<String> {
                     continue; // it was a value that happens to equal the key name
                 }
                 skip_space(&mut chars);
-                return if chars.next() == Some('"') {
-                    json_read_string(&mut chars)
-                } else {
-                    None
-                };
+                return if chars.next() == Some('"') { json_read_string(&mut chars) } else { None };
             }
             _ => {}
         }
@@ -248,11 +222,9 @@ fn find_rc() -> Option<PathBuf> {
     if let Some(rc) = env::var_os("RC").map(PathBuf::from).filter(|p| p.is_file()) {
         return Some(rc);
     }
-    if let Some(found) = env::var_os("PATH").and_then(|paths| {
-        env::split_paths(&paths)
-            .map(|d| d.join("rc.exe"))
-            .find(|p| p.is_file())
-    }) {
+    if let Some(found) =
+        env::var_os("PATH").and_then(|paths| env::split_paths(&paths).map(|d| d.join("rc.exe")).find(|p| p.is_file()))
+    {
         return Some(found);
     }
     // The Windows SDK installs one folder per version: Windows Kits\10\bin\10.0.26100.0\x64\rc.exe.
@@ -261,18 +233,9 @@ fn find_rc() -> Option<PathBuf> {
         Ok("x86") => "x86",
         _ => "x64",
     };
-    ["ProgramFiles(x86)", "ProgramFiles"]
-        .iter()
-        .filter_map(env::var_os)
-        .find_map(|program_files| {
-            newest_sdk_rc(
-                &PathBuf::from(program_files)
-                    .join("Windows Kits")
-                    .join("10")
-                    .join("bin"),
-                arch,
-            )
-        })
+    ["ProgramFiles(x86)", "ProgramFiles"].iter().filter_map(env::var_os).find_map(|program_files| {
+        newest_sdk_rc(&PathBuf::from(program_files).join("Windows Kits").join("10").join("bin"), arch)
+    })
 }
 
 fn newest_sdk_rc(bin: &Path, arch: &str) -> Option<PathBuf> {
@@ -282,16 +245,8 @@ fn newest_sdk_rc(bin: &Path, arch: &str) -> Option<PathBuf> {
         .map(|e| e.path())
         .filter(|p| p.is_dir())
         .map(|p| {
-            let name = p
-                .file_name()
-                .map(|n| n.to_string_lossy().into_owned())
-                .unwrap_or_default();
-            (
-                name.split('.')
-                    .filter_map(|part| part.parse().ok())
-                    .collect(),
-                p,
-            )
+            let name = p.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_default();
+            (name.split('.').filter_map(|part| part.parse().ok()).collect(), p)
         })
         .collect();
     // Compare version folders numerically (10.0.9200.0 is older than 10.0.26100.0); newest first.
@@ -310,35 +265,24 @@ mod tests {
 
     #[test]
     fn json_string_reads_top_level_keys_only() {
-        let text = r#"{"list": ["title", {"title": "nested"}], "title": "Real \"Title\" \\ \u00e9 \ud83d\ude00", "n": 3}"#;
-        assert_eq!(
-            json_string(text, "title").as_deref(),
-            Some("Real \"Title\" \\ \u{e9} \u{1F600}")
-        );
+        let text =
+            r#"{"list": ["title", {"title": "nested"}], "title": "Real \"Title\" \\ \u00e9 \ud83d\ude00", "n": 3}"#;
+        assert_eq!(json_string(text, "title").as_deref(), Some("Real \"Title\" \\ \u{e9} \u{1F600}"));
         assert_eq!(json_string(text, "n"), None);
         assert_eq!(json_string(text, "missing"), None);
-        assert_eq!(
-            json_string(r#"{"a": "title", "title": "second"}"#, "title").as_deref(),
-            Some("second")
-        );
+        assert_eq!(json_string(r#"{"a": "title", "title": "second"}"#, "title").as_deref(), Some("second"));
     }
 
     #[test]
     fn json_string_survives_broken_input() {
         assert_eq!(json_string("", "title"), None);
         assert_eq!(json_string(r#"{"title": "unterminated"#, "title"), None);
-        assert_eq!(
-            json_string(r#"{"title": "\ud83d alone"}"#, "title").as_deref(),
-            Some("\u{FFFD} alone")
-        );
+        assert_eq!(json_string(r#"{"title": "\ud83d alone"}"#, "title").as_deref(), Some("\u{FFFD} alone"));
         assert_eq!(json_string(r#"{"title": "\u12"}"#, "title"), None);
     }
 
     #[test]
     fn rc_strings_double_quotes_and_backslashes() {
-        assert_eq!(
-            rc_escape("say \"hi\" \\ there\n"),
-            "say \"\"hi\"\" \\\\ there "
-        );
+        assert_eq!(rc_escape("say \"hi\" \\ there\n"), "say \"\"hi\"\" \\\\ there ");
     }
 }
