@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {
+      "id": "paddle-input",
+      "area": "controls",
+      "instructions": "Move the paddle left and right with the mouse, keyboard arrows and a mapped controller stick. Confirm the selected device actually reaches gameplay; scripted verification is separate evidence."
+    },
+    {
+      "id": "save-and-restart",
+      "area": "gameplay",
+      "instructions": "Use K to save, advance play, then L to restore the saved ball, paddle and cleared-band state. After a loss, use R to restart. Observe the actual native keys."
+    },
+    {
+      "id": "flat-camera",
+      "area": "camera",
+      "instructions": "Keep the existing fixed 2D view. Resize the window and confirm the paddle, pink ball and six glass bands remain visible at their correct relative positions without introducing a perspective camera."
+    },
+    {
+      "id": "glass-hud",
+      "area": "ui",
+      "instructions": "Check that Glass cleared N/6 stays readable above the teal/gold bands and agrees with bands removed during play. Inspect the real window at a small and a large size."
+    },
+    {
+      "id": "impact-sound",
+      "area": "audio",
+      "instructions": "With sound enabled and a physical output selected, hear the existing paddle/band impact cue. Toggle M and confirm the sound setting works. No background music or new soundtrack is required. Muted capture/null PCM counters do not verify audibility."
+    }
+  ]
+}
