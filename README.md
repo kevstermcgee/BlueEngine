@@ -27,7 +27,7 @@ character skins alongside the original content. See the [sandbox guide](assets/g
 - Asset discovery: `python tools/assets.py search "desk lamp"`; see the [asset library contract](assets/README.md).
 - Native discovery: `be2-tools describe`, `be2-tools search multiplayer`, `be2-tools catalog`. Inside an engine checkout, before
   any build, use `python tools/be2.py context "FEATURE" --compact` (query up to 100 characters), then `python tools/be2.py check --changed`.
-- Rust prototypes: [compact quickstart](docs/AI_QUICKSTART.md), `cargo run --locked --no-default-features --example prototype`.
+- Rust prototypes: [compact quickstart](docs/AI_QUICKSTART.md), `cargo run --locked --no-default-features --features physics --example prototype`.
 - A game: `python3 tools/be2.py start "<game prompt>" --compact` selects the starter. `be2-tools new-game NAME DIR` defaults to **portable**, with Rust rules. Pass `stock` explicitly for declarative `GameDocument` rules. Offline 2D enemies use `two-d`; spatial 3D enemies/AI/physics and custom multiplayer use `custom-sim`. See [the starter table and completion gates](docs/GAME_QUICKSTART.md).
 - Custom presentation or your own simulation: [visible-client boundary and kit](docs/CUSTOM_CLIENT.md), `cargo run --locked --example custom_client`.
 - Save states (F5/F9, autosave, a server that resumes, saves for your own simulation): [save-state contract](docs/SAVE_STATE.md), `be2-tools save-info FILE`.
@@ -53,12 +53,12 @@ Cargo package/binaries remain `be2`; the library remains `vesper3d` for compatib
 
 ```sh
 cargo run --locked --bin be2
-cargo run --locked --no-default-features --bin be2-headless -- --server 127.0.0.1:4000 --transport development
+cargo run --locked --no-default-features --features physics,networking --bin be2-headless -- --server 127.0.0.1:4000 --transport development
 cargo run --locked --bin be2 -- --connect 127.0.0.1:4000 --transport development
-cargo run --locked --no-default-features --bin be2-headless -- --server 127.0.0.1:4000 --auth-key "LONG_RANDOM_SECRET"
+cargo run --locked --no-default-features --features physics,networking --bin be2-headless -- --server 127.0.0.1:4000 --auth-key "LONG_RANDOM_SECRET"
 cargo run --locked --bin be2 -- --connect 127.0.0.1:4000 --auth-key "LONG_RANDOM_SECRET"
-cargo run --locked --no-default-features --bin be2-tools -- describe
-cargo run --locked --no-default-features --bin be2-tools -- export-lab lab.json
+cargo run --locked --no-default-features --features physics,networking --bin be2-tools -- describe
+cargo run --locked --no-default-features --features physics,networking --bin be2-tools -- export-lab lab.json
 cargo run --locked --bin be2 -- --map lab.json
 ```
 

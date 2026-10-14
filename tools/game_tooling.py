@@ -59,7 +59,12 @@ def fresh_tools(engine, explicit=None):
         if explicit and hashlib.sha256(Path(explicit).read_bytes()).digest() != hashlib.sha256(binary.read_bytes()).digest():
             raise ValueError(f'{explicit} is incompatible or stale; use {binary} or remove BE2_TOOLS/--tools')
         return str(Path(explicit).resolve() if explicit else binary)
-    result = subprocess.run(['cargo', 'build', '--locked', '--profile', 'itest',
+    profile = 'itest'
+    if explicit:
+        directory = Path(explicit).resolve().parent.name
+        if directory in ('debug', 'release', 'fast', 'itest'):
+            profile = 'dev' if directory == 'debug' else directory
+    result = subprocess.run(['cargo', 'build', '--locked', '--profile', profile,
                              '--no-default-features', '--features', 'physics,networking', '--bin', 'be2-tools',
                              '--message-format=json-render-diagnostics'], cwd=engine,
                             capture_output=True, text=True, encoding='utf-8', errors='replace')
@@ -92,7 +97,7 @@ def load(command, game, engine):
         module.ROOT = game
     if command == 'check':
         # main resolves freshness after parsing so --help never compiles.
-        module.ensure_tools = lambda explicit: fresh_tools(engine, explicit)
+        module.ensure_tools = lambda explicit: fresh_tools(module.engine_path(game) or engine, explicit)
     return module
 
 

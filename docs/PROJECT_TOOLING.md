@@ -17,7 +17,8 @@ reviewed local edits that a Git revision alone cannot identify.
 
 `BE2_TOOLING_ROOT` can select an equivalent engine distribution; it must match the
 content pin. For source tooling, checks let Cargo prove the selected dependency's
-freshness in the `itest` profile and use Cargo's executable artifact path. Shared
+freshness in the `itest` profile and use Cargo's executable artifact path (an
+explicit debug/release/fast artifact verifies its own profile). Shared
 `CARGO_TARGET_DIR` and Cargo configuration are supported. `BE2_TOOLS`/`--tools`
 must match that fresh artifact byte-for-byte; a mismatched or stale override fails
 with the correct path. An exported engine package can instead provide its existing

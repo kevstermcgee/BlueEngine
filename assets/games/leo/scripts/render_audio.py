@@ -11,15 +11,15 @@ from prepare_ambience import prepare_leaves
 
 
 def audio_command(root, tools=None):
+    from check import engine_path, ensure_tools
+    engine = engine_path(root)
+    if engine:
+        return [ensure_tools(tools or os.environ.get('BE2_TOOLS')), 'audio']
     if tools:
         return [str(Path(tools).resolve()), "audio"]
     if os.environ.get("BE2_TOOLS"):
         return [os.environ["BE2_TOOLS"], "audio"]
-    from check import engine_path, find_tools
-    engine = engine_path(root)
-    if engine and (engine / "tools/be2.py").is_file():
-        # Canonical source authoring builds fresh tooling with Cargo's invalidation.
-        return [sys.executable, str(engine / "tools/be2.py"), "map", "audio"]
+    from check import find_tools
     found = find_tools(root)
     if found:
         return [found, "audio"]
