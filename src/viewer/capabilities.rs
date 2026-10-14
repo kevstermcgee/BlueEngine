@@ -68,6 +68,7 @@ pub fn runtime_support() -> Value {
     use super::{game, net, netplay, savestate, simulation};
     json!({
         "stock_server": {
+            "available_in_this_build": cfg!(all(feature = "physics", feature = "networking")),
             "what": "be2-headless --server: authoritative GameDocument/map server for the stock client",
             "players": {
                 "default": simulation::DEFAULT_MAX_PLAYERS,
@@ -92,6 +93,7 @@ pub fn runtime_support() -> Value {
             "game_document": {"file_bytes": game::MAX_GAME_BYTES, "counters": game::MAX_GAME_COUNTERS, "flags": game::MAX_GAME_FLAGS},
         },
         "custom_sim_netplay": {
+            "production_transport_available_in_this_build": cfg!(feature = "networking"),
             "what": "viewer::netplay: NetGame + ClientView with the game's own server loop",
             "datagram_bytes": netplay::wire::MAX_DATAGRAM,
             "players": "NetGame::MAX_SEATS, chosen by each game",

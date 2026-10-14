@@ -9,12 +9,13 @@ pub mod game_client;
 pub mod game_edit;
 pub mod game_example;
 pub mod game_explore;
+#[cfg(feature = "physics")]
 pub mod game_scenario;
 #[cfg(feature = "gamepad")]
 pub mod gamepad;
 pub mod icon;
 pub mod identity;
-#[cfg(feature = "client")]
+#[cfg(feature = "native-client")]
 pub mod input;
 pub mod interaction;
 #[cfg(feature = "presentation")]
@@ -53,6 +54,7 @@ mod landscaping;
 pub mod arena;
 pub mod combat;
 pub mod fps;
+#[cfg(feature = "physics")]
 pub mod prop_physics;
 pub mod stock_demo;
 pub mod weapons;
@@ -60,6 +62,7 @@ pub mod weapons;
 pub mod lifecycle;
 pub mod metrics;
 pub mod net;
+#[cfg(feature = "physics")]
 pub mod server;
 pub mod spatial;
 
@@ -71,6 +74,7 @@ pub mod mcp;
 pub mod newgame;
 pub mod pathing;
 pub mod reach;
+#[cfg(feature = "physics")]
 pub mod scenario;
 pub mod symbols;
 pub mod ui_check;
@@ -85,7 +89,7 @@ pub mod game_visuals;
 pub mod character_skins;
 /// Rendering-independent placement, safe removal and atomic map saves.
 pub mod creative;
-#[cfg(feature = "client")]
+#[cfg(feature = "native-client")]
 pub mod game_input;
 #[cfg(feature = "presentation")]
 pub mod game_ui;
@@ -95,11 +99,12 @@ pub mod character;
 #[cfg(feature = "presentation")]
 pub mod wrench_view;
 
-#[cfg(feature = "client")]
+#[cfg(all(feature = "client", feature = "physics"))]
 pub mod local_client;
 
+#[cfg(feature = "physics")]
 pub mod game_session;
-#[cfg(feature = "client")]
+#[cfg(all(feature = "client", feature = "physics"))]
 pub mod playable;
-#[cfg(feature = "presentation")]
+#[cfg(all(feature = "presentation", feature = "physics"))]
 pub mod prop_view;

@@ -2,7 +2,7 @@
 //! payload shares, with atomic writes, a last-good backup, named slots and payload migration.
 //!
 //! A save state is a snapshot of a deterministic simulation that can be restored later: the engine's own
-//! [`HeadlessWorld`](crate::viewer::simulation::HeadlessWorld) (see [`world`]) and any game's own
+//! `HeadlessWorld` (with the `physics` feature; see [`world`]) and any game's own
 //! simulation (see `devkit::Snapshot`). This module is the part that must never fail the player:
 //!
 //! * **A save never replaces a good file with a partial one.** [`write_atomic`] writes a temporary file

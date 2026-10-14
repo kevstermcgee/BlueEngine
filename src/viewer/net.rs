@@ -23,6 +23,7 @@ pub mod codec;
 pub mod lag_compensation;
 pub mod loopback;
 pub mod proxy;
+#[cfg(feature = "networking")]
 pub mod quic;
 pub mod reliable_command;
 pub mod replication;
@@ -35,6 +36,7 @@ pub use any::{client_transport, server_transport, AnyTransport};
 pub use clock::Clock;
 pub use lag_compensation::*;
 pub use proxy::*;
+#[cfg(feature = "networking")]
 pub use quic::*;
 pub use reliable_command::*;
 pub use replication::*;

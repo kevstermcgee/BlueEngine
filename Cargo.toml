@@ -22,6 +22,10 @@ required-features = ["client"]
 
 [features]
 default = ["client"]
+# Opt into the stock rigid-body world or production native transports independently.
+# Rules, snapshots, integer 2D collision and static authoring remain rendering-free.
+physics = ["dep:rapier3d"]
+networking = ["dep:rustls", "dep:tokio", "dep:quinn"]
 # Historical name: cinematic scene export, unrelated to offline gameplay.
 offline = ["dep:png", "dep:ctrlc"]
 presentation = ["dep:macroquad", "macroquad/audio"]
@@ -31,12 +35,14 @@ portable = ["two-d"]
 model-import = ["presentation", "dep:gltf", "dep:base64", "dep:image"]
 schema-generation = ["dep:schemars"]
 schema-validation = ["schema-generation", "dep:jsonschema"]
-client = ["presentation", "gamepad", "dep:windows-sys"]
+native-client = ["presentation", "gamepad", "dep:windows-sys"]
+client = ["native-client", "physics", "networking"]
 gamepad = ["dep:gilrs"]
 
 [[bin]]
 name = "be2-headless"
 path = "src/bin/be2-headless.rs"
+required-features = ["physics", "networking"]
 
 [[bin]]
 name = "be2-ctl"
@@ -45,14 +51,17 @@ path = "src/bin/be2-ctl.rs"
 [[bin]]
 name = "be2-hub"
 path = "src/bin/be2-hub.rs"
+required-features = ["networking"]
 
 [[bin]]
 name = "be2-toy-server"
 path = "src/bin/be2-toy-server.rs"
+required-features = ["networking"]
 
 [[bin]]
 name = "be2-tools"
 path = "src/bin/be2-tools.rs"
+required-features = ["physics", "networking"]
 
 [[bin]]
 name = "be2-model-import"
@@ -97,11 +106,11 @@ gltf = { version = "=1.4.1", default-features = false, features = ["utils", "nam
 base64 = { version = "=0.22.1", optional = true }
 image = { version = "=0.24.9", default-features = false, features = ["png", "jpeg"], optional = true }
 gilrs = { version = "=0.11.2", optional = true }
-rapier3d = { version = "=0.26.1", features = ["enhanced-determinism"] }
+rapier3d = { version = "=0.26.1", features = ["enhanced-determinism"], optional = true }
 getrandom = "0.3.4"
-rustls = { version = "0.23", default-features = false, features = ["ring", "std"] }
-tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "net", "macros"] }
-quinn = { version = "0.11.9", default-features = false, features = ["runtime-tokio", "rustls-ring"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std"], optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "sync", "time", "net", "macros"], optional = true }
+quinn = { version = "0.11.9", default-features = false, features = ["runtime-tokio", "rustls-ring"], optional = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { optional = true, version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_System_Console", "Win32_UI_Input_KeyboardAndMouse"] }
@@ -140,3 +149,257 @@ required-features = ["schema-validation"]
 name = "model_import_compare"
 path = "docs/perf/model-import/compare.rs"
 required-features = ["portable"]
+
+[[test]]
+name = "audio_project"
+path = "tests/audio_project.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "authoring"
+path = "tests/authoring.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "benchmarks"
+path = "tests/benchmarks.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "capabilities"
+path = "tests/capabilities.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "capacity_limits"
+path = "tests/capacity_limits.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "cli"
+path = "tests/cli.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "content_handshake"
+path = "tests/content_handshake.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "furniture_clearance"
+path = "tests/furniture_clearance.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "game_conditions"
+path = "tests/game_conditions.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "game_documents"
+path = "tests/game_documents.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "game_failure_paths"
+path = "tests/game_failure_paths.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "game_runtime"
+path = "tests/game_runtime.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "game_scenario"
+path = "tests/game_scenario.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "graceful_shutdown"
+path = "tests/graceful_shutdown.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "hub"
+path = "tests/hub.rs"
+required-features = ["networking"]
+
+[[test]]
+name = "mover_riding"
+path = "tests/mover_riding.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "multiplayer_transport"
+path = "tests/multiplayer_transport.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "net_test_command"
+path = "tests/net_test_command.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "parallel_broadcast"
+path = "tests/parallel_broadcast.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "physics_saves"
+path = "tests/physics_saves.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "prop_api"
+path = "tests/prop_api.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "prototype"
+path = "tests/prototype.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "proxy_shutdown"
+path = "tests/proxy_shutdown.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "replication_budget"
+path = "tests/replication_budget.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "replication_priority"
+path = "tests/replication_priority.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "replication_sizing"
+path = "tests/replication_sizing.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "replication_sockets"
+path = "tests/replication_sockets.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "runtime_performance"
+path = "tests/runtime_performance.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "sandbox"
+path = "tests/sandbox.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "save_session"
+path = "tests/save_session.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "save_state"
+path = "tests/save_state.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "scenario_intents"
+path = "tests/scenario_intents.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "secure_net"
+path = "tests/secure_net.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "server_ctl"
+path = "tests/server_ctl.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "simulation_flow"
+path = "tests/simulation_flow.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "spans"
+path = "tests/spans.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "static_game"
+path = "tests/static_game.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "stock_audio"
+path = "tests/stock_audio.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "stock_observatory"
+path = "tests/stock_observatory.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "template_manifests"
+path = "tests/template_manifests.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "toolchain"
+path = "tests/toolchain.rs"
+required-features = ["physics"]
+
+[[test]]
+name = "transport_profiles"
+path = "tests/transport_profiles.rs"
+required-features = ["physics", "networking"]
+
+[[test]]
+name = "virtual_time"
+path = "tests/virtual_time.rs"
+required-features = ["physics"]
+
+# Used by tools/schemas.py; generation does not need the stock simulation or transports.
+[[bin]]
+name = "be2-schema"
+path = "src/bin/be2-schema.rs"
+required-features = ["schema-generation"]
+
+[[example]]
+name = "prototype"
+required-features = ["physics"]
+
+[[example]]
+name = "runtime_perf"
+required-features = ["physics"]
+
+[[example]]
+name = "network_smoke"
+required-features = ["physics"]
+
+[[example]]
+name = "net_broadcast_bench"
+required-features = ["physics"]
+
+[[example]]
+name = "net_freshness_bench"
+required-features = ["physics"]
+
+[[example]]
+name = "server_load"
+required-features = ["physics"]
+
+[[example]]
+name = "validate_expanded_maps"
+required-features = ["physics"]
+
+[[test]]
+name = "shared_gameplay"
+path = "tests/shared_gameplay.rs"
+required-features = ["physics"]

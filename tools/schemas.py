@@ -28,7 +28,7 @@ def main(argv=None):
     command = (['cargo', 'test', '--locked', '--profile', 'itest', '--no-default-features',
                 '--features', 'schema-validation', '--test', 'authoring_schemas', '-j', '2'] if args.check else
                ['cargo', 'build', '--locked', '--message-format=json-render-diagnostics', '--profile', 'itest', '--no-default-features',
-                '--features', 'schema-generation', '--bin', 'be2-tools', '-j', '2'])
+                '--features', 'schema-generation', '--bin', 'be2-schema', '-j', '2'])
     packet = {'schema_version': 1, 'action': 'check' if args.check else 'write',
               'cwd': str(ROOT), 'argv': command, 'files': list(FILES.values()),
               'semantic_gate': 'Schema validity does not replace game-validate, asset validation, scenarios or shipping checks.'}
@@ -59,14 +59,14 @@ def main(argv=None):
             for line in result.stdout.splitlines():
                 artifact = json.loads(line)
                 if (artifact.get('reason') == 'compiler-artifact' and
-                        artifact.get('target', {}).get('name') == 'be2-tools' and
+                        artifact.get('target', {}).get('name') == 'be2-schema' and
                         'bin' in artifact['target']['kind'] and artifact.get('executable')):
                     binary = artifact['executable']
             if not binary:
-                raise ValueError('Cargo did not report the be2-tools executable; use a native host target.')
+                raise ValueError('Cargo did not report the be2-schema executable; use a native host target.')
             generated = {}
             for kind, path in FILES.items():
-                result = run([str(binary), 'schema-generate', kind])
+                result = run([str(binary), kind])
                 # Parse everything before touching any previous output.
                 json.loads(result.stdout)
                 generated[path] = result.stdout.encode('utf-8')

@@ -8,5 +8,7 @@ pub use crate::viewer::fps::{
     AimState, FireMode, OperativeModel, Team, TeamDeathmatch, TeamDeathmatchConfig, WeaponCatalog,
     WeaponDefinition, WeaponState,
 };
-pub use crate::viewer::simulation::{HeadlessWorld, TICK_SECONDS};
+#[cfg(feature = "physics")]
+pub use crate::viewer::simulation::HeadlessWorld;
+pub use crate::viewer::simulation::TICK_SECONDS;
 pub use crate::Result;
