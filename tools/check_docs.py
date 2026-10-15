@@ -36,6 +36,7 @@ def broken_links(root=ROOT):
 
 
 if __name__ == '__main__':
-    errors = broken_links()
-    print('\n'.join(errors) if errors else 'Markdown file links: OK')
+    from readme_scope import errors as scope_errors
+    errors = broken_links() + scope_errors()
+    print('\n'.join(errors) if errors else 'Markdown file links and README scope: OK')
     sys.exit(bool(errors))
