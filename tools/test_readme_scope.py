@@ -186,6 +186,25 @@ class ReadmeScopeTests(unittest.TestCase):
             self.assertEqual((root / "README.md").read_bytes(), readme_before)
             self.assertEqual(readme_scope.errors(root), [])
 
+    def test_noop_update_preserves_the_applicable_unchanged_reason(self):
+        with self.repository() as root:
+            readme_scope.update(root)
+            document = self.features(root)
+            document["features"]["movement"]["public_api"].append("Controller::turn")
+            self.write_json(root, "tools/FEATURES.json", document)
+            reason = "The README already covers the controller's movement API."
+            approved = readme_scope.update(root, unchanged_reason=reason)
+            readme_before = (root / "README.md").read_bytes()
+
+            refreshed = readme_scope.update(root)
+
+            saved = json.loads((root / "docs/README_SCOPE.json").read_text(encoding="utf-8"))
+            self.assertEqual(refreshed["unchanged_reason"], reason)
+            self.assertEqual(saved["unchanged_reason"], reason)
+            self.assertEqual(refreshed["readme_sha256"], approved["readme_sha256"])
+            self.assertEqual((root / "README.md").read_bytes(), readme_before)
+            self.assertEqual(readme_scope.errors(root), [])
+
     def test_malformed_receipt_and_unsupported_format_are_reported(self):
         for malformed in ("not JSON", "[]", "{}", "unsupported format"):
             with self.subTest(receipt=malformed), self.repository() as root:
@@ -214,6 +233,28 @@ class ReadmeScopeTests(unittest.TestCase):
                     readme_scope.update(root)
                 self.assertEqual((root / "docs/README_SCOPE.json").read_bytes(), receipt_before)
                 self.assertEqual((root / "README.md").read_bytes(), readme_before)
+
+    def test_malformed_cargo_table_types_are_diagnosed_without_losing_receipt(self):
+        for table in ("features", "package"):
+            for value in ("[]", '"not a table"'):
+                with self.subTest(table=table, value=value), self.repository() as root:
+                    readme_scope.update(root)
+                    receipt_before = (root / "docs/README_SCOPE.json").read_bytes()
+                    readme_before = (root / "README.md").read_bytes()
+                    valid_other_table = ('[package]\nname = "fixture"\nversion = "0.1.0"\n'
+                                         'rust-version = "1.87"\n' if table == "features" else
+                                         '[features]\ndefault = []\n')
+                    self.write(root, "Cargo.toml", f"{table} = {value}\n" + valid_other_table)
+
+                    errors = readme_scope.errors(root)
+
+                    self.assertTrue(errors)
+                    self.assertTrue(any("Cargo.toml" in error and table in error.lower()
+                                        for error in errors), errors)
+                    with self.assertRaises(ValueError):
+                        readme_scope.update(root)
+                    self.assertEqual((root / "docs/README_SCOPE.json").read_bytes(), receipt_before)
+                    self.assertEqual((root / "README.md").read_bytes(), readme_before)
 
 
 if __name__ == "__main__":

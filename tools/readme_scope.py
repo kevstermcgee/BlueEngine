@@ -38,7 +38,13 @@ def snapshot(root):
     features = index.get('features') if isinstance(index, dict) else None
     if not isinstance(features, dict) or any(not isinstance(v, dict) for v in features.values()):
         raise ValueError('tools/FEATURES.json: expected a mapping of capability records')
-    manifest = tomllib.loads((root / 'Cargo.toml').read_text(encoding='utf-8'))
+    try:
+        manifest = tomllib.loads((root / 'Cargo.toml').read_text(encoding='utf-8'))
+    except tomllib.TOMLDecodeError as error:
+        raise ValueError(f'Cargo.toml: {error}') from error
+    for table in ('package', 'features'):
+        if not isinstance(manifest.get(table, {}), dict):
+            raise ValueError(f'Cargo.toml: expected [{table}] to be a table')
     return {
         'format': 1,
         'readme_sha256': hashlib.sha256((root / 'README.md').read_bytes()).hexdigest(),
@@ -113,6 +119,8 @@ def update(root=ROOT, unchanged_reason=None):
             and old['readme_sha256'] == current['readme_sha256'] and not reason):
         raise ValueError('Scope inputs changed but README.md is unchanged. Revise its description '
                          'or record a specific --unchanged-reason after reviewing it.')
+    if old and unchanged_reason is None and not changes(old, current):
+        reason = old.get('unchanged_reason')
     current['unchanged_reason'] = reason
     path = root / RECEIPT
     path.parent.mkdir(parents=True, exist_ok=True)
