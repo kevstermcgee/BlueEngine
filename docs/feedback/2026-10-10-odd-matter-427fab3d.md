@@ -121,6 +121,7 @@ ZIP SHA-256: `5f5b43a785932aa7b483440845b2009fd4addeaf4f8be176731ad3ec8c0df69c`.
 - build-and-review: Insufficient free space for native compilation; choose a larger target disk
 - build-and-review: Insufficient free space for native compilation; choose a larger target disk
 - build: Native packaging scripts must come from the fresh canonical engine templates
+- publish-feedback: Git operation failed: merge-base (exit 1)
 
 Detailed command logs, AI responses and package captures stay in the ignored
 run directory. This file contains authored findings and checked delivery receipts.
