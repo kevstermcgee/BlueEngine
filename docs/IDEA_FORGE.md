@@ -119,7 +119,14 @@ The AI's sanitized friction findings include reproduction, severity, workaround
 and a proposed engine improvement. They become `docs/feedback/DATE-GAME-RUN.md`
 and validated `docs/learning/ledger.jsonl` entries. After verified delivery, the
 game source and final feedback are pushed to engine main and the remote feedback
-blob is checked. Normal CI also runs for that final documentation commit.
+blob is checked. Normal CI also runs for that final documentation commit. If main
+has advanced, a separate `engine-feedback` worktree integrates the frozen game and
+feedback commit with current main. That integration needs fresh full engine CI and
+generated-game Linux/Windows checks, including native package launches, for its
+exact commit before a normal fast-forward push. Original release receipts remain
+bound to the released source. The supervisor resumes only this final stage;
+normal engine-main automation can still synchronize companion source and produce
+a later installer release and site update without replacing the original release.
 No transcript or credential is committed, and no findings are fabricated when
 the AI reports none.
 
@@ -139,7 +146,15 @@ receipts cannot authorize the new source. Before production publication, use
 `ideaforge resume /path/to/run --rebuild` after integrating the changes. This
 preserves the idea and AI findings, archives old receipts and reruns build,
 review and publication gates. An already published run cannot be rebuilt; create
-a new run for another release. A failed run still retains feedback
+a new run for another release. After verified delivery, resume instead retains
+the original game worktree and release evidence and continues the separate
+`engine-feedback` integration branch. Merge conflicts stop with that worktree's
+path; preserve current main's registry and learning entries, resolve and commit
+the merge there, then resume. Advancing main requires fresh checks for the new
+integration commit. Once prepared, final feedback is frozen: retries after a push
+or remote-verification failure reuse the same commit rather than rewriting its
+report. Integration state and head-specific CI receipts live in the private run
+journal. A failed run still retains feedback
 locally when the AI has provided it. Virtual/software graphics checks do not
 certify physical controller hardware or speaker output.
 
