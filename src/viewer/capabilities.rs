@@ -98,11 +98,11 @@ pub fn runtime_support() -> Value {
             "production_transport_available_in_this_build": cfg!(feature = "networking"),
             "what": "NetGame + ClientView; loop: cli::serve",
             "datagram_bytes": netplay::wire::MAX_DATAGRAM,
-            "datagram_budget": "min(payload_limit, datagram_bytes), including framing",
-            "players": "MAX_SEATS/lobby_capacity/minimum_players: configured, unmeasured",
+            "datagram_budget": "min(transport payload_limit, datagram_bytes), with framing",
+            "players": "MAX_SEATS/lobby_capacity/minimum_players: not measured capacity",
             "replication": "snapshot_with_budget trims optional state; no fragmentation/stock deltas/interest scheduler",
-            "prediction": "your ClientView",
-            "graceful_shutdown": "cli::serve shutdown handlers; bots: NetGame::release",
+            "prediction": "ClientView",
+            "graceful_shutdown": "cli::serve installs shutdown handlers; bots: NetGame::release",
             "transport": "UDP; QUIC/TLS needs networking; hub rooms: UDP",
             "delivery": "local queue acceptance, not remote acknowledgement",
             "saving": format!("devkit::Snapshot: {}B; no stock --autosave", savestate::MAX_PAYLOAD_BYTES),
@@ -138,8 +138,8 @@ pub fn describe() -> Result<Value> {
         },
         "runtime_support": runtime_support(),
         "start": ["python3 tools/be2.py start TASK --compact", "be2-tools search TOPIC", "docs/GAME_AUTHORING_ENTRY.md"],
-        "unsupported": ["arbitrary gameplay scripts", "runtime mesh import"],
-        "metadata": "Curated index."
+        "unsupported": ["gameplay scripting", "runtime mesh import"],
+        "metadata": "Curated."
     }))
 }
 
