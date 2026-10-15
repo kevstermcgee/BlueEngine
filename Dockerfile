@@ -4,6 +4,7 @@ WORKDIR /build
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
 COPY examples ./examples
+COPY tests ./tests
 COPY tools ./tools
 COPY templates ./templates
 COPY assets ./assets
