@@ -4,6 +4,14 @@ Implementation and bounded native examples are in this checkout. Start with
 [the capability-aware Poe guide](../tools/skills/poe/SKILL.md) and
 [the public contract](NARRATIVE.md). No existing game needs conversion.
 
+The measurements and original 39-gate verification below were collected on the
+milestone's original base, `76743a0`. They are historical samples, not measurements
+of current main. Integration onto main at `a1fbb20` preserves its native-only
+workflow, feature split and 51 existing verification gates, adding three narrative
+gates. The narrative library and headless walk remain independent of physics and
+networking; the existing authoring-tool binary requires both. The stock storyless
+acceptance test follows its existing physics requirement.
+
 ## Delivered boundary
 
 - Cargo `narrative` is off by default, has no dependencies, and adds no fields or
@@ -132,7 +140,8 @@ Orchard Watch, Lantern Grove and Leo; headless boundaries, public authoring and 
 complete Python batch. Earlier failed attempts and their repairs are retained.
 
 Tracked evidence was updated during that successful run, so its task-source binding
-is not stable. After this report is frozen, the [final checkout receipt](../.be2-work/narrative-evidence/full-check-5.stdout.json)
-links the repeated canonical check and its source-stability verdict. Its outputs
-stay in the ignored work directory. The Linux/Windows CI matrix is preserved;
+is not stable. A subsequent frozen-source run passed all 39 gates with a stable
+source binding; its local receipt is `.be2-work/narrative-evidence/full-check-5.stdout.json`
+in the original development checkout and is not distributed in Git. The committed
+report above retains the portable raw gate results. The Linux/Windows CI matrix is preserved;
 Windows runtime and physical-device evidence require their corresponding hosts.
