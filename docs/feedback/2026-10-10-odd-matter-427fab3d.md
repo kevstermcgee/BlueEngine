@@ -15,6 +15,10 @@ Interior occlusion and counting overlapping volumes may obscure the rule. Keep c
 
 ## Findings from the AI that developed and reviewed the game
 
+## Measured game-run cost
+
+Tokens: 0; wall seconds: 466476.918; Codex seconds: 0. Partial/unavailable CLI usage; tokens sum only exposed turns, wall time recorded.
+
 ### 1. tooling (medium)
 
 Observed: The fresh custom-sim scaffold omitted game.project.json and scripts/project.py, requiring manual dimension and target declarations.
@@ -121,6 +125,7 @@ ZIP SHA-256: `5f5b43a785932aa7b483440845b2009fd4addeaf4f8be176731ad3ec8c0df69c`.
 - build-and-review: Insufficient free space for native compilation; choose a larger target disk
 - build-and-review: Insufficient free space for native compilation; choose a larger target disk
 - build: Native packaging scripts must come from the fresh canonical engine templates
+- publish-feedback: Git operation failed: merge-base (exit 1)
 - publish-feedback: Git operation failed: merge-base (exit 1)
 - publish-feedback: Git operation failed: merge-base (exit 1)
 
