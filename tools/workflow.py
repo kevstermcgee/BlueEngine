@@ -629,6 +629,14 @@ def context(root, query, limit=3, level=2):
     features = index(root)
     summaries = modules(root)
     terms = set(re.findall(r'[a-z0-9]+', query.lower())) - RANK_STOP
+    # Optional authoring kits require a positive capability request. Shared words
+    # such as game, state, character or scene must not load writing guidance.
+    opt_in_query = re.sub(r'\b(?:no|without|skip|omit|avoid)\s+(?:any\s+|all\s+)?'
+                          r'(?:narrative|dialogue|story|stories|plot|barks?)\b', '', query.lower())
+    opt_in_terms = set(re.findall(r'[a-z0-9]+', opt_in_query))
+    if opt_in_terms & {'story', 'stories', 'plot'}:
+        opt_in_terms.add('narrative')
+        terms.add('narrative')
     bags, described = {}, {}
     for name, feature in features.items():
         # What a feature's files say about themselves (one line each) is searchable text of the feature.
@@ -651,6 +659,10 @@ def context(root, query, limit=3, level=2):
                          feature.get('constraints', []) + feature.get('decisions', []))
         answers[name], exact_answer = public_answers(feature, query)
         exact_api = identifier(query) in [identifier(api) for api in feature.get('public_api', [])]
+        required = feature.get('context_requires_any', [])
+        if required and not (opt_in_terms & set(required) or query.lower() == name or diagnostic
+                             or exact_answer or exact_api):
+            continue
         score = 2000 if exact_answer else 1000 if query.lower() == name or diagnostic or exact_api else round(sum(
             weight[term] * (4 if term in title | keywords else 2 if term in described[name] else 1)
             for term in terms & words), 3)
@@ -808,6 +820,15 @@ def full_commands(test_profile='itest'):
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest, '--no-default-features'],
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest,
          '--no-default-features', '--features', 'online', '--test', 'netplay'],
+    ])
+    # Opt-in narrative must be tested explicitly: ordinary/default games keep it disabled.
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
+         '--features', 'narrative', '--lib', '--test', 'narrative_fixtures', '--test', 'narrative_content'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--features', 'narrative',
+         '--all-targets', '--', '-D', 'warnings'],
+        ['cargo', 'rustdoc', '--locked', *profile_flags(test_profile), '--no-default-features',
+         '--features', 'narrative', '--lib', '--', '-D', 'warnings'],
     ])
     # Keep the maintained game on the real authoring path. Its own final ship check is exercised
     # separately with a display; CI still compiles presentation and proves headless rules/saves.

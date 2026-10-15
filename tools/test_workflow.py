@@ -119,6 +119,22 @@ class ContextTests(unittest.TestCase):
                                and i not in consumed and not value.startswith('-')]
                     self.assertLessEqual(len(filters), 1, f'{feature_id}: {check}: Cargo accepts one filter')
 
+    def test_optional_narrative_guidance_requires_positive_capability_request(self):
+        for query in ('Create a storyless arcade game with enemies, scoring, objective text and UI labels',
+                      'Create an arcade game with no narrative and without dialogue',
+                      'Create an arcade game with no story and without plot',
+                      'Revise character names and game state in the custom simulation'):
+            packet = workflow.context(ROOT, query, level=1)
+            self.assertNotIn('optional_narrative', [item['id'] for item in packet['matches']], query)
+            self.assertNotIn('tools/skills/poe/SKILL.md', json.dumps(packet), query)
+        for query in ('Poe', 'contextual dialogue barks', 'flavor introductions',
+                      'add a story to my game', 'add plot and stories',
+                      'no story but reactive barks', 'optional_narrative', 'Commands::apply_atomic'):
+            packet = workflow.context(ROOT, query, level=1)
+            self.assertEqual(packet['matches'][0]['id'], 'optional_narrative', query)
+            self.assertIn('tools/skills/poe/SKILL.md', packet['matches'][0]['read_first'])
+            self.assertFalse(workflow.context(ROOT, query)['engine_source_read'])
+
     def test_stock_audio_pipeline_and_bindings_are_discoverable(self):
         packet = workflow.context(ROOT, 'stock GameDocument audio pipeline cues and adaptive music')
         feature = packet['matches'][0]
@@ -265,6 +281,15 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertIn('--no-default-features', rust[1])
         self.assertIn('two-d', rust[2])
         self.assertIn('packaging', plan['requirements'])
+
+    def test_optional_narrative_has_explicit_full_gates(self):
+        commands = workflow.full_commands()
+        self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', '--no-default-features',
+                       '--features', 'narrative', '--lib', '--test', 'narrative_fixtures', '--test', 'narrative_content'], commands)
+        self.assertIn(['cargo', 'clippy', '--locked', '--profile', 'itest', '--features', 'narrative',
+                       '--all-targets', '--', '-D', 'warnings'], commands)
+        self.assertIn(['cargo', 'rustdoc', '--locked', '--profile', 'itest', '--no-default-features',
+                       '--features', 'narrative', '--lib', '--', '-D', 'warnings'], commands)
 
     def test_feature_guarded_schema_suite_runs_separately_from_normal_units(self):
         plan = workflow.change_plan(ROOT, ['src/viewer/game.rs'])

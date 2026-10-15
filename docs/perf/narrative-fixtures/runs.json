@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "name": "storyless",
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--fixture",
+        "storyless",
+        "--seed",
+        "7",
+        "--limit",
+        "340",
+        "--route",
+        "share"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.0035784589126706123,
+      "stderr": "",
+      "report": "docs/perf/narrative-fixtures/storyless.json"
+    },
+    {
+      "name": "reactive",
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--fixture",
+        "reactive",
+        "--seed",
+        "7",
+        "--limit",
+        "340",
+        "--route",
+        "share"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.00460481399204582,
+      "stderr": "",
+      "report": "docs/perf/narrative-fixtures/reactive.json"
+    },
+    {
+      "name": "reactive-quiet",
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--fixture",
+        "reactive",
+        "--seed",
+        "7",
+        "--limit",
+        "340",
+        "--route",
+        "share",
+        "--quiet"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.0044616470113396645,
+      "stderr": "",
+      "report": "docs/perf/narrative-fixtures/reactive-quiet.json"
+    },
+    {
+      "name": "scene-share",
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--fixture",
+        "scene",
+        "--seed",
+        "7",
+        "--limit",
+        "340",
+        "--route",
+        "share"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.004742790944874287,
+      "stderr": "",
+      "report": "docs/perf/narrative-fixtures/scene-share.json"
+    },
+    {
+      "name": "scene-keep",
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--fixture",
+        "scene",
+        "--seed",
+        "7",
+        "--limit",
+        "340",
+        "--route",
+        "keep"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.006499247043393552,
+      "stderr": "",
+      "report": "docs/perf/narrative-fixtures/scene-keep.json"
+    }
+  ],
+  "sources_sha256": {
+    "examples/narrative/shared.rs": "d7034d76c979170a1d7c67bbde12c890840be38d474e0b418725972a55839f90",
+    "examples/narrative_walk.rs": "4754a3ee578f5ceb18fb9ecd22f36bfb5e70d3aa565d5d40c44b128a5b0fdbd8",
+    "assets/narrative/relay-yard.poe": "b269f50e0ce1f4c5e6e5a5c7e2960edd6771e8165f406e72874586bd0ecc9d07",
+    "assets/narrative/borrowed-light.poe": "4baca2065c4b510705f807e7a4a76b7235021857498c91690ce169828aa11d5e",
+    "assets/narrative/yard.bindings.json": "cd32604895494314fb521ad165fc95ed4c8743129e899af663dcfcde7a1a7487"
+  },
+  "note": "One deterministic route per selected branch. Wall times include process startup, not isolated runtime benchmarks."
+}

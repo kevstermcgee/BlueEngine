@@ -3378,6 +3378,69 @@
           ]
         }
       ]
+    },
+    "optional_narrative": {
+      "required_features": [
+        "narrative"
+      ],
+      "files": [
+        "src/viewer/narrative",
+        "tests/narrative_fixtures.rs",
+        "tests/narrative_content.rs",
+        "examples/narrative_walk.rs",
+        "examples/narrative_native.rs",
+        "examples/narrative",
+        "assets/narrative",
+        "docs/NARRATIVE.md",
+        "docs/NARRATIVE_EXEMPLARS.md",
+        "tools/skills/poe/SKILL.md"
+      ],
+      "checks": [
+        "cargo test --locked --no-default-features --features narrative --lib --test narrative_fixtures --test narrative_content",
+        "python -m unittest tools.test_workflow.ContextTests"
+      ],
+      "note": "Optional Cargo narrative feature (default off): typed game-owned queries/atomic commands, event-indexed contextual responses, bounded scenes, explicit selection/presentation/completion, deterministic state and safe text reload. No configuration, runtime allocation, ticking, RNG, watchers or packaged story content for games that do not opt in. Poe is the existing workflow label, not a required writing service. Choose none/flavor/dialogue/scenes/director independently; director and large arcs are future milestones.",
+      "keywords": [
+        "poe",
+        "narrative",
+        "dialogue",
+        "barks",
+        "flavor",
+        "introductions",
+        "conversation",
+        "conversations",
+        "announcer",
+        "reactions"
+      ],
+      "context_requires_any": [
+        "poe",
+        "narrative",
+        "dialogue",
+        "bark",
+        "barks",
+        "flavor",
+        "introductions",
+        "conversation",
+        "conversations",
+        "announcer",
+        "reactions"
+      ],
+      "read_first": [
+        "tools/skills/poe/SKILL.md",
+        "docs/NARRATIVE.md"
+      ],
+      "canonical_example": "examples/narrative_walk.rs",
+      "public_api": [
+        "viewer::narrative",
+        "parse",
+        "parse_validated",
+        "load",
+        "Registry",
+        "View",
+        "Commands::apply_atomic",
+        "NarrativeState"
+      ],
+      "depends_on": []
     }
   },
   "format": 1,

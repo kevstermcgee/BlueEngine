@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "records": [
+    {
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout": "Bounded Relay Yard walk\n[FILE] --content FILE --fixture storyless|reactive|scene --seed N --limit N --route share|keep --quiet\nRuns real 60 Hz movement/bindings, reports trace, state and engine snapshot resume.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--typo"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "unknown option \"--typo\"; use --help\n"
+    },
+    {
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+        "--seed"
+      ],
+      "exit_code": 1,
+      "stdout": "",
+      "stderr": "--seed needs a value\n"
+    },
+    {
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_native",
+        "--help"
+      ],
+      "exit_code": 0,
+      "stdout": "Relay Yard native preview\n--fixture storyless|reactive|scene --content FILE --quiet\n--seed N --capture DIR --frames N --script CUES --exit-after N --size WxH\nF5 save; F9 load; F6 validate/reload; Tab/RB reveal; Enter/A advance; Backspace/B interrupt. Enter/LB dismisses barks; A remains jump.\nScenes block movement; clock continues. Esc pauses all ticks.\n",
+      "stderr": ""
+    },
+    {
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_native",
+        "--typo"
+      ],
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "unknown option \"--typo\"; use --help\n"
+    },
+    {
+      "command": [
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_native",
+        "--content"
+      ],
+      "exit_code": 2,
+      "stdout": "",
+      "stderr": "--content needs a value\n"
+    }
+  ]
+}

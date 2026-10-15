@@ -1,0 +1,18 @@
+{
+  "command": [
+    "/home/kevin/BlueEngine/target/itest/examples/narrative_walk",
+    "--fixture",
+    "reactive",
+    "--seed",
+    "7",
+    "--limit",
+    "120"
+  ],
+  "exit_code": 0,
+  "stderr": "",
+  "observed_feet_height": 0.6000000238418579,
+  "observed_eye_height": 2.2800002098083496,
+  "cells": 1,
+  "report": "reactive-landing.json",
+  "purpose": "Real Controller route climbs the shared three-dimensional risers before collecting the elevated cell."
+}

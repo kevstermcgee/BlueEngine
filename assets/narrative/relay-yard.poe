@@ -1,0 +1,41 @@
+poe 1
+# A maintenance announcer: personality for a tiny obstacle yard, no campaign.
+response yard.welcome
+ event arrive
+ speaker pa
+ category yard
+ text Relay Yard test track. The stairs are certified. Your shortcuts are not.
+ priority 1
+ cooldown 90
+ repeat once
+endresponse
+response yard.cell
+ event pickup
+ speaker pa
+ category yard
+ text One working cell. Already above the yard average.
+ when inventory.cells >= 1
+ priority 3
+ cooldown 90
+ repeat once
+endresponse
+response yard.open
+ event gate
+ speaker pa
+ category yard
+ text Bridge powered. Please reserve the victory lap for the far side.
+ when gate.open == true
+ priority 5
+ cooldown 90
+ repeat once
+endresponse
+response yard.finish
+ event finish
+ speaker pa
+ category yard
+ text Clean crossing. The clipboard is impressed. Quietly.
+ when course.finished == true
+ priority 6
+ cooldown 90
+ repeat once
+endresponse

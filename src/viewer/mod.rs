@@ -22,6 +22,8 @@ pub mod interaction;
 pub mod kit;
 #[cfg(feature = "presentation")]
 pub mod mesh;
+#[cfg(feature = "narrative")]
+pub mod narrative;
 pub mod netplay;
 pub mod presentation;
 pub mod profile;

@@ -40,6 +40,8 @@ schema-validation = ["schema-generation", "dep:jsonschema"]
 native-client = ["presentation", "gamepad", "dep:windows-sys"]
 client = ["native-client", "physics", "networking"]
 gamepad = ["dep:gilrs"]
+# Explicit, rendering-free contextual content; absent games allocate and run nothing.
+narrative = []
 
 [[bin]]
 name = "be2-headless"
@@ -409,4 +411,16 @@ required-features = ["physics"]
 [[test]]
 name = "shared_gameplay"
 path = "tests/shared_gameplay.rs"
+required-features = ["physics"]
+
+[[example]]
+name = "narrative_native"
+required-features = ["native-client", "narrative"]
+
+[[example]]
+name = "narrative_walk"
+required-features = ["narrative"]
+
+[[test]]
+name = "narrative_optional"
 required-features = ["physics"]
