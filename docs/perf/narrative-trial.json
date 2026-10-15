@@ -1,0 +1,438 @@
+{
+  "schema_version": 1,
+  "trial": "fresh-agent-public-tool-authoring",
+  "task1": {
+    "brief": "Create a storyless score-chasing arcade game with enemies, objective text and UI labels, no dialogue",
+    "passed": true,
+    "workflow": "new-game",
+    "template": "portable",
+    "feature": "two_dimensional",
+    "selected_guidance": [
+      "docs/PORTABLE_GAMES.md",
+      "templates/two-d/AGENTS.md"
+    ],
+    "narrative_guide_loaded_before_packet": false,
+    "narrative_kit_pulled_in": false,
+    "narrative_content_pulled_in": false,
+    "evidence": ".be2-work/narrative-trial/task1-start.stdout"
+  },
+  "source_exposure": {
+    "implementation_source_read": false,
+    "private_fixture_rust_read": false,
+    "other_agent_results_read": false,
+    "public_authored_or_documentation_files_read": [
+      "AGENTS.md",
+      "docs/PORTABLE_GAMES.md",
+      "templates/two-d/AGENTS.md",
+      "tools/skills/poe/SKILL.md",
+      "docs/NARRATIVE.md",
+      "assets/narrative/relay-yard.poe",
+      "assets/narrative/yard.bindings.json"
+    ],
+    "additional_reads": [
+      "own trial artifacts",
+      "public tool output"
+    ],
+    "initial_path_discovery": {
+      "command": "pwd && rg --files -g 'AGENTS.md' -g 'SKILL.md' -g '*discov*' -g '*CONTEXT*' . /home/kevin 2>/dev/null",
+      "content_exposure": "filenames only; output included other checkout paths and was truncated",
+      "raw_capture": "tool transcript only; all authoring commands captured to trial stdout/stderr artifacts"
+    },
+    "restriction": "No engine implementation source, private fixture shared Rust, or other agents results were opened."
+  },
+  "actual_model_tokens": null,
+  "model_tokens_note": "No actual model token usage counter is exposed to this agent. Whitespace words are reported separately and are not tokens.",
+  "validation_boundaries": {
+    "native_presentation": "not tested",
+    "human_playtesting": "not tested",
+    "editorial_review": "one concise yard-announcer callback authored against registered gate and inventory queries; not a general quality score",
+    "cross_platform": "not tested"
+  },
+  "automatic_tool_artifacts": [
+    ".be2-work/tasks/7529e21a5f9a.json"
+  ],
+  "ordinary_repository_files_authored": [
+    "docs/perf/narrative-trial.json"
+  ],
+  "status": "passed",
+  "recording_started_at": "2026-10-14T23:13:59.428833+00:00",
+  "completed_at": "2026-10-14T23:21:36.480151+00:00",
+  "measured_recording_wall_seconds": 457.051318,
+  "timing_note": "Recording begins immediately before Task1 start; initial path discovery/root AGENTS read and final report serialization are not included. Cargo command wall durations include build-directory lock wait and compilation. Runtime-only duration is not exposed and is null.",
+  "tool_calls": [
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "start",
+        "Create a storyless score-chasing arcade game with enemies, objective text and UI labels, no dialogue",
+        "--compact"
+      ],
+      "exit_code": 0,
+      "duration_seconds": 0.8099819299532101,
+      "stdout_file": ".be2-work/narrative-trial/task1-start.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task1-start.stderr"
+    },
+    {
+      "argv": [
+        "cat",
+        "docs/PORTABLE_GAMES.md",
+        "templates/two-d/AGENTS.md"
+      ],
+      "started_at": "2026-10-14T23:14:07.902516+00:00",
+      "exit_code": 0,
+      "duration_seconds": 0.0013954489259049296,
+      "stdout_file": ".be2-work/narrative-trial/task1-guidance.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task1-guidance.stderr"
+    },
+    {
+      "argv": [
+        "cat",
+        "tools/skills/poe/SKILL.md",
+        "docs/NARRATIVE.md",
+        "assets/narrative/relay-yard.poe",
+        "assets/narrative/yard.bindings.json"
+      ],
+      "started_at": "2026-10-14T23:14:14.226691+00:00",
+      "exit_code": 0,
+      "duration_seconds": 0.0015271990559995174,
+      "stdout_file": ".be2-work/narrative-trial/task2-guidance.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task2-guidance.stderr"
+    },
+    {
+      "argv": [
+        "target/itest/be2-tools",
+        "narrative",
+        "describe"
+      ],
+      "started_at": "2026-10-14T23:14:23.377473+00:00",
+      "exit_code": 1,
+      "duration_seconds": 0.002111253095790744,
+      "stdout_file": ".be2-work/narrative-trial/task2-describe.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task2-describe.stderr"
+    },
+    {
+      "argv": [
+        "target/itest/be2-tools",
+        "narrative",
+        "lint",
+        ".be2-work/narrative-trial/response.poe",
+        "assets/narrative/yard.bindings.json"
+      ],
+      "started_at": "2026-10-14T23:14:33.824192+00:00",
+      "exit_code": 1,
+      "duration_seconds": 0.002142692916095257,
+      "stdout_file": ".be2-work/narrative-trial/task2-lint-v1.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task2-lint-v1.stderr"
+    },
+    {
+      "argv": [
+        "cargo",
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "narrative",
+        "--bin",
+        "be2-tools",
+        "--",
+        "narrative",
+        "lint",
+        ".be2-work/narrative-trial/response.poe",
+        "assets/narrative/yard.bindings.json"
+      ],
+      "started_at": "2026-10-14T23:14:39.256454+00:00",
+      "exit_code": 0,
+      "duration_seconds": 367.11032545298804,
+      "stdout_file": ".be2-work/narrative-trial/task2-lint-v1-cargo.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task2-lint-v1-cargo.stderr"
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "context",
+        "optional_narrative",
+        "--level",
+        "1",
+        "--compact"
+      ],
+      "started_at": "2026-10-14T23:14:51.838638+00:00",
+      "exit_code": 0,
+      "duration_seconds": 0.0763629829743877,
+      "stdout_file": ".be2-work/narrative-trial/task2-context.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task2-context.stderr"
+    },
+    {
+      "argv": [
+        "cat",
+        "AGENTS.md"
+      ],
+      "started_at": "2026-10-14T23:15:20.656947+00:00",
+      "exit_code": 0,
+      "duration_seconds": 0.001476881094276905,
+      "stdout_file": ".be2-work/narrative-trial/root-guidance.stdout",
+      "stderr_file": ".be2-work/narrative-trial/root-guidance.stderr"
+    },
+    {
+      "argv": [
+        "target/itest/be2-tools",
+        "narrative",
+        "lint",
+        ".be2-work/narrative-trial/response.poe",
+        "assets/narrative/yard.bindings.json"
+      ],
+      "started_at": "2026-10-14T23:20:55.654696+00:00",
+      "exit_code": 0,
+      "duration_seconds": 0.0026722769252955914,
+      "stdout_file": ".be2-work/narrative-trial/task2-lint-v2.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task2-lint-v2.stderr"
+    },
+    {
+      "argv": [
+        "cargo",
+        "run",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "narrative",
+        "--example",
+        "narrative_walk",
+        "--",
+        "--fixture",
+        "reactive",
+        "--content",
+        ".be2-work/narrative-trial/response.poe",
+        "--seed",
+        "11",
+        "--limit",
+        "340"
+      ],
+      "started_at": "2026-10-14T23:20:58.651965+00:00",
+      "exit_code": 0,
+      "duration_seconds": 8.930708788102493,
+      "stdout_file": ".be2-work/narrative-trial/task3-walk.stdout",
+      "stderr_file": ".be2-work/narrative-trial/task3-walk.stderr"
+    }
+  ],
+  "authoring_actions": [
+    {
+      "at": "2026-10-14T23:14:33.797193+00:00",
+      "action": "Copy relay-yard.poe and append one original response",
+      "from": "assets/narrative/relay-yard.poe",
+      "file": ".be2-work/narrative-trial/response.poe",
+      "snapshot": ".be2-work/narrative-trial/response.v1.poe",
+      "id": "yard.trial_spent_cell",
+      "event": "gate",
+      "conditions": [
+        "gate.open == true"
+      ],
+      "priority": 8,
+      "cooldown": 90,
+      "repeat": "once"
+    },
+    {
+      "at": "2026-10-14T23:20:55.623833+00:00",
+      "action": "Revise same stable response ID with a second typed real query and revised text",
+      "file": ".be2-work/narrative-trial/response.poe",
+      "snapshot": ".be2-work/narrative-trial/response.after.poe",
+      "id": "yard.trial_spent_cell",
+      "conditions": [
+        "gate.open == true",
+        "inventory.cells == 0"
+      ],
+      "text": "Cell spent, bridge awake. The clipboard calls that a fair trade."
+    }
+  ],
+  "content_metrics": {
+    ".be2-work/narrative-trial/response.before.poe": {
+      "utf8_bytes": 873,
+      "whitespace_words": 128,
+      "lines": 41,
+      "sha256": "b269f50e0ce1f4c5e6e5a5c7e2960edd6771e8165f406e72874586bd0ecc9d07"
+    },
+    ".be2-work/narrative-trial/response.v1.poe": {
+      "utf8_bytes": 1096,
+      "whitespace_words": 161,
+      "lines": 51,
+      "sha256": "b31e4f343f094af7d2ac27d5de99cbc824ab83e3192e374d7eb4164162dcb788"
+    },
+    ".be2-work/narrative-trial/response.after.poe": {
+      "utf8_bytes": 1115,
+      "whitespace_words": 163,
+      "lines": 52,
+      "sha256": "27185c2fbe9be6c668c8daf6d62924e295c7bcbdc1adc005d5a7ef9e677b0beb"
+    },
+    ".be2-work/narrative-trial/response.poe": {
+      "utf8_bytes": 1115,
+      "whitespace_words": 163,
+      "lines": 52,
+      "sha256": "27185c2fbe9be6c668c8daf6d62924e295c7bcbdc1adc005d5a7ef9e677b0beb"
+    }
+  },
+  "task2": {
+    "passed": true,
+    "id": "yard.trial_spent_cell",
+    "event": "gate",
+    "speaker": "pa",
+    "category": "yard",
+    "priority": 8,
+    "cooldown_ticks": 90,
+    "repeat": "once",
+    "original_response_text": "Bridge awake. The clipboard will count your victory lap on the far side.",
+    "original_conditions": [
+      "gate.open == true"
+    ],
+    "revised_response_text": "Cell spent, bridge awake. The clipboard calls that a fair trade.",
+    "revised_conditions": [
+      "gate.open == true",
+      "inventory.cells == 0"
+    ],
+    "query_types": {
+      "gate.open": "bool",
+      "inventory.cells": "int"
+    },
+    "v1_lint": {
+      "content": ".be2-work/narrative-trial/response.poe",
+      "evidence": "content validity only; gameplay, native input and editorial review require separate evidence",
+      "ok": true,
+      "responses": 5,
+      "scenes": 0,
+      "warnings": [
+        {
+          "message": "event finish has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": ".be2-work/narrative-trial/response.poe",
+            "line": 32,
+            "node": "yard.finish"
+          }
+        },
+        {
+          "message": "event gate has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": ".be2-work/narrative-trial/response.poe",
+            "line": 22,
+            "node": "yard.open"
+          }
+        },
+        {
+          "message": "event pickup has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": ".be2-work/narrative-trial/response.poe",
+            "line": 12,
+            "node": "yard.cell"
+          }
+        }
+      ]
+    },
+    "v2_lint": {
+      "content": ".be2-work/narrative-trial/response.poe",
+      "evidence": "content validity only; gameplay, native input and editorial review require separate evidence",
+      "ok": true,
+      "responses": 5,
+      "scenes": 0,
+      "warnings": [
+        {
+          "message": "event finish has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": ".be2-work/narrative-trial/response.poe",
+            "line": 32,
+            "node": "yard.finish"
+          }
+        },
+        {
+          "message": "event gate has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": ".be2-work/narrative-trial/response.poe",
+            "line": 22,
+            "node": "yard.open"
+          }
+        },
+        {
+          "message": "event pickup has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": ".be2-work/narrative-trial/response.poe",
+            "line": 12,
+            "node": "yard.cell"
+          }
+        }
+      ]
+    },
+    "content_repairs": 0,
+    "revision_is_requested_edit": true,
+    "bindings_edited": false,
+    "snapshots": [
+      ".be2-work/narrative-trial/response.before.poe",
+      ".be2-work/narrative-trial/response.v1.poe",
+      ".be2-work/narrative-trial/response.after.poe"
+    ]
+  },
+  "task3": {
+    "passed": true,
+    "fixture": "Reactive",
+    "seed": 11,
+    "limit": 340,
+    "route": "share",
+    "chosen_line_appears": true,
+    "trace_ticks": [
+      205,
+      206
+    ],
+    "response_history": {
+      "completed": 1,
+      "last_selected": 205,
+      "presented": 1,
+      "selected": 1
+    },
+    "execution_errors": 0,
+    "resume_replays_identically": true,
+    "world_gate_open": true,
+    "world_cells": 0,
+    "world_finished": true,
+    "power_commits": 1,
+    "state_hash": "d1128137166486e4",
+    "content_argument_supported": true,
+    "content_argument_retries": 0,
+    "runtime_only_seconds": null,
+    "assumptions": [
+      "fixed 60 Hz",
+      "single player; speakers present",
+      "one authored route; no exhaustive exploration",
+      "actual movement, collision, typed reads and atomic commands"
+    ],
+    "raw_stdout": ".be2-work/narrative-trial/task3-walk.stdout",
+    "raw_stderr": ".be2-work/narrative-trial/task3-walk.stderr"
+  },
+  "friction_and_repairs": [
+    {
+      "kind": "feature-specific shared binary",
+      "observed": "Direct target/itest/be2-tools narrative describe and first lint both rejected narrative because the existing binary lacked the optional feature.",
+      "friction_items": 1,
+      "failed_calls": 2,
+      "repair": "Switched V1 lint to the documented cargo run --locked --profile itest --no-default-features --features narrative --bin be2-tools invocation. Revised direct-binary lint then passed.",
+      "source_read_required": false
+    },
+    {
+      "kind": "shared Cargo build-directory lock and compilation",
+      "observed": "V1 lint Cargo stderr reported waiting for file lock then compilation; Finished line reports 6m 05s. Headless command stderr reports a lock wait and 8.90s build.",
+      "repair": "Waited; no engine edits or dependency changes.",
+      "runtime_cost_inferred": false
+    }
+  ],
+  "raw_output_capture": {
+    "directory": ".be2-work/narrative-trial",
+    "public_authoring_commands": "All stdout/stderr captured separately without truncation.",
+    "initial_discovery": "Initial filename search and first AGENTS read predated recording; their observed outputs remain in the tool transcript. Root AGENTS content was subsequently captured to root-guidance.stdout.",
+    "polls": "PTY polling output mirrors captured stdout/stderr; no extra content was generated by polls."
+  },
+  "authored_file_preservation": {
+    "baseline_matches_source": true,
+    "final_matches_after_snapshot": true
+  },
+  "model_token_usage": null,
+  "test_scope": "Trial-specific lint before/after and one real headless fixture route only; no production source changed."
+}

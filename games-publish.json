@@ -27,7 +27,8 @@
     "games/dead-air",
     "games/prop-hunt",
     "games/slapstick",
-    "games/feta"
+    "games/feta",
+    "games/odd-matter"
   ],
   "collections": {
     "games": [
@@ -312,8 +313,16 @@
         "destination": "rift-delver"
       },
       {
-        "source": "games/odd-matter",
-        "destination": "odd-matter"
+        "source": "games/wormhole",
+        "destination": "wormhole"
+      },
+      {
+        "source": "games/sway",
+        "destination": "sway"
+      },
+      {
+        "source": "games/reverie",
+        "destination": "reverie"
       }
     ],
     "prototypes": [

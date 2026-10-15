@@ -1,0 +1,19 @@
+{
+  "complexity": "low",
+  "description": "An endless cinematic fall through living waves of color, morphing tunnels and a wistful evolving original score. Look anywhere; float, fall or surge.",
+  "id": "wormhole",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "networking": "offline",
+  "presentation": "3d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 30,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

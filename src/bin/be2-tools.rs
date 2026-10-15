@@ -338,6 +338,49 @@ fn run() -> Result<()> {
         }
     }
     match command {
+        "narrative" => {
+            #[cfg(not(feature = "narrative"))]
+            return Err("optional narrative tools require --no-default-features --features physics,networking,narrative; see tools/skills/poe/SKILL.md only when the game benefits from narrative".into());
+            #[cfg(feature = "narrative")]
+            {
+                use vesper3d::viewer::narrative::{self, Registry};
+                let report = match arg(1)? {
+                    "describe" if a.len() == 2 => json!({
+                        "ok":true,"version":1,"optional":true,
+                        "authoring":"tools/skills/poe/SKILL.md","contract":"docs/NARRATIVE.md",
+                        "commands":["narrative lint CONTENT.poe BINDINGS.json","narrative inspect CONTENT.poe BINDINGS.json"],
+                        "runtime":"typed live queries, atomic game commands, deterministic event-indexed responses; explicit input for every scene transition",
+                        "headless":"cargo run --example narrative_walk --no-default-features --features narrative -- --help",
+                        "native":"cargo run --example narrative_native --no-default-features --features native-client,narrative -- --help",
+                        "no_narrative":"omit the feature and all content; existing game authoring remains unchanged"
+                    }),
+                    action @ ("lint" | "inspect") if a.len() == 4 => {
+                        let path = Path::new(arg(3)?);
+                        if std::fs::metadata(path)?.len() > 65536 {
+                            return Err("binding contract exceeds 64 KiB".into());
+                        }
+                        let bytes = std::fs::read(path).map_err(|e| format!("{}:1 [bindings]: {e}", path.display()))?;
+                        let registry: Registry = serde_json::from_slice(&bytes)
+                            .map_err(|e| format!("{}:{} [bindings]: {e}", path.display(), e.line()))?;
+                        match narrative::load(Path::new(arg(2)?), &registry) {
+                            Ok(content) => {
+                                let mut report = json!({"ok":true,"content":arg(2)?,"responses":content.responses.len(),
+                                    "scenes":content.scenes.len(),"warnings":narrative::lint(&content),
+                                    "evidence":"content validity only; gameplay, native input and editorial review require separate evidence"});
+                                if action == "inspect" { report["parsed"] = serde_json::to_value(content)?; }
+                                report
+                            },
+                            Err(errors) => {
+                                println!("{}", json!({"ok":false,"diagnostics":errors}));
+                                return Err("narrative content invalid; see diagnostics".into());
+                            },
+                        }
+                    },
+                    _ => return Err("Expected narrative describe | lint CONTENT.poe BINDINGS.json | inspect CONTENT.poe BINDINGS.json".into()),
+                };
+                println!("{}", serde_json::to_string(&report)?);
+            }
+        }
         "game-describe" => println!(
             "{}",
             json!({

@@ -2,6 +2,7 @@
 import json
 import os
 import runpy
+import shlex
 from pathlib import Path
 import shutil
 import subprocess
@@ -80,6 +81,60 @@ class WindowsLauncherTests(unittest.TestCase):
 
 
 class ContextTests(unittest.TestCase):
+    def test_declared_cargo_commands_enable_required_targets_and_have_one_filter(self):
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
+        requirements = {kind: {target['name']: set(target.get('required-features', []))
+                              for target in manifest.get(kind, [])}
+                        for kind in ('test', 'bin', 'example')}
+        for feature_id, feature in workflow.index(ROOT).items():
+            checks = [*feature['checks'], *[rule.get('verify', '') for rule in feature.get('constraints', [])]]
+            for check in checks:
+                if not isinstance(check, str) or not check.startswith('cargo '):
+                    continue
+                argv = shlex.split(check)
+                if argv[1] not in ('test', 'check', 'run'):
+                    continue
+                selected = set() if '--no-default-features' in argv else {'default'}
+                required, consumed = set(), set()
+                for i, argument in enumerate(argv):
+                    if argument == '--features':
+                        selected.update(argv[i + 1].replace(',', ' ').split())
+                        consumed.add(i + 1)
+                    if argument in ('--test', '--bin', '--example'):
+                        required.update(requirements[argument[2:]].get(argv[i + 1], set()))
+                        consumed.add(i + 1)
+                    if argument in ('--profile', '--manifest-path', '--target'):
+                        consumed.add(i + 1)
+                pending = list(selected)
+                while pending:
+                    for dependency in manifest['features'].get(pending.pop(), []):
+                        if dependency in manifest['features'] and dependency not in selected:
+                            selected.add(dependency)
+                            pending.append(dependency)
+                self.assertFalse(required - selected, f'{feature_id}: {check} silently skips a required target')
+                if argv[1] == 'test':
+                    before_harness = argv[:argv.index('--')] if '--' in argv else argv
+                    filters = [value for i, value in enumerate(before_harness) if i > 1
+                               and i not in consumed and not value.startswith('-')]
+                    self.assertLessEqual(len(filters), 1, f'{feature_id}: {check}: Cargo accepts one filter')
+
+    def test_optional_narrative_guidance_requires_positive_capability_request(self):
+        for query in ('Create a storyless arcade game with enemies, scoring, objective text and UI labels',
+                      'Create an arcade game with no narrative and without dialogue',
+                      'Create an arcade game with no story and without plot',
+                      'Revise character names and game state in the custom simulation'):
+            packet = workflow.context(ROOT, query, level=1)
+            self.assertNotIn('optional_narrative', [item['id'] for item in packet['matches']], query)
+            self.assertNotIn('tools/skills/poe/SKILL.md', json.dumps(packet), query)
+        for query in ('Poe', 'contextual dialogue barks', 'flavor introductions',
+                      'add a story to my game', 'add plot and stories',
+                      'no story but reactive barks', 'optional_narrative', 'Commands::apply_atomic'):
+            packet = workflow.context(ROOT, query, level=1)
+            self.assertEqual(packet['matches'][0]['id'], 'optional_narrative', query)
+            self.assertIn('tools/skills/poe/SKILL.md', packet['matches'][0]['read_first'])
+            self.assertFalse(workflow.context(ROOT, query)['engine_source_read'])
+
     def test_stock_audio_pipeline_and_bindings_are_discoverable(self):
         packet = workflow.context(ROOT, 'stock GameDocument audio pipeline cues and adaptive music')
         feature = packet['matches'][0]
@@ -119,6 +174,20 @@ class ContextTests(unittest.TestCase):
             with self.assertRaisesRegex(SystemExit, 'ARCH-HEADLESS-001.*macroquad') as error:
                 runpy.run_path(str(ROOT / 'tools/check_headless.py'), run_name='__main__')
         self.assertIn('python tools/be2.py context ARCH-HEADLESS-001', str(error.exception))
+
+    def test_each_dependency_boundary_resolves_separately_and_rejects_heavy_edges(self):
+        from tools import check_headless
+        calls = []
+        def run(command, **kwargs):
+            calls.append(command)
+            return SimpleNamespace(stdout='serde v1.0\nring v0.17\n')
+        check_headless.check_boundaries(run)
+        self.assertEqual(len(calls), len(check_headless.CONFIGURATIONS))
+        self.assertTrue(all('--edges' in command and 'normal' in command for command in calls))
+        self.assertNotIn('--features', calls[0])
+        self.assertTrue(any('physics,networking' in command for command in calls))
+        with self.assertRaisesRegex(SystemExit, 'rules.*quinn'):
+            check_headless.check_boundaries(lambda *a, **k: SimpleNamespace(stdout='quinn v0.11\n'))
 
     def test_index_contracts_resolve_and_annotations_stay_queryable(self):
         features = workflow.index(ROOT)
@@ -195,8 +264,11 @@ class AutomaticLoopTests(unittest.TestCase):
         plan = workflow.change_plan(ROOT, ['src/viewer/net/replication.rs'])
         self.assertEqual(plan['scope'], 'focused')
         command = plan['commands'][0]
-        for arg in ('--lib', '--no-default-features', 'replication_budget', 'hub', 'netplay', 'shared_gameplay'):
+        for arg in ('--lib', '--no-default-features'):
             self.assertIn(arg, command)
+        selected = [arg for command in plan['commands'] if command[:2] == ['cargo', 'test'] for arg in command]
+        for suite in ('replication_budget', 'hub', 'netplay', 'shared_gameplay'):
+            self.assertIn(suite, selected)
         self.assertNotIn('audio_project', command)
         self.assertEqual(plan['requirements']['full_suite'], 'before merge')
         self.assertEqual(len(plan['commands']), len(plan['command_harnesses']))
@@ -209,6 +281,15 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertIn('--no-default-features', rust[1])
         self.assertIn('two-d', rust[2])
         self.assertIn('packaging', plan['requirements'])
+
+    def test_optional_narrative_has_explicit_full_gates(self):
+        commands = workflow.full_commands()
+        self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', '--no-default-features',
+                       '--features', 'narrative', '--lib', '--test', 'narrative_fixtures', '--test', 'narrative_content'], commands)
+        self.assertIn(['cargo', 'clippy', '--locked', '--profile', 'itest', '--features', 'narrative',
+                       '--all-targets', '--', '-D', 'warnings'], commands)
+        self.assertIn(['cargo', 'rustdoc', '--locked', '--profile', 'itest', '--no-default-features',
+                       '--features', 'narrative', '--lib', '--', '-D', 'warnings'], commands)
 
     def test_feature_guarded_schema_suite_runs_separately_from_normal_units(self):
         plan = workflow.change_plan(ROOT, ['src/viewer/game.rs'])
@@ -223,15 +304,212 @@ class AutomaticLoopTests(unittest.TestCase):
         exact = workflow.iteration_plan(ROOT, 'game_documents', test='authoring_schemas')
         self.assertIn('schema-validation', exact['commands'][0])
 
+    def test_feature_ownership_exercises_gated_modules_and_retains_narrow_rules(self):
+        physics = workflow.change_plan(ROOT, ['src/viewer/prop_physics.rs'])
+        first = physics['commands'][0]
+        self.assertEqual(first[first.index('--features') + 1], 'physics')
+        self.assertNotIn('networking', first)
+        rules = workflow.change_plan(ROOT, ['src/viewer/devkit/sim.rs'])
+        self.assertIn('--no-default-features', rules['commands'][0])
+        # This feature intentionally also owns stock example files; exact devkit
+        # simulation units remain narrow unless Cargo suites require a feature.
+        typecheck = workflow.iteration_plan(ROOT, 'simulation_contract', typecheck=True,
+                                            feature_mode='headless')['commands'][0]
+        self.assertIn('physics', typecheck)
+        self.assertEqual(workflow.feature_map(ROOT, 'simulation_contract')['required_features'], ['physics'])
+        model = workflow.change_plan(ROOT, ['src/model_import.rs'])['commands'][0]
+        self.assertIn('model-import', model)
+        schema = workflow.change_plan(ROOT, ['src/authoring_schemas.rs'])['commands'][0]
+        self.assertIn('schema-generation', schema)
+        static = workflow.change_plan(ROOT, ['src/asset_model.rs'])['commands'][0]
+        self.assertNotIn('--features', static)
+
+    def test_path_feature_ownership_is_exact_and_unknown_features_are_rejected(self):
+        features = {'owned': {'required_features': ['physics'], 'path_features': {
+            'src/schema': ['schema-generation'], 'src/import.rs': ['model-import']}}}
+        self.assertEqual(workflow.owner_features(features, ['owned'], ['src/schema/type.rs']),
+                         ['physics', 'schema-generation'])
+        self.assertEqual(workflow.owner_features(features, ['owned'], ['src/schema-other.rs']), ['physics'])
+        self.assertEqual(workflow.owner_features(features, ['owned']), ['model-import', 'physics', 'schema-generation'])
+        with patch.object(workflow, 'index', return_value={'owned': {
+                'files': ['Cargo.toml'], 'checks': [], 'required_features': ['unknown-feature'],
+                'path_features': {'Cargo.toml': ['unknown-path-feature']}}}):
+            result = workflow.validate_index(ROOT)
+            self.assertFalse(result['ok'])
+            self.assertEqual(len([error for error in result['errors']
+                                  if error['error'] == 'unknown Cargo feature']), 2)
+
+    def test_gated_gameplay_and_cinematic_paths_are_compiled_in_inner_loop(self):
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())['features']
+        cases = {
+            'src/viewer/game_input.rs': {'native-client'},
+            'src/viewer/game_ui.rs': {'presentation'},
+            'src/viewer/character_skins.rs': {'presentation'},
+            'src/viewer/character.rs': {'presentation'},
+            'src/viewer/wrench_view.rs': {'presentation'},
+            'src/viewer/local_client.rs': {'client', 'physics'},
+            'src/viewer/playable.rs': {'client', 'physics'},
+            'src/viewer/game_session.rs': {'physics'},
+            'src/viewer/prop_view.rs': {'presentation', 'physics'},
+            'src/main.rs': {'offline'},
+            'src/render.rs': {'offline'},
+            'src/output.rs': {'offline'},
+        }
+        for path, required in cases.items():
+            with self.subTest(path=path):
+                plan = workflow.change_plan(ROOT, [path])
+                self.assertEqual(plan['scope'], 'focused')
+                units = next(command for command in plan['commands']
+                             if command[:2] == ['cargo', 'test'] and '--lib' in command)
+                self.assertIn('--no-default-features', units)
+                enabled = set(units[units.index('--features') + 1].split(','))
+                pending = list(enabled)
+                while pending:
+                    for dependency in manifest.get(pending.pop(), []):
+                        if dependency in manifest and dependency not in enabled:
+                            enabled.add(dependency)
+                            pending.append(dependency)
+                self.assertFalse(required - enabled, f'{path} excluded from selected library build')
+                self.assertIn('Other feature configurations and undeclared downstream consumers.',
+                              plan['not_verified'])
+        for path, expected in [('src/viewer/game_input.rs', 'native-client'),
+                               ('src/viewer/game_ui.rs', 'presentation'),
+                               ('src/render.rs', 'offline')]:
+            command = workflow.change_plan(ROOT, [path])['commands'][0]
+            self.assertEqual(command[command.index('--features') + 1], expected)
+
+    def test_optional_library_modules_are_enabled_for_default_typecheck(self):
+        for feature, required in [('offline_renderer', 'offline'),
+                                  ('asset_library', 'schema-generation'),
+                                  ('shared_gameplay', 'native-client')]:
+            with self.subTest(feature=feature):
+                command = workflow.iteration_plan(ROOT, feature, typecheck=True)['commands'][0]
+                self.assertNotIn('--no-default-features', command)
+                self.assertIn(required, command[command.index('--features') + 1].split(','))
+
+    def test_changed_optional_binary_mains_are_selected_with_their_cargo_features(self):
+        for path, name, required in [('src/bin/be2-schema.rs', 'be2-schema', 'schema-generation'),
+                                     ('src/main.rs', 'vesper3d', 'offline')]:
+            for loop in ('inner', 'integration'):
+                with self.subTest(path=path, loop=loop):
+                    plan = workflow.change_plan(ROOT, [path], loop=loop)
+                    binaries = [command for command in plan['commands']
+                                if '--bin' in command and name in command]
+                    self.assertTrue(binaries, f'{path} must compile before focused success')
+                    for command in binaries:
+                        self.assertIn('--lib', command)
+                        self.assertIn(required, command[command.index('--features') + 1].split(','))
+
+    def test_focused_binary_plan_detects_an_executable_error_despite_passing_library(self):
+        # Execute a dependency-free external project: passing library units cannot
+        # conceal a broken main behind an optional Cargo feature.
+        with tempfile.TemporaryDirectory(prefix='be2-plan-binary ') as temporary:
+            root = Path(temporary)
+            (root / 'src/bin').mkdir(parents=True)
+            (root / 'Cargo.toml').write_text(
+                '[package]\nname="plan-binary"\nversion="0.0.0"\nedition="2021"\n'
+                '[features]\ndefault=[]\nauthoring=[]\n'
+                '[[bin]]\nname="authoring"\npath="src/bin/authoring.rs"\nrequired-features=["authoring"]\n')
+            (root / 'src/lib.rs').write_text('#[test] fn working_rules() { assert_eq!(2 + 2, 4); }\n')
+            (root / 'src/bin/authoring.rs').write_text(
+                'compile_error!("changed executable must be compiled");\nfn main() {}\n')
+            subprocess.run(['cargo', 'generate-lockfile', '--offline'], cwd=root,
+                           check=True, capture_output=True, text=True)
+            owned = {'authoring': {'files': ['src/bin/authoring.rs'], 'checks': []}}
+            with patch.object(workflow, 'index', return_value=owned):
+                plan = workflow.change_plan(root, ['src/bin/authoring.rs'], test_profile='dev')
+            command = next(command for command in plan['commands'] if command[:2] == ['cargo', 'test'])
+            env = {**os.environ, 'CARGO_TARGET_DIR': str(root / 'target')}
+            rules = subprocess.run(['cargo', 'test', '--locked', '--offline', '--lib'], cwd=root,
+                                   capture_output=True, text=True, env=env)
+            self.assertEqual(rules.returncode, 0, rules.stdout + rules.stderr)
+            self.assertIn('1 passed', rules.stdout)
+            result = subprocess.run(command, cwd=root, capture_output=True, text=True,
+                                    env=env)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('changed executable must be compiled', result.stdout + result.stderr)
+            (root / 'src/bin/authoring.rs').write_text('fn main() {}\n')
+            repaired = subprocess.run(command, cwd=root, capture_output=True, text=True, env=env)
+            self.assertEqual(repaired.returncode, 0, repaired.stdout + repaired.stderr)
+            self.assertIn('1 passed', repaired.stdout)
+
+    def test_reviewed_consumer_pin_changes_use_compatibility_checks_without_cargo(self):
+        inventory = json.loads((ROOT / 'tools/game_tooling_inventory.json').read_text())
+        paths = [item['game'] + '/scripts/tooling.json' for item in inventory['projects']]
+        plan = workflow.change_plan(ROOT, paths)
+        self.assertEqual(plan['scope'], 'focused')
+        self.assertFalse(plan['requirements']['unit'])
+        self.assertTrue(all(command[0] != 'cargo' for command in plan['commands']))
+        self.assertTrue(any('tools.test_game_tooling' in command for command in plan['commands']))
+        # Ownership of the inventoried pin does not classify game content or a
+        # new project's policy as independent Python tooling.
+        for path in ('games/unreviewed/scripts/tooling.json', 'games/reverie/game.json',
+                     'assets/games/leo/assets/identity.json'):
+            with self.subTest(path=path):
+                self.assertEqual(workflow.change_plan(ROOT, [path])['scope'], 'full')
+
     def test_unknown_build_and_content_inputs_fail_closed(self):
         for path in ('src/new.rs', 'Cargo.toml', 'tools/FEATURES.json', '.github/workflows/ci.yml',
-                     'assets/games/observatory/content/game.json', 'tools/place_interior.py'):
+                     'assets/games/observatory/content/game.json', 'tools/place_interior.py',
+                     'docs/AI_QUICKSTART.md', 'docs/archive/AI_REFERENCE.md',
+                     'tools/check_dependency_boundaries.py',
+                     'docs/perf/hot-reload/measure_content.py',
+                     'docs/perf/model-import/cases/final-1.rs', 'docs/new-recipe.md'):
             plan = workflow.change_plan(ROOT, [path])
             self.assertEqual(plan['scope'], 'full', path)
             self.assertEqual(plan['commands'], workflow.full_commands())
         mixed = workflow.change_plan(ROOT, ['tools/assets.py', 'unknown.py'])
         self.assertEqual(mixed['scope'], 'full')
         self.assertEqual(workflow.change_plan(ROOT, [])['commands'], [])
+
+    def test_reviewed_guides_execute_current_content_without_whole_library_units(self):
+        for loop in ('inner', 'integration'):
+            plan = workflow.change_plan(ROOT, ['docs/NETPLAY.md'], loop=loop)
+            self.assertEqual(plan['scope'], 'focused')
+            cargo = [c for c in plan['commands'] if c[0] == 'cargo']
+            self.assertEqual(len(cargo), 1)
+            self.assertIn('doc_drift', cargo[0])
+            self.assertNotIn('--lib', cargo[0])
+            self.assertEqual(plan['requirements']['integration_suites'], ['doc_drift'])
+            self.assertIn('Rust examples', plan['requirements']['documentation'])
+            self.assertEqual(plan['requirements']['networking'], 'deferred to shipping')
+            self.assertTrue(plan['not_verified'])
+            self.assertIn([sys.executable, 'tools/check_docs.py'], plan['commands'])
+            self.assertIn('shipping', plan['remaining'])
+        self.assertEqual(workflow.change_plan(ROOT, ['docs/NETPLAY.md'], loop='shipping')['scope'], 'full')
+        self.assertEqual(workflow.change_plan(ROOT, ['docs/NETPLAY.md', 'docs/new-recipe.md'])['scope'], 'full')
+
+    def test_known_markdown_with_no_behavioral_evidence_fails_closed(self):
+        with patch.object(workflow, 'index', return_value={'guide': {
+                'files': ['docs/recipe.md'], 'checks': [], 'evidence': []}}):
+            self.assertEqual(workflow.change_plan(ROOT, ['docs/recipe.md'])['scope'], 'full')
+
+    def test_shared_python_tools_execute_compatibility_tests_without_rust_rebuild(self):
+        for path in ('tools/game_tooling.py', 'tools/game_tooling_inventory.json',
+                     'templates/game_ship.py', 'templates/game_check.py',
+                     'templates/game_dev.py', 'templates/game_project.py',
+                     'templates/game_installer.py', 'templates/game_review.py'):
+            plan = workflow.change_plan(ROOT, [path])
+            self.assertEqual(plan['scope'], 'focused', path)
+            self.assertFalse(any(command[0] == 'cargo' for command in plan['commands']), path)
+            self.assertIn([sys.executable, '-m', 'unittest', 'tools.test_game_tooling'], plan['commands'])
+        embedded = workflow.change_plan(ROOT, ['templates/game_entry.py'])
+        self.assertEqual(embedded['scope'], 'focused')
+        self.assertTrue(embedded['requirements']['unit'])
+        self.assertTrue(any(command[:2] == ['cargo', 'test'] for command in embedded['commands']))
+
+    def test_content_link_gate_reads_current_files_on_every_run(self):
+        from tools.check_docs import broken_links
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            subprocess.run(['git', 'init', '-q', str(root)], check=True)
+            guide = root / 'guide.md'
+            (root / 'target.md').write_text('A reviewed destination.\n', encoding='utf-8')
+            guide.write_text('[Destination](target.md)\n', encoding='utf-8')
+            self.assertEqual(broken_links(root), [])
+            guide.write_text('[Destination](missing-current.md)\n', encoding='utf-8')
+            self.assertEqual(broken_links(root), ['guide.md: missing missing-current.md'])
 
     def test_shipping_selection_is_unchanged_and_python_needs_no_cargo(self):
         self.assertEqual(workflow.change_plan(ROOT, ['tools/assets.py'], loop='shipping'),
@@ -254,6 +532,108 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertEqual(ship['command_roles'], ['game_check', 'game_ship'])
         self.assertFalse(any('web' in command for command in ship['commands']))
         self.assertNotIn(['cargo', 'test', '--locked', '--profile', 'itest'], ship['commands'])
+
+    def test_optional_resources_have_independent_required_gates(self):
+        commands = workflow.full_commands()
+        resource = [command for command in commands if '--features' in command
+                    and command[command.index('--features') + 1] == 'resources']
+        self.assertEqual(len(resource), 4)
+        self.assertTrue(all('--no-default-features' in command for command in resource))
+        self.assertTrue(any('--test' in command and command[command.index('--test') + 1] == 'resources'
+                            for command in resource))
+        self.assertTrue(any('--doc' in command for command in resource))
+        self.assertTrue(any(command[1] == 'rustdoc' and '--lib' in command for command in resource))
+        self.assertTrue(any(command[1] == 'clippy' and '--all-targets' in command for command in resource))
+        workshop = [command for command in commands if '--manifest-path' in command
+                    and command[command.index('--manifest-path') + 1] == 'games/automation-workshop/Cargo.toml']
+        self.assertEqual(len(workshop), 2)
+        self.assertTrue(all('--no-default-features' in command for command in workshop))
+        self.assertTrue(any('--features' in command and command[command.index('--features') + 1] == 'online'
+                            and '--test' in command for command in workshop))
+
+    def test_resource_integration_closes_over_workshop_without_widening_inner(self):
+        inner = workflow.change_plan(ROOT, ['src/runtime/resources.rs'])
+        self.assertFalse(any('--manifest-path' in command for command in inner['commands']))
+        integration = workflow.change_plan(ROOT, ['src/runtime/resources.rs'], loop='integration')
+        projects = [command for command in integration['commands'] if '--manifest-path' in command]
+        self.assertEqual(len(projects), 2)
+        self.assertTrue(all('--no-default-features' in command for command in projects))
+        self.assertTrue(any('--features' in command and command[command.index('--features') + 1] == 'online'
+                            for command in projects))
+        self.assertTrue(all(integration['command_harnesses'][integration['commands'].index(command)] == 'rust_project'
+                            for command in projects))
+        direct = workflow.change_plan(ROOT, ['games/automation-workshop/src/lib.rs'])
+        cargo = [command for command in direct['commands'] if command[0] == 'cargo']
+        self.assertEqual(len(cargo), 1)
+        self.assertIn('games/automation-workshop/Cargo.toml', cargo[0])
+        self.assertNotIn('--features', cargo[0])
+        client = workflow.change_plan(ROOT, ['games/automation-workshop/src/main.rs'])
+        command = next(command for command in client['commands'] if command[0] == 'cargo')
+        self.assertEqual(command[command.index('--features') + 1], 'client')
+        server = workflow.change_plan(ROOT, ['games/automation-workshop/src/bin/server.rs'])
+        command = next(command for command in server['commands'] if command[0] == 'cargo')
+        self.assertEqual(command[command.index('--features') + 1], 'online')
+        unknown = workflow.change_plan(ROOT, ['src/runtime/unclassified-rule.rs'])
+        self.assertEqual(unknown['scope'], 'full')
+        self.assertEqual(unknown['commands'], workflow.full_commands())
+
+    def test_missing_external_consumer_escalates_instead_of_claiming_integration(self):
+        features = workflow.index(ROOT)
+        features['automation_workshop']['checks'] = [
+            'cargo test --locked --manifest-path missing-workshop/Cargo.toml --no-default-features']
+        with patch.object(workflow, 'index', return_value=features):
+            plan = workflow.change_plan(ROOT, ['src/runtime/resources.rs'], loop='integration')
+        self.assertEqual(plan['scope'], 'full')
+        self.assertIn('missing-workshop/Cargo.toml', plan['fallback_paths'])
+
+    def test_declared_game_integration_features_are_checked_but_inner_stays_narrow(self):
+        with tempfile.TemporaryDirectory() as directory:
+            game = Path(directory)
+            shutil.copyfile(ROOT / 'games/lantern-run/game.project.json', game / 'game.project.json')
+            (game / 'Cargo.toml').write_text(
+                '[package]\nname="capability-game"\nversion="0.1.0"\n'
+                '[package.metadata.blueengine]\nintegration-features=["online"]\n'
+                '[features]\nonline=[]\n')
+            (game / 'Cargo.lock').write_text('[[package]]\nname="capability-game"\nversion="0.1.0"\n')
+            (game / 'scripts').mkdir()
+            for name in ('check.py', 'ship.py'):
+                (game / 'scripts' / name).write_text('')
+            inner = workflow.game_plan(ROOT, game)
+            self.assertEqual(len(inner['commands']), 1)
+            self.assertNotIn('--features', inner['commands'][0])
+            self.assertIn('online', ' '.join(inner['not_verified']))
+            for loop in ('integration', 'shipping'):
+                plan = workflow.game_plan(ROOT, game, loop)
+                optional = [command for command in plan['commands'] if '--features' in command]
+                self.assertEqual(len(optional), 1)
+                self.assertIn('--no-default-features', optional[0])
+                self.assertEqual(optional[0][optional[0].index('--features') + 1], 'online')
+                self.assertEqual(plan['command_roles'][plan['commands'].index(optional[0])], 'integration_features')
+                self.assertFalse(any('--lib' in command for command in plan['commands']))
+        for value in ('online', ['missing'], ['online', 'online'], [False], ['online'] * 9):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                workflow.game_integration_features({'package': {'metadata': {'blueengine': {'integration-features': value}}},
+                                                    'features': {'online': []}})
+
+    def test_resources_isolated_graph_guard_refuses_network_runtime(self):
+        from tools import check_dependency_boundaries as boundaries
+        configurations = {'resource_transactions': boundaries.CASES['resource_transactions']}
+        observed = []
+        def resolved(command, **kwargs):
+            manifest = Path(command[command.index('--manifest-path') + 1])
+            import tomllib
+            document = tomllib.loads(manifest.read_text())
+            self.assertIn('workspace', document)
+            self.assertFalse(document['dependencies']['vesper3d']['default-features'])
+            self.assertEqual(document['dependencies']['vesper3d']['features'], ['resources'])
+            observed.append(command)
+            return SimpleNamespace(returncode=0)
+        with patch.dict(boundaries.CASES, configurations, clear=True), \
+                patch.object(boundaries.subprocess, 'run', side_effect=resolved), \
+                patch.object(boundaries.subprocess, 'check_output', return_value='be2 v0.2.0\nserde v1.0.219\nquinn v0.11.8\n'):
+            with self.assertRaisesRegex(SystemExit, 'resource_transactions.*quinn'):
+                boundaries.main(['--target', 'x86_64-unknown-linux-gnu'])
+        self.assertEqual(len(observed), 1)
 
     def test_progressive_context_and_index_validation(self):
         small = workflow.context(ROOT, 'two_dimensional', level=1)
@@ -321,11 +701,29 @@ class AutomaticLoopTests(unittest.TestCase):
                 self.assertTrue(any(path == source or path.startswith(source + '/') for source in sources),
                                 'Cargo parses declared targets even when only selected binaries build')
 
+    def test_container_build_selects_required_binary_features(self):
+        import tomllib
+        manifest = tomllib.loads((ROOT / 'Cargo.toml').read_text())
+        builds = [shlex.split(line)[1:] for line in (ROOT / 'Dockerfile').read_text().splitlines()
+                  if line.startswith('RUN cargo build ')]
+        self.assertTrue(builds)
+        targets = {target['name']: target for target in manifest['bin']}
+        for command in builds:
+            self.assertIn('--no-default-features', command)
+            selected = set(command[command.index('--features') + 1].split(','))
+            for index, word in enumerate(command):
+                if word == '--bin':
+                    name = command[index + 1]
+                    self.assertTrue(set(targets[name].get('required-features', [])) <= selected,
+                                    f'Container binary {name} is missing its required features')
+
     def test_ci_keeps_canonical_shipping_and_aggregate_gates(self):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         self.assertIn('run: python tools/be2.py check', ci)
-        for gate in ('docker build -t blueengine-server .', 'test "$CONTAINER_RESULT" = success', 'cargo build --release --locked', 'needs: [engine, leo, idea-forge, container]' ,
+        for gate in ('docker build -t blueengine-server .', 'test "$CONTAINER_RESULT" = success', 'cargo build --release --locked', 'needs: [engine, leo, idea-forge, wormhole, sway, container]' ,
                      'Stock audio offscreen verification', 'test "$FORGE_RESULT" = success',
+                     'test "$WORMHOLE_RESULT" = success',
+                     'test "$SWAY_RESULT" = success',
                      'Windows package resources and isolated smoke'):
             self.assertIn(gate, ci)
         self.assertNotIn('wasm32-unknown-unknown', ci)
@@ -333,6 +731,25 @@ class AutomaticLoopTests(unittest.TestCase):
         # Both platform and native/headless/portable checks remain in full_commands.
         self.assertIn('os: [ubuntu-latest, windows-latest]', ci)
         self.assertEqual(ci.count('run: python tools/be2.py check'), 1)
+
+    def test_native_game_matrix_adds_workshop_and_preserves_required_os_gates(self):
+        ci = (ROOT / '.github/workflows/ci.yml').read_text()
+        job = ci.split('\n  idea-forge:\n', 1)[1].split('\n  wormhole:\n', 1)[0]
+        self.assertIn('os: [ubuntu-latest, windows-latest]', job)
+        self.assertIn('game: [idea-forge, automation-workshop]', job)
+        self.assertNotIn('games/idea-forge', job)
+        self.assertIn('games/${{ matrix.game }}/Cargo.toml', job)
+        self.assertIn('games/${{ matrix.game }}/scripts/ship.py', job)
+        self.assertIn('name: ${{ matrix.game }}-native-${{ runner.os }}', job)
+        self.assertIn('games/${{ matrix.game }}/.blue-check/', job)
+        for gate in ('cargo fmt', 'cargo test --locked', 'cargo clippy --locked --all-targets',
+                     'Prepare pinned software OpenGL for Windows CI',
+                     'Mesa archive checksum mismatch', 'Windows package resources and isolated smoke',
+                     'Linux package and isolated smoke', 'ship --no-install'):
+            self.assertIn(gate, job)
+        self.assertIn('needs: [engine, leo, idea-forge, wormhole, sway, container]', ci)
+        self.assertIn('FORGE_RESULT: ${{ needs.idea-forge.result }}', ci)
+        self.assertIn('test "$FORGE_RESULT" = success', ci)
 
 
 class DiskTests(unittest.TestCase):
@@ -393,6 +810,20 @@ class WindowsPlanTests(unittest.TestCase):
 
 
 class SelectionTests(unittest.TestCase):
+    def test_perf_preserves_stock_scope_when_dependencies_become_optional(self):
+        from tools import perf
+        self.assertEqual(perf.HEADLESS, ['--no-default-features', '--features', 'physics,networking',
+                                         '--bin', 'be2-headless'])
+        calls = []
+        def timed(command, env):
+            calls.append(command)
+            return (0.1, SimpleNamespace(returncode=0, stdout='', stderr=''))
+        with tempfile.TemporaryDirectory() as directory, patch.object(perf, 'target_dir', return_value=Path(directory)), \
+                patch.object(perf, 'timed', side_effect=timed):
+            perf.test_rows('itest')
+        self.assertEqual(len(calls), 2)
+        self.assertTrue(all('physics,networking' in command for command in calls))
+
     def test_iteration_reuses_index_and_never_claims_final_validation(self):
         plan = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',
                                        test='replication_budget::oversized_world_makes_wire_progress')
@@ -414,7 +845,7 @@ class SelectionTests(unittest.TestCase):
     def test_all_original_engine_gates_remain(self):
         commands = workflow.full_commands()
         self.assertIn(['cargo', 'fmt', '--check'], commands)
-        for features in ([], ['--no-default-features']):
+        for features in ([], ['--no-default-features', '--features', 'physics,networking']):
             self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', *features], commands)
             self.assertIn(['cargo', 'test', '--locked', *features], workflow.full_commands('dev'))
             self.assertIn(['cargo', 'clippy', '--all-targets', '--locked', '--profile', 'itest', *features,
@@ -423,6 +854,9 @@ class SelectionTests(unittest.TestCase):
                            '--', '-D', 'warnings'], commands)
         for script in ['tools/check_headless.py', 'tools/check_authoring.py']:
             self.assertIn([sys.executable, script], commands)
+        self.assertIn([sys.executable, 'tools/check_dependency_boundaries.py', '--run'], commands)
+        self.assertIn([sys.executable, 'tools/check_dependency_boundaries.py', '--run', '--profile', 'dev'],
+                      workflow.full_commands('dev'))
         self.assertIn([sys.executable, 'tools/check_authoring.py', '--profile', 'dev'],
                       workflow.full_commands('dev'))
         for command in workflow.full_commands('dev'):
@@ -432,6 +866,24 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(plan['independent_commands'], [len(commands) - 1])
         self.assertEqual(commands[-1][1:3], ['-m', 'unittest'])
         self.assertNotIn('tools.test_author', commands[-1])
+        self.assertIn('tools.test_game_tooling', commands[-1])
+        self.assertIn('tools.test_discovery', commands[-1])
+        self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', '--no-default-features', '--lib'], commands)
+
+    def test_engine_test_lint_and_docs_share_profile_in_every_feature_mode(self):
+        # Standalone games retain their own profiles; engine commands must not
+        # accidentally produce a second dependency graph under dev.
+        for profile in workflow.TEST_PROFILES:
+            for command in workflow.full_commands(profile):
+                if command[:2] not in (['cargo', 'test'], ['cargo', 'clippy'], ['cargo', 'rustdoc']):
+                    continue
+                if '--manifest-path' in command:
+                    continue
+                if profile == 'itest':
+                    self.assertIn('--profile', command, command)
+                    self.assertEqual(command[command.index('--profile') + 1], 'itest')
+                else:
+                    self.assertNotIn('--profile', command)
 
     def test_iteration_tests_use_the_fast_profile_unless_dev_is_asked_for(self):
         command = workflow.iteration_plan(ROOT, 'multiplayer', feature_mode='headless',

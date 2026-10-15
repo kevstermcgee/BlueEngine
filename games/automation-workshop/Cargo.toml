@@ -1,0 +1,68 @@
+[package]
+name = "automation-workshop"
+version = "0.1.0"
+edition = "2021"
+description = "Versioned, bounded automation workshop reference"
+
+[package.metadata.blueengine]
+integration-features = ["online"]
+
+# The rules are a plain library so they can be tested without a window; the window is the binary.
+[lib]
+name = "automation_workshop"
+path = "src/lib.rs"
+
+[features]
+default = ["client"]
+client = ["vesper3d/native-client", "dep:macroquad", "dep:windows-sys"]
+online = []
+production = ["online", "vesper3d/networking"]
+
+[[bin]]
+name = "workshop"
+path = "src/bin/workshop.rs"
+
+[[bin]]
+name = "workshop-server"
+path = "src/bin/server.rs"
+required-features = ["online"]
+
+[[bin]]
+name = "automation-workshop"
+path = "src/main.rs"
+required-features = ["client"]
+
+[dependencies]
+vesper3d = { package = "be2", path = "../..", default-features = false, features = ["resources"] }
+macroquad = { optional = true, version = "=0.4.14", default-features = false, features = ["audio"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { optional = true, version = "=0.61.2", features = ["Win32_UI_WindowsAndMessaging", "Win32_System_Threading", "Win32_System_Console", "Win32_UI_Input_KeyboardAndMouse"] }
+
+# A frame here is real work (mesh building, effects), so debug builds must stay playable for captures
+# and scripted runs: the game at opt-level 2, dependencies at 3.
+[profile.dev]
+opt-level = 2
+debug = 1
+[profile.dev.package."*"]
+opt-level = 3
+debug = false
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 4
+debug = false
+
+[profile.itest]
+inherits = "dev"
+opt-level = 0
+debug = "line-tables-only"
+[profile.itest.package."*"]
+opt-level = 3
+debug = false
+[profile.itest.package.be2]
+opt-level = 0
+debug = "line-tables-only"

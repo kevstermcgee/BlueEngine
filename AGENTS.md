@@ -49,8 +49,8 @@ Never violate:
 Scaffolding/authoring uses `python3 tools/be2.py map ...` with fresh shared itest tooling;
 release builds are for shipping. Browser commands return retirement diagnostics without building.
 
-Game projects start with their own AGENTS.md and project check. Read the start packet's
-selected guide and docs/GAME_QUICKSTART.md. CLI `new-game NAME DIR` defaults to portable;
+Game projects start with their own AGENTS.md and project check. Read the start packet's selected entry contract (docs/GAME_AUTHORING_ENTRY.md for games).
+Retrieve the relevant detailed guide with context --level 2 as the task requires. CLI `new-game NAME DIR` defaults to portable;
 pass `stock` explicitly for declarative GameDocument counters/interactables/timers.
 Offline 2D enemy/projectile/scoring/AI rules use `two-d`. Simple 3D drawing over 2D
 collision uses `three-d`; spatial 3D enemies, projectiles, AI or physics use `custom-sim`.
@@ -67,8 +67,8 @@ with `python3 tools/be2.py map describe` in a source checkout (`tools/author.py 
 for packaged tools or an explicit `BE2_TOOLS`); discover assets with
 `python tools/assets.py search TEXT`. Retrieve detailed contracts through context;
 see docs/ENGINE_MAINTENANCE.md only for relevant maintenance obligations.
-Custom-sim games: `docs/CUSTOM_SIM_CHEATSHEET.md` is the game-facing API on one page (read it before grepping the
-source). Online play is `viewer::netplay` (`docs/NETPLAY.md`): implement `NetGame` + `ClientView`, do not write a
+Custom-sim games: begin with the selected public contract; use `docs/CUSTOM_SIM_CHEATSHEET.md`
+for the relevant API section before grepping source. Online play is `viewer::netplay` (`context netplay --level 2`): implement `NetGame` + `ClientView`, do not write a
 server (`netplay::cli::serve` is the server main; `be2-hub`, ADR 0037, hosts many games' rooms). See a game without a
 display with `python tools/xcapture.py`. Silent-failure traps are documented in `docs/AI_DEV_FEEDBACK.md`.
 Published-source changes also require `python scripts/publish_games.py check`.

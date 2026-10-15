@@ -3,7 +3,9 @@
 pub mod weapons;
 pub mod wrench;
 
+#[cfg(feature = "physics")]
 use crate::viewer::simulation::HeadlessWorld;
+#[cfg(feature = "physics")]
 impl HeadlessWorld {
     /// Stock-protocol compatibility: pistol range/impulse belong to the demo.
     pub fn fire_pistol(&mut self, id: u64) -> Option<crate::math::V> {

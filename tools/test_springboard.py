@@ -184,6 +184,38 @@ class SpringboardTests(unittest.TestCase):
             packet = self.start('Create a game', kind='new-game', template=template, targets=['linux'])
             self.assertEqual(packet['workflow']['template'], template)
 
+    def test_project_entry_files_match_the_selected_scaffold(self):
+        for template in springboard.catalog(self.root)['starters']:
+            with self.subTest(template=template):
+                target = Path(self.tmp.name) / f'new-{template}'
+                target.mkdir()  # An empty target directory is still a new scaffold.
+                packet = self.start('Create a game', kind='new-game', template=template,
+                                    project=target, persist=False)
+                sources = (['game.json', 'maps/main.json', 'src/main.rs'] if template == 'stock'
+                           else ['src/lib.rs', 'src/main.rs'])
+                self.assertEqual(packet['context']['project_files'], ['AGENTS.md', 'game.project.json', *sources])
+
+    def test_existing_project_entry_files_only_name_present_content_and_sources(self):
+        game = self.game()
+        for path in ('AGENTS.md', 'game.json', 'maps/main.json', 'src/main.rs'):
+            destination = game / path
+            destination.parent.mkdir(exist_ok=True)
+            destination.write_text('{}' if path.endswith('.json') else '// existing game entry\n')
+        (game / 'src/lib.rs').unlink()  # Stock projects have only the client binary.
+        packet = self.start('Change a stock declarative game', kind='change-game', project=game, persist=False)
+        self.assertEqual(packet['context']['project_files'],
+                         ['AGENTS.md', 'game.project.json', 'game.json', 'maps/main.json', 'src/main.rs'])
+        (game / 'maps/main.json').unlink()
+        partial = self.start('Change a stock declarative game', kind='change-game', project=game, persist=False)
+        self.assertNotIn('maps/main.json', partial['context']['project_files'])
+        self.assertTrue(all((game / path).is_file() for path in partial['context']['project_files']))
+        rules = game
+        (rules / 'src/main.rs').unlink()
+        (rules / 'game.json').unlink()
+        (rules / 'src/lib.rs').write_text('// existing pure game rules\n')
+        custom = self.start('Change custom simulation rules', kind='change-game', project=rules, persist=False)
+        self.assertEqual(custom['context']['project_files'], ['AGENTS.md', 'game.project.json', 'src/lib.rs'])
+
     def test_stock_custom_rule_gap_has_explicit_engineering_escape_hatch(self):
         packet = self.start('Create a GameDocument game with enemies and projectiles', kind='new-game', template='stock', targets=['linux'])
         self.assertEqual(packet['workflow']['template'], 'stock')

@@ -1,0 +1,47 @@
+{
+  "assumptions": [
+    "fixed 60 Hz",
+    "single player; speakers present",
+    "one authored route; no exhaustive exploration",
+    "actual movement, collision, typed reads and atomic commands"
+  ],
+  "execution_errors": 0,
+  "fixture": "Storyless",
+  "limit": 340,
+  "narrative": null,
+  "resume_replays_identically": true,
+  "resume_split_after_tick": 170,
+  "route": "share",
+  "schema_version": 1,
+  "seed": 7,
+  "state_hash": "009db513c64d1290",
+  "trace": [],
+  "world": {
+    "cell_available": false,
+    "cells": 0,
+    "finished": true,
+    "gate_open": true,
+    "player": {
+      "f": 0.0,
+      "g": true,
+      "h": 1.7999999523162842,
+      "j": 0.0,
+      "p": [
+        2.1520310156120104e-7,
+        1.6799999475479126,
+        -5.568576335906982
+      ],
+      "t": 0.0,
+      "v": [
+        1.5259376674075145e-23,
+        0.0,
+        0.0
+      ],
+      "y": 0.0
+    },
+    "power_commits": 1,
+    "seed": 7,
+    "speaker_present": true,
+    "tick": 340
+  }
+}

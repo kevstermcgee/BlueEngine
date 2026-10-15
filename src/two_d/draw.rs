@@ -399,6 +399,15 @@ pub trait Game: super::GameLogic {
     fn show_hud() -> bool {
         true
     }
+    /// Hide shared start/pause panels and transient notices for immersive presentation.
+    /// Controls, audio, storage and pause behavior still work. Fatal failures remain on stderr.
+    fn show_overlays() -> bool {
+        true
+    }
+    /// Begin immediately, without waiting for the shared start gesture.
+    fn start_automatically() -> bool {
+        false
+    }
     fn menu_status(&self) -> String {
         String::new()
     }

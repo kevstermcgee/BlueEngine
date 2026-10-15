@@ -1,0 +1,33 @@
+poe 1
+# Short interaction: the cell and bridge are actual gameplay state.
+response light.callback
+ event finish
+ speaker mara
+ category callback
+ text You kept no spare, but the bridge is holding. I'll take that trade.
+ when gate.open == true
+ when course.finished == true
+ priority 7
+ cooldown 120
+ repeat once
+endresponse
+scene light.offer
+ node offer
+  when inventory.cells >= 1
+  when gate.open == false
+  speaker mara
+  text One cell left. The bridge can use it. You can keep it. Your call.
+  choice share consequential -> thanks | Put the cell in the bridge.
+   when inventory.cells >= 1
+   when gate.open == false
+   do bridge.power true
+  endchoice
+  choice keep expressive -> end | Keep it. I need a moment.
+  endchoice
+ endnode
+ node thanks
+  speaker mara
+  text There. Follow the rail across. I'll watch the contacts.
+  next end
+ endnode
+endscene

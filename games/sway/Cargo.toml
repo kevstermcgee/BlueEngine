@@ -1,0 +1,27 @@
+[package]
+name = "sway"
+version = "0.1.0"
+edition = "2021"
+[features]
+default = ["client"]
+client = ["vesper3d/two-d-draw", "dep:macroquad", "rodio/playback", "dep:tinyfiledialogs"]
+[[bin]]
+name = "sway"
+required-features = ["client"]
+[dependencies]
+vesper3d = { package = "be2", path = "../..", default-features = false }
+serde = { version = "=1.0.219", features = ["derive"] }
+serde_json = "=1.0.140"
+macroquad = { version = "=0.4.14", default-features = false, optional = true }
+rodio = { version = "=0.21.1", default-features = false, features = ["symphonia-all"] }
+rustfft = "=6.4.1"
+tinyfiledialogs = { version = "=3.9.1", optional = true }
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "=0.52.0", features = ["Win32_Foundation", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_KeyboardAndMouse", "Win32_System_DataExchange", "Win32_System_Memory"] }
+[profile.release]
+opt-level = 3
+lto = "thin"
+[profile.dev]
+opt-level = 1
+[profile.dev.package."*"]
+opt-level = 3

@@ -1,0 +1,424 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "scope": "Final positive story-alias discovery repair; Python tooling only. Original full3 stage39 predates this fix.",
+  "repair": {
+    "before": "Public context for 'add a story to my game' omitted Poe; 'add plot and stories' returned no match.",
+    "change": "After existing negation filtering, map positive story/stories/plot query words to narrative for capability gating and ranking. No FEATURES, Rust or content edits.",
+    "files": [
+      "tools/workflow.py",
+      "tools/test_workflow.py"
+    ]
+  },
+  "tokens": null,
+  "token_reason": "No per-agent token usage counter or model tokenizer available.",
+  "public_packets": [
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "context",
+        "add a story to my game",
+        "--level",
+        "1",
+        "--compact"
+      ],
+      "returncode": 0,
+      "packet": {
+        "query": "add a story to my game",
+        "confidence": "low: keyword ranking; confirm read_first before editing",
+        "matches": [
+          {
+            "id": "optional_narrative",
+            "read_first": [
+              "tools/skills/poe/SKILL.md",
+              "docs/NARRATIVE.md"
+            ],
+            "canonical_example": "examples/narrative_walk.rs",
+            "public_api": [
+              "viewer::narrative",
+              "parse",
+              "parse_validated",
+              "load",
+              "Registry",
+              "View",
+              "Commands::apply_atomic",
+              "NarrativeState"
+            ],
+            "iterate": "python tools/be2.py check --iterate optional_narrative --plan"
+          },
+          {
+            "id": "dev_tools",
+            "read_first": [
+              "docs/HEADLESS_CAPTURE.md"
+            ],
+            "iterate": "python tools/be2.py check --iterate dev_tools --plan"
+          },
+          {
+            "id": "game_documents",
+            "read_first": [
+              "docs/GAME_QUICKSTART.md",
+              "assets/games/observatory/README.md"
+            ],
+            "canonical_example": "src/viewer/game_example.rs",
+            "iterate": "python tools/be2.py check --iterate game_documents --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.",
+        "level": 1
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "context",
+        "add plot and stories",
+        "--level",
+        "1",
+        "--compact"
+      ],
+      "returncode": 0,
+      "packet": {
+        "query": "add plot and stories",
+        "confidence": "low: keyword ranking; confirm read_first before editing",
+        "matches": [
+          {
+            "id": "optional_narrative",
+            "read_first": [
+              "tools/skills/poe/SKILL.md",
+              "docs/NARRATIVE.md"
+            ],
+            "canonical_example": "examples/narrative_walk.rs",
+            "public_api": [
+              "viewer::narrative",
+              "parse",
+              "parse_validated",
+              "load",
+              "Registry",
+              "View",
+              "Commands::apply_atomic",
+              "NarrativeState"
+            ],
+            "iterate": "python tools/be2.py check --iterate optional_narrative --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.",
+        "level": 1
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "context",
+        "Create a storyless arcade game with enemies, scoring, objective text and UI labels",
+        "--level",
+        "1",
+        "--compact"
+      ],
+      "returncode": 0,
+      "packet": {
+        "query": "Create a storyless arcade game with enemies, scoring, objective text and UI labels",
+        "confidence": "low: keyword ranking; confirm read_first before editing",
+        "matches": [
+          {
+            "id": "custom_simulation",
+            "read_first": [
+              "docs/CUSTOM_CLIENT.md"
+            ],
+            "canonical_example": "templates/custom-sim/src/main.rs",
+            "public_api": [
+              "FrameClock",
+              "FixedStepper",
+              "InputAccumulator",
+              "Simulation",
+              "StateHasher",
+              "assert_deterministic",
+              "Playback",
+              "Timeline",
+              "CapturePlan",
+              "PerfReport",
+              "Rng",
+              "Juice",
+              "Settings",
+              "Snapshot",
+              "Lifecycle",
+              "Options",
+              "Notice",
+              "ScriptFrame",
+              "FpsCamera",
+              "MouseLook",
+              "Bounds",
+              "game_input::mouse_pixels",
+              "MenuNav",
+              "MenuStep",
+              "stick_look",
+              "request_exit",
+              "ShadowQuality"
+            ],
+            "iterate": "python tools/be2.py check --iterate custom_simulation --typecheck --plan"
+          },
+          {
+            "id": "game_presentation",
+            "read_first": [
+              "docs/GAME_PRESENTATION.md"
+            ],
+            "iterate": "python tools/be2.py check --iterate game_presentation --plan"
+          },
+          {
+            "id": "game_documents",
+            "read_first": [
+              "docs/GAME_QUICKSTART.md",
+              "assets/games/observatory/README.md"
+            ],
+            "canonical_example": "src/viewer/game_example.rs",
+            "iterate": "python tools/be2.py check --iterate game_documents --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.",
+        "level": 1
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "context",
+        "Create an arcade game with no story and without plot",
+        "--level",
+        "1",
+        "--compact"
+      ],
+      "returncode": 0,
+      "packet": {
+        "query": "Create an arcade game with no story and without plot",
+        "confidence": "low: keyword ranking; confirm read_first before editing",
+        "matches": [
+          {
+            "id": "two_dimensional",
+            "read_first": [
+              "docs/PORTABLE_GAMES.md",
+              "templates/two-d/AGENTS.md"
+            ],
+            "canonical_example": "templates/two-d/lib.rs",
+            "public_api": [
+              "two_d::GameLogic",
+              "two_d::Intent",
+              "two_d::Rect",
+              "two_d::Body",
+              "two_d::draw::Scene",
+              "two_d::client::run",
+              "portable::draw::World",
+              "portable::draw::Scene::world"
+            ],
+            "iterate": "python tools/be2.py check --iterate two_dimensional --plan"
+          },
+          {
+            "id": "netplay_hub",
+            "read_first": [
+              "docs/NETPLAY.md",
+              "docs/adr/0037-shared-multi-game-hub.md"
+            ],
+            "canonical_example": "src/bin/be2-toy-server.rs",
+            "public_api": [
+              "cli::serve",
+              "cli::ServeSpec",
+              "cli::Participants",
+              "cli::build_id",
+              "cli::Info",
+              "cli::Status",
+              "NetGame::settings",
+              "NetGame::configure",
+              "SettingSpec",
+              "hub::HubClient",
+              "hub::Online",
+              "hub::local_build",
+              "hub::default_hub",
+              "hub::wire::Request",
+              "hub::legacy"
+            ],
+            "iterate": "python tools/be2.py check --iterate netplay_hub --plan"
+          },
+          {
+            "id": "custom_simulation",
+            "read_first": [
+              "docs/CUSTOM_CLIENT.md"
+            ],
+            "canonical_example": "templates/custom-sim/src/main.rs",
+            "public_api": [
+              "FrameClock",
+              "FixedStepper",
+              "InputAccumulator",
+              "Simulation",
+              "StateHasher",
+              "assert_deterministic",
+              "Playback",
+              "Timeline",
+              "CapturePlan",
+              "PerfReport",
+              "Rng",
+              "Juice",
+              "Settings",
+              "Snapshot",
+              "Lifecycle",
+              "Options",
+              "Notice",
+              "ScriptFrame",
+              "FpsCamera",
+              "MouseLook",
+              "Bounds",
+              "game_input::mouse_pixels",
+              "MenuNav",
+              "MenuStep",
+              "stick_look",
+              "request_exit",
+              "ShadowQuality"
+            ],
+            "iterate": "python tools/be2.py check --iterate custom_simulation --typecheck --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.",
+        "level": 1
+      }
+    },
+    {
+      "argv": [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "context",
+        "no story but reactive barks",
+        "--level",
+        "1",
+        "--compact"
+      ],
+      "returncode": 0,
+      "packet": {
+        "query": "no story but reactive barks",
+        "confidence": "low: keyword ranking; confirm read_first before editing",
+        "matches": [
+          {
+            "id": "optional_narrative",
+            "read_first": [
+              "tools/skills/poe/SKILL.md",
+              "docs/NARRATIVE.md"
+            ],
+            "canonical_example": "examples/narrative_walk.rs",
+            "public_api": [
+              "viewer::narrative",
+              "parse",
+              "parse_validated",
+              "load",
+              "Registry",
+              "View",
+              "Commands::apply_atomic",
+              "NarrativeState"
+            ],
+            "iterate": "python tools/be2.py check --iterate optional_narrative --plan"
+          },
+          {
+            "id": "game_shipping",
+            "read_first": [
+              "docs/GAME_QUICKSTART.md"
+            ],
+            "public_api": [
+              "Identity::parse",
+              "icon::write_icon_set",
+              "icon::IconSpec",
+              "game_client::window_config_with_icon",
+              "devkit::runtime_assets"
+            ],
+            "iterate": "python tools/be2.py check --iterate game_shipping --plan"
+          },
+          {
+            "id": "audio_authoring",
+            "read_first": [
+              "docs/AUDIO.md"
+            ],
+            "canonical_example": "examples/audio_preview.rs",
+            "public_api": [
+              "AudioProject",
+              "AudioBundle",
+              "AudioBank",
+              "AudioState",
+              "checked_wav",
+              "StockAudio",
+              "AudioCursor",
+              "GameSession::advance_observed"
+            ],
+            "iterate": "python tools/be2.py check --iterate audio_authoring --plan"
+          }
+        ],
+        "no_match": "No indexed capability; do not invent an API.",
+        "next": "Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.",
+        "level": 1
+      }
+    }
+  ],
+  "focused_test": {
+    "argv": [
+      "python3",
+      "-m",
+      "unittest",
+      "tools.test_workflow.ContextTests",
+      "tools.test_workflow.AutomaticLoopTests"
+    ],
+    "returncode": 0,
+    "tests_executed": 21,
+    "unittest_seconds": 1.307,
+    "source": "Observed tool command output after applying alias fix"
+  },
+  "final_python_batch": {
+    "argv": [
+      "/usr/bin/python3",
+      "-m",
+      "unittest",
+      "tools.test_workflow",
+      "tools.test_assets",
+      "tools.test_model_import",
+      "tools.test_schemas",
+      "scripts.test_publish_games",
+      "tools.test_game_check",
+      "tools.test_game_ship",
+      "tools.test_media_tools",
+      "tools.test_xcapture",
+      "tools.test_upgrade",
+      "tools.test_learn",
+      "tools.test_hub_deploy",
+      "tools.test_web_games",
+      "tools.test_springboard"
+    ],
+    "cwd": "/home/kevin/BlueEngine",
+    "environment_override": {
+      "TMPDIR": "/var/tmp/blueengine-narrative-tmp"
+    },
+    "scope": "Exact full3 stage39 Python batch, rerun after story-only discovery alias repair; original stage39 predates repair",
+    "tokens": null,
+    "returncode": 0,
+    "elapsed_seconds": 114.91469506907742,
+    "tests_executed": 566,
+    "unittest_seconds": 114.71,
+    "stdout_bytes": 2250,
+    "stderr_bytes": 1229,
+    "tests_reported": 624,
+    "tests_skipped": 58,
+    "passed": true
+  },
+  "raw_local_artifacts": [
+    ".be2-work/narrative-evidence/final-python.command.json",
+    ".be2-work/narrative-evidence/final-python.focused.json",
+    ".be2-work/narrative-evidence/final-python.packets.json",
+    ".be2-work/narrative-evidence/final-python.result.json",
+    ".be2-work/narrative-evidence/final-python.stderr",
+    ".be2-work/narrative-evidence/final-python.stdout"
+  ],
+  "limits": [
+    "Discovery and Python regression evidence only; no native device, editorial or gameplay certification.",
+    "624 tests reported; 58 skipped. 566 test cases executed successfully.",
+    "Canonical Rust and consumer gates are separately owned and reported."
+  ]
+}

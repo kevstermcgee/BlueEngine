@@ -1,0 +1,17 @@
+{
+  "title": "Reverie",
+  "tagline": "Lose yourself in a museum that dreams.",
+  "controls": "WASD: walk, Mouse: look, E/A: interact, Q/X: story, B: return, H: hint, M: map, Esc/Start: pause, Shift: faster, F5/F9: save/load, F11: fullscreen",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "15,30",
+    "--exit-after",
+    "35"
+  ],
+  "engine_revision": "9d6265b0d4be4edcd631f6df1ef94811f2ff275c",
+  "package": [
+    "assets"
+  ]
+}

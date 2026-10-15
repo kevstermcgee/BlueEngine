@@ -1,0 +1,293 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "scope": "Author-format cost comparison; not story quality or model context tokens",
+  "method": [
+    "Public compiled be2-tools narrative inspect on two original files; same parsed semantics, recursively omit diagnostic source only",
+    "Pretty JSON retains all semantic defaults; compact JSON is also shown; no claim JSON authors require pretty encoding",
+    "One text edit appends Thanks.; one guard edit adds player.near_relay == true to first response, validated through public tool",
+    "Times include process startup and parse+validation, not active-runtime reload, disk cold-cache or full native playtest",
+    "Whitespace words are ordinary split counts; model token counts unavailable without a tokenizer/session usage record"
+  ],
+  "tool_processes": 4,
+  "tokens": null,
+  "token_reason": "No model tokenizer or per-agent usage counter available for this measurement",
+  "editorial_repairs": [
+    {
+      "count": 1,
+      "file": "assets/narrative/borrowed-light.poe",
+      "reason": "Removed unimplemented lamp option; grounded offer and callback in actual battery/bridge state",
+      "type": "human-style editorial review, not a linter failure"
+    }
+  ],
+  "rows": [
+    {
+      "file": "assets/narrative/relay-yard.poe",
+      "sha256": "b269f50e0ce1f4c5e6e5a5c7e2960edd6771e8165f406e72874586bd0ecc9d07",
+      "poe": {
+        "utf8_bytes": 873,
+        "unicode_chars": 873,
+        "lines": 41,
+        "whitespace_words": 128
+      },
+      "semantic_json_pretty": {
+        "utf8_bytes": 1500,
+        "unicode_chars": 1500,
+        "lines": 68,
+        "whitespace_words": 150
+      },
+      "semantic_json_compact": {
+        "utf8_bytes": 973,
+        "unicode_chars": 973,
+        "lines": 1,
+        "whitespace_words": 35
+      },
+      "inspect_process_seconds": 0.0026884990511462092,
+      "valid": true,
+      "warnings": [
+        {
+          "message": "event finish has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "/home/kevin/BlueEngine/assets/narrative/relay-yard.poe",
+            "line": 32,
+            "node": "yard.finish"
+          }
+        },
+        {
+          "message": "event gate has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "/home/kevin/BlueEngine/assets/narrative/relay-yard.poe",
+            "line": 22,
+            "node": "yard.open"
+          }
+        },
+        {
+          "message": "event pickup has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "/home/kevin/BlueEngine/assets/narrative/relay-yard.poe",
+            "line": 12,
+            "node": "yard.cell"
+          }
+        }
+      ],
+      "same_line_text_edit": {
+        "poe": {
+          "lines_removed": 1,
+          "lines_added": 1,
+          "bytes_delta": 8
+        },
+        "pretty_json": {
+          "lines_removed": 1,
+          "lines_added": 1,
+          "bytes_delta": 8
+        }
+      },
+      "one_guard_addition": {
+        "poe": {
+          "lines_removed": 0,
+          "lines_added": 1,
+          "bytes_delta": 32
+        },
+        "pretty_json": {
+          "lines_removed": 1,
+          "lines_added": 7,
+          "bytes_delta": 113
+        },
+        "validated": true,
+        "inspect_process_seconds": 0.0023181800497695804
+      },
+      "raw": {
+        "poe": "poe 1\n# A maintenance announcer: personality for a tiny obstacle yard, no campaign.\nresponse yard.welcome\n event arrive\n speaker pa\n category yard\n text Relay Yard test track. The stairs are certified. Your shortcuts are not.\n priority 1\n cooldown 90\n repeat once\nendresponse\nresponse yard.cell\n event pickup\n speaker pa\n category yard\n text One working cell. Already above the yard average.\n when inventory.cells >= 1\n priority 3\n cooldown 90\n repeat once\nendresponse\nresponse yard.open\n event gate\n speaker pa\n category yard\n text Bridge powered. Please reserve the victory lap for the far side.\n when gate.open == true\n priority 5\n cooldown 90\n repeat once\nendresponse\nresponse yard.finish\n event finish\n speaker pa\n category yard\n text Clean crossing. The clipboard is impressed. Quietly.\n when course.finished == true\n priority 6\n cooldown 90\n repeat once\nendresponse\n",
+        "semantic_json_pretty": "{\n  \"responses\": [\n    {\n      \"category\": \"yard\",\n      \"conditions\": [],\n      \"cooldown\": 90,\n      \"event\": \"arrive\",\n      \"id\": \"yard.welcome\",\n      \"priority\": 1,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"Relay Yard test track. The stairs are certified. Your shortcuts are not.\"\n    },\n    {\n      \"category\": \"yard\",\n      \"conditions\": [\n        {\n          \"op\": \"Ge\",\n          \"query\": \"inventory.cells\",\n          \"value\": 1\n        }\n      ],\n      \"cooldown\": 90,\n      \"event\": \"pickup\",\n      \"id\": \"yard.cell\",\n      \"priority\": 3,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"One working cell. Already above the yard average.\"\n    },\n    {\n      \"category\": \"yard\",\n      \"conditions\": [\n        {\n          \"op\": \"Eq\",\n          \"query\": \"gate.open\",\n          \"value\": true\n        }\n      ],\n      \"cooldown\": 90,\n      \"event\": \"gate\",\n      \"id\": \"yard.open\",\n      \"priority\": 5,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"Bridge powered. Please reserve the victory lap for the far side.\"\n    },\n    {\n      \"category\": \"yard\",\n      \"conditions\": [\n        {\n          \"op\": \"Eq\",\n          \"query\": \"course.finished\",\n          \"value\": true\n        }\n      ],\n      \"cooldown\": 90,\n      \"event\": \"finish\",\n      \"id\": \"yard.finish\",\n      \"priority\": 6,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"Clean crossing. The clipboard is impressed. Quietly.\"\n    }\n  ],\n  \"scenes\": [],\n  \"version\": 1\n}\n"
+      }
+    },
+    {
+      "file": "assets/narrative/borrowed-light.poe",
+      "sha256": "9e094fbb70c6767d1689ca434d5f4b8af44e0ee67390624fabc610b3bec143a5",
+      "poe": {
+        "utf8_bytes": 804,
+        "unicode_chars": 804,
+        "lines": 31,
+        "whitespace_words": 127
+      },
+      "semantic_json_pretty": {
+        "utf8_bytes": 2045,
+        "unicode_chars": 2045,
+        "lines": 85,
+        "whitespace_words": 181
+      },
+      "semantic_json_compact": {
+        "utf8_bytes": 1036,
+        "unicode_chars": 1036,
+        "lines": 1,
+        "whitespace_words": 44
+      },
+      "inspect_process_seconds": 0.00238961901050061,
+      "valid": true,
+      "warnings": [
+        {
+          "message": "event finish has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "/home/kevin/BlueEngine/assets/narrative/borrowed-light.poe",
+            "line": 3,
+            "node": "light.callback"
+          }
+        }
+      ],
+      "same_line_text_edit": {
+        "poe": {
+          "lines_removed": 1,
+          "lines_added": 1,
+          "bytes_delta": 8
+        },
+        "pretty_json": {
+          "lines_removed": 1,
+          "lines_added": 1,
+          "bytes_delta": 8
+        }
+      },
+      "one_guard_addition": {
+        "poe": {
+          "lines_removed": 0,
+          "lines_added": 1,
+          "bytes_delta": 32
+        },
+        "pretty_json": {
+          "lines_removed": 0,
+          "lines_added": 5,
+          "bytes_delta": 107
+        },
+        "validated": true,
+        "inspect_process_seconds": 0.002207656973041594
+      },
+      "raw": {
+        "poe": "poe 1\n# Short interaction: the cell and bridge are actual gameplay state.\nresponse light.callback\n event finish\n speaker mara\n category callback\n text You kept no spare, but the bridge is holding. I'll take that trade.\n when gate.open == true\n when course.finished == true\n priority 7\n cooldown 120\n repeat once\nendresponse\nscene light.offer\n node offer\n  speaker mara\n  text One cell left. The bridge can use it. You can keep it. Your call.\n  choice share consequential -> thanks | Put the cell in the bridge.\n   when inventory.cells >= 1\n   when gate.open == false\n   do bridge.power true\n  endchoice\n  choice keep expressive -> end | Keep it. I need a moment.\n  endchoice\n endnode\n node thanks\n  speaker mara\n  text There. Follow the rail across. I'll watch the contacts.\n  next end\n endnode\nendscene\n",
+        "semantic_json_pretty": "{\n  \"responses\": [\n    {\n      \"category\": \"callback\",\n      \"conditions\": [\n        {\n          \"op\": \"Eq\",\n          \"query\": \"gate.open\",\n          \"value\": true\n        },\n        {\n          \"op\": \"Eq\",\n          \"query\": \"course.finished\",\n          \"value\": true\n        }\n      ],\n      \"cooldown\": 120,\n      \"event\": \"finish\",\n      \"id\": \"light.callback\",\n      \"priority\": 7,\n      \"repeat\": \"Once\",\n      \"speaker\": \"mara\",\n      \"text\": \"You kept no spare, but the bridge is holding. I'll take that trade.\"\n    }\n  ],\n  \"scenes\": [\n    {\n      \"id\": \"light.offer\",\n      \"nodes\": [\n        {\n          \"choices\": [\n            {\n              \"conditions\": [\n                {\n                  \"op\": \"Ge\",\n                  \"query\": \"inventory.cells\",\n                  \"value\": 1\n                },\n                {\n                  \"op\": \"Eq\",\n                  \"query\": \"gate.open\",\n                  \"value\": false\n                }\n              ],\n              \"effects\": [\n                {\n                  \"id\": \"bridge.power\",\n                  \"value\": true\n                }\n              ],\n              \"id\": \"share\",\n              \"kind\": \"consequential\",\n              \"next\": {\n                \"Jump\": \"thanks\"\n              },\n              \"text\": \"Put the cell in the bridge.\"\n            },\n            {\n              \"conditions\": [],\n              \"effects\": [],\n              \"id\": \"keep\",\n              \"kind\": \"expressive\",\n              \"next\": \"End\",\n              \"text\": \"Keep it. I need a moment.\"\n            }\n          ],\n          \"conditions\": [],\n          \"id\": \"offer\",\n          \"next\": null,\n          \"speaker\": \"mara\",\n          \"text\": \"One cell left. The bridge can use it. You can keep it. Your call.\"\n        },\n        {\n          \"choices\": [],\n          \"conditions\": [],\n          \"id\": \"thanks\",\n          \"next\": \"End\",\n          \"speaker\": \"mara\",\n          \"text\": \"There. Follow the rail across. I'll watch the contacts.\"\n        }\n      ]\n    }\n  ],\n  \"version\": 1\n}\n"
+      }
+    }
+  ],
+  "final_rows": [
+    {
+      "file": "assets/narrative/borrowed-light.poe",
+      "sha256": "4baca2065c4b510705f807e7a4a76b7235021857498c91690ce169828aa11d5e",
+      "poe": {
+        "utf8_bytes": 858,
+        "unicode_chars": 858,
+        "lines": 33,
+        "whitespace_words": 135
+      },
+      "semantic_json_pretty": {
+        "utf8_bytes": 2297,
+        "unicode_chars": 2297,
+        "lines": 96,
+        "whitespace_words": 198
+      },
+      "semantic_json_compact": {
+        "utf8_bytes": 1129,
+        "unicode_chars": 1129,
+        "lines": 1,
+        "whitespace_words": 44
+      },
+      "inspect_process_seconds": 0.0035752980038523674,
+      "valid": true,
+      "warnings": [
+        {
+          "message": "event finish has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "assets/narrative/borrowed-light.poe",
+            "line": 3,
+            "node": "light.callback"
+          }
+        }
+      ],
+      "one_guard_addition": {
+        "poe": {
+          "lines_removed": 0,
+          "lines_added": 1,
+          "bytes_delta": 32
+        },
+        "pretty_json": {
+          "lines_removed": 0,
+          "lines_added": 5,
+          "bytes_delta": 107
+        },
+        "validated": true,
+        "inspect_process_seconds": 0.0030091269873082638
+      },
+      "raw": {
+        "poe": "poe 1\n# Short interaction: the cell and bridge are actual gameplay state.\nresponse light.callback\n event finish\n speaker mara\n category callback\n text You kept no spare, but the bridge is holding. I'll take that trade.\n when gate.open == true\n when course.finished == true\n priority 7\n cooldown 120\n repeat once\nendresponse\nscene light.offer\n node offer\n  when inventory.cells >= 1\n  when gate.open == false\n  speaker mara\n  text One cell left. The bridge can use it. You can keep it. Your call.\n  choice share consequential -> thanks | Put the cell in the bridge.\n   when inventory.cells >= 1\n   when gate.open == false\n   do bridge.power true\n  endchoice\n  choice keep expressive -> end | Keep it. I need a moment.\n  endchoice\n endnode\n node thanks\n  speaker mara\n  text There. Follow the rail across. I'll watch the contacts.\n  next end\n endnode\nendscene\n",
+        "semantic_json_pretty": "{\n  \"responses\": [\n    {\n      \"category\": \"callback\",\n      \"conditions\": [\n        {\n          \"op\": \"Eq\",\n          \"query\": \"gate.open\",\n          \"value\": true\n        },\n        {\n          \"op\": \"Eq\",\n          \"query\": \"course.finished\",\n          \"value\": true\n        }\n      ],\n      \"cooldown\": 120,\n      \"event\": \"finish\",\n      \"id\": \"light.callback\",\n      \"priority\": 7,\n      \"repeat\": \"Once\",\n      \"speaker\": \"mara\",\n      \"text\": \"You kept no spare, but the bridge is holding. I'll take that trade.\"\n    }\n  ],\n  \"scenes\": [\n    {\n      \"id\": \"light.offer\",\n      \"nodes\": [\n        {\n          \"choices\": [\n            {\n              \"conditions\": [\n                {\n                  \"op\": \"Ge\",\n                  \"query\": \"inventory.cells\",\n                  \"value\": 1\n                },\n                {\n                  \"op\": \"Eq\",\n                  \"query\": \"gate.open\",\n                  \"value\": false\n                }\n              ],\n              \"effects\": [\n                {\n                  \"id\": \"bridge.power\",\n                  \"value\": true\n                }\n              ],\n              \"id\": \"share\",\n              \"kind\": \"consequential\",\n              \"next\": {\n                \"Jump\": \"thanks\"\n              },\n              \"text\": \"Put the cell in the bridge.\"\n            },\n            {\n              \"conditions\": [],\n              \"effects\": [],\n              \"id\": \"keep\",\n              \"kind\": \"expressive\",\n              \"next\": \"End\",\n              \"text\": \"Keep it. I need a moment.\"\n            }\n          ],\n          \"conditions\": [\n            {\n              \"op\": \"Ge\",\n              \"query\": \"inventory.cells\",\n              \"value\": 1\n            },\n            {\n              \"op\": \"Eq\",\n              \"query\": \"gate.open\",\n              \"value\": false\n            }\n          ],\n          \"id\": \"offer\",\n          \"next\": null,\n          \"speaker\": \"mara\",\n          \"text\": \"One cell left. The bridge can use it. You can keep it. Your call.\"\n        },\n        {\n          \"choices\": [],\n          \"conditions\": [],\n          \"id\": \"thanks\",\n          \"next\": \"End\",\n          \"speaker\": \"mara\",\n          \"text\": \"There. Follow the rail across. I'll watch the contacts.\"\n        }\n      ]\n    }\n  ],\n  \"version\": 1\n}\n"
+      }
+    },
+    {
+      "file": "assets/narrative/relay-yard.poe",
+      "sha256": "b269f50e0ce1f4c5e6e5a5c7e2960edd6771e8165f406e72874586bd0ecc9d07",
+      "poe": {
+        "utf8_bytes": 873,
+        "unicode_chars": 873,
+        "lines": 41,
+        "whitespace_words": 128
+      },
+      "semantic_json_pretty": {
+        "utf8_bytes": 1500,
+        "unicode_chars": 1500,
+        "lines": 68,
+        "whitespace_words": 150
+      },
+      "semantic_json_compact": {
+        "utf8_bytes": 973,
+        "unicode_chars": 973,
+        "lines": 1,
+        "whitespace_words": 35
+      },
+      "inspect_process_seconds": 0.0029574770014733076,
+      "valid": true,
+      "warnings": [
+        {
+          "message": "event finish has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "assets/narrative/relay-yard.poe",
+            "line": 32,
+            "node": "yard.finish"
+          }
+        },
+        {
+          "message": "event gate has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "assets/narrative/relay-yard.poe",
+            "line": 22,
+            "node": "yard.open"
+          }
+        },
+        {
+          "message": "event pickup has no unconditional fallback; silence may be intentional",
+          "source": {
+            "file": "assets/narrative/relay-yard.poe",
+            "line": 12,
+            "node": "yard.cell"
+          }
+        }
+      ],
+      "one_guard_addition": {
+        "poe": {
+          "lines_removed": 0,
+          "lines_added": 1,
+          "bytes_delta": 32
+        },
+        "pretty_json": {
+          "lines_removed": 1,
+          "lines_added": 7,
+          "bytes_delta": 113
+        },
+        "validated": true,
+        "inspect_process_seconds": 0.002851528930477798
+      },
+      "raw": {
+        "poe": "poe 1\n# A maintenance announcer: personality for a tiny obstacle yard, no campaign.\nresponse yard.welcome\n event arrive\n speaker pa\n category yard\n text Relay Yard test track. The stairs are certified. Your shortcuts are not.\n priority 1\n cooldown 90\n repeat once\nendresponse\nresponse yard.cell\n event pickup\n speaker pa\n category yard\n text One working cell. Already above the yard average.\n when inventory.cells >= 1\n priority 3\n cooldown 90\n repeat once\nendresponse\nresponse yard.open\n event gate\n speaker pa\n category yard\n text Bridge powered. Please reserve the victory lap for the far side.\n when gate.open == true\n priority 5\n cooldown 90\n repeat once\nendresponse\nresponse yard.finish\n event finish\n speaker pa\n category yard\n text Clean crossing. The clipboard is impressed. Quietly.\n when course.finished == true\n priority 6\n cooldown 90\n repeat once\nendresponse\n",
+        "semantic_json_pretty": "{\n  \"responses\": [\n    {\n      \"category\": \"yard\",\n      \"conditions\": [],\n      \"cooldown\": 90,\n      \"event\": \"arrive\",\n      \"id\": \"yard.welcome\",\n      \"priority\": 1,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"Relay Yard test track. The stairs are certified. Your shortcuts are not.\"\n    },\n    {\n      \"category\": \"yard\",\n      \"conditions\": [\n        {\n          \"op\": \"Ge\",\n          \"query\": \"inventory.cells\",\n          \"value\": 1\n        }\n      ],\n      \"cooldown\": 90,\n      \"event\": \"pickup\",\n      \"id\": \"yard.cell\",\n      \"priority\": 3,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"One working cell. Already above the yard average.\"\n    },\n    {\n      \"category\": \"yard\",\n      \"conditions\": [\n        {\n          \"op\": \"Eq\",\n          \"query\": \"gate.open\",\n          \"value\": true\n        }\n      ],\n      \"cooldown\": 90,\n      \"event\": \"gate\",\n      \"id\": \"yard.open\",\n      \"priority\": 5,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"Bridge powered. Please reserve the victory lap for the far side.\"\n    },\n    {\n      \"category\": \"yard\",\n      \"conditions\": [\n        {\n          \"op\": \"Eq\",\n          \"query\": \"course.finished\",\n          \"value\": true\n        }\n      ],\n      \"cooldown\": 90,\n      \"event\": \"finish\",\n      \"id\": \"yard.finish\",\n      \"priority\": 6,\n      \"repeat\": \"Once\",\n      \"speaker\": \"pa\",\n      \"text\": \"Clean crossing. The clipboard is impressed. Quietly.\"\n    }\n  ],\n  \"scenes\": [],\n  \"version\": 1\n}\n"
+      }
+    }
+  ],
+  "final_tool_processes": 4,
+  "final_note": "Revalidated final sources after adding offer entry guards; omit both source and text_source diagnostic metadata. Initial draft rows and raw snapshots retained above."
+}

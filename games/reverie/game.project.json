@@ -1,0 +1,19 @@
+{
+  "complexity": "high",
+  "description": "An endless first-person museum of living emotional art. Enter recursive painting worlds, uncover keys, explore branching galleries and hear eight original musical movements.",
+  "id": "reverie",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "networking": "offline",
+  "presentation": "3d",
+  "runtime": "legacy-native",
+  "schema_version": 1,
+  "session_minutes": 60,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

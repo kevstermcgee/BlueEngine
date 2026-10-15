@@ -1,0 +1,18 @@
+{
+  "complexity": "low",
+  "description": "Versioned two-machine automation with a shared bounded inventory, production escrow and recoverable saves.",
+  "id": "automation-workshop",
+  "input": [
+    "keyboard",
+    "mouse"
+  ],
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "legacy-native",
+  "schema_version": 1,
+  "session_minutes": 1,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

@@ -1,11 +1,14 @@
 # Netplay: online play for games that own their simulation
 
 `vesper3d::viewer::netplay` is a server and a client for any game whose rules are Rust (`custom-sim`). You
-supply the rules and the layouts of what crosses the wire; the kit supplies everything else. It was extracted from
+supply the rules, client prediction/presentation and layouts of what crosses the wire; the kit supplies shared lobby, session and match plumbing. It was extracted from
 Spooky Kart, whose own copy of this code was about 2,000 lines, none of it about karts.
 
-This is not the stock server (`be2-headless`): it has its own server loop, so `--max-players`, partial replication,
-interest management and signal handling described in [HOSTING.md](HOSTING.md) do not apply. `be2-tools describe` lists both paths' limits.
+Custom netplay has its own server loop. Stock `be2-headless` partial-world replication,
+interest scheduling, `--max-players` and `--network-threads` do not apply.
+`netplay::cli::serve` supplies shared signal handling; `NetGame::release` owns match bot handoff.
+The stock runtime is described in [HOSTING.md](HOSTING.md); `be2-tools describe` lists both paths' limits.
+`MAX_SEATS` (1..=16), `lobby_capacity()` and `minimum_players()` configure seats, not demonstrated game capacity.
 
 ## What the kit does
 
@@ -77,7 +80,7 @@ not an internet latency guarantee or hardware/server-capacity measurement.
 
 Use `src/viewer/netplay/toy.rs` (`ToyGame` and `ToyView`) and
 `src/bin/be2-toy-server.rs` (`netplay::cli::serve`) as the smallest complete assembly.
-`cargo run --no-default-features --bin be2-toy-server -- --info` describes its shared
+`cargo run --no-default-features --features networking --bin be2-toy-server -- --info` describes its shared
 server configuration; `cargo test --no-default-features --test netplay` validates
 lobby, match, loss, reconnect and process behavior. Retired prototype code is in
 `docs/archive/multiplayer-game`; its old handshake is not a supported starter.
@@ -220,8 +223,10 @@ Online state machine, `Online::new(&hub.address, MyGame::NAME, hub::local_build:
 ## Limits and what is not covered
 
 - A snapshot must fit `MAX_DATAGRAM` (1,100 bytes, further limited by the active transport). The kit sheds old events first; a snapshot that is too big on
-  its own is not sent (the server prints a warning). Use a compact layout, or split the world.
-- One snapshot format for everyone: no per-client interest management yet.
+  its own is not sent (the server prints a warning). `snapshot_with_budget` can trim optional data but does not provide fragmentation.
+  Use a compact layout and test required state under the active payload budget; a larger world requires explicit game/engine engineering.
+- The engine does not supply stock interest scheduling or acknowledged partial-world replication.
+  `snapshot(m, participant)` and `snapshot_with_budget` let the game choose per-recipient data within one snapshot budget.
 - Prediction is your game's. Spooky Kart predicts its own kart only, so bumps show as small corrections that grow
   with the number of players (see `docs/perf`).
 - Lockstep and rollback are not provided; this is server-authoritative with client prediction.

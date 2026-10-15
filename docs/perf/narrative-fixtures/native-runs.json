@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "binary_sha256": "c380f7b4c874ee58e475ce2d17ad6312c9b117f2b2209573bff2ce077ff3bfb4",
+  "sources_sha256": {
+    "examples/narrative_native.rs": "d8a83d794038d15c71d171a59924f96a3cdc250a568aa99e0072385bdbd2964b",
+    "examples/narrative/shared.rs": "d7034d76c979170a1d7c67bbde12c890840be38d474e0b418725972a55839f90",
+    "assets/narrative/relay-yard.poe": "b269f50e0ce1f4c5e6e5a5c7e2960edd6771e8165f406e72874586bd0ecc9d07",
+    "assets/narrative/borrowed-light.poe": "4baca2065c4b510705f807e7a4a76b7235021857498c91690ce169828aa11d5e"
+  },
+  "records": [
+    {
+      "name": "storyless",
+      "command": [
+        "python3",
+        "tools/xcapture.py",
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_native",
+        "--frames",
+        "30",
+        "--out",
+        "/home/kevin/BlueEngine/docs/perf/narrative-captures/storyless",
+        "--timeout",
+        "120",
+        "--",
+        "--fixture",
+        "storyless",
+        "--seed",
+        "7",
+        "--script",
+        "walk:0-70",
+        "--perf"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 4.6180060770129785,
+      "stdout": "/home/kevin/BlueEngine/docs/perf/narrative-captures/storyless/shot_00030.png\n{\"fixture\":\"Storyless\",\"narrative\":null,\"native_fixture_report\":1,\"state_hash\":\"c8ecc051408d3bec\",\"world\":{\"cell_available\":true,\"cells\":0,\"finished\":false,\"gate_open\":false,\"player\":{\"f\":0.0,\"g\":true,\"h\":1.7999999523162842,\"j\":0.0,\"p\":[-2.1753060817718506,1.6799999475479126,4.177676677703857],\"t\":0.0,\"v\":[-0.2150566726922989,0.0,-2.9849414825439453],\"y\":0.0},\"power_commits\":0,\"seed\":7,\"speaker_present\":true,\"tick\":50}}\nframes 20  avg 16.67 ms (60 fps)  p50 16.67  p95 16.67  p99 16.67  max 16.67  slow(>25ms) 0 at []\n  own work per frame: p50 0.65 ms  max 141.08 ms\n",
+      "stderr": "",
+      "captures": [
+        "docs/perf/narrative-captures/storyless/shot_00030.png"
+      ]
+    },
+    {
+      "name": "reactive",
+      "command": [
+        "python3",
+        "tools/xcapture.py",
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_native",
+        "--frames",
+        "30",
+        "--out",
+        "/home/kevin/BlueEngine/docs/perf/narrative-captures/reactive",
+        "--timeout",
+        "120",
+        "--",
+        "--fixture",
+        "reactive",
+        "--seed",
+        "7",
+        "--script",
+        "walk:0-70,reveal@10,advance@35",
+        "--perf"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 2.8502945519285277,
+      "stdout": "/home/kevin/BlueEngine/docs/perf/narrative-captures/reactive/shot_00030.png\n{\"fixture\":\"Reactive\",\"narrative\":{\"active_response\":null,\"category_ready\":{\"yard\":91},\"completed_scenes\":{},\"decisions\":{},\"generation\":3,\"history\":{\"yard.welcome\":{\"completed\":1,\"last_selected\":1,\"presented\":1,\"selected\":1}},\"last_context_id\":1,\"next_token\":2,\"queue\":[],\"scene\":null,\"speaker_ready\":{\"pa\":91},\"version\":1},\"native_fixture_report\":1,\"state_hash\":\"e475a2452f069e6f\",\"world\":{\"cell_available\":true,\"cells\":0,\"finished\":false,\"gate_open\":false,\"player\":{\"f\":0.0,\"g\":true,\"h\":1.7999999523162842,\"j\":0.0,\"p\":[-2.1753060817718506,1.6799999475479126,4.177676677703857],\"t\":0.0,\"v\":[-0.2150566726922989,0.0,-2.9849414825439453],\"y\":0.0},\"power_commits\":0,\"seed\":7,\"speaker_present\":true,\"tick\":50}}\nframes 20  avg 16.67 ms (60 fps)  p50 16.67  p95 16.67  p99 16.67  max 16.67  slow(>25ms) 0 at []\n  own work per frame: p50 0.58 ms  max 74.85 ms\n",
+      "stderr": "",
+      "captures": [
+        "docs/perf/narrative-captures/reactive/shot_00030.png"
+      ]
+    },
+    {
+      "name": "scene",
+      "command": [
+        "python3",
+        "tools/xcapture.py",
+        "/home/kevin/BlueEngine/target/itest/examples/narrative_native",
+        "--frames",
+        "210,275",
+        "--out",
+        "/home/kevin/BlueEngine/docs/perf/narrative-captures/scene",
+        "--timeout",
+        "120",
+        "--",
+        "--fixture",
+        "scene",
+        "--seed",
+        "7",
+        "--script",
+        "walk:0-340,reveal@209,choose:0@214,reveal@215,advance@216,reload@218,save@220,load@230,reveal@270",
+        "--save-dir",
+        "/home/kevin/BlueEngine/.be2-work/narrative-fixture-saves",
+        "--perf"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 14.352041500038467,
+      "stdout": "/home/kevin/BlueEngine/docs/perf/narrative-captures/scene/shot_00210.png\n{\"reload_ms\":0.277517,\"result\":\"Content validated and reloaded between ticks\",\"tick\":218}\n/home/kevin/BlueEngine/docs/perf/narrative-captures/scene/shot_00275.png\n{\"fixture\":\"Scene\",\"narrative\":{\"active_response\":{\"expires_at\":560,\"id\":\"light.callback\",\"presented\":true,\"token\":4},\"category_ready\":{\"callback\":380},\"completed_scenes\":{\"light.offer\":1},\"decisions\":{\"light.offer/offer/share\":1},\"generation\":9,\"history\":{\"light.callback\":{\"completed\":0,\"last_selected\":260,\"presented\":1,\"selected\":1}},\"last_context_id\":2084,\"next_token\":5,\"queue\":[{\"event\":\"arrive\",\"expires_at\":300,\"id\":1},{\"event\":\"pickup\",\"expires_at\":415,\"id\":922},{\"event\":\"gate\",\"expires_at\":515,\"id\":1723}],\"scene\":null,\"speaker_ready\":{\"mara\":380},\"version\":1},\"native_fixture_report\":1,\"state_hash\":\"68df9174bc8249b8\",\"world\":{\"cell_available\":false,\"cells\":0,\"finished\":true,\"gate_open\":true,\"player\":{\"f\":0.0,\"g\":true,\"h\":1.7999999523162842,\"j\":0.0,\"p\":[2.1520310156120104e-7,1.6799999475479126,-4.877632141113281],\"t\":0.0,\"v\":[1.6433803916218043e-13,0.0,-3.199997901916504],\"y\":0.0},\"power_commits\":1,\"seed\":7,\"speaker_present\":true,\"tick\":285}}\nframes 265  avg 16.67 ms (60 fps)  p50 16.67  p95 16.67  p99 16.67  max 16.67  slow(>25ms) 0 at []\n  own work per frame: p50 0.54 ms  max 100.72 ms\n",
+      "stderr": "",
+      "captures": [
+        "docs/perf/narrative-captures/scene/shot_00210.png",
+        "docs/perf/narrative-captures/scene/shot_00275.png"
+      ]
+    }
+  ],
+  "repairs": [
+    "Unsupported default HUD glyphs replaced with ASCII controls and focus marker; panel made opaque.",
+    "Passive bark dismiss uses Enter/LB; A remains gameplay jump. Scene Enter/A unchanged."
+  ],
+  "intermediate_artifacts": ".be2-work/narrative-fixture-intermediate",
+  "limitations": [
+    "Xvfb software OpenGL and scripted intentions; no physical controller, Windows device or audio hardware evidence",
+    "Screenshots establish observed presentation; they do not certify editorial impact or human playtesting"
+  ]
+}

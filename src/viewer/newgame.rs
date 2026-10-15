@@ -207,12 +207,6 @@ pub fn scaffold_new_game_with(
     };
     write_shipping_files(&project, identity, template)?;
     write_scripts(&project)?;
-    if template.is_portable() {
-        project.write(
-            "scripts/project.py",
-            include_str!("../../templates/game_project.py"),
-        )?;
-    }
     fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
     Ok(())
 }
@@ -328,23 +322,82 @@ fn write_shipping_files(
 ) -> Result<()> {
     identity.engine_revision = engine_revision(&project.engine_dir);
     project.write("assets/identity.json", identity.to_json())?;
+    // Installer identity stays stable when a game later renames its Cargo package.
+    project.write(
+        "scripts/installer.json",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "app_id": format!("BlueEngineGames.{}", project.name),
+        }))?,
+    )?;
     write_icon_set(
         &IconSpec::new(&identity.title),
         &project.dir.join("assets"),
         false,
     )?;
     project.write("build.rs", include_str!("../../templates/game_build.rs"))?;
+    for command in ["check", "ship", "dev", "project"] {
+        project.write(&format!("scripts/{command}.py"), tooling_entry(command))?;
+    }
     project.write(
-        "scripts/check.py",
-        include_str!("../../templates/game_check.py"),
+        "scripts/tooling.py",
+        include_str!("../../templates/game_entry.py"),
     )?;
     project.write(
-        "scripts/ship.py",
-        include_str!("../../templates/game_ship.py"),
+        "scripts/tooling.json",
+        serde_json::to_string_pretty(&serde_json::json!({
+            "schema_version": 1,
+            "engine": serde_json::from_str::<String>(&project.engine_toml)?,
+            "revision": identity.engine_revision,
+            "sha256": tooling_digest(&project.engine_dir),
+        }))?,
     )?;
+    // Starter names describe code generation; project runtimes describe the native client route.
+    // Keep the public Cargo-name contract, including uppercase/underscores and long names, while
+    // giving the requirements document its own canonical ID.
+    let mut id = project.name.to_ascii_lowercase().replace('_', "-");
+    if !id.as_bytes()[0].is_ascii_alphabetic() {
+        id.insert_str(0, "game-");
+    }
+    id.truncate(48);
+    let presentation = match template {
+        Template::TwoD => "2d",
+        Template::Hybrid | Template::Portable => "hybrid",
+        _ => "3d",
+    };
+    let runtime = if template.is_portable() {
+        "portable"
+    } else {
+        "legacy-native"
+    };
+    let mut requirements = serde_json::json!({
+        "schema_version": 1,
+        "id": id,
+        "presentation": presentation,
+        "runtime": runtime,
+        "targets": starter_catalog()["starters"][template.name()]["default_targets"],
+        "networking": "offline",
+        "input": ["keyboard", "mouse", "controller"],
+        "description": identity.tagline,
+        "session_minutes": 1,
+        "complexity": "low",
+    });
+    if template.is_portable() {
+        requirements["mobile_controls"] =
+            serde_json::json!({"layout": "dpad", "action_label": null});
+    }
     project.write(
-        "scripts/dev.py",
-        include_str!("../../templates/game_dev.py"),
+        "game.project.json",
+        serde_json::to_string_pretty(&requirements)?,
+    )?;
+    let status = fs::read_to_string(project.dir.join("STATUS.md"))?;
+    project.write(
+        "STATUS.md",
+        format!(
+            "{status}\nProject requirements: `game.project.json`, checked by `scripts/project.py`.\n\
+             CLI starter: `{}`; project runtime: `{runtime}`; presentation: `{presentation}`.\n\
+             Update the declared targets deliberately before running project checks.\n",
+            template.name()
+        ),
     )?;
     if !template.is_portable() {
         project.write(
@@ -356,7 +409,10 @@ fn write_shipping_files(
         "tests/identity.rs",
         include_str!("../../templates/game_identity_test.rs"),
     )?;
-    project.write(".gitignore", "/target/\n/.blue-check/\n/dist/\n")?;
+    project.write(
+        ".gitignore",
+        "/target/\n/.blue-check/\n/dist/\n/installers/\n",
+    )?;
     // Seed the lock file from the engine's so the game builds against the versions the engine was
     // tested with (and offline builds work). The first Cargo command settles it: it adds this game's
     // entry and drops crates only the engine's own tests need. `scripts/check.py` does that before
@@ -365,6 +421,57 @@ fn write_shipping_files(
         project.write("Cargo.lock", lock)?;
     }
     Ok(())
+}
+
+/// Thin Python compatibility entry point; implementation remains in the engine.
+pub fn tooling_entry(command: &str) -> String {
+    let tail = match command {
+        "dev" => "    sys.exit(_impl.main(sys.argv[1:]))\n",
+        "check" | "ship" => "    sys.exit(_impl.main(root=Path(__file__).resolve().parents[1]))\n",
+        _ => "    print(\"Project requirements are checked by scripts/check.py\")\n",
+    };
+    format!("#!/usr/bin/env python3\n\
+        \"\"\"Compatibility entry point; shared implementation is pinned in tooling.json.\"\"\"\n\
+        from pathlib import Path\nimport importlib.util\n\
+        _spec = importlib.util.spec_from_file_location(\"be2_bootstrap\", Path(__file__).with_name(\"tooling.py\"))\n\
+        _bootstrap = importlib.util.module_from_spec(_spec)\n_spec.loader.exec_module(_bootstrap)\n\
+        _impl = _bootstrap.load('{command}', Path(__file__).resolve().parents[1])\n\
+        globals().update({{k: v for k, v in vars(_impl).items() if not k.startswith(\"__\")}})\n\
+        if __name__ == \"__main__\":\n    import sys\n{tail}")
+}
+
+/// Content pin also supports a checked-out revision with local, reviewed tooling edits.
+/// A recorded Git revision alone cannot identify a dirty source checkout.
+fn tooling_digest(engine: &Path) -> Option<String> {
+    let mut digest = ring::digest::Context::new(&ring::digest::SHA256);
+    for name in [
+        "templates/game_check.py",
+        "templates/game_dev.py",
+        "templates/game_project.py",
+        "templates/game_ship.py",
+        "templates/game_installer.py",
+        "templates/game_review.py",
+        "templates/game_entry.py",
+        "tools/game_tooling.py",
+    ] {
+        digest.update(name.as_bytes());
+        digest.update(&[0]);
+        // The implementation is distributed with the engine, not embedded in
+        // this Rust binary. Editing Python tooling must not rebuild the engine.
+        // The legacy API can scaffold before its dependency exists; that project
+        // needs an explicit tooling migration after restoring the dependency.
+        let content = fs::read(engine.join(name)).ok()?;
+        digest.update(&content);
+        digest.update(&[0]);
+    }
+    Some(
+        digest
+            .finish()
+            .as_ref()
+            .iter()
+            .map(|byte| format!("{byte:02x}"))
+            .collect(),
+    )
 }
 
 fn write_scripts(project: &Project) -> Result<()> {
@@ -562,7 +669,6 @@ fn scaffold_two_d(project: &Project, template: Template) -> Result<Identity> {
             format!("{}{}{}", &original[..start], draw, &original[end..]),
         )?;
     }
-    project.write("game.project.json",serde_json::to_string_pretty(&serde_json::json!({"schema_version":1,"id":project.name,"presentation":presentation,"runtime":"portable","mobile_controls":{"layout":"dpad","action_label":null},"targets":starter_catalog()["starters"][template.name()]["default_targets"],"networking":"offline","input":["keyboard","mouse","controller"],"description":identity.tagline,"session_minutes":1,"complexity":"low"}))?)?;
     Ok(identity)
 }
 
@@ -592,7 +698,7 @@ path = "src/main.rs"
 required-features = ["client"]
 
 [dependencies]
-vesper3d = {{ package = "be2", path = {engine_path_str}, default-features = false }}
+vesper3d = {{ package = "be2", path = {engine_path_str}, default-features = false, features = ["physics"] }}
 macroquad = {{ optional = true, version = "=0.4.14", default-features = false, features = ["audio"] }}
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
@@ -802,9 +908,8 @@ this game's files first; do not load engine source or run engine-wide checks for
 Start in the engine checkout: `python3 tools/be2.py start "<task>" --project GAME_DIR`
 (`python` on Windows); `next`/`resume TASK_ID` refreshes context. Missing capability needs engine work; never invent APIs.
 
-Rules that do not fit counters/interactables/timers (enemies, projectiles, scoring, AI, per-frame
-physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its simulation
-(engine docs/SHARED_GAMEPLAY.md "Custom loops", docs/CUSTOM_CLIENT.md).
+Custom enemies/projectiles/scoring/AI need `new-game NAME DIR ENGINE_PATH custom-sim`;
+use `context custom_simulation` for its public contract.
 
 ## Working with Maps
 - Edit `blueprints/main.blueprint.json` (rooms, doors, props); compile into a NEW map file,
@@ -833,7 +938,8 @@ physics)? Wrong starter: `new-game NAME DIR ENGINE_PATH custom-sim` owns its sim
 2. Set title/tagline/controls in `assets/identity.json`; regenerate changed title art:
    `be2-tools icon TITLE assets --replace`. `scripts/blue ship --no-install` verifies package/smoke
    without desktop access; plain `ship` also installs and verifies its own shortcut.
-3. You exercised changed controls and looked at real frames; state what you did not verify.
+3. Record authored controls/camera/audio with `python scripts/ship.py review`; state unverified devices.
+   Windows installers: `python scripts/ship.py installer prepare`; engine docs/NATIVE_DELIVERY.md.
 "#
     );
     project.write("AGENTS.md", agents_md)?;

@@ -1,0 +1,541 @@
+{
+  "schema_version": 1,
+  "date": "2026-10-14",
+  "baseline": {
+    "revision": "76743a0ced2fdceed136d88c42b0f1d304579785",
+    "features": "no-default-features",
+    "binaries": [
+      {
+        "name": "be2-headless",
+        "bytes": 38852944,
+        "sha256": "d7e5f959d7d2eb5d8febd42644b24dc23a3e07cf27915c91526a99ca9029c0c1",
+        "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n10089758\t 386344\t   3380\t10479482\t 9fe77a\ttarget/itest/be2-headless\n"
+      },
+      {
+        "name": "be2-tools",
+        "bytes": 39763328,
+        "sha256": "e9e2345fa8fde14966fa3b0abce36903142c8177acfc6a7ad68c599c2536e62c",
+        "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9806107\t 357200\t   1080\t10164387\t 9b18a3\ttarget/itest/be2-tools\n"
+      }
+    ],
+    "measurement_scope": "Before narrative changes, existing working tree and warm shared dependencies; itest profile, unstripped binaries, not a pristine release or cold build benchmark",
+    "initial_build": {
+      "result": "passed_after_cache_cleanup",
+      "cached_build_seconds": 4.59,
+      "initial_failure": "shared compiled-cache volume full",
+      "new_third_party_dependencies": 0
+    }
+  },
+  "final": {
+    "new_third_party_dependencies": 0,
+    "cargo_lock_changed": false,
+    "disabled_runtime": "no integration into stock state/tick/scheduler; cfg module excluded, no content assets referenced by default templates",
+    "memory_measurement": "serialized optional state only; no claim of measured allocator/heap overhead",
+    "canonical_engine_consumer_check": {
+      "report": "/home/kevin/BlueEngine/.be2-work/check-20261015T002248846072Z-e72x1uvu/report.json",
+      "ok": true,
+      "scope": "full",
+      "seconds": 3164.437,
+      "commands": 39,
+      "cargo_artifacts": {
+        "fresh": 4785,
+        "built": 328
+      },
+      "resources": {
+        "child_cpu_seconds": 1936.141,
+        "max_child_rss_bytes": 4354797568,
+        "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+      }
+    },
+    "frozen_checkout_receipt": ".be2-work/narrative-evidence/full-check-5.stdout.json"
+  },
+  "microbenchmark": {
+    "profile": "itest",
+    "responses": 64,
+    "event_pools": 4,
+    "candidates_per_event": 16,
+    "select_iterations": 100000,
+    "select_total_ns": 64381447,
+    "reload_iterations": 1000,
+    "reload_total_ns": 286288145,
+    "state_bytes": 202,
+    "command": [
+      "target/itest/deps/vesper3d-355f1f8901bd1f96",
+      "measure_indexed_selection_and_validated_reload",
+      "--ignored",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.35393987805582583,
+    "stdout": "\nrunning 1 test\n{\"profile\":\"itest\",\"responses\":64,\"event_pools\":4,\"candidates_per_event\":16,\"select_iterations\":100000,\"select_total_ns\":64381447,\"reload_iterations\":1000,\"reload_total_ns\":286288145,\"state_bytes\":202}\ntest viewer::narrative::runtime::tests::measure_indexed_selection_and_validated_reload ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 498 filtered out; finished in 0.35s\n\n",
+    "stderr": "",
+    "binary_sha256": "b4a2725788d22e423ffd35296dc7eeaba781c732220f671b902a740576f6343d",
+    "measured_at_utc": "2026-10-15T00:31:23.796552+00:00",
+    "artifact_log": ".be2-work/check-20261015T002248846072Z-e72x1uvu/8.log",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "scope": [
+      "highest priority candidate eligible; pure select clones",
+      "reload clones+validates+reindexes+compiles templates; parsed IR, no file IO",
+      "state_bytes is serialized empty progress after 1000 reloads, not heap memory",
+      "shared host under other compilation; unoptimized engine itest; single sample, no cross-platform claim",
+      "current-source Cargo library test executable verified by final canonical stage8 metadata: features=[narrative], profile.test=true"
+    ]
+  },
+  "comparison": {
+    "pristine_revision": "76743a0ced2fdceed136d88c42b0f1d304579785",
+    "same_length_source_paths": true,
+    "pristine": {
+      "source": "/home/kevin/BluePoeOld",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--bin",
+        "be2-headless",
+        "--bin",
+        "be2-tools"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 59.151827306021005,
+      "cargo_events": [
+        {
+          "seconds": 0.09446302196010947,
+          "line": "    Blocking waiting for file lock on build directory"
+        },
+        {
+          "seconds": 37.018596670008264,
+          "line": "   Compiling be2 v0.2.0 (/home/kevin/BluePoeOld)"
+        },
+        {
+          "seconds": 58.320426783990115,
+          "line": "    Finished `itest` profile [unoptimized + debuginfo] target(s) in 58.31s"
+        }
+      ],
+      "binaries": [
+        {
+          "name": "be2-headless",
+          "bytes": 38852944,
+          "sha256": "16eeecf829123de58105a39aa3751ecf3a21af56906590b56ded615831d9e729",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n10089758\t 386344\t   3380\t10479482\t 9fe77a\t/home/kevin/BlueEngine/target/itest/be2-headless\n"
+        },
+        {
+          "name": "be2-tools",
+          "bytes": 39763328,
+          "sha256": "b822ba71892c24815d6df1d1f0ae3b09693c604811a219bd6c0f68703f5391e2",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9806107\t 357200\t   1080\t10164387\t 9b18a3\t/home/kevin/BlueEngine/target/itest/be2-tools\n"
+        }
+      ],
+      "scope": "warm shared dependency cache; includes lock wait; host IO contention. Not cold-build overhead or an isolated benchmark."
+    },
+    "current_disabled": {
+      "source": "/home/kevin/BlueEngine",
+      "command": [
+        "cargo",
+        "build",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--bin",
+        "be2-headless",
+        "--bin",
+        "be2-tools"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 71.71923294698354,
+      "cargo_events": [
+        {
+          "seconds": 0.10389005404431373,
+          "line": "    Blocking waiting for file lock on build directory"
+        },
+        {
+          "seconds": 34.51324428105727,
+          "line": "   Compiling be2 v0.2.0 (/home/kevin/BlueEngine)"
+        },
+        {
+          "seconds": 71.27700603404082,
+          "line": "    Finished `itest` profile [unoptimized + debuginfo] target(s) in 1m 11s"
+        }
+      ],
+      "binaries": [
+        {
+          "name": "be2-headless",
+          "bytes": 38852944,
+          "sha256": "a2be7b38aaf741a8e3d211c11ba6a321a6a7e188d06dc88613db67ec4cfdf783",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n10089758\t 386344\t   3380\t10479482\t 9fe77a\t/home/kevin/BlueEngine/target/itest/be2-headless\n"
+        },
+        {
+          "name": "be2-tools",
+          "bytes": 39766192,
+          "sha256": "bc4cd84b15a0ddc424bd029880c2a87eca49087f4adaffca61940dba41b0eb6e",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9808755\t 357320\t   2384\t10168459\t 9b288b\t/home/kevin/BlueEngine/target/itest/be2-tools\n"
+        }
+      ],
+      "scope": "warm shared dependency cache; includes lock wait; host IO contention. Not cold-build overhead or an isolated benchmark. Preliminary sample before the compact-discovery help repair; retained raw."
+    },
+    "binary_byte_deltas": {
+      "be2-headless": 0,
+      "be2-tools": 3056
+    },
+    "notes": [
+      "itest unstripped ELF files; no-default-features; equal-length source paths; same compiler and warm dependency target",
+      "be2-headless byte count/text/data/bss unchanged in this measurement; not a universal zero-overhead claim",
+      "be2-tools adds discovery metadata and an opt-in command diagnostic while runtime feature is off",
+      "build elapsed includes separately timestamped lock waits and heavy IO contention; no isolated/cold compile-time causal estimate"
+    ],
+    "preliminary_binary_byte_deltas": {
+      "be2-headless": 0,
+      "be2-tools": 2864
+    },
+    "final_disabled": {
+      "schema_version": 1,
+      "measured_at_utc": "2026-10-15T00:12:37.271894+00:00",
+      "profile": "itest",
+      "features": [],
+      "cargo_command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features"
+      ],
+      "artifact_log": ".be2-work/check-20261014T234308140222Z-dqhuy3mj/6.log",
+      "stage6_status_at_capture": "production artifacts emitted; tests still running",
+      "binaries": [
+        {
+          "name": "be2-headless",
+          "path": "/home/kevin/BlueEngine/target/itest/be2-headless",
+          "bytes": 38852944,
+          "sha256": "a2be7b38aaf741a8e3d211c11ba6a321a6a7e188d06dc88613db67ec4cfdf783",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n10089758\t 386344\t   3380\t10479482\t 9fe77a\t/home/kevin/BlueEngine/target/itest/be2-headless\n",
+          "sections_detailed": "/home/kevin/BlueEngine/target/itest/be2-headless  :\nsection                  size       addr\n.interp                    28        792\n.note.gnu.property         32        824\n.note.ABI-tag              32        856\n.note.gnu.build-id         36        888\n.gnu.hash                  28        928\n.dynsym                  5328        960\n.dynstr                  2795       6288\n.gnu.version              444       9084\n.gnu.version_r            640       9528\n.rela.dyn              706392      10168\n.rela.plt                  24     716560\n.debug_gdb_scripts         34     716584\n.eh_frame              823512     716624\n.eh_frame_hdr          196548    1540136\n.gcc_except_table      245472    1736684\n.rodata                524616    1982464\n.rodata.cst16            5264    2507088\n.rodata.cst32            1344    2512352\n.rodata.cst4             2056    2513696\n.rodata.cst8             1584    2515752\n.rodata.str1.1          69798    2517336\n.rodata.str1.2              2    2587134\n.fini                       9    2591232\n.init                      23    2591244\n.plt                       48    2591280\n.plt.got                   24    2591328\n.text                 7503645    2591360\n.tdata                    200   10099104\n.tbss                     120   10099304\n.data.rel.ro           242352   10099312\n.dynamic                  544   10341664\n.fini_array                 8   10342208\n.got.plt                   32   10342216\n.init_array                16   10342248\n.got                   136544   10342264\n.relro_padding           2856   10478808\n.data                    6648   10482904\n.tm_clone_table             0   10489552\n.bss                      404   10489552\n.comment                  113          0\n.debug_abbrev           58636          0\n.debug_aranges         609360          0\n.debug_info           3875711          0\n.debug_line           4547747          0\n.debug_line_str          7193          0\n.debug_loclists       1209656          0\n.debug_macro           105619          0\n.debug_ranges         1460304          0\n.debug_rnglists         52189          0\n.debug_str            6405251          0\nTotal                28811261\n\n\n",
+          "artifact_metadata": {
+            "profile": {
+              "opt_level": "0",
+              "debuginfo": "line-tables-only",
+              "debug_assertions": true,
+              "overflow_checks": true,
+              "test": false
+            },
+            "features": [],
+            "filenames": [
+              "/home/kevin/BlueEngine/target/itest/be2-headless"
+            ],
+            "executable": "/home/kevin/BlueEngine/target/itest/be2-headless",
+            "fresh": false
+          }
+        },
+        {
+          "name": "be2-tools",
+          "path": "/home/kevin/BlueEngine/target/itest/be2-tools",
+          "bytes": 39766384,
+          "sha256": "7499ddf89792b8a2b64729fc5e8717f24169dd7cc6127e087dc4b832d231c56e",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n9808737\t 357328\t   2408\t10168473\t 9b2899\t/home/kevin/BlueEngine/target/itest/be2-tools\n",
+          "sections_detailed": "/home/kevin/BlueEngine/target/itest/be2-tools  :\nsection                  size       addr\n.interp                    28        792\n.note.gnu.property         32        824\n.note.ABI-tag              32        856\n.note.gnu.build-id         36        888\n.gnu.hash                  28        928\n.dynsym                  5328        960\n.dynstr                  2795       6288\n.gnu.version              444       9084\n.gnu.version_r            640       9528\n.rela.dyn              717744      10168\n.rela.plt                  24     727912\n.debug_gdb_scripts         34     727936\n.eh_frame              738416     727976\n.eh_frame_hdr          206996    1466392\n.gcc_except_table      258328    1673388\n.rodata                622568    1931720\n.rodata.cst16            4048    2554288\n.rodata.cst32             608    2558336\n.rodata.cst4             2888    2558944\n.rodata.cst8             2016    2561832\n.rodata.str1.1          44978    2563848\n.rodata.str1.2              2    2608826\n.rodata.str1.4              4    2608828\n.fini                       9    2612928\n.init                      23    2612940\n.plt                       48    2612976\n.plt.got                   24    2613024\n.text                 7200616    2613056\n.tdata                     48    9817768\n.tbss                      72    9817816\n.data.rel.ro           191208    9817816\n.dynamic                  544   10009024\n.fini_array                 8   10009568\n.got.plt                   32   10009576\n.init_array                16   10009608\n.got                   162792   10009624\n.relro_padding           2048   10172416\n.data                    2680   10176512\n.tm_clone_table             0   10179192\n.bss                      288   10179192\n.comment                  113          0\n.debug_abbrev           60308          0\n.debug_aranges         621232          0\n.debug_info           3901018          0\n.debug_line           4699119          0\n.debug_line_str          7193          0\n.debug_loclists       1209656          0\n.debug_macro           105619          0\n.debug_ranges         1468128          0\n.debug_rnglists         52189          0\n.debug_str            6329679          0\nTotal                28622727\n\n\n",
+          "artifact_metadata": {
+            "profile": {
+              "opt_level": "0",
+              "debuginfo": "line-tables-only",
+              "debug_assertions": true,
+              "overflow_checks": true,
+              "test": false
+            },
+            "features": [],
+            "filenames": [
+              "/home/kevin/BlueEngine/target/itest/be2-tools"
+            ],
+            "executable": "/home/kevin/BlueEngine/target/itest/be2-tools",
+            "fresh": false
+          }
+        }
+      ],
+      "describe": {
+        "command": [
+          "target/itest/be2-tools",
+          "describe"
+        ],
+        "stdout_bytes": 5984,
+        "stdout_sha256": "7192686ecb6b87e811f9910a08c1adc97502cc9e59dcf92821aadbcb3a471483",
+        "stderr": "",
+        "returncode": 0
+      },
+      "scope": "Final current-source production binaries emitted by canonical no-default stage 6; not test harnesses; no extra Cargo build.",
+      "stage6_final_result": {
+        "status": "passed",
+        "seconds": 556.887,
+        "source": ".be2-work/narrative-evidence/full-check-3.stderr"
+      },
+      "post_stage6_sha256_rechecked": true
+    },
+    "final_enabled": {
+      "schema_version": 1,
+      "measured_at_utc": "2026-10-15T00:30:15.676468+00:00",
+      "profile": "itest",
+      "features": [
+        "narrative"
+      ],
+      "cargo_command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "narrative",
+        "--lib",
+        "--test",
+        "narrative_fixtures",
+        "--test",
+        "narrative_content"
+      ],
+      "artifact_log": ".be2-work/check-20261015T002248846072Z-e72x1uvu/8.log",
+      "stage8_status_at_capture": "production artifacts emitted; library test compilation pending",
+      "binaries": [
+        {
+          "name": "be2-headless",
+          "path": "/home/kevin/BlueEngine/target/itest/be2-headless",
+          "bytes": 39613744,
+          "sha256": "57ee9617597bb991af0861c8ee2db383e1a5e56f28b39514ee466f08062e9939",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n10089902\t 386392\t   3268\t10479562\t 9fe7ca\t/home/kevin/BlueEngine/target/itest/be2-headless\n",
+          "sections_detailed": "/home/kevin/BlueEngine/target/itest/be2-headless  :\nsection                  size       addr\n.interp                    28        792\n.note.gnu.property         32        824\n.note.ABI-tag              32        856\n.note.gnu.build-id         36        888\n.gnu.hash                  28        928\n.dynsym                  5328        960\n.dynstr                  2795       6288\n.gnu.version              444       9084\n.gnu.version_r            640       9528\n.rela.dyn              706488      10168\n.rela.plt                  24     716656\n.debug_gdb_scripts         34     716680\n.eh_frame              823496     716720\n.eh_frame_hdr          196548    1540216\n.gcc_except_table      245472    1736764\n.rodata                524616    1982464\n.rodata.cst16            5264    2507088\n.rodata.cst32            1344    2512352\n.rodata.cst4             2056    2513696\n.rodata.cst8             1584    2515752\n.rodata.str1.1          69798    2517336\n.rodata.str1.2              2    2587134\n.fini                       9    2591232\n.init                      23    2591244\n.plt                       48    2591280\n.plt.got                   24    2591328\n.text                 7503709    2591360\n.tdata                    200   10099168\n.tbss                     120   10099368\n.data.rel.ro           242400   10099376\n.dynamic                  544   10341776\n.fini_array                 8   10342320\n.got.plt                   32   10342328\n.init_array                16   10342360\n.got                   136544   10342376\n.relro_padding           2744   10478920\n.data                    6648   10483016\n.tm_clone_table             0   10489664\n.bss                      404   10489664\n.comment                  113          0\n.debug_abbrev           58416          0\n.debug_aranges         632288          0\n.debug_info           4018341          0\n.debug_line           4711141          0\n.debug_line_str          7193          0\n.debug_loclists       1209656          0\n.debug_macro           105619          0\n.debug_ranges         1508016          0\n.debug_rnglists         52189          0\n.debug_str            6789076          0\nTotal                29571610\n\n\n",
+          "artifact_metadata": {
+            "profile": {
+              "opt_level": "0",
+              "debuginfo": "line-tables-only",
+              "debug_assertions": true,
+              "overflow_checks": true,
+              "test": false
+            },
+            "features": [
+              "narrative"
+            ],
+            "filenames": [
+              "/home/kevin/BlueEngine/target/itest/be2-headless"
+            ],
+            "executable": "/home/kevin/BlueEngine/target/itest/be2-headless",
+            "fresh": false
+          }
+        },
+        {
+          "name": "be2-tools",
+          "path": "/home/kevin/BlueEngine/target/itest/be2-tools",
+          "bytes": 41237160,
+          "sha256": "d5d0ee301062add4657e235b3a2fb2aeac83d5f4dc626d00dac1596b6d48d07c",
+          "sections": "   text\t   data\t    bss\t    dec\t    hex\tfilename\n10098850\t 365200\t   3424\t10467474\t 9fb892\t/home/kevin/BlueEngine/target/itest/be2-tools\n",
+          "sections_detailed": "/home/kevin/BlueEngine/target/itest/be2-tools  :\nsection                  size       addr\n.interp                    28        792\n.note.gnu.property         32        824\n.note.ABI-tag              32        856\n.note.gnu.build-id         36        888\n.gnu.hash                  28        928\n.dynsym                  5328        960\n.dynstr                  2795       6288\n.gnu.version              444       9084\n.gnu.version_r            640       9528\n.rela.dyn              734208      10168\n.rela.plt                  24     744376\n.debug_gdb_scripts         34     744400\n.eh_frame              761940     744440\n.eh_frame_hdr          213924    1506380\n.gcc_except_table      269208    1720304\n.rodata                625224    1989512\n.rodata.cst16            4048    2614736\n.rodata.cst32             672    2618784\n.rodata.cst4             2904    2619456\n.rodata.cst8             2096    2622360\n.rodata.str1.1          45711    2624456\n.rodata.str1.2              2    2670168\n.rodata.str1.4              4    2670172\n.fini                       9    2674272\n.init                      23    2674284\n.plt                       48    2674320\n.plt.got                   24    2674368\n.text                 7429384    2674400\n.tdata                     48   10107880\n.tbss                      72   10107928\n.data.rel.ro           194848   10107928\n.dynamic                  544   10302776\n.fini_array                 8   10303320\n.got.plt                   32   10303328\n.init_array                16   10303360\n.got                   167024   10303376\n.relro_padding           3072   10470400\n.data                    2680   10474496\n.tm_clone_table             0   10477176\n.bss                      280   10477176\n.comment                  113          0\n.debug_abbrev           60536          0\n.debug_aranges         648928          0\n.debug_info           4058785          0\n.debug_line           4896264          0\n.debug_line_str          7193          0\n.debug_loclists       1209656          0\n.debug_macro           105619          0\n.debug_ranges         1522528          0\n.debug_rnglists         52189          0\n.debug_str            6742095          0\nTotal                29771380\n\n\n",
+          "artifact_metadata": {
+            "profile": {
+              "opt_level": "0",
+              "debuginfo": "line-tables-only",
+              "debug_assertions": true,
+              "overflow_checks": true,
+              "test": false
+            },
+            "features": [
+              "narrative"
+            ],
+            "filenames": [
+              "/home/kevin/BlueEngine/target/itest/be2-tools"
+            ],
+            "executable": "/home/kevin/BlueEngine/target/itest/be2-tools",
+            "fresh": false
+          }
+        }
+      ],
+      "describe": {
+        "command": [
+          "target/itest/be2-tools",
+          "describe"
+        ],
+        "stdout_bytes": 5984,
+        "stdout_sha256": "7192686ecb6b87e811f9910a08c1adc97502cc9e59dcf92821aadbcb3a471483",
+        "stderr": "",
+        "returncode": 0
+      },
+      "scope": "Final current-source production binaries emitted by canonical full4 narrative stage 8; not test harnesses; no extra Cargo build.",
+      "stage8_final_result": {
+        "status": "passed",
+        "seconds": 152.217,
+        "source": ".be2-work/narrative-evidence/full-check-4.stderr"
+      },
+      "post_stage8_sha256_rechecked": true
+    },
+    "enabled_minus_disabled_bytes": {
+      "be2-headless": 760800,
+      "be2-tools": 1470776
+    }
+  },
+  "source_size": {
+    "model.rs": {
+      "total_lines": 374,
+      "production_lines": 374,
+      "unit_test_lines": 0
+    },
+    "parser.rs": {
+      "total_lines": 473,
+      "production_lines": 473,
+      "unit_test_lines": 0
+    },
+    "runtime.rs": {
+      "total_lines": 1644,
+      "production_lines": 1035,
+      "unit_test_lines": 609
+    },
+    "mod.rs": {
+      "total_lines": 13,
+      "production_lines": 13,
+      "unit_test_lines": 0
+    },
+    "note": "Rustfmt lines including blank lines/comments. Integration tests, fixture games, CLI glue and docs are additional and reported separately."
+  },
+  "additional_lines": {
+    "tests/narrative_content.rs": 91,
+    "tests/narrative_fixtures.rs": 258,
+    "tests/narrative_optional.rs": 23,
+    "examples/narrative/shared.rs": 578,
+    "examples/narrative_native.rs": 501,
+    "examples/narrative_walk.rs": 149
+  },
+  "repairs": [
+    {
+      "kind": "build environment",
+      "detail": "Shared compiled-cache full; removed regenerable itest executable/incremental artifacts. Rebuild timings are not ordinary warm-cache checks."
+    },
+    {
+      "kind": "test environment",
+      "detail": "Initial TMPDIR inside checkout changed temporary-project Git/privacy behavior. Reran using /var/tmp outside all repositories; Python624 passed."
+    },
+    {
+      "kind": "integration regression",
+      "detail": "New discovery command exceeded existing 6000-byte describe budget (6075 bytes). Condensed redundant help prose without changing fields, constants or test budget. Fixed response is 5,984 bytes and default regression passed. Initial size comparison predates this repair; final-disabled artifact sample records final deltas."
+    },
+    {
+      "kind": "runtime review",
+      "detail": "Size-aware interpolation eligibility now allows fallback without render allocation; regression passed."
+    },
+    {
+      "kind": "authoring discovery review",
+      "detail": "Final Python-only positive story/stories/plot alias repair makes story-only briefs discover Poe while storyless/negated-story briefs stay excluded. 21 focused context/automatic tests passed; exact full3 stage39 Python command rerun after repair: 624 reported, 58 skipped, 566 executed, exit 0 in 114.710 s. Original stage39 predates this fix. Raw final-python.* and docs/perf/narrative-discovery.json retain the evidence."
+    },
+    {
+      "kind": "lint integration",
+      "detail": "Full3 passed default/headless tests and narrative 498 + 5 + 7 tests, then narrative all-target Clippy rejected one field-reassign-after-default test initializer. Rewrote that initializer without changing production code; canonical full4 then passed all 39 gates. Full3 raw report preserved."
+    }
+  ],
+  "public_glue_diff": {
+    "scope": "Tracked public CLI, discovery, feature, workflow and manifest changes relative to starting HEAD; new optional module/tests/examples counted separately.",
+    "files": [
+      {
+        "path": "Cargo.toml",
+        "added_lines": 10,
+        "deleted_lines": 0
+      },
+      {
+        "path": "src/bin/be2-tools.rs",
+        "added_lines": 43,
+        "deleted_lines": 0
+      },
+      {
+        "path": "src/viewer/capabilities.rs",
+        "added_lines": 5,
+        "deleted_lines": 4
+      },
+      {
+        "path": "src/viewer/mod.rs",
+        "added_lines": 2,
+        "deleted_lines": 0
+      },
+      {
+        "path": "tools/FEATURES.json",
+        "added_lines": 60,
+        "deleted_lines": 0
+      },
+      {
+        "path": "tools/test_workflow.py",
+        "added_lines": 25,
+        "deleted_lines": 0
+      },
+      {
+        "path": "tools/workflow.py",
+        "added_lines": 20,
+        "deleted_lines": 0
+      }
+    ]
+  },
+  "microbenchmark_preliminary": {
+    "command": "target/itest/deps/vesper3d-355f1f8901bd1f96 measure_indexed_selection_and_validated_reload --ignored --nocapture",
+    "profile": "itest",
+    "rustc": "1.98.1 (48a229cea 2026-09-01)",
+    "responses": 64,
+    "event_pools": 4,
+    "candidates_per_event": 16,
+    "select_iterations": 100000,
+    "select_total_ns": 52677535,
+    "reload_iterations": 1000,
+    "reload_total_ns": 294802555,
+    "state_bytes": 202,
+    "scope": [
+      "highest priority candidate eligible; pure select clones",
+      "reload clones+validates+reindexes+compiles templates; parsed IR, no file IO",
+      "state_bytes is serialized empty progress after 1000 reloads, not heap memory",
+      "shared host under other compilation; unoptimized engine itest; single sample, no cross-platform claim",
+      "recorded before final size-aware eligibility repair; final rerun pending"
+    ],
+    "superseded_by": "microbenchmark"
+  },
+  "microbenchmark_before_test_initializer_repair": {
+    "profile": "itest",
+    "responses": 64,
+    "event_pools": 4,
+    "candidates_per_event": 16,
+    "select_iterations": 100000,
+    "select_total_ns": 80718053,
+    "reload_iterations": 1000,
+    "reload_total_ns": 357282041,
+    "state_bytes": 202,
+    "command": [
+      "target/itest/deps/vesper3d-355f1f8901bd1f96",
+      "measure_indexed_selection_and_validated_reload",
+      "--ignored",
+      "--nocapture"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 0.4441117710666731,
+    "stdout": "\nrunning 1 test\n{\"profile\":\"itest\",\"responses\":64,\"event_pools\":4,\"candidates_per_event\":16,\"select_iterations\":100000,\"select_total_ns\":80718053,\"reload_iterations\":1000,\"reload_total_ns\":357282041,\"state_bytes\":202}\ntest viewer::narrative::runtime::tests::measure_indexed_selection_and_validated_reload ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 498 filtered out; finished in 0.44s\n\n",
+    "stderr": "",
+    "binary_sha256": "0ae40170dff006d9dfc8f23059ab656e779b34591424370f629c77b42e9ad629",
+    "measured_at_utc": "2026-10-15T00:20:54.714865+00:00",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "scope": [
+      "highest priority candidate eligible; pure select clones",
+      "reload clones+validates+reindexes+compiles templates; parsed IR, no file IO",
+      "state_bytes is serialized empty progress after 1000 reloads, not heap memory",
+      "shared host under other compilation; unoptimized engine itest; single sample, no cross-platform claim",
+      "current-source Cargo library test executable verified by final canonical stage8 metadata: features=[narrative], profile.test=true"
+    ],
+    "superseded_by": "microbenchmark"
+  },
+  "cache_cleanup_during_verification": [
+    {
+      "removed": "completed non-library itest incremental caches older than 10 minutes only",
+      "preserved_prefixes": [
+        "vesper3d-"
+      ],
+      "directories": 378,
+      "reclaimed_bytes": 2245861376,
+      "seconds": 40.140671940054744,
+      "free_bytes": 4264927232
+    },
+    {
+      "removed": "completed itest incremental cache after all itest feature compilation; active debug consumer builds untouched",
+      "reclaimed_bytes": 5287452672,
+      "seconds": 27.21985437301919,
+      "free_bytes": 8228667392
+    }
+  ]
+}

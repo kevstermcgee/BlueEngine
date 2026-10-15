@@ -34,3 +34,5 @@ Esc pauses and M toggles sound. Use a custom client when the game needs differen
 
 Browser gameplay/WASM is retired. Do not install browser dependencies or add web targets.
 Inspect native captures and controls; compiler/tests do not prove audible hardware playback.
+`python scripts/ship.py installer prepare` starts Windows installer preparation.
+Declare game-owned device checks and use `python scripts/ship.py review`; see engine docs/NATIVE_DELIVERY.md.

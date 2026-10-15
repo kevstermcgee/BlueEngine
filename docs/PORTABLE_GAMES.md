@@ -54,6 +54,11 @@ entire framebuffer, and keep rendering read-only. Native kit geometry/materials/
 and the existing native worker/network APIs remain available. Controller, chunks and day clocks are rendering-free.
 Leo retains its optional native portable presentation with the same authoritative state.
 
+`Game::show_overlays()` defaults to true; return false to hide shared start/pause panels and notices.
+`Game::start_automatically()` defaults to false; return true to start a simulation immediately.
+These preserve pause/input/audio/storage behavior. `show_hud()` independently controls title/control labels.
+Fatal runtime errors still reach stderr. Wormhole demonstrates a fully unobstructed experience.
+
 `Game::drag_look()` opts into canvas dragging/right-stick look. Intent carries accumulated `look`
 radians and `sprint`; look and press edges are consumed once per fixed tick. F toggles fullscreen in
 portable native players. Unsupported device operations produce an explicit notice.
@@ -72,6 +77,12 @@ from read-only simulation. Checksums/PCM/sample counts are validated before deco
 saved Music/Sound toggles are N/M. Loops require audio activation, stop during pause
 or focus loss, and fade ordinary transitions. Submission evidence cannot prove human listening.
 Older Sound-only settings retain their value and default Music on. The shared cue bank stays small.
+
+Custom native clients that supply their own audio backend can select `two-d-draw`
+instead of `two-d`. This exports the same `draw::Scene`, `Renderer` and viewport
+composition without enabling Macroquad audio. `two-d`, `portable`, `presentation`
+and the shared client retain their existing audio behavior. Sway uses this path
+for local streaming media, live sample analysis and native file import.
 
 Open-ended games need no artificial win: headless evidence may use outcome `playing`, with positive
 `ticks`, a nonempty `purpose` and the complete state hash. Tests must assert mechanics were exercised.

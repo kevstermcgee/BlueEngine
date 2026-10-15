@@ -1082,6 +1082,7 @@ impl GameRuntime {
             fired_log: None,
         })
     }
+    #[cfg(feature = "physics")]
     pub(crate) fn set_round(&mut self, round: u64) {
         self.state.round = round;
     }
@@ -1332,6 +1333,7 @@ impl GameRuntime {
             && state.fired & !flag_mask(self.document.rules.len()) == 0
     }
     /// Complete rule state for a save: the public state plus timer countdowns and zone occupancy.
+    #[cfg(feature = "physics")]
     pub(crate) fn capture(&self) -> super::savestate::world::GameSave {
         super::savestate::world::GameSave {
             state: self.state.clone(),
@@ -1340,6 +1342,7 @@ impl GameRuntime {
         }
     }
     /// Check that a saved rule state belongs to this game. Nothing is changed.
+    #[cfg(feature = "physics")]
     pub(crate) fn check_save(
         &self,
         save: &super::savestate::world::GameSave,
@@ -1374,6 +1377,7 @@ impl GameRuntime {
         Ok(())
     }
     /// Apply a save that [`Self::check_save`] accepted.
+    #[cfg(feature = "physics")]
     pub(crate) fn restore(&mut self, save: &super::savestate::world::GameSave, room: &mut Room) {
         for (mover, ticks) in self.movers.iter_mut().zip(&save.state.mover_ticks) {
             mover.current_ticks = *ticks;
@@ -1560,6 +1564,7 @@ impl GameRuntime {
 }
 
 impl LoadedGame {
+    #[cfg(feature = "physics")]
     pub fn world(self) -> Result<super::simulation::HeadlessWorld> {
         let original = self.clone();
         let runtime = GameRuntime::compile(self.document, &self.map)?;

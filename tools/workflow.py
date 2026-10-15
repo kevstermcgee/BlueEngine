@@ -4,6 +4,7 @@ import importlib.util
 import math
 from pathlib import Path
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -103,6 +104,62 @@ def feature_suites(feature):
                   {path[6:-3] for path in feature['files'] if re.fullmatch(r'tests/[\w-]+\.rs', path)})
 
 
+def owner_features(features, owners, paths=None):
+    """Cargo feature ownership stays beside file ownership in the existing index."""
+    selected = {flag for name in owners for flag in features[name].get('required_features', [])}
+    for name in owners:
+        for owned, flags in features[name].get('path_features', {}).items():
+            if paths is None or any(path == owned or path.startswith(owned.rstrip('/') + '/') for path in paths):
+                selected.update(flags)
+    return sorted(selected)
+
+
+def external_consumer_tests(root, features, affected, paths, loop):
+    """Reuse indexed Cargo checks for affected standalone consumers, without workspace unification.
+
+    Integration closes over affected consumers. Inner checks only exercise a consumer whose own
+    files changed, in its declared defaults-disabled configuration; downstream optional modes wait.
+    """
+    commands, missing = [], []
+    native_inputs = any(path.startswith(('src/', 'tests/', 'templates/')) and
+                        path.endswith(('.rs', '.tmpl')) for path in paths)
+    native_inputs = native_inputs or bool(set(paths) & COMPILED_TEMPLATE_INPUTS)
+    for name in sorted(affected):
+        for check in features[name].get('checks', []):
+            if not isinstance(check, str) or not check.startswith('cargo test '):
+                continue
+            command = shlex.split(check)
+            if '--manifest-path' not in command:
+                continue
+            index = command.index('--manifest-path') + 1
+            if index == len(command):
+                missing.append(f'{name}: missing external Cargo manifest argument')
+                continue
+            manifest = Path(command[index])
+            manifest = manifest if manifest.is_absolute() else Path(root) / manifest
+            game_path = manifest.parent.relative_to(Path(root)).as_posix() if manifest.is_relative_to(Path(root)) else None
+            direct = game_path is not None and any(path == game_path or path.startswith(game_path + '/') for path in paths)
+            if loop == 'integration' and not native_inputs and not direct:
+                continue  # Reviewed prose runs current-content checks, not downstream compilation.
+            if loop != 'integration' and (not direct or '--no-default-features' not in command or '--features' in command):
+                continue
+            if not manifest.is_file():
+                missing.append(command[index])
+                continue
+            if direct and loop == 'inner':
+                document = tomllib.loads(manifest.read_text(encoding='utf-8'))
+                required = {flag for target in document.get('bin', [])
+                            if target.get('path') and game_path + '/' + target['path'] in paths
+                            for flag in target.get('required-features', [])}
+                if required:
+                    command += ['--features', ','.join(sorted(required))]
+            if not any(argument.startswith('--message-format') for argument in command):
+                command.append('--message-format=json')
+            if command not in commands:
+                commands.append(command)
+    return commands, missing
+
+
 def feature_map(root, name, features=None):
     """Derive roles from the existing index; never create a second ownership registry."""
     features = index(root) if features is None else features
@@ -115,6 +172,8 @@ def feature_map(root, name, features=None):
             'tests': feature_suites(feature), 'checks': feature['checks'],
             'examples': [p for p in feature['files'] if p.startswith(('examples/', 'templates/', 'assets/'))],
             'depends_on': feature.get('depends_on', []),
+            'required_features': feature.get('required_features', []),
+            'path_features': feature.get('path_features', {}),
             'used_by': sorted(k for k, v in features.items() if name in v.get('depends_on', [])),
             'extension_point': feature.get('canonical_example') or (feature.get('read_first') or feature['files'])[0],
             'ownership': 'Declared discovery relationships; final verification does not rely on completeness.'}
@@ -122,6 +181,8 @@ def feature_map(root, name, features=None):
 
 def validate_index(root):
     features = index(root)
+    manifest = root / 'Cargo.toml'
+    cargo_features = set(tomllib.loads(manifest.read_text(encoding='utf-8')).get('features', {})) if manifest.is_file() else set()
     errors = []
     for name, feature in features.items():
         for path in set(feature['files'] + feature.get('read_first', []) +
@@ -131,6 +192,16 @@ def validate_index(root):
         for dependency in feature.get('depends_on', []):
             if dependency not in features:
                 errors.append({'feature': name, 'dependency': dependency, 'error': 'unknown dependency'})
+        for requirement in feature.get('required_features', []):
+            if cargo_features and requirement not in cargo_features:
+                errors.append({'feature': name, 'required_feature': requirement, 'error': 'unknown Cargo feature'})
+        for path, requirements in feature.get('path_features', {}).items():
+            if path not in feature['files']:
+                errors.append({'feature': name, 'path': path, 'error': 'feature path lacks indexed ownership'})
+            for requirement in requirements:
+                if cargo_features and requirement not in cargo_features:
+                    errors.append({'feature': name, 'path': path, 'required_feature': requirement,
+                                   'error': 'unknown Cargo feature'})
         for suite in feature_suites(feature):
             if not re.fullmatch(r'[\w-]+', suite) or not (root / 'tests' / (suite + '.rs')).is_file():
                 errors.append({'feature': name, 'suite': suite, 'error': 'missing integration suite'})
@@ -149,6 +220,20 @@ def suite_feature_groups(root, suites):
     return groups
 
 
+# Reviewed guides consumed as runtime text by doc_drift, not compiled source,
+# generated schema, fixture or build input. This is an exact ownership list:
+# adding a file requires reviewing its consumers. In particular AI_QUICKSTART.md
+# and archive/AI_REFERENCE.md are include_str! inputs and are intentionally absent.
+ITERATION_GUIDES = frozenset({
+    'docs/CHANGE_WORKFLOW.md', 'docs/AI_SPRINGBOARD.md', 'docs/NETPLAY.md',
+    'docs/CUSTOM_SIM_CHEATSHEET.md', 'docs/GAME_QUICKSTART.md', 'docs/AUDIO.md',
+    'docs/BROWSER_WORKFLOW.md', 'docs/GAME_AUTHORING_ENTRY.md',
+})
+# The bootstrap is embedded in newgame.rs. Maintained canonical Python tools are
+# loaded at runtime and deliberately absent so changing them does not rebuild Rust.
+COMPILED_TEMPLATE_INPUTS = frozenset({'templates/game_entry.py'})
+
+
 def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     """Automatic iteration evidence, never permission to omit the shipping gates.
 
@@ -162,11 +247,18 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     paths = sorted(set(paths))
     affected = impact(root, paths)
     features = index(root)
+    external_tests, missing_consumers = external_consumer_tests(root, features, affected['affected'], paths, loop)
     suites = sorted({suite for name in affected['affected'] for suite in feature_suites(features[name])})
     invalid = [s for s in suites if not re.fullmatch(r'[\w-]+', s) or not (root / 'tests' / (s + '.rs')).is_file()]
-    boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json') or
+    boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json',
+                                        'tools/check_dependency_boundaries.py') or
                 p.startswith('.github/') or p.endswith('build.rs')]
-    fallback = sorted(set(affected['unmapped'] + boundary + invalid))
+    # A Markdown suffix is not proof of independence. Keep executable docs and
+    # unknown recipes conservative; only exact guides and existing reviewed
+    # independent Python/data scopes can narrow an iteration plan.
+    boundary += [p for p in paths if p.endswith('.md') and p not in ITERATION_GUIDES
+                 and validation_plan([p], base, test_profile)['scope'] == 'full']
+    fallback = sorted(set(affected['unmapped'] + boundary + invalid + missing_consumers))
     common = {'loop': loop, 'base': base, 'changed_paths': paths, 'impact': affected,
               'remaining': 'Run check --changed (shipping) and complete Linux/Windows CI plus relevant game/package gates.',
               'required_before_merge': ['python tools/be2.py check', 'Linux/Windows CI',
@@ -179,33 +271,78 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     commands, harnesses = [], []
 
     def add(command, harness=None):
+        if '--features' in command:
+            command = list(command)
+            position = command.index('--features') + 1
+            command[position] = ','.join(sorted(set(command[position].split(','))))
         if command not in commands:
             commands.append(command)
             harnesses.append(harness)
 
     native = any(p.startswith(('src/', 'tests/')) and p.endswith('.rs') for p in paths)
     native = native or any(p.startswith('templates/') and p.endswith(('.rs', '.tmpl')) for p in paths)
+    native = native or bool(set(paths) & COMPILED_TEMPLATE_INPUTS)
+    guides = sorted(set(paths) & ITERATION_GUIDES)
+    exercised_suites = suites if native else []
     if native:
         groups = suite_feature_groups(root, suites)
+        manifest = root / 'Cargo.toml'
+        definitions = tomllib.loads(manifest.read_text(encoding='utf-8')) if manifest.is_file() else {}
+        binaries = {target['name']: set(target.get('required-features', []))
+                    for target in definitions.get('bin', []) if target.get('path') in paths}
+        owned_features = set(owner_features(features, affected['owners'], paths))
+        owned_features.update(flag for required in binaries.values() for flag in required)
         portable = bool({'two_dimensional'} & set(affected['affected']))
         presentation = portable or bool({'graphics', 'game_presentation', 'client_kit', 'native_controllers',
                                          'offline_renderer', 'sandbox'} & set(affected['owners']))
-        modes = ([[] , ['--no-default-features']] if loop == 'integration' else
-                 ([['--no-default-features', '--features', 'two-d']] if portable else
-                  [[]] if presentation else [['--no-default-features']]))
+        narrow = ['--no-default-features']
+        requested = sorted(set(owned_features) | ({'two-d'} if portable else set()))
+        if requested:
+            narrow += ['--features', ','.join(requested)]
+        # Explicit path ownership takes priority over the historical broad-client
+        # heuristic. Defaults need not contain every gated module (for example
+        # cinematic output), and a custom input/UI edit can use its own boundary.
+        modes = ([[], ['--no-default-features', '--features', 'physics,networking']]
+                 if loop == 'integration' else [[]] if presentation and not portable and not requested and not binaries else [narrow])
+
+        def library_targets(flags):
+            # An explicit --lib does not compile changed executable mains. Only
+            # select a binary when this mode actually enables its Cargo contract;
+            # the owned narrow mode supplies optional features absent from defaults.
+            enabled = set() if '--no-default-features' in flags else {'default'}
+            if '--features' in flags:
+                enabled.update(flags[flags.index('--features') + 1].split(','))
+            pending = list(enabled)
+            while pending:
+                for dependency in definitions.get('features', {}).get(pending.pop(), []):
+                    if dependency in definitions.get('features', {}) and dependency not in enabled:
+                        enabled.add(dependency)
+                        pending.append(dependency)
+            return ['--lib', *[arg for name, required in binaries.items() if required <= enabled
+                               for arg in ('--bin', name)]]
+
         for flags in modes:
-            add(['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, '--lib',
+            add(['cargo', 'test', '--locked', *profile_flags(test_profile), *flags, *library_targets(flags),
                  *[arg for suite in groups.get((), []) for arg in ('--test', suite)], '--message-format=json'], 'rust')
         for required, selected in groups.items():
             if required:
                 add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
                      '--features', ','.join(required),
                      *[arg for suite in selected for arg in ('--test', suite)], '--message-format=json'], 'rust')
-        if loop == 'integration' and portable:
-            add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
-                 '--features', 'two-d', '--lib', '--message-format=json'], 'rust')
+        if loop == 'integration' and set(requested) != {'physics', 'networking'}:
+            add(['cargo', 'test', '--locked', *profile_flags(test_profile), *narrow,
+                 *library_targets(narrow), '--message-format=json'], 'rust')
         if loop == 'integration':
             add([sys.executable, 'tools/check_headless.py'])
+    for command in external_tests:
+        add(command, 'rust_project')
+    if guides:
+        # Cargo validates source/feature/profile freshness, then the test reads
+        # today's content on every invocation. No saved test result is reused.
+        add(['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
+             '--test', 'doc_drift', '--message-format=json'], 'rust')
+        exercised_suites = sorted(set(exercised_suites) | {'doc_drift'})
+        add([sys.executable, 'tools/check_docs.py'])
     for name in affected['affected']:
         for check in features[name]['checks']:
             match = re.fullmatch(r'python -m unittest ((?:[\w]+\.[\w.]+)(?: [\w]+\.[\w.]+)*)', check)
@@ -218,21 +355,37 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     if reviewed['scope'] not in ('full', 'no_changes'):
         for command in reviewed['commands']:
             add(command, 'python' if command[1:3] == ['-m', 'unittest'] else None)
-    if paths and not native and len(commands) == 1 and not all(p.endswith('.md') for p in paths):
+    if paths and not native and len(commands) == 1:
         return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
                 'reason': 'Ownership is known but executable behavioral evidence is missing: full checks required.',
                 'commands': full_commands(test_profile), 'fallback_paths': paths}
-    content = any(p.startswith('assets/') for p in paths)
+    # Exact reviewed compatibility manifests use the current-pin Python suite,
+    # including Leo's manifest under assets/. This exception does not classify
+    # surrounding game content, hooks or unknown project pins as tooling.
+    tooling_pins = {p for p in features.get('game_scaffolding', {}).get('files', [])
+                    if p.endswith('/scripts/tooling.json')}
+    content = any(p.startswith('assets/') and p not in tooling_pins for p in paths)
     if content and not native:
         # Content can encode mechanics/assets; the incomplete index cannot infer an exercised route.
         return {**validation_plan(paths, base, test_profile), **common, 'scope': 'full',
                 'reason': 'Content requires authored scenario/asset closure evidence; no automatic route is declared.',
                 'commands': full_commands(test_profile), 'fallback_paths': paths}
-    return {**common, 'scope': 'focused', 'reason': 'Whole-library units plus declared consumer suites and tooling checks.',
+    return {**common, 'scope': 'focused',
+            'reason': ('Whole-library units plus declared consumer suites and tooling checks.' if native else
+                       'Current-content guide checks and reviewed tooling checks only.' if guides else
+                       'Reviewed tooling checks only.'),
             'commands': commands, 'command_harnesses': harnesses,
             'proves': 'Executed selected behavioral checks only; final shipping verification remains outstanding.',
-            'requirements': {'unit': native, 'integration_suites': suites,
-                             'networking': 'selected suites' if {'multiplayer', 'netplay', 'netplay_hub'} & set(affected['affected']) else 'deferred to shipping',
+            'not_verified': ['Other feature configurations and undeclared downstream consumers.',
+                             'Native package launch, physical controls, graphics and audio devices.'] +
+                            (['Gameplay and compiled Rust examples in documentation.'] if guides else []),
+            'requirements': {'unit': native, 'integration_suites': exercised_suites,
+                             'external_consumers': [command[command.index('--manifest-path') + 1] for command in external_tests],
+                             'documentation': ('Current links, registered CLI invocations and embedded JSON; '
+                                               'Rust examples and gameplay contracts still require shipping checks.'
+                                               if guides else 'deferred to shipping'),
+                             'networking': ('selected suites' if native and {'multiplayer', 'netplay', 'netplay_hub'} & set(affected['affected'])
+                                            else 'deferred to shipping'),
                              'packaging': 'affected game package gate before shipping' if {'game_shipping'} & set(affected['affected']) else 'deferred to shipping',
                              'full_suite': 'before merge'}}
 
@@ -243,6 +396,26 @@ def project_module(root):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def game_integration_features(manifest):
+    """One explicit optional capability configuration, declared in standard Cargo metadata.
+
+    Defaults-disabled rule checks remain the inner loop. These local feature names select an
+    additional required integration/shipping run, never arbitrary commands or engine test suites.
+    """
+    package = manifest.get('package', {})
+    metadata = package.get('metadata', {})
+    settings = metadata.get('blueengine', {}) if isinstance(metadata, dict) else None
+    if not isinstance(settings, dict):
+        raise ValueError('package.metadata.blueengine must be a table')
+    features = settings.get('integration-features', [])
+    if (not isinstance(features, list) or len(features) > 8 or
+            any(not isinstance(flag, str) or not flag or len(flag) > 128 for flag in features)):
+        raise ValueError('package.metadata.blueengine.integration-features must be a list of at most eight local feature names')
+    if len(features) != len(set(features)) or any(flag not in manifest.get('features', {}) for flag in features):
+        raise ValueError('integration-features must name unique declared local Cargo features; add an explicit feature alias first')
+    return sorted(features)
 
 
 def game_plan(root, game, loop='inner'):
@@ -259,6 +432,7 @@ def game_plan(root, game, loop='inner'):
     # once before locked iteration/shipping can work. Existing game locks stay locked.
     import tomllib
     manifest = tomllib.loads((game / 'Cargo.toml').read_text(encoding='utf-8'))
+    integration_features = game_integration_features(manifest)
     lock = game / 'Cargo.lock'
     locked = tomllib.loads(lock.read_text(encoding='utf-8')) if lock.is_file() else {}
     if not any(p.get('name') == manifest['package']['name'] for p in locked.get('package', [])):
@@ -273,6 +447,9 @@ def game_plan(root, game, loop='inner'):
                          [arg for arg in command if arg != '--no-default-features']]
             harnesses += [None, 'rust_project']
             roles += ['format', 'tests']
+            if integration_features:
+                commands.append([*command[:-1], '--features', ','.join(integration_features), command[-1]])
+                harnesses.append('rust_project'); roles.append('integration_features')
     else:
         if project['targets']:
             script = game / 'scripts/check.py'
@@ -285,13 +462,22 @@ def game_plan(root, game, loop='inner'):
                          [sys.executable, str(ship), 'ship', '--no-install']]
             harnesses += ['game_check', 'game_ship']
             roles += ['game_check', 'game_ship']
+            if integration_features:
+                commands.insert(-2, ['cargo', 'test', '--locked', '--manifest-path', str(game / 'Cargo.toml'),
+                                     '--no-default-features', '--features', ','.join(integration_features),
+                                     '--message-format=json'])
+                harnesses.insert(-2, 'rust_project'); roles.insert(-2, 'integration_features')
     return {'scope': 'game_shipping' if loop == 'shipping' else 'focused', 'loop': loop,
             'game': str(game), 'commands': commands, 'command_harnesses': harnesses, 'command_roles': roles,
             'proves': 'Game checks in selected loop only; engine dependency tests are excluded.',
             'remaining': ('Declared game gates on this host; other declared native platforms still need their own evidence.'
                           if loop == 'shipping' else 'Run check --game GAME --loop shipping; engine source edits also require engine check --changed.'),
             'requirements': {'native_packaging': sorted(project['targets']),
-                             'networking': project['networking'], 'engine_suite': 'required only when engine inputs change'}}
+                             'networking': project['networking'],
+                             'integration_features': integration_features,
+                             'engine_suite': 'required only when engine inputs change'},
+            'not_verified': ([f'Optional integration features: {", ".join(integration_features)}']
+                             if loop == 'inner' and integration_features else [])}
 
 
 # Words that say nothing about which feature a task needs (kept narrow: "game", "custom" and "kit" do).
@@ -324,6 +510,8 @@ def learned_line(entry):
     ref = f" ({entry['ref']})" if entry.get('ref') else ''
     if entry.get('status') == 'promoted':
         head, body = 'solved: ', entry.get('hint') or entry.get('workaround') or entry.get('note') or ''
+    elif entry.get('status') == 'wontfix' and 'retired' in entry.get('workaround', '').lower():
+        head, body = 'retired: ', entry['workaround']
     elif entry.get('trap'):
         head, body = 'trap: ', entry.get('hint') or entry['trap']
     else:
@@ -357,7 +545,8 @@ def ledger_hints(root, query, selected=()):
             entry = json.loads(line)
         except ValueError:
             continue
-        if isinstance(entry, dict) and isinstance(entry.get('note'), str) and entry.get('status') != 'duplicate':
+        if (isinstance(entry, dict) and isinstance(entry.get('note'), str)
+                and entry.get('status') != 'duplicate' and entry.get('scope') != 'retired-workflow'):
             entries.append(entry)
     keyword_sets = [learned_words(' '.join(w for w in entry.get('keywords', []) if isinstance(w, str)))
                     if isinstance(entry.get('keywords', []), list) else set() for entry in entries]
@@ -411,6 +600,24 @@ def module_picks(summaries, feature, query_words, rarity=None):
     return [path for *_, path in sorted(picks)]
 
 
+def identifier(text):
+    """Keep Rust qualification and field separators; prose does not become an identifier."""
+    return text.strip().strip('`').lower()
+
+
+def public_answers(feature, query):
+    """Curated public contracts use synonym groups, rather than exact task sentences."""
+    words = set(re.findall(r'[a-z0-9_-]+', query.lower()))
+    exact, matched = [], []
+    for answer in feature.get('answers', []):
+        if identifier(query) in [identifier(api) for api in answer.get('identifiers', [])]:
+            exact.append(answer)
+        elif answer.get('when') and all(words.intersection(group) for group in answer['when']):
+            matched.append(answer)
+    # One complete answer per feature keeps repeated limitations/signatures out of intake.
+    return (exact or sorted(matched, key=lambda answer: -len(answer['when'])))[:1], bool(exact)
+
+
 def context(root, query, limit=3, level=2):
     if level not in (1, 2, 3):
         raise ValueError('Context level must be 1, 2 or 3')
@@ -422,6 +629,14 @@ def context(root, query, limit=3, level=2):
     features = index(root)
     summaries = modules(root)
     terms = set(re.findall(r'[a-z0-9]+', query.lower())) - RANK_STOP
+    # Optional authoring kits require a positive capability request. Shared words
+    # such as game, state, character or scene must not load writing guidance.
+    opt_in_query = re.sub(r'\b(?:no|without|skip|omit|avoid)\s+(?:any\s+|all\s+)?'
+                          r'(?:narrative|dialogue|story|stories|plot|barks?)\b', '', query.lower())
+    opt_in_terms = set(re.findall(r'[a-z0-9]+', opt_in_query))
+    if opt_in_terms & {'story', 'stories', 'plot'}:
+        opt_in_terms.add('narrative')
+        terms.add('narrative')
     bags, described = {}, {}
     for name, feature in features.items():
         # What a feature's files say about themselves (one line each) is searchable text of the feature.
@@ -435,20 +650,36 @@ def context(root, query, limit=3, level=2):
     # it is across the index (inverse document frequency), so a generic word cannot outvote a specific one.
     weight = {term: math.log(1 + len(bags) / sum(term in words for words in bags.values()))
               for term in terms if any(term in words for words in bags.values())}
-    ranked = []
+    ranked, answers = [], {}
     for name, feature in features.items():
         words = bags[name]
         title = set(re.findall(r'[a-z0-9]+', name.lower()))
         keywords = set(re.findall(r'[a-z0-9]+', ' '.join(feature.get('keywords', [])).lower()))
         diagnostic = any(query.upper() == item['id'] for item in
                          feature.get('constraints', []) + feature.get('decisions', []))
-        score = 1000 if query.lower() == name or diagnostic else round(sum(
+        answers[name], exact_answer = public_answers(feature, query)
+        exact_api = identifier(query) in [identifier(api) for api in feature.get('public_api', [])]
+        required = feature.get('context_requires_any', [])
+        if required and not (opt_in_terms & set(required) or query.lower() == name or diagnostic
+                             or exact_answer or exact_api):
+            continue
+        score = 2000 if exact_answer else 1000 if query.lower() == name or diagnostic or exact_api else round(sum(
             weight[term] * (4 if term in title | keywords else 2 if term in described[name] else 1)
             for term in terms & words), 3)
+        if answers[name] and not exact_answer:
+            score += 100
+        # Retired paths only answer an explicit browser/WASM question or exact identifier.
+        if feature.get('status') == 'retired' and score < 1000:
+            if not terms.intersection({'browser', 'web', 'wasm'}):
+                score = 0
+            else:
+                score += 100
         if score:
             ranked.append((score, name, feature))
     ranked.sort(key=lambda item: (-item[0], item[1]))
-    selected = ranked[:1] if ranked and ranked[0][0] >= 1000 else ranked[:limit]
+    selected = (ranked[:1] if ranked and ranked[0][0] >= 1000 else
+                [item for item in ranked if item[0] >= 100][:limit]
+                if ranked and ranked[0][0] >= 100 else ranked[:limit])
     matches = []
     query_words = learned_words(query)
     frequency = {}
@@ -469,6 +700,11 @@ def context(root, query, limit=3, level=2):
         for field in ('constraints', 'canonical_example', 'decisions', 'traps', 'depends_on', 'public_api'):
             if feature.get(field):
                 item[field] = feature[field]
+        for field in ('status', 'runtime', 'limitations', 'replacement'):
+            if feature.get(field):
+                item[field] = feature[field]
+        if answers[name]:
+            item['answer'] = {k: v for k, v in answers[name][0].items() if k not in ('when', 'identifiers')}
         item['used_by'] = sorted(key for key, value in features.items() if name in value.get('depends_on', []))
         for typecheck in (False, True):
             try:
@@ -484,11 +720,14 @@ def context(root, query, limit=3, level=2):
         omitted.insert(0, matches.pop()['id'])
     related = closure(features, [item['id'] for item in matches])
     candidates = ['graphics', 'offline_renderer', 'asset_library', 'map_geometry']
-    learned = ledger_hints(root, query, [item['id'] for item in matches])
+    # Output limits must not change hint retrieval for an equivalent query.
+    learned = ledger_hints(root, query, [name for _, name, _ in ranked[:3]])
     packet = {'query': query, 'total': len(ranked), 'limit': limit,
             'matches': matches,
             'omitted_matches': omitted,
-            'confidence': 'high' if selected and selected[0][0] >= 1000 else 'low: keyword ranking; confirm read_first before editing',
+            'confidence': ('high: exact indexed identifier' if selected and selected[0][0] >= 1000 else
+                           'guided: public contract matched; confirm runtime and warnings' if selected and selected[0][0] >= 100 else
+                           'low: keyword ranking; confirm read_first before editing'),
             'probably_unnecessary': [name for name in candidates if name not in related] if selected else [],
             'exclusion_basis': 'Declared dependencies only; advisory, never a reason to skip validation.',
             'expected_scope': 'Small task: 1-4 source files; subsystem: 3-8. Above 10, recheck impact.',
@@ -507,11 +746,15 @@ def context(root, query, limit=3, level=2):
             guides = [p for p in feature.get('read_first', []) if p.endswith('.md')]
             if not guides:
                 guides = [p for p in feature['files'] if p.endswith('.md') and '/adr/' not in p]
-            item['read_first'] = (guides or item['read_first'])[:2]
+            item['read_first'] = [feature['entry_guide']] if feature.get('entry_guide') else (guides or item['read_first'])[:2]
             for key in list(item):
-                if key not in ('id', 'read_first', 'public_api', 'iterate', 'canonical_example'):
+                if key not in ('id', 'read_first', 'public_api', 'iterate', 'canonical_example',
+                               'answer', 'status', 'runtime', 'limitations', 'replacement'):
                     del item[key]
-        packet['next'] = 'Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership.'
+            if item.get('answer'):
+                item['public_api'] = answers[item['id']][0].get('identifiers', []) or item.get('public_api', [])[:2]
+        packet['next'] = ('Use context FEATURE --level 2 for contracts; --level 3 for implementation ownership. '
+                          'Low confidence: name the runtime and mechanic, or use an exact public identifier.')
         if learned:
             packet['learned'] = learned
     elif level == 3:
@@ -549,12 +792,44 @@ def full_commands(test_profile='itest'):
     # Group feature modes to avoid repeatedly rebuilding the same binary with a
     # different feature set. Keep every pre-existing engine gate.
     commands = [['cargo', 'fmt', '--check']]
-    for features in ([], ['--no-default-features'], ['--no-default-features', '--features', 'offline']):
+    for features in ([], ['--no-default-features', '--features', 'physics,networking'],
+                     ['--no-default-features', '--features', 'offline,physics,networking']):
         commands.extend([
             ['cargo', 'rustdoc', '--locked', '--lib', *profile_flags(test_profile), *features, '--', '-D', 'warnings'],
             ['cargo', 'test', '--locked', *profile_flags(test_profile), *features],
             ['cargo', 'clippy', '--all-targets', '--locked', *profile_flags(test_profile), *features, '--', '-D', 'warnings'],
         ])
+    # Test the genuinely narrow rules build independently; the stock/default
+    # configurations above must not mask missing feature gates by unification.
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib', '--', '-D', 'warnings'],
+        ['cargo', 'rustdoc', '--locked', *profile_flags(test_profile), '--no-default-features', '--lib', '--', '-D', 'warnings'],
+    ])
+    # Optional resources are absent from defaults: test/document/lint this exact boundary separately.
+    # The doctest executes the public Inventory example, not only rustdoc rendering.
+    resource_flags = ['--no-default-features', '--features', 'resources']
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), *resource_flags, '--test', 'resources'],
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), *resource_flags, '--doc'],
+        ['cargo', 'rustdoc', '--locked', *profile_flags(test_profile), *resource_flags, '--lib', '--', '-D', 'warnings'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), *resource_flags, '--all-targets', '--', '-D', 'warnings'],
+    ])
+    workshop_manifest = 'games/automation-workshop/Cargo.toml'
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest, '--no-default-features'],
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest,
+         '--no-default-features', '--features', 'online', '--test', 'netplay'],
+    ])
+    # Opt-in narrative must be tested explicitly: ordinary/default games keep it disabled.
+    commands.extend([
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
+         '--features', 'narrative', '--lib', '--test', 'narrative_fixtures', '--test', 'narrative_content'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--features', 'narrative',
+         '--all-targets', '--', '-D', 'warnings'],
+        ['cargo', 'rustdoc', '--locked', *profile_flags(test_profile), '--no-default-features',
+         '--features', 'narrative', '--lib', '--', '-D', 'warnings'],
+    ])
     # Keep the maintained game on the real authoring path. Its own final ship check is exercised
     # separately with a display; CI still compiles presentation and proves headless rules/saves.
     game_manifest = 'games/signal-garden/Cargo.toml'
@@ -565,8 +840,9 @@ def full_commands(test_profile='itest'):
     ])
     commands.extend([
         ['cargo','test','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib'],
-        ['cargo','clippy','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
-        ['cargo','rustdoc','--locked','--no-default-features','--features','two-d','--lib','--','-D','warnings'],
+        ['cargo','clippy','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib','--','-D','warnings'],
+        ['cargo','rustdoc','--locked',*profile_flags(test_profile),'--no-default-features','--features','two-d','--lib','--','-D','warnings'],
+        ['cargo','clippy','--locked',*profile_flags(test_profile),'--no-default-features','--features','presentation','--lib','--','-D','warnings'],
     ])
     commands.extend([
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features', '--features', 'model-import', '--lib', 'model_import'],
@@ -587,13 +863,17 @@ def full_commands(test_profile='itest'):
                      ['cargo','test','--locked','--manifest-path',leo,'--no-default-features','--features','portable-client']])
     return commands + [
         [sys.executable, 'tools/check_headless.py'],
+        [sys.executable, 'tools/check_dependency_boundaries.py', '--run',
+         *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, 'tools/check_authoring.py', *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'tools.test_model_import', 'tools.test_schemas', 'scripts.test_publish_games',
          'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
          'tools.test_hub_deploy','tools.test_browser_retirement','tools.test_springboard',
-         'tools.test_machine_utilities', 'tools.test_idea_forge', 'tools.test_engine_fix'],
+         'tools.test_machine_utilities', 'tools.test_idea_forge', 'tools.test_engine_fix',
+         'tools.test_game_tooling', 'tools.test_game_installer', 'tools.test_game_review', 'tools.test_discovery',
+         'tools.test_readme_scope'],
     ]
 
 
@@ -632,7 +912,7 @@ def windows_plan(which=shutil.which, run=subprocess.run):
     return {'scope': 'windows_typecheck',
             'reason': 'Windows-only code is invisible to Linux builds; type-check it for ' + WINDOWS_TARGET + '.',
             'proves': WINDOWS_PROVES, 'env': env,
-            'commands': [base, [*base, '--no-default-features']]}
+            'commands': [base, [*base, '--no-default-features', '--features', 'physics,networking']]}
 
 
 def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode='default', _features=None,
@@ -654,6 +934,11 @@ def iteration_plan(root, feature_id, *, typecheck=False, test=None, feature_mode
     if typecheck:
         if not any(path.startswith('src/') for path in feature['files']):
             raise ValueError('No engine source indexed here; use the feature checks from context.')
+        owned_features = owner_features(features, [feature_id])
+        # Default client features do not include optional schema/model-import or
+        # cinematic modules. A selected feature's library must actually compile.
+        if owned_features:
+            flags += ['--features', ','.join(owned_features)]
         commands = [['cargo', 'check', '--locked', '--lib', *flags, '--message-format=json']]
         proves = 'Engine library type-check only; no linking or behavior tests.'
     elif suites:

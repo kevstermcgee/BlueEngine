@@ -6,6 +6,8 @@
 //! handles disconnects, stale input and packet ordering separately.
 //!
 //! ```
+//! # #[cfg(feature = "physics")]
+//! # fn main() -> vesper3d::Result<()> {
 //! use vesper3d::viewer::{controller::Movement, simulation::HeadlessWorld};
 //! let mut world = HeadlessWorld::new()?;
 //! assert!(world.join(42));
@@ -15,7 +17,10 @@
 //! assert!(world.player(42).is_some());
 //! world.leave(42);
 //! assert!(world.player(42).is_none());
-//! # Ok::<(), Box<dyn std::error::Error + Send + Sync>>(())
+//! # Ok(())
+//! # }
+//! # #[cfg(not(feature = "physics"))]
+//! # fn main() {}
 //! ```
 //!
 //! A game that keeps its rules in Rust (`docs/CUSTOM_CLIENT.md`) can embed the world as its physics
@@ -24,6 +29,8 @@
 //! (`assert_loads_replay_identically`, `assert_resumes_within`), not the bit-exact one.
 //!
 //! ```
+//! # #[cfg(feature = "physics")]
+//! # fn main() {
 //! use vesper3d::prelude::*;
 //! use vesper3d::viewer::{devkit::{snapshot, Simulation, Snapshot, StateHasher}, savestate::world::WorldState};
 //!
@@ -75,10 +82,14 @@
 //! let mut fresh = Sim::new();
 //! snapshot::restore(&mut fresh, &bytes).unwrap();
 //! assert_eq!((fresh.hits, fresh.state_hash()), (1, sim.state_hash()));
+//! # }
+//! # #[cfg(not(feature = "physics"))]
+//! # fn main() {}
 //! ```
+use super::controller::{Collider, Controller, Movement};
+#[cfg(feature = "physics")]
 use super::{
     authoring::MapDocument,
-    controller::{Collider, Controller, Movement},
     room::Room,
     savestate::{
         self,
@@ -86,11 +97,12 @@ use super::{
         Expect, Loaded, SaveError, SaveHeader,
     },
 };
+#[cfg(feature = "physics")]
 use std::collections::{BTreeMap, BTreeSet};
 
 /// Duration in seconds of one shared simulation tick (60 Hz).
 pub const TICK_SECONDS: f32 = 1. / 60.;
-/// Players a world accepts unless [`HeadlessWorld::set_max_players`] says otherwise.
+/// Players a world accepts unless `HeadlessWorld::set_max_players` (with the `physics` feature) says otherwise.
 pub const DEFAULT_MAX_PLAYERS: usize = 8;
 /// The most a world, and so a server, can be configured for.
 pub const MAX_PLAYERS_LIMIT: usize = 1024;
@@ -143,6 +155,7 @@ impl PlayerStepper {
 }
 
 /// Stored controller and private pending intent for one match-local player.
+#[cfg(feature = "physics")]
 pub struct Player {
     /// Simulation state; world callers inspect it through [`HeadlessWorld::player`].
     pub controller: Controller,
@@ -150,6 +163,7 @@ pub struct Player {
     interact: bool,
 }
 /// Match-local world, bounded to eight players. No socket, renderer or window.
+#[cfg(feature = "physics")]
 pub struct HeadlessWorld {
     pub(crate) initial_game: Option<super::game::LoadedGame>,
     /// Optional authoritative declarative game rules/state.
@@ -173,6 +187,7 @@ pub struct HeadlessWorld {
     /// Execution time in microseconds spent in physics on the last tick.
     pub last_physics_time_us: f64,
 }
+#[cfg(feature = "physics")]
 impl HeadlessWorld {
     /// Use authored static collision without promoting catalog objects to rigid bodies.
     /// Choose this for games that do not replicate or render moving props. This keeps
@@ -1143,7 +1158,7 @@ impl HeadlessWorld {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "physics"))]
 mod tests {
     use super::*;
     #[test]

@@ -21,7 +21,6 @@ python scripts/ship.py ship           # on Windows: EXE, shortcut, isolated capt
 python scripts/check.py               # full game verification including shipping
 ```
 
-Web builds require rustup target add wasm32-unknown-unknown, Node, ws and Chromium.
 Publishing to a directory produces a deployment-ready library, not an external URL.
 Browser gameplay is retired. Inspect native captures/controls; audio counters do not prove heard sound.
 

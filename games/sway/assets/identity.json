@@ -1,0 +1,19 @@
+{
+  "title": "Sway",
+  "tagline": "Your sound, in color.",
+  "controls": "Drop music / O import; Space pauses music and animation; Esc options; Arrows track; R fresh look; F fullscreen",
+  "engine_revision": "bf1504ff5506",
+  "package": [
+    "assets/check-tone.wav"
+  ],
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "1,15,45",
+    "--exit-after",
+    "60",
+    "--verify",
+    "--mute"
+  ]
+}

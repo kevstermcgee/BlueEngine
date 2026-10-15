@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "ground": {
+      "file": "music-ground.wav",
+      "checksum": "c966de686b2e2622",
+      "frames": 2601900,
+      "peak": 0.6056408,
+      "rms": 0.12615559,
+      "dc": 1.5456543e-7,
+      "seam_jump": 0.0076859146
+    },
+    "stars": {
+      "file": "music-stars.wav",
+      "checksum": "2463cbb6870a0ec5",
+      "frames": 2601900,
+      "peak": 0.13687792,
+      "rms": 0.016323686,
+      "dc": 3.6272407e-8,
+      "seam_jump": 0.0
+    }
+  },
+  "music_scale": 1.0
+}

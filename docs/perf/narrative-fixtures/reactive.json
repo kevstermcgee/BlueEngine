@@ -1,0 +1,170 @@
+{
+  "assumptions": [
+    "fixed 60 Hz",
+    "single player; speakers present",
+    "one authored route; no exhaustive exploration",
+    "actual movement, collision, typed reads and atomic commands"
+  ],
+  "execution_errors": 0,
+  "fixture": "Reactive",
+  "limit": 340,
+  "narrative": {
+    "active_response": null,
+    "category_ready": {
+      "yard": 385
+    },
+    "completed_scenes": {},
+    "decisions": {},
+    "generation": 12,
+    "history": {
+      "yard.cell": {
+        "completed": 1,
+        "last_selected": 115,
+        "presented": 1,
+        "selected": 1
+      },
+      "yard.finish": {
+        "completed": 1,
+        "last_selected": 295,
+        "presented": 1,
+        "selected": 1
+      },
+      "yard.open": {
+        "completed": 1,
+        "last_selected": 205,
+        "presented": 1,
+        "selected": 1
+      },
+      "yard.welcome": {
+        "completed": 1,
+        "last_selected": 1,
+        "presented": 1,
+        "selected": 1
+      }
+    },
+    "last_context_id": 1980,
+    "next_token": 5,
+    "queue": [],
+    "scene": null,
+    "speaker_ready": {
+      "pa": 385
+    },
+    "version": 1
+  },
+  "resume_replays_identically": true,
+  "resume_split_after_tick": 170,
+  "route": "share",
+  "schema_version": 1,
+  "seed": 7,
+  "state_hash": "d0600b053fb3bccb",
+  "trace": [
+    {
+      "response": {
+        "id": "yard.welcome",
+        "speaker": "pa",
+        "text": "Relay Yard test track. The stairs are certified. Your shortcuts are not.",
+        "token": 1
+      },
+      "suppressed": false,
+      "tick": 1
+    },
+    {
+      "response": {
+        "id": "yard.welcome",
+        "speaker": "pa",
+        "text": "Relay Yard test track. The stairs are certified. Your shortcuts are not.",
+        "token": 1
+      },
+      "suppressed": false,
+      "tick": 2
+    },
+    {
+      "response": {
+        "id": "yard.cell",
+        "speaker": "pa",
+        "text": "One working cell. Already above the yard average.",
+        "token": 2
+      },
+      "suppressed": false,
+      "tick": 115
+    },
+    {
+      "response": {
+        "id": "yard.cell",
+        "speaker": "pa",
+        "text": "One working cell. Already above the yard average.",
+        "token": 2
+      },
+      "suppressed": false,
+      "tick": 116
+    },
+    {
+      "response": {
+        "id": "yard.open",
+        "speaker": "pa",
+        "text": "Bridge powered. Please reserve the victory lap for the far side.",
+        "token": 3
+      },
+      "suppressed": false,
+      "tick": 205
+    },
+    {
+      "response": {
+        "id": "yard.open",
+        "speaker": "pa",
+        "text": "Bridge powered. Please reserve the victory lap for the far side.",
+        "token": 3
+      },
+      "suppressed": false,
+      "tick": 206
+    },
+    {
+      "response": {
+        "id": "yard.finish",
+        "speaker": "pa",
+        "text": "Clean crossing. The clipboard is impressed. Quietly.",
+        "token": 4
+      },
+      "suppressed": false,
+      "tick": 295
+    },
+    {
+      "response": {
+        "id": "yard.finish",
+        "speaker": "pa",
+        "text": "Clean crossing. The clipboard is impressed. Quietly.",
+        "token": 4
+      },
+      "suppressed": false,
+      "tick": 296
+    }
+  ],
+  "world": {
+    "cell_available": false,
+    "cells": 0,
+    "finished": true,
+    "gate_open": true,
+    "player": {
+      "f": 0.0,
+      "g": true,
+      "h": 1.7999999523162842,
+      "j": 0.0,
+      "p": [
+        2.1520310156120104e-7,
+        1.6799999475479126,
+        -5.568576335906982
+      ],
+      "t": 0.0,
+      "v": [
+        1.5259376674075145e-23,
+        0.0,
+        0.0
+      ],
+      "y": 0.0
+    },
+    "power_commits": 1,
+    "seed": 7,
+    "speaker_present": true,
+    "tick": 340
+  }
+}

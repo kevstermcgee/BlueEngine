@@ -62,7 +62,34 @@ fn discovery_reports_limits_read_from_the_code_and_docs_do_not_contradict_them()
     assert!(support["custom_sim_netplay"]["graceful_shutdown"]
         .as_str()
         .unwrap()
-        .contains("not provided"));
+        .contains("cli::serve installs shutdown handlers"));
+    let custom = &support["custom_sim_netplay"];
+    assert_eq!(custom["datagram_bytes"], net::MAX_PACKET_BYTES);
+    assert!(custom["datagram_budget"]
+        .as_str()
+        .unwrap()
+        .contains("transport payload_limit"));
+    assert!(custom["players"].as_str().unwrap().contains("MAX_SEATS"));
+    assert!(custom["players"]
+        .as_str()
+        .unwrap()
+        .contains("not measured capacity"));
+    assert!(stock["players"]["capacity_evidence"]
+        .as_str()
+        .unwrap()
+        .contains("not measured capacity"));
+    assert!(custom["replication"]
+        .as_str()
+        .unwrap()
+        .contains("no fragmentation"));
+    assert!(custom["delivery"]
+        .as_str()
+        .unwrap()
+        .contains("not remote acknowledgement"));
+    assert_eq!(
+        custom["production_transport_available_in_this_build"],
+        cfg!(feature = "networking")
+    );
 
     // The specific contradictions the review found must stay out of the prose.
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));

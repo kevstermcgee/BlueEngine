@@ -118,7 +118,7 @@ def build(kind):
     elif kind == 'cinematic':
         args += ['--no-default-features', '--features', 'offline', '--bin', 'vesper3d']
     else:
-        args += ['--no-default-features', '--bin', 'be2-headless' if kind == 'headless' else 'be2-tools']
+        args += ['--no-default-features', '--features', 'physics,networking', '--bin', 'be2-headless' if kind == 'headless' else 'be2-tools']
     invoke(args, env=env)
     return target / 'release'
 
@@ -126,7 +126,7 @@ def build(kind):
 def tool(args):
     # Share fresh headless authoring output with check_authoring; Cargo owns invalidation.
     # Isolated release builds remain the distribution/packaging path.
-    output = invoke(['cargo', 'build', '--locked', '--profile', 'itest', '--no-default-features', '--bin', 'be2-tools'], capture=True)
+    output = invoke(['cargo', 'build', '--locked', '--profile', 'itest', '--no-default-features', '--features', 'physics,networking', '--bin', 'be2-tools'], capture=True)
     if output:
         print(output, end='', file=sys.stderr)
     target = target_directory()

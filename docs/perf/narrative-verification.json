@@ -1,0 +1,3108 @@
+{
+  "schema_version": 1,
+  "platform": "Linux-6.12.111+deb13-amd64-x86_64-with-glibc2.41",
+  "scope": "Canonical full Linux engine and maintained-consumer verification; not Windows execution or physical device certification.",
+  "summary": {
+    "report": "/home/kevin/BlueEngine/.be2-work/check-20261015T002248846072Z-e72x1uvu/report.json",
+    "ok": true,
+    "scope": "full",
+    "seconds": 3164.437,
+    "commands": 39,
+    "cargo_artifacts": {
+      "fresh": 4785,
+      "built": 328
+    },
+    "resources": {
+      "child_cpu_seconds": 1936.141,
+      "max_child_rss_bytes": 4354797568,
+      "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+    }
+  },
+  "raw_report": {
+    "ok": true,
+    "plan": {
+      "scope": "full",
+      "base": "76743a0ced2fdceed136d88c42b0f1d304579785",
+      "changed_paths": [
+        "Cargo.toml",
+        "assets/narrative/borrowed-light.poe",
+        "assets/narrative/relay-yard.poe",
+        "assets/narrative/yard.bindings.json",
+        "docs/LINUX_HEADLESS.md",
+        "docs/NARRATIVE.md",
+        "docs/NARRATIVE_EVIDENCE.md",
+        "docs/NARRATIVE_EXEMPLARS.md",
+        "docs/feedback/2026-10-06-couch-games-feedback.md",
+        "docs/learning/ledger.jsonl",
+        "docs/perf/metrics.jsonl",
+        "docs/perf/narrative-authoring.json",
+        "docs/perf/narrative-captures/reactive/shot_00030.png",
+        "docs/perf/narrative-captures/scene/shot_00210.png",
+        "docs/perf/narrative-captures/scene/shot_00275.png",
+        "docs/perf/narrative-captures/storyless/shot_00030.png",
+        "docs/perf/narrative-discovery.json",
+        "docs/perf/narrative-fixtures/cli.json",
+        "docs/perf/narrative-fixtures/native-runs.json",
+        "docs/perf/narrative-fixtures/reactive-landing.json",
+        "docs/perf/narrative-fixtures/reactive-quiet.json",
+        "docs/perf/narrative-fixtures/reactive.json",
+        "docs/perf/narrative-fixtures/runs.json",
+        "docs/perf/narrative-fixtures/scene-keep.json",
+        "docs/perf/narrative-fixtures/scene-share.json",
+        "docs/perf/narrative-fixtures/spatial-probe.json",
+        "docs/perf/narrative-fixtures/storyless.json",
+        "docs/perf/narrative-runtime.json",
+        "docs/perf/narrative-trial.json",
+        "examples/narrative/shared.rs",
+        "examples/narrative_native.rs",
+        "examples/narrative_walk.rs",
+        "games/prickle-putt/assets/icon.ico",
+        "games/prickle-putt/assets/icon.png",
+        "games/prickle-putt/assets/icon_16.rgba",
+        "games/prickle-putt/assets/icon_32.rgba",
+        "games/prickle-putt/assets/icon_64.rgba",
+        "games/puff-pop/assets/icon.ico",
+        "games/puff-pop/assets/icon.png",
+        "games/puff-pop/assets/icon_16.rgba",
+        "games/puff-pop/assets/icon_32.rgba",
+        "games/puff-pop/assets/icon_64.rgba",
+        "games/topsy-turvy/assets/icon.ico",
+        "games/topsy-turvy/assets/icon.png",
+        "games/topsy-turvy/assets/icon_16.rgba",
+        "games/topsy-turvy/assets/icon_32.rgba",
+        "games/topsy-turvy/assets/icon_64.rgba",
+        "src/bin/be2-tools.rs",
+        "src/viewer/capabilities.rs",
+        "src/viewer/mod.rs",
+        "src/viewer/narrative/mod.rs",
+        "src/viewer/narrative/model.rs",
+        "src/viewer/narrative/parser.rs",
+        "src/viewer/narrative/runtime.rs",
+        "tests/narrative_content.rs",
+        "tests/narrative_fixtures.rs",
+        "tests/narrative_optional.rs",
+        "tools/FEATURES.json",
+        "tools/pixelart.py",
+        "tools/skills/poe/SKILL.md",
+        "tools/test_workflow.py",
+        "tools/workflow.py"
+      ],
+      "fallback_paths": [
+        "Cargo.toml",
+        "assets/narrative/borrowed-light.poe",
+        "assets/narrative/relay-yard.poe",
+        "assets/narrative/yard.bindings.json",
+        "docs/LINUX_HEADLESS.md",
+        "docs/NARRATIVE.md",
+        "docs/NARRATIVE_EVIDENCE.md",
+        "docs/NARRATIVE_EXEMPLARS.md",
+        "docs/feedback/2026-10-06-couch-games-feedback.md",
+        "docs/perf/metrics.jsonl",
+        "docs/perf/narrative-authoring.json",
+        "docs/perf/narrative-captures/reactive/shot_00030.png",
+        "docs/perf/narrative-captures/scene/shot_00210.png",
+        "docs/perf/narrative-captures/scene/shot_00275.png",
+        "docs/perf/narrative-captures/storyless/shot_00030.png",
+        "docs/perf/narrative-discovery.json",
+        "docs/perf/narrative-fixtures/cli.json",
+        "docs/perf/narrative-fixtures/native-runs.json",
+        "docs/perf/narrative-fixtures/reactive-landing.json",
+        "docs/perf/narrative-fixtures/reactive-quiet.json",
+        "docs/perf/narrative-fixtures/reactive.json",
+        "docs/perf/narrative-fixtures/runs.json",
+        "docs/perf/narrative-fixtures/scene-keep.json",
+        "docs/perf/narrative-fixtures/scene-share.json",
+        "docs/perf/narrative-fixtures/spatial-probe.json",
+        "docs/perf/narrative-fixtures/storyless.json",
+        "docs/perf/narrative-runtime.json",
+        "docs/perf/narrative-trial.json",
+        "examples/narrative/shared.rs",
+        "examples/narrative_native.rs",
+        "examples/narrative_walk.rs",
+        "games/prickle-putt/assets/icon.ico",
+        "games/prickle-putt/assets/icon.png",
+        "games/prickle-putt/assets/icon_16.rgba",
+        "games/prickle-putt/assets/icon_32.rgba",
+        "games/prickle-putt/assets/icon_64.rgba",
+        "games/puff-pop/assets/icon.ico",
+        "games/puff-pop/assets/icon.png",
+        "games/puff-pop/assets/icon_16.rgba",
+        "games/puff-pop/assets/icon_32.rgba",
+        "games/puff-pop/assets/icon_64.rgba",
+        "games/topsy-turvy/assets/icon.ico",
+        "games/topsy-turvy/assets/icon.png",
+        "games/topsy-turvy/assets/icon_16.rgba",
+        "games/topsy-turvy/assets/icon_32.rgba",
+        "games/topsy-turvy/assets/icon_64.rgba",
+        "src/bin/be2-tools.rs",
+        "src/viewer/capabilities.rs",
+        "src/viewer/mod.rs",
+        "src/viewer/narrative/mod.rs",
+        "src/viewer/narrative/model.rs",
+        "src/viewer/narrative/parser.rs",
+        "src/viewer/narrative/runtime.rs",
+        "tests/narrative_content.rs",
+        "tests/narrative_fixtures.rs",
+        "tests/narrative_optional.rs",
+        "tools/FEATURES.json",
+        "tools/pixelart.py",
+        "tools/skills/poe/SKILL.md",
+        "tools/test_workflow.py",
+        "tools/workflow.py"
+      ],
+      "reason": "Unclassified inputs require all engine gates.",
+      "commands": [
+        [
+          "cargo",
+          "fmt",
+          "--check"
+        ],
+        [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--lib",
+          "--profile",
+          "itest",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest"
+        ],
+        [
+          "cargo",
+          "clippy",
+          "--all-targets",
+          "--locked",
+          "--profile",
+          "itest",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--lib",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features"
+        ],
+        [
+          "cargo",
+          "clippy",
+          "--all-targets",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "narrative",
+          "--lib",
+          "--test",
+          "narrative_fixtures",
+          "--test",
+          "narrative_content"
+        ],
+        [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--features",
+          "narrative",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "narrative",
+          "--lib",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml",
+          "--check"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml",
+          "--no-default-features"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "two-d",
+          "--lib"
+        ],
+        [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "two-d",
+          "--lib",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "two-d",
+          "--lib",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "model-import",
+          "--lib",
+          "model_import"
+        ],
+        [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "model-import,portable",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--test",
+          "authoring_schemas"
+        ],
+        [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--all-targets",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml",
+          "--check"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml",
+          "--no-default-features"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml"
+        ],
+        [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml",
+          "--check"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml",
+          "--no-default-features"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml"
+        ],
+        [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml",
+          "--check"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml",
+          "--no-default-features"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml"
+        ],
+        [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml",
+          "--check"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml",
+          "--no-default-features"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml"
+        ],
+        [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--check"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--no-default-features"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml"
+        ],
+        [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--no-default-features",
+          "--features",
+          "portable-client"
+        ],
+        [
+          "/usr/bin/python3",
+          "tools/check_headless.py"
+        ],
+        [
+          "/usr/bin/python3",
+          "tools/check_authoring.py"
+        ],
+        [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "tools.test_workflow",
+          "tools.test_assets",
+          "tools.test_model_import",
+          "tools.test_schemas",
+          "scripts.test_publish_games",
+          "tools.test_game_check",
+          "tools.test_game_ship",
+          "tools.test_media_tools",
+          "tools.test_xcapture",
+          "tools.test_upgrade",
+          "tools.test_learn",
+          "tools.test_hub_deploy",
+          "tools.test_web_games",
+          "tools.test_springboard"
+        ]
+      ],
+      "independent_commands": [
+        38
+      ],
+      "impact": {
+        "owners": [
+          "audio_authoring",
+          "change_workflow",
+          "dev_tools",
+          "learning_loop",
+          "map_editing",
+          "native_discovery",
+          "optional_narrative",
+          "performance_regression_budgets"
+        ],
+        "affected": [
+          "audio_authoring",
+          "change_workflow",
+          "dev_tools",
+          "game_scaffolding",
+          "game_shipping",
+          "game_upgrade",
+          "learning_loop",
+          "map_editing",
+          "native_discovery",
+          "optional_narrative",
+          "performance_regression_budgets",
+          "prototype_api",
+          "source_free_authoring"
+        ],
+        "unmapped": [
+          "Cargo.toml",
+          "docs/LINUX_HEADLESS.md",
+          "docs/NARRATIVE_EVIDENCE.md",
+          "docs/feedback/2026-10-06-couch-games-feedback.md",
+          "docs/perf/narrative-authoring.json",
+          "docs/perf/narrative-captures/reactive/shot_00030.png",
+          "docs/perf/narrative-captures/scene/shot_00210.png",
+          "docs/perf/narrative-captures/scene/shot_00275.png",
+          "docs/perf/narrative-captures/storyless/shot_00030.png",
+          "docs/perf/narrative-discovery.json",
+          "docs/perf/narrative-fixtures/cli.json",
+          "docs/perf/narrative-fixtures/native-runs.json",
+          "docs/perf/narrative-fixtures/reactive-landing.json",
+          "docs/perf/narrative-fixtures/reactive-quiet.json",
+          "docs/perf/narrative-fixtures/reactive.json",
+          "docs/perf/narrative-fixtures/runs.json",
+          "docs/perf/narrative-fixtures/scene-keep.json",
+          "docs/perf/narrative-fixtures/scene-share.json",
+          "docs/perf/narrative-fixtures/spatial-probe.json",
+          "docs/perf/narrative-fixtures/storyless.json",
+          "docs/perf/narrative-runtime.json",
+          "docs/perf/narrative-trial.json",
+          "games/prickle-putt/assets/icon.ico",
+          "games/prickle-putt/assets/icon.png",
+          "games/prickle-putt/assets/icon_16.rgba",
+          "games/prickle-putt/assets/icon_32.rgba",
+          "games/prickle-putt/assets/icon_64.rgba",
+          "games/puff-pop/assets/icon.ico",
+          "games/puff-pop/assets/icon.png",
+          "games/puff-pop/assets/icon_16.rgba",
+          "games/puff-pop/assets/icon_32.rgba",
+          "games/puff-pop/assets/icon_64.rgba",
+          "games/topsy-turvy/assets/icon.ico",
+          "games/topsy-turvy/assets/icon.png",
+          "games/topsy-turvy/assets/icon_16.rgba",
+          "games/topsy-turvy/assets/icon_32.rgba",
+          "games/topsy-turvy/assets/icon_64.rgba",
+          "src/viewer/mod.rs",
+          "tests/narrative_optional.rs",
+          "tools/pixelart.py"
+        ],
+        "confidence": "partial: declared feature relationships, not a complete Rust dependency graph",
+        "scope_warning": "More than 10 files: re-run context; consider a shared lower layer."
+      }
+    },
+    "checks": [
+      {
+        "step": 1,
+        "command": [
+          "cargo",
+          "fmt",
+          "--check"
+        ],
+        "log": "1.log",
+        "ok": true,
+        "started_seconds": 0.302,
+        "returncode": 0,
+        "log_bytes": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 1.692
+      },
+      {
+        "step": 2,
+        "command": [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--lib",
+          "--profile",
+          "itest",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "2.log",
+        "ok": true,
+        "started_seconds": 1.994,
+        "returncode": 0,
+        "log_bytes": 132853,
+        "cargo_artifacts": {
+          "fresh": 172,
+          "built": 1
+        },
+        "elapsed_seconds": 38.796
+      },
+      {
+        "step": 3,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json"
+        ],
+        "log": "3.log",
+        "ok": true,
+        "started_seconds": 40.791,
+        "returncode": 0,
+        "log_bytes": 310834,
+        "cargo_artifacts": {
+          "fresh": 265,
+          "built": 0
+        },
+        "tests_executed": 989,
+        "elapsed_seconds": 165.667
+      },
+      {
+        "step": 4,
+        "command": [
+          "cargo",
+          "clippy",
+          "--all-targets",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "4.log",
+        "ok": true,
+        "started_seconds": 206.458,
+        "returncode": 0,
+        "log_bytes": 192829,
+        "cargo_artifacts": {
+          "fresh": 265,
+          "built": 0
+        },
+        "elapsed_seconds": 0.454
+      },
+      {
+        "step": 5,
+        "command": [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--lib",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "5.log",
+        "ok": true,
+        "started_seconds": 206.912,
+        "returncode": 0,
+        "log_bytes": 93702,
+        "cargo_artifacts": {
+          "fresh": 121,
+          "built": 1
+        },
+        "elapsed_seconds": 12.98
+      },
+      {
+        "step": 6,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "log": "6.log",
+        "ok": true,
+        "started_seconds": 219.892,
+        "returncode": 0,
+        "log_bytes": 243414,
+        "cargo_artifacts": {
+          "fresh": 204,
+          "built": 0
+        },
+        "tests_executed": 837,
+        "elapsed_seconds": 124.452
+      },
+      {
+        "step": 7,
+        "command": [
+          "cargo",
+          "clippy",
+          "--all-targets",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "7.log",
+        "ok": true,
+        "started_seconds": 344.345,
+        "returncode": 0,
+        "log_bytes": 143069,
+        "cargo_artifacts": {
+          "fresh": 204,
+          "built": 0
+        },
+        "elapsed_seconds": 0.335
+      },
+      {
+        "step": 8,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "narrative",
+          "--lib",
+          "--test",
+          "narrative_fixtures",
+          "--test",
+          "narrative_content",
+          "--message-format=json"
+        ],
+        "log": "8.log",
+        "ok": true,
+        "started_seconds": 344.68,
+        "returncode": 0,
+        "log_bytes": 158963,
+        "cargo_artifacts": {
+          "fresh": 130,
+          "built": 9
+        },
+        "tests_executed": 510,
+        "elapsed_seconds": 152.217
+      },
+      {
+        "step": 9,
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--features",
+          "narrative",
+          "--all-targets",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "9.log",
+        "ok": true,
+        "started_seconds": 496.897,
+        "returncode": 0,
+        "log_bytes": 195398,
+        "cargo_artifacts": {
+          "fresh": 181,
+          "built": 86
+        },
+        "elapsed_seconds": 108.935
+      },
+      {
+        "step": 10,
+        "command": [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "narrative",
+          "--lib",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "10.log",
+        "ok": true,
+        "started_seconds": 605.832,
+        "returncode": 0,
+        "log_bytes": 93713,
+        "cargo_artifacts": {
+          "fresh": 121,
+          "built": 1
+        },
+        "elapsed_seconds": 13.455
+      },
+      {
+        "step": 11,
+        "command": [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml",
+          "--check"
+        ],
+        "log": "11.log",
+        "ok": true,
+        "started_seconds": 619.287,
+        "returncode": 0,
+        "log_bytes": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 0.114
+      },
+      {
+        "step": 12,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "log": "12.log",
+        "ok": true,
+        "started_seconds": 619.401,
+        "returncode": 0,
+        "log_bytes": 106070,
+        "cargo_artifacts": {
+          "fresh": 122,
+          "built": 6
+        },
+        "tests_executed": 9,
+        "elapsed_seconds": 143.931
+      },
+      {
+        "step": 13,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/signal-garden/Cargo.toml",
+          "--message-format=json"
+        ],
+        "log": "13.log",
+        "ok": true,
+        "started_seconds": 763.333,
+        "returncode": 0,
+        "log_bytes": 147401,
+        "cargo_artifacts": {
+          "fresh": 170,
+          "built": 8
+        },
+        "tests_executed": 9,
+        "elapsed_seconds": 134.372
+      },
+      {
+        "step": 14,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "two-d",
+          "--lib",
+          "--message-format=json"
+        ],
+        "log": "14.log",
+        "ok": true,
+        "started_seconds": 897.705,
+        "returncode": 0,
+        "log_bytes": 178718,
+        "cargo_artifacts": {
+          "fresh": 164,
+          "built": 1
+        },
+        "tests_executed": 484,
+        "elapsed_seconds": 48.109
+      },
+      {
+        "step": 15,
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "two-d",
+          "--lib",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "15.log",
+        "ok": true,
+        "started_seconds": 945.814,
+        "returncode": 0,
+        "log_bytes": 119318,
+        "cargo_artifacts": {
+          "fresh": 155,
+          "built": 1
+        },
+        "elapsed_seconds": 92.465
+      },
+      {
+        "step": 16,
+        "command": [
+          "cargo",
+          "rustdoc",
+          "--locked",
+          "--no-default-features",
+          "--features",
+          "two-d",
+          "--lib",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "16.log",
+        "ok": true,
+        "started_seconds": 1038.279,
+        "returncode": 0,
+        "log_bytes": 119363,
+        "cargo_artifacts": {
+          "fresh": 155,
+          "built": 1
+        },
+        "elapsed_seconds": 13.712
+      },
+      {
+        "step": 17,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "model-import",
+          "--lib",
+          "model_import",
+          "--message-format=json"
+        ],
+        "log": "17.log",
+        "ok": true,
+        "started_seconds": 1051.991,
+        "returncode": 0,
+        "log_bytes": 140433,
+        "cargo_artifacts": {
+          "fresh": 170,
+          "built": 1
+        },
+        "tests_executed": 6,
+        "elapsed_seconds": 29.888
+      },
+      {
+        "step": 18,
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "model-import,portable",
+          "--all-targets",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "18.log",
+        "ok": true,
+        "started_seconds": 1081.88,
+        "returncode": 0,
+        "log_bytes": 180282,
+        "cargo_artifacts": {
+          "fresh": 170,
+          "built": 79
+        },
+        "elapsed_seconds": 45.321
+      },
+      {
+        "step": 19,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--test",
+          "authoring_schemas",
+          "--message-format=json"
+        ],
+        "log": "19.log",
+        "ok": true,
+        "started_seconds": 1127.201,
+        "returncode": 0,
+        "log_bytes": 166422,
+        "cargo_artifacts": {
+          "fresh": 196,
+          "built": 7
+        },
+        "tests_executed": 10,
+        "elapsed_seconds": 184.774
+      },
+      {
+        "step": 20,
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--no-default-features",
+          "--features",
+          "schema-validation",
+          "--all-targets",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "20.log",
+        "ok": true,
+        "started_seconds": 1311.975,
+        "returncode": 0,
+        "log_bytes": 197233,
+        "cargo_artifacts": {
+          "fresh": 196,
+          "built": 75
+        },
+        "elapsed_seconds": 62.967
+      },
+      {
+        "step": 21,
+        "command": [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml",
+          "--check"
+        ],
+        "log": "21.log",
+        "ok": true,
+        "started_seconds": 1374.943,
+        "returncode": 0,
+        "log_bytes": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 0.052
+      },
+      {
+        "step": 22,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "log": "22.log",
+        "ok": true,
+        "started_seconds": 1374.995,
+        "returncode": 0,
+        "log_bytes": 103882,
+        "cargo_artifacts": {
+          "fresh": 122,
+          "built": 4
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 381.458
+      },
+      {
+        "step": 23,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-run/Cargo.toml",
+          "--message-format=json"
+        ],
+        "log": "23.log",
+        "ok": true,
+        "started_seconds": 1756.453,
+        "returncode": 0,
+        "log_bytes": 145135,
+        "cargo_artifacts": {
+          "fresh": 170,
+          "built": 6
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 296.384
+      },
+      {
+        "step": 24,
+        "command": [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml",
+          "--check"
+        ],
+        "log": "24.log",
+        "ok": true,
+        "started_seconds": 2052.838,
+        "returncode": 0,
+        "log_bytes": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 0.054
+      },
+      {
+        "step": 25,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "log": "25.log",
+        "ok": true,
+        "started_seconds": 2052.891,
+        "returncode": 0,
+        "log_bytes": 103904,
+        "cargo_artifacts": {
+          "fresh": 123,
+          "built": 3
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 3.721
+      },
+      {
+        "step": 26,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/pocket-breaker/Cargo.toml",
+          "--message-format=json"
+        ],
+        "log": "26.log",
+        "ok": true,
+        "started_seconds": 2056.613,
+        "returncode": 0,
+        "log_bytes": 145197,
+        "cargo_artifacts": {
+          "fresh": 171,
+          "built": 5
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 23.697
+      },
+      {
+        "step": 27,
+        "command": [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml",
+          "--check"
+        ],
+        "log": "27.log",
+        "ok": true,
+        "started_seconds": 2080.31,
+        "returncode": 0,
+        "log_bytes": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 0.062
+      },
+      {
+        "step": 28,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "log": "28.log",
+        "ok": true,
+        "started_seconds": 2080.372,
+        "returncode": 0,
+        "log_bytes": 103892,
+        "cargo_artifacts": {
+          "fresh": 123,
+          "built": 3
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 90.225
+      },
+      {
+        "step": 29,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/orchard-watch/Cargo.toml",
+          "--message-format=json"
+        ],
+        "log": "29.log",
+        "ok": true,
+        "started_seconds": 2170.597,
+        "returncode": 0,
+        "log_bytes": 145171,
+        "cargo_artifacts": {
+          "fresh": 171,
+          "built": 5
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 155.512
+      },
+      {
+        "step": 30,
+        "command": [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml",
+          "--check"
+        ],
+        "log": "30.log",
+        "ok": true,
+        "started_seconds": 2326.109,
+        "returncode": 0,
+        "log_bytes": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 0.059
+      },
+      {
+        "step": 31,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "log": "31.log",
+        "ok": true,
+        "started_seconds": 2326.168,
+        "returncode": 0,
+        "log_bytes": 103882,
+        "cargo_artifacts": {
+          "fresh": 123,
+          "built": 3
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 92.447
+      },
+      {
+        "step": 32,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "games/lantern-grove/Cargo.toml",
+          "--message-format=json"
+        ],
+        "log": "32.log",
+        "ok": true,
+        "started_seconds": 2418.616,
+        "returncode": 0,
+        "log_bytes": 145161,
+        "cargo_artifacts": {
+          "fresh": 171,
+          "built": 5
+        },
+        "tests_executed": 3,
+        "elapsed_seconds": 170.56
+      },
+      {
+        "step": 33,
+        "command": [
+          "cargo",
+          "fmt",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--check"
+        ],
+        "log": "33.log",
+        "ok": true,
+        "started_seconds": 2589.176,
+        "returncode": 0,
+        "log_bytes": 0,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 0.085
+      },
+      {
+        "step": 34,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--no-default-features",
+          "--message-format=json"
+        ],
+        "log": "34.log",
+        "ok": true,
+        "started_seconds": 2589.261,
+        "returncode": 0,
+        "log_bytes": 104905,
+        "cargo_artifacts": {
+          "fresh": 123,
+          "built": 4
+        },
+        "tests_executed": 7,
+        "elapsed_seconds": 217.426
+      },
+      {
+        "step": 35,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--message-format=json"
+        ],
+        "log": "35.log",
+        "ok": true,
+        "started_seconds": 2806.688,
+        "returncode": 0,
+        "log_bytes": 146289,
+        "cargo_artifacts": {
+          "fresh": 171,
+          "built": 6
+        },
+        "tests_executed": 9,
+        "elapsed_seconds": 183.566
+      },
+      {
+        "step": 36,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--manifest-path",
+          "assets/games/leo/Cargo.toml",
+          "--no-default-features",
+          "--features",
+          "portable-client",
+          "--message-format=json"
+        ],
+        "log": "36.log",
+        "ok": true,
+        "started_seconds": 2990.254,
+        "returncode": 0,
+        "log_bytes": 134705,
+        "cargo_artifacts": {
+          "fresh": 156,
+          "built": 7
+        },
+        "tests_executed": 9,
+        "elapsed_seconds": 89.966
+      },
+      {
+        "step": 37,
+        "command": [
+          "/usr/bin/python3",
+          "tools/check_headless.py"
+        ],
+        "log": "37.log",
+        "ok": true,
+        "started_seconds": 3080.221,
+        "returncode": 0,
+        "log_bytes": 23,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "elapsed_seconds": 0.128
+      },
+      {
+        "step": 38,
+        "command": [
+          "/usr/bin/python3",
+          "tools/check_authoring.py"
+        ],
+        "log": "38.log",
+        "ok": true,
+        "started_seconds": 3080.349,
+        "returncode": 0,
+        "log_bytes": 10054,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "tests_executed": 53,
+        "elapsed_seconds": 84.087
+      },
+      {
+        "step": 39,
+        "command": [
+          "/usr/bin/python3",
+          "-m",
+          "unittest",
+          "tools.test_workflow",
+          "tools.test_assets",
+          "tools.test_model_import",
+          "tools.test_schemas",
+          "scripts.test_publish_games",
+          "tools.test_game_check",
+          "tools.test_game_ship",
+          "tools.test_media_tools",
+          "tools.test_xcapture",
+          "tools.test_upgrade",
+          "tools.test_learn",
+          "tools.test_hub_deploy",
+          "tools.test_web_games",
+          "tools.test_springboard"
+        ],
+        "log": "39.log",
+        "ok": true,
+        "started_seconds": 0.302,
+        "returncode": 0,
+        "log_bytes": 3479,
+        "cargo_artifacts": {
+          "fresh": 0,
+          "built": 0
+        },
+        "tests_executed": 566,
+        "elapsed_seconds": 122.041
+      }
+    ],
+    "target_directory": "/home/kevin/BlueEngine/target",
+    "independent_commands": [
+      38
+    ],
+    "elapsed_seconds": 3164.437,
+    "commands_attempted": 39,
+    "failed_commands": 0,
+    "cargo_artifacts": {
+      "fresh": 4785,
+      "built": 328
+    },
+    "resources": {
+      "child_cpu_seconds": 1936.141,
+      "max_child_rss_bytes": 4354797568,
+      "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+    },
+    "successful_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24,
+      25,
+      26,
+      27,
+      28,
+      29,
+      30,
+      31,
+      32,
+      33,
+      34,
+      35,
+      36,
+      37,
+      38,
+      39
+    ],
+    "task_evidence": {
+      "task": "36c581c613e2",
+      "project": null,
+      "before": {
+        "schema_version": 1,
+        "engine": {
+          "sha256": "45e9256e354a4c0cca6a838a09d235e8a4e7af6d03d7d3f3c1fa1d1fc78ca3ea",
+          "files": 1297
+        },
+        "tools": {
+          "python": {
+            "path": "/usr/bin/python3",
+            "sha256": "889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+            "freshness": "unverified; map uses Cargo freshness before authoring"
+          },
+          "authoring": {
+            "path": "/home/kevin/BlueEngine/target/itest/be2-tools",
+            "sha256": "d5d0ee301062add4657e235b3a2fb2aeac83d5f4dc626d00dac1596b6d48d07c",
+            "freshness": "unverified; map uses Cargo freshness before authoring"
+          },
+          "compiler": {
+            "ok": true,
+            "output": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8",
+            "error": null
+          },
+          "sysroot": {
+            "ok": true,
+            "output": "/home/kevin/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+            "error": null
+          },
+          "cargo": {
+            "ok": true,
+            "output": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+            "error": null
+          }
+        },
+        "environment_sha256": "cb5d7ba214af94ebe5f74c1e71479ca243c82169f3b39e8ca2b9e23909d254a7",
+        "configuration": {
+          "/home/kevin/.cargo/config": null,
+          "/home/kevin/.cargo/config.toml": "45bf599718276dbd72556ff2f1fc7a4a615e6f52f117e2ab3dc4fa383689f200"
+        }
+      },
+      "after": {
+        "schema_version": 1,
+        "engine": {
+          "sha256": "5b25ab83f16fe1592b9454e9ba2ddf9843d47bd3c283b68367e6afaf3ba5158d",
+          "files": 1297
+        },
+        "tools": {
+          "python": {
+            "path": "/usr/bin/python3",
+            "sha256": "889c603f0d17cb54060951bcf4c4f9b8c9ebd9e52b392c70209bbb9755d797d9",
+            "freshness": "unverified; map uses Cargo freshness before authoring"
+          },
+          "authoring": {
+            "path": "/home/kevin/BlueEngine/target/itest/be2-tools",
+            "sha256": "7499ddf89792b8a2b64729fc5e8717f24169dd7cc6127e087dc4b832d231c56e",
+            "freshness": "unverified; map uses Cargo freshness before authoring"
+          },
+          "compiler": {
+            "ok": true,
+            "output": "rustc 1.98.1 (48a229cea 2026-09-01)\nbinary: rustc\ncommit-hash: 48a229ceaefd4985c50990b14116b6d856af0985\ncommit-date: 2026-09-01\nhost: x86_64-unknown-linux-gnu\nrelease: 1.98.1\nLLVM version: 22.1.8",
+            "error": null
+          },
+          "sysroot": {
+            "ok": true,
+            "output": "/home/kevin/.rustup/toolchains/stable-x86_64-unknown-linux-gnu",
+            "error": null
+          },
+          "cargo": {
+            "ok": true,
+            "output": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+            "error": null
+          }
+        },
+        "environment_sha256": "cb5d7ba214af94ebe5f74c1e71479ca243c82169f3b39e8ca2b9e23909d254a7",
+        "configuration": {
+          "/home/kevin/.cargo/config": null,
+          "/home/kevin/.cargo/config.toml": "45bf599718276dbd72556ff2f1fc7a4a615e6f52f117e2ab3dc4fa383689f200"
+        }
+      },
+      "stable_sources": false
+    }
+  },
+  "test_result_counts_by_step": [
+    {
+      "step": 3,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 618,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 10,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 10,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 17,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 12,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 18,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 6
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 6,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 482,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 10,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 10,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 17,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 12,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 18,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 16,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 13,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 3,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 9,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 8,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 11,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 27,
+          "failed": 0,
+          "ignored": 1
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 8,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "narrative",
+        "--lib",
+        "--test",
+        "narrative_fixtures",
+        "--test",
+        "narrative_content",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 498,
+          "failed": 0,
+          "ignored": 1
+        },
+        {
+          "passed": 5,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 12,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/signal-garden/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 13,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/signal-garden/Cargo.toml",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 7,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 14,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "two-d",
+        "--lib",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 484,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 17,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "model-import",
+        "--lib",
+        "model_import",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 6,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 19,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--no-default-features",
+        "--features",
+        "schema-validation",
+        "--test",
+        "authoring_schemas",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 10,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 22,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-run/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 23,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-run/Cargo.toml",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 25,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/pocket-breaker/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 26,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/pocket-breaker/Cargo.toml",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 28,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/orchard-watch/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 29,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/orchard-watch/Cargo.toml",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 31,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-grove/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 32,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "games/lantern-grove/Cargo.toml",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 34,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "assets/games/leo/Cargo.toml",
+        "--no-default-features",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 35,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "assets/games/leo/Cargo.toml",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 2,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 36,
+      "command": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "assets/games/leo/Cargo.toml",
+        "--no-default-features",
+        "--features",
+        "portable-client",
+        "--message-format=json"
+      ],
+      "rust_suites": [
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 4,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 1,
+          "failed": 0,
+          "ignored": 0
+        },
+        {
+          "passed": 0,
+          "failed": 0,
+          "ignored": 0
+        }
+      ],
+      "python_batches": []
+    },
+    {
+      "step": 38,
+      "command": [
+        "/usr/bin/python3",
+        "tools/check_authoring.py"
+      ],
+      "rust_suites": [],
+      "python_batches": [
+        {
+          "reported": 53,
+          "seconds": 46.347
+        }
+      ]
+    },
+    {
+      "step": 39,
+      "command": [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_workflow",
+        "tools.test_assets",
+        "tools.test_model_import",
+        "tools.test_schemas",
+        "scripts.test_publish_games",
+        "tools.test_game_check",
+        "tools.test_game_ship",
+        "tools.test_media_tools",
+        "tools.test_xcapture",
+        "tools.test_upgrade",
+        "tools.test_learn",
+        "tools.test_hub_deploy",
+        "tools.test_web_games",
+        "tools.test_springboard"
+      ],
+      "rust_suites": [],
+      "python_batches": [
+        {
+          "reported": 624,
+          "seconds": 121.86
+        }
+      ]
+    }
+  ],
+  "earlier_attempts": [
+    {
+      "report": "/home/kevin/BlueEngine/.be2-work/check-20261014T232709066010Z-6v2bq8x_/report.json",
+      "ok": false,
+      "scope": "full",
+      "seconds": 793.09,
+      "commands": 4,
+      "cargo_artifacts": {
+        "fresh": 353,
+        "built": 85
+      },
+      "resources": {
+        "child_cpu_seconds": 312.068,
+        "max_child_rss_bytes": 4194422784,
+        "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+      },
+      "failure": {
+        "returncode": 101,
+        "log_bytes": 267981,
+        "cargo_artifacts": {
+          "fresh": 181,
+          "built": 84
+        },
+        "tests_executed": 642,
+        "category": "test_failure",
+        "diagnostics": [
+          "thread 'discovery_and_parser_share_command_signatures' (3609974) panicked at tests/capabilities.rs:40:5:",
+          "assertion failed: output.stdout.len() < 6000",
+          "note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace",
+          "failures:",
+          "    discovery_and_parser_share_command_signatures",
+          "test result: FAILED. 3 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s",
+          "error: test failed, to rerun pass `--test capabilities`"
+        ],
+        "location": {
+          "file": "tests/capabilities.rs",
+          "line": 40,
+          "column": 5
+        },
+        "elapsed_seconds": 558.795,
+        "command": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json"
+        ],
+        "reproduction": [
+          "cargo",
+          "test",
+          "--locked",
+          "--profile",
+          "itest",
+          "--message-format=json"
+        ],
+        "log": "/home/kevin/BlueEngine/.be2-work/check-20261014T232709066010Z-6v2bq8x_/3.log",
+        "recovery": {
+          "likely_reason": "A behavioral assertion failed; inspect the named test and assertion location.",
+          "inspect": {
+            "file": "tests/capabilities.rs",
+            "line": 40,
+            "column": 5
+          },
+          "next_command": [
+            "cargo",
+            "test",
+            "--locked",
+            "--profile",
+            "itest",
+            "--message-format=json"
+          ],
+          "previous_work": "Completed outputs and successful stage reports are retained; only the failed selection is unverified."
+        }
+      },
+      "exit_code": 101
+    },
+    {
+      "report": "/home/kevin/BlueEngine/.be2-work/check-20261014T234308140222Z-dqhuy3mj/report.json",
+      "ok": false,
+      "scope": "full",
+      "seconds": 2358.631,
+      "commands": 10,
+      "cargo_artifacts": {
+        "fresh": 1226,
+        "built": 391
+      },
+      "resources": {
+        "child_cpu_seconds": 837.614,
+        "max_child_rss_bytes": 4193415168,
+        "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+      },
+      "failure": {
+        "returncode": 101,
+        "log_bytes": 183798,
+        "cargo_artifacts": {
+          "fresh": 181,
+          "built": 64
+        },
+        "category": "compiler",
+        "diagnostics": [
+          {
+            "message": "field assignment outside of initializer for an instance created with Default::default()",
+            "code": "clippy::field_reassign_with_default",
+            "location": {
+              "file": "src/viewer/narrative/runtime.rs",
+              "line": 1282,
+              "column": 9
+            },
+            "notes": [
+              "`-D clippy::field-reassign-with-default` implied by `-D warnings`",
+              "to override `-D warnings` add `#[allow(clippy::field_reassign_with_default)]`"
+            ]
+          }
+        ],
+        "elapsed_seconds": 84.944,
+        "command": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--features",
+          "narrative",
+          "--all-targets",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "reproduction": [
+          "cargo",
+          "clippy",
+          "--locked",
+          "--profile",
+          "itest",
+          "--features",
+          "narrative",
+          "--all-targets",
+          "--message-format=json",
+          "--",
+          "-D",
+          "warnings"
+        ],
+        "log": "/home/kevin/BlueEngine/.be2-work/check-20261014T234308140222Z-dqhuy3mj/9.log",
+        "recovery": {
+          "likely_reason": "The compiler rejected the selected target; inspect the primary span and diagnostic notes.",
+          "inspect": {
+            "file": "src/viewer/narrative/runtime.rs",
+            "line": 1282,
+            "column": 9
+          },
+          "next_command": [
+            "cargo",
+            "clippy",
+            "--locked",
+            "--profile",
+            "itest",
+            "--features",
+            "narrative",
+            "--all-targets",
+            "--message-format=json",
+            "--",
+            "-D",
+            "warnings"
+          ],
+          "previous_work": "Completed outputs and successful stage reports are retained; only the failed selection is unverified."
+        }
+      },
+      "exit_code": 101
+    }
+  ],
+  "earlier_cancelled_attempt": {
+    "reason": "TMPDIR inside checkout affected temporary-project Git/privacy tests; rerun outside repositories.",
+    "stdout": ".be2-work/narrative-evidence/full-check.stdout.json",
+    "stderr": ".be2-work/narrative-evidence/full-check.stderr"
+  },
+  "frozen_checkout_receipt": ".be2-work/narrative-evidence/full-check-5.stdout.json",
+  "binding_note": "Tracked measurement/documentation updates occurred during this successful run, so its task_evidence.stable_sources is false. The final cached check writes only ignored outputs after tracked files are frozen; its receipt links the final source-stability verdict.",
+  "native_presentation": "docs/perf/narrative-fixtures/native-runs.json",
+  "unverified": [
+    "Windows runtime",
+    "physical controllers",
+    "hardware audio",
+    "human playtesting"
+  ]
+}

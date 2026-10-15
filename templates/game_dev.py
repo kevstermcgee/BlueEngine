@@ -12,6 +12,7 @@ once, so an edit relinks only the game.
 Examples: `python scripts/dev.py -- --capture shots --frames 30`, `python scripts/dev.py --build-only`.
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -43,11 +44,12 @@ def close_running(exe):
     """Stop processes started from exactly `exe` (never a same-named program elsewhere)."""
     if sys.platform != 'win32' or not exe.parent.exists():
         return
-    script = ("Get-Process -Name '%s' -ErrorAction SilentlyContinue | "
-              "Where-Object { $_.Path -ieq '%s' } | "
+    script = ("Get-Process -ErrorAction SilentlyContinue | "
+              "Where-Object { $_.Path -ieq $env:BLUEENGINE_DEV_EXE } | "
               "ForEach-Object { Write-Host ('closing running ' + $_.Path); $_ | Stop-Process -Force; $_.WaitForExit(5000) | Out-Null }"
-              % (exe.stem, str(exe).replace("'", "''")))
-    subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', script], check=False)
+              )
+    subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', script], check=False,
+                   env=dict(os.environ, BLUEENGINE_DEV_EXE=str(exe)))
 
 
 def main(argv):
@@ -55,7 +57,7 @@ def main(argv):
         import importlib.util
         helper = ROOT / 'scripts/project.py'
         if not helper.is_file():
-            sys.exit('game.project.json needs scripts/project.py; refresh generated project tooling')
+            sys.exit('game.project.json needs scripts/project.py; run python scripts/check.py --refresh-project')
         spec = importlib.util.spec_from_file_location('game_requirements', helper)
         requirements = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(requirements)

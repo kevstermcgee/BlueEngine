@@ -1,0 +1,9 @@
+{
+  "queries": {
+    "inventory.cells": "int",
+    "gate.open": "bool",
+    "course.finished": "bool",
+    "player.near_relay": "bool"
+  },
+  "commands": { "bridge.power": "bool" }
+}
