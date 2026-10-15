@@ -193,6 +193,14 @@ def git(root, *args):
     return process.stdout.strip()
 
 
+def git_ancestor(root, ancestor, descendant):
+    result = subprocess.run(["git", "-C", str(root), "merge-base", "--is-ancestor",
+                             ancestor, descendant], capture_output=True, text=True)
+    if result.returncode not in (0, 1):
+        raise ForgeError("Could not verify feedback integration ancestry")
+    return result.returncode == 0
+
+
 def github_repository(root):
     origin = git(root, "remote", "get-url", "origin")
     match = re.search(r"github\.com[:/]([\w.-]+/[\w.-]+?)(?:\.git)?$", origin)
@@ -894,22 +902,98 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                                      "verified_at": datetime.now(timezone.utc).isoformat()}
         atomic_json(downloads / "receipt.json", self.state["publication"])
 
+    def prepare_feedback_integration(self):
+        """Retain conflicts and new checks separately from the released source."""
+        integration = self.state["feedback_integration"]
+        root = self.directory / "engine-feedback"
+        branch, source = integration["branch"], integration["source_head"]
+        integration["mode"] = "integration"
+        self.save()  # Record ownership before creating or merging a worktree.
+        if root.is_symlink():
+            raise ForgeError("Feedback integration worktree must not be a symlink")
+        if not root.exists():
+            existing = git(self.engine, "branch", "--list", branch)
+            argv = ["git", "worktree", "add"]
+            argv += [str(root), branch] if existing else ["-b", branch, str(root), source]
+            self.command(argv, cwd=self.engine, label="feedback-worktree")
+        if (Path(git(root, "rev-parse", "--show-toplevel")).resolve() != root.resolve()
+                or git(root, "branch", "--show-current") != branch):
+            raise ForgeError("Feedback integration worktree or branch does not match its retained state")
+        merge = Path(git(root, "rev-parse", "--git-path", "MERGE_HEAD"))
+        if not merge.is_absolute():
+            merge = root / merge
+        if merge.exists() or git(root, "status", "--porcelain"):
+            raise ForgeError(f"Feedback integration is unfinished in {root}; resolve conflicts and commit "
+                             "the merge there, then resume. Preserve main's ledger and game registry entries.")
+        head = git(root, "rev-parse", "HEAD")
+        if not git_ancestor(root, source, head):
+            raise ForgeError("Feedback integration no longer contains the frozen verified source")
+        # A successful push followed by an API failure must reuse its commit, even
+        # when another author has advanced main since that push.
+        if not git_ancestor(root, head, "origin/main") and not git_ancestor(root, "origin/main", head):
+            try:
+                self.command(["git", "-c", "user.name=IdeaForge", "-c",
+                              "user.email=idea-forge@users.noreply.github.com", "merge", "--no-edit", "origin/main"],
+                             cwd=root, label="feedback-merge-main")
+            except ForgeError as error:
+                raise ForgeError(f"Feedback integration needs review in {root}; resolve conflicts and commit "
+                                 "the merge there, then resume. Preserve main's ledger and game registry entries.") from error
+        head = git(root, "rev-parse", "HEAD")
+        if git(root, "status", "--porcelain") or not git_ancestor(root, source, head):
+            raise ForgeError("Feedback integration must be clean and retain its frozen source")
+        integration["head"] = head
+        self.save()
+        return root, head
+
     def publish_feedback(self):
         if code_digest(self.engine) != self.state["verified_code"]:
             raise ForgeError("Code changed after publication; unverified changes cannot enter engine main")
-        self.state["status"] = "published"
-        self.feedback()
-        git(self.engine, "add", self.state["feedback_path"], "docs/learning/ledger.jsonl", "docs/learning/forge-runs.jsonl")
-        self.commit(self.engine, "Record verified delivery and AI feedback for " + self.state["idea"]["title"])
-        self.command(["git", "fetch", "origin", "main"], label="feedback-fetch")
-        # Never force-push or overwrite changes made by another engine author.
-        git(self.engine, "merge-base", "--is-ancestor", "origin/main", "HEAD")
-        self.command(["git", "push", "origin", "HEAD:main"], label="publish-engine-feedback")
-        blob = git(self.engine, "rev-parse", "HEAD:" + self.state["feedback_path"])
+        integration = self.state.get("feedback_integration")
+        if integration is None:
+            self.state["status"] = "published"
+            self.feedback()
+            paths = [self.state["feedback_path"], "docs/learning/ledger.jsonl", "docs/learning/forge-runs.jsonl"]
+            staged = git(self.engine, "diff", "--cached", "--name-only").splitlines()
+            if set(staged) - set(paths):
+                raise ForgeError("Unrelated staged changes must be preserved outside feedback publication")
+            git(self.engine, "add", *paths)
+            self.commit(self.engine, "Record verified delivery and AI feedback for " + self.state["idea"]["title"])
+            integration = {"branch": self.state["branch"] + "-feedback",
+                           "source_head": git(self.engine, "rev-parse", "HEAD"), "mode": "direct"}
+            self.state["feedback_integration"] = integration
+            self.save()  # Freeze the source before any fetch, worktree mutation, or push.
+        source = integration["source_head"]
+        if not git_ancestor(self.engine, self.state["engine_head"], source):
+            raise ForgeError("Frozen feedback source does not contain the verified game commit")
+        self.command(["git", "fetch", "origin", "main"], cwd=self.engine, label="feedback-fetch")
+        direct = integration["mode"] == "direct" and (
+            git_ancestor(self.engine, "origin/main", source) or git_ancestor(self.engine, source, "origin/main"))
+        root, head = (self.engine, source) if direct else self.prepare_feedback_integration()
+        if not direct:
+            repository, branch = self.state["engine_repository"], integration["branch"]
+            self.command(["git", "push", "-u", "origin", head + ":refs/heads/" + branch],
+                         cwd=root, label="push-feedback-review")
+            for workflow, label, dispatch in (
+                    ("forge-game-checks.yml", "feedback-game-linux-windows-" + head, True),
+                    ("ci.yml", "feedback-engine-checks-" + head, False)):
+                receipt = self.wait_ci(repository, workflow, branch, head, label, dispatch=dispatch,
+                                       fields={"game_slug": self.state["idea"]["slug"]} if dispatch else None)
+                if not receipt or receipt.get("head") != head:
+                    raise ForgeError("Feedback integration lacks an exact-source CI receipt")
+            if git(root, "rev-parse", "HEAD") != head or git(root, "status", "--porcelain"):
+                raise ForgeError("Feedback integration changed after CI; resume to recheck the retained source")
+        self.command(["git", "fetch", "origin", "main"], cwd=root, label="feedback-publication-fetch")
+        if not git_ancestor(root, head, "origin/main"):
+            if not git_ancestor(root, "origin/main", head):
+                raise ForgeError("Engine main advanced during feedback checks; resume to integrate and recheck it")
+            if git(root, "rev-parse", "HEAD") != head or git(root, "status", "--porcelain"):
+                raise ForgeError("Feedback worktree changed before publication; retained without a push")
+            self.command(["git", "push", "origin", head + ":main"], cwd=root, label="publish-engine-feedback")
+        blob = git(root, "rev-parse", head + ":" + self.state["feedback_path"])
         remote = self.api(f"repos/{self.state['engine_repository']}/contents/{self.state['feedback_path']}?ref=main")
         if remote["sha"] != blob:
             raise ForgeError("Final feedback was not verified on engine main")
-        self.state["feedback_commit"] = git(self.engine, "rev-parse", "HEAD")
+        self.state["feedback_commit"] = head
 
     def rebuild(self):
         """Recheck integrated changes without regenerating the selected concept."""
@@ -956,10 +1040,11 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                     self.save()
                 except OSError:
                     pass  # Keep the original failure if the journal disk also filled.
-                try:
-                    self.feedback()
-                except (ForgeError, OSError, ValueError):
-                    pass  # A feedback failure must not erase the original gate failure.
+                if not self.state.get("feedback_integration", {}).get("source_head"):
+                    try:
+                        self.feedback()
+                    except (ForgeError, OSError, ValueError):
+                        pass  # A feedback failure must not erase the original gate failure.
                 raise
         self.state["status"] = "published" if self.state["publish"] else "built-locally"
         self.save()

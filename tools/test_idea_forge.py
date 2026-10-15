@@ -8,8 +8,10 @@ import sys
 import tempfile
 import unittest
 import argparse
+from copy import deepcopy
 from datetime import datetime, timezone
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlsplit
 
 from tools import idea_forge as forge
 
@@ -390,6 +392,296 @@ class SupervisorTests(unittest.TestCase):
         self.assertIn("verified_code", self.state)
         self.assertNotIn("ci", self.state)
         self.assertNotIn("publication", self.state)
+
+
+class FeedbackPublicationTests(unittest.TestCase):
+    """Use real local Git history; only GitHub workflows and API calls are fake."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.remote = self.root / "origin.git"
+        self.writer = self.root / "main-writer"
+        self.directory = self.root / "run"
+        self.engine = self.directory / "engine"
+        self.directory.mkdir()
+        self.git_at(self.root, "init", "--bare", "--initial-branch=main", str(self.remote))
+        self.git_at(self.root, "clone", str(self.remote), str(self.writer))
+        self.configure(self.writer)
+        (self.writer / "source.rs").write_text("current engine baseline\n")
+        (self.writer / "games-publish.json").write_text('{"games": []}\n')
+        self.commit_all(self.writer, "Engine baseline")
+        self.git_at(self.writer, "push", "origin", "main")
+        self.git_at(self.root, "clone", str(self.remote), str(self.engine))
+        self.configure(self.engine)
+        self.git_at(self.engine, "checkout", "-b", "idea-forge/fixture")
+        game = self.engine / "games/rule-relay/src/lib.rs"
+        game.parent.mkdir(parents=True)
+        game.write_text("verified published game rules\n")
+        (self.engine / "games-publish.json").write_text('{"games": ["rule-relay"]}\n')
+        self.commit_all(self.engine, "Reviewed published game source")
+        source = self.git_at(self.engine, "rev-parse", "HEAD")
+        self.state = {
+            "id": "fixture", "created": "2026-10-08T00:00:00+00:00", "status": "failed",
+            "source_root": str(self.engine), "target_dir": str(self.root),
+            "timeout": 10, "wait_timeout": 0.02, "story": False, "brief": "test", "agent": "codex",
+            "repairs": 0, "publish": True, "min_free_gib": 0, "idea": idea(),
+            "branch": "idea-forge/fixture", "engine_repository": "fixture/engine",
+            "engine_head": source, "games_head": "original-companion-commit",
+            "verified_code": forge.code_digest(self.engine),
+            "feedback_path": "docs/feedback/fixture.md",
+            "publication": {"release": "https://example.invalid/immutable-release",
+                            "installer_sha256": "old-installer-digest", "zip_sha256": "old-zip-digest"},
+            "ci": {"engine-checks": {"run": 1, "head": source},
+                   "generated-game-linux-windows": {"run": 2, "head": source}}}
+        self.pinned = {key: deepcopy(self.state[key]) for key in
+                       ("engine_head", "games_head", "verified_code", "publication", "ci")}
+        self.worker = forge.Forge(self.directory, self.state)
+        self.feedback_calls = 0
+        self.workflow_requests = []
+        self.main_pushes = []
+        self.github_dispatches = []
+        self.failed_workflow = None
+        self.missing_workflow = None
+        self.fail_receipt_once = False
+        self.fail_main_push_once = False
+        self.advance_during_final_fetch = False
+        self.advanced = False
+        self.real_command = self.worker.command
+        self.addCleanup(patch.stopall)
+        patch.object(self.worker, "command", side_effect=self.command).start()
+        patch.object(self.worker, "api", side_effect=self.api).start()
+        patch.object(self.worker, "feedback", side_effect=self.feedback).start()
+        patch.object(forge.time, "sleep", return_value=None).start()
+
+    @staticmethod
+    def git_at(root, *args):
+        return subprocess.run(["git", "-C", str(root), *args], check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    def configure(self, root):
+        self.git_at(root, "config", "user.name", "Fixture")
+        self.git_at(root, "config", "user.email", "fixture@example.invalid")
+
+    def commit_all(self, root, message):
+        self.git_at(root, "add", ".")
+        self.git_at(root, "commit", "-qm", message)
+
+    def advance_main(self, name="current-main.txt", text="another author's work\n"):
+        (self.writer / name).write_text(text)
+        self.commit_all(self.writer, "Independent main update")
+        self.git_at(self.writer, "push", "origin", "main")
+        return self.git_at(self.writer, "rev-parse", "HEAD")
+
+    def feedback(self):
+        self.feedback_calls += 1
+        for name, text in [(self.state["feedback_path"], "Verified original release and learning\n"),
+                           ("docs/learning/ledger.jsonl", '{"id":"fixture-learning"}\n'),
+                           ("docs/learning/forge-runs.jsonl", '{"id":"fixture"}\n')]:
+            path = self.engine / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(text)
+
+    def command(self, argv, **kwargs):
+        if argv[0] == "gh":
+            self.assertEqual(argv[1:3], ["workflow", "run"])
+            self.github_dispatches.append(list(argv))
+            return self.directory / "mock-dispatch.log"
+        self.assertEqual(argv[0], "git")
+        self.assertNotIn("--force", argv)
+        self.assertNotIn("--force-with-lease", argv)
+        if argv[1:3] == ["fetch", "origin"] and self.advance_during_final_fetch and not self.advanced:
+            if len(self.workflow_requests) >= 2:
+                self.advance_main("later-main.txt", "arrived while integration CI ran\n")
+                self.advanced = True
+        if argv[1] == "push" and any(arg.endswith(":main") for arg in argv):
+            self.main_pushes.append(list(argv))
+            if self.fail_main_push_once:
+                self.fail_main_push_once = False
+                raise forge.ForgeError("Fixture main push unavailable")
+        return self.real_command(argv, **kwargs)
+
+    def api(self, endpoint):
+        if "/contents/" in endpoint:
+            if self.fail_receipt_once:
+                self.fail_receipt_once = False
+                raise forge.ForgeError("Fixture API unavailable after successful push")
+            return {"sha": self.git_at(self.remote, "rev-parse", "main:" + self.state["feedback_path"])}
+        parsed = urlsplit(endpoint)
+        self.assertIn("/actions/workflows/", parsed.path)
+        workflow = parsed.path.split("/workflows/", 1)[1].split("/", 1)[0]
+        branch = parse_qs(parsed.query)["branch"][0]
+        head = self.git_at(self.remote, "rev-parse", "refs/heads/" + branch)
+        self.workflow_requests.append((workflow, head))
+        if workflow == self.missing_workflow:
+            return {"workflow_runs": []}
+        return {"workflow_runs": [{"head_sha": head,
+                "event": "workflow_dispatch" if workflow == "forge-game-checks.yml" else "push",
+                "status": "completed", "conclusion": "failure" if workflow == self.failed_workflow else "success",
+                "id": 100 + len(self.workflow_requests), "html_url": "https://example.invalid/ci",
+                "updated_at": "2026-10-08T01:00:00Z"}]}
+
+    def assert_original_release_preserved(self):
+        for key in ("engine_head", "games_head", "verified_code", "publication"):
+            self.assertEqual(self.state[key], self.pinned[key])
+        for label, receipt in self.pinned["ci"].items():
+            self.assertEqual(self.state["ci"][label], receipt)
+
+    def test_ancestor_main_uses_existing_verified_source_without_integration_ci(self):
+        self.worker.publish_feedback()
+        self.assertFalse((self.directory / "engine-feedback").exists())
+        self.assertEqual(self.workflow_requests, [])
+        self.assertEqual(self.feedback_calls, 1)
+        head = self.git_at(self.remote, "rev-parse", "main")
+        self.assertEqual(self.state["feedback_commit"], head)
+        self.assertEqual(self.git_at(self.remote, "show", "main:games/rule-relay/src/lib.rs"),
+                         "verified published game rules")
+        self.assert_original_release_preserved()
+
+    def test_diverged_main_integrates_game_and_current_main_with_fresh_exact_ci(self):
+        current = self.advance_main()
+        self.worker.publish_feedback()
+        integration = self.directory / "engine-feedback"
+        head = self.git_at(integration, "rev-parse", "HEAD")
+        frozen = self.git_at(self.engine, "rev-parse", "HEAD")
+        self.assertEqual(self.git_at(integration, "branch", "--show-current"), self.state["branch"] + "-feedback")
+        self.assertEqual(self.state["feedback_integration"]["source_head"], frozen)
+        self.git_at(integration, "merge-base", "--is-ancestor", current, head)
+        self.git_at(integration, "merge-base", "--is-ancestor", frozen, head)
+        self.assertTrue((integration / "current-main.txt").exists())
+        self.assertTrue((integration / "games/rule-relay/src/lib.rs").exists())
+        self.assertEqual(set(self.workflow_requests), {("ci.yml", head), ("forge-game-checks.yml", head)})
+        game_dispatch = next(argv for argv in self.github_dispatches if "forge-game-checks.yml" in argv)
+        self.assertEqual(game_dispatch[game_dispatch.index("--ref") + 1], self.state["branch"] + "-feedback")
+        self.assertIn("game_slug=rule-relay", game_dispatch)
+        for label, receipt in self.state["ci"].items():
+            if label not in self.pinned["ci"]:
+                self.assertIn(head[:12], label)
+                self.assertEqual(receipt["head"], head)
+        self.assertEqual(self.git_at(self.remote, "rev-parse", "main"), head)
+        self.assertEqual(self.state["feedback_commit"], head)
+        self.assert_original_release_preserved()
+
+    def test_unverified_code_or_other_document_changes_are_rejected_before_publication(self):
+        for name in ["source.rs", "README.md"]:
+            with self.subTest(path=name):
+                path = self.engine / name
+                previous = path.read_bytes() if path.exists() else None
+                path.write_text("unverified change\n")
+                with self.assertRaisesRegex(forge.ForgeError, "Code changed"):
+                    self.worker.publish_feedback()
+                if previous is None:
+                    path.unlink()
+                else:
+                    path.write_bytes(previous)
+        self.assertEqual(self.feedback_calls, 0)
+        self.assertEqual(self.main_pushes, [])
+        self.assertFalse((self.directory / "engine-feedback").exists())
+
+    def test_merge_conflict_is_retained_and_retry_never_overwrites_it(self):
+        original_main = self.advance_main("games-publish.json", '{"games": ["another-game"]}\n')
+        with self.assertRaisesRegex(forge.ForgeError, "[Cc]onflict|resolve"):
+            self.worker.publish_feedback()
+        integration = self.directory / "engine-feedback"
+        conflicts = self.git_at(integration, "ls-files", "-u")
+        self.assertTrue(conflicts)
+        retained = (integration / "games-publish.json").read_bytes()
+        with self.assertRaises(forge.ForgeError):
+            self.worker.publish_feedback()
+        self.assertEqual((integration / "games-publish.json").read_bytes(), retained)
+        self.assertEqual(self.git_at(integration, "ls-files", "-u"), conflicts)
+        self.assertEqual(self.git_at(self.remote, "rev-parse", "main"), original_main)
+        self.assertEqual(self.feedback_calls, 1)
+        self.assertEqual(self.main_pushes, [])
+        self.assert_original_release_preserved()
+
+    def test_failed_integration_ci_cannot_push_main(self):
+        main = self.advance_main()
+        self.failed_workflow = "ci.yml"
+        with self.assertRaisesRegex(forge.ForgeError, "did not pass"):
+            self.worker.publish_feedback()
+        self.assertEqual(self.git_at(self.remote, "rev-parse", "main"), main)
+        self.assertEqual(self.main_pushes, [])
+        self.assertNotIn("feedback_commit", self.state)
+        self.assert_original_release_preserved()
+
+    def test_missing_integration_ci_cannot_reuse_old_publication_receipts(self):
+        main = self.advance_main()
+        self.missing_workflow = "forge-game-checks.yml"
+        with self.assertRaisesRegex(forge.ForgeError, "Timed out"):
+            self.worker.publish_feedback()
+        self.assertEqual(self.git_at(self.remote, "rev-parse", "main"), main)
+        self.assertEqual(self.main_pushes, [])
+        self.assertNotIn("feedback_commit", self.state)
+        self.assert_original_release_preserved()
+
+    def test_main_advance_during_ci_requires_rechecked_new_integration_head(self):
+        self.advance_main()
+        self.advance_during_final_fetch = True
+        try:
+            self.worker.publish_feedback()
+        except forge.ForgeError as error:
+            self.assertRegex(str(error), "[Aa]dvanc|retry|changed")
+            self.assertEqual(self.main_pushes, [])
+            self.worker.publish_feedback()
+        self.assertTrue(self.advanced)
+        final = self.git_at(self.remote, "rev-parse", "main")
+        heads = {head for _, head in self.workflow_requests}
+        self.assertGreaterEqual(len(heads), 2)
+        self.assertIn(final, heads)
+        self.assertEqual({workflow for workflow, head in self.workflow_requests if head == final},
+                         {"ci.yml", "forge-game-checks.yml"})
+        self.assertEqual(self.git_at(self.remote, "show", "main:later-main.txt"),
+                         "arrived while integration CI ran")
+        self.assertEqual(self.feedback_calls, 1)
+        self.assert_original_release_preserved()
+
+    def test_api_failure_after_successful_push_retries_frozen_commit_idempotently(self):
+        self.advance_main()
+        self.fail_receipt_once = True
+        with self.assertRaisesRegex(forge.ForgeError, "API unavailable"):
+            self.worker.publish_feedback()
+        pushed = self.git_at(self.remote, "rev-parse", "main")
+        frozen = self.git_at(self.engine, "rev-parse", "HEAD")
+        count = self.git_at(self.remote, "rev-list", "--count", "main")
+        self.worker.publish_feedback()
+        self.assertEqual(self.git_at(self.remote, "rev-parse", "main"), pushed)
+        self.assertEqual(self.git_at(self.remote, "rev-list", "--count", "main"), count)
+        self.assertEqual(self.git_at(self.engine, "rev-parse", "HEAD"), frozen)
+        self.assertEqual(self.state["feedback_commit"], pushed)
+        self.assertEqual(self.feedback_calls, 1)
+        self.assert_original_release_preserved()
+
+    def test_run_handler_preserves_frozen_direct_feedback_after_push_failure(self):
+        self.state["completed"] = ["setup", "generate", "build-and-review", "feedback", "source-commit",
+                                   "engine-ci", "export", "installer-review", "publish-games", "verify-publication"]
+
+        def varying_report():
+            self.feedback()
+            path = self.engine / self.state["feedback_path"]
+            path.write_text(path.read_text() + "Observed run status: " + self.state["status"] + "\n")
+
+        self.worker.feedback.side_effect = varying_report
+        self.fail_main_push_once = True
+        with patch("builtins.print"):
+            with self.assertRaisesRegex(forge.ForgeError, "main push unavailable"):
+                self.worker.run()
+        frozen = self.state["feedback_integration"]["source_head"]
+        self.assertEqual(self.state["status"], "failed")
+        self.assertEqual(self.feedback_calls, 1)
+        self.assertEqual(self.git_at(self.engine, "status", "--porcelain"), "")
+        self.assertIn("Observed run status: published", (self.engine / self.state["feedback_path"]).read_text())
+        with patch("builtins.print"):
+            self.worker.run()
+        self.assertEqual(self.feedback_calls, 1)
+        self.assertEqual(self.git_at(self.engine, "rev-parse", "HEAD"), frozen)
+        self.assertEqual(self.git_at(self.remote, "rev-parse", "main"), frozen)
+        self.assertEqual(self.state["feedback_commit"], frozen)
+        self.assertIn("publish-feedback", self.state["completed"])
+        self.assertEqual(self.state["status"], "published")
+        self.assertEqual(self.workflow_requests, [])
+        self.assert_original_release_preserved()
 
 
 class DailyTests(unittest.TestCase):
