@@ -86,7 +86,7 @@ pub fn runtime_support() -> Value {
             },
             "interest_management": "snapshot_for_player: room relevance",
             "prediction": "PredictionBuffer",
-            "graceful_shutdown": "SIGINT/SIGTERM/SIGHUP: finish tick, final save, exit 0; second signal forces exit. Unix tested; Windows compile-only.",
+            "graceful_shutdown": "INT/TERM/HUP: finish tick, save, exit 0; second forces exit. Unix tested; Windows compile-only.",
             "saving": {
                 "autosave": "--autosave SECONDS; --load auto; shutdown save",
                 "players_in_a_save": savestate::world::MAX_PLAYERS,
@@ -98,11 +98,11 @@ pub fn runtime_support() -> Value {
             "production_transport_available_in_this_build": cfg!(feature = "networking"),
             "what": "NetGame + ClientView; loop: cli::serve",
             "datagram_bytes": netplay::wire::MAX_DATAGRAM,
-            "datagram_budget": "min(transport payload_limit, datagram_bytes), with framing",
-            "players": "MAX_SEATS/lobby_capacity/minimum_players: configuration, not measured capacity",
-            "replication": "snapshot_with_budget: trim optional state; no fragmentation/stock partial replication/interest scheduler",
+            "datagram_budget": "min(payload_limit, datagram_bytes), including framing",
+            "players": "MAX_SEATS/lobby_capacity/minimum_players: configured, unmeasured",
+            "replication": "snapshot_with_budget trims optional state; no fragmentation/stock deltas/interest scheduler",
             "prediction": "your ClientView",
-            "graceful_shutdown": "cli::serve installs shutdown handlers; bots: NetGame::release",
+            "graceful_shutdown": "cli::serve shutdown handlers; bots: NetGame::release",
             "transport": "UDP; QUIC/TLS needs networking; hub rooms: UDP",
             "delivery": "local queue acceptance, not remote acknowledgement",
             "saving": format!("devkit::Snapshot: {}B; no stock --autosave", savestate::MAX_PAYLOAD_BYTES),
@@ -122,7 +122,7 @@ pub fn describe() -> Result<Value> {
     Ok(json!({
         "ok": true, "engine": "BlueEngine", "version": env!("CARGO_PKG_VERSION"),
         "protocol_version": super::net::PROTOCOL_VERSION, "map_schema_version": 1, "game_schema_version": 1,
-        "units": "metres; +Y up; angles radians; yaw 0=-Z; box half extents; prop bottom origins",
+        "units": "m; +Y up; radians; yaw 0=-Z; box half extents; prop bottom origins",
         "default_map": "Blue Test Lab",
         "commands": COMMANDS.iter().map(|(name, args)| json!({"name":name,"arguments":args})).collect::<Vec<_>>(),
         "features": names,
@@ -133,7 +133,7 @@ pub fn describe() -> Result<Value> {
         "limits": {
             "packet_bytes": super::net::MAX_PACKET_BYTES,
             "players": super::simulation::DEFAULT_MAX_PLAYERS,
-        "players_note": "Default admission; per-path runtime_support",
+        "players_note": "Default admission; see runtime_support",
             "map_bytes": super::game::MAX_MAP_BYTES, "patch_operations": 1000, "search_results": 10
         },
         "runtime_support": runtime_support(),
