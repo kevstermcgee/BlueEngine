@@ -124,8 +124,9 @@ has advanced, a separate `engine-feedback` worktree integrates the frozen game a
 feedback commit with current main. That integration needs fresh full engine CI and
 generated-game Linux/Windows checks, including native package launches, for its
 exact commit before a normal fast-forward push. Original release receipts remain
-bound to the released source; source integration does not republish its installer
-or catalog.
+bound to the released source. The supervisor resumes only this final stage;
+normal engine-main automation can still synchronize companion source and produce
+a later installer release and site update without replacing the original release.
 No transcript or credential is committed, and no findings are fabricated when
 the AI reports none.
 
