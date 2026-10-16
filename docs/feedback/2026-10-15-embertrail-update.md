@@ -81,6 +81,14 @@ A context prompt for this existing portable GameLogic platformer surfaced stock 
 
 The first full Linux engine run passed 625 of 626 library tests and failed the existing process-discovery timing test under load. Its exact isolated rerun passed without a code change; the full suite was rerun. Keep this kind of environment timing evidence separate from game behavior regressions.
 
+## Verified updates include publication
+
+Delivery of this update initially stopped at a local candidate and required the player to ask separately for the BlueEngineGames website update. The player explicitly clarified that publication must be automatic behavior for verified game updates, unless they request local-only work. Treat this as part of delivery rather than a separate routine approval prompt.
+
+The completion path is: retain the successful native Windows installer and its exact public source/build evidence; publish a versioned release in the game's established release repository; update the BlueEngineGames entry with its immutable asset URL, size, checksum, current description and screenshot; preserve earlier release entries; deploy Pages; and verify the live listing and download. Reuse the verified artifact rather than silently rebuilding different bytes for publication. Never mark a local candidate as a published update.
+
+A future delivery helper should join these existing gates and emit one receipt with the source commit, successful build, release URL, asset digest, website commit and successful deployment. Its default for an existing published game should finish this path after checks pass, while an explicit local-only request skips external publication. Acceptance requires the live catalog version and download digest to match the verified game, previous downloads to remain intact, and failure to stop with concrete resumable state instead of asking the player to repeat the publication request.
+
 ## Verification scope
 
 The game and engine checks, captured presentation, music analysis, native package tests, and their remaining limits are recorded with the update's verification artifacts. Software rendering and synthetic inputs establish implementation behavior; they do not attest to a person hearing speakers or using a physical controller.
