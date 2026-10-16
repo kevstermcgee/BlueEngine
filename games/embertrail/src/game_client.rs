@@ -41,6 +41,7 @@ impl Default for Settings {
 const PAPER: Color = Color::new(0.97, 0.93, 0.82, 1.);
 const MINT: Color = Color::new(0.64, 0.88, 0.75, 1.);
 const GOLD: Color = Color::new(0.98, 0.76, 0.42, 1.);
+const STAIRS_ATLAS_NOTICE: &str = "Resume to finish the stairs before opening the atlas.";
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum PauseAction {
     Resume,
@@ -744,7 +745,7 @@ pub async fn run() -> Result<(), String> {
                             game.open_atlas();
                             paused = false;
                         } else {
-                            notice = "Resume to finish the stairs before opening the atlas.".into();
+                            notice = STAIRS_ATLAS_NOTICE.into();
                             notice_time = 4.;
                         }
                     }
@@ -1115,6 +1116,10 @@ pub async fn run() -> Result<(), String> {
             );
         } else if started && game.outcome() != "playing" {
             terminal(&mut scene, game.outcome() == "won");
+        }
+        if !paused && notice == STAIRS_ATLAS_NOTICE {
+            notice.clear();
+            notice_time = 0.;
         }
         if notice_time > 0. && !notice.is_empty() {
             notice_time -= dt;
