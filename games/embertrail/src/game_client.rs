@@ -780,14 +780,16 @@ pub async fn run() -> Result<(), String> {
         let playing = score.now_playing(wanted);
         if !started {
             game.draw_title_backdrop(&mut scene, presentation_seconds);
-            title(
-                &mut scene,
-                &game,
-                title_selection,
-                score.title(playing),
-                &font,
-                presentation_seconds,
-            );
+            if !paused {
+                title(
+                    &mut scene,
+                    &game,
+                    title_selection,
+                    score.title(playing),
+                    &font,
+                    presentation_seconds,
+                );
+            }
         } else {
             game.draw(&mut scene);
         }

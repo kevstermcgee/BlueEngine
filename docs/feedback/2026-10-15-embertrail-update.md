@@ -20,6 +20,9 @@ This update moves the existing Embertrail campaign from its previous BlueEngine 
 
 **Acceptance:** real keyboard and controller navigation can reach every row; focus remains visible; menu confirmation is consumed; loading clears pending input; quit saves before exit; and save failure is visible without silently destroying the last good slot. Scripted menu events and physical device observations should be recorded separately.
 
+
+A title-options capture exposed a separate composition trap: Scene sorts explicit depth rather than submission order. The shared title text helper used depth 210 while the options panel used 202, so submitting the panel last still left inactive title labels on top. Embertrail now omits the inactive title UI while preserving its animated backdrop. A reusable menu layer should own a scoped depth range or explicitly replace the previous screen. Capture nested screens and inspect their labels; successful navigation and downloads alone do not verify visual isolation.
+
 ## Music identity, lifetime, and downloadable assets
 
 **Evidence:** the original game used the same three short stems throughout eight worlds. `GameLogic::audio_level` changes layer levels but does not identify a currently playing composition or its title/download asset. A mixer counter cannot detect that the score sounds repetitive. A long score also magnifies the cost of eagerly loading every bank.
