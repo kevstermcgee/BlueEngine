@@ -24,13 +24,15 @@ The game is designed for a standard PC controller. [Windows release downloads](h
 
 Up/W never jumps and does not change jump height. Jump buffering and coyote time make close landings and ledge takeoffs forgiving. Releasing the stick brakes promptly both on the ground and in the air, while retaining the full running jump range. Frostbloom's surface ice has its own traction; its warm underground rooms use ordinary traction.
 
-Pause offers Resume, Trail atlas, Controls, Restart checkpoint, Restart course, Music, Sound effects, Download this song, Return to title, and Quit game. Controls are available when requested, without a permanent bar over the game. Menu / Esc also opens options on the title screen, including its current song download; B / Esc returns to the title while that song keeps playing. Confirming a menu action consumes the input. Normal play saves automatically through BlueEngine storage. Version 3 preserves version 2 campaign progress and surface discoveries while replacing the old underground room; a save inside that room resumes at the new room entrance. Version 1 saves preserve campaign discoveries and restart the loaded course at its entrance. Player files remain outside the install directory.
+Pause offers Resume, Trail atlas, Controls, Restart checkpoint, Restart course, Music, Sound effects, Download this song, Return to title, and Quit game. Controls are available when requested, without a permanent bar over the game. Menu / Esc also opens options on the title screen, including its current song download; B / Esc returns to the title while that song keeps playing. Confirming a menu action consumes the input. Normal play saves automatically through BlueEngine storage. Version 4 adds resumable stair travel and preserves version 3 campaign/course state, repairing a saved position embedded by the old platform-carry bug. Version 2 surface discoveries are retained while its old underground room is replaced; an inside-room save resumes at the new entrance. Version 1 saves preserve campaign discoveries and restart the loaded course at its entrance. Player files remain outside the install directory.
 
 ## The islands
 
 Collect sparks for extra lights and seek three optional moon shards in each course. Bloom Lantern protects an extra hit and breaks clay; Ember Lantern adds seed casting; Dawn Stars briefly protect against ordinary enemies. Stomp seed beetles into shells, then kick the shells along the trail. Ivory briars, crystal wisps, root lifts, and other obstacles belong to the region's ecology and machinery.
 
 Open hollow-root stairways reveal the direction of travel through their dark opening, brass handrail, descending treads, and spark trail. Hold Down while standing in the entrance. No explanatory secret label is needed.
+
+Stair travel shows Mote descending and emerging over 40 fixed steps, with the camera swap hidden by a brief warm fade. The world and its hazards wait during travel. Release Down before entering another staircase. Moving platforms sweep their carried motion against stationary terrain; horizontal platforms can pass beneath blocked feet, and a rising lift waits when its rider meets a ceiling.
 
 Each course has its own underground route. Eight regional designs include a stepped root well, crystal waterways, working copper pumps, warm spring pads beneath the frozen orchard, a glass reliquary, cloudseed cisterns, a thorn nursery, and the citadel's gear lifts. Four course variants change the geometry and timing within each region. Seek the upper lantern reward and follow the far stairs back out; the entrance stairs also provide a safe return.
 
@@ -39,6 +41,8 @@ Dewmane, Chimeback, Brack, Rimehart, Solarch, Tempest, the Briar Matron, and Ves
 ## Original soundtrack
 
 Sixteen named, multi-section compositions provide approximately nineteen minutes of original music. Each composition lasts 61–86 seconds, with distinct phrases, harmony, rhythmic grids, instrumentation, and contrasting sections. Worlds, root grottos, guardian encounters, Vesper, the title, and homecoming have appropriate musical contexts.
+
+The five guardian/Vesper arrangements add quiet heartbeat, frame-drum and bass accents with rests and contrasting sections. The battle theme begins when the living boss first appears in the camera view, remains through its offscreen attacks and pause/Atlas screens, and gently returns to the world theme after the battle ends. These use the same named, checked recordings; no extra long-form tracks are loaded.
 
 The pause menu displays the composition actually playing. Choose **Download this song** while it plays to save its exact WAV in **Downloads / Embertrail Soundtrack**. Pausing keeps its playback position. A loading transition prepares the course's world, grotto and applicable guardian tracks before play. Context changes crossfade between prepared tracks; the bounded cache holds at most four decoded compositions, including a fading previous track. Enemy sprites and common UI glyphs are also prepared before play so their first appearance does not decode an image during platforming.
 

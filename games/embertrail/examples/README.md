@@ -29,13 +29,27 @@ reaches its bound without finding a clear also does not prove a course impossibl
 `grotto_probe` separately verifies the underground reward route and far-stair
 return in an isolated room. It lets the normal spawn protection expire, places
 Mote at the real surface root entrance as an explicit initial fixture, then
-uses public Down, movement, run and jump inputs. It never alters health,
+uses public Down, movement, run and jump inputs, waiting through both stair
+animations with neutral inputs. It never alters health,
 geometry, enemies or position after that initialization. A successful route
 collects the real upper lantern reward, leaves by the far stairs and replays
 independently from the same fixture without losing a life. This does not prove
 surface entrance access or a contiguous campaign run.
 
+The new stair clock advances while world ticks stay frozen. Receipts distinguish
+room world ticks from the 40 neutral travel steps in each direction and require
+both animations to finish. `EMBERTRAIL_GROTTO_PROBE_DIR` selects a separate output
+folder so a new rules version does not overwrite earlier receipts.
+
 ```sh
 cargo run --locked --no-default-features --example grotto_probe -- 0 900
 cargo run --locked --no-default-features --example grotto_probe -- --replay 0 .blue-check/grotto-route-01.json
 ```
+
+For native audio/presentation review, `--capture DIR --intent-replay PATH
+--replay-course N --frames ...` reads a JSON array of full public `Intent` values
+and starts at that isolated course's normal entrance. One intent advances per
+frame; pause, Atlas and loading suspend consumption. After exhaustion it sends
+neutral inputs. It changes no health, geometry, enemy or player position after
+normal course initialization. This mode is capture-only and is separate from
+the explicitly staged showcase fixtures.

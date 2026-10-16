@@ -453,14 +453,39 @@ pub async fn run() -> Result<(), String> {
     let showcase_secret = flag_value(&args, "--showcase-secret");
     let showcase_ending = has_flag(&args, "--showcase-ending");
     let showcase_grotto = flag_value(&args, "--showcase-grotto");
+    let showcase_stairs = flag_value(&args, "--showcase-stairs");
     let showcase_layout = has_flag(&args, "--showcase-layout");
     let showcase_count = usize::from(showcase_world.is_some())
         + usize::from(showcase_boss.is_some())
         + usize::from(showcase_secret.is_some())
         + usize::from(showcase_ending)
         + usize::from(showcase_grotto.is_some())
+        + usize::from(showcase_stairs.is_some())
         + usize::from(showcase_layout);
     let showcase = showcase_count > 0;
+    let intent_replay = flag_value(&args, "--intent-replay")
+        .map(|path| -> Result<Vec<Intent>, String> {
+            if capture.is_none() || verify || showcase {
+                return Err("Intent replay requires --capture and cannot combine with --verify or showcase fixtures".into());
+            }
+            let bytes = std::fs::read(path).map_err(|error| format!("Intent replay: {error}"))?;
+            serde_json::from_slice(&bytes).map_err(|error| format!("Intent replay: {error}"))
+        })
+        .transpose()?;
+    if intent_replay.is_some() {
+        let course = flag_value(&args, "--replay-course")
+            .ok_or("Intent replay requires an explicit --replay-course index")?
+            .parse::<usize>()
+            .ok()
+            .filter(|course| *course < embertrail::COURSES)
+            .ok_or("Replay course must be0through31")?;
+        game.enter_course(course);
+        game.state.unlocked = course;
+        println!(
+            "{}",
+            serde_json::json!({"isolated_course_init":true,"public_intent_replay":true,"course":course,"replay_count":intent_replay.as_ref().map(Vec::len),"rule_evidence":"Public intentions from a fresh isolated course; no positions, enemies or health assigned"})
+        );
+    }
     if showcase {
         if capture.is_none() || verify || showcase_count != 1 {
             return Err("Showcase fixtures require --capture, one fixture, and no --verify; they are visual review only".into());
@@ -469,6 +494,7 @@ pub async fn run() -> Result<(), String> {
             .or(showcase_boss)
             .or(showcase_secret)
             .or(showcase_grotto)
+            .or(showcase_stairs)
             .unwrap_or("0")
             .parse::<usize>()
             .ok()
@@ -486,7 +512,8 @@ pub async fn run() -> Result<(), String> {
                         .ok_or("Grotto variant must be0through3")?
                 } else if showcase_boss.is_some() {
                     3
-                } else if showcase_secret.is_some() || showcase_ending {
+                } else if showcase_secret.is_some() || showcase_stairs.is_some() || showcase_ending
+                {
                     0
                 } else {
                     2
@@ -520,12 +547,27 @@ pub async fn run() -> Result<(), String> {
             game.state.py = 338 * embertrail::SUB;
             game.state.banner = embertrail::levels::GROTTO_NAMES[world].into();
             game.state.banner_ticks = 300;
+        } else if showcase_stairs.is_some() {
+            match flag_value(&args, "--stairs-direction").unwrap_or("enter") {
+                "enter" => {
+                    game.state.px = (game.state.level.secret.x + 10) * embertrail::SUB;
+                }
+                "exit" => {
+                    game.state.secret_inside = true;
+                    game.state.level.secret_used = true;
+                    game.state.px = (game.state.level.secret_return.x + 10) * embertrail::SUB;
+                }
+                _ => return Err("Stairs direction must be enter or exit".into()),
+            }
+            game.state.py = 338 * embertrail::SUB;
+            game.state.grounded = true;
+            game.state.banner_ticks = 0;
         } else if showcase_secret.is_some() {
             game.state.px = (game.state.level.secret.x - 190).max(0) * embertrail::SUB;
         } else {
             game.state.px = 650 * embertrail::SUB;
         }
-        game.state.camera = if showcase_grotto.is_some() {
+        game.state.camera = if game.state.secret_inside {
             let r = game.state.level.grotto.bounds;
             (game.player().x - 280).clamp(r.x, r.x + r.w - 800)
         } else {
@@ -534,11 +576,12 @@ pub async fn run() -> Result<(), String> {
         game.state.shield = 1200;
         println!(
             "{}",
-            serde_json::json!({"visual_fixture":true,"world":world,"boss":showcase_boss.is_some(),"secret":showcase_secret.is_some(),"ending":showcase_ending,"inside_grotto":showcase_grotto.is_some(),"layout_review":showcase_layout,"gameplay_evidence":false})
+            serde_json::json!({"visual_fixture":true,"world":world,"boss":showcase_boss.is_some(),"secret":showcase_secret.is_some(),"ending":showcase_ending,"inside_grotto":game.state.secret_inside,"stairs_review":showcase_stairs.is_some(),"presentation_ticks_fixed":showcase_stairs.is_some(),"layout_review":showcase_layout,"gameplay_evidence":false})
         );
     }
     let mut started = verify
         || showcase
+        || intent_replay.is_some()
         || (capture.is_some()
             && !has_flag(&args, "--title")
             && flag_value(&args, "--script").is_none());
@@ -601,6 +644,8 @@ pub async fn run() -> Result<(), String> {
     }
     let mut frame = 0;
     let mut verification_tick = 0;
+    let mut replay_index = 0usize;
+    let mut previous_boss_observation = None;
     let mut save_clock = 0.;
     let mut saved_hash = None;
     let mut was_focused = true;
@@ -695,8 +740,13 @@ pub async fn run() -> Result<(), String> {
                     PauseAction::Resume => paused = false,
                     PauseAction::Controls => show_controls = true,
                     PauseAction::Atlas => {
-                        game.open_atlas();
-                        paused = false;
+                        if game.state.stairs.is_none() {
+                            game.open_atlas();
+                            paused = false;
+                        } else {
+                            notice = "Resume to finish the stairs before opening the atlas.".into();
+                            notice_time = 4.;
+                        }
                     }
                     PauseAction::RestartCheckpoint => {
                         game.restart_checkpoint();
@@ -806,7 +856,7 @@ pub async fn run() -> Result<(), String> {
             }
             println!(
                 "{}",
-                serde_json::json!({"client":"quit","tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"music_started":score.submitted,"music_downloads":score.downloads,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes})
+                serde_json::json!({"client":"quit","tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"music_started":score.submitted,"music_downloads":score.downloads,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes,"boss_music":score.boss_music,"boss_mix":score.boss_mix,"crossfade_seconds":score.crossfade_seconds,"boss_on_screen":game.boss_on_screen(),"boss_battle_active":game.boss_battle_active(),"stair_elapsed":game.state.stairs.as_ref().map(|stairs|stairs.elapsed),"stair_entering":game.state.stairs.as_ref().map(|stairs|stairs.entering),"inside_grotto":game.state.secret_inside,"camera":game.state.camera,"isolated_course_init":intent_replay.is_some(),"replay_index":replay_index,"replay_count":intent_replay.as_ref().map(Vec::len)})
             );
             break;
         }
@@ -946,7 +996,15 @@ pub async fn run() -> Result<(), String> {
             frame_clock = Instant::now();
         }
         let simulation_clock = Instant::now();
-        let ticks = if verify && started {
+        let ticks = if (showcase_stairs.is_some() || intent_replay.is_some())
+            && started
+            && !paused
+            && focused
+        {
+            // Review advances actual public intentions one tick per frame;
+            // neither replay nor the stair fixture assigns a transition clock.
+            1
+        } else if verify && started {
             60
         } else {
             stepper.advance(if started && !paused && focused {
@@ -974,6 +1032,11 @@ pub async fn run() -> Result<(), String> {
             if verify {
                 intent = Embertrail::verification_input(verification_tick);
                 verification_tick += 1;
+            } else if !game.state.atlas {
+                if let Some(replay) = &intent_replay {
+                    intent = replay.get(replay_index).copied().unwrap_or_default();
+                    replay_index = (replay_index + 1).min(replay.len());
+                }
             }
             game.step(&intent);
         }
@@ -991,6 +1054,28 @@ pub async fn run() -> Result<(), String> {
             notice_time = 12.;
         }
         let audio_update_ms = audio_clock.elapsed().as_secs_f64() * 1000.;
+        if capture.is_some() || profile.enabled() {
+            let boss = game
+                .state
+                .level
+                .enemies
+                .iter()
+                .find(|enemy| enemy.kind == 4);
+            let observation = (
+                game.boss_on_screen(),
+                game.boss_battle_active(),
+                boss.map(|enemy| (enemy.active, enemy.hp)),
+            );
+            if previous_boss_observation != Some(observation) {
+                previous_boss_observation = Some(observation);
+                if boss.is_some() {
+                    println!(
+                        "{}",
+                        serde_json::json!({"boss_observation":true,"frame":frame,"tick":game.tick(),"course":game.state.course,"on_screen":observation.0,"battle_active":observation.1,"boss_alive":boss.is_some_and(|enemy|enemy.active && enemy.hp>0),"boss_hp":boss.map(|enemy|enemy.hp),"view_bounds":boss.map(|enemy|game.boss_view_bounds(enemy)),"camera":game.state.camera,"replay_index":replay_index,"music_boss":score.boss_music,"boss_mix":score.boss_mix,"decode_count":score.decode_count,"visual_fixture":showcase,"isolated_course_init":intent_replay.is_some()})
+                    );
+                }
+            }
+        }
         let save_started = Instant::now();
         save_clock += dt;
         if persist && started && game.tick() > 0 && (save_clock >= 1. || paused) {
@@ -1098,7 +1183,7 @@ pub async fn run() -> Result<(), String> {
                 get_screen_data().export_png(path.to_str().ok_or("Capture path must be UTF-8")?);
                 println!(
                     "{}",
-                    serde_json::json!({"frame":frame,"path":path,"paused":paused,"started":started,"track":score.title(playing),"next_track":score.title(wanted),"menu_selection":selection,"atlas":game.state.atlas,"course":game.state.course,"x":game.player().x,"y":game.player().y,"vy":game.state.vy,"music_started":score.submitted,"visual_fixture":showcase,"controls_page":show_controls,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes})
+                    serde_json::json!({"frame":frame,"path":path,"paused":paused,"started":started,"track":score.title(playing),"next_track":score.title(wanted),"menu_selection":selection,"atlas":game.state.atlas,"course":game.state.course,"x":game.player().x,"y":game.player().y,"vy":game.state.vy,"music_started":score.submitted,"visual_fixture":showcase,"controls_page":show_controls,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes,"boss_music":score.boss_music,"boss_mix":score.boss_mix,"crossfade_seconds":score.crossfade_seconds,"boss_on_screen":game.boss_on_screen(),"boss_battle_active":game.boss_battle_active(),"stair_elapsed":game.state.stairs.as_ref().map(|stairs|stairs.elapsed),"stair_entering":game.state.stairs.as_ref().map(|stairs|stairs.entering),"inside_grotto":game.state.secret_inside,"camera":game.state.camera,"isolated_course_init":intent_replay.is_some(),"replay_index":replay_index,"replay_count":intent_replay.as_ref().map(Vec::len)})
                 );
             }
         }
@@ -1108,7 +1193,7 @@ pub async fn run() -> Result<(), String> {
         {
             println!(
                 "{}",
-                serde_json::json!({"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"music_started":score.submitted,"music_downloads":score.downloads,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes})
+                serde_json::json!({"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"music_started":score.submitted,"music_downloads":score.downloads,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes,"boss_music":score.boss_music,"boss_mix":score.boss_mix,"crossfade_seconds":score.crossfade_seconds,"boss_on_screen":game.boss_on_screen(),"boss_battle_active":game.boss_battle_active(),"stair_elapsed":game.state.stairs.as_ref().map(|stairs|stairs.elapsed),"stair_entering":game.state.stairs.as_ref().map(|stairs|stairs.entering),"inside_grotto":game.state.secret_inside,"camera":game.state.camera,"isolated_course_init":intent_replay.is_some(),"replay_index":replay_index,"replay_count":intent_replay.as_ref().map(Vec::len)})
             );
             break;
         }

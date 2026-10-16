@@ -5,12 +5,12 @@
   "music": {
     "song": {
       "file": "song.wav",
-      "checksum": "2fbe1d31e46df1f1",
+      "checksum": "0a3825c7fbd950f8",
       "frames": 2822400,
-      "peak": 0.446327984,
-      "rms": 0.104201282,
-      "dc": 5e-09,
-      "seam_jump": 0.004514646
+      "peak": 0.442645341,
+      "rms": 0.104687198,
+      "dc": 8e-09,
+      "seam_jump": 0.008343235
     }
   },
   "music_scale": 1.0

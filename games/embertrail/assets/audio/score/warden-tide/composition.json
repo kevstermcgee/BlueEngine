@@ -79,6 +79,31 @@
     "C: change register and texture",
     "A prime: counterline and resolution"
   ],
-  "note_events": 920,
-  "provenance": "Original Embertrail composition and offline additive instruments; no samples"
+  "note_events": 1030,
+  "provenance": "Original Embertrail composition and offline additive instruments; no samples",
+  "battle_arrangement": {
+    "version": 1,
+    "heartbeats": [
+      0.18,
+      3.18
+    ],
+    "frame_drum_accents": [
+      [
+        2.5,
+        43
+      ],
+      [
+        4.5,
+        48
+      ]
+    ],
+    "description": "Low bronze-frame pulse grouped3+2, with a round bass answer",
+    "section_strength": [
+      0.72,
+      0.9,
+      0.45,
+      1.0
+    ],
+    "extra_bass_answer": "Short chord-tone answer before the next downbeat; rests at phrase ends"
+  }
 }

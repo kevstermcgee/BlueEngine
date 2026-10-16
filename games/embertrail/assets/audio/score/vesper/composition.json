@@ -80,6 +80,35 @@
     "C: change register and texture",
     "A prime: counterline and resolution"
   ],
-  "note_events": 964,
-  "provenance": "Original Embertrail composition and offline additive instruments; no samples"
+  "note_events": 1123,
+  "provenance": "Original Embertrail composition and offline additive instruments; no samples",
+  "battle_arrangement": {
+    "version": 1,
+    "heartbeats": [
+      0.16,
+      2.16
+    ],
+    "frame_drum_accents": [
+      [
+        1.25,
+        42
+      ],
+      [
+        2.75,
+        47
+      ],
+      [
+        3.5,
+        45
+      ]
+    ],
+    "description": "Uneven night-bell drum answers and a quiet final-heartbeat pulse",
+    "section_strength": [
+      0.72,
+      0.9,
+      0.45,
+      1.0
+    ],
+    "extra_bass_answer": "Short chord-tone answer before the next downbeat; rests at phrase ends"
+  }
 }

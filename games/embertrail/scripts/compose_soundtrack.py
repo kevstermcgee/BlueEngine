@@ -54,6 +54,16 @@ RHYTHMS = {
  "victory": ([0,1,2,2.5,3.25], [0,.5,1.5,2.75,3.5]),
 }
 
+# Quiet, material-specific battle accents preserve each existing composition.
+# Positions are beats within its own meter; the five-beat keeper retains3+2 phrasing.
+BATTLE_ACCENTS = {
+ "warden-root": ([.22,2.22], [(1.75,45),(3.25,50)], "Seedpod taps and a soft double heartbeat beneath the reeds"),
+ "warden-tide": ([.18,3.18], [(2.5,43),(4.5,48)], "Low bronze-frame pulse grouped3+2, with a round bass answer"),
+ "warden-gale": ([.20,2.20], [(1.5,55),(3.5,52)], "Light galloping frame-drum accents beneath ice bells and horns"),
+ "warden-iron": ([.24,2.24], [(1.75,38),(3.25,43)], "Restrained low hand-drum heartbeat beneath the lion's brass"),
+ "vesper": ([.16,2.16], [(1.25,42),(2.75,47),(3.5,45)], "Uneven night-bell drum answers and a quiet final-heartbeat pulse"),
+}
+
 def compose(piece):
     ident,title,bpm,meter,root,scale,progression,lead,a,b,mood = piece
     # Each complete piece has four eight-bar sections; slow triple pieces use 40 bars.
@@ -108,6 +118,19 @@ def compose(piece):
         # Drum fills occur only at phrase ends and evolve by section.
         if boss and bar%8==7:
             for k in range(4):add(t+meter-1+k*.25,.1,48+k*2,.09+k*.015,11,(k-1.5)*.15)
+        if ident in BATTLE_ACCENTS:
+            heartbeats,accents,_ = BATTLE_ACCENTS[ident]
+            strength=(.72,.90,.45,1.0)[section]
+            # Leave a breath at phrase ends and in alternate bridge bars; tension
+            # comes from orchestration and rhythm, not a master-volume increase.
+            if section!=2 or bar%2==0:
+                for pos in heartbeats[:1 if bar%4==3 else 2]:
+                    add(t+pos,.10,40,.055*strength,8)
+                for j,(pos,key) in enumerate(accents):
+                    if (bar+j)%3!=2:
+                        add(t+pos,.11,key+(bar%2)*2,.040*strength,11,(-.18,.18)[j%2])
+                if bar%4!=3:
+                    add(t+meter-.75,.19,pitch(chord+(2 if bar%2 else 4),-2),.058*strength,6,.04)
         if section==3 and bar%4==0:
             add(t+.04,meter*.6,pitch(chord+7,1),.10,2,.4)
     return seconds,notes,bars
@@ -131,7 +154,10 @@ def main():
             metadata=json.loads(info.read_text())
             bank=dict(version=1,sample_rate=44100,effects={},music={"song":metadata},music_scale=1.0)
             (directory/"bank.json").write_text(json.dumps(bank,indent=2)+"\n")
-            (directory/"composition.json").write_text(json.dumps(dict(title=title,bpm=bpm,meter=meter,bars=bars,tonic_midi=root,scale=scale,progression=progression,melody_a=a,melody_b=b,rhythm_a=RHYTHMS[ident][0],rhythm_b=RHYTHMS[ident][1],sections=["A: introduce","B: answer","C: change register and texture","A prime: counterline and resolution"],note_events=len(notes),provenance="Original Embertrail composition and offline additive instruments; no samples"),indent=2)+"\n")
+            composition=dict(title=title,bpm=bpm,meter=meter,bars=bars,tonic_midi=root,scale=scale,progression=progression,melody_a=a,melody_b=b,rhythm_a=RHYTHMS[ident][0],rhythm_b=RHYTHMS[ident][1],sections=["A: introduce","B: answer","C: change register and texture","A prime: counterline and resolution"],note_events=len(notes),provenance="Original Embertrail composition and offline additive instruments; no samples")
+            if ident in BATTLE_ACCENTS:
+                composition["battle_arrangement"]=dict(version=1,heartbeats=BATTLE_ACCENTS[ident][0],frame_drum_accents=BATTLE_ACCENTS[ident][1],description=BATTLE_ACCENTS[ident][2],section_strength=[.72,.90,.45,1.0],extra_bass_answer="Short chord-tone answer before the next downbeat; rests at phrase ends")
+            (directory/"composition.json").write_text(json.dumps(composition,indent=2)+"\n")
             print(f"{title}: {seconds:.1f}s, {len(notes)} events, RMS {metadata['rms']:.3f}, seam {metadata['seam_jump']:.5f}",flush=True)
     (OUT/"tracks.json").write_text(json.dumps(catalog,indent=2)+"\n")
 if __name__=="__main__":main()

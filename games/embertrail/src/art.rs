@@ -166,6 +166,21 @@ fn sprite(
     h: f32,
     color: Color,
 ) {
+    sprite_region(s, layer, id, data, x, y, w, h, None, color);
+}
+#[allow(clippy::too_many_arguments)]
+fn sprite_region(
+    s: &mut Scene,
+    layer: i32,
+    id: &'static str,
+    data: &'static [u8],
+    x: i32,
+    y: i32,
+    w: f32,
+    h: f32,
+    source: Option<macroquad::prelude::Rect>,
+    color: Color,
+) {
     SPRITE_TEXTURES.with(|textures| {
         let mut textures = textures.borrow_mut();
         let texture = textures.entry(id).or_insert_with(|| {
@@ -184,10 +199,34 @@ fn sprite(
                 ..Default::default()
             },
             [w, h],
-            None,
+            source,
             color,
         );
     });
+}
+fn mote_frame(facing: i32, frame: usize) -> (&'static str, &'static [u8]) {
+    match (facing < 0, frame) {
+        (false, 0) => ("mote0", include_bytes!("../assets/sprites/mote0.png")),
+        (false, 1) => ("mote1", include_bytes!("../assets/sprites/mote1.png")),
+        (false, 2) => ("mote2", include_bytes!("../assets/sprites/mote2.png")),
+        (false, _) => ("mote3", include_bytes!("../assets/sprites/mote3.png")),
+        (true, 0) => (
+            "mote_left0",
+            include_bytes!("../assets/sprites/mote_left0.png"),
+        ),
+        (true, 1) => (
+            "mote_left1",
+            include_bytes!("../assets/sprites/mote_left1.png"),
+        ),
+        (true, 2) => (
+            "mote_left2",
+            include_bytes!("../assets/sprites/mote_left2.png"),
+        ),
+        (true, _) => (
+            "mote_left3",
+            include_bytes!("../assets/sprites/mote_left3.png"),
+        ),
+    }
 }
 fn label(s: &mut Scene, layer: i32, text: impl Into<String>, x: i32, y: i32, size: f32, c: u32) {
     let text = text.into();
@@ -1569,15 +1608,16 @@ impl Embertrail {
                         _ => ("vesper", include_bytes!("../assets/sprites/boss7.png")),
                     };
                     let shake = if tell { ((tick / 4 % 3) as i32) - 1 } else { 0 };
+                    let bounds = self.boss_view_bounds(e);
                     sprite(
                         s,
                         15,
                         id,
                         data,
-                        x - 12 + shake,
-                        y - 24,
-                        (e.r.w + 24) as f32,
-                        (e.r.h + 28) as f32,
+                        bounds.x - cam + shake,
+                        bounds.y,
+                        bounds.w as f32,
+                        bounds.h as f32,
                         c,
                     );
                     // The cursed collar opens in mint during the safe punish window.
@@ -1743,8 +1783,103 @@ impl Embertrail {
             }
         }
     }
+    fn stair_actor_art(&self, s: &mut Scene) {
+        let Some(stairs) = &self.state.stairs else {
+            return;
+        };
+        let Some(gate) = self.stair_transition_gate() else {
+            return;
+        };
+        let half = f32::from(STAIR_TICKS) / 2.;
+        let emerging = f32::from(stairs.elapsed) >= half;
+        let progress = (f32::from(stairs.elapsed) % half) / half;
+        let ease = progress * progress * (3. - 2. * progress);
+        let player = self.player();
+        let gate_center = (gate.x + gate.w / 2) as f32;
+        let player_center = (player.x + player.w / 2) as f32;
+        let depth = (progress * 5.).floor() / 5.;
+        let rise = ((progress / 0.55).min(1.) * 5.).floor() / 5.;
+        let (center, foot, scale, toward) = if emerging {
+            (
+                gate_center + (player_center - gate_center) * ease,
+                (gate.y + gate.h) as f32 + 18. * (1. - rise),
+                0.82 + 0.18 * progress,
+                player_center - gate_center,
+            )
+        } else {
+            (
+                player_center + (gate_center - player_center) * ease,
+                (player.y + player.h) as f32 + 18. * depth,
+                1. - 0.18 * progress,
+                gate_center - player_center,
+            )
+        };
+        let facing = if toward.abs() < 12. {
+            self.state.facing
+        } else if toward < 0. {
+            -1
+        } else {
+            1
+        };
+        let (id, data) = mote_frame(facing, usize::from(stairs.elapsed / 4) % 3);
+        let width = (32. * scale).round();
+        let height = (40. * scale).round();
+        let x = (center - width / 2.).round() as i32 - self.state.camera;
+        let y = (foot - height).round() as i32;
+        // The threshold occludes the feet as Mote descends. Crop the same
+        // cached sprite rather than painting over the surrounding terrain.
+        let visible_height = if (center - gate_center).abs() < 30. {
+            ((gate.y + gate.h - 1 - y) as f32).clamp(0., height)
+        } else {
+            height
+        };
+        if visible_height > 0. {
+            s.circle(
+                20,
+                Point::new(center.round() as i32 - self.state.camera, gate.y + 31),
+                18.,
+                alpha(GOLDEN, 0.08),
+            );
+            sprite_region(
+                s,
+                22,
+                id,
+                data,
+                x,
+                y,
+                width,
+                visible_height,
+                Some(macroquad::prelude::Rect::new(
+                    0.,
+                    0.,
+                    32.,
+                    40. * visible_height / height,
+                )),
+                WHITE,
+            );
+        }
+    }
+    fn stair_fade(&self, s: &mut Scene) {
+        let Some(stairs) = &self.state.stairs else {
+            return;
+        };
+        let elapsed = f32::from(stairs.elapsed);
+        let opacity = if elapsed < 17. {
+            ((elapsed - 10.) / 7.).clamp(0., 1.)
+        } else if elapsed <= 23. {
+            1.
+        } else {
+            ((32. - elapsed) / 9.).clamp(0., 1.)
+        };
+        let opacity = opacity * opacity * (3. - 2. * opacity);
+        s.rect(95, Rect::new(0, 0, 800, 450), alpha(0x211c20, opacity));
+    }
     fn actor_art(&self, s: &mut Scene) {
         let st = &self.state;
+        if st.stairs.is_some() {
+            self.stair_actor_art(s);
+            return;
+        }
         let r = self.player();
         let x = r.x - st.camera;
         let y = r.y;
@@ -1781,28 +1916,7 @@ impl Embertrail {
         } else {
             0
         };
-        let (id, data): (&'static str, &'static [u8]) = match (st.facing < 0, frame) {
-            (false, 0) => ("mote0", include_bytes!("../assets/sprites/mote0.png")),
-            (false, 1) => ("mote1", include_bytes!("../assets/sprites/mote1.png")),
-            (false, 2) => ("mote2", include_bytes!("../assets/sprites/mote2.png")),
-            (false, _) => ("mote3", include_bytes!("../assets/sprites/mote3.png")),
-            (true, 0) => (
-                "mote_left0",
-                include_bytes!("../assets/sprites/mote_left0.png"),
-            ),
-            (true, 1) => (
-                "mote_left1",
-                include_bytes!("../assets/sprites/mote_left1.png"),
-            ),
-            (true, 2) => (
-                "mote_left2",
-                include_bytes!("../assets/sprites/mote_left2.png"),
-            ),
-            (true, _) => (
-                "mote_left3",
-                include_bytes!("../assets/sprites/mote_left3.png"),
-            ),
-        };
+        let (id, data) = mote_frame(st.facing, frame);
         s.circle(
             20,
             Point::new(x + 10, y + 19),
@@ -2172,5 +2286,6 @@ impl draw::Game for Embertrail {
         self.world_art(s, p);
         self.actor_art(s);
         self.hud(s);
+        self.stair_fade(s);
     }
 }

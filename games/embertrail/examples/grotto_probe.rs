@@ -40,6 +40,14 @@ fn start(course: usize) -> Embertrail {
         ..Default::default()
     });
     assert!(
+        game.state
+            .stairs
+            .as_ref()
+            .is_some_and(|stairs| stairs.entering),
+        "Down did not start the real stair transition"
+    );
+    finish_stairs(&mut game);
+    assert!(
         game.state.secret_inside,
         "Down did not enter the real root opening"
     );
@@ -49,6 +57,17 @@ fn start(course: usize) -> Embertrail {
         "The room must begin with a real reward"
     );
     game
+}
+fn finish_stairs(game: &mut Embertrail) {
+    // A recorded command waits through travel using real neutral inputs. The
+    // authoritative transition clock advances while world hazards stay still.
+    for _ in 0..embertrail::STAIR_TICKS {
+        if game.state.stairs.is_none() {
+            return;
+        }
+        game.step(&Intent::default());
+    }
+    assert!(game.state.stairs.is_none(), "Stair travel did not finish");
 }
 fn reward_taken(state: &State) -> bool {
     let reward = state.level.grotto.reward;
@@ -69,9 +88,17 @@ fn advance(game: &mut Embertrail, command: Command) -> bool {
             sprint: true,
             ..Default::default()
         });
+        if let Some(stairs) = &game.state.stairs {
+            assert!(command.down, "Stair travel began without public Down input");
+            let far_exit = !stairs.entering
+                && at_far_stairs
+                && stairs.source_gate == game.state.level.secret_return;
+            finish_stairs(game);
+            assert!(!game.state.secret_inside, "The room did not finish exiting");
+            return far_exit;
+        }
         if !game.state.secret_inside {
-            assert!(command.down, "The room exited without public Down input");
-            return at_far_stairs;
+            panic!("The room exited without completing animated stair travel");
         }
         if game.state.dead > 0 || !game.state.secret_inside {
             break;
@@ -96,6 +123,10 @@ fn replay(course: usize, route: &[Command]) -> Embertrail {
         "The room's reward was not collected"
     );
     assert!(!game.state.secret_inside, "The far stairs were not used");
+    assert!(
+        game.state.stairs.is_none(),
+        "The exit animation is unfinished"
+    );
     assert!(far_exit, "The replay used the emergency entrance stairs");
     assert_eq!(game.state.course, course);
     game
@@ -161,30 +192,38 @@ fn main() {
                 route.push(command);
                 if !game.state.secret_inside && collected {
                     let verified = replay(course, &route);
-                    let base = format!(".blue-check/grotto-route-{:02}", course + 1);
-                    std::fs::create_dir_all(".blue-check").unwrap();
-                    std::fs::write(format!("{base}.json"), serde_json::to_vec(&route).unwrap())
-                        .unwrap();
+                    let folder = std::env::var_os("EMBERTRAIL_GROTTO_PROBE_DIR")
+                        .map(std::path::PathBuf::from)
+                        .unwrap_or_else(|| ".blue-check".into());
+                    std::fs::create_dir_all(&folder).unwrap();
+                    let base = folder.join(format!("grotto-route-{:02}", course + 1));
+                    std::fs::write(
+                        base.with_extension("json"),
+                        serde_json::to_vec(&route).unwrap(),
+                    )
+                    .unwrap();
                     let proof = serde_json::json!({
                         "course":course+1,
                         "archetype":verified.state.level.grotto.archetype,
                         "variant":verified.state.level.grotto.variant,
                         "ticks":verified.state.tick,
                         "setup_ticks":120,
-                        "room_ticks":verified.state.tick-121,
+                        "room_world_ticks":verified.state.tick-120,
+                        "stair_neutral_steps_per_trip":embertrail::STAIR_TICKS,
+                        "entry_and_exit_animations_completed":true,
                         "spawn_protection_after_entry":0,
                         "lives":verified.state.lives,
                         "reward_collected":true,
                         "far_stair_exit":true,
                         "public_inputs_after_initialization":true,
                         "independent_replay":true,
-                        "initialization":"isolated real surface root entrance fixture; initial position only, then public Down entry",
+                        "initialization":"isolated real surface root entrance fixture; initial position only, then public Down and neutral inputs through entry animation",
                         "scope":"room traversal only; not surface access or campaign completion",
                         "hash":format!("{:016x}",verified.state_hash()),
-                        "route":format!("{base}.json")
+                        "route":base.with_extension("json")
                     });
                     std::fs::write(
-                        format!("{base}-proof.json"),
+                        folder.join(format!("grotto-route-{:02}-proof.json", course + 1)),
                         serde_json::to_vec_pretty(&proof).unwrap(),
                     )
                     .unwrap();

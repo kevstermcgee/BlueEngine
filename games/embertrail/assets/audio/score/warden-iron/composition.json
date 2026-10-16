@@ -79,6 +79,31 @@
     "C: change register and texture",
     "A prime: counterline and resolution"
   ],
-  "note_events": 1064,
-  "provenance": "Original Embertrail composition and offline additive instruments; no samples"
+  "note_events": 1200,
+  "provenance": "Original Embertrail composition and offline additive instruments; no samples",
+  "battle_arrangement": {
+    "version": 1,
+    "heartbeats": [
+      0.24,
+      2.24
+    ],
+    "frame_drum_accents": [
+      [
+        1.75,
+        38
+      ],
+      [
+        3.25,
+        43
+      ]
+    ],
+    "description": "Restrained low hand-drum heartbeat beneath the lion's brass",
+    "section_strength": [
+      0.72,
+      0.9,
+      0.45,
+      1.0
+    ],
+    "extra_bass_answer": "Short chord-tone answer before the next downbeat; rests at phrase ends"
+  }
 }

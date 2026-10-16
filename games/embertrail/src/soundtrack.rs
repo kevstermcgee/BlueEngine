@@ -70,6 +70,10 @@ pub struct Score {
     pub max_decoded_tracks: usize,
     pub decoded_pcm_bytes: u64,
     pub max_decoded_pcm_bytes: u64,
+    pub boss_music: bool,
+    /// Fraction of submitted music volume belonging to guardian compositions during a fade.
+    pub boss_mix: f32,
+    pub crossfade_seconds: f32,
 }
 impl Score {
     pub async fn new(muted: bool) -> Result<Self, String> {
@@ -133,6 +137,9 @@ impl Score {
             max_decoded_tracks: 0,
             decoded_pcm_bytes: 0,
             max_decoded_pcm_bytes: 0,
+            boss_music: false,
+            boss_mix: 0.,
+            crossfade_seconds: 0.8,
         })
     }
     pub fn wanted(&self, game: &Embertrail, started: bool) -> usize {
@@ -142,7 +149,7 @@ impl Score {
             "victory"
         } else if game.state.secret_inside {
             "underroots"
-        } else if game.boss_active() {
+        } else if game.boss_battle_active() {
             match game.state.course / 4 {
                 0 | 6 => "warden-root",
                 1 | 2 => "warden-tide",
@@ -309,6 +316,9 @@ impl Score {
     pub fn title(&self, wanted: usize) -> &str {
         &self.tracks[wanted].title
     }
+    fn is_boss_track(&self, id: usize) -> bool {
+        self.tracks[id].id.starts_with("warden-") || self.tracks[id].id == "vesper"
+    }
     pub fn now_playing(&self, wanted: usize) -> usize {
         self.current.as_ref().map_or(wanted, |playing| playing.id)
     }
@@ -334,6 +344,8 @@ impl Score {
         self.cues.clear();
         self.active_cues.clear();
         self.pending = None;
+        self.boss_music = false;
+        self.boss_mix = 0.;
         self.measure_resident_tracks();
     }
     pub fn cue(&mut self, cue: usize, enabled: bool) {
@@ -432,6 +444,16 @@ impl Score {
         // World/grotto/guardian switches only submit an already resident native handle.
         if !self.muted && self.current.as_ref().is_none_or(|track| track.id != wanted) {
             if let Some(prepared) = self.prepared.iter().find(|track| track.id == wanted) {
+                let from = self
+                    .current
+                    .as_ref()
+                    .map(|track| self.tracks[track.id].id.clone());
+                let boss_transition = self.is_boss_track(wanted)
+                    || self
+                        .current
+                        .as_ref()
+                        .is_some_and(|track| self.is_boss_track(track.id));
+                self.crossfade_seconds = if boss_transition { 1.6 } else { 0.8 };
                 if let Some(previous) = self.outgoing.take() {
                     stop_sound(&previous.sound);
                 }
@@ -451,6 +473,10 @@ impl Score {
                     volume: 0.,
                 });
                 self.submitted += 1;
+                println!(
+                    "{}",
+                    serde_json::json!({"music_transition":self.tracks[wanted].id,"from":from,"boss_music":self.is_boss_track(wanted),"crossfade_seconds":self.crossfade_seconds,"decode_count":self.decode_count})
+                );
             }
         }
         // Pause leaves the exact song and playback position running for the music download menu.
@@ -463,11 +489,12 @@ impl Score {
         } else {
             0.
         };
+        let fade_rate = 0.31 / self.crossfade_seconds;
         if let Some(current) = &mut self.current {
             current.volume = if !enabled || !focused {
                 0.
             } else {
-                current.volume + (target - current.volume).clamp(-dt * 0.42, dt * 0.42)
+                current.volume + (target - current.volume).clamp(-dt * fade_rate, dt * fade_rate)
             };
             set_sound_volume(&current.sound, current.volume);
         }
@@ -475,7 +502,7 @@ impl Score {
             outgoing.volume = if !enabled || !focused {
                 0.
             } else {
-                (outgoing.volume - dt * 0.38).max(0.)
+                (outgoing.volume - dt * fade_rate).max(0.)
             };
             set_sound_volume(&outgoing.sound, outgoing.volume);
             if outgoing.volume <= 0. {
@@ -483,6 +510,19 @@ impl Score {
                 self.outgoing = None;
             }
         }
+        self.boss_music = self
+            .current
+            .as_ref()
+            .is_some_and(|track| self.is_boss_track(track.id));
+        let mut total = 0.;
+        let mut battle = 0.;
+        for playing in self.current.iter().chain(self.outgoing.iter()) {
+            total += playing.volume;
+            if self.is_boss_track(playing.id) {
+                battle += playing.volume;
+            }
+        }
+        self.boss_mix = if total > 0. { battle / total } else { 0. };
         self.measure_resident_tracks();
         notice
     }
@@ -552,6 +592,7 @@ fn read_track(id: &str) -> Result<Vec<u8>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vesper3d::runtime::Simulation;
     #[test]
     fn interaction_bank_has_distinct_checked_behavior_voices_with_short_clean_envelopes() {
         let root = std::path::Path::new("assets/audio/sfx");
@@ -634,6 +675,18 @@ mod tests {
                 "duplicate melody"
             );
             meters.insert(composition["meter"].as_u64().unwrap());
+            if track.id.starts_with("warden-") || track.id == "vesper" {
+                let arrangement = &composition["battle_arrangement"];
+                assert_eq!(arrangement["heartbeats"].as_array().unwrap().len(), 2);
+                assert!(arrangement["frame_drum_accents"].as_array().unwrap().len() >= 2);
+                let strengths = arrangement["section_strength"].as_array().unwrap();
+                assert_eq!(strengths.len(), 4);
+                assert!(strengths[2].as_f64().unwrap() < strengths[3].as_f64().unwrap());
+                assert!(!arrangement["extra_bass_answer"]
+                    .as_str()
+                    .unwrap()
+                    .is_empty());
+            }
             assert!(hashes.insert(info.checksum.clone()), "duplicate recording");
             assert!(info.rms > 0.03 && info.peak <= 0.77 && info.dc < 0.001);
             assert!(
@@ -675,6 +728,9 @@ mod tests {
             max_decoded_tracks: 0,
             decoded_pcm_bytes: 0,
             max_decoded_pcm_bytes: 0,
+            boss_music: false,
+            boss_mix: 0.,
+            crossfade_seconds: 0.8,
         };
         let mut game = Embertrail::new(7);
         assert_eq!(score.tracks[score.wanted(&game, false)].id, "title");
@@ -715,16 +771,58 @@ mod tests {
                 .find(|enemy| enemy.kind == 4)
                 .unwrap();
             boss.phase = 1;
+            let visual_left = boss.r.x - 12;
+            game.state.px = (visual_left - 519) * embertrail::SUB;
+            game.state.camera = visual_left - 800;
+            assert!(!game.boss_on_screen());
+            let normal = score.wanted(&game, true);
+            assert!(
+                !score.is_boss_track(normal),
+                "an activated but unseen guardian must not change the song"
+            );
+            game.state.camera += 1;
+            assert!(
+                game.boss_on_screen(),
+                "the first rendered guardian pixel is visible"
+            );
+            assert!(score.is_boss_track(score.wanted(&game, true)));
+            game.step(&vesper3d::two_d::Intent::default());
+            assert!(
+                game.boss_on_screen(),
+                "camera movement exposes the first guardian pixel"
+            );
+            assert!(game.state.boss_seen);
             let theme = score.wanted(&game, true);
             assert!(
                 arena.contains(&theme),
-                "guardian activation must use a prepared track"
+                "guardian appearance must use a prepared track"
             );
-            // Retreating from a moving guardian must not restart the exploration song.
+            assert!(score.is_boss_track(theme));
+            // A moving guardian can leave the picture without restarting either song.
             game.state.px = 0;
+            game.state.camera = 0;
+            assert!(!game.boss_on_screen());
             assert_eq!(theme, score.wanted(&game, true));
-            assert!(
-                score.tracks[theme].id.starts_with("warden") || score.tracks[theme].id == "vesper"
+            game.state.dead = 90;
+            assert_eq!(
+                normal,
+                score.wanted(&game, true),
+                "death returns to exploration music"
+            );
+            game.state.dead = 0;
+            let boss = game
+                .state
+                .level
+                .enemies
+                .iter_mut()
+                .find(|enemy| enemy.kind == 4)
+                .unwrap();
+            boss.active = false;
+            boss.hp = 0;
+            assert_eq!(
+                normal,
+                score.wanted(&game, true),
+                "freeing the guardian returns to the world song"
             );
         }
         assert_eq!(world_themes.len(), 8);

@@ -13,6 +13,7 @@ mod tests;
 pub const SUB: i32 = 256;
 pub const COURSES: usize = 32;
 pub const FLOOR: i32 = 368;
+pub const STAIR_TICKS: u8 = 40;
 const ATLAS_BUTTON: Rect = Rect::new(732, 8, 60, 24);
 /// The same timeline drives collision, vulnerability, audio and visible warnings.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -84,6 +85,12 @@ pub struct Grotto {
     pub variant: u8,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct StairTransition {
+    pub elapsed: u8,
+    pub entering: bool,
+    pub source_gate: Rect,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Level {
     pub width: i32,
     pub tiles: Vec<Tile>,
@@ -134,6 +141,12 @@ pub struct State {
     pub won: bool,
     pub secret_inside: bool,
     pub portal_cooldown: u32,
+    #[serde(default)]
+    pub stairs: Option<StairTransition>,
+    #[serde(default)]
+    pub down_held: bool,
+    #[serde(default)]
+    pub boss_seen: bool,
     pub shots: Vec<Shot>,
     pub camera: i32,
     pub atlas: bool,
@@ -283,6 +296,9 @@ fn boss_step(
 }
 impl Embertrail {
     pub fn open_atlas(&mut self) {
+        if self.state.stairs.is_some() {
+            return;
+        }
         self.state.lives = self.state.lives.max(5);
         self.state.won = false;
         self.state.atlas = true;
@@ -304,6 +320,49 @@ impl Embertrail {
             .enemies
             .iter()
             .any(|e| e.active && e.kind == 4 && e.phase > 0)
+    }
+    pub fn boss_on_screen(&self) -> bool {
+        self.boss_music_allowed()
+            && !self.state.atlas
+            && self.state.level.enemies.iter().any(|e| {
+                e.active
+                    && e.kind == 4
+                    && e.hp > 0
+                    && self
+                        .boss_view_bounds(e)
+                        .overlaps(Rect::new(self.state.camera, 0, 800, 450))
+            })
+    }
+    /// Shared sprite extent for presentation and first-visible-pixel music onset.
+    pub fn boss_view_bounds(&self, e: &Enemy) -> Rect {
+        Rect::new(e.r.x - 12, e.r.y - 24, e.r.w + 24, e.r.h + 28)
+    }
+    pub fn boss_battle_active(&self) -> bool {
+        self.boss_music_allowed() && (self.state.boss_seen || self.boss_on_screen())
+    }
+    fn boss_music_allowed(&self) -> bool {
+        self.state.dead == 0
+            && self.state.transition == 0
+            && !self.state.won
+            && !self.state.secret_inside
+            && self.state.stairs.is_none()
+            && self
+                .state
+                .level
+                .enemies
+                .iter()
+                .any(|e| e.active && e.kind == 4 && e.hp > 0)
+    }
+    pub fn stair_transition_gate(&self) -> Option<Rect> {
+        self.state.stairs.as_ref().map(|stairs| {
+            if stairs.elapsed < STAIR_TICKS / 2 {
+                stairs.source_gate
+            } else if stairs.entering {
+                self.grotto_entry_gate()
+            } else {
+                self.state.level.secret
+            }
+        })
     }
     pub fn boss_phase(&self, e: &Enemy) -> BossPhase {
         boss_phase(self.state.course / 4, e.phase)
@@ -365,6 +424,9 @@ impl Embertrail {
         self.state.relics = 0;
         self.state.secret_inside = false;
         self.state.portal_cooldown = 0;
+        self.state.stairs = None;
+        self.state.down_held = false;
+        self.state.boss_seen = false;
         self.state.shots.clear();
         self.state.camera = 0;
         self.state.atlas = false;
@@ -400,6 +462,7 @@ impl Embertrail {
         } else {
             self.state.lives = self.state.lives.saturating_sub(1);
             self.state.dead = 90;
+            self.state.boss_seen = false;
             self.state.form = 0;
             self.state.invincible = 0;
             self.cue(Cue::Death);
@@ -417,6 +480,9 @@ impl Embertrail {
         self.state.vy = 0;
         self.state.shield = 120;
         self.state.dead = 0;
+        self.state.stairs = None;
+        self.state.down_held = false;
+        self.state.boss_seen = false;
         self.state.secret_inside = false;
         self.state.timer = 60 * 240;
         self.state.shots.clear();
@@ -602,30 +668,93 @@ impl Embertrail {
             }
         }
     }
+    fn stationary_walls(&self) -> Vec<Rect> {
+        let mut walls: Vec<_> = self
+            .state
+            .level
+            .tiles
+            .iter()
+            .filter(|tile| tile.r.w > 0 && tile.kind != 5)
+            .map(|tile| tile.r)
+            .collect();
+        if self
+            .state
+            .level
+            .enemies
+            .iter()
+            .any(|e| e.active && e.kind == 4)
+        {
+            walls.push(Rect::new(self.state.level.width - 98, 0, 12, FLOOR));
+            if self.boss_active() {
+                walls.push(Rect::new(
+                    self.state.level.width - levels::BOSS_COURT - 12,
+                    0,
+                    12,
+                    FLOOR,
+                ));
+            }
+        }
+        walls
+    }
     fn move_platforms(&mut self) {
-        let player = self.player();
-        let mut carry = Point::default();
-        for p in &mut self.state.level.platforms {
-            p.previous = p.r;
+        let walls = self.stationary_walls();
+        for index in 0..self.state.level.platforms.len() {
+            let player = self.player();
+            let p = &self.state.level.platforms[index];
+            let previous = p.r;
             let t = (self.state.tick + p.phase) % 240;
             let triangle = if t < 120 { t as i32 } else { 240 - t as i32 };
             let offset = triangle * p.span / 120;
+            let mut next = previous;
             if p.vertical {
-                p.r.y = p.home.y - offset;
+                next.y = p.home.y - offset;
             } else {
-                p.r.x = p.home.x + offset;
+                next.x = p.home.x + offset;
             }
-            if self.state.grounded
-                && player.y + player.h == p.previous.y
-                && player.x + player.w > p.previous.x
-                && player.x < p.previous.x + p.previous.w
-            {
-                carry.x = p.r.x - p.previous.x;
-                carry.y = p.r.y - p.previous.y;
+            let rider = self.state.grounded
+                && player.y + player.h == previous.y
+                && player.x + player.w > previous.x
+                && player.x < previous.x + previous.w;
+            // Platforms have one-way tops. An ascending top must also catch a
+            // falling actor between its old and new positions, even at >1px/tick.
+            let rising_contact = self.state.vy >= 0
+                && next.y < previous.y
+                && player.y + player.h <= previous.y
+                && player.y + player.h >= next.y
+                && player.x + player.w > next.x
+                && player.x < next.x + next.w;
+            if rider || rising_contact {
+                let dx = if rider { next.x - previous.x } else { 0 };
+                let dy = if rider {
+                    next.y - previous.y
+                } else {
+                    next.y - player.y - player.h
+                };
+                let mut carried = player;
+                carried.slide(dx, dy, &walls);
+                let actual_x = carried.x - player.x;
+                let actual_y = carried.y - player.y;
+                self.state.px += actual_x * SUB;
+                self.state.py += actual_y * SUB;
+                if dx != actual_x {
+                    self.state.vx = 0;
+                }
+                if rising_contact {
+                    self.state.vy = 0;
+                    self.state.grounded = true;
+                }
+                if dy < 0 && actual_y > dy {
+                    // A ceiling cannot crush or embed a rider. Pause the lift's
+                    // path clock until they leave; there is no accumulated jump.
+                    next.y = carried.y + carried.h;
+                    let p = &mut self.state.level.platforms[index];
+                    p.phase = (p.phase % 240 + 239) % 240;
+                }
             }
+            let p = &mut self.state.level.platforms[index];
+            p.previous = previous;
+            p.r = next;
         }
-        self.state.px += carry.x * SUB;
-        self.state.py += carry.y * SUB;
     }
     fn enemy_step(&mut self) {
         let walls: Vec<Rect> = self
@@ -914,47 +1043,78 @@ impl Embertrail {
             self.hurt(false);
         }
     }
-    fn portal(&mut self, i: &Intent) {
-        if i.y <= 0 || self.state.portal_cooldown > 0 {
-            return;
+    fn portal(&mut self, i: &Intent) -> bool {
+        if i.y <= 0
+            || self.state.portal_cooldown > 0
+            || !self.state.grounded
+            || self.state.stairs.is_some()
+        {
+            return false;
         }
         let p = self.player();
-        if !self.state.secret_inside && p.overlaps(self.state.level.secret) {
-            self.state.secret_inside = true;
-            self.state.level.secret_used = true;
-            self.state.px = self.state.level.grotto.entrance.x * SUB;
-            self.state.py = self.state.level.grotto.entrance.y * SUB;
-            self.banner(levels::GROTTO_NAMES[self.state.course / 4]);
-        } else if self.state.secret_inside
-            && (p.overlaps(self.state.level.secret_return) || p.overlaps(self.grotto_entry_gate()))
-        {
-            self.state.secret_inside = false;
-            self.state.px = (self.state.level.secret.x + 8) * SUB;
-            self.state.py = 320 * SUB;
-            self.banner("A secret worth keeping");
+        let gate = if !self.state.secret_inside && p.overlaps(self.state.level.secret) {
+            self.state.level.secret
+        } else if self.state.secret_inside && p.overlaps(self.state.level.secret_return) {
+            self.state.level.secret_return
+        } else if self.state.secret_inside && p.overlaps(self.grotto_entry_gate()) {
+            self.grotto_entry_gate()
         } else {
-            return;
+            return false;
+        };
+        if self.state.crouching {
+            self.state.py -= 12 * SUB;
+            self.state.crouching = false;
         }
+        let entering = !self.state.secret_inside;
+        self.state.stairs = Some(StairTransition {
+            elapsed: 0,
+            entering,
+            source_gate: gate,
+        });
         self.state.vx = 0;
         self.state.vy = 0;
-        self.state.portal_cooldown = 60;
-        self.state.crouching = false;
-        self.state.grounded = true;
-        self.state.coyote = 6;
         self.state.jump_buffer = 0;
-        self.state.shots.clear();
-        self.state.camera = if self.state.secret_inside {
-            self.state.level.grotto.bounds.x
-        } else {
-            (self.player().x - 280).clamp(0, self.state.level.width - 800)
-        };
-        self.cue(if self.state.secret_inside {
+        self.state.jump_held = i.action;
+        self.cue(if entering {
             Cue::GrottoEnter
         } else {
             Cue::GrottoExit
         });
+        true
+    }
+    fn advance_stairs(&mut self) {
+        let stairs = self.state.stairs.as_mut().unwrap();
+        stairs.elapsed += 1;
+        let entering = stairs.entering;
+        if stairs.elapsed == STAIR_TICKS / 2 {
+            self.state.secret_inside = entering;
+            if entering {
+                self.state.level.secret_used = true;
+                self.state.facing = 1;
+                self.state.px = self.state.level.grotto.entrance.x * SUB;
+                self.state.py = self.state.level.grotto.entrance.y * SUB;
+                self.banner(levels::GROTTO_NAMES[self.state.course / 4]);
+            } else {
+                self.state.px = (self.state.level.secret.x + 8) * SUB;
+                self.state.py = 338 * SUB;
+                self.banner("A secret worth keeping");
+            }
+            self.state.shots.clear();
+            self.state.camera = if entering {
+                self.state.level.grotto.bounds.x
+            } else {
+                (self.player().x - 280).clamp(0, self.state.level.width - 800)
+            };
+        }
+        if self.state.stairs.as_ref().unwrap().elapsed == STAIR_TICKS {
+            self.state.stairs = None;
+            self.state.portal_cooldown = 30;
+            self.state.grounded = true;
+            self.state.coyote = 6;
+        }
     }
     fn guardian_freed(&mut self) {
+        self.state.boss_seen = false;
         self.state.shots.retain(|s| !s.hostile);
         self.state.score += 5000;
         self.state.shield = self.state.shield.max(90);
@@ -1027,6 +1187,9 @@ impl GameLogic for Embertrail {
                 won: false,
                 secret_inside: false,
                 portal_cooldown: 0,
+                stairs: None,
+                down_held: false,
+                boss_seen: false,
                 shots: Vec::new(),
                 camera: 0,
                 atlas: false,
@@ -1086,6 +1249,16 @@ impl Simulation for Embertrail {
     type Input = Intent;
     fn step(&mut self, i: &Intent) {
         if self.outcome() != "playing" {
+            return;
+        }
+        let down_edge = i.y > 0 && !self.state.down_held;
+        self.state.down_held = i.y > 0;
+        if self.state.stairs.is_some() {
+            self.state.jump_held = i.action;
+            self.advance_stairs();
+            return;
+        }
+        if down_edge && self.state.dead == 0 && self.state.transition == 0 && self.portal(i) {
             return;
         }
         self.state.tick += 1;
@@ -1237,34 +1410,10 @@ impl Simulation for Embertrail {
             self.cue(Cue::SeedCast);
         }
         let before = self.player();
-        let mut walls: Vec<Rect> = self
-            .state
-            .level
-            .tiles
-            .iter()
-            .filter(|t| t.r.w > 0 && t.kind != 5)
-            .map(|t| t.r)
-            .collect();
+        let mut walls = self.stationary_walls();
         for p in &self.state.level.platforms {
             if self.state.vy >= 0 && before.y + before.h <= p.r.y + 4 {
                 walls.push(p.r);
-            }
-        }
-        if self
-            .state
-            .level
-            .enemies
-            .iter()
-            .any(|e| e.active && e.kind == 4)
-        {
-            walls.push(Rect::new(self.state.level.width - 98, 0, 12, FLOOR));
-            if self.boss_active() {
-                walls.push(Rect::new(
-                    self.state.level.width - levels::BOSS_COURT - 12,
-                    0,
-                    12,
-                    FLOOR,
-                ));
             }
         }
         let mut r = before;
@@ -1307,7 +1456,6 @@ impl Simulation for Embertrail {
             self.state.puff = 16;
             self.cue(Cue::Spring);
         }
-        self.portal(i);
         self.collect();
         self.enemy_step();
         self.enemy_contacts(before);
@@ -1357,6 +1505,9 @@ impl Simulation for Embertrail {
         } else {
             self.state.camera += (target - self.state.camera).clamp(-9, 9);
         }
+        if self.boss_on_screen() {
+            self.state.boss_seen = true;
+        }
     }
     fn state_hash(&self) -> u64 {
         hash_json(&self.state)
@@ -1364,7 +1515,7 @@ impl Simulation for Embertrail {
 }
 impl Snapshot for Embertrail {
     const KIND: &'static str = "embertrail";
-    const VERSION: u32 = 3;
+    const VERSION: u32 = 4;
     const MIGRATIONS: &'static [vesper3d::runtime::snapshot::Migration] = &[
         vesper3d::runtime::snapshot::Migration {
             from: 1,
@@ -1373,6 +1524,10 @@ impl Snapshot for Embertrail {
         vesper3d::runtime::snapshot::Migration {
             from: 2,
             step: migrate_v2,
+        },
+        vesper3d::runtime::snapshot::Migration {
+            from: 3,
+            step: migrate_v3,
         },
     ];
     type State = State;
@@ -1390,6 +1545,22 @@ impl Snapshot for Embertrail {
                 != Rect::new(expected.bounds.x + expected.bounds.w - 82, 320, 48, 48)
         {
             return Err("Invalid Embertrail hidden trail bounds".into());
+        }
+        if let Some(stairs) = &s.stairs {
+            let entry_gate = Rect::new(expected.bounds.x + 24, 320, 48, 48);
+            let valid_gate = if stairs.entering {
+                stairs.source_gate == s.level.secret
+            } else {
+                stairs.source_gate == s.level.secret_return || stairs.source_gate == entry_gate
+            };
+            let expected_inside = if stairs.elapsed < STAIR_TICKS / 2 {
+                !stairs.entering
+            } else {
+                stairs.entering
+            };
+            if stairs.elapsed >= STAIR_TICKS || !valid_gate || s.secret_inside != expected_inside {
+                return Err("Invalid Embertrail stair transition".into());
+            }
         }
         let valid_rect = |r: Rect| {
             r.x >= -100
@@ -1587,6 +1758,79 @@ fn migrate_v2(mut value: serde_json::Value) -> Result<serde_json::Value, String>
         state.shield = state.shield.max(90);
         state.banner = "Your hidden trail has grown. Your discoveries are safe.".into();
         state.banner_ticks = 300;
+    }
+    serde_json::to_value(state).map_err(|e| e.to_string())
+}
+
+fn migrate_v3(value: serde_json::Value) -> Result<serde_json::Value, String> {
+    let mut state: State = serde_json::from_value(value).map_err(|e| e.to_string())?;
+    state.stairs = None;
+    state.down_held = false;
+    state.boss_seen = !state.secret_inside
+        && state
+            .level
+            .enemies
+            .iter()
+            .any(|e| e.active && e.kind == 4 && e.phase > 0);
+    // Published v3 could save an unchecked platform carry one pixel inside a
+    // wall. Repair only that legacy overlap, preserving all campaign content.
+    // Validate rectangle arithmetic here; full state validation follows restore.
+    let walls: Vec<_> = state
+        .level
+        .tiles
+        .iter()
+        .filter(|t| {
+            let r = t.r;
+            t.kind != 5
+                && r.w > 0
+                && (-100..=10000).contains(&r.x)
+                && (-600..=1000).contains(&r.y)
+                && r.w <= 8000
+                && (0..=800).contains(&r.h)
+        })
+        .map(|t| t.r)
+        .collect();
+    let player = Rect::new(
+        state.px.div_euclid(SUB),
+        state.py.div_euclid(SUB),
+        22,
+        if state.crouching { 18 } else { 30 },
+    );
+    if state.dead == 0 && walls.iter().any(|r| r.overlaps(player)) {
+        let mut xs = vec![player.x];
+        let mut ys = vec![player.y];
+        for wall in walls.iter().filter(|r| r.overlaps(player)) {
+            xs.extend([wall.x - player.w, wall.x + wall.w]);
+            ys.extend([wall.y - player.h, wall.y + wall.h]);
+        }
+        let mut candidates = Vec::new();
+        for x in xs {
+            for &y in &ys {
+                let r = Rect::new(x, y, player.w, player.h);
+                if x >= 0 && (-500..=600).contains(&y) && !walls.iter().any(|w| w.overlaps(r)) {
+                    candidates.push(r);
+                }
+            }
+        }
+        if let Some(safe) = candidates.into_iter().min_by_key(|r| {
+            (
+                (r.x - player.x).abs() + (r.y - player.y).abs(),
+                (r.y - player.y).abs(),
+            )
+        }) {
+            state.px += (safe.x - player.x) * SUB;
+            state.py += (safe.y - player.y) * SUB;
+            if safe.x != player.x {
+                state.vx = 0;
+            }
+            if safe.y != player.y {
+                state.vy = 0;
+            }
+            state.grounded = walls
+                .iter()
+                .chain(state.level.platforms.iter().map(|p| &p.r))
+                .any(|r| r.y == safe.y + safe.h && r.x < safe.x + safe.w && r.x + r.w > safe.x);
+        }
     }
     serde_json::to_value(state).map_err(|e| e.to_string())
 }
