@@ -6,6 +6,7 @@ checkout so the game's source art remains reproducible after an engine upgrade.
 """
 from pathlib import Path
 import struct
+import sys
 import zlib
 
 OUT = Path(__file__).resolve().parents[1] / 'assets' / 'sprites'
@@ -78,8 +79,9 @@ def mote(frame):
     c.poly([(12, 10 + hop), (21, 10 + hop), (25, 13 + hop), (25, 21 + hop), (21, 23 + hop), (12, 22 + hop), (10, 18 + hop), (10, 14 + hop)], '#397a6e')
     c.poly([(18, 11 + hop), (24, 13 + hop), (25, 16 + hop), (29, 17 + hop), (28, 20 + hop), (24, 20 + hop), (22, 23 + hop), (17, 22 + hop), (15, 18 + hop), (15, 14 + hop)], PAPER)
     c.rect(17, 13 + hop, 2, 7, '#e7c995')
-    c.rect(23, 14 + hop, 3, 4, INK)
-    c.rect(24, 14 + hop, 1, 1, '#ffffff')
+    # A small inset warm pupil stays separate from the hood's dark outline.
+    c.rect(22, 15 + hop, 2, 3, '#514b43')
+    c.rect(22, 15 + hop, 1, 1, '#a69b7b')
     c.rect(25, 20 + hop, 2, 1, '#b77558')
     c.rect(11, 13 + hop, 2, 6, '#63bca2')
     # Cloak, lantern clasp and small boots stay readable against every biome.
@@ -253,7 +255,10 @@ def villager():
 
 
 for i in range(4): mote(i)
-small_enemies()
-bosses()
-villager()
-print('Authored Mote, five cursed woodland creatures, eight bell wardens and a villager.')
+if '--mote-only' in sys.argv:
+    print('Authored Mote profiles only; other world assets were left untouched.')
+else:
+    small_enemies()
+    bosses()
+    villager()
+    print('Authored Mote, five cursed woodland creatures, eight bell wardens and a villager.')
