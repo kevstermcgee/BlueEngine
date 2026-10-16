@@ -1,0 +1,6 @@
+/target/
+/.blue-check/
+/dist/
+/installers/
+__pycache__/
+*.pyc

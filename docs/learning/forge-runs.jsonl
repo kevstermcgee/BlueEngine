@@ -1,1 +1,2 @@
 {"run": "427fab3d", "game": "odd-matter", "tokens": 0, "usage": null, "wall_seconds": 466476.918, "agent_seconds": 0, "usage_note": "Partial/unavailable CLI usage; tokens sum only exposed turns, wall time recorded."}
+{"run": "57f654f3", "game": "corner-clutch", "tokens": 31201737, "usage": {"input_tokens": 30941615, "cached_input_tokens": 28985344, "output_tokens": 260122}, "wall_seconds": 33941.225, "agent_seconds": 7296.558, "usage_note": "Measured from Codex CLI turn.completed usage; cached input included once."}

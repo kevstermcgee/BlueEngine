@@ -323,6 +323,10 @@
       {
         "source": "games/reverie",
         "destination": "reverie"
+      },
+      {
+        "source": "games/corner-clutch",
+        "destination": "corner-clutch"
       }
     ],
     "prototypes": [

@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {
+      "id": "driver-controls",
+      "area": "controls",
+      "instructions": "Click each crate and try 1-4/Tab, tap/hold directions, click direction buttons, undo with Z, reset with R, and pause with Esc. Hold W after one step, use Undo/selection, and keep holding: no extra move. Repeat with the cursor centered on each hotkey target. Click a crate while holding a direction. Check Enter on Next and K/L save/load. Hold W, press D, release D while W stays held: only the two presses move. Repeat in reverse order, with arrows, and with opposing W/S or A/D: releases never move. A direction tap on a display frame with no fixed tick must still move exactly once. Quickly click C and tap Down in room 1: only C moves. Repeat selection and direction in one display frame, with number keys and Tab, and with multiple presses before a fixed tick. Repeat two Tab presses followed by Down: C moves. Queue a move then select a crate on its displayed cell: selection keeps that crate identity. Click all direction-button edges. Restart/load while commands are pending: stale commands must not execute."
+    },
+    {
+      "id": "corner-preview",
+      "area": "ui",
+      "instructions": "Compare end and middle drivers in room 3. Inspect gold driver, mint immediate passengers, empty/occupied matching sockets, destination ghosts and red wall/crate/edge blockers at 960x540 and 1280x720."
+    },
+    {
+      "id": "campaign-recovery",
+      "area": "gameplay",
+      "instructions": "Finish eight rooms; borrow the parked helper in room 5. Undo after a solved room, continue, reset the current room, save with K, change the board, and load with L. There is no terminal loss or move budget."
+    },
+    {
+      "id": "native-cues",
+      "area": "audio",
+      "instructions": "Listen to movement, rejected-command and room-complete cues. Toggle M, pause, change focus, and verify sound behavior on a physical audio device. Shared client currently uses its stock Coin/Hit/Success cue bank."
+    }
+  ]
+}
