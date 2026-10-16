@@ -1,8 +1,13 @@
 //! Controller-first platform glue; gameplay remains in Embertrail::step.
-use crate::{soundtrack::Score, window_focus};
-use embertrail::Embertrail;
+use crate::{
+    frame_profile::{FrameProfile, FrameSample},
+    soundtrack::Score,
+    window_focus,
+};
+use embertrail::{cues::Cue, Embertrail};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::time::Instant;
 use vesper3d::{
     runtime::{
         playback::{flag_value, has_flag, CapturePlan, Timeline},
@@ -40,6 +45,7 @@ const GOLD: Color = Color::new(0.98, 0.76, 0.42, 1.);
 enum PauseAction {
     Resume,
     Atlas,
+    Controls,
     RestartCheckpoint,
     RestartCourse,
     Music,
@@ -54,6 +60,7 @@ fn pause_actions(started: bool) -> &'static [PauseAction] {
         &[
             Resume,
             Atlas,
+            Controls,
             RestartCheckpoint,
             RestartCourse,
             Music,
@@ -63,7 +70,7 @@ fn pause_actions(started: bool) -> &'static [PauseAction] {
             Quit,
         ]
     } else {
-        &[ReturnTitle, Music, Sound, Download, Quit]
+        &[ReturnTitle, Controls, Music, Sound, Download, Quit]
     }
 }
 fn panel(scene: &mut Scene, rect: Rect) {
@@ -84,159 +91,100 @@ fn panel(scene: &mut Scene, rect: Rect) {
         GOLD,
     );
 }
-fn text(scene: &mut Scene, value: impl Into<String>, x: i32, y: i32, size: f32, color: Color) {
-    scene.text(210, value, Point::new(x, y), size, color);
-}
-fn row(scene: &mut Scene, label: &str, selected: bool, index: usize, y: i32) {
-    if selected {
-        scene.rect(
-            205,
-            Rect::new(167, y - 19, 466, 25),
-            Color::new(0.17, 0.29, 0.29, 1.),
-        );
-        scene.rect(206, Rect::new(167, y - 19, 4, 25), GOLD);
-    }
-    text(
-        scene,
-        format!("{}  {label}", if selected { ">" } else { " " }),
-        184,
-        y,
-        21.,
-        if selected { GOLD } else { PAPER },
-    );
-    let _ = index;
-}
-fn centered(scene: &mut Scene, font: &Font, value: &str, y: i32, size: u16, color: Color) {
-    let scale = (screen_width() / 800.)
-        .min(screen_height() / 450.)
-        .max(0.01);
-    let pixels = (size as f32 * scale).round().clamp(1., u16::MAX as f32) as u16;
-    let measured = measure_text(value, Some(font), pixels, 1.);
-    let x = ((800. - measured.width / scale) * 0.5).round() as i32;
-    scene.text(
-        208,
-        value,
-        Point::new(x + 1, y + 2),
-        size as f32,
-        Color::new(0.015, 0.04, 0.055, 0.9),
-    );
-    text(scene, value, x, y, size as f32, color);
-}
-fn title(
+fn ui(
     scene: &mut Scene,
-    game: &Embertrail,
-    selected: usize,
-    track: &str,
-    font: &Font,
-    seconds: f32,
+    value: &str,
+    bounds: Rect,
+    size: f32,
+    line_height: i32,
+    color: Color,
+    centered: bool,
 ) {
-    centered(scene, font, "EMBERTRAIL", 95, 48, GOLD);
-    centered(
+    Embertrail::draw_ui_text(
         scene,
-        font,
+        210,
+        value,
+        bounds,
+        size,
+        line_height,
+        color,
+        centered,
+    );
+}
+fn title(scene: &mut Scene, game: &Embertrail, selected: usize, seconds: f32) {
+    ui(
+        scene,
+        "EMBERTRAIL",
+        Rect::new(96, 42, 608, 63),
+        48.,
+        63,
+        GOLD,
+        true,
+    );
+    ui(
+        scene,
         "A little light. A very big adventure.",
-        128,
-        20,
+        Rect::new(110, 109, 580, 28),
+        20.,
+        28,
         MINT,
+        true,
     );
-    centered(
-        scene,
-        font,
-        "Vesper stole your village's Dawnheart.",
-        171,
-        22,
-        PAPER,
-    );
-    centered(
-        scene,
-        font,
-        "Without its warmth, your home will freeze.",
-        198,
-        22,
-        PAPER,
-    );
-    centered(
-        scene,
-        font,
-        "Free eight bells. Bring the Dawnheart home.",
-        227,
-        22,
-        MINT,
-    );
+    for (text, y, color) in [
+        ("Vesper stole your village's Dawnheart.", 150, PAPER),
+        ("Without its warmth, your home will freeze.", 178, PAPER),
+        ("Free eight bells. Bring the Dawnheart home.", 206, MINT),
+    ] {
+        ui(
+            scene,
+            text,
+            Rect::new(112, y, 576, 28),
+            22.,
+            28,
+            color,
+            true,
+        );
+    }
     let begin = if game.tick() > 0 {
         "CONTINUE THE TRAIL"
     } else {
         "CARRY THE FIRST SPARK"
     };
-    scene.rect(
-        205,
-        Rect::new(228, 264, 344, 42),
-        Color::new(0.075, 0.17, 0.19, 0.95),
-    );
-    if selected == 0 {
-        let pulse = 0.75 + 0.2 * (seconds * 2.5).sin();
-        scene.rect(
-            206,
-            Rect::new(228, 264, 344, 2),
-            Color::new(GOLD.r, GOLD.g, GOLD.b, pulse),
+    for (index, label, rect, size) in [
+        (0, begin, Rect::new(210, 264, 380, 42), 22.),
+        (1, "Options", Rect::new(300, 316, 200, 32), 21.),
+        (2, "Quit game", Rect::new(300, 354, 200, 32), 21.),
+    ] {
+        if index == 0 || selected == index {
+            scene.rect(205, rect, Color::new(0.075, 0.17, 0.19, 0.95));
+        }
+        if selected == index {
+            let pulse = 0.75 + 0.2 * (seconds * 2.5).sin();
+            scene.rect(
+                206,
+                Rect::new(rect.x, rect.y, rect.w, 2),
+                Color::new(GOLD.r, GOLD.g, GOLD.b, pulse),
+            );
+            scene.rect(206, Rect::new(rect.x, rect.y + rect.h - 2, rect.w, 2), GOLD);
+        }
+        ui(
+            scene,
+            label,
+            Rect::new(rect.x + 16, rect.y + 5, rect.w - 32, rect.h - 8),
+            size,
+            rect.h - 8,
+            if selected == index { GOLD } else { PAPER },
+            true,
         );
-        scene.rect(206, Rect::new(228, 304, 344, 2), GOLD);
-        scene.circle(207, Point::new(245, 285), 3., GOLD);
-        scene.circle(207, Point::new(555, 285), 3., GOLD);
     }
-    centered(
+    ui(
         scene,
-        font,
-        begin,
-        291,
-        22,
-        if selected == 0 { GOLD } else { PAPER },
-    );
-    if selected == 1 {
-        scene.rect(
-            205,
-            Rect::new(300, 320, 200, 32),
-            Color::new(0.075, 0.17, 0.19, 0.92),
-        );
-        scene.rect(206, Rect::new(300, 350, 200, 2), GOLD);
-    }
-    centered(
-        scene,
-        font,
-        "Quit game",
-        343,
-        21,
-        if selected == 1 { GOLD } else { PAPER },
-    );
-    scene.rect(
-        205,
-        Rect::new(180, 357, 440, 44),
-        Color::new(0.025, 0.075, 0.09, 0.88),
-    );
-    centered(
-        scene,
-        font,
-        "A  Confirm     Stick / D-pad  Choose",
-        375,
-        18,
-        MINT,
-    );
-    centered(scene, font, "Menu  Options / soundtrack", 393, 16, MINT);
-    centered(
-        scene,
-        font,
-        &format!("Now playing: {track}"),
-        416,
-        16,
-        PAPER,
-    );
-    text(
-        scene,
-        format!("v{}", env!("CARGO_PKG_VERSION")),
-        735,
-        438,
+        &format!("v{}", env!("CARGO_PKG_VERSION")),
+        Rect::new(708, 10, 78, 24),
         16.,
+        24,
         MINT,
+        true,
     );
 }
 fn pause(
@@ -248,37 +196,46 @@ fn pause(
     loading: bool,
     length: f32,
 ) {
-    panel(scene, Rect::new(150, 30, 500, 390));
-    text(
+    panel(scene, Rect::new(88, 20, 624, 410));
+    ui(
         scene,
         if started { "PAUSED" } else { "OPTIONS" },
-        184,
-        71,
-        32.,
+        Rect::new(112, 36, 576, 36),
+        30.,
+        36,
         GOLD,
+        false,
     );
-    text(
+    ui(
         scene,
         if loading {
             "Soundtrack loading"
         } else {
-            "NOW PLAYING"
+            "Now playing"
         },
-        184,
-        94,
+        Rect::new(112, 76, 576, 21),
         16.,
+        21,
         MINT,
+        false,
     );
-    text(scene, track, 184, 119, 22., PAPER);
+    ui(
+        scene,
+        track,
+        Rect::new(112, 99, 576, 48),
+        21.,
+        24,
+        PAPER,
+        false,
+    );
     for (index, action) in pause_actions(started).iter().enumerate() {
         let label = match action {
             PauseAction::Resume => "Resume".to_owned(),
             PauseAction::Atlas => "Trail atlas".to_owned(),
+            PauseAction::Controls => "Controls".to_owned(),
             PauseAction::RestartCheckpoint => "Restart checkpoint".to_owned(),
             PauseAction::RestartCourse => "Restart course".to_owned(),
-            PauseAction::Music => {
-                format!("Music: {}", if settings.music { "On" } else { "Off" })
-            }
+            PauseAction::Music => format!("Music: {}", if settings.music { "On" } else { "Off" }),
             PauseAction::Sound => format!(
                 "Sound effects: {}",
                 if settings.sound { "On" } else { "Off" }
@@ -288,75 +245,146 @@ fn pause(
                 length as u32 / 60,
                 length as u32 % 60
             ),
-            PauseAction::ReturnTitle => "Return to title".to_owned(),
+            PauseAction::ReturnTitle => {
+                if started {
+                    "Return to title".to_owned()
+                } else {
+                    "Back to title".to_owned()
+                }
+            }
             PauseAction::Quit => "Quit game".to_owned(),
         };
-        row(
+        let top = 153 + index as i32 * 24;
+        if selected == index {
+            scene.rect(
+                205,
+                Rect::new(108, top, 584, 24),
+                Color::new(0.17, 0.29, 0.29, 1.),
+            );
+            scene.rect(206, Rect::new(108, top, 4, 24), GOLD);
+        }
+        ui(
             scene,
             &label,
-            selected == index,
-            index,
-            146 + index as i32 * 26,
+            Rect::new(126, top, 550, 24),
+            20.,
+            24,
+            if selected == index { GOLD } else { PAPER },
+            false,
         );
     }
-    text(
+    ui(
         scene,
-        if started {
-            "A  Select     B  Resume     Stick / D-pad  Choose"
-        } else {
-            "A  Select     B  Title     Stick / D-pad  Choose"
-        },
-        178,
-        398,
-        17.,
+        "A  Select     B  Back",
+        Rect::new(112, 399, 576, 22),
+        16.,
+        22,
         MINT,
+        true,
+    );
+}
+fn controls(scene: &mut Scene) {
+    panel(scene, Rect::new(88, 20, 624, 410));
+    ui(
+        scene,
+        "CONTROLS",
+        Rect::new(112, 38, 576, 40),
+        30.,
+        40,
+        GOLD,
+        false,
+    );
+    for (index, (label, binding)) in [
+        ("Move", "Left stick / D-pad"),
+        ("Jump", "A  (Space)"),
+        ("Cast", "X  (X key)"),
+        ("Run", "RT / RB  (Shift)"),
+        ("Enter hollows", "Down"),
+        ("Pause / options", "Menu  (Esc)"),
+        ("Trail atlas", "Y / View  (Tab)"),
+    ]
+    .iter()
+    .enumerate()
+    {
+        let y = 98 + index as i32 * 39;
+        ui(
+            scene,
+            label,
+            Rect::new(112, y, 222, 30),
+            20.,
+            30,
+            PAPER,
+            false,
+        );
+        ui(
+            scene,
+            binding,
+            Rect::new(342, y, 346, 30),
+            20.,
+            30,
+            MINT,
+            false,
+        );
+    }
+    ui(
+        scene,
+        "A or B  Back to options",
+        Rect::new(112, 388, 576, 28),
+        18.,
+        28,
+        MINT,
+        true,
     );
 }
 fn terminal(scene: &mut Scene, won: bool) {
-    panel(scene, Rect::new(128, 115, 544, 220));
-    text(
+    panel(scene, Rect::new(96, 104, 608, 256));
+    ui(
         scene,
         if won {
-            "EVERY WINDOW HOLDS THE DAWN"
+            "Every window holds the dawn"
         } else {
-            "YOUR SPARK IS STILL HERE"
+            "Your spark is still here"
         },
-        154,
-        164,
-        27.,
+        Rect::new(120, 122, 560, 72),
+        28.,
+        36,
         GOLD,
+        false,
     );
-    text(
+    ui(
         scene,
         if won {
             "The bells are free. Your village is warm again."
         } else {
             "A setback is another beginning. Keep your discoveries."
         },
-        154,
-        203,
+        Rect::new(120, 199, 560, 56),
         20.,
+        28,
         PAPER,
+        false,
     );
-    text(
+    ui(
         scene,
         if won {
             "A  Return to the trail atlas"
         } else {
             "A  Try this course again"
         },
-        154,
-        257,
-        23.,
+        Rect::new(120, 262, 560, 32),
+        22.,
+        32,
         MINT,
+        false,
     );
-    text(
+    ui(
         scene,
-        "Menu  Pause / soundtrack / quit",
-        154,
-        302,
+        "Menu  Options, soundtrack and quit",
+        Rect::new(120, 314, 560, 28),
         18.,
+        28,
         PAPER,
+        false,
     );
 }
 fn script_event(script: &Timeline, frame: u32, name: &str) -> bool {
@@ -397,6 +425,7 @@ pub async fn run() -> Result<(), String> {
         .map_err(|e| e.to_string())?
         .unwrap_or_default();
     let verify = has_flag(&args, "--verify");
+    let mut profile = FrameProfile::from_args(&args)?;
     let persist = !verify && capture.is_none();
     let muted = has_flag(&args, "--mute") || (capture.is_some() && !has_flag(&args, "--audible"));
     let store = PlatformStorage::new(Embertrail::ID)?;
@@ -423,10 +452,14 @@ pub async fn run() -> Result<(), String> {
     let showcase_boss = flag_value(&args, "--showcase-boss");
     let showcase_secret = flag_value(&args, "--showcase-secret");
     let showcase_ending = has_flag(&args, "--showcase-ending");
+    let showcase_grotto = flag_value(&args, "--showcase-grotto");
+    let showcase_layout = has_flag(&args, "--showcase-layout");
     let showcase_count = usize::from(showcase_world.is_some())
         + usize::from(showcase_boss.is_some())
         + usize::from(showcase_secret.is_some())
-        + usize::from(showcase_ending);
+        + usize::from(showcase_ending)
+        + usize::from(showcase_grotto.is_some())
+        + usize::from(showcase_layout);
     let showcase = showcase_count > 0;
     if showcase {
         if capture.is_none() || verify || showcase_count != 1 {
@@ -435,6 +468,7 @@ pub async fn run() -> Result<(), String> {
         let world = showcase_world
             .or(showcase_boss)
             .or(showcase_secret)
+            .or(showcase_grotto)
             .unwrap_or("0")
             .parse::<usize>()
             .ok()
@@ -443,7 +477,14 @@ pub async fn run() -> Result<(), String> {
         game.state.unlocked = 31;
         game.enter_course(
             world * 4
-                + if showcase_boss.is_some() {
+                + if showcase_grotto.is_some() {
+                    flag_value(&args, "--grotto-variant")
+                        .unwrap_or("0")
+                        .parse::<usize>()
+                        .ok()
+                        .filter(|v| *v < 4)
+                        .ok_or("Grotto variant must be0through3")?
+                } else if showcase_boss.is_some() {
                     3
                 } else if showcase_secret.is_some() || showcase_ending {
                     0
@@ -464,16 +505,36 @@ pub async fn run() -> Result<(), String> {
                 .ok_or("Showcase boss unavailable")?;
             boss.phase = 1;
             game.state.px = (boss.r.x - 230) * embertrail::SUB;
+        } else if showcase_grotto.is_some() {
+            let room = game.state.level.grotto.clone();
+            game.state.secret_inside = true;
+            game.state.level.secret_used = true;
+            let x = match flag_value(&args, "--grotto-view").unwrap_or("middle") {
+                "entrance" => room.entrance.x,
+                "middle" => room.bounds.x + room.bounds.w / 2,
+                "reward" => room.reward.x - 80,
+                "exit" => room.bounds.x + room.bounds.w - 112,
+                _ => return Err("Grotto view must be entrance, middle, reward or exit".into()),
+            };
+            game.state.px = x * embertrail::SUB;
+            game.state.py = 338 * embertrail::SUB;
+            game.state.banner = embertrail::levels::GROTTO_NAMES[world].into();
+            game.state.banner_ticks = 300;
         } else if showcase_secret.is_some() {
             game.state.px = (game.state.level.secret.x - 190).max(0) * embertrail::SUB;
         } else {
             game.state.px = 650 * embertrail::SUB;
         }
-        game.state.camera = (game.player().x - 280).clamp(0, game.state.level.width - 800);
+        game.state.camera = if showcase_grotto.is_some() {
+            let r = game.state.level.grotto.bounds;
+            (game.player().x - 280).clamp(r.x, r.x + r.w - 800)
+        } else {
+            (game.player().x - 280).clamp(0, game.state.level.width - 800)
+        };
         game.state.shield = 1200;
         println!(
             "{}",
-            serde_json::json!({"visual_fixture":true,"world":world,"boss":showcase_boss.is_some(),"secret":showcase_secret.is_some(),"ending":showcase_ending,"gameplay_evidence":false})
+            serde_json::json!({"visual_fixture":true,"world":world,"boss":showcase_boss.is_some(),"secret":showcase_secret.is_some(),"ending":showcase_ending,"inside_grotto":showcase_grotto.is_some(),"layout_review":showcase_layout,"gameplay_evidence":false})
         );
     }
     let mut started = verify
@@ -482,6 +543,7 @@ pub async fn run() -> Result<(), String> {
             && !has_flag(&args, "--title")
             && flag_value(&args, "--script").is_none());
     let mut paused = false;
+    let mut show_controls = false;
     let mut selection = 0usize;
     let mut title_selection = 0usize;
     let mut nav = MenuNav::default();
@@ -493,6 +555,50 @@ pub async fn run() -> Result<(), String> {
     let font = load_ttf_font_from_bytes(include_bytes!("../assets/fonts/DejaVuSans.ttf"))
         .map_err(|error| format!("Interface font: {error}"))?;
     renderer.set_font(font.clone());
+    Embertrail::set_ui_font(font);
+    let prewarm_started = Instant::now();
+    Embertrail::prewarm_presentation_assets();
+    let prewarmed_assets = Embertrail::take_presentation_asset_events();
+    if profile.enabled() {
+        println!(
+            "{}",
+            serde_json::json!({"presentation_prewarm_ms":prewarm_started.elapsed().as_secs_f64()*1000.,"assets":prewarmed_assets})
+        );
+    }
+    let mut layout_track = None;
+    if showcase_layout {
+        let mut candidates = Vec::new();
+        for world in 0..8 {
+            for course in 0..4 {
+                let value = format!(
+                    "{}: {}",
+                    embertrail::story::NPC_NAMES[world],
+                    embertrail::story::NPC_LINES[world][course]
+                );
+                candidates.push((
+                    Embertrail::ui_text_width(&value, 18.),
+                    world * 4 + course,
+                    value,
+                ));
+            }
+        }
+        let (_, course, value) = candidates.into_iter().max_by_key(|entry| entry.0).unwrap();
+        game.enter_course(course);
+        game.state.unlocked = 31;
+        game.state.npc_greeted = true;
+        game.state.banner = value;
+        game.state.banner_ticks = 3600;
+        layout_track = score
+            .tracks
+            .iter()
+            .enumerate()
+            .max_by_key(|(_, t)| Embertrail::ui_text_width(&t.title, 21.))
+            .map(|(i, _)| i);
+        println!(
+            "{}",
+            serde_json::json!({"layout_review":true,"story":game.state.banner,"track":layout_track.map(|i|score.title(i))})
+        );
+    }
     let mut frame = 0;
     let mut verification_tick = 0;
     let mut save_clock = 0.;
@@ -501,8 +607,11 @@ pub async fn run() -> Result<(), String> {
     let mut fullscreen = false;
     let mut presentation_seconds = 0.;
     prevent_quit();
-    loop {
+    'client: loop {
         frame += 1;
+        let mut frame_clock = Instant::now();
+        let dt_ms = f64::from(get_frame_time()) * 1000.;
+        let sprite_misses_before = Embertrail::presentation_asset_misses();
         let dt = get_frame_time().clamp(0., 0.1);
         presentation_seconds += dt;
         let focused = window_focus::focused();
@@ -543,7 +652,25 @@ pub async fn run() -> Result<(), String> {
         let mut consume = false;
         let mut atlas_command = false;
         let mut quit = is_quit_requested();
-        if paused {
+        let menu_navigation = if paused {
+            !show_controls && (menu_step.up || menu_step.down)
+        } else if !started {
+            menu_step.up || menu_step.down
+        } else {
+            game.state.atlas
+                && (menu_step.up || menu_step.down || menu_step.left || menu_step.right)
+        };
+        if menu_navigation {
+            score.cue(Cue::MenuNavigate as usize, settings.sound);
+        }
+        if paused && show_controls {
+            if back || pause_press || confirm {
+                show_controls = false;
+                consume = true;
+                nav.reset();
+                score.cue(Cue::MenuBack as usize, settings.sound);
+            }
+        } else if paused {
             let actions = pause_actions(started);
             if menu_step.up {
                 selection = (selection + actions.len() - 1) % actions.len();
@@ -555,8 +682,10 @@ pub async fn run() -> Result<(), String> {
                 paused = false;
                 consume = true;
                 nav.reset();
+                score.cue(Cue::MenuBack as usize, settings.sound);
             } else if confirm || press("download") {
                 consume = true;
+                score.cue(Cue::MenuConfirm as usize, settings.sound);
                 let selected = if press("download") {
                     PauseAction::Download
                 } else {
@@ -564,6 +693,7 @@ pub async fn run() -> Result<(), String> {
                 };
                 match selected {
                     PauseAction::Resume => paused = false,
+                    PauseAction::Controls => show_controls = true,
                     PauseAction::Atlas => {
                         game.open_atlas();
                         paused = false;
@@ -614,35 +744,50 @@ pub async fn run() -> Result<(), String> {
         } else if !started {
             if pause_press {
                 paused = true;
+                show_controls = false;
                 selection = 0;
                 consume = true;
                 nav.reset();
+                score.cue(Cue::MenuConfirm as usize, settings.sound);
             } else {
-                if menu_step.up || menu_step.down {
-                    title_selection = 1 - title_selection;
+                if menu_step.up {
+                    title_selection = (title_selection + 2) % 3;
+                }
+                if menu_step.down {
+                    title_selection = (title_selection + 1) % 3;
                 }
                 if confirm {
                     consume = true;
-                    if title_selection == 1 {
-                        quit = true;
-                    } else {
-                        started = true;
-                        nav.reset();
-                        score.cue(0, settings.sound);
+                    score.cue(Cue::MenuConfirm as usize, settings.sound);
+                    match title_selection {
+                        2 => quit = true,
+                        1 => {
+                            paused = true;
+                            show_controls = false;
+                            selection = 0;
+                        }
+                        _ => {
+                            started = true;
+                            nav.reset();
+                        }
                     }
                 }
             }
         } else if game.state.atlas && back {
+            score.cue(Cue::MenuBack as usize, settings.sound);
             atlas_command = true;
             consume = true;
             nav.reset();
         } else if pause_press {
+            score.cue(Cue::MenuConfirm as usize, settings.sound);
+            show_controls = false;
             paused = true;
             selection = 0;
             consume = true;
             input.clear();
             nav.reset();
         } else if game.outcome() != "playing" && confirm {
+            score.cue(Cue::MenuConfirm as usize, settings.sound);
             if game.outcome() == "won" {
                 game.open_atlas();
             } else {
@@ -650,6 +795,7 @@ pub async fn run() -> Result<(), String> {
             }
             consume = true;
         } else if atlas_press {
+            score.cue(Cue::MenuConfirm as usize, settings.sound);
             atlas_command = true;
             consume = true;
             nav.reset();
@@ -660,7 +806,7 @@ pub async fn run() -> Result<(), String> {
             }
             println!(
                 "{}",
-                serde_json::json!({"client":"quit","tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"music_started":score.submitted,"music_downloads":score.downloads})
+                serde_json::json!({"client":"quit","tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"music_started":score.submitted,"music_downloads":score.downloads,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes})
             );
             break;
         }
@@ -722,6 +868,84 @@ pub async fn run() -> Result<(), String> {
         } else {
             input.clear();
         }
+        // Preparation has its own rendered frames. The public input/capture
+        // frame clock remains still, and no action is buffered into gameplay.
+        while !score.context_ready(&game, started) {
+            input.clear();
+            stepper.reset();
+            let preparing_presentation = Instant::now();
+            let mut loading_scene = Scene::default();
+            if started {
+                game.draw(&mut loading_scene);
+            } else {
+                game.draw_title_backdrop(&mut loading_scene, presentation_seconds);
+            }
+            loading_scene.rect(
+                300,
+                Rect::new(204, 178, 392, 78),
+                Color::new(0.03, 0.1, 0.14, 0.98),
+            );
+            Embertrail::draw_ui_text(
+                &mut loading_scene,
+                301,
+                "Kindling the trail…",
+                Rect::new(224, 194, 352, 46),
+                24.,
+                46,
+                GOLD,
+                true,
+            );
+            let presentation_ms = preparing_presentation.elapsed().as_secs_f64() * 1000.;
+            clear_background(BLACK);
+            let preparing_renderer = Instant::now();
+            loading_scene.draw(
+                Viewport::fit(800., 450., screen_width().max(1.), screen_height().max(1.)),
+                Point::default(),
+                &mut renderer,
+            )?;
+            let renderer_ms = preparing_renderer.elapsed().as_secs_f64() * 1000.;
+            next_frame().await;
+            let preparing_audio = Instant::now();
+            if let Some(message) = score.prepare_context(&game, started).await {
+                notice = message;
+                notice_time = 10.;
+            }
+            let audio_update_ms = preparing_audio.elapsed().as_secs_f64() * 1000.;
+            if profile.record(FrameSample {
+                frame,
+                dt_ms: f64::from(get_frame_time()) * 1000.,
+                gameplay: false,
+                preparing: true,
+                simulation_ms: 0.,
+                presentation_ms,
+                renderer_ms,
+                audio_update_ms,
+                save_ms: 0.,
+                cpu_ms: presentation_ms + renderer_ms + audio_update_ms,
+                sprite_cache_misses: Embertrail::presentation_asset_misses() - sprite_misses_before,
+            }) {
+                break 'client;
+            }
+            if is_quit_requested() {
+                break 'client;
+            }
+            if score.context_ready(&game, started) {
+                // Consume the final decoding interval while the preparation
+                // card is still visible. The next interactive frame must not
+                // count that work as elapsed simulation time.
+                clear_background(BLACK);
+                loading_scene.draw(
+                    Viewport::fit(800., 450., screen_width().max(1.), screen_height().max(1.)),
+                    Point::default(),
+                    &mut renderer,
+                )?;
+                next_frame().await;
+                input.clear();
+                stepper.reset();
+            }
+            frame_clock = Instant::now();
+        }
+        let simulation_clock = Instant::now();
         let ticks = if verify && started {
             60
         } else {
@@ -753,10 +977,12 @@ pub async fn run() -> Result<(), String> {
             }
             game.step(&intent);
         }
+        let simulation_ms = simulation_clock.elapsed().as_secs_f64() * 1000.;
+        let audio_clock = Instant::now();
         for cue in game.take_cues() {
             score.cue(cue, settings.sound);
         }
-        let wanted = score.wanted(&game, started);
+        let wanted = layout_track.unwrap_or_else(|| score.wanted(&game, started));
         if let Some(message) = score
             .update(wanted, settings.music, paused, focused, dt)
             .await
@@ -764,6 +990,8 @@ pub async fn run() -> Result<(), String> {
             notice = message;
             notice_time = 12.;
         }
+        let audio_update_ms = audio_clock.elapsed().as_secs_f64() * 1000.;
+        let save_started = Instant::now();
         save_clock += dt;
         if persist && started && game.tick() > 0 && (save_clock >= 1. || paused) {
             save_clock = 0.;
@@ -776,24 +1004,21 @@ pub async fn run() -> Result<(), String> {
                 saved_hash = Some(hash);
             }
         }
+        let save_ms = save_started.elapsed().as_secs_f64() * 1000.;
+        let presentation_clock = Instant::now();
         let mut scene = Scene::default();
         let playing = score.now_playing(wanted);
         if !started {
             game.draw_title_backdrop(&mut scene, presentation_seconds);
             if !paused {
-                title(
-                    &mut scene,
-                    &game,
-                    title_selection,
-                    score.title(playing),
-                    &font,
-                    presentation_seconds,
-                );
+                title(&mut scene, &game, title_selection, presentation_seconds);
             }
         } else {
             game.draw(&mut scene);
         }
-        if paused {
+        if paused && show_controls {
+            controls(&mut scene);
+        } else if paused {
             pause(
                 &mut scene,
                 started,
@@ -808,42 +1033,91 @@ pub async fn run() -> Result<(), String> {
         }
         if notice_time > 0. && !notice.is_empty() {
             notice_time -= dt;
-            scene.rect(
-                220,
-                Rect::new(14, 423, 772, 22),
-                Color::new(0.04, 0.1, 0.13, 0.96),
-            );
-            // Full path goes to stdout; keep the actual in-game notice legible.
             let visible = if notice.starts_with("Saved WAV:") {
-                "Song saved in Downloads / Embertrail Soundtrack"
+                "Song saved to Downloads / Embertrail Soundtrack"
             } else {
                 &notice
             };
-            scene.text(221, visible, Point::new(24, 439), 18., GOLD);
+            let width = (Embertrail::ui_text_width(visible, 18.) + 28).clamp(260, 680);
+            let lines = Embertrail::ui_text_lines(visible, width - 28, 18.)
+                .len()
+                .min(2) as i32;
+            let height = lines * 24 + 20;
+            let bounds = if paused && !show_controls {
+                // A temporary status replaces the song header area rather
+                // than covering menu actions or their Back hint.
+                Rect::new(108, 74, 584, 76)
+            } else {
+                Rect::new((800 - width) / 2, 438 - height, width, height)
+            };
+            scene.rect(220, bounds, Color::new(0.04, 0.1, 0.13, 0.98));
+            Embertrail::draw_ui_text(
+                &mut scene,
+                221,
+                visible,
+                Rect::new(bounds.x + 14, bounds.y + 10, bounds.w - 28, bounds.h - 20),
+                18.,
+                24,
+                GOLD,
+                false,
+            );
         }
+        let presentation_ms = presentation_clock.elapsed().as_secs_f64() * 1000.;
         clear_background(BLACK);
+        let renderer_clock = Instant::now();
         let view = Viewport::fit(800., 450., screen_width().max(1.), screen_height().max(1.));
         scene.draw(view, Point::default(), &mut renderer)?;
+        let renderer_ms = renderer_clock.elapsed().as_secs_f64() * 1000.;
+        let profile_finished = profile.record(FrameSample {
+            frame,
+            dt_ms,
+            gameplay: started
+                && !paused
+                && !game.state.atlas
+                && focused
+                && game.outcome() == "playing",
+            preparing: false,
+            simulation_ms,
+            presentation_ms,
+            renderer_ms,
+            audio_update_ms,
+            save_ms,
+            cpu_ms: frame_clock.elapsed().as_secs_f64() * 1000.,
+            sprite_cache_misses: Embertrail::presentation_asset_misses() - sprite_misses_before,
+        });
+        let first_use_assets = Embertrail::take_presentation_asset_events();
+        if profile.enabled() && !first_use_assets.is_empty() {
+            println!(
+                "{}",
+                serde_json::json!({"first_use_presentation_assets":first_use_assets,"frame":frame})
+            );
+        }
         if let Some(plan) = &capture {
             if plan.wants(frame) {
                 let path = plan.path_for(frame);
                 get_screen_data().export_png(path.to_str().ok_or("Capture path must be UTF-8")?);
                 println!(
                     "{}",
-                    serde_json::json!({"frame":frame,"path":path,"paused":paused,"started":started,"track":score.title(playing),"next_track":score.title(wanted),"menu_selection":selection,"atlas":game.state.atlas,"course":game.state.course,"x":game.player().x,"y":game.player().y,"vy":game.state.vy,"music_started":score.submitted,"visual_fixture":showcase})
+                    serde_json::json!({"frame":frame,"path":path,"paused":paused,"started":started,"track":score.title(playing),"next_track":score.title(wanted),"menu_selection":selection,"atlas":game.state.atlas,"course":game.state.course,"x":game.player().x,"y":game.player().y,"vy":game.state.vy,"music_started":score.submitted,"visual_fixture":showcase,"controls_page":show_controls,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes})
                 );
             }
         }
         if capture.as_ref().is_some_and(|c| c.finished(frame))
             || verify && verification_tick >= Embertrail::VERIFY_TICKS
+            || profile_finished
         {
             println!(
                 "{}",
-                serde_json::json!({"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"music_started":score.submitted,"music_downloads":score.downloads})
+                serde_json::json!({"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome(),"music_started":score.submitted,"music_downloads":score.downloads,"effects_submitted":score.effects_submitted,"effect_counts":score.effect_counts,"last_effect":score.last_effect,"decode_count":score.decode_count,"last_decode_ms":score.last_decode_ms,"max_decode_ms":score.max_decode_ms,"decoded_tracks":score.decoded_tracks,"max_decoded_tracks":score.max_decoded_tracks,"decoded_pcm_bytes":score.decoded_pcm_bytes,"max_decoded_pcm_bytes":score.max_decoded_pcm_bytes})
             );
             break;
         }
         next_frame().await;
     }
+    if let Some(summary) = profile.summary() {
+        println!("{summary}");
+    }
+    score.shutdown();
+    Embertrail::release_presentation_assets();
     Ok(())
 }

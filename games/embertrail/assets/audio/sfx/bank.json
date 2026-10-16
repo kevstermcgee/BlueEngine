@@ -1,0 +1,364 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {
+    "spark-pickup": [
+      {
+        "file": "spark-pickup-1.wav",
+        "checksum": "4974efe3176507c4",
+        "frames": 7497,
+        "peak": 0.629974365234375,
+        "rms": 0.21776150965812427,
+        "dc": 6.826461053171268e-06,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "spark-pickup-2.wav",
+        "checksum": "39f11ce7f98aab6d",
+        "frames": 7497,
+        "peak": 0.629974365234375,
+        "rms": 0.2227085864403826,
+        "dc": 2.124059259120315e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "shard-pickup": [
+      {
+        "file": "shard-pickup-1.wav",
+        "checksum": "7ec78d7312707897",
+        "frames": 22050,
+        "peak": 0.629974365234375,
+        "rms": 0.14170854472859395,
+        "dc": 2.3099246208900225e-06,
+        "seam_jump": 0.0
+      }
+    ],
+    "bloom-unfurl": [
+      {
+        "file": "bloom-unfurl-1.wav",
+        "checksum": "ab58e0b04c22aa0e",
+        "frames": 26460,
+        "peak": 0.629974365234375,
+        "rms": 0.11865327639400841,
+        "dc": 4.53726955191799e-06,
+        "seam_jump": 0.0
+      }
+    ],
+    "ember-ignite": [
+      {
+        "file": "ember-ignite-1.wav",
+        "checksum": "d4872bba20d79ca2",
+        "frames": 19404,
+        "peak": 0.629974365234375,
+        "rms": 0.11491717661495615,
+        "dc": 5.455858509360184e-06,
+        "seam_jump": 0.0
+      }
+    ],
+    "invincibility-shimmer": [
+      {
+        "file": "invincibility-shimmer-1.wav",
+        "checksum": "ddacab6f66afdfcb",
+        "frames": 37485,
+        "peak": 0.629974365234375,
+        "rms": 0.13484402990329625,
+        "dc": 3.36804643732493e-06,
+        "seam_jump": 0.0
+      }
+    ],
+    "extra-life": [
+      {
+        "file": "extra-life-1.wav",
+        "checksum": "315ea88218096435",
+        "frames": 37044,
+        "peak": 0.629974365234375,
+        "rms": 0.16242056722221115,
+        "dc": 4.54418963766062e-06,
+        "seam_jump": 0.0
+      }
+    ],
+    "clay-break": [
+      {
+        "file": "clay-break-1.wav",
+        "checksum": "154db600d299d277",
+        "frames": 11907,
+        "peak": 0.629974365234375,
+        "rms": 0.07905778164425958,
+        "dc": 0.00016107140314652096,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "clay-break-2.wav",
+        "checksum": "254e8a71eb5adc18",
+        "frames": 11907,
+        "peak": 0.629974365234375,
+        "rms": 0.08896418543180282,
+        "dc": 0.00021671658150142773,
+        "seam_jump": 0.0
+      }
+    ],
+    "block-reveal": [
+      {
+        "file": "block-reveal-1.wav",
+        "checksum": "cddec5205457c4c7",
+        "frames": 12789,
+        "peak": 0.629974365234375,
+        "rms": 0.13848186765669304,
+        "dc": 0.00025113468407298264,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "block-reveal-2.wav",
+        "checksum": "c5e7e25476e73afb",
+        "frames": 12789,
+        "peak": 0.629974365234375,
+        "rms": 0.139435194016969,
+        "dc": 0.00026907679603809914,
+        "seam_jump": 0.0
+      }
+    ],
+    "checkpoint": [
+      {
+        "file": "checkpoint-1.wav",
+        "checksum": "c0870d26ac999ead",
+        "frames": 38808,
+        "peak": 0.629974365234375,
+        "rms": 0.1101361086032522,
+        "dc": 1.918908321496212e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "jump": [
+      {
+        "file": "jump-1.wav",
+        "checksum": "3ba353cd0f578116",
+        "frames": 6174,
+        "peak": 0.629974365234375,
+        "rms": 0.17169226306732877,
+        "dc": 0.0008851382815030774,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "jump-2.wav",
+        "checksum": "95e45b1b9a90183a",
+        "frames": 6174,
+        "peak": 0.629974365234375,
+        "rms": 0.16669096212253928,
+        "dc": 0.0008002980302984289,
+        "seam_jump": 0.0
+      }
+    ],
+    "spring": [
+      {
+        "file": "spring-1.wav",
+        "checksum": "5010f455fe8d69ff",
+        "frames": 20727,
+        "peak": 0.629974365234375,
+        "rms": 0.12700931978801802,
+        "dc": 8.27509742538416e-05,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "spring-2.wav",
+        "checksum": "832b98fa300220cf",
+        "frames": 20727,
+        "peak": 0.629974365234375,
+        "rms": 0.13110312969801008,
+        "dc": 0.00010730991684683626,
+        "seam_jump": 0.0
+      }
+    ],
+    "seed-cast": [
+      {
+        "file": "seed-cast-1.wav",
+        "checksum": "0dce86a2cd6b1d7a",
+        "frames": 7056,
+        "peak": 0.629974365234375,
+        "rms": 0.09842229378547615,
+        "dc": 0.0001164563929412911,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "seed-cast-2.wav",
+        "checksum": "126c0de1b7606af6",
+        "frames": 7056,
+        "peak": 0.629974365234375,
+        "rms": 0.11943131732805293,
+        "dc": 0.00012564713181822208,
+        "seam_jump": 0.0
+      }
+    ],
+    "enemy-bounce": [
+      {
+        "file": "enemy-bounce-1.wav",
+        "checksum": "2bf975bdaa07916a",
+        "frames": 10143,
+        "peak": 0.629974365234375,
+        "rms": 0.13549075614185274,
+        "dc": 0.0005762114699253796,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "enemy-bounce-2.wav",
+        "checksum": "c286be5c2d27e4f6",
+        "frames": 10143,
+        "peak": 0.629974365234375,
+        "rms": 0.13783354440276313,
+        "dc": 0.0005753329199093587,
+        "seam_jump": 0.0
+      }
+    ],
+    "shell-kick": [
+      {
+        "file": "shell-kick-1.wav",
+        "checksum": "0555403497cbdeae",
+        "frames": 9261,
+        "peak": 0.629974365234375,
+        "rms": 0.16536326453579916,
+        "dc": 1.075908569032772e-05,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "shell-kick-2.wav",
+        "checksum": "8f6b3923f6199860",
+        "frames": 9261,
+        "peak": 0.629974365234375,
+        "rms": 0.13581458791462722,
+        "dc": 2.2447440037522947e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "boss-hit": [
+      {
+        "file": "boss-hit-1.wav",
+        "checksum": "58544105f1177acb",
+        "frames": 21609,
+        "peak": 0.629974365234375,
+        "rms": 0.07062664395227822,
+        "dc": 0.00016962683643823175,
+        "seam_jump": 0.0
+      },
+      {
+        "file": "boss-hit-2.wav",
+        "checksum": "dc80023763fa7ba0",
+        "frames": 21609,
+        "peak": 0.629974365234375,
+        "rms": 0.07855524870428629,
+        "dc": 0.00018023716382279954,
+        "seam_jump": 0.0
+      }
+    ],
+    "guardian-freed": [
+      {
+        "file": "guardian-freed-1.wav",
+        "checksum": "b76bec2e3f72ef98",
+        "frames": 54684,
+        "peak": 0.629974365234375,
+        "rms": 0.12290220803955285,
+        "dc": 8.700333607065138e-07,
+        "seam_jump": 0.0
+      }
+    ],
+    "hurt": [
+      {
+        "file": "hurt-1.wav",
+        "checksum": "28ed54bd7794b8b6",
+        "frames": 15435,
+        "peak": 0.629974365234375,
+        "rms": 0.1313734562290039,
+        "dc": 5.042369905551506e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "death": [
+      {
+        "file": "death-1.wav",
+        "checksum": "4fd8042cf8d783b2",
+        "frames": 34398,
+        "peak": 0.629974365234375,
+        "rms": 0.12650083579809712,
+        "dc": 6.127026172715347e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "grotto-enter": [
+      {
+        "file": "grotto-enter-1.wav",
+        "checksum": "0e4a11507b32550d",
+        "frames": 24255,
+        "peak": 0.629974365234375,
+        "rms": 0.13127862411056768,
+        "dc": 6.034188947832921e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "grotto-exit": [
+      {
+        "file": "grotto-exit-1.wav",
+        "checksum": "71d7d335b98d864b",
+        "frames": 24255,
+        "peak": 0.629974365234375,
+        "rms": 0.12971334662562428,
+        "dc": 0.0001124916556347918,
+        "seam_jump": 0.0
+      }
+    ],
+    "menu-confirm": [
+      {
+        "file": "menu-confirm-1.wav",
+        "checksum": "8ec489f9a248c639",
+        "frames": 4410,
+        "peak": 0.629974365234375,
+        "rms": 0.2059653102305857,
+        "dc": 4.900804722930839e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "course-clear": [
+      {
+        "file": "course-clear-1.wav",
+        "checksum": "c5ad650ce531282e",
+        "frames": 50715,
+        "peak": 0.629974365234375,
+        "rms": 0.12320927512533951,
+        "dc": 2.511690251281672e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "homecoming": [
+      {
+        "file": "homecoming-1.wav",
+        "checksum": "96b2601ecd4e7159",
+        "frames": 75852,
+        "peak": 0.629974365234375,
+        "rms": 0.11467459698030485,
+        "dc": 2.1875115227474226e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "menu-navigate": [
+      {
+        "file": "menu-navigate-1.wav",
+        "checksum": "d8bcbf8817824133",
+        "frames": 2426,
+        "peak": 0.629974365234375,
+        "rms": 0.23946556923774906,
+        "dc": 5.038042060619332e-05,
+        "seam_jump": 0.0
+      }
+    ],
+    "menu-back": [
+      {
+        "file": "menu-back-1.wav",
+        "checksum": "e26efd2624f682e2",
+        "frames": 5733,
+        "peak": 0.629974365234375,
+        "rms": 0.1930413768159876,
+        "dc": 0.0004585674664497209,
+        "seam_jump": 0.0
+      }
+    ]
+  },
+  "music": {},
+  "music_scale": 1.0
+}

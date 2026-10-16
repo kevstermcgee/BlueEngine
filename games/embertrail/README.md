@@ -22,9 +22,9 @@ The game is designed for a standard PC controller. [Windows release downloads](h
 | Stick / D-pad, A, B | Arrows, Enter, Esc | Navigate menus, confirm, go back |
 | — | F | Fullscreen |
 
-Up/W never jumps and does not change jump height. Jump buffering and coyote time make close landings and ledge takeoffs forgiving. Ice preserves a distinct feel with controllable braking.
+Up/W never jumps and does not change jump height. Jump buffering and coyote time make close landings and ledge takeoffs forgiving. Releasing the stick brakes promptly both on the ground and in the air, while retaining the full running jump range. Frostbloom's surface ice has its own traction; its warm underground rooms use ordinary traction.
 
-Pause offers Resume, Trail atlas, Restart checkpoint, Restart course, Music, Sound effects, Download this song, Return to title, and Quit game. Menu / Esc also opens options on the title screen, including its current song download; B / Esc returns to the title while that song keeps playing. Confirming a menu action consumes the input. Normal play saves automatically through BlueEngine storage. Existing campaign progress migrates to version 2; an older saved course restarts at its entrance because course geometry and movement have changed. Player files remain outside the install directory.
+Pause offers Resume, Trail atlas, Controls, Restart checkpoint, Restart course, Music, Sound effects, Download this song, Return to title, and Quit game. Controls are available when requested, without a permanent bar over the game. Menu / Esc also opens options on the title screen, including its current song download; B / Esc returns to the title while that song keeps playing. Confirming a menu action consumes the input. Normal play saves automatically through BlueEngine storage. Version 3 preserves version 2 campaign progress and surface discoveries while replacing the old underground room; a save inside that room resumes at the new room entrance. Version 1 saves preserve campaign discoveries and restart the loaded course at its entrance. Player files remain outside the install directory.
 
 ## The islands
 
@@ -32,13 +32,17 @@ Collect sparks for extra lights and seek three optional moon shards in each cour
 
 Open hollow-root stairways reveal the direction of travel through their dark opening, brass handrail, descending treads, and spark trail. Hold Down while standing in the entrance. No explanatory secret label is needed.
 
+Each course has its own underground route. Eight regional designs include a stepped root well, crystal waterways, working copper pumps, warm spring pads beneath the frozen orchard, a glass reliquary, cloudseed cisterns, a thorn nursery, and the citadel's gear lifts. Four course variants change the geometry and timing within each region. Seek the upper lantern reward and follow the far stairs back out; the entrance stairs also provide a safe return.
+
 Dewmane, Chimeback, Brack, Rimehart, Solarch, Tempest, the Briar Matron, and Vesper have different attack patterns. Watch the wind-up, evade the attack, and strike the exposed mint collar during recovery. A fresh Bloom Lantern and checkpoint sit before each arena. Freed guardians stop attacking and open the dawn gate.
 
 ## Original soundtrack
 
 Sixteen named, multi-section compositions provide approximately nineteen minutes of original music. Each composition lasts 61–86 seconds, with distinct phrases, harmony, rhythmic grids, instrumentation, and contrasting sections. Worlds, root grottos, guardian encounters, Vesper, the title, and homecoming have appropriate musical contexts.
 
-The pause menu displays the composition actually playing. Choose **Download this song** while it plays to save its exact WAV in **Downloads / Embertrail Soundtrack**. Pausing keeps its playback position. Context transitions crossfade, retaining only the current and fading previous decoded compositions.
+The pause menu displays the composition actually playing. Choose **Download this song** while it plays to save its exact WAV in **Downloads / Embertrail Soundtrack**. Pausing keeps its playback position. A loading transition prepares the course's world, grotto and applicable guardian tracks before play. Context changes crossfade between prepared tracks; the bounded cache holds at most four decoded compositions, including a fading previous track. Enemy sprites and common UI glyphs are also prepared before play so their first appearance does not decode an image during platforming.
+
+Thirty-four original interaction recordings cover 25 semantic sound families: clay cracks, wooden knocks, spring coils, descending root passages, lantern growth, seed casts, shell kicks, guardian impacts, checkpoints, and menu actions have their own sounds. Short movement cues use quiet variants and cooldowns; a four-voice budget gives important events priority.
 
 | Context | Composition |
 | --- | --- |
@@ -69,8 +73,10 @@ cargo clippy --locked --all-targets -- -D warnings
 cargo run --no-default-features --example route_probe -- 3 600
 ```
 
-`src/lib.rs` owns deterministic 60 Hz rules, `src/levels.rs` the authored courses, `src/story.rs` the short encounters, and `src/art.rs` the read-only presentation. `src/game_client.rs` uses engine input, timing, renderer, and checksummed snapshot storage. `src/soundtrack.rs` manages contextual checked audio and downloads. `scripts/make_world_art.py` regenerates pixel assets; `scripts/compose_soundtrack.py` and `scripts/render_score.c` author the score. Do not run the obsolete combined `make_art.py` generator over the new assets.
+`src/lib.rs` owns deterministic 60 Hz rules, `src/levels.rs` the authored courses, `src/story.rs` the short encounters, and `src/art.rs` the read-only presentation. `src/game_client.rs` uses engine input, timing, renderer, and checksummed snapshot storage. `src/soundtrack.rs` manages contextual checked audio and downloads; `src/cues.rs` names interaction events. `scripts/make_world_art.py` regenerates pixel assets; `scripts/compose_soundtrack.py` and `scripts/render_score.c` author the score; `scripts/compose_interactions.py` regenerates the checked interaction bank. Do not run the obsolete combined `make_art.py` generator over the new assets.
 
 The tests cover rule behavior, all boss phases, independent inputs, exact continuation, versioned migration, secrets, checkpoints, controller Atlas navigation, and real-input traversal constraints. The development route search and its independent replay prove isolated-course reachability; [examples/README.md](examples/README.md) explains that scope. Native window input checks and visual captures are separate from deterministic tests. Physical controller feel and speaker playback require device review.
+
+For native timing evidence, `--profile-frames N` reports frame intervals and CPU work by category, first-use sprite cache misses, audio preparation and cache counts. Use an isolated `BLUEENGINE_DATA_DIR` and omit `--capture` to include real autosaves. Software-rendered timing is evidence about that process, not a physical display or controller latency measurement.
 
 Windows delivery requires `python scripts/ship.py ship`, Inno Setup 6 compiling `scripts/installer.iss`, and `scripts/test-installer.ps1`. The update workflow checks the x64 GUI executable, complete package, shortcut, isolated graphical launch, installer upgrades, and save-preserving uninstall. Only a verified Windows installer is suitable for publication.

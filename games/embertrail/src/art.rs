@@ -17,6 +17,108 @@ fn alpha(n: u32, a: f32) -> Color {
 const PAPER: u32 = 0xf7edcc;
 const GOLDEN: u32 = 0xf3c777;
 const MINT: u32 = 0xa6e7c8;
+thread_local! {
+    static UI_FONT: std::cell::RefCell<Option<macroquad::prelude::Font>> = const { std::cell::RefCell::new(None) };
+    static SPRITE_MISSES: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+    static SPRITE_EVENTS: std::cell::RefCell<Vec<&'static str>> = const { std::cell::RefCell::new(Vec::new()) };
+    static SPRITE_TEXTURES: std::cell::RefCell<std::collections::BTreeMap<&'static str,Texture2D>> = const { std::cell::RefCell::new(std::collections::BTreeMap::new()) };
+}
+fn text_metrics(value: &str, size: f32) -> (i32, i32, i32) {
+    use macroquad::prelude::*;
+    let scale = (screen_width() / 800.)
+        .min(screen_height() / 450.)
+        .max(0.01);
+    let pixels = (size * scale).round().clamp(1., u16::MAX as f32) as u16;
+    UI_FONT.with(|slot| {
+        let mut font = slot.borrow_mut();
+        let font = font.get_or_insert_with(|| {
+            load_ttf_font_from_bytes(include_bytes!("../assets/fonts/DejaVuSans.ttf"))
+                .expect("The bundled interface font is valid")
+        });
+        let measured = measure_text(value, Some(font), pixels, 1.);
+        (
+            (measured.width / scale).ceil() as i32,
+            (measured.height / scale).ceil() as i32,
+            (measured.offset_y / scale).ceil() as i32,
+        )
+    })
+}
+fn text_lines(value: &str, width: i32, size: f32) -> Vec<String> {
+    let mut result = Vec::new();
+    for paragraph in value.split('\n') {
+        let mut line = String::new();
+        for word in paragraph.split_whitespace() {
+            let candidate = if line.is_empty() {
+                word.into()
+            } else {
+                format!("{line} {word}")
+            };
+            if text_metrics(&candidate, size).0 <= width {
+                line = candidate;
+                continue;
+            }
+            if !line.is_empty() {
+                result.push(std::mem::take(&mut line));
+            }
+            if text_metrics(word, size).0 <= width {
+                line = word.to_owned();
+                continue;
+            }
+            // Filenames and error paths may contain no spaces. Split them by
+            // measured glyphs rather than letting a single word escape its box.
+            for ch in word.chars() {
+                let mut candidate = line.clone();
+                candidate.push(ch);
+                if !line.is_empty() && text_metrics(&candidate, size).0 > width {
+                    result.push(std::mem::take(&mut line));
+                }
+                line.push(ch);
+            }
+        }
+        result.push(line);
+    }
+    result
+}
+#[allow(clippy::too_many_arguments)]
+fn text_box(
+    s: &mut Scene,
+    layer: i32,
+    value: &str,
+    bounds: Rect,
+    size: f32,
+    line_height: i32,
+    color: Color,
+    centered: bool,
+) {
+    if bounds.w <= 3 || bounds.h < line_height {
+        return;
+    }
+    let mut lines = text_lines(value, bounds.w, size);
+    let max_lines = (bounds.h / line_height) as usize;
+    if lines.len() > max_lines {
+        lines.truncate(max_lines);
+        let last = lines.last_mut().unwrap();
+        while !last.is_empty() && text_metrics(&format!("{last}…"), size).0 > bounds.w {
+            last.pop();
+        }
+        last.push('…');
+    }
+    let (_, glyph_height, ascent) = text_metrics("Ag", size);
+    let baseline = bounds.y + ascent + (line_height - glyph_height).max(0) / 2;
+    for (row, line) in lines.iter().enumerate() {
+        let width = text_metrics(line, size).0;
+        let x = bounds.x + if centered { (bounds.w - width) / 2 } else { 0 };
+        let y = baseline + row as i32 * line_height;
+        s.text(
+            layer,
+            line,
+            Point::new(x + 1, y + 1),
+            size,
+            alpha(0x061b25, 0.9),
+        );
+        s.text(layer + 1, line, Point::new(x, y), size, color);
+    }
+}
 // Stable cell hashes keep scenery attached to its place in the world. Camera
 // movement only changes projection; it never chooses a new tree or rock shape.
 fn cell_seed(cell: i32, salt: u32) -> u32 {
@@ -64,12 +166,11 @@ fn sprite(
     h: f32,
     color: Color,
 ) {
-    use std::cell::RefCell;
-    use std::collections::BTreeMap;
-    thread_local! {static TEXTURES: RefCell<BTreeMap<&'static str,Texture2D>>=const { RefCell::new(BTreeMap::new()) };}
-    TEXTURES.with(|textures| {
+    SPRITE_TEXTURES.with(|textures| {
         let mut textures = textures.borrow_mut();
         let texture = textures.entry(id).or_insert_with(|| {
+            SPRITE_MISSES.with(|count| count.set(count.get() + 1));
+            SPRITE_EVENTS.with(|events| events.borrow_mut().push(id));
             let texture =
                 Texture2D::from_file_with_format(data, Some(macroquad::prelude::ImageFormat::Png));
             texture.set_filter(macroquad::prelude::FilterMode::Nearest);
@@ -212,6 +313,89 @@ fn home(s: &mut Scene, x: i32, y: i32, restored: bool) {
     }
 }
 impl Embertrail {
+    pub fn release_presentation_assets() {
+        // GPU handles must be released while Macroquad's context still exists,
+        // rather than from thread-local destructors after the native window ends.
+        SPRITE_TEXTURES.with(|textures| textures.borrow_mut().clear());
+        UI_FONT.with(|font| *font.borrow_mut() = None);
+    }
+    pub fn presentation_asset_misses() -> u32 {
+        SPRITE_MISSES.with(|count| count.get())
+    }
+    pub fn take_presentation_asset_events() -> Vec<&'static str> {
+        SPRITE_EVENTS.with(|events| std::mem::take(&mut *events.borrow_mut()))
+    }
+    pub fn prewarm_presentation_assets() {
+        let assets: &[(&str, &[u8])] = &[
+            ("mote0", include_bytes!("../assets/sprites/mote0.png")),
+            ("mote1", include_bytes!("../assets/sprites/mote1.png")),
+            ("mote2", include_bytes!("../assets/sprites/mote2.png")),
+            ("mote3", include_bytes!("../assets/sprites/mote3.png")),
+            (
+                "mote_left0",
+                include_bytes!("../assets/sprites/mote_left0.png"),
+            ),
+            (
+                "mote_left1",
+                include_bytes!("../assets/sprites/mote_left1.png"),
+            ),
+            (
+                "mote_left2",
+                include_bytes!("../assets/sprites/mote_left2.png"),
+            ),
+            (
+                "mote_left3",
+                include_bytes!("../assets/sprites/mote_left3.png"),
+            ),
+            ("mite", include_bytes!("../assets/sprites/mite.png")),
+            ("beetle", include_bytes!("../assets/sprites/beetle.png")),
+            ("shell", include_bytes!("../assets/sprites/shell.png")),
+            ("wisp", include_bytes!("../assets/sprites/wisp.png")),
+            ("thorn", include_bytes!("../assets/sprites/thorn.png")),
+            ("villager", include_bytes!("../assets/sprites/villager.png")),
+            ("dewmane", include_bytes!("../assets/sprites/boss0.png")),
+            ("chimeback", include_bytes!("../assets/sprites/boss1.png")),
+            ("brack", include_bytes!("../assets/sprites/boss2.png")),
+            ("rimehart", include_bytes!("../assets/sprites/boss3.png")),
+            ("solarch", include_bytes!("../assets/sprites/boss4.png")),
+            ("tempest", include_bytes!("../assets/sprites/boss5.png")),
+            (
+                "briar_matron",
+                include_bytes!("../assets/sprites/boss6.png"),
+            ),
+            ("vesper", include_bytes!("../assets/sprites/boss7.png")),
+        ];
+        let mut scratch = Scene::default();
+        for &(id, data) in assets {
+            sprite(&mut scratch, -1000, id, data, -1000, -1000, 1., 1., WHITE);
+        }
+        let glyphs = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~…—×";
+        for size in [16., 17., 18., 20., 21., 22., 24., 28., 30., 32., 48.] {
+            text_metrics(glyphs, size);
+        }
+    }
+    pub fn set_ui_font(font: macroquad::prelude::Font) {
+        UI_FONT.with(|slot| *slot.borrow_mut() = Some(font));
+    }
+    pub fn ui_text_width(value: &str, size: f32) -> i32 {
+        text_metrics(value, size).0
+    }
+    pub fn ui_text_lines(value: &str, width: i32, size: f32) -> Vec<String> {
+        text_lines(value, width, size)
+    }
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_ui_text(
+        s: &mut Scene,
+        layer: i32,
+        value: &str,
+        bounds: Rect,
+        size: f32,
+        line_height: i32,
+        color: Color,
+        centered: bool,
+    ) {
+        text_box(s, layer, value, bounds, size, line_height, color, centered);
+    }
     /// A living view of the village for the title. Wall time only animates
     /// presentation; opening a menu never advances rules, timers or story.
     pub fn draw_title_backdrop(&self, s: &mut Scene, seconds: f32) {
@@ -344,8 +528,303 @@ impl Embertrail {
             star(s, 26, x, y, 1, alpha(GOLDEN, a));
         }
     }
+    fn grotto_palette(&self) -> [u32; 8] {
+        let world = self.state.level.grotto.archetype as usize;
+        [
+            [
+                0x182c32, 0x426058, 0x304841, 0x263d36, 0xbbc58c, 0x374d40, 0x718568, 0xffd28d,
+            ],
+            [
+                0x151f36, 0x3e5368, 0x303d59, 0x243346, 0xa7cad5, 0x313d51, 0x617f96, 0xbcefee,
+            ],
+            [
+                0x202f34, 0x5f6357, 0x3d514c, 0x2c3e3e, 0xddbc84, 0x454b43, 0x8f8c70, 0xffbd7e,
+            ],
+            [
+                0x1c3447, 0x5d8190, 0x3c596b, 0x2f4d5b, 0xd3e8d8, 0x3a5660, 0x8caeb5, 0xffd79c,
+            ],
+            [
+                0x352d3f, 0x936c65, 0x654950, 0x473d4c, 0xf0ce99, 0x5c4848, 0xa38a76, 0xffdf9d,
+            ],
+            [
+                0x193442, 0x54818a, 0x355963, 0x294953, 0xc8e5d0, 0x35565e, 0x83adb1, 0xd4fff0,
+            ],
+            [
+                0x292b3f, 0x70596d, 0x484052, 0x343949, 0xc5a7a4, 0x45414a, 0x866c7e, 0xf3b4b5,
+            ],
+            [
+                0x20263b, 0x5d536a, 0x3c394e, 0x2d3045, 0xc5ac9e, 0x3b3b4a, 0x817789, 0xffc28a,
+            ],
+        ][world]
+    }
+    fn grotto_background(&self, s: &mut Scene, p: [u32; 8]) {
+        let st = &self.state;
+        let room = &st.level.grotto;
+        let world = room.archetype as usize;
+        let variant = u32::from(room.variant);
+        let local_cam = st.camera - room.bounds.x;
+        s.rect(-100, Rect::new(0, 0, 800, 450), rgb(p[0]));
+        for band in 0..24 {
+            let a = band as f32 / 23.;
+            let top = rgb(p[0]);
+            let bottom = rgb(p[1]);
+            s.rect(
+                -99,
+                Rect::new(0, 48 + band * 17, 800, 18),
+                Color::new(
+                    top.r * (1. - a) + bottom.r * a,
+                    top.g * (1. - a) + bottom.g * a,
+                    top.b * (1. - a) + bottom.b * a,
+                    1.,
+                ),
+            );
+        }
+        // These chambers have their own spatial rhythm. Identity is local world
+        // geometry, so a camera pan never replaces a visible pipe, root or gear.
+        let spacing = [176, 192, 204, 184, 208, 196, 168, 222][world];
+        let start = (local_cam / 3).div_euclid(spacing) - 1;
+        for cell in start..=start + 6 {
+            let seed = cell_seed(cell, 211 + world as u32 * 37 + variant * 19);
+            let x = cell * spacing - local_cam / 3;
+            let depth = 95 + (seed % 90) as i32;
+            match world {
+                0 => {
+                    // A root stepwell: branching old timber and suspended seed lanterns.
+                    s.rect(-72, Rect::new(x + 40, 52, 24, 326), rgb(p[2]));
+                    s.rect(-71, Rect::new(x + 44, 52, 4, 290), alpha(p[4], 0.17));
+                    for (dx, y, w) in [(-16, 128, 85), (12, 219, 95), (-5, 305, 81)] {
+                        s.rect(-72, Rect::new(x + dx, y, w, 12), rgb(p[2]));
+                        s.rect(-71, Rect::new(x + dx + 5, y, 24, 2), alpha(p[4], 0.2));
+                    }
+                    s.rect(-68, Rect::new(x + 117, 58, 2, depth), rgb(p[3]));
+                    s.circle(-67, Point::new(x + 118, 58 + depth), 12., rgb(0x776f4c));
+                    s.circle(-66, Point::new(x + 118, 58 + depth), 7., rgb(p[7]));
+                    s.circle(
+                        -69,
+                        Point::new(x + 118, 58 + depth),
+                        31.,
+                        alpha(p[7], 0.055),
+                    );
+                }
+                1 => {
+                    // The echo waterway is cut by dark arches and mineral curtains.
+                    s.circle(-73, Point::new(x + 80, 192), 63., rgb(p[2]));
+                    s.rect(-73, Rect::new(x + 17, 190, 126, 187), rgb(p[2]));
+                    s.circle(-72, Point::new(x + 80, 192), 47., rgb(p[3]));
+                    s.rect(-72, Rect::new(x + 33, 190, 94, 187), rgb(p[3]));
+                    for n in 0..4 {
+                        s.rect(
+                            -69,
+                            Rect::new(x + 40 + n * 21, 54, 8, depth / 2 + n % 2 * 24),
+                            rgb(p[6]),
+                        );
+                        s.rect(
+                            -68,
+                            Rect::new(x + 42 + n * 21, 55, 2, depth / 2),
+                            alpha(p[7], 0.26),
+                        );
+                    }
+                    let drip = 90 + ((st.tick / 2 + seed) % 230) as i32;
+                    s.rect(-65, Rect::new(x + 93, drip, 2, 9), alpha(p[7], 0.5));
+                    s.rect(-66, Rect::new(x + 37, 326, 88, 2), alpha(p[7], 0.2));
+                }
+                2 => {
+                    // Copper pumps: oxidized pipes, turning flywheels and small pistons.
+                    for (dx, y, w, h) in [
+                        (16, 112, 150, 12),
+                        (24, 112, 12, 242),
+                        (145, 112, 12, 142),
+                        (33, 254, 122, 11),
+                    ] {
+                        s.rect(-72, Rect::new(x + dx, y, w, h), rgb(p[2]));
+                        s.rect(
+                            -71,
+                            Rect::new(x + dx + 2, y + 2, (w - 4).max(2), 2),
+                            alpha(p[7], 0.18),
+                        );
+                    }
+                    let cx = x + 89;
+                    let cy = 210;
+                    s.circle(-69, Point::new(cx, cy), 30., rgb(p[3]));
+                    s.circle(-68, Point::new(cx, cy), 25., rgb(p[6]));
+                    s.circle(-67, Point::new(cx, cy), 20., rgb(p[3]));
+                    for spoke in 0..6 {
+                        let angle = (st.tick as f32 * 0.012
+                            + spoke as f32 * std::f32::consts::TAU / 6.
+                            + variant as f32)
+                            .sin_cos();
+                        for step in (4..23).step_by(4) {
+                            s.rect(
+                                -66,
+                                Rect::new(
+                                    cx + (angle.0 * step as f32) as i32 - 1,
+                                    cy + (angle.1 * step as f32) as i32 - 1,
+                                    3,
+                                    3,
+                                ),
+                                rgb(p[6]),
+                            );
+                        }
+                    }
+                    let piston =
+                        (st.tick as f32 * 0.035 + cell as f32).sin().mul_add(7., 0.) as i32;
+                    s.rect(-65, Rect::new(x + 139, 286 + piston, 24, 12), rgb(p[6]));
+                    s.rect(-65, Rect::new(x + 148, 265, 5, 28 + piston), rgb(p[6]));
+                }
+                3 => {
+                    // Warm wells under the frost orchard: pale ice above, amber springs below.
+                    for n in 0..4 {
+                        s.rect(
+                            -73,
+                            Rect::new(x + n * 29, 55, 17, 37 + (seed % 31) as i32 + n * 13),
+                            rgb(p[2]),
+                        );
+                    }
+                    s.circle(-72, Point::new(x + 76, 345), 47., rgb(p[3]));
+                    s.rect(-71, Rect::new(x + 26, 337, 102, 6), alpha(p[7], 0.25));
+                    s.rect(-70, Rect::new(x + 43, 334, 68, 2), alpha(p[7], 0.4));
+                    for n in 0..3 {
+                        let rise = ((st.tick / 3 + n * 37 + seed) % 96) as i32;
+                        s.circle(
+                            -67,
+                            Point::new(x + 43 + n as i32 * 24, 327 - rise),
+                            9.,
+                            alpha(PAPER, 0.1 * (1. - rise as f32 / 96.)),
+                        );
+                    }
+                }
+                4 => {
+                    // Sunglass reliquaries: carved pillars and small windows catching warm light.
+                    s.rect(-73, Rect::new(x + 35, 58, 26, 308), rgb(p[2]));
+                    s.rect(-72, Rect::new(x + 25, 72, 47, 10), rgb(p[6]));
+                    s.rect(-72, Rect::new(x + 25, 350, 47, 13), rgb(p[6]));
+                    s.rect(-71, Rect::new(x + 42, 86, 3, 256), alpha(p[7], 0.16));
+                    for tier in 0..5 {
+                        s.rect(
+                            -73,
+                            Rect::new(x + 95 + tier * 5, 97 + tier * 8, 71 - tier * 10, 9),
+                            rgb(p[2]),
+                        );
+                    }
+                    s.rect(-72, Rect::new(x + 114, 122, 29, 57), rgb(p[3]));
+                    star(s, -69, x + 128, 148, 11, alpha(p[7], 0.55));
+                    for beam in 0..3 {
+                        s.rect(
+                            -70,
+                            Rect::new(x + 111 + beam * 11, 174, 5, 190),
+                            alpha(p[7], 0.035),
+                        );
+                    }
+                }
+                5 => {
+                    // Cloud cisterns: hanging tanks, chains and water disappearing into deep gaps.
+                    s.circle(-73, Point::new(x + 79, 160), 50., rgb(p[2]));
+                    s.rect(-73, Rect::new(x + 29, 154, 100, 105), rgb(p[2]));
+                    s.rect(-72, Rect::new(x + 35, 191, 88, 54), alpha(p[7], 0.08));
+                    for dx in [26, 126] {
+                        for y in (57..148).step_by(12) {
+                            s.rect(-69, Rect::new(x + dx, y, 4, 8), rgb(p[6]));
+                        }
+                    }
+                    s.rect(-70, Rect::new(x + 22, 252, 116, 8), rgb(p[6]));
+                    for n in 0..4 {
+                        let fall = 266 + ((st.tick * 2 + seed + n * 23) % 150) as i32;
+                        s.rect(
+                            -68,
+                            Rect::new(x + 54 + n as i32 * 15, fall, 2, 14),
+                            alpha(p[7], 0.25),
+                        );
+                    }
+                }
+                6 => {
+                    // A sheltered nursery: sleeping seed pods, old roots and pink sap lights.
+                    s.rect(-73, Rect::new(x + 24, 56, 9, 312), rgb(p[2]));
+                    s.rect(-72, Rect::new(x + 31, 127, 88, 6), rgb(p[2]));
+                    s.rect(
+                        -72,
+                        Rect::new(x + 113, 127, 3, 67 + (seed % 43) as i32),
+                        rgb(p[2]),
+                    );
+                    let py = 184 + (seed % 43) as i32;
+                    s.circle(-70, Point::new(x + 114, py), 22., rgb(p[3]));
+                    s.circle(-69, Point::new(x + 114, py), 15., rgb(p[6]));
+                    s.rect(-68, Rect::new(x + 109, py - 9, 3, 18), alpha(p[7], 0.45));
+                    for n in 0..3 {
+                        s.rect(
+                            -71,
+                            Rect::new(x + 49 + n * 13, 310 - n * 12, 4, 58 + n * 12),
+                            rgb(p[2]),
+                        );
+                        s.circle(
+                            -70,
+                            Point::new(x + 51 + n * 13, 310 - n * 12),
+                            7.,
+                            rgb(p[6]),
+                        );
+                    }
+                }
+                _ => {
+                    // The Regent's undercroft: counterweights and slow, chained clockwork.
+                    let cx = x + 94;
+                    let cy = 206;
+                    s.circle(-73, Point::new(cx, cy), 61., rgb(p[2]));
+                    s.circle(-72, Point::new(cx, cy), 48., rgb(p[3]));
+                    for spoke in 0..10 {
+                        let angle = (st.tick as f32 * 0.006
+                            + spoke as f32 * std::f32::consts::TAU / 10.
+                            + variant as f32)
+                            .sin_cos();
+                        for radius in (8..60).step_by(6) {
+                            s.rect(
+                                -71,
+                                Rect::new(
+                                    cx + (angle.0 * radius as f32) as i32 - 2,
+                                    cy + (angle.1 * radius as f32) as i32 - 2,
+                                    5,
+                                    5,
+                                ),
+                                rgb(p[6]),
+                            );
+                        }
+                    }
+                    s.circle(-70, Point::new(cx, cy), 11., rgb(p[7]));
+                    let weight_y = 150
+                        + (st.tick as f32 * 0.018 + cell as f32)
+                            .sin()
+                            .mul_add(17., 0.) as i32;
+                    for y in (57..weight_y).step_by(11) {
+                        s.rect(-69, Rect::new(x + 188, y, 4, 7), rgb(p[6]));
+                    }
+                    s.rect(-68, Rect::new(x + 175, weight_y, 28, 47), rgb(p[2]));
+                    s.rect(
+                        -67,
+                        Rect::new(x + 180, weight_y + 4, 4, 38),
+                        alpha(p[7], 0.25),
+                    );
+                }
+            }
+        }
+        // Course variants have different little skylight patterns and mote trails.
+        for n in 0..15 {
+            let seed = cell_seed(n, world as u32 * 19 + variant * 31 + 81);
+            let x = (seed % 850) as i32 - 25 - local_cam / 2;
+            let y = 82 + ((seed / 850 + st.tick / 9) % 260) as i32;
+            s.rect(-45, Rect::new(x, y, 2, 2), alpha(p[7], 0.24));
+        }
+        let reward = room.reward;
+        if !self.grotto_reward_collected() {
+            let x = reward.x - st.camera + reward.w / 2;
+            let y = reward.y + reward.h / 2;
+            s.circle(-41, Point::new(x, y), 32., alpha(p[7], 0.08));
+            s.circle(-40, Point::new(x, y), 19., alpha(p[7], 0.06));
+        }
+    }
     fn background(&self, s: &mut Scene, p: [u32; 8]) {
         let st = &self.state;
+        if st.secret_inside {
+            self.grotto_background(s, p);
+            return;
+        }
         let cam = if st.won { 0 } else { st.camera };
         let world = if st.won { 0 } else { st.course / 4 };
         s.rect(-100, Rect::new(0, 0, 800, 450), rgb(p[0]));
@@ -651,20 +1130,6 @@ impl Embertrail {
                 alpha(c, 0.3),
             );
         }
-        if st.secret_inside {
-            s.rect(-40, Rect::new(0, 40, 800, 410), alpha(0x102637, 0.85));
-            for cell in (cam / 3 / 104 - 2)..=(cam / 3 / 104 + 10) {
-                let x = cell * 104 - cam / 3;
-                let seed = cell_seed(cell, 83);
-                s.rect(
-                    -35,
-                    Rect::new(x, 40, 17, 60 + (seed % 70) as i32),
-                    rgb(0x304f56),
-                );
-                s.rect(-35, Rect::new(x + 35, 294, 11, 98), rgb(0x27434d));
-                star(s, -34, x + 40, 292, 4, alpha(MINT, 0.5));
-            }
-        }
     }
     fn world_art(&self, s: &mut Scene, p: [u32; 8]) {
         let st = &self.state;
@@ -689,10 +1154,19 @@ impl Embertrail {
                 );
                 if (self.player().x - self.npc_x()).abs() < 170 {
                     let name = story::NPC_NAMES[st.course / 4];
-                    let width = name.len() as i32 * 9 + 16;
+                    let width = text_metrics(name, 16.).0 + 18;
                     let left = (nx - width / 2 + 12).clamp(12, 788 - width);
                     s.rect(18, Rect::new(left, 296, width, 29), alpha(0x102733, 0.96));
-                    label(s, 19, name, left + 8, 318, 16., PAPER);
+                    text_box(
+                        s,
+                        19,
+                        name,
+                        Rect::new(left + 8, 299, width - 16, 23),
+                        16.,
+                        23,
+                        rgb(PAPER),
+                        false,
+                    );
                 }
             }
             // A chained bell hangs over each guardian's arena, rooted in the same architecture.
@@ -756,7 +1230,9 @@ impl Embertrail {
                         let root_h = 12 + (seed % 4) as i32 * 9;
                         s.rect(2, Rect::new(x + 9, r.y + 9, 2, root_h), alpha(p[4], 0.28));
                         s.rect(2, Rect::new(x + 11, r.y + 15, 6, 2), alpha(p[4], 0.19));
-                        if st.course / 4 != 7 {
+                        if st.course / 4 != 7
+                            && (!st.secret_inside || [0, 3, 6].contains(&(st.course / 4)))
+                        {
                             s.rect(3, Rect::new(x + 7, r.y - 3, 2, 4), rgb(p[4]));
                             s.rect(
                                 3,
@@ -805,6 +1281,31 @@ impl Embertrail {
                         Rect::new(r.x, r.y + r.h - 3, r.w, 3),
                         alpha(0x102b35, 0.3),
                     );
+                }
+                5 => {
+                    // Floor-flush bellows: a mint cap, visible coil, and rising
+                    // motes signal an automatic upward spring without a label.
+                    s.rect(5, Rect::new(r.x + 2, r.y - 1, r.w - 4, 5), rgb(0x243d45));
+                    for n in 0..3 {
+                        s.rect(
+                            6,
+                            Rect::new(r.x + 11 + n % 2 * 4, r.y - 4 - n * 4, 18, 3),
+                            rgb(0xd7b77a),
+                        );
+                    }
+                    s.rect(7, Rect::new(r.x + 2, r.y - 15, r.w - 4, 5), rgb(0x274c48));
+                    s.rect(8, Rect::new(r.x + 4, r.y - 15, r.w - 8, 3), rgb(MINT));
+                    for n in 0..2 {
+                        let rise = ((tick / 3 + n * 14) % 30) as i32;
+                        star(
+                            s,
+                            8,
+                            r.x + r.w / 2,
+                            r.y - 23 - rise,
+                            1,
+                            alpha(MINT, 0.5 * (1. - rise as f32 / 30.)),
+                        );
+                    }
                 }
                 2..=4 => {
                     let base = if t.kind == 3 {
@@ -873,6 +1374,38 @@ impl Embertrail {
         for h in &st.level.hazards {
             let x = h.x - cam;
             if x > 880 || x + h.w < -80 {
+                continue;
+            }
+            if st.secret_inside && st.level.grotto.archetype == 1 {
+                s.rect(7, Rect::new(x, h.y, h.w, h.h), rgb(0x405d79));
+                s.rect(8, Rect::new(x, h.y, h.w, 3), rgb(0x9fd9e2));
+                for n in 0..h.w / 16 {
+                    let pulse = (tick / 12 + n as u32) % 3;
+                    s.rect(
+                        9,
+                        Rect::new(x + n * 16 + 3, h.y - 2 - pulse as i32, 6, 2),
+                        rgb(0xd4f0e5),
+                    );
+                }
+                continue;
+            }
+            if st.secret_inside && [2, 7].contains(&st.level.grotto.archetype) {
+                s.rect(7, Rect::new(x, h.y, h.w, h.h), rgb(0x403940));
+                s.rect(8, Rect::new(x, h.y, h.w, 3), rgb(0xf5b17b));
+                for n in 0..h.w / 10 {
+                    s.rect(
+                        9,
+                        Rect::new(x + n * 10 + 3, h.y + 3, 3, h.h - 3),
+                        rgb(0xa06f63),
+                    );
+                    let rise = ((tick / 2 + n as u32 * 17) % 30) as i32;
+                    s.circle(
+                        8,
+                        Point::new(x + n * 10 + 4, h.y - rise),
+                        4.,
+                        alpha(0xffd6a9, 0.18 * (1. - rise as f32 / 30.)),
+                    );
+                }
                 continue;
             }
             // The Regent's curse grows as ivory-tipped briars, never loose metal spikes.
@@ -1078,8 +1611,22 @@ impl Embertrail {
                         }
                     }
                     if e.phase > 0 && !st.secret_inside {
-                        s.rect(45, Rect::new(120, 114, 560, 66), alpha(0x102733, 0.96));
-                        label(s, 46, story::BOSS_NAMES[world], 137, 139, 22., GOLDEN);
+                        let top = if st.banner_ticks > 0 {
+                            46 + 14 + text_lines(&st.banner, 748, 18.).len().min(3) as i32 * 24 + 8
+                        } else {
+                            74
+                        };
+                        s.rect(45, Rect::new(120, top, 560, 70), alpha(0x102733, 0.96));
+                        text_box(
+                            s,
+                            46,
+                            story::BOSS_NAMES[world],
+                            Rect::new(137, top + 8, 365, 28),
+                            22.,
+                            28,
+                            rgb(GOLDEN),
+                            false,
+                        );
                         let text = if open {
                             "Collar open"
                         } else if tell {
@@ -1087,12 +1634,30 @@ impl Embertrail {
                         } else {
                             "Keep moving"
                         };
-                        label(s, 46, text, 535, 139, 16., if open { MINT } else { PAPER });
-                        label(s, 46, story::BOSS_EPITHETS[world], 137, 164, 17., PAPER);
+                        text_box(
+                            s,
+                            46,
+                            text,
+                            Rect::new(520, top + 10, 145, 24),
+                            16.,
+                            24,
+                            rgb(if open { MINT } else { PAPER }),
+                            false,
+                        );
+                        text_box(
+                            s,
+                            46,
+                            story::BOSS_EPITHETS[world],
+                            Rect::new(137, top + 38, 400, 24),
+                            17.,
+                            24,
+                            rgb(PAPER),
+                            false,
+                        );
                         for n in 0..e.hp {
                             s.rect(
                                 47,
-                                Rect::new(551 + n as i32 * 16, 155, 11, 7),
+                                Rect::new(551 + n as i32 * 16, top + 44, 11, 7),
                                 rgb(if open { MINT } else { GOLDEN }),
                             );
                         }
@@ -1101,12 +1666,15 @@ impl Embertrail {
                 _ => (),
             }
         }
-        root_gate(s, st.level.secret.x - cam, 320, st.level.secret_used, tick);
         if st.secret_inside {
+            let entry = self.grotto_entry_gate();
+            root_gate(s, entry.x - cam, entry.y, true, tick);
             root_gate(s, st.level.secret_return.x - cam, 320, true, tick);
+        } else {
+            root_gate(s, st.level.secret.x - cam, 320, st.level.secret_used, tick);
         }
         let cp = st.level.checkpoint - cam;
-        if (-60..860).contains(&cp) {
+        if !st.secret_inside && (-60..860).contains(&cp) {
             s.rect(7, Rect::new(cp + 3, 274, 5, 94), rgb(p[6]));
             s.rect(8, Rect::new(cp - 5, 272, 22, 25), rgb(0x263b41));
             s.rect(
@@ -1119,7 +1687,7 @@ impl Embertrail {
             }
         }
         let gate = st.level.exit.x - cam;
-        if gate < 850 {
+        if !st.secret_inside && gate < 850 {
             let locked = st.level.enemies.iter().any(|e| e.active && e.kind == 4);
             s.rect(10, Rect::new(gate - 8, 264, 64, 104), rgb(0x294447));
             s.rect(11, Rect::new(gate - 4, 260, 56, 12), rgb(p[4]));
@@ -1158,10 +1726,19 @@ impl Embertrail {
                 if (-180..800).contains(&sx) {
                     s.rect(
                         19,
-                        Rect::new(sx - 8, y - 22, text.len() as i32 * 8 + 18, 29),
+                        Rect::new(sx - 8, y - 22, text_metrics(text, 16.).0 + 18, 29),
                         alpha(0x102733, 0.96),
                     );
-                    label(s, 20, text, sx, y, 16., c);
+                    text_box(
+                        s,
+                        20,
+                        text,
+                        Rect::new(sx, y - 20, text_metrics(text, 16.).0 + 2, 25),
+                        16.,
+                        25,
+                        rgb(c),
+                        false,
+                    );
                 }
             }
         }
@@ -1282,23 +1859,50 @@ impl Embertrail {
     fn hud(&self, s: &mut Scene) {
         let st = &self.state;
         let world = st.course / 4;
+        let compact = |n: u32| {
+            if n >= 1_000_000 {
+                format!("{:.1}m", n as f64 / 1_000_000.)
+            } else if n >= 10_000 {
+                format!("{}k", n / 1000)
+            } else {
+                format!("{n:03}")
+            }
+        };
         s.rect(60, Rect::new(8, 6, 267, 33), alpha(0x102733, 0.96));
-        label(
+        text_box(
             s,
             65,
-            format!("{}-{}", world + 1, st.course % 4 + 1),
-            19,
-            29,
+            &format!("{}-{}", world + 1, st.course % 4 + 1),
+            Rect::new(19, 10, 44, 26),
             18.,
-            PAPER,
+            26,
+            rgb(PAPER),
+            false,
         );
         star(s, 65, 76, 22, 4, rgb(GOLDEN));
-        label(s, 65, format!("{:03}", st.sparks), 88, 29, 18., GOLDEN);
-        // A lantern and three shard silhouettes keep the key statistics compact.
+        text_box(
+            s,
+            65,
+            &compact(st.sparks),
+            Rect::new(88, 10, 45, 26),
+            18.,
+            26,
+            rgb(GOLDEN),
+            false,
+        );
         s.rect(65, Rect::new(143, 13, 8, 2), rgb(MINT));
         s.rect(65, Rect::new(140, 17, 14, 15), rgb(MINT));
         s.rect(66, Rect::new(144, 20, 6, 8), rgb(0x142a36));
-        label(s, 65, format!("{:02}", st.lives), 163, 29, 18., PAPER);
+        text_box(
+            s,
+            65,
+            &format!("{:02}", st.lives),
+            Rect::new(163, 10, 31, 26),
+            18.,
+            26,
+            rgb(PAPER),
+            false,
+        );
         for n in 0..3 {
             star(
                 s,
@@ -1311,65 +1915,55 @@ impl Embertrail {
         }
         s.rect(60, Rect::new(471, 6, 245, 33), alpha(0x102733, 0.96));
         let seconds = st.timer / 60;
-        label(
+        text_box(
             s,
             65,
-            format!("{}:{:02}", seconds / 60, seconds % 60),
-            484,
-            29,
+            &format!("{}:{:02}", seconds / 60, seconds % 60),
+            Rect::new(484, 10, 62, 26),
             18.,
-            PAPER,
+            26,
+            rgb(PAPER),
+            false,
         );
-        label(
+        text_box(
             s,
             65,
-            format!("Score {:06}", st.score),
-            555,
-            29,
+            &format!("Score {}", compact(st.score)),
+            Rect::new(555, 10, 149, 26),
             18.,
-            GOLDEN,
+            26,
+            rgb(GOLDEN),
+            false,
         );
         s.rect(65, ATLAS_BUTTON, rgb(0x294b48));
-        label(s, 66, "Map", 745, 27, 18., MINT);
-        s.rect(62, Rect::new(0, 414, 800, 36), alpha(0x102733, 0.94));
-        label(
+        text_box(
             s,
-            65,
-            "L stick: Move   A: Jump   X: Cast   RT: Run   Down: Enter   Menu: Pause",
-            18,
-            438,
-            16.,
-            PAPER,
+            66,
+            "Map",
+            Rect::new(737, 8, 51, 24),
+            18.,
+            24,
+            rgb(MINT),
+            true,
         );
         if st.banner_ticks > 0 && st.transition == 0 {
-            // Narrative uses readable prose, two lines and a full contrast backing.
-            let mut lines = vec![String::new()];
-            for word in st.banner.split_whitespace() {
-                let last = lines.last_mut().unwrap();
-                if last.len() + word.len() + 1 > 78 && !last.is_empty() {
-                    lines.push(word.to_owned());
-                } else {
-                    if !last.is_empty() {
-                        last.push(' ');
-                    }
-                    last.push_str(word);
-                }
-            }
-            let height = 14 + lines.len() as i32 * 24;
+            let count = text_lines(&st.banner, 748, 18.).len().min(3);
+            let height = 14 + count as i32 * 24;
             s.rect(50, Rect::new(12, 46, 776, height), alpha(0x102733, 0.96));
-            for (line, text) in lines.iter().enumerate() {
-                label(s, 51, text, 26, 70 + line as i32 * 24, 18., PAPER);
-            }
+            text_box(
+                s,
+                51,
+                &st.banner,
+                Rect::new(26, 53, 748, count as i32 * 24),
+                18.,
+                24,
+                rgb(PAPER),
+                false,
+            );
         }
-        let progress = if st.secret_inside {
-            0
-        } else {
-            (self.player().x * 800 / st.level.width).clamp(0, 800)
-        };
-        s.rect(63, Rect::new(0, 448, progress, 2), alpha(MINT, 0.7));
         if st.transition > 0 {
-            s.rect(75, Rect::new(0, 40, 800, 374), alpha(0x142936, 0.82));
-            label(
+            s.rect(75, Rect::new(104, 136, 592, 158), alpha(0x142936, 0.96));
+            text_box(
                 s,
                 76,
                 if st.course % 4 == 3 {
@@ -1377,28 +1971,31 @@ impl Embertrail {
                 } else {
                     "A little brighter"
                 },
-                220,
-                189,
+                Rect::new(124, 152, 552, 43),
                 32.,
-                GOLDEN,
+                43,
+                rgb(GOLDEN),
+                true,
             );
-            label(
+            text_box(
                 s,
                 76,
-                format!("{}-{}  Course clear", world + 1, st.course % 4 + 1),
-                271,
-                228,
+                &format!("{}-{}  Course clear", world + 1, st.course % 4 + 1),
+                Rect::new(124, 203, 552, 32),
                 24.,
-                PAPER,
+                32,
+                rgb(PAPER),
+                true,
             );
-            label(
+            text_box(
                 s,
                 76,
-                format!("Moon shards  {}/3", st.relics),
-                285,
-                265,
+                &format!("Moon shards  {}/3", st.relics),
+                Rect::new(124, 247, 552, 28),
                 20.,
-                MINT,
+                28,
+                rgb(MINT),
+                true,
             );
         }
         if st.atlas {
@@ -1407,18 +2004,38 @@ impl Embertrail {
     }
     fn atlas_art(&self, s: &mut Scene) {
         let st = &self.state;
-        s.rect(80, Rect::new(0, 38, 800, 410), rgb(0x182d38));
-        label(s, 81, "The Lantern Isles", 28, 76, 24., PAPER);
+        s.rect(80, Rect::new(0, 38, 800, 412), rgb(0x182d38));
+        text_box(
+            s,
+            81,
+            "The Lantern Isles",
+            Rect::new(28, 47, 330, 31),
+            24.,
+            31,
+            rgb(PAPER),
+            false,
+        );
+        text_box(
+            s,
+            81,
+            "A: Travel    B: Return",
+            Rect::new(433, 50, 306, 24),
+            16.,
+            24,
+            rgb(MINT),
+            true,
+        );
         for world in 0..8 {
             let y = 86 + world * 35;
-            label(
+            text_box(
                 s,
                 81,
-                format!("{:02}  {}", world + 1, levels::WORLDS[world as usize]),
-                28,
-                y + 18,
+                &format!("{:02}  {}", world + 1, levels::WORLDS[world as usize]),
+                Rect::new(28, y, 227, 34),
                 16.,
-                PALETTES[world as usize][7],
+                17,
+                rgb(PALETTES[world as usize][7]),
+                false,
             );
             for course in 0..4 {
                 let n = world as usize * 4 + course;
@@ -1436,18 +2053,20 @@ impl Embertrail {
                         0x34534e
                     }),
                 );
-                label(
+                let value = if locked {
+                    "--".into()
+                } else {
+                    format!("{}-{}", world + 1, course + 1)
+                };
+                text_box(
                     s,
                     82,
-                    if locked {
-                        "--".into()
-                    } else {
-                        format!("{}-{}", world + 1, course + 1)
-                    },
-                    x + 9,
-                    y + 18,
+                    &value,
+                    Rect::new(x + 9, y + 2, 40, 23),
                     18.,
-                    if locked { 0x627674 } else { PAPER },
+                    23,
+                    rgb(if locked { 0x82968f } else { PAPER }),
+                    false,
                 );
                 for shard in 0..st.best_relics[n] {
                     star(s, 83, x + 57 + shard as i32 * 12, y + 13, 3, rgb(MINT));
@@ -1456,21 +2075,32 @@ impl Embertrail {
                     s.rect(83, Rect::new(x + 97, y + 2, 3, 23), rgb(GOLDEN));
                 }
                 if n == st.map_selection {
-                    s.rect(84, Rect::new(x, y, 102, 2), rgb(GOLDEN));
-                    s.rect(84, Rect::new(x, y + 25, 102, 2), rgb(GOLDEN));
-                    s.rect(84, Rect::new(x, y, 2, 27), rgb(GOLDEN));
-                    s.rect(84, Rect::new(x + 100, y, 2, 27), rgb(GOLDEN));
+                    for edge in [
+                        Rect::new(x, y, 102, 2),
+                        Rect::new(x, y + 25, 102, 2),
+                        Rect::new(x, y, 2, 27),
+                        Rect::new(x + 100, y, 2, 27),
+                    ] {
+                        s.rect(84, edge, rgb(GOLDEN));
+                    }
                 }
             }
         }
-        label(
+        let selected = st.map_selection;
+        text_box(
             s,
             81,
-            "L stick: Choose a course    A: Travel    B: Return",
-            28,
-            431,
-            16.,
-            MINT,
+            &format!(
+                "{}-{}  {}",
+                selected / 4 + 1,
+                selected % 4 + 1,
+                levels::NAMES[selected]
+            ),
+            Rect::new(28, 382, 711, 50),
+            18.,
+            25,
+            rgb(PAPER),
+            false,
         );
     }
 }
@@ -1533,7 +2163,11 @@ impl draw::Game for Embertrail {
             }
             return;
         }
-        let p = PALETTES[self.state.course / 4];
+        let p = if self.state.secret_inside {
+            self.grotto_palette()
+        } else {
+            PALETTES[self.state.course / 4]
+        };
         self.background(s, p);
         self.world_art(s, p);
         self.actor_art(s);

@@ -45,6 +45,29 @@ pub const NAMES: [&str; 32] = [
     "Vesper, the Bell Regent",
 ];
 pub const BOSS_COURT: i32 = 880;
+pub const GROTTO_NAMES: [&str; 8] = [
+    "Root Stepwell",
+    "Echo Waterway",
+    "Copper Pumpworks",
+    "Frostbloom Warmwell",
+    "Sunglass Reliquary",
+    "Cloudseed Cistern",
+    "Briar Nursery",
+    "Citadel Undercroft",
+];
+pub fn grotto_meta(course: usize, width: i32) -> Grotto {
+    let world = course / 4;
+    let room_width = [928, 1120, 960, 1056, 1184, 1024, 1152, 1248][world];
+    let x = width + 128;
+    let reward_floor = [208, 184, 208, 176, 176, 224, 208, 144][world];
+    Grotto {
+        bounds: Rect::new(x, 40, room_width, 424),
+        entrance: Point::new(x + 96, 338),
+        reward: Rect::new(x + room_width - 220, reward_floor - 36, 20, 24),
+        archetype: world as u8,
+        variant: (course % 4) as u8,
+    }
+}
 // 0 meadow, 1 steps, 2 gap, 3 bridge, 4 towers, 5 canopy, 6 thorns,
 // 7 sprint, 8 hidden root vault, 9 lift, 10 creature gauntlet.
 const ROUTES: [&[u8]; 32] = [
@@ -127,6 +150,118 @@ fn moving(l: &mut Level, x: i32, y: i32, vertical: bool, span: i32, phase: u32) 
         previous: r,
     });
 }
+fn spring(l: &mut Level, x: i32) {
+    // Non-solid, floor-flush contact pad. Its visible coil sits above this trigger.
+    tile(l, x, FLOOR - 4, 44, 8, 5, 0);
+}
+fn build_grotto(l: &mut Level, course: usize) {
+    let room = l.grotto.clone();
+    let x = room.bounds.x;
+    let w = room.bounds.w;
+    let v = i32::from(room.variant);
+    let shift = v * 20;
+    let phase = course as u32 * 37;
+    tile(l, x - 24, 40, 24, 424, 1, 0);
+    tile(l, x + w, 40, 24, 424, 1, 0);
+    tile(l, x, 40, w, 16, 1, 0);
+    if room.archetype == 5 {
+        // The cistern's two short gaps have an ordinary jump route as well as springs/lifts.
+        tile(l, x, FLOOR, 320, 96, 0, 0);
+        tile(l, x + 432, FLOOR, 184, 96, 0, 0);
+        tile(l, x + 744, FLOOR, w - 744, 96, 0, 0);
+    } else {
+        tile(l, x, FLOOR, w, 96, 0, 0);
+    }
+    match room.archetype {
+        0 => {
+            tile(l, x + 180 + shift, 304, 88, 16, 1, 0);
+            tile(l, x + 336 + shift / 2, 256 - v * 8, 88, 16, 1, 0);
+            moving(l, x + 500 - shift / 2, 332, true, 140 + v * 8, phase);
+            tile(l, x + w - 260, 208, 116, 16, 1, 0);
+            if v % 2 == 1 {
+                tile(l, x + 284, 202, 64, 12, 1, 0);
+            }
+        }
+        1 => {
+            l.hazards.push(Rect::new(x + 274 + shift, 356, 96, 12));
+            l.hazards.push(Rect::new(x + 610 - shift / 2, 356, 112, 12));
+            tile(l, x + 202 + shift / 2, 286, 100, 16, 1, 0);
+            tile(l, x + 382 + shift, 230, 88, 16, 1, 0);
+            moving(l, x + 490, 272 - v * 8, false, 184, phase);
+            moving(l, x + 740 - shift, 324, true, 160, phase + 90);
+            tile(l, x + w - 260, 184, 116, 16, 1, 0);
+        }
+        2 => {
+            l.hazards.push(Rect::new(x + 302 + shift / 2, 356, 104, 12));
+            tile(l, x + 184, 294 - v * 8, 96, 16, 1, 0);
+            moving(l, x + 340 + shift, 252, false, 128, phase);
+            moving(l, x + 558 - shift / 2, 330, true, 136 + v * 12, phase + 100);
+            tile(l, x + w - 260, 208, 116, 16, 1, 0);
+            enemy(l, x + 570 + shift, 342, 1, phase);
+        }
+        3 => {
+            spring(l, x + 226 + shift);
+            spring(l, x + 542 - shift / 2);
+            tile(l, x + 352 + shift, 216 - v * 8, 96, 16, 1, 0);
+            tile(l, x + 608 + shift / 2, 176, 92, 16, 1, 0);
+            tile(l, x + w - 260, 176, 116, 16, 1, 0);
+            moving(l, x + 394, 322, false, 128 + shift, phase);
+        }
+        4 => {
+            for (dx, y) in [(176, 304), (326, 248), (474, 192)] {
+                tile(l, x + dx + shift / 2, y - (v % 2) * 8, 80, 16, 1, 0);
+            }
+            moving(l, x + 596 - shift / 2, 222, false, 176, phase);
+            tile(l, x + 830 + shift / 2, 236, 88, 16, 1, 0);
+            tile(l, x + w - 260, 176, 116, 16, 1, 0);
+            enemy(l, x + 700 + shift, 342, 1, phase);
+        }
+        5 => {
+            spring(l, x + 246 + shift / 2);
+            spring(l, x + 534 - shift / 2);
+            moving(l, x + 424, 330, true, 140 + v * 8, phase);
+            moving(l, x + 632, 290 - v * 10, false, 150, phase + 80);
+            tile(l, x + 548 + shift, 190, 88, 16, 1, 0);
+            tile(l, x + w - 260, 224, 116, 16, 1, 0);
+        }
+        6 => {
+            l.hazards.push(Rect::new(x + 278 + shift, 356, 48, 12));
+            l.hazards.push(Rect::new(x + 672 - shift, 356, 64, 12));
+            tile(l, x + 200 + shift / 2, 286, 110, 16, 1, 0);
+            tile(l, x + 390 + shift, 218, 104, 16, 1, 0);
+            moving(l, x + 584, 286, false, 148 + v * 8, phase);
+            tile(l, x + w - 260, 208, 116, 16, 1, 0);
+            enemy(l, x + 510 - shift / 2, FLOOR - 56, 3, phase);
+            enemy(l, x + 800 + shift, 342, 0, phase + 60);
+        }
+        7 => {
+            moving(l, x + 216 + shift / 2, 334, true, 126 + v * 8, phase);
+            spring(l, x + 426 + shift);
+            moving(l, x + 560 - shift / 2, 304, true, 144, phase + 80);
+            l.hazards.push(Rect::new(x + 690 + shift / 2, 356, 64, 12));
+            tile(l, x + 754, 224 - v * 8, 96, 16, 1, 0);
+            moving(l, x + 884 - shift / 2, 284, true, 120 + v * 8, phase + 150);
+            tile(l, x + w - 260, 144, 116, 16, 1, 0);
+            enemy(l, x + 866 + shift, 342, 1, phase);
+        }
+        _ => unreachable!(),
+    }
+    l.secret_return = Rect::new(x + w - 82, 320, 48, 48);
+    l.pickups.push(Pickup {
+        r: room.reward,
+        kind: 4,
+        active: true,
+    });
+    // Coins trace the climb, while a few floor sparks lead toward the far stairs.
+    for n in 0..6 {
+        coin(l, x + 160 + n * 112 + (v % 2) * 16, 292 - (n % 3) * 38, 0);
+    }
+    coin(l, room.reward.x - 36, room.reward.y + 4, 0);
+    coin(l, room.reward.x + 36, room.reward.y + 4, 0);
+    if room.archetype >= 1 {
+        coin(l, x + 146, 334, 1);
+    }
+}
 pub fn build(course: usize) -> Level {
     let route = ROUTES[course];
     let world = course / 4;
@@ -148,6 +283,7 @@ pub fn build(course: usize) -> Level {
         secret: Rect::default(),
         secret_return: Rect::new(width + 800, 320, 40, 48),
         secret_used: false,
+        grotto: grotto_meta(course, width),
     };
     tile(&mut l, 0, FLOOR, 320, 96, 0, 0);
     for x in [170, 206, 242] {
@@ -334,17 +470,6 @@ pub fn build(course: usize) -> Level {
             );
         }
     }
-    // A separate, camera-bounded secret grotto, reached only via the hollow root.
-    tile(&mut l, width + 128, FLOOR, 736, 96, 0, 0);
-    tile(&mut l, width + 96, 80, 32, 384, 1, 0);
-    tile(&mut l, width + 864, 80, 32, 384, 1, 0);
-    tile(&mut l, width + 128, 80, 736, 32, 1, 0);
-    for row in 0..3 {
-        for col in 0..7 {
-            coin(&mut l, width + 280 + col * 52, 208 + row * 44, 0);
-        }
-    }
-    tile(&mut l, width + 600, 306, 64, 16, 1, 0);
-    coin(&mut l, width + 620, 264, 4);
+    build_grotto(&mut l, course);
     l
 }

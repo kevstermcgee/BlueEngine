@@ -3,8 +3,10 @@ use serde::{Deserialize, Serialize};
 use vesper3d::two_d::*;
 #[cfg(feature = "client")]
 mod art;
+pub mod cues;
 pub mod levels;
 pub mod story;
+use cues::Cue;
 #[cfg(test)]
 mod tests;
 
@@ -74,6 +76,14 @@ pub struct Shot {
     pub hostile: bool,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Grotto {
+    pub bounds: Rect,
+    pub entrance: Point,
+    pub reward: Rect,
+    pub archetype: u8,
+    pub variant: u8,
+}
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Level {
     pub width: i32,
     pub tiles: Vec<Tile>,
@@ -86,6 +96,7 @@ pub struct Level {
     pub secret: Rect,
     pub secret_return: Rect,
     pub secret_used: bool,
+    pub grotto: Grotto,
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct State {
@@ -311,6 +322,16 @@ impl Embertrail {
     pub fn npc_x(&self) -> i32 {
         184
     }
+    pub fn grotto_entry_gate(&self) -> Rect {
+        Rect::new(self.state.level.grotto.bounds.x + 24, 320, 48, 48)
+    }
+    pub fn grotto_reward_collected(&self) -> bool {
+        self.state
+            .level
+            .pickups
+            .iter()
+            .any(|p| p.r == self.state.level.grotto.reward && !p.active)
+    }
     pub fn player(&self) -> Rect {
         Rect::new(
             self.state.px.div_euclid(SUB),
@@ -319,8 +340,8 @@ impl Embertrail {
             if self.state.crouching { 18 } else { 30 },
         )
     }
-    fn cue(&mut self, n: usize) {
-        self.cues.push(n);
+    fn cue(&mut self, cue: Cue) {
+        self.cues.push(cue as usize);
         let r = self.player();
         self.state.cue = Point::new(r.x - self.state.camera + 11, r.y + 10);
     }
@@ -374,14 +395,14 @@ impl Embertrail {
             self.state.form -= 1;
             self.state.shield = 120;
             self.state.vy = -4 * SUB;
-            self.cue(1);
+            self.cue(Cue::Hurt);
             self.banner("Lantern cracked! Keep going.");
         } else {
             self.state.lives = self.state.lives.saturating_sub(1);
             self.state.dead = 90;
             self.state.form = 0;
             self.state.invincible = 0;
-            self.cue(1);
+            self.cue(Cue::Death);
         }
     }
     fn respawn(&mut self) {
@@ -425,15 +446,17 @@ impl Embertrail {
             "Every little light gets another try"
         });
     }
-    fn add_sparks(&mut self, amount: u32) {
+    fn add_sparks(&mut self, amount: u32) -> bool {
         let before = self.state.sparks / 100;
         self.state.sparks += amount;
         self.state.score += amount * 100;
         if self.state.sparks / 100 > before {
             self.state.lives = (self.state.lives + 1).min(99);
             self.banner("100 sparks! An extra light.");
+            self.cue(Cue::ExtraLife);
+            return true;
         }
-        self.cue(0);
+        false
     }
     fn map_input(&mut self, i: &Intent) -> bool {
         // The custom client maps View/Select to this public, deterministic intent.
@@ -487,6 +510,7 @@ impl Embertrail {
     }
     fn bump(&mut self, before: Rect, after: Rect) {
         let mut rewards = Vec::new();
+        let mut broken = false;
         let strong = self.state.form > 0;
         for tile in &mut self.state.level.tiles {
             if tile.r.w == 0
@@ -504,7 +528,14 @@ impl Embertrail {
                 tile.r.w = 0;
                 self.state.score += 50;
                 self.state.puff = 18;
+                broken = true;
             }
+        }
+        if broken {
+            self.cue(Cue::ClayBreak);
+        }
+        if !rewards.is_empty() {
+            self.cue(Cue::BlockReveal);
         }
         for (r, kind) in rewards {
             if kind == 0 {
@@ -520,7 +551,6 @@ impl Embertrail {
                     kind: actual,
                     active: true,
                 });
-                self.cue(0);
             }
         }
     }
@@ -535,34 +565,38 @@ impl Embertrail {
         }
         for kind in kinds {
             match kind {
-                0 => self.add_sparks(1),
+                0 => {
+                    if !self.add_sparks(1) {
+                        self.cue(Cue::SparkPickup);
+                    }
+                }
                 1 => {
                     self.state.form = self.state.form.max(1);
                     self.state.score += 500;
                     self.banner("BLOOM LANTERN - one extra hit, break clay blocks");
-                    self.cue(0);
+                    self.cue(Cue::BloomUnfurl);
                 }
                 2 => {
                     self.state.form = 2;
                     self.state.score += 800;
                     self.banner("EMBER LANTERN - X casts an ember seed");
-                    self.cue(0);
+                    self.cue(Cue::EmberIgnite);
                 }
                 3 => {
                     self.state.invincible = 600;
                     self.banner("DAWN STAR - ten seconds of fearless light");
-                    self.cue(0);
+                    self.cue(Cue::InvincibilityShimmer);
                 }
                 4 => {
                     self.state.lives = (self.state.lives + 1).min(99);
                     self.banner("An extra light!");
-                    self.cue(0);
+                    self.cue(Cue::ExtraLife);
                 }
                 5 => {
                     self.state.relics += 1;
                     self.state.score += 1500;
                     self.banner("Moon shard found! Three hidden in every course.");
-                    self.cue(0);
+                    self.cue(Cue::ShardPickup);
                 }
                 _ => (),
             }
@@ -599,7 +633,7 @@ impl Embertrail {
             .level
             .tiles
             .iter()
-            .filter(|t| t.r.w > 0)
+            .filter(|t| t.r.w > 0 && t.kind != 5)
             .map(|t| t.r)
             .collect();
         let tick = self.state.tick;
@@ -709,11 +743,14 @@ impl Embertrail {
             .map(|e| e.r)
             .collect();
         let mut freed = false;
+        let mut boss_hit = false;
+        let mut creature_hit = false;
         for e in &mut self.state.level.enemies {
             if e.active && !e.rolling && shells.iter().any(|r| r.overlaps(e.r)) {
                 if e.kind == 4 {
                     if boss_vulnerable(world, e) {
                         e.hp = e.hp.saturating_sub(1);
+                        boss_hit = true;
                         e.immunity = 45;
                         if e.hp == 0 {
                             e.active = false;
@@ -723,8 +760,15 @@ impl Embertrail {
                 } else {
                     e.active = false;
                     self.state.score += 200;
+                    creature_hit = true;
                 }
             }
+        }
+        if boss_hit {
+            self.cue(Cue::BossHit);
+        }
+        if creature_hit {
+            self.cue(Cue::EnemyBounce);
         }
         if freed {
             self.guardian_freed();
@@ -733,7 +777,7 @@ impl Embertrail {
     fn enemy_contacts(&mut self, before: Rect) {
         let player = self.player();
         let mut damage = false;
-        let mut reward = false;
+        let mut sounds = Vec::new();
         let mut bounce = false;
         let mut freed = false;
         let world = self.state.course / 4;
@@ -744,7 +788,7 @@ impl Embertrail {
             if self.state.invincible > 0 && e.kind != 4 {
                 e.active = false;
                 self.state.score += 200;
-                reward = true;
+                sounds.push(Cue::EnemyBounce);
                 continue;
             }
             let stomp = self.state.vy >= 0 && before.y + before.h <= e.r.y + 12;
@@ -752,6 +796,7 @@ impl Embertrail {
                 if e.kind == 4 {
                     if boss_vulnerable(world, e) {
                         e.hp = e.hp.saturating_sub(1);
+                        sounds.push(Cue::BossHit);
                         e.immunity = 60;
                         if e.hp == 0 {
                             e.active = false;
@@ -771,13 +816,13 @@ impl Embertrail {
                     e.active = false;
                 }
                 bounce = true;
-                reward = true;
+                sounds.push(Cue::EnemyBounce);
                 self.state.score += 200;
             } else if e.kind == 1 && e.shell && !e.rolling {
                 e.rolling = true;
                 e.dir = if player.x < e.r.x { 1 } else { -1 };
                 e.r.x += e.dir * 12;
-                reward = true;
+                sounds.push(Cue::ShellKick);
             } else {
                 damage = true;
             }
@@ -788,8 +833,8 @@ impl Embertrail {
             self.state.grounded = false;
             self.state.jump_age = 0;
         }
-        if reward {
-            self.cue(0);
+        for sound in sounds {
+            self.cue(sound);
         }
         if freed {
             self.guardian_freed();
@@ -804,12 +849,14 @@ impl Embertrail {
             .level
             .tiles
             .iter()
-            .filter(|t| t.r.w > 0)
+            .filter(|t| t.r.w > 0 && t.kind != 5)
             .map(|t| t.r)
             .collect();
         let player = self.player();
         let mut hit_player = false;
         let mut freed = false;
+        let mut hit_boss = false;
+        let mut hit_creature = false;
         let world = self.state.course / 4;
         for shot in &mut self.state.shots {
             if shot.life == 0 {
@@ -836,6 +883,7 @@ impl Embertrail {
                         if e.kind == 4 {
                             if boss_vulnerable(world, e) {
                                 e.hp = e.hp.saturating_sub(1);
+                                hit_boss = true;
                                 e.immunity = 30;
                                 if e.hp == 0 {
                                     e.active = false;
@@ -845,6 +893,7 @@ impl Embertrail {
                         } else {
                             e.active = false;
                             self.state.score += 200;
+                            hit_creature = true;
                         }
                         break;
                     }
@@ -852,6 +901,12 @@ impl Embertrail {
             }
         }
         self.state.shots.retain(|s| s.life > 0 && s.r.y < 500);
+        if hit_boss {
+            self.cue(Cue::BossHit);
+        }
+        if hit_creature {
+            self.cue(Cue::EnemyBounce);
+        }
         if freed {
             self.guardian_freed();
         }
@@ -867,10 +922,12 @@ impl Embertrail {
         if !self.state.secret_inside && p.overlaps(self.state.level.secret) {
             self.state.secret_inside = true;
             self.state.level.secret_used = true;
-            self.state.px = (self.state.level.width + 176) * SUB;
-            self.state.py = 338 * SUB;
-            self.banner("A warm hollow beneath the roots");
-        } else if self.state.secret_inside && p.overlaps(self.state.level.secret_return) {
+            self.state.px = self.state.level.grotto.entrance.x * SUB;
+            self.state.py = self.state.level.grotto.entrance.y * SUB;
+            self.banner(levels::GROTTO_NAMES[self.state.course / 4]);
+        } else if self.state.secret_inside
+            && (p.overlaps(self.state.level.secret_return) || p.overlaps(self.grotto_entry_gate()))
+        {
             self.state.secret_inside = false;
             self.state.px = (self.state.level.secret.x + 8) * SUB;
             self.state.py = 320 * SUB;
@@ -882,17 +939,26 @@ impl Embertrail {
         self.state.vy = 0;
         self.state.portal_cooldown = 60;
         self.state.crouching = false;
+        self.state.grounded = true;
+        self.state.coyote = 6;
+        self.state.jump_buffer = 0;
+        self.state.shots.clear();
         self.state.camera = if self.state.secret_inside {
-            self.state.level.width + 128
+            self.state.level.grotto.bounds.x
         } else {
             (self.player().x - 280).clamp(0, self.state.level.width - 800)
         };
+        self.cue(if self.state.secret_inside {
+            Cue::GrottoEnter
+        } else {
+            Cue::GrottoExit
+        });
     }
     fn guardian_freed(&mut self) {
         self.state.shots.retain(|s| !s.hostile);
         self.state.score += 5000;
         self.state.shield = self.state.shield.max(90);
-        self.cue(2);
+        self.cue(Cue::GuardianFreed);
         self.banner(if self.state.course == COURSES - 1 {
             "Vesper's crown is broken! Take the Dawnheart to the last bell!"
         } else {
@@ -910,7 +976,7 @@ impl Embertrail {
             .max((self.state.course + 1).min(COURSES - 1));
         self.state.score += 3000 + self.state.timer / 6;
         self.state.transition = 150;
-        self.cue(2);
+        self.cue(Cue::CourseClear);
         self.banner(if self.state.course % 4 == 3 {
             story::BELL_LINES[self.state.course / 4]
         } else {
@@ -1037,6 +1103,7 @@ impl Simulation for Embertrail {
             if self.state.transition == 0 {
                 if self.state.course == 31 {
                     self.state.won = true;
+                    self.cue(Cue::Homecoming);
                 } else {
                     self.enter_course(self.state.course + 1);
                 }
@@ -1067,7 +1134,7 @@ impl Simulation for Embertrail {
                 .level
                 .tiles
                 .iter()
-                .any(|t| t.r.w > 0 && t.r.overlaps(standing))
+                .any(|t| t.r.w > 0 && t.kind != 5 && t.r.overlaps(standing))
             {
                 self.state.crouching = false;
                 self.state.py -= 12 * SUB;
@@ -1094,7 +1161,7 @@ impl Simulation for Embertrail {
                     .level
                     .tiles
                     .iter()
-                    .any(|t| t.r.w > 0 && t.r.overlaps(standing))
+                    .any(|t| t.r.w > 0 && t.kind != 5 && t.r.overlaps(standing))
                 {
                     self.state.crouching = false;
                     self.state.py -= 12 * SUB;
@@ -1105,15 +1172,17 @@ impl Simulation for Embertrail {
             self.state.coyote = 0;
             self.state.grounded = false;
             self.state.jump_age = 0;
+            self.cue(Cue::Jump);
         }
         self.state.jump_age = self.state.jump_age.saturating_add(1);
         let world = self.state.course / 4;
-        let acceleration = if world == 3 {
-            92
+        let ice = world == 3 && self.state.grounded && !self.state.secret_inside;
+        let acceleration = if ice {
+            140
         } else if self.state.grounded {
-            138
+            350
         } else {
-            110
+            250
         };
         let max_speed = if i.sprint { 1470 } else { 1120 };
         let target = if i.y > 0 && self.state.grounded {
@@ -1121,17 +1190,27 @@ impl Simulation for Embertrail {
         } else {
             i.x.clamp(-1, 1) * max_speed
         };
-        let friction = if world == 3 {
-            58
+        let friction = if ice {
+            if i.y > 0 {
+                360
+            } else {
+                95
+            }
         } else if self.state.grounded {
-            155
+            500
         } else {
-            36
+            330
         };
         let rate = if target == 0 {
             friction
         } else if self.state.vx.signum() != target.signum() {
-            acceleration + 50
+            if ice {
+                200
+            } else if self.state.grounded {
+                500
+            } else {
+                400
+            }
         } else {
             acceleration
         };
@@ -1155,6 +1234,7 @@ impl Simulation for Embertrail {
             });
             self.state.cooldown = 18;
             self.state.puff = 12;
+            self.cue(Cue::SeedCast);
         }
         let before = self.player();
         let mut walls: Vec<Rect> = self
@@ -1162,7 +1242,7 @@ impl Simulation for Embertrail {
             .level
             .tiles
             .iter()
-            .filter(|t| t.r.w > 0)
+            .filter(|t| t.r.w > 0 && t.kind != 5)
             .map(|t| t.r)
             .collect();
         for p in &self.state.level.platforms {
@@ -1213,6 +1293,20 @@ impl Simulation for Embertrail {
         } else {
             self.state.py += self.state.vy;
         }
+        if self.state.grounded
+            && self.state.level.tiles.iter().any(|tile| {
+                let p = self.player();
+                tile.kind == 5 && Rect::new(p.x, p.y + p.h - 2, p.w, 4).overlaps(tile.r)
+            })
+        {
+            self.state.vy = -15 * SUB;
+            self.state.grounded = false;
+            self.state.coyote = 0;
+            self.state.jump_age = 0;
+            self.state.jump_buffer = 0;
+            self.state.puff = 16;
+            self.cue(Cue::Spring);
+        }
         self.portal(i);
         self.collect();
         self.enemy_step();
@@ -1237,7 +1331,7 @@ impl Simulation for Embertrail {
         if !self.state.secret_inside && !self.state.checkpoint && r.x > self.state.level.checkpoint
         {
             self.state.checkpoint = true;
-            self.cue(0);
+            self.cue(Cue::Checkpoint);
             self.banner("CHECKPOINT - your light is safe here");
         }
         if self.state.dead == 0
@@ -1253,11 +1347,12 @@ impl Simulation for Embertrail {
             self.complete();
         }
         let target = if self.state.secret_inside {
-            (self.state.level.width + 128).clamp(0, i32::MAX - 800)
+            let room = self.state.level.grotto.bounds;
+            (r.x - 280).clamp(room.x, room.x + room.w - 800)
         } else {
             (r.x - 280).clamp(0, self.state.level.width - 800)
         };
-        if self.state.secret_inside || (self.state.camera - target).abs() > 900 {
+        if (self.state.camera - target).abs() > 900 {
             self.state.camera = target;
         } else {
             self.state.camera += (target - self.state.camera).clamp(-9, 9);
@@ -1269,17 +1364,33 @@ impl Simulation for Embertrail {
 }
 impl Snapshot for Embertrail {
     const KIND: &'static str = "embertrail";
-    const VERSION: u32 = 2;
-    const MIGRATIONS: &'static [vesper3d::runtime::snapshot::Migration] =
-        &[vesper3d::runtime::snapshot::Migration {
+    const VERSION: u32 = 3;
+    const MIGRATIONS: &'static [vesper3d::runtime::snapshot::Migration] = &[
+        vesper3d::runtime::snapshot::Migration {
             from: 1,
             step: migrate_v1,
-        }];
+        },
+        vesper3d::runtime::snapshot::Migration {
+            from: 2,
+            step: migrate_v2,
+        },
+    ];
     type State = State;
     fn capture(&self) -> State {
         self.state.clone()
     }
     fn restore(&mut self, s: State) -> Result<(), String> {
+        if s.course >= COURSES {
+            return Err("Invalid Embertrail course".into());
+        }
+        let authored_width = levels::build(s.course).width;
+        let expected = levels::grotto_meta(s.course, authored_width);
+        if hash_json(&s.level.grotto) != hash_json(&expected)
+            || s.level.secret_return
+                != Rect::new(expected.bounds.x + expected.bounds.w - 82, 320, 48, 48)
+        {
+            return Err("Invalid Embertrail hidden trail bounds".into());
+        }
         let valid_rect = |r: Rect| {
             r.x >= -100
                 && r.x <= 10000
@@ -1300,9 +1411,9 @@ impl Snapshot for Embertrail {
             || s.jump_buffer > 8
             || s.relics > 3
             || s.best_relics.iter().any(|n| *n > 3)
-            || s.level.width != levels::build(s.course).width
+            || s.level.width != authored_width
             || s.px < 0
-            || s.px > (s.level.width + 1000) * SUB
+            || s.px > (s.level.grotto.bounds.x + s.level.grotto.bounds.w) * SUB
             || s.py < -500 * SUB
             || s.py > 600 * SUB
             || s.vx.unsigned_abs() > 2000
@@ -1317,7 +1428,7 @@ impl Snapshot for Embertrail {
                 .level
                 .tiles
                 .iter()
-                .all(|t| valid_rect(t.r) && t.kind <= 4 && t.content <= 5)
+                .all(|t| valid_rect(t.r) && t.kind <= 5 && t.content <= 5)
             || !s
                 .level
                 .pickups
@@ -1343,7 +1454,7 @@ impl Snapshot for Embertrail {
                     && p.life <= 240
             })
             || s.camera < 0
-            || s.camera > s.level.width + 1000
+            || s.camera > s.level.grotto.bounds.x + s.level.grotto.bounds.w - 800
             || s.map_selection >= COURSES
             || s.banner.len() > 160
             || s.timer > 60 * 240
@@ -1364,6 +1475,20 @@ fn migrate_v1(mut value: serde_json::Value) -> Result<serde_json::Value, String>
         .ok_or("The old save is not an Embertrail state")?;
     fields.insert("jump_held".into(), false.into());
     fields.insert("npc_greeted".into(), false.into());
+    let course = fields
+        .get("course")
+        .and_then(|v| v.as_u64())
+        .filter(|v| *v < COURSES as u64)
+        .ok_or("The old save names an unknown course")? as usize;
+    let width = levels::build(course).width;
+    fields
+        .get_mut("level")
+        .and_then(|v| v.as_object_mut())
+        .ok_or("The old save has no level")?
+        .insert(
+            "grotto".into(),
+            serde_json::to_value(levels::grotto_meta(course, width)).map_err(|e| e.to_string())?,
+        );
     let mut state: State = serde_json::from_value(value).map_err(|e| e.to_string())?;
     if state.course >= COURSES || state.unlocked >= COURSES || state.course > state.unlocked {
         return Err("The old save names an unknown course".into());
@@ -1398,5 +1523,70 @@ fn migrate_v1(mut value: serde_json::Value) -> Result<serde_json::Value, String>
     state.banner =
         "Welcome back, Mote. Your discoveries are safe. Bring our Dawnheart home!".into();
     state.banner_ticks = 360;
+    serde_json::to_value(state).map_err(|e| e.to_string())
+}
+
+fn migrate_v2(mut value: serde_json::Value) -> Result<serde_json::Value, String> {
+    let course = value
+        .get("course")
+        .and_then(|v| v.as_u64())
+        .filter(|v| *v < COURSES as u64)
+        .ok_or("The old save names an unknown course")? as usize;
+    let fresh = levels::build(course);
+    value
+        .get_mut("level")
+        .and_then(|v| v.as_object_mut())
+        .ok_or("The old save has no level")?
+        .insert(
+            "grotto".into(),
+            serde_json::to_value(&fresh.grotto).map_err(|e| e.to_string())?,
+        );
+    let mut state: State = serde_json::from_value(value).map_err(|e| e.to_string())?;
+    let width = fresh.width;
+    // Surface progress remains exact; only obsolete hidden-room geometry is replaced.
+    state.level.tiles.retain(|p| p.r.x < width);
+    state
+        .level
+        .tiles
+        .extend(fresh.tiles.into_iter().filter(|p| p.r.x >= width));
+    state.level.pickups.retain(|p| p.r.x < width);
+    state
+        .level
+        .pickups
+        .extend(fresh.pickups.into_iter().filter(|p| p.r.x >= width));
+    state.level.enemies.retain(|p| p.r.x < width);
+    state
+        .level
+        .enemies
+        .extend(fresh.enemies.into_iter().filter(|p| p.r.x >= width));
+    state.level.platforms.retain(|p| p.home.x < width);
+    state
+        .level
+        .platforms
+        .extend(fresh.platforms.into_iter().filter(|p| p.home.x >= width));
+    state.level.hazards.retain(|p| p.x < width);
+    state
+        .level
+        .hazards
+        .extend(fresh.hazards.into_iter().filter(|p| p.x >= width));
+    state.level.grotto = fresh.grotto;
+    state.level.secret_return = fresh.secret_return;
+    if state.secret_inside {
+        state.px = state.level.grotto.entrance.x * SUB;
+        state.py = state.level.grotto.entrance.y * SUB;
+        state.vx = 0;
+        state.vy = 0;
+        state.grounded = true;
+        state.crouching = false;
+        state.coyote = 6;
+        state.jump_buffer = 0;
+        state.jump_held = false;
+        state.portal_cooldown = 30;
+        state.camera = state.level.grotto.bounds.x;
+        state.shots.clear();
+        state.shield = state.shield.max(90);
+        state.banner = "Your hidden trail has grown. Your discoveries are safe.".into();
+        state.banner_ticks = 300;
+    }
     serde_json::to_value(state).map_err(|e| e.to_string())
 }

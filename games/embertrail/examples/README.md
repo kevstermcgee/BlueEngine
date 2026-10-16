@@ -25,3 +25,17 @@ These receipts prove individual course reachability through normal inputs. They
 do not certify a contiguous campaign run, physical controller handling, graphics,
 audio playback, or the subjective quality of a human play session. A search that
 reaches its bound without finding a clear also does not prove a course impossible.
+
+`grotto_probe` separately verifies the underground reward route and far-stair
+return in an isolated room. It lets the normal spawn protection expire, places
+Mote at the real surface root entrance as an explicit initial fixture, then
+uses public Down, movement, run and jump inputs. It never alters health,
+geometry, enemies or position after that initialization. A successful route
+collects the real upper lantern reward, leaves by the far stairs and replays
+independently from the same fixture without losing a life. This does not prove
+surface entrance access or a contiguous campaign run.
+
+```sh
+cargo run --locked --no-default-features --example grotto_probe -- 0 900
+cargo run --locked --no-default-features --example grotto_probe -- --replay 0 .blue-check/grotto-route-01.json
+```

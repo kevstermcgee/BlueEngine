@@ -1,6 +1,7 @@
 #![cfg_attr(target_os = "windows", windows_subsystem = "windows")]
 
 use vesper3d::two_d::{client, GameLogic};
+mod frame_profile;
 mod game_client;
 mod soundtrack;
 mod window_focus;

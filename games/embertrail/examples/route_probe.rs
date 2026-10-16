@@ -32,7 +32,10 @@ fn replay(course: usize, route: &[(i32, bool)]) -> Embertrail {
                 secondary: tick == 0,
                 ..Default::default()
             });
-            assert_eq!(game.state.lives, 5, "The replay lost a life");
+            assert!(
+                game.state.lives >= 5 && game.state.dead == 0,
+                "The replay lost a life"
+            );
             if game.state.transition > 0 {
                 break;
             }
@@ -126,21 +129,25 @@ fn main() {
                     let mut route = n.route.clone();
                     route.push((x, jump));
                     if g.state.transition > 0 {
-                        let path = format!(".blue-check/route-{:02}.json", course + 1);
-                        std::fs::create_dir_all(".blue-check").unwrap();
+                        let folder = std::env::var_os("EMBERTRAIL_PROBE_DIR")
+                            .map(std::path::PathBuf::from)
+                            .unwrap_or_else(|| ".blue-check".into());
+                        let path = folder.join(format!("route-{:02}.json", course + 1));
+                        std::fs::create_dir_all(&folder).unwrap();
                         std::fs::write(&path, serde_json::to_vec(&route).unwrap()).unwrap();
                         let replayed = replay(course, &route);
                         let proof = serde_json::json!({"course":course + 1,"ticks":replayed.state.tick,"lives":replayed.state.lives,"outcome":replayed.outcome(),"hash":format!("{:016x}",replayed.state_hash()),"route":path,"public_inputs_only":true,"independent_replay":true,"initialization":"isolated course entrance"});
                         std::fs::write(
-                            format!(".blue-check/route-{:02}-proof.json", course + 1),
+                            folder.join(format!("route-{:02}-proof.json", course + 1)),
                             serde_json::to_vec_pretty(&proof).unwrap(),
                         )
                         .unwrap();
                         println!(
-                            "course={} cleared ticks<={} lives={} route={path}",
+                            "course={} cleared ticks<={} lives={} route={}",
                             course + 1,
                             (depth + 1) * 8,
-                            g.state.lives
+                            g.state.lives,
+                            path.display()
                         );
                         return;
                     }

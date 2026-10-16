@@ -5,6 +5,7 @@
   "engine_revision": "1d8d501ccc9c9fc8cfb6cabf7ddcac87aeba6106",
   "package": [
     "assets/audio/score",
+    "assets/audio/sfx",
     "assets/fonts"
   ]
 }

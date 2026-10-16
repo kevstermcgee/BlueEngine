@@ -258,11 +258,13 @@ fn stomp_shell_kick_and_boss_gate() {
     g.enemy_contacts(Rect::new(100, 310, 22, 30));
     assert!(g.state.level.enemies[0].shell);
     assert!(g.state.vy < 0);
+    assert_eq!(g.take_cues(), vec![Cue::EnemyBounce as usize]);
     g.state.py = 338 * SUB;
     g.state.px = 90 * SUB;
     g.state.vy = 0;
     g.enemy_contacts(g.player());
     assert!(g.state.level.enemies[0].rolling);
+    assert_eq!(g.take_cues(), vec![Cue::ShellKick as usize]);
     g.state.unlocked = 3;
     g.enter_course(3);
     let exit = g.state.level.exit;
@@ -337,6 +339,7 @@ fn loss_stops_the_authority_and_final_beacon_wins() {
     g.complete();
     step(&mut g, 150, Intent::default());
     assert_eq!(g.outcome(), "won");
+    assert!(g.take_cues().contains(&(Cue::Homecoming as usize)));
     assert_eq!(g.state.cleared, 1 << 31);
 }
 
@@ -479,6 +482,9 @@ fn each_guardian_requires_an_open_collar_and_can_be_freed_by_stomping() {
         g.state.vy = 3 * SUB;
         let before = Rect::new(r.x, r.y - 34, 22, 30);
         g.enemy_contacts(before);
+        let closed_sounds = g.take_cues();
+        assert!(closed_sounds.contains(&(Cue::EnemyBounce as usize)));
+        assert!(!closed_sounds.contains(&(Cue::BossHit as usize)));
         assert_eq!(
             g.state.level.enemies[index].hp, hp,
             "A closed crown must resist stomps"
@@ -494,6 +500,12 @@ fn each_guardian_requires_an_open_collar_and_can_be_freed_by_stomping() {
             g.state.vy = 3 * SUB;
             g.enemy_contacts(before);
             assert_eq!(g.state.level.enemies[index].hp, remaining);
+            let sounds = g.take_cues();
+            assert!(sounds.contains(&(Cue::BossHit as usize)));
+            assert!(!sounds.contains(&(Cue::SparkPickup as usize)));
+            if remaining == 0 {
+                assert!(sounds.contains(&(Cue::GuardianFreed as usize)));
+            }
         }
         assert!(!g.state.level.enemies[index].active);
         assert!(!g.boss_active());
@@ -509,6 +521,7 @@ fn each_guardian_requires_an_open_collar_and_can_be_freed_by_stomping() {
         assert!(g.state.transition > 0);
         assert_eq!(g.dawn_bells(), 1);
         assert_eq!(g.state.banner, story::BELL_LINES[world]);
+        assert!(g.take_cues().contains(&(Cue::CourseClear as usize)));
     }
 }
 
@@ -698,6 +711,7 @@ fn old_v1_save_migrates_through_engine_framing_and_keeps_campaign_discoveries() 
     let mut value = serde_json::to_value(old.capture()).unwrap();
     value.as_object_mut().unwrap().remove("jump_held");
     value.as_object_mut().unwrap().remove("npc_greeted");
+    value["level"].as_object_mut().unwrap().remove("grotto");
     let payload = serde_json::json!({"hash":"0000000000000000", "state": value});
     let header = vesper3d::viewer::savestate::SaveHeader::new("embertrail", 1, "Old campaign");
     let bytes =
@@ -736,12 +750,14 @@ fn story_greetings_are_automatic_and_portal_camera_returns_immediately() {
     let banner = g.state.banner.clone();
     step(&mut g, 10, Intent::default());
     assert_eq!(g.state.banner, banner);
+    g.take_cues();
     g.state.px = g.state.level.secret.x * SUB;
     g.state.py = 338 * SUB;
     g.portal(&Intent {
         y: 1,
         ..Default::default()
     });
+    assert_eq!(g.take_cues(), vec![Cue::GrottoEnter as usize]);
     assert_eq!(g.state.camera, g.state.level.width + 128);
     g.state.px = g.state.level.secret_return.x * SUB;
     g.state.portal_cooldown = 0;
@@ -749,6 +765,7 @@ fn story_greetings_are_automatic_and_portal_camera_returns_immediately() {
         y: 1,
         ..Default::default()
     });
+    assert_eq!(g.take_cues(), vec![Cue::GrottoExit as usize]);
     assert!(!g.state.secret_inside);
     assert!(g.state.camera <= g.state.level.width - 800);
 }
@@ -809,4 +826,434 @@ fn controller_atlas_grid_and_checkpoint_restart_preserve_discoveries() {
     assert_eq!(g.outcome(), "playing");
     assert_eq!(g.state.cleared, 3);
     assert_eq!(g.state.best_relics[0], 2);
+}
+
+fn measure_release(world: usize, inside: bool, airborne: bool) -> (u32, i32) {
+    let mut game = Embertrail::new(7);
+    game.state.unlocked = world * 4;
+    game.enter_course(world * 4);
+    if inside {
+        game.state.px = game.state.level.secret.x * SUB;
+        game.step(&Intent {
+            y: 1,
+            ..Default::default()
+        });
+        assert!(game.state.secret_inside);
+    }
+    step(
+        &mut game,
+        16,
+        Intent {
+            x: 1,
+            sprint: true,
+            ..Default::default()
+        },
+    );
+    assert_eq!(game.state.vx, 1470);
+    if airborne {
+        game.step(&Intent {
+            x: 1,
+            action: true,
+            sprint: true,
+            ..Default::default()
+        });
+    }
+    let start = game.state.px;
+    let mut ticks = 0;
+    while game.state.vx != 0 && ticks < 60 {
+        game.step(&Intent::default());
+        ticks += 1;
+    }
+    assert_eq!(game.state.vx, 0);
+    (ticks, game.state.px - start)
+}
+
+#[test]
+fn normal_ground_and_air_stop_promptly_while_frost_ice_is_ground_only() {
+    let ground = measure_release(0, false, false);
+    let air = measure_release(0, false, true);
+    let frost_ground = measure_release(3, false, false);
+    let frost_air = measure_release(3, false, true);
+    let warm_grotto = measure_release(3, true, false);
+    assert!(ground.0 <= 3 && ground.1 < 6 * SUB);
+    assert!(air.0 <= 5 && air.1 < 12 * SUB);
+    assert!(frost_ground.0 > 10 && frost_ground.1 > ground.1 * 4);
+    assert_eq!(
+        frost_air, air,
+        "An ice world must not make the air slippery"
+    );
+    assert_eq!(
+        warm_grotto, ground,
+        "Dry warmwell stone has ordinary traction"
+    );
+    // These prior-release baselines are calculated from its published fixed-step
+    // 155/36 braking coefficients at the same 1470 subpixel sprint velocity.
+    let report = serde_json::json!({
+        "new_measured":{"normal_ground":{"ticks":ground.0,"pixels":ground.1 as f64/SUB as f64},
+            "normal_air":{"ticks":air.0,"pixels":air.1 as f64/SUB as f64},
+            "frost_ground":{"ticks":frost_ground.0,"pixels":frost_ground.1 as f64/SUB as f64},
+            "frost_air":{"ticks":frost_air.0,"pixels":frost_air.1 as f64/SUB as f64},
+            "frost_grotto":{"ticks":warm_grotto.0,"pixels":warm_grotto.1 as f64/SUB as f64}},
+        "v020_calculated_from_published_coefficients":{"normal_ground":{"ticks":10,"pixels":24.43359375},"normal_air":{"ticks":41,"pixels":114.375}}
+    });
+    eprintln!("traction {report}");
+    if let Ok(path) = std::env::var("EMBERTRAIL_TRACTION_REPORT") {
+        std::fs::write(path, serde_json::to_vec_pretty(&report).unwrap()).unwrap();
+    }
+}
+
+#[test]
+fn reversal_is_responsive_and_held_run_jump_keeps_its_full_range() {
+    for airborne in [false, true] {
+        let mut game = Embertrail::new(7);
+        step(
+            &mut game,
+            16,
+            Intent {
+                x: 1,
+                sprint: true,
+                ..Default::default()
+            },
+        );
+        if airborne {
+            game.step(&Intent {
+                x: 1,
+                action: true,
+                sprint: true,
+                ..Default::default()
+            });
+        }
+        for _ in 0..if airborne { 4 } else { 3 } {
+            game.step(&Intent {
+                x: -1,
+                sprint: true,
+                ..Default::default()
+            });
+        }
+        assert!(
+            game.state.vx < 0,
+            "Reverse direction promptly, including in the air"
+        );
+        assert_eq!(game.state.facing, -1);
+    }
+    let mut game = Embertrail::new(7);
+    game.state.level.tiles = vec![Tile {
+        r: Rect::new(0, FLOOR, 2000, 96),
+        kind: 0,
+        content: 0,
+    }];
+    game.state.level.pickups.clear();
+    game.state.level.enemies.clear();
+    game.state.level.platforms.clear();
+    step(
+        &mut game,
+        16,
+        Intent {
+            x: 1,
+            sprint: true,
+            ..Default::default()
+        },
+    );
+    let start_x = game.state.px;
+    let mut apex = game.player().y;
+    game.step(&Intent {
+        x: 1,
+        action: true,
+        sprint: true,
+        ..Default::default()
+    });
+    let mut ticks = 1;
+    while !game.state.grounded && ticks < 80 {
+        game.step(&Intent {
+            x: 1,
+            sprint: true,
+            ..Default::default()
+        });
+        apex = apex.min(game.player().y);
+        ticks += 1;
+    }
+    assert_eq!(ticks, 51, "The established jump timing is unchanged");
+    assert_eq!(game.state.px - start_x, 1470 * 51);
+    assert!((147..=149).contains(&(338 - apex)));
+}
+
+#[test]
+fn every_hidden_room_has_unique_authored_geometry_and_live_movers() {
+    let mut layouts = std::collections::HashSet::new();
+    for course in 0..COURSES {
+        let mut game = Embertrail::new(7);
+        game.state.unlocked = course;
+        game.enter_course(course);
+        let room = game.state.level.grotto.clone();
+        assert_eq!(room.archetype as usize, course / 4);
+        assert_eq!(room.variant as usize, course % 4);
+        let terrain: Vec<_> = game
+            .state
+            .level
+            .tiles
+            .iter()
+            .filter(|t| t.r.x >= room.bounds.x)
+            .map(|t| (t.r.x - room.bounds.x, t.r.y, t.r.w, t.r.h, t.kind))
+            .collect();
+        assert!(
+            layouts.insert(hash_json(&terrain)),
+            "Hidden layout repeats at course {course}"
+        );
+        assert!(room
+            .bounds
+            .contains(Point::new(game.state.level.secret_return.x, 338)));
+        assert!(game
+            .state
+            .level
+            .tiles
+            .iter()
+            .any(|t| t.kind == 0 && t.r.contains(Point::new(room.entrance.x, FLOOR))));
+        assert!(game.state.level.tiles.iter().any(|t| t.kind == 0
+            && t.r
+                .contains(Point::new(game.state.level.secret_return.x, FLOOR))));
+        let before: Vec<_> = game
+            .state
+            .level
+            .platforms
+            .iter()
+            .filter(|p| p.home.x >= room.bounds.x)
+            .map(|p| p.r)
+            .collect();
+        assert!(!before.is_empty());
+        game.state.px = game.state.level.secret.x * SUB;
+        game.step(&Intent {
+            y: 1,
+            ..Default::default()
+        });
+        assert!(game.state.secret_inside);
+        let mut moved = false;
+        for _ in 0..53 {
+            game.step(&Intent::default());
+            let after: Vec<_> = game
+                .state
+                .level
+                .platforms
+                .iter()
+                .filter(|p| p.home.x >= room.bounds.x)
+                .map(|p| p.r)
+                .collect();
+            moved |= before != after;
+        }
+        assert!(
+            moved,
+            "A hidden room must actually move during the observed interval"
+        );
+        let save = snapshot::save(&game, "Inside a live hidden room").unwrap();
+        let mut resumed = Embertrail::new(7);
+        snapshot::restore(&mut resumed, &save).unwrap();
+        for tick in 0..90 {
+            let input = Intent {
+                x: if tick % 48 < 24 { 1 } else { -1 },
+                action: tick % 47 == 0,
+                ..Default::default()
+            };
+            game.step(&input);
+            resumed.step(&input);
+            assert_eq!(game.state_hash(), resumed.state_hash());
+        }
+        game.state.px = game.grotto_entry_gate().x * SUB;
+        game.state.py = 338 * SUB;
+        game.state.portal_cooldown = 0;
+        game.step(&Intent {
+            y: 1,
+            ..Default::default()
+        });
+        assert!(
+            !game.state.secret_inside,
+            "The entry stairs always offer a safe return"
+        );
+    }
+}
+
+#[test]
+fn springs_launch_once_with_a_distinct_cue_and_room_death_keeps_the_checkpoint() {
+    let mut game = Embertrail::new(7);
+    game.state.level.tiles.push(Tile {
+        r: Rect::new(72, FLOOR - 4, 44, 8),
+        kind: 5,
+        content: 0,
+    });
+    game.step(&Intent::default());
+    assert_eq!(game.state.vy, -15 * SUB);
+    assert!(!game.state.grounded);
+    assert_eq!(game.take_cues(), vec![Cue::Spring as usize]);
+    game.step(&Intent::default());
+    assert!(!game.take_cues().contains(&(Cue::Spring as usize)));
+    let save = snapshot::save(&game, "Spring launch").unwrap();
+    let mut resumed = Embertrail::new(7);
+    snapshot::restore(&mut resumed, &save).unwrap();
+    assert_eq!(game.state_hash(), resumed.state_hash());
+    game.state.checkpoint = true;
+    game.state.secret_inside = true;
+    game.hurt(true);
+    step(&mut game, 90, Intent::default());
+    assert!(!game.state.secret_inside);
+    assert_eq!(game.player().x, game.state.level.checkpoint + 20);
+}
+
+#[test]
+fn interaction_cues_follow_the_actual_object_or_player_event() {
+    for (kind, cue) in [
+        (0, Cue::SparkPickup),
+        (1, Cue::BloomUnfurl),
+        (2, Cue::EmberIgnite),
+        (3, Cue::InvincibilityShimmer),
+        (4, Cue::ExtraLife),
+        (5, Cue::ShardPickup),
+    ] {
+        let mut game = Embertrail::new(7);
+        game.state.level.pickups = vec![Pickup {
+            r: game.player(),
+            kind,
+            active: true,
+        }];
+        game.collect();
+        assert_eq!(game.take_cues(), vec![cue as usize]);
+    }
+    let mut game = Embertrail::new(7);
+    game.state.sparks = 99;
+    game.state.level.pickups = vec![Pickup {
+        r: game.player(),
+        kind: 0,
+        active: true,
+    }];
+    game.collect();
+    assert_eq!(game.take_cues(), vec![Cue::ExtraLife as usize]);
+    let mut game = Embertrail::new(7);
+    game.state.px = 514 * SUB;
+    game.state.py = 294 * SUB;
+    game.state.vy = -3 * SUB;
+    game.step(&Intent::default());
+    assert_eq!(game.take_cues(), vec![Cue::BlockReveal as usize]);
+    game.state.form = 1;
+    game.state.px = 482 * SUB;
+    game.state.py = 294 * SUB;
+    game.state.vy = -3 * SUB;
+    game.step(&Intent::default());
+    assert_eq!(game.take_cues(), vec![Cue::ClayBreak as usize]);
+    game.state.px = 80 * SUB;
+    game.state.py = 338 * SUB;
+    game.state.vy = 0;
+    game.state.grounded = true;
+    game.state.form = 2;
+    game.step(&Intent {
+        action: true,
+        secondary: true,
+        ..Default::default()
+    });
+    let sounds = game.take_cues();
+    assert!(sounds.contains(&(Cue::Jump as usize)) && sounds.contains(&(Cue::SeedCast as usize)));
+    game.state.shield = 0;
+    game.hurt(false);
+    assert_eq!(game.take_cues(), vec![Cue::Hurt as usize]);
+    game.state.shield = 0;
+    game.state.form = 0;
+    game.hurt(false);
+    assert_eq!(game.take_cues(), vec![Cue::Death as usize]);
+}
+
+#[test]
+fn published_v2_payloads_migrate_surface_and_inside_saves_through_engine_framing() {
+    for inside in [false, true] {
+        let mut old = Embertrail::new(7);
+        old.state.unlocked = 13;
+        old.enter_course(13);
+        old.state.cleared = 0x1fff;
+        old.state.best_relics[4] = 3;
+        old.state.score = 54321;
+        old.state.sparks = 76;
+        old.state.relics = 2;
+        old.state.checkpoint = true;
+        old.state.timer = 12345;
+        old.state.level.pickups[0].active = false;
+        // Published 0.2.0 used this exact small vault and had no spring kind or
+        // Grotto metadata. Exercise its actual old payload shape, not a v3 room.
+        let width = old.state.level.width;
+        old.state.level.tiles.retain(|p| p.r.x < width);
+        for (r, kind) in [
+            (Rect::new(width + 128, FLOOR, 736, 96), 0),
+            (Rect::new(width + 96, 80, 32, 384), 1),
+            (Rect::new(width + 864, 80, 32, 384), 1),
+            (Rect::new(width + 128, 80, 736, 32), 1),
+            (Rect::new(width + 600, 306, 64, 16), 1),
+        ] {
+            old.state.level.tiles.push(Tile {
+                r,
+                kind,
+                content: 0,
+            });
+        }
+        old.state.level.pickups.retain(|p| p.r.x < width);
+        for row in 0..3 {
+            for col in 0..7 {
+                old.state.level.pickups.push(Pickup {
+                    r: Rect::new(width + 280 + col * 52, 208 + row * 44, 16, 20),
+                    kind: 0,
+                    active: true,
+                });
+            }
+        }
+        old.state.level.pickups.push(Pickup {
+            r: Rect::new(width + 620, 264, 16, 20),
+            kind: 4,
+            active: true,
+        });
+        old.state.level.enemies.retain(|p| p.r.x < width);
+        old.state.level.platforms.retain(|p| p.home.x < width);
+        old.state.level.hazards.retain(|p| p.x < width);
+        old.state.px = if inside {
+            (old.state.level.width + 600) * SUB
+        } else {
+            700 * SUB
+        };
+        old.state.secret_inside = inside;
+        old.state.level.secret_used = inside;
+        old.state.camera = if inside { width + 128 } else { 420 };
+        old.state.level.secret_return = Rect::new(old.state.level.width + 800, 320, 40, 48);
+        let mut value = serde_json::to_value(old.capture()).unwrap();
+        value["level"].as_object_mut().unwrap().remove("grotto");
+        let payload = serde_json::json!({"hash":"0000000000000000","state":value});
+        let header =
+            vesper3d::viewer::savestate::SaveHeader::new("embertrail", 2, "Published 0.2.0 save");
+        let bytes =
+            vesper3d::viewer::savestate::encode(&header, &serde_json::to_vec(&payload).unwrap())
+                .unwrap();
+        let mut game = Embertrail::new(7);
+        snapshot::restore(&mut game, &bytes).unwrap();
+        assert_eq!(game.state.course, 13);
+        assert_eq!(game.state.unlocked, 13);
+        assert_eq!(game.state.cleared, 0x1fff);
+        assert_eq!(game.state.best_relics[4], 3);
+        assert_eq!(game.state.score, 54321);
+        assert_eq!(game.state.sparks, 76);
+        assert_eq!(game.state.relics, 2);
+        assert!(game.state.checkpoint);
+        assert_eq!(game.state.timer, 12345);
+        assert!(!game.state.level.pickups[0].active);
+        assert_eq!(game.state.secret_inside, inside);
+        assert_eq!(
+            game.player().x,
+            if inside {
+                game.state.level.grotto.entrance.x
+            } else {
+                700
+            }
+        );
+        let current = snapshot::save(&game, "Migrated v3").unwrap();
+        let mut resumed = Embertrail::new(7);
+        snapshot::restore(&mut resumed, &current).unwrap();
+        assert_eq!(game.state_hash(), resumed.state_hash());
+    }
+    let mut game = Embertrail::new(7);
+    let mut invalid = game.capture();
+    invalid.level.grotto.bounds.x = i32::MAX;
+    assert!(
+        game.restore(invalid).is_err(),
+        "Malformed room metadata must be rejected before bound arithmetic"
+    );
 }

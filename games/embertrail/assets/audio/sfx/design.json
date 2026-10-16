@@ -1,0 +1,210 @@
+{
+  "title": "Embertrail \u2014 objects have voices",
+  "sample_rate": 44100,
+  "provenance": "Original authored procedural foley; no recordings or stock presets",
+  "generator": "scripts/compose_interactions.py",
+  "cues": [
+    {
+      "cue": 0,
+      "id": "spark-pickup",
+      "seconds": 0.17,
+      "variants": 2,
+      "behavior": "Tiny warm glass tick with an airy tail; collectible spark",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 1,
+      "id": "shard-pickup",
+      "seconds": 0.5,
+      "variants": 1,
+      "behavior": "Three irregular crystalline overtones, longer than a spark",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 2,
+      "id": "bloom-unfurl",
+      "seconds": 0.6,
+      "variants": 1,
+      "behavior": "Soft leaf rustle opening into rounded petal resonances",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 3,
+      "id": "ember-ignite",
+      "seconds": 0.44,
+      "variants": 1,
+      "behavior": "Breathy ignition whoosh with a warm low flame and tiny crackle",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 4,
+      "id": "invincibility-shimmer",
+      "seconds": 0.85,
+      "variants": 1,
+      "behavior": "A spreading high glass shimmer; brief power activation only",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 5,
+      "id": "extra-life",
+      "seconds": 0.84,
+      "variants": 1,
+      "behavior": "Four ascending soft lantern notes; reward heard once",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 6,
+      "id": "clay-break",
+      "seconds": 0.27,
+      "variants": 2,
+      "behavior": "Dry granular crack, low pottery body and falling ceramic chips",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 7,
+      "id": "block-reveal",
+      "seconds": 0.29,
+      "variants": 2,
+      "behavior": "Hollow wooden knock and rustling lid; an object opens",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 8,
+      "id": "checkpoint",
+      "seconds": 0.88,
+      "variants": 1,
+      "behavior": "Two warm shelter bells with a low reassuring root note",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 9,
+      "id": "jump",
+      "seconds": 0.14,
+      "variants": 2,
+      "behavior": "Quiet short upward breath; low rounded lift, no pickup notes",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 10,
+      "id": "spring",
+      "seconds": 0.47,
+      "variants": 2,
+      "behavior": "Elastic wooden twang with a decaying oscillating pitch",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 11,
+      "id": "seed-cast",
+      "seconds": 0.16,
+      "variants": 2,
+      "behavior": "Soft hollow puff and seed flick, kept below the score",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 12,
+      "id": "enemy-bounce",
+      "seconds": 0.23,
+      "variants": 2,
+      "behavior": "Damped seedpod thump with a short rounded rebound",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 13,
+      "id": "shell-kick",
+      "seconds": 0.21,
+      "variants": 2,
+      "behavior": "Hard wooden shell clack with a low rolling body",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 14,
+      "id": "boss-hit",
+      "seconds": 0.49,
+      "variants": 2,
+      "behavior": "Deep night-collar crack and low resonant impact",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 15,
+      "id": "guardian-freed",
+      "seconds": 1.24,
+      "variants": 1,
+      "behavior": "Collar glass breaks, then a warm bell resolves the guardian's release",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 16,
+      "id": "hurt",
+      "seconds": 0.35,
+      "variants": 1,
+      "behavior": "Cracked lantern rattle and falling uneven resonance",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 17,
+      "id": "death",
+      "seconds": 0.78,
+      "variants": 1,
+      "behavior": "A soft descending extinguishing breath, distinct from taking a hit",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 18,
+      "id": "grotto-enter",
+      "seconds": 0.55,
+      "variants": 1,
+      "behavior": "Hollow root knocks descend beneath the ground with woody breath",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 19,
+      "id": "grotto-exit",
+      "seconds": 0.55,
+      "variants": 1,
+      "behavior": "Hollow root knocks rise toward daylight with an open airy finish",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 20,
+      "id": "menu-confirm",
+      "seconds": 0.1,
+      "variants": 1,
+      "behavior": "Muted round button click; no world reward motif",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 21,
+      "id": "course-clear",
+      "seconds": 1.15,
+      "variants": 1,
+      "behavior": "Three resolving dawn-bell strikes and a rounded wooden knock",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 22,
+      "id": "homecoming",
+      "seconds": 1.72,
+      "variants": 1,
+      "behavior": "Broad warm bell chord opening into the recovered Dawnheart's answer",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 23,
+      "id": "menu-navigate",
+      "seconds": 0.055,
+      "variants": 1,
+      "behavior": "Very quiet brushed wooden tick, only for a changed selection",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    },
+    {
+      "cue": 24,
+      "id": "menu-back",
+      "seconds": 0.13,
+      "variants": 1,
+      "behavior": "Lower soft wooden button release; distinct from confirming",
+      "synthesis": "Original deterministic modal/noise synthesis"
+    }
+  ],
+  "content_sha256": "cfd57d41703911e4394b77a617d3f13c50bf20fa2869037ced3c0fab2a03a611",
+  "review_scope": "Numerical waveform and contract checks; physical speaker review remains human"
+}
