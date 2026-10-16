@@ -24,7 +24,7 @@ The game is designed for a standard PC controller. [Windows release downloads](h
 
 Up/W never jumps and does not change jump height. Jump buffering and coyote time make close landings and ledge takeoffs forgiving. Ice preserves a distinct feel with controllable braking.
 
-Pause offers Resume, Trail atlas, Restart checkpoint, Restart course, Music, Sound effects, Download this song, Return to title, and Quit game. Confirming a menu action consumes the input. Normal play saves automatically through BlueEngine storage. Existing campaign progress migrates to version 2; an older saved course restarts at its entrance because course geometry and movement have changed. Player files remain outside the install directory.
+Pause offers Resume, Trail atlas, Restart checkpoint, Restart course, Music, Sound effects, Download this song, Return to title, and Quit game. Menu / Esc also opens options on the title screen, including its current song download; B / Esc returns to the title while that song keeps playing. Confirming a menu action consumes the input. Normal play saves automatically through BlueEngine storage. Existing campaign progress migrates to version 2; an older saved course restarts at its entrance because course geometry and movement have changed. Player files remain outside the install directory.
 
 ## The islands
 

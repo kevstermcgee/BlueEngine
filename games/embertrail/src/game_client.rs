@@ -36,6 +36,36 @@ impl Default for Settings {
 const PAPER: Color = Color::new(0.97, 0.93, 0.82, 1.);
 const MINT: Color = Color::new(0.64, 0.88, 0.75, 1.);
 const GOLD: Color = Color::new(0.98, 0.76, 0.42, 1.);
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PauseAction {
+    Resume,
+    Atlas,
+    RestartCheckpoint,
+    RestartCourse,
+    Music,
+    Sound,
+    Download,
+    ReturnTitle,
+    Quit,
+}
+fn pause_actions(started: bool) -> &'static [PauseAction] {
+    use PauseAction::*;
+    if started {
+        &[
+            Resume,
+            Atlas,
+            RestartCheckpoint,
+            RestartCourse,
+            Music,
+            Sound,
+            Download,
+            ReturnTitle,
+            Quit,
+        ]
+    } else {
+        &[ReturnTitle, Music, Sound, Download, Quit]
+    }
+}
 fn panel(scene: &mut Scene, rect: Rect) {
     scene.rect(
         200,
@@ -180,22 +210,23 @@ fn title(
     );
     scene.rect(
         205,
-        Rect::new(220, 357, 360, 29),
+        Rect::new(180, 357, 440, 44),
         Color::new(0.025, 0.075, 0.09, 0.88),
     );
     centered(
         scene,
         font,
         "A  Confirm     Stick / D-pad  Choose",
-        378,
+        375,
         18,
         MINT,
     );
+    centered(scene, font, "Menu  Options / soundtrack", 393, 16, MINT);
     centered(
         scene,
         font,
         &format!("Now playing: {track}"),
-        410,
+        416,
         16,
         PAPER,
     );
@@ -210,6 +241,7 @@ fn title(
 }
 fn pause(
     scene: &mut Scene,
+    started: bool,
     settings: &Settings,
     selected: usize,
     track: &str,
@@ -217,7 +249,14 @@ fn pause(
     length: f32,
 ) {
     panel(scene, Rect::new(150, 30, 500, 390));
-    text(scene, "PAUSED", 184, 71, 32., GOLD);
+    text(
+        scene,
+        if started { "PAUSED" } else { "OPTIONS" },
+        184,
+        71,
+        32.,
+        GOLD,
+    );
     text(
         scene,
         if loading {
@@ -231,28 +270,30 @@ fn pause(
         MINT,
     );
     text(scene, track, 184, 119, 22., PAPER);
-    let labels = [
-        "Resume".to_owned(),
-        "Trail atlas".to_owned(),
-        "Restart checkpoint".to_owned(),
-        "Restart course".to_owned(),
-        format!("Music: {}", if settings.music { "On" } else { "Off" }),
-        format!(
-            "Sound effects: {}",
-            if settings.sound { "On" } else { "Off" }
-        ),
-        format!(
-            "Download this song (.wav)  {}:{:02}",
-            length as u32 / 60,
-            length as u32 % 60
-        ),
-        "Return to title".to_owned(),
-        "Quit game".to_owned(),
-    ];
-    for (index, label) in labels.iter().enumerate() {
+    for (index, action) in pause_actions(started).iter().enumerate() {
+        let label = match action {
+            PauseAction::Resume => "Resume".to_owned(),
+            PauseAction::Atlas => "Trail atlas".to_owned(),
+            PauseAction::RestartCheckpoint => "Restart checkpoint".to_owned(),
+            PauseAction::RestartCourse => "Restart course".to_owned(),
+            PauseAction::Music => {
+                format!("Music: {}", if settings.music { "On" } else { "Off" })
+            }
+            PauseAction::Sound => format!(
+                "Sound effects: {}",
+                if settings.sound { "On" } else { "Off" }
+            ),
+            PauseAction::Download => format!(
+                "Download this song (.wav)  {}:{:02}",
+                length as u32 / 60,
+                length as u32 % 60
+            ),
+            PauseAction::ReturnTitle => "Return to title".to_owned(),
+            PauseAction::Quit => "Quit game".to_owned(),
+        };
         row(
             scene,
-            label,
+            &label,
             selected == index,
             index,
             146 + index as i32 * 26,
@@ -260,7 +301,11 @@ fn pause(
     }
     text(
         scene,
-        "A  Select     B  Resume     Stick / D-pad  Choose",
+        if started {
+            "A  Select     B  Resume     Stick / D-pad  Choose"
+        } else {
+            "A  Select     B  Title     Stick / D-pad  Choose"
+        },
         178,
         398,
         17.,
@@ -481,7 +526,6 @@ pub async fn run() -> Result<(), String> {
         let confirm = key(KeyCode::Enter)
             || key(KeyCode::Space)
             || pad.pressed(Button::South)
-            || (!started && pad.pressed(Button::Start))
             || press("select")
             || press("start");
         let back = key(KeyCode::Escape) || pad.menu_back() || press("back");
@@ -499,50 +543,40 @@ pub async fn run() -> Result<(), String> {
         let mut consume = false;
         let mut atlas_command = false;
         let mut quit = is_quit_requested();
-        if !started {
-            if menu_step.up || menu_step.down {
-                title_selection = 1 - title_selection;
-            }
-            if confirm {
-                consume = true;
-                if title_selection == 1 {
-                    quit = true;
-                } else {
-                    started = true;
-                    paused = false;
-                    nav.reset();
-                    score.cue(0, settings.sound);
-                }
-            }
-        } else if paused {
+        if paused {
+            let actions = pause_actions(started);
             if menu_step.up {
-                selection = (selection + 8) % 9;
+                selection = (selection + actions.len() - 1) % actions.len();
             }
             if menu_step.down {
-                selection = (selection + 1) % 9;
+                selection = (selection + 1) % actions.len();
             }
-            if back || pad.pressed(Button::Start) || press("pause") {
+            if back || pause_press {
                 paused = false;
                 consume = true;
                 nav.reset();
             } else if confirm || press("download") {
                 consume = true;
-                let selected = if press("download") { 6 } else { selection };
+                let selected = if press("download") {
+                    PauseAction::Download
+                } else {
+                    actions[selection]
+                };
                 match selected {
-                    0 => paused = false,
-                    1 => {
+                    PauseAction::Resume => paused = false,
+                    PauseAction::Atlas => {
                         game.open_atlas();
                         paused = false;
                     }
-                    2 => {
+                    PauseAction::RestartCheckpoint => {
                         game.restart_checkpoint();
                         paused = false;
                     }
-                    3 => {
+                    PauseAction::RestartCourse => {
                         game.restart();
                         paused = false;
                     }
-                    4 => {
+                    PauseAction::Music => {
                         settings.music = !settings.music;
                         notice = match storage::write_settings(&store, &settings) {
                             Ok(()) => {
@@ -552,7 +586,7 @@ pub async fn run() -> Result<(), String> {
                         };
                         notice_time = 4.;
                     }
-                    5 => {
+                    PauseAction::Sound => {
                         settings.sound = !settings.sound;
                         notice = match storage::write_settings(&store, &settings) {
                             Ok(()) => format!(
@@ -563,20 +597,40 @@ pub async fn run() -> Result<(), String> {
                         };
                         notice_time = 4.;
                     }
-                    6 => {
+                    PauseAction::Download => {
                         let playing = score.now_playing(score.wanted(&game, started));
                         notice = score.save_current(playing);
                         notice_time = 8.;
                     }
-                    7 => {
+                    PauseAction::ReturnTitle => {
                         started = false;
                         paused = false;
                         title_selection = 0;
                     }
-                    8 => quit = true,
-                    _ => {}
+                    PauseAction::Quit => quit = true,
                 }
                 nav.reset();
+            }
+        } else if !started {
+            if pause_press {
+                paused = true;
+                selection = 0;
+                consume = true;
+                nav.reset();
+            } else {
+                if menu_step.up || menu_step.down {
+                    title_selection = 1 - title_selection;
+                }
+                if confirm {
+                    consume = true;
+                    if title_selection == 1 {
+                        quit = true;
+                    } else {
+                        started = true;
+                        nav.reset();
+                        score.cue(0, settings.sound);
+                    }
+                }
             }
         } else if game.state.atlas && back {
             atlas_command = true;
@@ -737,9 +791,10 @@ pub async fn run() -> Result<(), String> {
         } else {
             game.draw(&mut scene);
         }
-        if started && paused {
+        if paused {
             pause(
                 &mut scene,
+                started,
                 &settings,
                 selection,
                 score.title(playing),
