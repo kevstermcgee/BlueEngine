@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "song": {
+      "file": "song.wav",
+      "checksum": "65ea0f429abaacba",
+      "frames": 3024000,
+      "peak": 0.4120377,
+      "rms": 0.09195233,
+      "dc": 3e-09,
+      "seam_jump": 0.001015119
+    }
+  },
+  "music_scale": 1.0
+}

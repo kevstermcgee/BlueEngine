@@ -1,0 +1,85 @@
+{
+  "title": "Caravans of the Sunseed",
+  "bpm": 126,
+  "meter": 4,
+  "bars": 32,
+  "tonic_midi": 57,
+  "scale": [
+    0,
+    1,
+    4,
+    5,
+    7,
+    8,
+    10
+  ],
+  "progression": [
+    0,
+    1,
+    4,
+    0,
+    5,
+    3,
+    1,
+    4
+  ],
+  "melody_a": [
+    0,
+    1,
+    4,
+    3,
+    1,
+    0,
+    2,
+    4,
+    5,
+    3,
+    2,
+    1,
+    4,
+    6,
+    3,
+    0
+  ],
+  "melody_b": [
+    7,
+    6,
+    4,
+    5,
+    3,
+    1,
+    2,
+    4,
+    6,
+    5,
+    3,
+    4,
+    2,
+    1,
+    -1,
+    0
+  ],
+  "rhythm_a": [
+    0,
+    0.5,
+    1.75,
+    2.5,
+    3,
+    3.5
+  ],
+  "rhythm_b": [
+    0,
+    0.75,
+    1.5,
+    2.25,
+    3.25
+  ],
+  "sections": [
+    "A: introduce",
+    "B: answer",
+    "C: change register and texture",
+    "A prime: counterline and resolution"
+  ],
+  "note_events": 820,
+  "provenance": "Original Embertrail composition and offline additive instruments; no samples"
+}

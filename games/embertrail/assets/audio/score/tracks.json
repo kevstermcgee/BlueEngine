@@ -1,0 +1,146 @@
+[
+  {
+    "id": "title",
+    "title": "A Small Light, A Long Road",
+    "seconds": 68.571429,
+    "bpm": 112,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Warm lute, woodwind and lantern bells; Mote's promise"
+  },
+  {
+    "id": "meadow",
+    "title": "First Sparks in Fernlight",
+    "seconds": 61.935484,
+    "bpm": 124,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Buoyant flute and plucked strings for early exploration"
+  },
+  {
+    "id": "moon",
+    "title": "When Crystals Learn to Sing",
+    "seconds": 78.26087,
+    "bpm": 92,
+    "meter": 3,
+    "bars": 40,
+    "mood": "Swaying cave nocturne, glass melody and soft brushed frame drum"
+  },
+  {
+    "id": "marsh",
+    "title": "Reeds Beneath Copper Rain",
+    "seconds": 71.111111,
+    "bpm": 108,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Syncopated reeds, hollow percussion and warm bass through wetlands"
+  },
+  {
+    "id": "frost",
+    "title": "Snowglass Waltz",
+    "seconds": 81.818182,
+    "bpm": 88,
+    "meter": 3,
+    "bars": 40,
+    "mood": "Celesta and bowed chords, spacious three-beat skating pulse"
+  },
+  {
+    "id": "dunes",
+    "title": "Caravans of the Sunseed",
+    "seconds": 60.952381,
+    "bpm": 126,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Lute flourishes, hand drums and winding sunlit phrases"
+  },
+  {
+    "id": "sky",
+    "title": "Kites Above the Sleeping Sea",
+    "seconds": 66.206897,
+    "bpm": 116,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Airborne woodwind duet with rising strings and light marimba"
+  },
+  {
+    "id": "forge",
+    "title": "Lanterns in the Briar Choir",
+    "seconds": 69.818182,
+    "bpm": 110,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Bowed woodland choir, seedpod percussion and uneasy dusk harmonies"
+  },
+  {
+    "id": "citadel",
+    "title": "Ashes Keep Their Promises",
+    "seconds": 64.0,
+    "bpm": 120,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Resolute strings and low horns for the climb to the stolen Dawnheart"
+  },
+  {
+    "id": "underroots",
+    "title": "Where the Roots Hide Stars",
+    "seconds": 85.714286,
+    "bpm": 84,
+    "meter": 3,
+    "bars": 40,
+    "mood": "Secret grotto music: waterlike bells and curious pizzicato"
+  },
+  {
+    "id": "warden-root",
+    "title": "Thorns Around a Tender Heart",
+    "seconds": 67.605634,
+    "bpm": 142,
+    "meter": 4,
+    "bars": 40,
+    "mood": "Agile reed duels and rattling seedpods for the woodland guardians"
+  },
+  {
+    "id": "warden-tide",
+    "title": "Keepers of Stone and Water",
+    "seconds": 69.565217,
+    "bpm": 138,
+    "meter": 5,
+    "bars": 32,
+    "mood": "Five-beat bronze rhythm for Chimeback and the marsh pump-keeper"
+  },
+  {
+    "id": "warden-gale",
+    "title": "A Crown of Ice and Thunder",
+    "seconds": 64.864865,
+    "bpm": 148,
+    "meter": 4,
+    "bars": 40,
+    "mood": "Bright horns cut through ice bells and galloping strings"
+  },
+  {
+    "id": "warden-iron",
+    "title": "The Lion Behind the Sun",
+    "seconds": 66.666667,
+    "bpm": 144,
+    "meter": 4,
+    "bars": 40,
+    "mood": "Heavy hand drums, low brass and sunglass chimes for Solarch"
+  },
+  {
+    "id": "vesper",
+    "title": "Vesper's Last Toll",
+    "seconds": 64.0,
+    "bpm": 150,
+    "meter": 4,
+    "bars": 40,
+    "mood": "The Bell Regent's final confrontation: urgent horns, dark bells and Mote's answer"
+  },
+  {
+    "id": "victory",
+    "title": "Every Window Holds the Dawn",
+    "seconds": 65.084746,
+    "bpm": 118,
+    "meter": 4,
+    "bars": 32,
+    "mood": "Homecoming reprise with full warm ensemble and a new soaring resolution"
+  }
+]

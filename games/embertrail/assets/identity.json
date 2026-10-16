@@ -1,0 +1,10 @@
+{
+  "title": "Embertrail",
+  "tagline": "A little light. A very big adventure.",
+  "controls": "Stick/D-pad move; A jump; X cast; Down enter roots; Start pause; keyboard A/D move, Space jump, X cast, Esc pause",
+  "engine_revision": "1d8d501ccc9c9fc8cfb6cabf7ddcac87aeba6106",
+  "package": [
+    "assets/audio/score",
+    "assets/fonts"
+  ]
+}

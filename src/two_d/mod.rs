@@ -104,6 +104,10 @@ pub struct Intent {
     pub y: i32,
     pub pointer: Option<Point>,
     pub action: bool,
+    /// Independent secondary action (X / controller West in the shared native client).
+    /// Keep jump and attack separate instead of overloading movement axes.
+    #[serde(default)]
+    pub secondary: bool,
     /// Radians accumulated across device frames and consumed once, for optional 3D look.
     #[serde(default)]
     pub look: [f32; 2],
@@ -175,6 +179,22 @@ pub fn hash_json(value: &impl Serialize) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn secondary_action_is_independent_and_old_replays_default_to_false() {
+        let old: Intent =
+            serde_json::from_str(r#"{"x":1,"y":0,"pointer":null,"action":true}"#).unwrap();
+        assert!(old.action);
+        assert!(!old.secondary);
+        let attack = Intent {
+            secondary: true,
+            ..Default::default()
+        };
+        let roundtrip: Intent =
+            serde_json::from_str(&serde_json::to_string(&attack).unwrap()).unwrap();
+        assert!(roundtrip.secondary);
+        assert!(!roundtrip.action);
+        assert_eq!(roundtrip.y, 0);
+    }
     #[test]
     fn swept_collision_cannot_tunnel_and_slides_along_walls() {
         let mut a = Rect::new(0, 0, 10, 10);

@@ -1,0 +1,84 @@
+{
+  "title": "The Lion Behind the Sun",
+  "bpm": 144,
+  "meter": 4,
+  "bars": 40,
+  "tonic_midi": 48,
+  "scale": [
+    0,
+    1,
+    3,
+    5,
+    7,
+    8,
+    10
+  ],
+  "progression": [
+    0,
+    1,
+    5,
+    4,
+    3,
+    6,
+    1,
+    4
+  ],
+  "melody_a": [
+    0,
+    1,
+    3,
+    4,
+    6,
+    3,
+    2,
+    0,
+    4,
+    5,
+    3,
+    1,
+    2,
+    4,
+    1,
+    -1
+  ],
+  "melody_b": [
+    7,
+    6,
+    8,
+    4,
+    5,
+    3,
+    6,
+    2,
+    5,
+    4,
+    1,
+    3,
+    2,
+    0,
+    1,
+    -1
+  ],
+  "rhythm_a": [
+    0,
+    0.5,
+    1.5,
+    2.5,
+    3.25
+  ],
+  "rhythm_b": [
+    0,
+    1,
+    1.75,
+    2.25,
+    3.5
+  ],
+  "sections": [
+    "A: introduce",
+    "B: answer",
+    "C: change register and texture",
+    "A prime: counterline and resolution"
+  ],
+  "note_events": 1064,
+  "provenance": "Original Embertrail composition and offline additive instruments; no samples"
+}

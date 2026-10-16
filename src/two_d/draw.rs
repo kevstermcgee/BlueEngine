@@ -175,6 +175,14 @@ enum Shape<'a> {
 #[derive(Default)]
 pub struct Renderer {
     textures: std::collections::BTreeMap<&'static str, (Texture2D, u64)>,
+    font: Option<macroquad::prelude::Font>,
+}
+impl Renderer {
+    /// Use a game-owned, embedded font for every Scene text command.
+    /// Load after graphics initialization. Existing renderers retain the default font.
+    pub fn set_font(&mut self, font: macroquad::prelude::Font) {
+        self.font = Some(font);
+    }
 }
 #[derive(Default)]
 pub struct Scene<'a> {
@@ -245,7 +253,12 @@ impl<'a> Scene<'a> {
         // so a later notice cannot invalidate text already submitted in this same frame.
         for (_, shape) in &self.items {
             if let Shape::Text(text, _, size, _) = shape {
-                measure_text(text, None, (size * view.scale) as u16, 1.);
+                measure_text(
+                    text,
+                    renderer.font.as_ref(),
+                    (size * view.scale).round() as u16,
+                    1.,
+                );
             }
         }
         let p = |x: f32, y: f32| {
@@ -278,7 +291,17 @@ impl<'a> Scene<'a> {
                 }
                 Shape::Text(text, pos, size, c) => {
                     let xy = p(pos.x as f32, pos.y as f32);
-                    draw_text(&text, xy[0], xy[1], size * view.scale, c);
+                    draw_text_ex(
+                        &text,
+                        xy[0],
+                        xy[1],
+                        TextParams {
+                            font: renderer.font.as_ref(),
+                            font_size: (size * view.scale).round() as u16,
+                            color: c,
+                            ..Default::default()
+                        },
+                    );
                 }
                 Shape::Sprite(texture, t, size, source, c) => {
                     let xy = p(t.position[0], t.position[1]);

@@ -1,0 +1,84 @@
+{
+  "title": "Keepers of Stone and Water",
+  "bpm": 138,
+  "meter": 5,
+  "bars": 32,
+  "tonic_midi": 53,
+  "scale": [
+    0,
+    2,
+    3,
+    5,
+    7,
+    9,
+    10
+  ],
+  "progression": [
+    0,
+    3,
+    6,
+    4,
+    1,
+    5,
+    2,
+    4
+  ],
+  "melody_a": [
+    0,
+    3,
+    1,
+    4,
+    2,
+    6,
+    4,
+    3,
+    0,
+    2,
+    5,
+    4,
+    1,
+    3,
+    2,
+    -1
+  ],
+  "melody_b": [
+    7,
+    4,
+    6,
+    3,
+    5,
+    8,
+    6,
+    2,
+    4,
+    5,
+    1,
+    3,
+    4,
+    2,
+    0,
+    -1
+  ],
+  "rhythm_a": [
+    0,
+    1,
+    1.5,
+    3,
+    4.25
+  ],
+  "rhythm_b": [
+    0,
+    0.75,
+    2,
+    3.25,
+    4
+  ],
+  "sections": [
+    "A: introduce",
+    "B: answer",
+    "C: change register and texture",
+    "A prime: counterline and resolution"
+  ],
+  "note_events": 920,
+  "provenance": "Original Embertrail composition and offline additive instruments; no samples"
+}

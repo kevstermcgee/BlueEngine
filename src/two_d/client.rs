@@ -310,6 +310,8 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         #[allow(unused_mut)]
         let mut action = platform::primary_key() || is_mouse_button_pressed(MouseButton::Left);
         #[allow(unused_mut)]
+        let mut secondary = platform::command_key(KeyCode::X);
+        #[allow(unused_mut)]
         let mut start =
             platform::command_key(KeyCode::Enter) || is_mouse_button_pressed(MouseButton::Left);
         action |= digital.action;
@@ -322,6 +324,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             x += (pad.left_stick[0] * 1.5) as i32;
             y -= (pad.left_stick[1] * 1.5) as i32;
             action |= pad.menu_select();
+            secondary |= pad.pressed(crate::viewer::gamepad::Button::West);
             start |= pad.menu_select();
             if G::drag_look() {
                 look_native = [pad.right_stick[0] * dt * 2., pad.right_stick[1] * dt * 2.];
@@ -399,6 +402,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 y: y.clamp(-1, 1),
                 pointer,
                 action,
+                secondary,
                 sprint: platform::sprint_key(),
                 look: [0.; 2],
             })
@@ -406,6 +410,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             Intent::default()
         };
         action = intent.action;
+        secondary = intent.secondary;
         if G::pointer_target_only_on_press() {
             pointer_actions.feed(
                 action,
@@ -415,6 +420,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             );
         }
         intent.action = false;
+        intent.secondary = false;
         if !focused || paused || !started {
             inputs.clear();
             pointer_actions.clear();
@@ -422,7 +428,11 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         inputs.feed(
             intent,
-            u32::from(action && focused && started && !paused),
+            if focused && started && !paused {
+                u32::from(action) | (u32::from(secondary) << 1)
+            } else {
+                0
+            },
             if focused && started && !paused {
                 look
             } else {
@@ -447,6 +457,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             let tick = inputs.take_tick();
             let mut intent = tick.held;
             intent.action = tick.pressed(1);
+            intent.secondary = tick.pressed(2);
             if G::pointer_target_only_on_press() {
                 intent.pointer = pointer_actions.take(intent.action);
             }

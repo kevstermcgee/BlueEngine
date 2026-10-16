@@ -1,0 +1,3 @@
+# Native Windows releases carry their C runtime rather than requiring a separate redistributable.
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

@@ -17,7 +17,7 @@ and hybrid presentation are described in docs/PORTABLE_GAMES.md.
 
 ## Game surface (`vesper3d::two_d`)
 
-- `Simulation` + `GameLogic`: fixed 60 Hz integer rules, `Intent { x, y, pointer, action }`, outcome,
+- `Simulation` + `GameLogic`: fixed 60 Hz integer rules, `Intent { x, y, pointer, action, secondary, .. }`, outcome,
   public-input verification route and one meaningful real-device probe. All state stays rendering-free.
 - `Snapshot`: same checksummed BE2SAVE frame, exact continuation, version and migration contract as 3D.
 - `Rect::{overlaps,contains,slide}`: half-open integer bounds, swept axis movement that cannot tunnel;
@@ -25,6 +25,10 @@ and hybrid presentation are described in docs/PORTABLE_GAMES.md.
 - `draw::Scene`: `rect`, `circle`, `text`, `sprite`, `sprite_png`; stable integer painter layers.
   Texture transforms have position, scale and rotation. `sprite` accepts atlas source rectangles.
   Embedded PNGs decode once in the renderer. Invalid/duplicate asset IDs fail explicitly.
+- `draw::Renderer::set_font(font)`: use an embedded, game-owned TTF loaded after graphics
+  initialization for every Scene text command. Text atlas preparation and drawing use the same
+  font and rounded viewport-scaled size. Prefer a readable sans serif for HUD and menus;
+  inspect body labels at the smallest supported window size.
 - `draw::Animation::new(frames,ticks_per_frame)?.frame(tick)`; `Particles` are bounded, presentation-only.
 - `Viewport::fit` letterboxes a logical canvas; pointer coordinates outside it are `None`. Rendering
   can offset by a camera `Point`. The shared client uses an 800×450 logical canvas.
@@ -44,8 +48,8 @@ under that overlay. `Game::show_hud()` controls title/control labels, while a cu
 remains available for a different presentation. Shared keys are R restart, K save, L load,
 Esc pause and M sound; these do not need game-owned key handlers.
 Inspect contrast, glyphs and the native captures before final
-packaging. The built-in bitmap font covers ordinary ASCII; custom text/art remains
-available through the drawing APIs and custom clients.
+packaging. The built-in bitmap font covers ordinary ASCII. Use `Renderer::set_font` for
+readable body text and bundle its redistribution license with the native package.
 The starter already uses `runtime::assert_deterministic`, `snapshot::assert_resumes_exactly`,
 `two_d::verify` for a public-input route, collision and loss assertions. Extend them
 with timer, pickup, locked-exit and restart cases. Native packaged-game smoke checks the client; inspect pause, storage, audio and input separately.

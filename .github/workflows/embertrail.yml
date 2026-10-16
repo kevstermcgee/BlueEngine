@@ -1,0 +1,117 @@
+name: Embertrail update Windows verification
+on:
+  push:
+    branches: [game/embertrail-dawn-update]
+    paths: ['games/embertrail/**', 'src/two_d/**', '.github/workflows/embertrail.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: embertrail-windows
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-latest
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: . -> target
+          shared-key: embertrail-windows
+          cache-on-failure: true
+      - name: Rules, deterministic snapshots and presentation checks
+        working-directory: .
+        shell: bash
+        run: |
+          cargo fmt --manifest-path games/embertrail/Cargo.toml --check
+          cargo test --locked --manifest-path games/embertrail/Cargo.toml
+          cargo clippy --locked --all-targets --manifest-path games/embertrail/Cargo.toml -- -D warnings
+          cargo build --locked --profile itest --no-default-features --features physics,networking --bin be2-tools
+      - name: Prepare pinned software OpenGL for Windows verification
+        shell: pwsh
+        run: |
+          $archive = Join-Path $env:RUNNER_TEMP 'mesa-ci.7z'
+          $mesa = Join-Path $env:RUNNER_TEMP 'mesa-ci'
+          Invoke-WebRequest 'https://github.com/pal1000/mesa-dist-win/releases/download/26.2.4/mesa3d-26.2.4-release-msvc.7z' -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLowerInvariant() -ne '351fc8c8b695878ffb3eaa044b3ead08672a48b1a045e3c3e3975811df0f6695') { throw 'Mesa checksum mismatch' }
+          & 7z x $archive "-o$mesa" 'x64/*' -y
+          if ($LASTEXITCODE -ne 0) { throw 'Mesa extraction failed' }
+          "BE2_CI_OPENGL_DIR=$(Join-Path $mesa 'x64')" >> $env:GITHUB_ENV
+      - name: Ship native package and verify shortcut, icon and isolated graphical launch
+        working-directory: .
+        shell: python
+        run: |
+          import ctypes, os, runpy, sys
+          kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+          set_directory = kernel.SetDllDirectoryW
+          set_directory.argtypes = [ctypes.c_wchar_p]
+          set_directory.restype = ctypes.c_int
+          if not set_directory(os.environ['BE2_CI_OPENGL_DIR']): raise ctypes.WinError(ctypes.get_last_error())
+          os.environ.update(GALLIUM_DRIVER='llvmpipe', LIBGL_ALWAYS_SOFTWARE='1')
+          folder = os.path.join(os.environ['RUNNER_TEMP'], 'Embertrail-shortcuts')
+          sys.argv = ['games/embertrail/scripts/ship.py', 'ship', '--folder', folder, '--force']
+          try: runpy.run_path(sys.argv[0], run_name='__main__')
+          finally: set_directory(None)
+      - name: Validate score, project requirements and verified package
+        working-directory: .
+        shell: pwsh
+        run: |
+          $folder = Join-Path $env:RUNNER_TEMP 'Embertrail-shortcuts'
+          python games/embertrail/scripts/check.py --ship-folder $folder
+          if ($LASTEXITCODE -ne 0) { throw 'Game content check failed' }
+          python scripts/publish_games.py check
+          if ($LASTEXITCODE -ne 0) { throw 'Published-source check failed' }
+      - name: Verify native executable and self-contained C runtime
+        working-directory: .
+        shell: python
+        run: |
+          import hashlib, json, struct
+          from pathlib import Path
+          root = Path('games/embertrail/dist')
+          stamp = json.loads((root / 'ship.json').read_text())
+          assert stamp['verified']['launch'] and stamp['verified']['smoke']
+          for name, digest in stamp['file_sha256'].items():
+              assert hashlib.sha256((root / name).read_bytes()).hexdigest() == digest, name
+          assert not list(root.rglob('*.wasm'))
+          data = (root / 'embertrail.exe').read_bytes()
+          offset = struct.unpack_from('<I', data, 0x3c)[0]
+          assert data[offset:offset+4] == b'PE\0\0'
+          assert struct.unpack_from('<H', data, offset + 4)[0] == 0x8664
+          assert struct.unpack_from('<H', data, offset + 24 + 68)[0] == 2
+          assert b'VCRUNTIME140' not in data.upper(), 'Game requires a separate Visual C++ runtime'
+          assert b'MSVCP140' not in data.upper(), 'Game requires a separate Visual C++ runtime'
+          print('Verified native x64 GUI executable, declared files, graphical evidence and embedded C runtime.')
+      - name: Build per-user Windows x64 installer
+        working-directory: .
+        shell: pwsh
+        run: |
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (!(Test-Path $iscc)) { choco install innosetup --no-progress -y }
+          if (!(Test-Path $iscc)) { throw 'Inno Setup compiler missing' }
+          & $iscc 'games/embertrail/scripts/installer.iss'
+          if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed' }
+          $exe = 'games/embertrail/installers/embertrail-setup-windows-x64.exe'
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  embertrail-setup-windows-x64.exe" | Set-Content -Encoding ascii games/embertrail/installers/SHA256SUMS.txt
+      - name: Verify installation, shortcuts, upgrades and save retention
+        working-directory: .
+        shell: pwsh
+        run: games/embertrail/scripts/test-installer.ps1
+      - name: Retain installer, complete native package and verification captures
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: embertrail-windows-x64
+          path: |
+            games/embertrail/installers/
+            games/embertrail/dist/
+            games/embertrail/.blue-check/
+          include-hidden-files: true

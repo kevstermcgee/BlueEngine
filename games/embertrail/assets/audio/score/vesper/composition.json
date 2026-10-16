@@ -1,0 +1,85 @@
+{
+  "title": "Vesper's Last Toll",
+  "bpm": 150,
+  "meter": 4,
+  "bars": 40,
+  "tonic_midi": 50,
+  "scale": [
+    0,
+    1,
+    3,
+    5,
+    6,
+    8,
+    11
+  ],
+  "progression": [
+    0,
+    1,
+    4,
+    0,
+    5,
+    3,
+    1,
+    4
+  ],
+  "melody_a": [
+    0,
+    1,
+    4,
+    3,
+    6,
+    4,
+    1,
+    0,
+    5,
+    3,
+    2,
+    4,
+    6,
+    3,
+    1,
+    -1
+  ],
+  "melody_b": [
+    7,
+    6,
+    4,
+    8,
+    5,
+    3,
+    6,
+    2,
+    5,
+    4,
+    1,
+    3,
+    2,
+    0,
+    -1,
+    0
+  ],
+  "rhythm_a": [
+    0,
+    0.5,
+    1.25,
+    2,
+    2.75,
+    3.5
+  ],
+  "rhythm_b": [
+    0,
+    0.75,
+    1.5,
+    2.5,
+    3.25
+  ],
+  "sections": [
+    "A: introduce",
+    "B: answer",
+    "C: change register and texture",
+    "A prime: counterline and resolution"
+  ],
+  "note_events": 964,
+  "provenance": "Original Embertrail composition and offline additive instruments; no samples"
+}
