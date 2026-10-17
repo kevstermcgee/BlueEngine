@@ -1,0 +1,16 @@
+{
+  "engine_root": "/home/YOUR_USER/BlueEngine-idea-forge-native",
+  "games_root": "/home/YOUR_USER/BlueEngineGames",
+  "runs_root": "/srv/storage/artifacts/ideaforge/runs",
+  "base": "origin/main",
+  "brief": "A small, original game with a surprising and satisfying central rule",
+  "timezone": "America/Los_Angeles",
+  "daily_root": null,
+  "story": false,
+  "agent": "codex",
+  "model": null,
+  "repairs": 2,
+  "agent_timeout": 3600,
+  "wait_timeout": 10800,
+  "min_free_gib": 8
+}

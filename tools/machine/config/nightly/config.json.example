@@ -1,0 +1,15 @@
+{
+  "engine": "/home/YOUR_USER/BlueEngine",
+  "games": "/home/YOUR_USER/BlueEngineGames",
+  "engine_repo": "YOUR_ORG/BlueEngine",
+  "games_repo": "YOUR_ORG/BlueEngineGames",
+  "branch": "main",
+  "state": "/home/YOUR_USER/.local/state/blueengine-nightly",
+  "codex": "/home/YOUR_USER/.local/bin/codex",
+  "codex_timeout_seconds": 14400,
+  "check_timeout_seconds": 7200,
+  "runs_root": "/srv/storage/artifacts/blueengine-nightly/runs",
+  "worktrees_root": "/srv/storage/artifacts/bn",
+  "ci_timeout_seconds": 5400,
+  "ci_poll_seconds": 30
+}

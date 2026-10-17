@@ -1,0 +1,4 @@
+# Merge this key into the existing [build] table in ~/.cargo/config.toml.
+# Preserve existing compiler wrappers, linker settings, and other configuration.
+[build]
+target-dir = "/srv/storage/cache/cargo/default"

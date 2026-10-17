@@ -1,0 +1,9 @@
+[Unit]
+Description=Record local scheduled status for %i
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/BlueEngine/tools/machine/scheduled_status.py %i
+UMask=0077
+TimeoutStartSec=30s
+NoNewPrivileges=true

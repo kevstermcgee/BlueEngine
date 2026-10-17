@@ -1,0 +1,12 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "status": {"type": "string", "enum": ["updated", "no_changes", "blocked"]},
+    "summary": {"type": "string"},
+    "feedback_addressed": {"type": "array", "items": {"type": "string"}},
+    "checks": {"type": "array", "items": {"type": "string"}},
+    "deferred": {"type": "array", "items": {"type": "string"}}
+  },
+  "required": ["status", "summary", "feedback_addressed", "checks", "deferred"]
+}

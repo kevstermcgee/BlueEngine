@@ -184,6 +184,32 @@ class UtilitiesTest(unittest.TestCase):
                 tools.build_command(self.build_args([sys.executable], min_free_gib=20))
             child.assert_not_called()
 
+    def test_build_refuses_unavailable_policy_mount_before_launch(self):
+        import storage_policy
+        config = self.home / ".config/dev-tools/storage-policy.json"
+        config.parent.mkdir(parents=True)
+        config.write_text("{}")
+        with patch.object(storage_policy, "load_policy", return_value={}) as load, \
+                patch.object(storage_policy, "verify_required_mounts", side_effect=ValueError("Required storage missing")), \
+                patch.object(tools.subprocess, "Popen") as child:
+            with self.assertRaisesRegex(ValueError, "Required storage"):
+                tools.build_command(self.build_args([sys.executable]))
+            load.assert_called_once_with(config)
+            child.assert_not_called()
+
+    def test_build_rechecks_policy_mount_after_acquiring_lock(self):
+        import storage_policy
+        config = self.home / ".config/dev-tools/storage-policy.json"
+        config.parent.mkdir(parents=True)
+        config.write_text("{}")
+        with patch.object(storage_policy, "load_policy", return_value={}), \
+                patch.object(storage_policy, "verify_required_mounts", side_effect=[[], ValueError("Required storage disappeared")]) as guard, \
+                patch.object(tools.subprocess, "Popen") as child:
+            with self.assertRaisesRegex(ValueError, "disappeared"):
+                tools.build_command(self.build_args([sys.executable]))
+            self.assertEqual(guard.call_count, 2)
+            child.assert_not_called()
+
     def test_build_signal_exit_propagates(self):
         code = tools.build_command(self.build_args([sys.executable, "-c", "import os,signal;os.kill(os.getpid(),signal.SIGTERM)"]))
         self.assertEqual(code, 128 + signal.SIGTERM)
