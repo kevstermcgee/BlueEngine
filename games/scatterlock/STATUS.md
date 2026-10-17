@@ -1,0 +1,20 @@
+# Scatterlock implementation status
+
+Implemented the six-chamber native 3D game: exact fixed-point homothetic pulses, simultaneous swept collision, matching endpoint docking, docked-cargo obstacles, allowance exhaustion, full undo/restart, chamber progression and final completion. Authoritative rules are rendering-free and take Intent input at fixed ticks. Snapshot captures cargo, allowance, selection, chamber and undo history.
+
+The shared BlueEngine Lifecycle, native ClientInput/GameShell, kit renderer and engine saves surround the custom simulation. Presentation reads state, animates confirmed pulses, draws lit cargo, suspended berths, fixed baffles, a chamber cage, travel paths, destination ghosts and first obstruction markers. Native keyboard, beacon clicks, orbit, zoom, pause, and F5/F9 are wired. Canonical scaffold/icon tooling supplies the original identity, icon, executable resources and packaging scripts.
+
+CLI starter: `custom-sim`; project runtime: `legacy-native`; presentation: `3d`.
+Windows x64 EXE installer delivery; Linux is a verification host, not a distribution channel. No browser build, shortcut installation, publishing or engine edits.
+
+Behavioral tests cover all six public-input solutions, every-coordinate scaling, swept/static/moving/docked collision, endpoint docking, fixed docked positions, rejection without spending, exhaustion, undo, determinism, corrupted-state refusal and exact Snapshot continuation across the campaign. `verification_input()` and `assets/verification.script` exercise public gameplay only.
+
+Native software evidence lives in `evidence/controls` (X11 keyboard/mouse: loss, undo, click, solve, save/load, orbit/zoom, pause), `evidence/closer` (inspected presentation), and `evidence/campaign` (six-chamber scripted progression). The native-input log confirms two secured cubes with zero allowance remaining. Software captures do not certify physical controls, hardware rendering, audible output, Windows executable resources or an installer. `assets/native-review.json` keeps those criteria explicit.
+
+Beacon-selection review fix: click, number-key and script selections now retain their payload across rendered frames without a fixed tick. The game-owned controls adapter carries the most recent beacon; Lifecycle still consumes the selection edge once. A regression first reproduced B reverting to A, then passed after the fix. Headless tests cover all five beacon indices at 240 Hz, replacement by a newer selection, and non-repeated pulses during catch-up. The native X11 review explicitly checks the highlighted sidebar row after number keys, world-badge clicks and sidebar clicks.
+
+Current review evidence: all 17 headless tests and `scripts/check.py` pass. Two native X11 control runs completed chamber one; the expanded run checks world-badge and sidebar clicks plus number-key selections. Canonical map/icon tooling regenerated the identity assets. Host release packaging and manifest/icon validation pass. The shipping coordinator correctly reports incomplete delivery evidence: package smoke was skipped without a display, and subsequent Xvfb attempts could not bind display sockets. No Windows installer or physical-device verification is claimed. Earlier campaign captures remain available; this review's attempted campaign recapture failed at display initialization.
+
+Observed tooling friction: scaffold rejects runner metadata in an otherwise empty destination; generated relative engine paths need adjusting after moving scaffold files. The capture helper lost Xvfb startup diagnostics on an XOpenDisplay failure; direct xvfb-run worked. The audio backend initialized and reported an ALSA rate error during muted runs; a null ALSA configuration in the software-review child process avoids that error. Supervisor owns feedback/learning-ledger entries.
+
+Run `python3 scripts/check.py --skip-ship` for content, formatting, headless rules and native compilation. Run `python3 scripts/ship.py ship --no-install` for the host package and isolated smoke. Windows installer prepare/build/test and physical native review remain supervisor gates.

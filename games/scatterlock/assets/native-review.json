@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {
+      "id": "pulse-controls",
+      "area": "controls",
+      "instructions": "Use real Tab, number keys 1-5, Q/E, Space, world-badge and sidebar clicks to select and execute. Check that B stays selected through quiet frames on a high-refresh display. Exercise Z, R, Escape and F5/F9. Confirm rejected pulses cost nothing and undo restores allowance."
+    },
+    {
+      "id": "volume-camera",
+      "area": "camera",
+      "instructions": "Right-drag orbit and wheel zoom. Read elevated and rear cargo, fixed baffles, sockets and preview collision markers at 1280x800 and 1920x1080."
+    },
+    {
+      "id": "cargo-route",
+      "area": "gameplay",
+      "instructions": "Complete six chambers using public pulses. In chamber 5 dock cyan first, route amber up and back, and verify the tempting amber-first route encounters its own docked obstruction."
+    },
+    {
+      "id": "legibility",
+      "area": "ui",
+      "instructions": "Inspect colored cargo numbers, beacon badges, pulse allowance, blocked paths, recoverable exhaustion and final completion. Verify pause menu."
+    },
+    {
+      "id": "pulse-sound",
+      "area": "audio",
+      "instructions": "Listen on physical speakers or headphones for pulse, docking, rejection and selection cues. Muted software captures do not certify sound output."
+    }
+  ]
+}

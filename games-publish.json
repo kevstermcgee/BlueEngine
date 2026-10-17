@@ -347,6 +347,10 @@
       {
         "source": "games/backstop",
         "destination": "backstop"
+      },
+      {
+        "source": "games/scatterlock",
+        "destination": "scatterlock"
       }
     ],
     "prototypes": [
