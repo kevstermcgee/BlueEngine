@@ -343,6 +343,10 @@
       {
         "source": "games/pinstride",
         "destination": "pinstride"
+      },
+      {
+        "source": "games/backstop",
+        "destination": "backstop"
       }
     ],
     "prototypes": [

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {
+      "id": "shove-controls",
+      "area": "controls",
+      "instructions": "Use arrows and WASD to move one cell, face cargo and press Space. Verify numbered route and blue rear ruler match the launch. Use Z to undo and R to retry the current bay."
+    },
+    {
+      "id": "cargo-goal",
+      "area": "gameplay",
+      "instructions": "Solve all eight rooms, including crate backstops, repeated helper use and moving a delivered crate. Check a deadlock stays undoable; rejected routes never move cargo."
+    },
+    {
+      "id": "readability",
+      "area": "ui",
+      "instructions": "Inspect native 2D loading-bay grid, target visibility, exact landing, first-obstruction X, progress, start/pause/final panels at normal and resized windows."
+    },
+    {
+      "id": "save-resume",
+      "area": "other",
+      "instructions": "K saves; change cargo and undo history, then L loads. Confirm current bay, facing, cargo, undo and subsequent play resume exactly."
+    },
+    {
+      "id": "cues",
+      "area": "audio",
+      "instructions": "Listen for cargo launch and delivery cues; exercise M mute and focus/pause. Software captures do not prove physical audio."
+    }
+  ]
+}
