@@ -1,0 +1,7 @@
+{"schema_version":1,"checks":[
+{"id":"swing-controls","area":"controls","instructions":"Use real 1-4 keys and click destination ghosts to preview, Space to commit, Z to cancel or undo, R to restart. Check each arriving tip becomes the new pin and held Space never repeats. Escape must pause; F5/F9 must resume a swing and undo history."},
+{"id":"spatial-camera","area":"camera","instructions":"Right-drag to orbit and wheel to zoom. Inspect the windows, overhead clearance and depth changes in all eight chambers; confirm the baton remains visible and the red first-contact marker explains obstruction."},
+{"id":"interface","area":"ui","instructions":"Read instructions at 1280x800 and 1440x900. Distinguish the blue circle and orange diamond, current pin, arriving pin, ghost numbers, sockets, blocked arc, chamber completion and final victory."},
+{"id":"puzzle-loop","area":"gameplay","instructions":"Solve the tutorial by moving up then right. Check clear endpoints can still have a blocked arc in False Clearance, that rejected moves preserve the pin and pose, and that retry/undo are unlimited. Complete all eight chambers without a timer or move budget."},
+{"id":"snap-audio","area":"audio","instructions":"Listen for separate preview, blocked, handoff, undo and completion cues. Exercise Sound effects in Escape Settings. Software captures run muted and cannot verify hardware audio."}
+]}

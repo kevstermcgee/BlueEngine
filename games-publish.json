@@ -339,6 +339,10 @@
       {
         "source": "games/peelturn",
         "destination": "peelturn"
+      },
+      {
+        "source": "games/pinstride",
+        "destination": "pinstride"
       }
     ],
     "prototypes": [

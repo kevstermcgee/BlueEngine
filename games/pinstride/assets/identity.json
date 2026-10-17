@@ -1,0 +1,17 @@
+{
+  "title": "Pinstride",
+  "tagline": "Every swing changes your foothold.",
+  "controls": "1-4 preview swing, Space commit / next chamber, right drag orbit, wheel zoom, Z undo, R restart, H hint, F5/F9 save/load, Esc pause",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100"
+  ],
+  "engine_revision": "f495520db2c9",
+  "package": [
+    "assets/fonts/LICENSE.txt"
+  ]
+}
