@@ -1,0 +1,7 @@
+{"schema_version":1,"checks":[
+{"id":"paired-exchange","area":"gameplay","instructions":"Select two cubes; change X/Y/Z; compare both previews to synchronized movement. Reject a baffle, cargo and partner route without spending a move. Finish the eight chambers, including borrowing from docked C in chamber three."},
+{"id":"retry-and-save","area":"controls","instructions":"Reach allowance failure; undo to refund; restart. F5 save during a slide, then F9 restore and undo. Test Enter progression and Tab instructions using real native key events."},
+{"id":"orbit-and-selection","area":"camera","instructions":"Left-click cubes and cargo-list rows; select hidden cargo with 1-4. Right-drag around the chamber and zoom with wheel. World X/Y/Z labels, height plumbs and depth routes remain consistent."},
+{"id":"legibility","area":"ui","instructions":"Inspect 1440x900 and 1280x800 captures. Cargo and matching symbol docks, first red obstruction, both ghost destinations, move allowance, goal and failure/retry instructions must be readable."},
+{"id":"exchange-audio","area":"audio","instructions":"Listen for pair selection, synchronized slide, rejected route, docking and undo cues. Software playback submission is not a speaker or subjective audio attestation."}
+]}

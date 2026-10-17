@@ -331,6 +331,10 @@
       {
         "source": "games/afterpull",
         "destination": "afterpull"
+      },
+      {
+        "source": "games/crosshaul",
+        "destination": "crosshaul"
       }
     ],
     "prototypes": [

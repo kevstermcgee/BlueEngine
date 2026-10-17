@@ -1,0 +1,17 @@
+{
+  "title": "Crosshaul",
+  "tagline": "Two cargoes. One coordinate. Every route matters.",
+  "controls": "Left click two cubes, X/Y/Z world axis, Space exchange, Right drag orbit, Wheel zoom, 1-4 select cargo, Backspace undo, R restart chamber, Enter next chamber, H hint, F5/F9 save/load, Esc menu",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90",
+    "--exit-after",
+    "100",
+    "--script",
+    "a@2,b@4,y@6,swap@15"
+  ],
+  "engine_revision": "cb3782af9b1b",
+  "exe": "crosshaul"
+}
