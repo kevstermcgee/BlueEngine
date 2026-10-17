@@ -1,0 +1,17 @@
+{
+  "complexity": "medium",
+  "description": "Every step leaves a vacuum. Fill the docks across six spatial puzzles.",
+  "id": "afterpull",
+  "input": [
+    "keyboard"
+  ],
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 15,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

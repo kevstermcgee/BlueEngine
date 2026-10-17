@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {
+      "id": "tap-preview-undo",
+      "area": "controls",
+      "instructions": "Tap WASD and arrows; hold a direction to confirm one step only. Hold Space + direction to preview. At high refresh, release Space immediately after pressing direction: no turn may commit, including a pit pull. Release Space, then make a fresh direction tap to commit. Undo a turn and a pit loss with Z. R retries; Escape pauses/resumes."
+    },
+    {
+      "id": "room-progression",
+      "area": "gameplay",
+      "instructions": "Fill all docks across six rooms. Check shielding, simultaneous pulls, jams and pit failure. Enter advances a clear; Z reverses it before advancing. No clock or move limit."
+    },
+    {
+      "id": "top-down-legibility",
+      "area": "ui",
+      "instructions": "Inspect 800x450 and 1280x720 native windows. Read instructions, numbered crates, docks and striped pits. Preview counts must match moving crates, jammed crates and dock arrivals; pit previews must warn explicitly. Inspect crossed jam arrows, suction pulses and dock-arrival flashes. Confirm shared panels and save notices remain legible."
+    },
+    {
+      "id": "snapshot",
+      "area": "controls",
+      "instructions": "K saves and L loads a changed board including undo history. Undo after loading, then retry the same room. Escape pause must prevent gameplay."
+    },
+    {
+      "id": "focus-loss",
+      "area": "controls",
+      "instructions": "At high refresh, tap a direction then switch applications before the next fixed tick. The game-local native focus adapter must discard pending movement, preview, Z and Enter commands and freeze puzzle ticks. Return with a direction or Space held: release every control, then make a fresh tap. No delayed turn may occur. Repeat with a pit preview, an already-cleared room, and focus-out/focus-in between ticks. Confirm K/L and Escape still work after returning. Verify separately on Windows and Linux X11."
+    },
+    {
+      "id": "feedback",
+      "area": "audio",
+      "instructions": "Listen for pull/jam cues, distinct dock-arrival success cues and pit-loss cues. Toggle M and confirm saved sound setting. Forecast summaries, jam crosses, dock flashes and suction pulses must remain readable when muted."
+    }
+  ]
+}

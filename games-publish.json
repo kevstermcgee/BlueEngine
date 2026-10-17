@@ -327,6 +327,10 @@
       {
         "source": "games/corner-clutch",
         "destination": "corner-clutch"
+      },
+      {
+        "source": "games/afterpull",
+        "destination": "afterpull"
       }
     ],
     "prototypes": [

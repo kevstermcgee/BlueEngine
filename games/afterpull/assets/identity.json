@@ -1,0 +1,6 @@
+{
+  "title": "Afterpull",
+  "tagline": "Leave a little gravity behind.",
+  "controls": "WASD/arrows step; Space + direction preview; Z undo; R retry; Esc pause; K save; L load",
+  "engine_revision": "2fe51349eeeb"
+}
