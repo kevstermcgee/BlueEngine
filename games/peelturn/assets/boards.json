@@ -1,0 +1,794 @@
+[
+  {
+    "name": "One good turn",
+    "tip": "A bead stays at every impact. Then turn clockwise.",
+    "walls": [],
+    "packets": [
+      {
+        "cell": [
+          2,
+          2
+        ],
+        "beads": 2
+      }
+    ],
+    "sockets": [
+      [
+        5,
+        5
+      ]
+    ],
+    "solution": [
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "name": "Meet yourself",
+    "tip": "The sixth impact stops against your very first bead.",
+    "walls": [],
+    "packets": [
+      {
+        "cell": [
+          2,
+          2
+        ],
+        "beads": 6
+      }
+    ],
+    "sockets": [
+      [
+        0,
+        5
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "solution": [
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  {
+    "name": "After you",
+    "tip": "Order matters. A waiting packet is also a wall.",
+    "walls": [],
+    "packets": [
+      {
+        "cell": [
+          4,
+          5
+        ],
+        "beads": 4
+      },
+      {
+        "cell": [
+          0,
+          3
+        ],
+        "beads": 2
+      }
+    ],
+    "sockets": [
+      [
+        5,
+        2
+      ],
+      [
+        5,
+        0
+      ],
+      [
+        0,
+        5
+      ]
+    ],
+    "solution": [
+      [
+        1,
+        0
+      ],
+      [
+        0,
+        2
+      ]
+    ]
+  },
+  {
+    "name": "Borrowed corner",
+    "tip": "Leave a bead to steer a later packet.",
+    "walls": [
+      [
+        1,
+        5
+      ],
+      [
+        3,
+        4
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          4,
+          3
+        ],
+        "beads": 4
+      },
+      {
+        "cell": [
+          4,
+          5
+        ],
+        "beads": 4
+      }
+    ],
+    "sockets": [
+      [
+        5,
+        3
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        5,
+        5
+      ]
+    ],
+    "solution": [
+      [
+        1,
+        3
+      ],
+      [
+        0,
+        2
+      ]
+    ]
+  },
+  {
+    "name": "Departure gate",
+    "tip": "Launching opens the cell a packet used to occupy.",
+    "walls": [
+      [
+        0,
+        2
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        3,
+        3
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          0,
+          3
+        ],
+        "beads": 3
+      },
+      {
+        "cell": [
+          3,
+          2
+        ],
+        "beads": 4
+      }
+    ],
+    "sockets": [
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        0,
+        5
+      ]
+    ],
+    "solution": [
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        2
+      ]
+    ]
+  },
+  {
+    "name": "Inside track",
+    "tip": "Preview one impact. Picture the clockwise exit.",
+    "walls": [
+      [
+        0,
+        5
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        4,
+        0
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          4,
+          5
+        ],
+        "beads": 4
+      },
+      {
+        "cell": [
+          5,
+          4
+        ],
+        "beads": 4
+      }
+    ],
+    "sockets": [
+      [
+        5,
+        2
+      ],
+      [
+        2,
+        5
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        5
+      ]
+    ],
+    "solution": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        1
+      ]
+    ]
+  },
+  {
+    "name": "Small sacrifices",
+    "tip": "An off-socket bead can be the most useful bead.",
+    "walls": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        5,
+        2
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          5,
+          1
+        ],
+        "beads": 2
+      },
+      {
+        "cell": [
+          2,
+          2
+        ],
+        "beads": 5
+      },
+      {
+        "cell": [
+          4,
+          0
+        ],
+        "beads": 3
+      }
+    ],
+    "sockets": [
+      [
+        4,
+        1
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        5,
+        0
+      ]
+    ],
+    "solution": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        2,
+        0
+      ]
+    ]
+  },
+  {
+    "name": "Chain reaction",
+    "tip": "Permanent beads reshape every later route.",
+    "walls": [
+      [
+        0,
+        5
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        4
+      ],
+      [
+        4,
+        1
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          1,
+          3
+        ],
+        "beads": 5
+      },
+      {
+        "cell": [
+          4,
+          0
+        ],
+        "beads": 6
+      },
+      {
+        "cell": [
+          5,
+          2
+        ],
+        "beads": 3
+      }
+    ],
+    "sockets": [
+      [
+        5,
+        5
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        1,
+        5
+      ]
+    ],
+    "solution": [
+      [
+        0,
+        3
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        1,
+        0
+      ]
+    ]
+  },
+  {
+    "name": "Tight weave",
+    "tip": "Count the exits before spending the long packet.",
+    "walls": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        5,
+        1
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          2,
+          2
+        ],
+        "beads": 3
+      },
+      {
+        "cell": [
+          2,
+          5
+        ],
+        "beads": 2
+      },
+      {
+        "cell": [
+          1,
+          1
+        ],
+        "beads": 3
+      }
+    ],
+    "sockets": [
+      [
+        4,
+        5
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        4,
+        1
+      ]
+    ],
+    "solution": [
+      [
+        2,
+        2
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        1,
+        3
+      ]
+    ]
+  },
+  {
+    "name": "Eightfold",
+    "tip": "Eight beads. No shortcuts. Every turn leaves a trace.",
+    "walls": [
+      [
+        0,
+        2
+      ],
+      [
+        1,
+        2
+      ],
+      [
+        1,
+        4
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        3,
+        5
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          4,
+          5
+        ],
+        "beads": 8
+      },
+      {
+        "cell": [
+          3,
+          2
+        ],
+        "beads": 2
+      },
+      {
+        "cell": [
+          2,
+          2
+        ],
+        "beads": 7
+      }
+    ],
+    "sockets": [
+      [
+        4,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        2,
+        1
+      ],
+      [
+        0,
+        0
+      ]
+    ],
+    "solution": [
+      [
+        0,
+        3
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        1,
+        2
+      ]
+    ]
+  },
+  {
+    "name": "Cross purposes",
+    "tip": "Sometimes the shortest-looking route closes a door.",
+    "walls": [
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        1
+      ],
+      [
+        2,
+        0
+      ],
+      [
+        2,
+        2
+      ],
+      [
+        3,
+        0
+      ],
+      [
+        5,
+        0
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          2,
+          1
+        ],
+        "beads": 2
+      },
+      {
+        "cell": [
+          3,
+          4
+        ],
+        "beads": 4
+      },
+      {
+        "cell": [
+          0,
+          5
+        ],
+        "beads": 6
+      }
+    ],
+    "sockets": [
+      [
+        0,
+        2
+      ],
+      [
+        5,
+        2
+      ],
+      [
+        3,
+        1
+      ],
+      [
+        0,
+        3
+      ],
+      [
+        4,
+        5
+      ]
+    ],
+    "solution": [
+      [
+        2,
+        3
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        1,
+        3
+      ]
+    ]
+  },
+  {
+    "name": "The final peel",
+    "tip": "Use the space you open and the stoppers you leave.",
+    "walls": [
+      [
+        0,
+        1
+      ],
+      [
+        1,
+        0
+      ],
+      [
+        1,
+        1
+      ],
+      [
+        2,
+        4
+      ],
+      [
+        3,
+        3
+      ],
+      [
+        5,
+        0
+      ]
+    ],
+    "packets": [
+      {
+        "cell": [
+          2,
+          0
+        ],
+        "beads": 3
+      },
+      {
+        "cell": [
+          5,
+          2
+        ],
+        "beads": 4
+      },
+      {
+        "cell": [
+          2,
+          2
+        ],
+        "beads": 4
+      },
+      {
+        "cell": [
+          4,
+          4
+        ],
+        "beads": 5
+      }
+    ],
+    "sockets": [
+      [
+        5,
+        5
+      ],
+      [
+        5,
+        1
+      ],
+      [
+        1,
+        5
+      ],
+      [
+        3,
+        2
+      ],
+      [
+        0,
+        5
+      ],
+      [
+        3,
+        4
+      ]
+    ],
+    "solution": [
+      [
+        3,
+        1
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        2,
+        3
+      ],
+      [
+        1,
+        2
+      ]
+    ]
+  }
+]

@@ -335,6 +335,10 @@
       {
         "source": "games/crosshaul",
         "destination": "crosshaul"
+      },
+      {
+        "source": "games/peelturn",
+        "destination": "peelturn"
       }
     ],
     "prototypes": [

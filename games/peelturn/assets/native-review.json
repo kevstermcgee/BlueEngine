@@ -1,0 +1,9 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {"id":"routing-controls","area":"controls","instructions":"Exercise Tab, arrows, Space, mouse packet/card selection and launch, Backspace during a route and after a jam, R current-board retry, H guide, Escape pause, K/L save/load, F fullscreen. Check focus loss separately."},
+    {"id":"flat-board","area":"ui","instructions":"Inspect six-by-six flat board, packet counts and letters, sockets, first-impact clockwise preview, numbered impacts, all terminal messages and guide at 800x450 and 1280x720. Check no clipped or overlapping labels."},
+    {"id":"routing-puzzle","area":"gameplay","instructions":"Solve teaching boards and an interacting board deliberately. Confirm a deposited bead redirects a later packet, and only deposits fill sockets. Assess route readability and pacing."},
+    {"id":"shared-cues","area":"audio","instructions":"Listen to shared impact, jam and clear cues. Verify M toggles sound and Escape pauses audio. Software muted captures do not attest audible output."}
+  ]
+}

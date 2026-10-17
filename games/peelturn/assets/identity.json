@@ -1,0 +1,6 @@
+{
+  "title": "Peelturn",
+  "tagline": "Every turn leaves a trace.",
+  "controls": "Tab select; arrows aim; Space launch; Backspace undo; R retry; Esc pause; K save; L load",
+  "engine_revision": "3e1b3cd035b3"
+}
