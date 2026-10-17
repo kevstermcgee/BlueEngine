@@ -1,0 +1,11 @@
+[Unit]
+Description=Wake IdeaForge hourly to complete the daily pair
+
+[Timer]
+OnCalendar=*-*-* *:10:00 America/Los_Angeles
+Persistent=true
+AccuracySec=1min
+Unit=ideaforge-daily.service
+
+[Install]
+WantedBy=timers.target

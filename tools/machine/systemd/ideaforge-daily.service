@@ -1,0 +1,13 @@
+[Unit]
+Description=IdeaForge: one 2D and one 3D game per day
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h/BlueEngine-idea-forge-native
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/python3 %h/BlueEngine-idea-forge-native/tools/idea_forge.py daily --config %h/.config/ideaforge/daily.json
+TimeoutStartSec=infinity
+KillMode=control-group
+UMask=0077

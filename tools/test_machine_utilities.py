@@ -10,6 +10,13 @@ import unittest
 class MachineUtilitiesTests(unittest.TestCase):
     def test_scratch_behavioral_suite(self):
         folder = Path(__file__).resolve().parent / "machine"
+        self.run_suite(folder)
+
+    def test_nightly_feedback_suite(self):
+        folder = Path(__file__).resolve().parent / "machine" / "blueengine-nightly"
+        self.run_suite(folder)
+
+    def run_suite(self, folder):
         env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
         result = subprocess.run([sys.executable, "-m", "unittest", "discover", "-v"],
             cwd=folder, env=env, text=True, capture_output=True, timeout=60)

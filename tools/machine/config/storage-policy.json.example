@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "reserve_gib": 30,
+  "warning_free_gib": 40,
+  "cache_budget_gib": 80,
+  "idle_days": 14,
+  "protected_paths": [],
+  "pinned_caches": [
+    "/srv/storage/cache/cargo/ideaforge",
+    "/srv/storage/cache/cargo/nightly",
+    "/srv/storage/cache/cargo/default"
+  ],
+  "retired_caches": [],
+  "workloads": {
+    "ideaforge": ["/srv/storage/cache/cargo/ideaforge", "/home/YOUR_USER/.cargo"],
+    "nightly": ["/srv/storage/cache/cargo/nightly", "/home/YOUR_USER/.cargo"]
+  },
+  "monitor_paths": ["/srv/storage"],
+  "required_mounts": [{
+    "mountpoint": "/srv/storage",
+    "uuid": "REPLACE-WITH-REVIEWED-FILESYSTEM-UUID",
+    "fstype": "ext4",
+    "fsroot": "/"
+  }],
+  "managed_external_caches": [
+    {
+      "target": "/srv/storage/cache/cargo/ideaforge",
+      "manifest": "/home/YOUR_USER/BlueEngine-idea-forge-native/Cargo.toml",
+      "budget_gib": 80,
+      "profiles": ["dev", "itest", "fast"]
+    },
+    {
+      "target": "/srv/storage/cache/cargo/nightly",
+      "manifest": "/home/YOUR_USER/BlueEngine-idea-forge-native/Cargo.toml",
+      "budget_gib": 40,
+      "profiles": ["dev", "itest", "fast"]
+    },
+    {
+      "target": "/srv/storage/cache/cargo/default",
+      "manifest": "/home/YOUR_USER/BlueEngine-idea-forge-native/Cargo.toml",
+      "budget_gib": 40,
+      "profiles": ["dev", "itest", "fast"]
+    }
+  ]
+}

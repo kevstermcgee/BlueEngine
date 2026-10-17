@@ -1,0 +1,15 @@
+[Unit]
+Description=Inventory development storage and retire reviewed idle Cargo profiles
+
+[Service]
+Type=oneshot
+WorkingDirectory=%h
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 %h/BlueEngine/tools/machine/storage_policy.py sweep
+TimeoutStartSec=15min
+TimeoutStopSec=30s
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+UMask=0077

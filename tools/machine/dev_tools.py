@@ -19,7 +19,7 @@ import tempfile
 import time
 import urllib.request
 
-VERSION = "1.1.1"
+VERSION = "1.8.1"
 HOME = Path.home()
 STATE = HOME / ".local/state/dev-tools"
 BIN = HOME / ".local/bin"
@@ -376,6 +376,12 @@ def build_command(args):
     paths = {"target": target, "temp": Path(tempfile.gettempdir()),
              "cargo_home": Path(env.get("CARGO_HOME", HOME / ".cargo"))}
     def preflight():
+        policy_path = HOME / ".config/dev-tools/storage-policy.json"
+        if policy_path.exists():
+            # Import only here: storage_policy uses the common utility helpers.
+            import storage_policy
+            policy = storage_policy.load_policy(policy_path)
+            storage_policy.verify_required_mounts(policy, paths.values())
         status = {k: space(v) for k, v in paths.items()}
         low = [k for k, v in status.items() if v["available_gib"] < args.min_free_gib]
         if low:
