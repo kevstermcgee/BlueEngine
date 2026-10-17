@@ -29,10 +29,10 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 try:
-    from tools import learn
+    from tools import game_tooling, learn
 except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from tools import learn
+    from tools import game_tooling, learn
 
 ROOT = Path(__file__).resolve().parent.parent
 SLUG = r"[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -592,11 +592,13 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         for name in ("Cargo.toml", "game.project.json", "scripts/ship.py", "src/lib.rs", "src/main.rs"):
             if not (game / name).is_file():
                 raise ForgeError(f"Generated game is missing {name}")
-        for name in ("ship", "check", "project"):
-            script = game / "scripts" / (name + ".py")
-            canonical = self.engine / "templates" / ("game_" + name + ".py")
-            if not script.is_file() or script.read_bytes() != canonical.read_bytes():
-                raise ForgeError("Native packaging scripts must come from the fresh canonical engine templates")
+        try:
+            game_tooling.check(game, self.engine)
+        except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+            raise ForgeError(
+                f"Native project tooling must use the canonical pinned launchers: {error}. "
+                "Review the tooling update and run python ENGINE/tools/game_tooling.py migrate GAME"
+            ) from error
         project = load_json(game / "game.project.json")
         dimension = self.state["idea"].get("dimension", self.state.get("dimension", "any"))
         if dimension != "any" and project.get("presentation") != dimension:

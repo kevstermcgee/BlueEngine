@@ -108,6 +108,15 @@ This review approves the local implementation; Windows installer evidence is
 collected by the subsequent native CI and publication gates. Source portability
 defects remain review blockers.
 
+Before running these gates, the supervisor validates the scaffold's pinned
+`scripts/check.py`, `ship.py`, `dev.py` and `project.py` launchers, bootstrap and
+tooling content pin with the shared `tools/game_tooling.py check` contract.
+Modified launchers, stale pins and legacy full template copies stop verification
+before any game command runs. For a retained older project, review its tooling
+changes and explicitly run `python ENGINE/tools/game_tooling.py migrate GAME`;
+verification never rewrites the project's scripts. Keep game preparation in the
+supported `scripts/tooling_hooks.py` hooks instead of editing shared launchers.
+
 Publication requires exact-commit full engine CI, generated-game Windows and Linux
 tests/resources/isolated launches, and a Windows installer review. The companion
 export includes its native download definition and real screenshot. Only then

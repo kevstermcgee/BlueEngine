@@ -2,6 +2,7 @@
 import os
 import json
 from pathlib import Path
+import shutil
 import struct
 import subprocess
 import sys
@@ -46,11 +47,14 @@ class SupervisorTests(unittest.TestCase):
         subprocess.run(["git", "init", "-q", str(self.engine)], check=True)
         subprocess.run(["git", "-C", str(self.engine), "config", "user.name", "Fixture"], check=True)
         subprocess.run(["git", "-C", str(self.engine), "config", "user.email", "fixture@example.invalid"], check=True)
-        (self.engine / ".gitignore").write_text(".blue-check/\ndist/\n")
+        (self.engine / ".gitignore").write_text(".blue-check/\ndist/\n__pycache__/\n")
         (self.engine / "source.rs").write_text("authoritative rules\n")
-        (self.engine / "templates").mkdir()
-        for name in ("ship", "check", "project"):
-            (self.engine / "templates" / ("game_" + name + ".py")).write_text("# canonical " + name)
+        bootstrap = forge.game_tooling.module_from(
+            forge.ROOT / "templates/game_entry.py", "be2_forge_fixture_bootstrap")
+        for name in bootstrap.FILES:
+            destination = self.engine / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(forge.ROOT / name, destination)
         subprocess.run(["git", "-C", str(self.engine), "add", "."], check=True)
         subprocess.run(["git", "-C", str(self.engine), "commit", "-qm", "Fixture"], check=True)
         self.state = {"id": "fixture", "created": "2026-10-08T00:00:00+00:00", "status": "running",
@@ -63,11 +67,12 @@ class SupervisorTests(unittest.TestCase):
         game = self.worker.game
         (game / "scripts").mkdir(parents=True)
         (game / "src").mkdir()
-        (self.engine / "templates").mkdir(exist_ok=True)
-        for name in ("ship", "check", "project"):
-            text = "# canonical " + name
-            (game / "scripts" / (name + ".py")).write_text(text)
-            (self.engine / "templates" / ("game_" + name + ".py")).write_text(text)
+        # The shared generator emits the same launchers, bootstrap and content pin
+        # as new-game; full template copies are only migration inputs.
+        for name in ("ship", "check", "dev", "project"):
+            (game / "scripts" / (name + ".py")).write_text(forge.game_tooling.entry(name))
+        shutil.copyfile(self.engine / "templates/game_entry.py", game / "scripts/tooling.py")
+        forge.atomic_json(game / "scripts/tooling.json", forge.game_tooling.pin(game, self.engine))
         for name in ("Cargo.toml", "src/lib.rs", "src/main.rs"):
             (game / name).write_text("fixture")
         forge.atomic_json(game / "game.project.json", {"targets": ["windows", "linux"], "presentation": "2d"})
@@ -170,6 +175,68 @@ class SupervisorTests(unittest.TestCase):
             with self.assertRaisesRegex(forge.ForgeError, "canonical"):
                 self.worker.verify_local()
             command.assert_not_called()
+
+    def test_fresh_pinned_project_tooling_reaches_native_package_without_rewriting(self):
+        game, _ = self.native_game()
+        scripts = game / "scripts"
+        before = {path.name: path.read_bytes() for path in scripts.iterdir()}
+        logfile = self.directory / "test.log"
+        logfile.write_text("test result: ok. 1 passed; 0 failed; 0 ignored")
+        with patch.object(self.worker, "command", return_value=logfile) as command, \
+                patch.dict(os.environ, {"DISPLAY": ":fixture"}):
+            self.worker.verify_local()
+        self.assertEqual([call.kwargs["label"] for call in command.call_args_list],
+                         ["game-format", "game-tests", "game-clippy", "native-package"])
+        self.assertIn(str(game / "scripts/ship.py"), command.call_args_list[-1].args[0])
+        self.assertEqual(before, {path.name: path.read_bytes() for path in scripts.iterdir()})
+
+    def test_altered_or_missing_tooling_pin_blocks_all_commands(self):
+        game, _ = self.native_game()
+        path = game / "scripts/tooling.json"
+        recorded = forge.load_json(path)
+        for changes in ({"sha256": "0" * 64}, {"schema_version": 2},
+                        {"engine": "../different-engine"}, None):
+            with self.subTest(changes=changes):
+                if changes is None:
+                    path.unlink()
+                else:
+                    forge.atomic_json(path, {**recorded, **changes})
+                with patch.object(self.worker, "command") as command:
+                    with self.assertRaisesRegex(forge.ForgeError, "canonical pinned launchers"):
+                        self.worker.verify_local()
+                    command.assert_not_called()
+
+    def test_malformed_tooling_pin_is_a_gate_failure_before_commands(self):
+        game, _ = self.native_game()
+        path = game / "scripts/tooling.json"
+        recorded = forge.load_json(path)
+        for contents in ("{invalid", "[]", "null", json.dumps({**recorded, "engine": []}),
+                         json.dumps({key: value for key, value in recorded.items() if key != "engine"})):
+            with self.subTest(contents=contents):
+                path.write_text(contents)
+                with patch.object(self.worker, "command") as command:
+                    with self.assertRaisesRegex(forge.ForgeError, "canonical pinned launchers"):
+                        self.worker.verify_local()
+                    command.assert_not_called()
+
+    def test_modified_bootstrap_blocks_all_commands(self):
+        game, _ = self.native_game()
+        (game / "scripts/tooling.py").write_text("print('all passed')")
+        with patch.object(self.worker, "command") as command:
+            with self.assertRaisesRegex(forge.ForgeError, "bootstrap drift"):
+                self.worker.verify_local()
+            command.assert_not_called()
+
+    def test_legacy_full_template_copies_require_explicit_migration(self):
+        game, _ = self.native_game()
+        for name in ("ship", "check", "dev", "project"):
+            shutil.copyfile(self.engine / f"templates/game_{name}.py", game / f"scripts/{name}.py")
+        before = {path.name: path.read_bytes() for path in (game / "scripts").iterdir()}
+        with patch.object(self.worker, "command") as command:
+            with self.assertRaisesRegex(forge.ForgeError, "scripts/check.py drift.*migrate GAME"):
+                self.worker.verify_local()
+            command.assert_not_called()
+        self.assertEqual(before, {path.name: path.read_bytes() for path in (game / "scripts").iterdir()})
 
     def test_untracked_workflow_changes_are_outside_the_worker_scope(self):
         self.native_game()
