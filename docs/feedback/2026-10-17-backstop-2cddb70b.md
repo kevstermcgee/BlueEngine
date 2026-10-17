@@ -1,7 +1,7 @@
 # Backstop: AI development feedback
 
 Run: `2cddb70b`.
-Project: `games/backstop`. State: running.
+Project: `games/backstop`. State: published.
 
 ## Generated mechanic
 
@@ -17,7 +17,7 @@ The rule could become tedious counting or frequent rejected pushes. Persistent r
 
 ## Measured game-run cost
 
-Tokens: 4341827; wall seconds: 982.086; Codex seconds: 977.223. Measured from Codex CLI turn.completed usage; cached input included once.
+Tokens: 4341827; wall seconds: 5935.624; Codex seconds: 977.223. Measured from Codex CLI turn.completed usage; cached input included once.
 
 ### 1. platform (medium)
 
@@ -78,6 +78,16 @@ software rendering do not certify physical devices or audible hardware output.
 - game-tests: exit 0, 0.966 seconds.
 - game-clippy: exit 0, 0.165 seconds.
 - native-package: exit 0, 1.368 seconds.
+- generated-game-linux-windows: https://github.com/kevstermcgee/BlueEngine/actions/runs/39070989511 (exact source `8d378f609bb1`).
+- engine-checks: https://github.com/kevstermcgee/BlueEngine/actions/runs/39070990049 (exact source `8d378f609bb1`).
+- windows-installer-review: https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39073793514 (exact source `2dcea90e4202`).
+- production-release: https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39074053305 (exact source `2dcea90e4202`).
+- download-page: https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39076561431 (exact source `2dcea90e4202`).
+
+Published game: https://kevstermcgee.github.io/BlueEngineGames/games/backstop/
+Immutable release: https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-8d378f609bb1-games-2dcea90e4202-39074053305-1
+Installer SHA-256: `e34b61e61889cb8a525c88574b53500149c3ff62eadfc9c583dc3978918226b1`.
+ZIP SHA-256: `70903b61461fd49e81491fe57df8dc0fc95174c91cfdc81ed7a43bd8a9492b7d`.
 
 Detailed command logs, AI responses and package captures stay in the ignored
 run directory. This file contains authored findings and checked delivery receipts.
