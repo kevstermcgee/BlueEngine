@@ -5,7 +5,7 @@ Read this file and `docs/WORKSHOP.md` in the pinned engine checkout. Begin with
 change-game --project games/automation-workshop --compact`; use an absolute project
 path when invoking it from another directory.
 
-This is an external custom Rust simulation. `src/lib.rs` owns fixed 60 Hz commands,
+This is a game-owned Rust simulation. `src/lib.rs` owns fixed 60 Hz commands,
 queues, escrow, recipes, upgrades and engine-owned Snapshot persistence. `src/main.rs`
 owns the native console, uncaptured cursor, input, camera and silent presentation.
 `src/net.rs` adapts the same rules to existing NetGame/ClientView; the server uses

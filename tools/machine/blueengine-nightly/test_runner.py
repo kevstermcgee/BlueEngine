@@ -118,6 +118,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         with patch.object(nightly, 'CONFIG_DIR', self.config_dir), patch.object(nightly, 'preflight'), \
              patch.object(nightly, 'collect_feedback', side_effect=feedback), \
              patch.object(nightly, 'command', side_effect=ci_command), \
+             patch.object(nightly.os, 'fsync'), \
              patch.object(nightly.time, 'monotonic', side_effect=lambda: clock[0]), \
              patch.object(nightly.time, 'sleep', side_effect=advance), \
              patch.object(sys, 'argv', ['run.py', *options]), patch.dict(os.environ, env), \
@@ -126,6 +127,14 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
 
     def remote_head(self):
         return git('--git-dir', self.remote, 'rev-parse', 'main')
+
+    def test_receipt_flushes_file_and_directory_before_returning(self):
+        destination = self.root / 'durable.json'
+        with patch.object(nightly.os, 'fsync') as synced:
+            nightly.write_json(destination, {'acknowledged': True})
+        self.assertEqual(synced.call_count, 2)
+        self.assertEqual(json.loads(destination.read_text()), {'acknowledged': True})
+        self.assertFalse(destination.with_suffix('.json.tmp').exists())
 
     def test_validated_update_pushes_and_preserves_developer_work(self):
         self.assertEqual(self.execute(), 0)
