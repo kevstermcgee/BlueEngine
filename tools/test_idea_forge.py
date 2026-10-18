@@ -114,8 +114,8 @@ class SupervisorTests(unittest.TestCase):
     def test_wiki_content_and_distinct_screenshots_are_required_before_commands(self):
         game, _ = self.native_game()
         original = forge.load_json(game / "wiki.json")
-        changes = ({"overview": "Short."}, {"rules": []}, {"controls": []}, {"story": None},
-                   {"characters_note": ""}, {"gallery": original["gallery"][:2]},
+        changes = ({"overview": "Short."}, {"rules": []}, {"controls": []},
+                   {"gallery": original["gallery"][:2]},
                    {"design": {"origin": "ai", "original_prompt": None, "rationale": "A puzzle."}})
         for change in changes:
             with self.subTest(change=change):
@@ -127,6 +127,20 @@ class SupervisorTests(unittest.TestCase):
         (game / "wiki.json").unlink()
         with self.assertRaisesRegex(forge.ForgeError, "missing or malformed"):
             self.worker.verify_local()
+
+    def test_storyless_wiki_has_no_narrative_or_character_gate(self):
+        game, _ = self.native_game()
+        wiki = forge.load_json(game / "wiki.json")
+        for key in ("story", "characters", "characters_note"):
+            wiki.pop(key, None)
+        forge.atomic_json(game / "wiki.json", wiki)
+        self.assertEqual(forge.validate_game_wiki(game), wiki)
+        self.assertFalse((game / "story.json").exists())
+        self.assertFalse((game / "characters").exists())
+        # Factual rules and genuine screenshot gates still apply.
+        forge.atomic_json(game / "wiki.json", {**wiki, "controls": []})
+        with self.assertRaises(forge.ForgeError):
+            forge.validate_game_wiki(game)
 
     def test_renaming_the_same_screenshot_cannot_satisfy_the_gallery(self):
         game, _ = self.native_game()

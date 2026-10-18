@@ -37,6 +37,8 @@ already ancestors of main. Unrelated dirty worktrees were preserved.
   presentation/audio requests. Required signatures/limits remain complete.
   Async/long-function navigation and Cargo freshness already existed; stale
   learning hints were superseded while original reports/notes were retained.
+  IdeaForge factual wikis no longer require story absence essays or character
+  lists/notes for storyless games; rules, controls and genuine capture gates remain.
   Jump-height, offline 2D routing, exact API identifiers and browser retirement
   remain tested. Behavioral-testing commands now enable physics and networking,
   as the actual be2-tools target requires. Metadata-only prepared directories

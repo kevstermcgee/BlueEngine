@@ -122,15 +122,15 @@ tests/resources/isolated launches, and a Windows installer review. The companion
 export includes its native download definition and real screenshot. Every new game
 also ships a substantive `games/SLUG/wiki.json` and real images in
 `games/SLUG/assets/wiki/`. The mini-wiki documents the actual game: overview, rules,
-goals and failure conditions, controls, progression, story/setting, every named
-character and a screenshot of each. A game without story or characters says so
-explicitly; invented lore and character art are not substitutes for game evidence.
+goals and failure conditions, controls and progression. Story/characters are
+optional factual publication fields when implemented. Storyless games need no
+absence essay, story files or character sheets; never invent lore or artwork.
 
 The version 1 wiki contract requires an overview of at least 120 characters,
 at least three rules (20 characters each), one control instruction (8 characters),
-and a story or explicit absence statement (40 characters). `characters` is an array
-of objects with `name`, `description` (40 characters), and `image`; an empty list
-needs `characters_note` (20 characters). Each character's image is a genuine
+with optional `story`, `characters`, and `characters_note` fields. If provided,
+`characters` contains objects with `name`, `description` (40 characters), and
+`image`. Each documented character's image is a genuine
 in-game PNG, at least 96 by 96 pixels; cropping a real native capture is allowed.
 `gallery` contains at least three objects with `image`, `caption`, and `alt`
 (8 characters each for caption/alt). Gallery images must be different native

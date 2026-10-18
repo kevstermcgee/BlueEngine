@@ -286,18 +286,19 @@ def validate_game_wiki(game):
             return hashlib.sha256(data).hexdigest()
 
         text(wiki.get("overview"), "overview", 120)
-        text(wiki.get("story"), "story (or an explicit absence of a story)", 40)
+        if wiki.get("story") is not None:
+            text(wiki["story"], "implemented story")
         for field, count, minimum in (("rules", 3, 20), ("controls", 1, 8)):
             values = wiki.get(field)
             if not isinstance(values, list) or len(values) < count:
                 raise ForgeError(f"Game wiki needs at least {count} {field}")
             for value in values:
                 text(value, field, minimum)
-        characters = wiki.get("characters")
+        characters = wiki.get("characters", [])
         if not isinstance(characters, list):
             raise ForgeError("Game wiki needs a characters list")
-        if not characters:
-            text(wiki.get("characters_note"), "explanation that this game has no characters", 20)
+        if wiki.get("characters_note"):
+            text(wiki["characters_note"], "character note")
         names = set()
         for character in characters:
             if not isinstance(character, dict):
@@ -570,10 +571,10 @@ Author a substantive mini-wiki at games/{idea['slug']}/wiki.json, alongside the 
 version: 1; overview: at least 120 characters explaining what players actually do;
 rules: at least three concrete rules (20+ characters each), including goals, failure
 and progression; controls: one or more exact input instructions (8+ characters each);
-story: 40+ characters of the implemented setting/story, or an explicit explanation
-that this game has no narrative. characters: an array listing every named playable
-character, ally and enemy with name, description (40+ characters) and image. For a
-game without characters use an empty array and characters_note (20+ characters).
+story and characters are optional publication facts. Omit them for storyless or
+characterless games: no absence essay, story file or character sheet is required.
+If implemented, document the actual story and named characters with name,
+description and a genuine in-game image. Do not invent lore/assets to satisfy a gate.
 gallery: at least THREE distinct real gameplay screenshots, each with image, caption
 and alt (8+ characters each). All image paths must be game-relative assets/wiki/NAME.png.
 Gallery images must be landscape PNGs >=320x180, showing genuinely different moments,
@@ -633,7 +634,7 @@ Mandatory user direction and quality requirements: {json.dumps(self.state['brief
 Assess whether applicable player frustrations were addressed and enjoyed experiences preserved.
 Do not manufacture blockers from unrelated feedback or treat a rating as verified evidence.
 Read wiki.json and inspect EVERY image it references. Block inaccurate or shallow wiki
-content, missing rules/story/controls, missing named characters or their real in-game
+content, missing rules/controls or implemented story, missing implemented named characters or their real in-game
 screenshots, unclear rationale for choosing this particular game, fake screenshots,
 or a gallery that does not show at least three meaningfully different gameplay moments.
 The rationale is a public authored design summary, never a claim to private reasoning.
@@ -903,7 +904,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         exported_game = self.games / "games" / slug
         validate_game_wiki(exported_game)
         wiki_files = {"wiki.json", *(shot["image"] for shot in wiki["gallery"]),
-                      *(character["image"] for character in wiki["characters"])}
+                      *(character["image"] for character in wiki.get("characters", []))}
         if any((self.game / path).read_bytes() != (exported_game / path).read_bytes()
                for path in wiki_files):
             raise ForgeError("Export did not preserve the verified game wiki and screenshots")
