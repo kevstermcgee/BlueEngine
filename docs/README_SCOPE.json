@@ -8,7 +8,7 @@
     "browser_games": "32551b1054b8c231efa0fe17159899ebeb50a0ef88772ca99efc77ecca03e6ac",
     "camera_character": "f4c96fcc41e2d8e0870249314cb0fc9f1d00f36ef1f35f7118be20259fac265a",
     "change_workflow": "ddd6086eb53bd648b887ee5473864e6a6725fbd48e5c57f38746094fef11af45",
-    "client_kit": "a2d0a2e513513ce47c7d4b1f8bc4a85dc55c5df733108543ac8f5914cbc1d770",
+    "client_kit": "d538f2471debe1a777a260d32f8f1cc3f779a2be52efd89ddd6da5c285e63234",
     "closed_path": "9cfe54df64486ce4f0e70559273038126320987ed8299cdca70c0d0afd35843d",
     "custom_clients": "4726391e286d0cea9d52116ec8ef059eac97bcc98a00a26c7039aa64e29e40ba",
     "custom_simulation": "4d42a27ad3d03a3158b0d34e89c7bc3dc1f3885c41ae4118c0f208b0f9cdfc82",
@@ -85,5 +85,5 @@
   "readme_sha256": "ac2c7e4aedfda25ffc7e87b38ca79b47c7bd1cb073538b0476be4b3b448d1706",
   "rust_version": "1.87",
   "starters_sha256": "fd931a4efe14309aff7611726b5e33f727bd77c704b934abe5f033fd3b30a7a7",
-  "unchanged_reason": null
+  "unchanged_reason": "Reviewed README current capabilities, game-owned native presentation, authored audio, optional narrative, fixed-step authority and Windows delivery. The client_kit change adds presentation as a discovery synonym and returns the existing complete HUD/audio contracts; it does not broaden the supported gameplay or distribution scope."
 }
