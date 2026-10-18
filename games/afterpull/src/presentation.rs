@@ -82,7 +82,7 @@ impl draw::Game for Afterpull {
         }
     }
     fn device_input(&mut self, i: Intent) -> Intent {
-        self.map_device_input(i, is_key_down(KeyCode::Space))
+        self.map_device_input(i, vesper3d::viewer::focus::key_down(KeyCode::Space))
     }
     fn draw(&self, s: &mut Scene) {
         let st = &self.state;

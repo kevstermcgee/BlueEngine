@@ -227,7 +227,7 @@ impl ClientInput {
             && self
                 .keyboard
                 .as_ref()
-                .map_or_else(|| is_key_down(key), |k| k.down.contains(&key))
+                .map_or_else(|| super::focus::key_down(key), |k| k.down.contains(&key))
     }
     /// True once per press while a game is over, for the shared "play again" convention: `R` (always a
     /// hotkey), Enter, or the controller's South (A / Cross) or Start button. False while the game is

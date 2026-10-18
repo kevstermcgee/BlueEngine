@@ -3,13 +3,21 @@
 #![allow(unsafe_code)] // Narrow OS adapter; all calls stay on the window thread.
 use std::cell::RefCell;
 static TITLE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+#[cfg(target_os = "linux")]
 fn window_title_for(title: &str) -> String {
     format!("{title} [{}]", std::process::id())
 }
 /// Register the native window identity before creation. The adapter restores the display title.
 pub fn window_title(title: &str) -> String {
     *TITLE.lock().unwrap() = Some(title.into());
-    window_title_for(title)
+    #[cfg(target_os = "linux")]
+    {
+        window_title_for(title)
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        title.into()
+    }
 }
 thread_local! { static WINDOW: RefCell<Option<WindowFocus>> = const { RefCell::new(None) }; }
 /// Poll once per frame. Custom hosts may instead supply their own native focus observation.
@@ -21,6 +29,24 @@ pub fn sample() -> Option<Sample> {
             *slot = Some(WindowFocus::new(&title));
         }
         Some(slot.as_mut().unwrap().sample())
+    })
+}
+/// Physical held state after `sample`, avoiding stale window key-up events after focus loss.
+/// Unregistered custom hosts retain Macroquad's own input source.
+pub fn key_down(key: macroquad::prelude::KeyCode) -> bool {
+    WINDOW.with(|slot| {
+        slot.borrow()
+            .as_ref()
+            .map_or_else(|| macroquad::prelude::is_key_down(key), |w| w.key_down(key))
+    })
+}
+/// Physical mouse-button state; a release outside the window must not leave drag/look held.
+pub fn mouse_down(button: macroquad::prelude::MouseButton) -> bool {
+    WINDOW.with(|slot| {
+        slot.borrow().as_ref().map_or_else(
+            || macroquad::prelude::is_mouse_button_down(button),
+            |w| w.mouse_down(button),
+        )
     })
 }
 /// A loss discards this frame; returning requires a complete neutral frame before fresh input.
@@ -46,7 +72,6 @@ pub struct Sample {
     pub focused: bool,
     pub lost: bool,
     pub neutral: bool,
-    pub space: bool,
 }
 pub use platform::WindowFocus;
 
@@ -101,6 +126,58 @@ mod platform {
             assert!(!hook.is_null(), "Cannot subscribe to Windows focus events");
             Self(hook)
         }
+        pub fn key_down(&self, key: macroquad::prelude::KeyCode) -> bool {
+            let code = key as u32;
+            let vk = match code {
+                32 | 48..=57 | 65..=90 => code,
+                256 => 0x1b,
+                257 => 0x0d,
+                258 => 0x09,
+                259 => 0x08,
+                260 => 0x2d,
+                261 => 0x2e,
+                262 => 0x27,
+                263 => 0x25,
+                264 => 0x28,
+                265 => 0x26,
+                266 => 0x21,
+                267 => 0x22,
+                268 => 0x24,
+                269 => 0x23,
+                290..=313 => 0x70 + code - 290,
+                320..=329 => 0x60 + code - 320,
+                340 => 0xa0,
+                344 => 0xa1,
+                341 => 0xa2,
+                345 => 0xa3,
+                342 => 0xa4,
+                346 => 0xa5,
+                343 => 0x5b,
+                347 => 0x5c,
+                39 => 0xde,
+                44 => 0xbc,
+                45 => 0xbd,
+                46 => 0xbe,
+                47 => 0xbf,
+                59 => 0xba,
+                61 => 0xbb,
+                91 => 0xdb,
+                92 => 0xdc,
+                93 => 0xdd,
+                96 => 0xc0,
+                _ => return false,
+            };
+            unsafe { GetAsyncKeyState(vk as i32) < 0 }
+        }
+        pub fn mouse_down(&self, button: macroquad::prelude::MouseButton) -> bool {
+            let vk = match button {
+                macroquad::prelude::MouseButton::Left => 1,
+                macroquad::prelude::MouseButton::Right => 2,
+                macroquad::prelude::MouseButton::Middle => 4,
+                _ => return false,
+            };
+            unsafe { GetAsyncKeyState(vk) < 0 }
+        }
         pub fn sample(&mut self) -> Sample {
             // All calls run on the native client thread; no state enters a Snapshot.
             unsafe {
@@ -108,7 +185,6 @@ mod platform {
                     focused: own_window(GetForegroundWindow()),
                     lost: LOST.swap(false, Ordering::Relaxed),
                     neutral: (1..256).all(|key| GetAsyncKeyState(key) >= 0),
-                    space: GetAsyncKeyState(0x20) < 0,
                 }
             }
         }
@@ -155,7 +231,8 @@ mod platform {
         api: X11,
         display: *mut c_void,
         window: c_ulong,
-        space: u8,
+        keys: [u8; 32],
+        mouse: u32,
     }
 
     // A GLXWindow is a rendering resource, not the X Window it wraps. Looking
@@ -229,14 +306,56 @@ mod platform {
                 );
                 (api.XSelectInput)(display, window, 1 << 21); // FocusChangeMask, separate connection.
                 (api.XFlush)(display);
-                let space = (api.XKeysymToKeycode)(display, 0x20);
                 Self {
                     api,
                     display,
                     window,
-                    space,
+                    keys: [0; 32],
+                    mouse: 0,
                 }
             }
+        }
+        pub fn key_down(&self, key: macroquad::prelude::KeyCode) -> bool {
+            let code = key as u32;
+            let symbol = match code {
+                32..=126 => code,
+                256 => 0xff1b,
+                257 => 0xff0d,
+                258 => 0xff09,
+                259 => 0xff08,
+                260 => 0xff63,
+                261 => 0xffff,
+                262 => 0xff53,
+                263 => 0xff51,
+                264 => 0xff54,
+                265 => 0xff52,
+                266 => 0xff55,
+                267 => 0xff56,
+                268 => 0xff50,
+                269 => 0xff57,
+                290..=314 => 0xffbe + code - 290,
+                320..=329 => 0xffb0 + code - 320,
+                340 => 0xffe1,
+                344 => 0xffe2,
+                341 => 0xffe3,
+                345 => 0xffe4,
+                342 => 0xffe9,
+                346 => 0xffea,
+                343 => 0xffeb,
+                347 => 0xffec,
+                _ => return false,
+            };
+            let key = unsafe { (self.api.XKeysymToKeycode)(self.display, symbol.into()) } as usize;
+            key != 0 && self.keys[key / 8] & (1 << (key % 8)) != 0
+        }
+        pub fn mouse_down(&self, button: macroquad::prelude::MouseButton) -> bool {
+            let mask = match button {
+                macroquad::prelude::MouseButton::Left => 0x100,
+                macroquad::prelude::MouseButton::Middle => 0x200,
+                macroquad::prelude::MouseButton::Right => 0x400,
+                _ => return false,
+            };
+            self.mouse & mask != 0
         }
         pub fn sample(&mut self) -> Sample {
             unsafe {
@@ -278,11 +397,12 @@ mod platform {
                     &mut wy,
                     &mut mask,
                 );
+                self.keys = keys;
+                self.mouse = mask;
                 Sample {
                     focused: focus == self.window,
                     lost,
                     neutral: keys.iter().all(|k| *k == 0) && mask & 0x1f00 == 0,
-                    space: keys[self.space as usize / 8] & (1 << (self.space % 8)) != 0,
                 }
             }
         }
@@ -303,6 +423,13 @@ mod platform {
             fn XCreateSimpleWindow(*mut c_void, c_ulong, c_int, c_int, c_uint, c_uint, c_uint, c_ulong, c_ulong) -> c_ulong,
             fn XMapWindow(*mut c_void, c_ulong) -> c_int,
             fn XSetInputFocus(*mut c_void, c_ulong, c_int, c_ulong) -> c_int,
+            ... ...
+        );
+
+        macroquad::miniquad::declare_module!(TestXInput,
+            "libXtst.so.6", ... ...
+            fn XTestFakeKeyEvent(*mut c_void, c_uint, c_int, c_ulong) -> c_int,
+            fn XTestFakeButtonEvent(*mut c_void, c_uint, c_int, c_ulong) -> c_int,
             ... ...
         );
 
@@ -359,6 +486,26 @@ mod platform {
                 (api.XSync)(display, 0);
                 let returned = focus.sample();
                 assert!(returned.focused && returned.lost);
+                let input = TestXInput::try_load().expect("XTest for real native input regression");
+                let key = (api.XKeysymToKeycode)(display, b'W'.into());
+                (input.XTestFakeKeyEvent)(display, key.into(), 1, 0);
+                (input.XTestFakeButtonEvent)(display, 1, 1, 0);
+                (api.XSync)(display, 0);
+                assert!(focus.sample().focused);
+                assert!(focus.key_down(macroquad::prelude::KeyCode::W));
+                assert!(focus.mouse_down(macroquad::prelude::MouseButton::Left));
+                (test.XSetInputFocus)(display, other, 0, 0);
+                (api.XSync)(display, 0);
+                assert!(focus.sample().lost);
+                // Releases go to another window. Shared input must not retain the old down state.
+                (input.XTestFakeKeyEvent)(display, key.into(), 0, 0);
+                (input.XTestFakeButtonEvent)(display, 1, 0, 0);
+                (test.XSetInputFocus)(display, own, 0, 0);
+                (api.XSync)(display, 0);
+                let returned = focus.sample();
+                assert!(returned.focused && returned.neutral);
+                assert!(!focus.key_down(macroquad::prelude::KeyCode::W));
+                assert!(!focus.mouse_down(macroquad::prelude::MouseButton::Left));
                 drop(focus);
                 (api.XCloseDisplay)(display); // Also destroys the fixture windows.
             }

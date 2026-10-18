@@ -326,13 +326,21 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             pointer = Some(point);
         }
         #[allow(unused_mut)]
-        let mut x = i32::from(is_key_down(KeyCode::D) || is_key_down(KeyCode::Right))
-            - i32::from(is_key_down(KeyCode::A) || is_key_down(KeyCode::Left))
-            + digital.x;
+        let mut x = i32::from(
+            crate::viewer::focus::key_down(KeyCode::D)
+                || crate::viewer::focus::key_down(KeyCode::Right),
+        ) - i32::from(
+            crate::viewer::focus::key_down(KeyCode::A)
+                || crate::viewer::focus::key_down(KeyCode::Left),
+        ) + digital.x;
         #[allow(unused_mut)]
-        let mut y = i32::from(is_key_down(KeyCode::S) || is_key_down(KeyCode::Down))
-            - i32::from(is_key_down(KeyCode::W) || is_key_down(KeyCode::Up))
-            + digital.y;
+        let mut y = i32::from(
+            crate::viewer::focus::key_down(KeyCode::S)
+                || crate::viewer::focus::key_down(KeyCode::Down),
+        ) - i32::from(
+            crate::viewer::focus::key_down(KeyCode::W)
+                || crate::viewer::focus::key_down(KeyCode::Up),
+        ) + digital.y;
         #[allow(unused_mut)]
         let mut action = platform::primary_key() || is_mouse_button_pressed(MouseButton::Left);
         #[allow(unused_mut)]
@@ -356,7 +364,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         let mut focused = focus_gate.observe(observation.focused, observation.lost, neutral);
         let mut look = [0.; 2];
-        if G::drag_look() && is_mouse_button_down(MouseButton::Left) && pointer.is_some() {
+        if G::drag_look()
+            && crate::viewer::focus::mouse_down(MouseButton::Left)
+            && pointer.is_some()
+        {
             if let Some((x, y)) = last_pointer {
                 look = [(mx - x) * 0.003, (y - my) * 0.003];
             }
@@ -657,7 +668,8 @@ mod platform {
     }
     pub fn sprint_key() -> bool {
         use macroquad::prelude::*;
-        is_key_down(KeyCode::LeftShift) || is_key_down(KeyCode::RightShift)
+        crate::viewer::focus::key_down(KeyCode::LeftShift)
+            || crate::viewer::focus::key_down(KeyCode::RightShift)
     }
     pub fn command_key(key: macroquad::prelude::KeyCode) -> bool {
         {

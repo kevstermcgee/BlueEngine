@@ -248,6 +248,25 @@ impl GamepadInput {
 mod tests {
     use super::*;
     #[test]
+    fn neutral_gate_observes_held_buttons_sticks_and_triggers_without_press_edges() {
+        let mut frame = GamepadFrame::default();
+        assert!(frame.neutral());
+        frame.button(Button::South, true);
+        frame.begin_frame();
+        assert!(!frame.neutral());
+        frame.button(Button::South, false);
+        frame.begin_frame();
+        assert!(frame.neutral());
+        frame.left_stick[0] = 0.5;
+        assert!(!frame.neutral());
+        frame.left_stick = [0.; 2];
+        frame.right_stick[1] = 0.3;
+        assert!(!frame.neutral());
+        frame.right_stick = [0.; 2];
+        frame.triggers[0] = 1.;
+        assert!(!frame.neutral());
+    }
+    #[test]
     fn stick_look_is_the_devkit_convention() {
         let frame = GamepadFrame {
             right_stick: [1., 0.5],
