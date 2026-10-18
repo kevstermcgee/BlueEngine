@@ -197,6 +197,12 @@ pub fn scaffold_new_game_with(
         )
         .into());
     }
+    // Check this prerequisite before creating any source. All supported project
+    // integration gates require rustfmt; assemble then format exactly once.
+    if !std::process::Command::new("rustfmt").arg("--version").output()
+        .map_err(|_| "new-game requires rustfmt; select/install the Rust rustfmt component before scaffolding")?.status.success() {
+        return Err("new-game requires a working rustfmt component; no project files were written".into());
+    }
     let engine_arg = engine_rel_path.unwrap_or("../BlueEngine");
     let project = Project {
         name,
@@ -219,6 +225,33 @@ pub fn scaffold_new_game_with(
     write_shipping_files(&project, identity, template)?;
     write_scripts(&project)?;
     fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
+    let mut sources = Vec::new();
+    for directory in [
+        target_dir.to_path_buf(),
+        target_dir.join("src"),
+        target_dir.join("tests"),
+    ] {
+        for entry in fs::read_dir(directory)? {
+            let path = entry?.path();
+            if path.is_file() && path.extension().is_some_and(|e| e == "rs") {
+                sources.push(fs::canonicalize(path)?);
+            }
+        }
+    }
+    sources.sort();
+    let formatted = std::process::Command::new("rustfmt")
+        .args(["--edition", "2021"])
+        .args(sources)
+        .current_dir(target_dir)
+        .output()?;
+    if !formatted.status.success() {
+        return Err(format!(
+            "Generated source was preserved at {} but rustfmt failed: {}",
+            target_dir.display(),
+            String::from_utf8_lossy(&formatted.stderr)
+        )
+        .into());
+    }
     Ok(())
 }
 
@@ -970,6 +1003,34 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ))
+    }
+
+    #[test]
+    fn every_new_starter_passes_its_first_format_gate() {
+        for template in [
+            Template::Stock,
+            Template::CustomSim,
+            Template::TwoD,
+            Template::ThreeD,
+            Template::Hybrid,
+            Template::Portable,
+        ] {
+            let dir = temp(template.name());
+            scaffold_new_game_with("format-probe", &dir, None, template).unwrap();
+            let output = std::process::Command::new("cargo")
+                .args(["fmt", "--check"])
+                .current_dir(&dir)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}: {}{}",
+                template.name(),
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            fs::remove_dir_all(dir).unwrap();
+        }
     }
 
     #[test]

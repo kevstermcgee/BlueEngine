@@ -85,4 +85,6 @@ software captures distinct from physical attestations. Commands and examples:
 [NATIVE_DELIVERY.md](NATIVE_DELIVERY.md).
 Linux development checks cannot certify Windows installers or physical devices. Full engine Linux/Windows gates
 remain required after engine changes. Publish/deploy only when explicitly authorized.
+New-game creation checks for rustfmt before writing, then formats the assembled
+Rust sources once so the first integration format gate passes.
 Browser gameplay/WASM is retired: [BROWSER_WORKFLOW.md](BROWSER_WORKFLOW.md).

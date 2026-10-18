@@ -46,7 +46,7 @@ jobs:
           shared-key: engine-checks-test
       - name: Install FFmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress -y
@@ -54,6 +54,9 @@ jobs:
       # Cache compilation only: every check and every test still executes.
       - name: Full engine verification
         run: python tools/be2.py check
+      - name: Shared X11 focus and outside-window input releases
+        if: runner.os == 'Linux'
+        run: xvfb-run -a cargo test --locked --profile itest --no-default-features --features two-d --lib viewer::focus::platform::tests::native_focus_uses_real_window_without_a_gl_context -- --ignored --exact
       - run: cargo build --release --locked
       - run: cargo build --release --locked --no-default-features --features physics,networking --bin be2-headless
 
@@ -128,7 +131,7 @@ jobs:
           save-if: false # Engine job owns writes; both restore compatible dependency artifacts.
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Build and package Leo
         shell: bash # Fail on EACH native command on Windows too.
         env:
@@ -197,7 +200,7 @@ jobs:
           save-if: false
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Utility rules, exports, presentation and lint
         shell: bash
         run: |
@@ -284,7 +287,7 @@ jobs:
           save-if: false
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Journey rules, presentation and lint
         shell: bash
         run: |
@@ -363,7 +366,7 @@ jobs:
           save-if: false
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Media analysis, variation rules, presentation and lint
         shell: bash
         run: |

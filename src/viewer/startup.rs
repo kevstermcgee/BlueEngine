@@ -125,6 +125,11 @@ pub async fn show() {
             || is_mouse_button_down(MouseButton::Left)
             || is_mouse_button_down(MouseButton::Right)
             || is_mouse_button_down(MouseButton::Middle);
+        if let Some(observation) = super::focus::sample() {
+            skip &= observation.focused && !observation.lost;
+            // Window key-up events can be lost while switching applications.
+            held = !observation.focused || !observation.neutral;
+        }
         #[cfg(feature = "gamepad")]
         if let Some(pads) = pads.as_mut() {
             use super::gamepad::Button;

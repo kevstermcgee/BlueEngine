@@ -212,6 +212,9 @@ def readiness(root, route, identity, calls):
     tools = identity['tools']
     for name in ('compiler', 'cargo'):
         add(name, tools[name]['ok'], 'inner', 'Install/select Rust toolchain explicitly; then be2.py doctor', tools[name].get('error'))
+    if route['kind'] == 'new-game':
+        formatter = task_inputs.probe(['rustfmt', '--version'], root, calls)
+        add('Rust formatter', formatter['ok'], 'inner', 'Select/install the Rust rustfmt component before scaffolding')
     version = re.search(r'rustc (\d+)\.(\d+)', tools['compiler']['output'])
     manifest = root / 'Cargo.toml'
     minimum = tomllib.loads(manifest.read_text(encoding='utf-8')).get('package', {}).get('rust-version', '1.87') if manifest.is_file() else '1.87'
