@@ -1,12 +1,11 @@
 # Versioned automation workshop
 
-External **custom Rust simulation**, not stock `GameDocument` or a capacity claim:
-two independent machines share a bounded inventory.
-The game owns recipes, queues, upgrades, balance, controls and drawing. Optional
+External custom Rust simulation: two independent machines share bounded inventory.
+The game owns rules, balance, controls and drawing. Optional
 `vesper3d::runtime::resources` uses the `resources` feature. Fixed 60 Hz rules use
 `Simulation`; saves use `Snapshot` and `Lifecycle`. Rendering never advances production.
 
-From the engine checkout:
+Commands:
 
 ```text
 cargo test --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features
@@ -15,9 +14,8 @@ cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --no-def
 cargo run --locked --manifest-path games/automation-workshop/Cargo.toml --bin automation-workshop
 ```
 
-`inspect MACHINE-ID` prints bounded JSON from the same authority as the client:
-active recipe/definition location, queue, logical ticks left, balances and blockage.
-Read-only inspection; tests use public commands.
+`inspect MACHINE-ID` reads bounded authority JSON: recipe/definition location,
+queue, ticks left, balances and blockage. Tests use public commands.
 
 ## One coherent transaction
 
@@ -75,9 +73,9 @@ game-owned migration of a **copy** through the engine persistence contract. It
 validates the recognized old content and new definitions before accepting progress.
 Exact source definitions also permit v2 recipe/upgrade additions over existing items.
 V2 item/source/sink rules and existing recipe/upgrade tuning must match; retuning/removal requires another
-explicit migration. An explicit copy migration may change item/recipe/upgrade labels only: compatibility ignores labels, while complete content identity and historical save validation still include them. Missing/unsupported versions and unknown content fail;
+explicit migration. Copy migration permits label edits; complete identity and historical validation still include labels. Missing/unsupported versions and unknown content fail;
 normal exact-content checks remain enabled and original files are retained.
-Keep the original installation/save playable after a failed migration.
+Failed migration preserves the playable original.
 
 From `games/automation-workshop`, use existing inputs and a separate destination:
 
@@ -110,8 +108,8 @@ scheduling, capacity controls or autosave lifecycle. Local queue acceptance is n
 remote delivery. Production QUIC/TLS requires the `networking` feature; hub rooms
 use development UDP. See [NETPLAY.md](NETPLAY.md).
 
-Large-world replication is the next network milestone beyond this snapshot budget.
-Do not truncate authoritative state to pass tests or create a parallel server. A headless pass does not prove native
+Beyond this snapshot budget, never truncate state or create a parallel server.
+A headless pass does not prove native
 online UI, internet reliability, Windows runtime or commercial-game capacity.
 
 ## Add a recipe and upgrade without engine inspection
@@ -120,26 +118,14 @@ Read this page, the game's `AGENTS.md` and `assets/workshop.json`. Add a namespa
 recipe using existing item IDs and an upgrade with its declared cost and tuning.
 Use `workshop -- edit CONTENT_JSON ADDITIONS_JSON` for a validated atomic semantic
 edit. Run `workshop -- validate`, inspect the rule, then add a public-command test for
-production, blockage and save continuation. The native recipe/upgrade selectors are
-derived from the sorted definition index, so no engine or presentation edits are
-required for another valid definition. Use the focused game check above, then the
+production, blockage and save continuation. Native selectors use the sorted definition index; valid new definitions require
+no engine/presentation edits. Use the focused game check above, then the
 normal native package/installer gates for a release.
 
-Fresh-agent trials record all source/doc reads, tool calls, failures and verification
-time. Numeric CLI usage is model-token evidence when available; missing telemetry is
-unavailable, not zero. Scripted edit tests do not prove fresh-model completion.
+## Single-player proof
 
-## Persistent single-player acceptance and bounded playtesting
-
-The native goal is to deliver three wire. Acquire ore/coal, smelt plates, choose
-fast tools or wire tools, draw wire, then deliver it. Storage competes with queued
-work; freeing capacity or cancelling pending work preserves every paid input.
-D delivers one selected item (Down or mouse selects it). F/F11 toggles display
-mode in place; Escape opens the menu; focus loss suppresses queued input through
-the shared shell. F5/F9 continue through the same engine snapshot authority.
-
-`tools/playtest.py` runs isolated headless seeded processes over this exact game.
-See [PLAYTESTING.md](PLAYTESTING.md) for budgets, accounting, trace replay and the
-deliberately broken fixture. Rendering, physical input and audible output remain
-separate claims. Resource transaction `preview` validates through the identical
-validator without cloning inventory; committing always revalidates with `transact`.
+Deliver three wire: acquire ore/coal, smelt plates, buy wire tools, draw and deliver.
+D delivers the selected item; Down/mouse selects it. F/F11 toggles fullscreen;
+Escape opens the focus-aware menu. F5/F9 use the same snapshot authority.
+[PLAYTESTING.md](PLAYTESTING.md) covers isolated seeded runs, budgets and exact
+trace replay. Rendering, physical input and audible output remain separate claims.
