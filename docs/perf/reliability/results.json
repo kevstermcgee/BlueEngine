@@ -157,5 +157,6 @@
     "advanced optional narrative"
   ],
   "public_player_feedback": "No real public-review-driven improvement loop claimed. Provenance and untrusted observation policy preserved.",
-  "authorization": "Isolated review branch and draft PR only. No merge, publication, deployment or live schedule change."
+  "authorization": "Isolated review branch and draft PR only. No merge, publication, deployment or live schedule change.",
+  "completed_verification_receipt": "verification.json: full 54-command local canonical pass at 63afc20, exact SDK/Workshop tree IDs, final native capture, Afterpull consumer checks, measured failed-attempt costs. Final hosted status is on PR 28."
 }

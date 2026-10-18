@@ -126,3 +126,29 @@ No public feedback was fabricated. No real public player-driven improvement loop
 is claimed. Remaining upstream audio limitations and subsequent netplay, updater,
 world-region and optional narrative milestones are listed in `results.json` and
 [PERSISTENT_RELIABILITY.md](../../PERSISTENT_RELIABILITY.md).
+
+## Completed verification receipt
+
+`verification.json` records the complete local 54-command pass at `63afc20`
+(1,511.766 s), all 55 canonical performance rows in `docs/perf/metrics.jsonl`,
+and the exact unchanged SDK/Workshop Git objects. Earlier failed full attempts
+consumed 926.041, 537.182 and 1,957.876 seconds; their reports are retained.
+These are actual check wall times, including overlapping Python/Cargo work,
+not total authoring or model-active time.
+
+The final native Workshop build repeats the three-wire save/load capture and
+produces the exact retained goal image. Its binary identity and subsystem status
+are recorded. Afterpull's headless/native suites each pass fifteen tests; native
+format and all-target Clippy pass. Its actual shared-client verification completes
+1,300 ticks, including public loss/undo/retry/clear actions, and wins all six rooms.
+`afterpull.png` is a genuine capture. Its only subsequent cleanup removes the unused
+import of its former key reader; the SDK and Workshop sources remain identical.
+The retained duplicate-action trace also passes its same 28 turns with the fault
+injection disabled. These checks establish behavior, separate from physical devices.
+
+The checked `63afc20` checkpoint passed the full hosted Linux/Windows Engine
+workflow, native/headless release builds, all game/package jobs and Sandbox.
+The receipt's hosted status is timestamped by its checked revision. Completed final
+platform gates update that status on [PR 28](https://github.com/kevstermcgee/BlueEngine/pull/28).
+Physical input, audible hardware and manual Windows install/upgrade/uninstall
+remain unavailable; no enjoyment certification is made.

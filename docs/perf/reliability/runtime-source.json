@@ -20,7 +20,9 @@
     "src/viewer/game_client.rs": "ba55d71d4ba64f7400b1d1799f28cbcc00b66f03ef246108682cbb07a70e3bcc",
     "src/viewer/focus.rs": "befb398d497a36330161e4c731513fe2ef951ef94732b69024bb89ca24f8083d",
     "src/two_d/client.rs": "519fa4ba046d64739598454f81b62ca396b2fb0068fa488eaa9b083c83fa82b3",
-    "src/viewer/startup.rs": "c7d77eca45d982c43468c847b44f4987df7e5a80d255cec64e3c0cf5dcaae616"
+    "src/viewer/startup.rs": "c7d77eca45d982c43468c847b44f4987df7e5a80d255cec64e3c0cf5dcaae616",
+    "games/afterpull/src/presentation.rs": "052273d9b478b22e283791d298fa7f505a9dba321be505e93c49b865ebc57e5a",
+    "games/afterpull/src/main.rs": "867462367ed730d6fab0ad393f1a512bb288f868707d0ffaf6d3fb656bfd6a7d"
   },
   "note": "Exact delivered workload and shared-input bytes. Benchmark/core workshop/resource sources remain unchanged since 33c965f. Later CLI help/read bounds and menu-click gating are verified separately, with final-source seeded and replay reports. Evidence-only files may follow this manifest."
 }

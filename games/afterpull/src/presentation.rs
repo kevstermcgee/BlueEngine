@@ -1,6 +1,6 @@
 use super::*;
 use draw::{Color, Scene};
-use macroquad::prelude::{is_key_down, is_key_pressed, is_key_released, KeyCode};
+use macroquad::prelude::{is_key_pressed, is_key_released, KeyCode};
 const BG: Color = Color::new(0.035, 0.055, 0.09, 1.);
 const FLOOR: Color = Color::new(0.085, 0.125, 0.17, 1.);
 const EDGE: Color = Color::new(0.18, 0.26, 0.32, 1.);
