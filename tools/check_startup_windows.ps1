@@ -28,6 +28,7 @@ public static class BlueEngineStartupWindow {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr window, int command);
   [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
+  [DllImport("user32.dll")] public static extern uint MapVirtualKey(uint code, uint type);
   [DllImport("user32.dll")] public static extern bool SetProcessDPIAware();
   [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)] public static extern bool SetDllDirectory(string path);
 }
@@ -160,11 +161,12 @@ function Press-Toggle([IntPtr]$Window) {
   [void][BlueEngineStartupWindow]::SetForegroundWindow($Window)
   if ([BlueEngineStartupWindow]::GetForegroundWindow() -ne $Window) { throw 'Cannot focus the game for the fullscreen control check.' }
   $key = if ($ToggleKey -eq 'F11') { [byte]0x7a } else { [byte]0x46 }
+  $scan = [byte][BlueEngineStartupWindow]::MapVirtualKey($key, 0)
   try {
-    [BlueEngineStartupWindow]::keybd_event($key, 0, 0, [UIntPtr]::Zero)
+    [BlueEngineStartupWindow]::keybd_event($key, $scan, 0, [UIntPtr]::Zero)
     Start-Sleep -Milliseconds 100
   } finally {
-    [BlueEngineStartupWindow]::keybd_event($key, 0, 2, [UIntPtr]::Zero)
+    [BlueEngineStartupWindow]::keybd_event($key, $scan, 2, [UIntPtr]::Zero)
   }
 }
 
