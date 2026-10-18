@@ -16,6 +16,13 @@ jobs:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
       - uses: actions/checkout@v4
+      - name: Validate startup verifier syntax
+        shell: pwsh
+        run: |
+          $tokens = $null
+          $errors = $null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path tools/check_startup_windows.ps1).Path, [ref]$tokens, [ref]$errors)
+          if ($errors.Count) { throw ($errors | Out-String) }
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy

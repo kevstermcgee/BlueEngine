@@ -78,7 +78,8 @@ function Wait-WindowState([IntPtr]$Window, [bool]$Fullscreen) {
 
 function Save-Window([IntPtr]$Window, [string]$Name, [switch]$StudioCard) {
   $bounds = Get-WindowBounds $Window
-  $width, $height = $bounds.Right - $bounds.Left, $bounds.Bottom - $bounds.Top
+  $width = $bounds.Right - $bounds.Left
+  $height = $bounds.Bottom - $bounds.Top
   if ($width -lt 200 -or $height -lt 150) { throw 'Game window is too small to inspect.' }
   $bitmap = [Drawing.Bitmap]::new($width, $height)
   $graphics = [Drawing.Graphics]::FromImage($bitmap)
@@ -201,7 +202,7 @@ try {
     isolated_player_data = $true
   }
   $proof | ConvertTo-Json -Depth 6 | Set-Content -Encoding utf8 (Join-Path $OutputDirectory 'startup-proof.json')
-  Write-Host "Verified $ExpectedTitle: real studio card, fullscreen default, first $ToggleKey toggle, windowed override and isolated player data."
+  Write-Host "Verified ${ExpectedTitle}: real studio card, fullscreen default, first $ToggleKey toggle, windowed override and isolated player data."
 } finally {
   Stop-Game
   if ($OpenGLDirectory) { [void][BlueEngineStartupWindow]::SetDllDirectory($null) }
