@@ -1,0 +1,63 @@
+name: Game review
+description: Rate a BlueEngine game and tell us what you enjoyed or would improve.
+title: "[Player feedback]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Your review is public. It will be saved in the BlueEngine repository and considered when improving games and designing future ones.
+        Give a rating from 1 to 10 and complete at least one of the two writeups below. Do not include private information.
+  - type: input
+    id: game
+    attributes:
+      label: Game
+      description: The game identifier from its wiki, such as pocket-breaker or embertrail.
+      placeholder: pocket-breaker
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Game version
+      description: Optional game version or release identifier, up to 160 characters.
+      placeholder: The version you played
+  - type: dropdown
+    id: rating
+    attributes:
+      label: Rating (1–10)
+      description: Your overall score, from 1 (poor) to 10 (excellent).
+      options:
+        - "1"
+        - "2"
+        - "3"
+        - "4"
+        - "5"
+        - "6"
+        - "7"
+        - "8"
+        - "9"
+        - "10"
+    validations:
+      required: true
+  - type: textarea
+    id: enjoyed
+    attributes:
+      label: What I enjoyed
+      description: What worked well? Specific moments, mechanics or characters help. Up to 2,000 characters; complete this or the next field.
+      placeholder: Tell us what made you want to keep playing.
+      render: text
+  - type: textarea
+    id: disliked
+    attributes:
+      label: What could be better
+      description: What did you dislike, find confusing or want to change? Up to 2,000 characters; complete this or the previous field.
+      placeholder: Describe the problem and what you would like to improve.
+      render: text
+  - type: input
+    id: format
+    attributes:
+      label: Feedback format
+      description: Keep this value so the review can be imported automatically.
+      value: blueengine-player-feedback-v1
+    validations:
+      required: true

@@ -1,0 +1,83 @@
+name: Import player feedback
+
+on:
+  issues:
+    types:
+      [
+        opened,
+        edited,
+        reopened,
+        closed,
+        deleted,
+        transferred,
+        labeled,
+        unlabeled,
+      ]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: Optional issue number to reconcile first; all reviews are also reconciled.
+        required: false
+        type: string
+  schedule:
+    - cron: "17 9 * * *"
+
+permissions:
+  contents: write
+  issues: read
+
+# Each run reconciles the full bounded issue list because GitHub may replace a
+# pending concurrency run when another issue changes before it starts.
+concurrency:
+  group: player-feedback-main
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Reconcile current reviews and publish the archive
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          FEEDBACK_ISSUE_NUMBER: ${{ github.event.issue.number || inputs.issue_number || '' }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$FEEDBACK_ISSUE_NUMBER" && ! "$FEEDBACK_ISSUE_NUMBER" =~ ^[1-9][0-9]*$ ]]; then
+            echo '::error::The issue number must be a positive integer.'
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          for attempt in 1 2 3 4 5; do
+            echo "Reconciling player feedback (attempt $attempt/5)."
+            # A game publisher or another maintainer may advance main. Reapply
+            # current API data to the new head instead of force-pushing or
+            # merging a stale generated summary.
+            git fetch origin main
+            git reset --hard origin/main
+            if [[ -n "$FEEDBACK_ISSUE_NUMBER" ]]; then
+              python3 tools/player_feedback.py sync --repository "$GITHUB_REPOSITORY" --issue "$FEEDBACK_ISSUE_NUMBER"
+            fi
+            python3 tools/player_feedback.py sync --repository "$GITHUB_REPOSITORY" --all
+            python3 tools/player_feedback.py check
+            git add -- docs/player-feedback/reviews docs/player-feedback/summary.json
+            if git diff --cached --quiet; then
+              echo 'Player feedback is already current.'
+              exit 0
+            fi
+            git commit -m 'Sync player feedback from GitHub issues [skip ci]'
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+          done
+          echo '::error::Main kept advancing or the feedback commit could not be pushed. Rerun this workflow to reconcile current reviews.'
+          exit 1

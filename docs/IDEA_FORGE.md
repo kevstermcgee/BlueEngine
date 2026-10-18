@@ -172,6 +172,16 @@ a later installer release and site update without replacing the original release
 No transcript or credential is committed, and no findings are fabricated when
 the AI reports none.
 
+## Player experience feedback
+
+Game-wiki reviews are imported from public BlueEngine GitHub issues into
+[`docs/player-feedback`](player-feedback/README.md). Future runs read these
+committed ratings and experiences during concept generation, implementation and
+independent review. Source-cited JSON is bounded and frozen in each run journal;
+players' opinions remain untrusted observations, never executable directions or
+trusted engine-learning ledger entries. Relevant reports guide concrete playtests
+and improvements without replacing the normal game and publication gates.
+
 ## Failures and resumption
 
 Private logs, schemas, AI reports, phase state and delivery receipts live under

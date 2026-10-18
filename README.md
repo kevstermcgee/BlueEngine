@@ -64,6 +64,9 @@ remains `vesper3d` for compatibility.
 - **State and verification:** engine-owned snapshots, deterministic replay tools,
   bounded headless scenarios, content diagnostics and native capture tools. See
   [saves](docs/SAVE_STATE.md) and [behavioral testing](docs/BEHAVIORAL_TESTING.md).
+- **AI game building:** [IdeaForge](docs/IDEA_FORGE.md) builds and verifies native
+  games. [Wiki reviews](docs/player-feedback/README.md) become public repository
+  records that inform future concepts, implementation and independent review.
 - **Multiplayer:** custom simulations use [netplay](docs/NETPLAY.md); the stock
   client/server retains its own prediction and replication path. Their capacity,
   snapshot and transport contracts differ; [hosting](docs/HOSTING.md) documents

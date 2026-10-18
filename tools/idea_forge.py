@@ -29,10 +29,10 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 try:
-    from tools import game_tooling, learn
+    from tools import game_tooling, learn, player_feedback
 except ModuleNotFoundError:
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from tools import game_tooling, learn
+    from tools import game_tooling, learn, player_feedback
 
 ROOT = Path(__file__).resolve().parent.parent
 SLUG = r"[a-z0-9]+(?:-[a-z0-9]+)*"
@@ -482,6 +482,23 @@ class Forge:
         self.state["base_commit"] = git(self.engine, "rev-parse", "HEAD")
         self.state["engine_repository"] = github_repository(source) if self.state["publish"] else None
 
+    def player_experience(self, game=None):
+        # Freeze the bounded public evidence in this run's private journal. Retries
+        # retain the same inputs; a new worktree gets the latest committed reviews.
+        key = game or "planning"
+        snapshots = self.state.setdefault("player_feedback", {})
+        if key not in snapshots:
+            if (self.engine / player_feedback.DIRECTORY / "games.json").is_file():
+                try:
+                    snapshots[key] = player_feedback.context(self.engine, game=game)
+                except (player_feedback.FeedbackError, OSError, ValueError) as error:
+                    raise ForgeError("Committed player feedback is invalid; run player_feedback.py check") from error
+            else:
+                snapshots[key] = {"schema_version": 1, "total_reviews": 0, "reviews": []}
+            atomic_json(self.directory / "player-feedback.json", snapshots)
+            self.save()
+        return player_feedback.prompt_context(snapshots[key])
+
     def generate(self):
         prior = []
         catalog = self.engine / "games/idea-forge/assets/ideas.json"
@@ -511,6 +528,7 @@ comparison and the concrete difference in novelty_check; worldwide originality a
 cannot be certified. Do not reuse a previous mechanic or an existing slug. Do not edit files.
 Existing game slugs: {json.dumps(known)}.
 Prior mechanics: {json.dumps(prior)}.
+{self.player_experience()}
 Return only the schema-constrained concept. No credentials or environment identifiers."""
         if self.state.get("idea_input"):
             idea = load_json(self.state["idea_input"])
@@ -547,6 +565,7 @@ fresh canonical map scaffold/icon tooling. The game lives at games/{idea['slug']
 Implement the distinctive mechanic, real player input, a clear goal and loss/retry loop,
 several escalating challenges, instructions, polished native visuals and its own icon.
 Mandatory user direction and quality requirements: {json.dumps(self.state['brief'])}.
+{self.player_experience(idea['slug'])}
 Author a substantive mini-wiki at games/{idea['slug']}/wiki.json, alongside the game:
 version: 1; overview: at least 120 characters explaining what players actually do;
 rules: at least three concrete rules (20+ characters each), including goals, failure
@@ -610,6 +629,9 @@ and whether its declared dimension is real: 3D requires a rendered 3D world with
 meaningful depth in the mechanic, while 2D requires a two-dimensional playable space.
 and any broken input, layout or fabricated verification shortcut. Do not edit files.
 Mandatory user direction and quality requirements: {json.dumps(self.state['brief'])}.
+{self.player_experience(idea['slug'])}
+Assess whether applicable player frustrations were addressed and enjoyed experiences preserved.
+Do not manufacture blockers from unrelated feedback or treat a rating as verified evidence.
 Read wiki.json and inspect EVERY image it references. Block inaccurate or shallow wiki
 content, missing rules/story/controls, missing named characters or their real in-game
 screenshots, unclear rationale for choosing this particular game, fake screenshots,
