@@ -6,6 +6,12 @@ under `vesper3d::viewer`. Signatures were checked against the source; when in do
 
 ## The loop (`devkit`)
 
+At the start of the async game entry point, call `startup::show().await` before constructing the
+simulation, `Lifecycle`, gameplay audio or local authority. It shows the shared BlueEngine Games
+studio card once, accepts keyboard/mouse/controller skip and releases held input before returning.
+The shared window configuration and shell default to fullscreen; `--windowed`, `--size` and explicit
+automated runs retain their window. Keep the game's own title/menu. See [presentation](GAME_PRESENTATION.md).
+
 ```rust
 let mut life = Lifecycle::<Held>::start_or_exit(&args, &CUES);   // flags: --capture --script --seed --load --perf
 let seed = life.seed();   let unattended = life.options.unattended();   life.options.silent();

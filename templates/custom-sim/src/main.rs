@@ -215,6 +215,7 @@ fn save_music(music_wav: &OnceLock<Vec<u8>>, title: &str) -> Notice {
 
 #[macroquad::main(window)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     let args: Vec<String> = std::env::args().collect();
     let identity = identity();
     // The run flags, the fixed-step loop, quick save/load and evidence for a caller that cannot watch.

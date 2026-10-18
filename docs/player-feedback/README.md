@@ -12,7 +12,7 @@ GitHub supplies account authentication and its ordinary issue moderation control
 the site and launcher contain no repository write token. The launcher opens the
 system browser for this handoff.
 
-## Repository records and wiki summaries
+## Repository records and public reviews
 
 The [player feedback issue form](../../.github/ISSUE_TEMPLATE/player-feedback.yml)
 uses these stable fields:
@@ -46,11 +46,33 @@ or proof of ownership. No review is generated when nobody has submitted one.
 [summary.json](summary.json) contains `schema_version: 1` and a `games` object keyed
 by slug. Each game has `count`, arithmetic `average` rounded to two decimals, and
 `reviews` containing at most the three most recently created canonical records.
-The wiki can fetch this small public file without rebuilding games. Ratings are
-self-selected opinions, not a representative survey.
+The public site and launcher can fetch this small public file without rebuilding
+games. Cards and wiki headers show the average score and review count. Reading
+scores and reviews does not require a GitHub account; publishing a review uses
+the authenticated issue submission described above. Ratings are self-selected
+opinions, not a representative survey.
+
+`games/GAME_SLUG.json` contains the complete public review feed for each catalog
+game: `schema_version: 1`, `game` (canonical slug), `count`, `average`, and `reviews`.
+Unlike the summary, `reviews` includes **every** canonical record for that game,
+ordered by creation time and then issue number, newest first. The wiki can load
+and page through this feed when players want to read beyond the latest three
+reviews. Each record retains the full writeup, reported version, GitHub username,
+timestamps and source link. Review text remains literal untrusted text; consumers
+must render it as text rather than execute it or inject it as HTML.
+
+Games without feedback have a feed with `count: 0`, `average: null`, and
+`reviews: []`; they have no invented score and remain absent from `summary.json`.
+The importer deterministically regenerates the feeds and removes feeds for games
+no longer in the catalog. `check` rejects missing feeds for reviewed games, extra
+or stale feeds, and mismatched summaries. A newly created unreviewed native game
+can lack an empty feed until the next intake run; its authoring checks do not need
+a network request or a fabricated review. The workflow commits generated feeds
+together with their canonical records and summary.
 
 Closed review issues remain feedback. Adding the moderation label
-`feedback-excluded` removes a review from the canonical records and summaries;
+`feedback-excluded` removes a review from the canonical records, summaries and
+complete public feeds;
 removing that label restores a still-valid review. Deleting, transferring or
 editing a review into an invalid format also removes its canonical record.
 Git history may retain previous public content; moderators should use GitHub's

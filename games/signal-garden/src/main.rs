@@ -123,6 +123,7 @@ fn centered(text: &str, y: f32, size: f32, color: Color) {
 }
 #[macroquad::main(window)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     let args: Vec<String> = std::env::args().collect();
     let expected = flag_value(&args, "--expect");
     if (has_flag(&args, "--expect") && expected.is_none())

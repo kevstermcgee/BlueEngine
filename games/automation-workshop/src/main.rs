@@ -295,6 +295,7 @@ fn draw_workshop(sim: &Workshop, choice: &mut Selection, interactive: bool, stat
 
 #[macroquad::main(window)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     let args: Vec<String> = std::env::args().collect();
     let mut life = Lifecycle::<()>::start_or_exit(&args, CUES);
     if life.options.save_dir.is_none() {

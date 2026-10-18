@@ -202,6 +202,54 @@ def summary(records):
     return {"schema_version": 1, "games": games}
 
 
+def public_feeds(records, games):
+    """Complete public records per game; keep the small existing summary compatible."""
+    grouped = {slug: [] for slug in games}
+    for record in records:
+        grouped[record["game"]].append(record)
+    return {
+        slug: {"schema_version": 1, "game": slug, "count": len(reviews),
+               "average": round(sum(row["rating"] for row in reviews) / len(reviews), 2) if reviews else None,
+               "reviews": sorted(reviews, key=lambda row: (row["created_at"], row["issue_number"]), reverse=True)}
+        for slug, reviews in sorted(grouped.items())
+    }
+
+
+def public_feed_paths(root):
+    directory = Path(root) / DIRECTORY / "games"
+    if directory.is_symlink():
+        raise FeedbackError("Invalid public review feed directory")
+    paths = {}
+    for path in sorted(directory.glob("*.json")):
+        if path.is_symlink() or not path.is_file() or not SLUG.fullmatch(path.stem):
+            raise FeedbackError("Invalid public review feed file")
+        paths[path.stem] = path
+    return paths
+
+
+def write_public_feeds(root, records, games):
+    feeds, existing = public_feeds(records, games), public_feed_paths(root)
+    directory = Path(root) / DIRECTORY / "games"
+    changed = sum(atomic_json(directory / f"{slug}.json", feed) for slug, feed in feeds.items())
+    for slug in existing.keys() - feeds.keys():
+        existing[slug].unlink()
+        changed += 1
+    return changed
+
+
+def check_public_feeds(root, records, games):
+    feeds, existing = public_feeds(records, games), public_feed_paths(root)
+    # A new native game can exist before the next issue intake backfills its empty feed.
+    # Reviewed games always need a complete feed; every published feed must stay canonical.
+    reviewed = {slug for slug, feed in feeds.items() if feed["count"]}
+    if not reviewed <= existing.keys() or existing.keys() - feeds.keys():
+        raise FeedbackError("Public player review feeds are missing or stale")
+    for slug, path in existing.items():
+        feed = feeds[slug]
+        if json.loads(path.read_text(encoding="utf-8")) != feed:
+            raise FeedbackError(f"Public player review feed is stale: {slug}")
+
+
 def atomic_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(value, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
@@ -293,7 +341,9 @@ def sync(root, github, issue_number=None):
             imported += 1
     records = load_records(root, github.repository)
     changed = atomic_json(root / DIRECTORY / "summary.json", summary(records))
-    return {"imported": imported, "removed": removed, "summary_changed": changed, "reviews": len(records)}
+    feeds_changed = write_public_feeds(root, records, games)
+    return {"imported": imported, "removed": removed, "summary_changed": changed,
+            "public_feeds_changed": feeds_changed, "reviews": len(records)}
 
 
 def context(root, *, game=None, maximum=14000):
@@ -331,7 +381,7 @@ def main(argv=None):
     selection = command.add_mutually_exclusive_group(required=True)
     selection.add_argument("--issue", type=int)
     selection.add_argument("--all", action="store_true")
-    commands.add_parser("check", help="Validate stored records and deterministic summary")
+    commands.add_parser("check", help="Validate stored records, deterministic summary and public game feeds")
     commands.add_parser("context", help="Print bounded player experience data for game planning")
     args = parser.parse_args(argv)
     try:
@@ -344,6 +394,7 @@ def main(argv=None):
             actual = json.loads((args.root / DIRECTORY / "summary.json").read_text(encoding="utf-8"))
             if actual != summary(records):
                 raise FeedbackError("Player feedback summary is stale")
+            check_public_feeds(args.root, records, game_catalog(args.root))
             result = {"reviews": len(records), "valid": True}
         else:
             result = context(args.root)

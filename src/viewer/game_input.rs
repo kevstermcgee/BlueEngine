@@ -199,7 +199,10 @@ impl ClientInput {
         self.poll(focused);
         if let Some(read) = source {
             self.keyboard
-                .get_or_insert_with(KeyboardFrame::default)
+                .get_or_insert_with(|| KeyboardFrame {
+                    suppress_first: super::startup::shown(),
+                    ..KeyboardFrame::default()
+                })
                 .poll(focused, read);
         } else {
             self.keyboard = None;
@@ -681,6 +684,8 @@ mod tests {
 /// Pure key-edge tracking; the host owns the platform call.
 #[derive(Default)]
 struct KeyboardFrame {
+    // A studio-card skip can leave GetAsyncKeyState's historical low bit set even after key-up.
+    suppress_first: bool,
     previous: std::collections::HashSet<KeyCode>,
     down: std::collections::HashSet<KeyCode>,
     pressed: std::collections::HashSet<KeyCode>,
@@ -832,6 +837,7 @@ fn unsupported_message(key: KeyCode) -> String {
 }
 impl KeyboardFrame {
     fn poll(&mut self, focused: bool, read: impl Fn(i32) -> i16) {
+        let focused = focused && !std::mem::take(&mut self.suppress_first);
         self.down.clear();
         self.pressed.clear();
         for &(key, vk) in KEY_TABLE {
@@ -962,6 +968,21 @@ mod text_tests {
 #[cfg(test)]
 mod keyboard_tests {
     use super::*;
+    #[test]
+    fn studio_skip_native_history_is_drained_but_the_next_fresh_tap_is_retained() {
+        let mut keys = KeyboardFrame {
+            suppress_first: true,
+            ..Default::default()
+        };
+        keys.poll(true, |vk| i16::from(vk == 0x20));
+        assert!(keys.pressed.is_empty());
+        assert!(keys.down.is_empty());
+        keys.poll(true, |_| 0);
+        keys.poll(true, |vk| i16::from(vk == 0x20));
+        assert!(keys.pressed.contains(&KeyCode::Space));
+        keys.poll(true, |_| 0);
+        assert!(keys.pressed.is_empty());
+    }
     #[test]
     fn native_edges_are_consumed_once_and_focus_loss_does_not_replay_them() {
         let mut keys = KeyboardFrame::default();

@@ -2,6 +2,17 @@
 
 Every playable BlueEngine game should meet this baseline before delivery:
 
+- Start fullscreen and show the brief **BlueEngine Games** studio card before the game's own title
+  or menu. The shared `viewer::startup::show().await` uses the official logo, accepts keyboard,
+  mouse or controller skip, and drains held input before returning. Call it before creating a
+  simulation, frame clock, gameplay audio or local server. It runs once per process, so callers
+  can safely use it with the stock or 2D clients, which already include it. Keep the game's own
+  title, icon and opening screen. Respect an explicitly saved windowed preference where exposed;
+  the shared `devkit::Settings` default is fullscreen, and saved `false` values remain windowed.
+- `game_client::window_config` and `two_d::client::config` choose fullscreen consistently with
+  `GameShell` and the 2D F/F11 state. `--windowed` or `--size WxH` requests a window; `--fullscreen`
+  can override size alone. Explicit capture, script, playback, scenario, probe, verify, frames or
+  exit-after runs stay windowed and omit the studio card so evidence frame numbers remain stable.
 - F toggles fullscreen in place; F11 may be an alias. Never restart the renderer or match.
 - Escape opens a compact Resume / Controls / Quit menu. Opening it releases the mouse
   and suppresses movement, fire, reload, weapon selection and look. Resume clicks must

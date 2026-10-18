@@ -15,7 +15,7 @@
     "dev_tools": "6e244f5a17356604a54175f322af3ba346c7064457e795f37db16024b5bbee51",
     "fps_foundation": "f790e0a43bea2e55e881b57dd5200849b358cf3188f316c98b5a9060733c3044",
     "game_documents": "b4282500c49eb8d8706e632507bfca944d347b48ccdd3ca6a11ba9dffba34074",
-    "game_presentation": "c50575d09d4c8e5626e8b6cbb6c08d1434462b9001f30f8efa703ac41905622a",
+    "game_presentation": "799ce76185849aa2ad24191425c9877cb69e8e7383a10a80da40931cc0948699",
     "game_scaffolding": "747e263e8984619299bf647e2fda9a09ce0ae1dc136ef9f52c043eccdd1204cd",
     "game_shipping": "0b2f47df692467afb2d6ffb0b341142f3e32f5e109779b38c4ff518d8e064c2e",
     "game_upgrade": "69e64d2a9d9e22dae052d56e3544925f97a9d299fb9a84a2088a6116746a0aea",
@@ -82,7 +82,7 @@
     "docs/adr/0049-retire-browser-gameplay.md": "25fb0a971337a5d86a1479492e241c61e6d3b3e020d747fe7eb87cff2da48563"
   },
   "format": 1,
-  "readme_sha256": "f45e5f186d00caedca1357dddd8905800a92a2a89ea399f7363f03947b69d299",
+  "readme_sha256": "ac2c7e4aedfda25ffc7e87b38ca79b47c7bd1cb073538b0476be4b3b448d1706",
   "rust_version": "1.87",
   "starters_sha256": "fd931a4efe14309aff7611726b5e33f727bd77c704b934abe5f033fd3b30a7a7",
   "unchanged_reason": null

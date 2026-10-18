@@ -38,6 +38,7 @@ pub fn window_config(title: &str) -> macroquad::conf::Conf {
             window_title: title.into(),
             window_width: 1280,
             window_height: 720,
+            fullscreen: super::startup::default_fullscreen(),
             high_dpi: true,
             sample_count: 4,
             ..Default::default()
@@ -186,7 +187,7 @@ impl GameShell {
     pub fn new() -> Self {
         Self {
             paused: false,
-            fullscreen: false,
+            fullscreen: super::startup::default_fullscreen(),
             diagnostics: false,
             subscriber: register_input_subscriber(),
             focus: Focus { active: true },

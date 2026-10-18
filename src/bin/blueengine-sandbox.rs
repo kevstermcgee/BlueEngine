@@ -1621,6 +1621,8 @@ fn config() -> macroquad::conf::Conf {
 
 #[macroquad::main(config)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
+    input::poll(false);
     if let Err(e) = run().await {
         eprintln!("BlueEngineSandbox: {e}");
         // Keep load failures readable in packaged Windows builds with no console.

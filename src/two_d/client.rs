@@ -220,6 +220,7 @@ pub fn config(title: &str) -> macroquad::conf::Conf {
             window_title: title.into(),
             window_width: size.0 as i32,
             window_height: size.1 as i32,
+            fullscreen: crate::viewer::startup::default_fullscreen(),
             high_dpi: true,
             ..Default::default()
         },
@@ -233,6 +234,7 @@ pub async fn run<G: Game>() {
     }
 }
 async fn run_inner<G: Game>() -> Result<(), String> {
+    crate::viewer::startup::show().await;
     let capture = {
         let args: Vec<_> = std::env::args().collect();
         let plan =
@@ -280,12 +282,12 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut renderer = Renderer::default();
     let mut frame = 0;
     let mut last_pointer = None;
-    let mut fullscreen = false;
+    let mut fullscreen = crate::viewer::startup::default_fullscreen();
     #[cfg(feature = "gamepad")]
     let mut pads = crate::viewer::gamepad::Gamepads::new().ok();
     loop {
         frame += 1;
-        if is_key_pressed(KeyCode::F) {
+        if is_key_pressed(KeyCode::F) || is_key_pressed(KeyCode::F11) {
             fullscreen = !fullscreen;
             macroquad::miniquad::window::set_fullscreen(fullscreen);
         }

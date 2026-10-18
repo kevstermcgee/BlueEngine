@@ -161,7 +161,7 @@ impl Default for Settings {
             sfx: 0.9,
             music_on: true,
             sfx_on: true,
-            fullscreen: false,
+            fullscreen: true,
             last_server: None,
             shadow_quality: ShadowQuality::default(),
         }
@@ -346,6 +346,10 @@ mod tests {
         .unwrap();
         let s = Settings::load(&path);
         assert_eq!((s.sensitivity, s.music, s.sfx), (4., 0., 0.5));
+        assert!(
+            s.fullscreen,
+            "a missing display preference defaults to fullscreen"
+        );
         let bad = Settings {
             sensitivity: f32::NAN,
             music: f32::INFINITY,
@@ -412,6 +416,10 @@ mod tests {
         )
         .unwrap();
         let s = Settings::load(&path);
+        assert!(
+            !s.fullscreen,
+            "an explicit saved windowed preference survives the new default"
+        );
         assert!(
             s.music_on && s.sfx_on,
             "missing keys default to on, not off"

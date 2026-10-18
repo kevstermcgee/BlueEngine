@@ -69,7 +69,7 @@ jobs:
             fi
             python3 tools/player_feedback.py sync --repository "$GITHUB_REPOSITORY" --all
             python3 tools/player_feedback.py check
-            git add -- docs/player-feedback/reviews docs/player-feedback/summary.json
+            git add -- docs/player-feedback/reviews docs/player-feedback/summary.json docs/player-feedback/games
             if git diff --cached --quiet; then
               echo 'Player feedback is already current.'
               exit 0

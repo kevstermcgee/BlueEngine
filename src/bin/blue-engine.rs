@@ -40,7 +40,7 @@ fn config() -> macroquad::conf::Conf {
             window_title: "Blue Engine 2 | BE2".into(),
             window_width: 960,
             window_height: 600,
-            fullscreen: false,
+            fullscreen: vesper3d::viewer::startup::default_fullscreen(),
             high_dpi: true,
             sample_count: 4,
             window_resizable: true,
@@ -242,7 +242,10 @@ fn slider(label: &str, x: f32, y: f32, w: f32, value: &mut f32, min: f32, max: f
 
 #[macroquad::main(config)]
 async fn main() {
-    platform_window::maximize();
+    vesper3d::viewer::startup::show().await;
+    if !vesper3d::viewer::startup::default_fullscreen() {
+        platform_window::maximize();
+    }
     // Process the queued maximize/resize before preparing or displaying the room.
     next_frame().await;
     #[cfg(windows)]
@@ -461,6 +464,8 @@ async fn main() {
         Perspective::default()
     };
     let mut keys = Keys::default();
+    // Drain native historical press bits left by a studio-card skip before accepting game input.
+    keys.poll(false);
     let mut gamepads = Gamepads::new()
         .map_err(|error| {
             eprintln!("Controller input unavailable: {error}");
@@ -479,7 +484,7 @@ async fn main() {
     let mut invert = false;
     let mut hud = false;
     let mut debug = false;
-    let mut fullscreen = false;
+    let mut fullscreen = vesper3d::viewer::startup::default_fullscreen();
     let mut maximize_pending = false;
     let mut frame = 0;
     let mut samples = Vec::new();

@@ -19,6 +19,8 @@ pub struct Keys {
     pressed: HashSet<KeyCode>,
     #[cfg(windows)]
     native_down: HashSet<KeyCode>,
+    #[cfg(windows)]
+    native_started: bool,
 }
 
 impl Keys {
@@ -44,6 +46,8 @@ impl Keys {
         self.pressed.clear();
         #[cfg(windows)]
         {
+            let focused = focused && (self.native_started || !super::startup::shown());
+            self.native_started = true;
             // Read only the engine's bound keys. Polling also accepts accessibility-injected
             // keys without hardware scan codes and prevents a missed key-up sticking.
             for (key, vk) in [

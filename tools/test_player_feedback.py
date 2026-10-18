@@ -105,10 +105,14 @@ class PlayerFeedbackTests(unittest.TestCase):
         feedback.sync(self.root, self.api, 3)
         first = feedback.sync(self.root, self.api, 3)
         self.assertEqual(first["imported"], 0)
+        self.assertEqual(first["public_feeds_changed"], 0)
         self.api.current[3].update(body=body(rating="5"), state="closed", updated_at="2026-10-18T00:00:00Z")
         feedback.sync(self.root, self.api, 3)  # The triggering event could be old; only current API is read.
         self.assertEqual(self.records()[0]["rating"], 5)
         self.assertEqual(feedback.summary(self.records())["games"]["rule-relay"]["count"], 1)
+        feed = json.loads((self.root / feedback.DIRECTORY / "games/rule-relay.json").read_text())
+        self.assertEqual(feed["average"], 5)
+        self.assertEqual(feed["reviews"][0]["rating"], 5)
 
     def test_deleted_transferred_malformed_and_moderated_reviews_are_removed(self):
         variants = [None, issue(html_url="https://github.com/other/project/issues/3"), issue(body="Edited away"),
@@ -121,6 +125,9 @@ class PlayerFeedbackTests(unittest.TestCase):
                 feedback.sync(self.root, self.api)
                 self.assertEqual(self.records(), [])
                 self.assertEqual(json.loads((self.root / feedback.DIRECTORY / "summary.json").read_text())["games"], {})
+                feed = json.loads((self.root / feedback.DIRECTORY / "games/rule-relay.json").read_text())
+                self.assertEqual(feed, {"schema_version": 1, "game": "rule-relay", "count": 0,
+                                        "average": None, "reviews": []})
 
     def test_network_failure_preserves_canonical_records_and_summary(self):
         feedback.sync(self.root, self.api)
@@ -143,6 +150,91 @@ class PlayerFeedbackTests(unittest.TestCase):
         self.assertEqual(game["count"], 5)
         self.assertEqual(game["average"], 3)
         self.assertEqual([row["issue_number"] for row in game["reviews"]], [5, 4, 3])
+        feed = json.loads((self.root / feedback.DIRECTORY / "games/rule-relay.json").read_text())
+        self.assertEqual(feed["count"], 5)
+        self.assertEqual(feed["average"], 3)
+        self.assertEqual([row["issue_number"] for row in feed["reviews"]], [5, 4, 3, 2, 1])
+        self.assertEqual(feed["reviews"], sorted(self.records(), key=lambda row: row["issue_number"], reverse=True))
+
+    def test_public_feeds_include_unreviewed_games_and_prune_removed_games(self):
+        directory = self.root / feedback.DIRECTORY
+        feedback.atomic_json(directory / "games.json", {"schema_version": 1, "games": {
+            "rule-relay": "Rule Relay", "another": "Another"}})
+        result = feedback.sync(self.root, self.api)
+        self.assertEqual(result["public_feeds_changed"], 2)
+        self.assertEqual(json.loads((directory / "games/another.json").read_text()), {
+            "schema_version": 1, "game": "another", "count": 0, "average": None, "reviews": []})
+        self.assertNotIn("another", json.loads((directory / "summary.json").read_text())["games"])
+        feedback.atomic_json(directory / "games.json", {"schema_version": 1, "games": {"rule-relay": "Rule Relay"}})
+        self.assertEqual(feedback.sync(self.root, self.api)["public_feeds_changed"], 1)
+        self.assertFalse((directory / "games/another.json").exists())
+        self.assertEqual(feedback.main(["--root", str(self.root), "check"]), 0)
+
+    def test_new_unreviewed_native_game_does_not_require_network_intake_before_authoring_checks(self):
+        feedback.sync(self.root, self.api)
+        game = self.root / "games/new-farm"
+        (game / "assets").mkdir(parents=True)
+        feedback.atomic_json(game / "assets/identity.json", {"title": "New Farm"})
+        feedback.atomic_json(game / "game.project.json", {})
+        path = self.root / feedback.DIRECTORY / "games/new-farm.json"
+        self.assertFalse(path.exists())
+        self.assertEqual(feedback.main(["--root", str(self.root), "check"]), 0)
+        feedback.sync(self.root, self.api)
+        self.assertEqual(json.loads(path.read_text())["count"], 0)
+        self.api.current[4] = issue(4, body=body(game="new-farm"))
+        feedback.sync(self.root, self.api)
+        self.assertEqual(json.loads(path.read_text())["count"], 1)
+        path.unlink()
+        with self.assertRaisesRegex(feedback.FeedbackError, "missing or stale"):
+            feedback.check_public_feeds(self.root, self.records(), feedback.game_catalog(self.root))
+
+    def test_public_feeds_have_stable_order_and_preserve_full_literal_review_text(self):
+        note = ("<script>alert(1)</script>\n### Notes\n" + "Good movement. " * 100).strip()
+        self.api.current = {number: issue(number, body=body(enjoyed=note, rating=str(number))) for number in (2, 1, 3)}
+        feedback.sync(self.root, self.api)
+        path = self.root / feedback.DIRECTORY / "games/rule-relay.json"
+        content = path.read_bytes()
+        feed = json.loads(content)
+        self.assertEqual([row["issue_number"] for row in feed["reviews"]], [3, 2, 1])
+        self.assertTrue(all(row["enjoyed"] == note for row in feed["reviews"]))
+        self.api.current = dict(reversed(list(self.api.current.items())))
+        self.assertEqual(feedback.sync(self.root, self.api)["public_feeds_changed"], 0)
+        self.assertEqual(path.read_bytes(), content)
+
+    def test_check_rejects_missing_extra_or_stale_public_review_feeds(self):
+        feedback.sync(self.root, self.api)
+        directory = self.root / feedback.DIRECTORY / "games"
+        path = directory / "rule-relay.json"
+        original = path.read_bytes()
+        path.unlink()
+        with self.assertRaisesRegex(feedback.FeedbackError, "missing or stale"):
+            feedback.check_public_feeds(self.root, self.records(), feedback.game_catalog(self.root))
+        path.write_bytes(original)
+        feedback.atomic_json(directory / "removed-game.json", {})
+        with self.assertRaisesRegex(feedback.FeedbackError, "missing or stale"):
+            feedback.check_public_feeds(self.root, self.records(), feedback.game_catalog(self.root))
+        feedback.sync(self.root, self.api)
+        value = json.loads(original)
+        value["reviews"] = []
+        feedback.atomic_json(path, value)
+        with self.assertRaisesRegex(feedback.FeedbackError, "feed is stale"):
+            feedback.check_public_feeds(self.root, self.records(), feedback.game_catalog(self.root))
+        feedback.sync(self.root, self.api)
+        self.assertEqual(feedback.main(["--root", str(self.root), "check"]), 0)
+
+    def test_public_feed_symlinks_cannot_redirect_generated_outputs(self):
+        feedback.sync(self.root, self.api)
+        path = self.root / feedback.DIRECTORY / "games/rule-relay.json"
+        target = self.root / "unrelated.json"
+        target.write_text("Preserve this content", encoding="utf-8")
+        path.unlink()
+        try:
+            path.symlink_to(target)
+        except OSError as error:
+            self.skipTest(str(error))
+        with self.assertRaisesRegex(feedback.FeedbackError, "Invalid public review feed"):
+            feedback.sync(self.root, self.api)
+        self.assertEqual(target.read_text(), "Preserve this content")
 
     def test_context_is_bounded_and_prioritizes_requested_game(self):
         catalog = self.root / feedback.DIRECTORY / "games.json"

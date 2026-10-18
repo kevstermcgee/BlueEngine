@@ -174,6 +174,7 @@ fn panel(x: f32, y: f32, w: f32, h: f32, u: f32) {
 }
 #[macroquad::main(window)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     let args: Vec<_> = std::env::args().collect();
     let id = Identity::parse(IDENTITY).unwrap();
     let mut life = Lifecycle::<Held>::start_or_exit(&args, &CUES);

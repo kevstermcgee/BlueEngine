@@ -63,6 +63,7 @@ fn notice(ui: &mut Ui, n: vesper3d::viewer::devkit::Notice) {
 }
 #[macroquad::main(window)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     let mut args: Vec<String> = std::env::args().collect();
     // A designed first visit; --seed still allows completely different museums.
     if flag_value(&args, "--seed").is_none() {
@@ -98,9 +99,9 @@ async fn main() {
     let mut ui = Ui::new();
     let mut shell = GameShell::new();
     let mut input = ClientInput::new();
-    if prefs.audio.fullscreen && !unattended {
-        shell.fullscreen = true;
-        set_fullscreen(true);
+    if !unattended && !has_flag(&args, "--windowed") && !has_flag(&args, "--size") {
+        shell.fullscreen = prefs.audio.fullscreen;
+        set_fullscreen(shell.fullscreen);
     }
     shell.paused = !unattended;
     if has_flag(&args, "--menu") {

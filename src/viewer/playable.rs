@@ -116,6 +116,7 @@ pub async fn run_game_with_options(
     options: GameOptions,
     focused: impl Fn() -> bool,
 ) -> Result<()> {
+    super::startup::show().await;
     let title = game.document.name.clone();
     if options.server.is_some() && options.connect.is_some() {
         return Err("Choose --server or --connect".into());

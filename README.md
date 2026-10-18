@@ -101,6 +101,9 @@ Native map editing, export, server startup and custom-client examples are covere
 by [the authoring guide](tools/AUTHORING.md), [hosting](docs/HOSTING.md) and
 [custom clients](docs/CUSTOM_CLIENT.md). The stock client supports keyboard/mouse
 and native controllers; [controller support](docs/CONTROLLERS.md) documents the bindings.
+Games start fullscreen with a brief, skippable **BlueEngine Games** studio card before their own
+title or menu. Shared clients preserve explicit windowed preferences and automated capture frames;
+custom windows use the same [startup and presentation contract](docs/GAME_PRESENTATION.md).
 
 ## Validation and delivery
 

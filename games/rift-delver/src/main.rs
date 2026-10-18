@@ -729,6 +729,7 @@ fn draw_hud(sim: &Sim, view: &View, hit: f32) {
 }
 #[macroquad::main(window)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     let args: Vec<String> = std::env::args().collect();
     let identity = identity();
     let mut life = Lifecycle::<Held>::start_or_exit(&args, &CUES);
