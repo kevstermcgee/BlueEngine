@@ -82,7 +82,7 @@ function Wait-WindowState([IntPtr]$Window, [bool]$Fullscreen) {
   throw "Game window did not become fullscreen=$Fullscreen."
 }
 
-function Save-Window([IntPtr]$Window, [string]$Name, [switch]$StudioCard) {
+function Save-Window([IntPtr]$Window, [string]$Name, [switch]$StudioCard, [switch]$GameFrame) {
   $bounds = Get-WindowBounds $Window
   $width = $bounds.Right - $bounds.Left
   $height = $bounds.Bottom - $bounds.Top
@@ -109,6 +109,16 @@ function Save-Window([IntPtr]$Window, [string]$Name, [switch]$StudioCard) {
         }
       }
       if ($lightPixels -lt 30) { throw "Studio title was not visible in $Name.png (light title samples: $lightPixels)." }
+    } elseif ($GameFrame) {
+      # Ignore title bars/taskbars: they can be visible while the client is still black.
+      $visiblePixels = 0
+      for ($y = [int]($height * 0.12); $y -lt [int]($height * 0.90); $y += 12) {
+        for ($x = [int]($width * 0.08); $x -lt [int]($width * 0.92); $x += 12) {
+          $pixel = $bitmap.GetPixel($x, $y)
+          if ($pixel.R -gt 32 -or $pixel.G -gt 32 -or $pixel.B -gt 32) { $visiblePixels++ }
+        }
+      }
+      if ($visiblePixels -lt 30) { throw "Game/title content was still black in $Name.png." }
     }
     return @{ screenshot = "$Name.png"; width = $width; height = $height; left = $bounds.Left; top = $bounds.Top }
   } finally {
@@ -180,9 +190,9 @@ try {
   Wait-WindowState $window $true
   Start-Sleep -Milliseconds 650
   $intro = Save-Window $window 'fullscreen-studio-card' -StudioCard
-  Start-Sleep -Milliseconds 3000
+  Start-Sleep -Milliseconds 4500
   Wait-WindowState $window $true
-  $game = Save-Window $window 'fullscreen-game'
+  $game = Save-Window $window 'fullscreen-game' -GameFrame
   if ((Get-FileHash (Join-Path $OutputDirectory $intro.screenshot)).Hash -eq
       (Get-FileHash (Join-Path $OutputDirectory $game.screenshot)).Hash) { throw 'Studio card did not advance to the game.' }
   Press-Toggle $window
@@ -196,9 +206,9 @@ try {
   Wait-WindowState $window $false
   Start-Sleep -Milliseconds 650
   $windowed = Save-Window $window 'windowed-studio-card' -StudioCard
-  Start-Sleep -Milliseconds 2300
+  Start-Sleep -Milliseconds 4500
   Wait-WindowState $window $false
-  $windowedGame = Save-Window $window 'windowed-game'
+  $windowedGame = Save-Window $window 'windowed-game' -GameFrame
   Stop-Game
 
   $proof = @{
