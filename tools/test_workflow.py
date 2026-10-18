@@ -435,14 +435,14 @@ class AutomaticLoopTests(unittest.TestCase):
             self.assertIn('1 passed', repaired.stdout)
 
     def test_reviewed_consumer_pin_changes_use_compatibility_checks_without_cargo(self):
-        inventory = json.loads((ROOT / 'tools/game_tooling_inventory.json').read_text())
-        paths = [item['game'] + '/scripts/tooling.json' for item in inventory['projects']]
+        from tools import game_tooling
+        paths = [str((game / 'scripts/tooling.json').relative_to(ROOT)) for game in game_tooling.consumers(ROOT)]
         plan = workflow.change_plan(ROOT, paths)
         self.assertEqual(plan['scope'], 'focused')
         self.assertFalse(plan['requirements']['unit'])
         self.assertTrue(all(command[0] != 'cargo' for command in plan['commands']))
         self.assertTrue(any('tools.test_game_tooling' in command for command in plan['commands']))
-        # Ownership of the inventoried pin does not classify game content or a
+        # Ownership of a declared pin does not classify game content or a
         # new project's policy as independent Python tooling.
         for path in ('games/unreviewed/scripts/tooling.json', 'games/reverie/game.json',
                      'assets/games/leo/assets/identity.json'):

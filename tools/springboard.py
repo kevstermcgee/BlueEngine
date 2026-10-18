@@ -344,13 +344,13 @@ def refresh(root, state, *, detail=False, observed=None):
     state['route'] = route
     owners = workflow.impact(root, state['paths'])['owners'] if state['paths'] else []
     query = ' '.join(state['objective'].split())[:500]
-    context = workflow.context(root, query, limit=1, level=3 if detail else 1)
+    context = workflow.context(root, query, limit=3, level=3 if detail else 1)
     fallback_feature = route.get('feature') or (owners[0] if len(owners) == 1 else None)
     if context['confidence'].startswith('low') and fallback_feature:
         # A known starter remains useful when its task wording has no curated API answer.
         hints = context.get('learned', [])
         query = fallback_feature
-        context = workflow.context(root, query, limit=1, level=3 if detail else 1)
+        context = workflow.context(root, query, limit=3, level=3 if detail else 1)
         context['learned'] = hints
     refs = list(dict.fromkeys(p for m in context['matches'] for p in m.get('read_first', [])))
     if route.get('template') and detail:
@@ -402,7 +402,7 @@ def refresh(root, state, *, detail=False, observed=None):
         if not (project / 'Cargo.toml').exists():
             if route['kind'] == 'change-game':
                 blockers.append('Existing game Cargo.toml is missing; select the correct --project or use --kind new-game deliberately.')
-            elif project.exists() and any(project.iterdir()):
+            elif project.exists() and any(p.name not in {'.git', '.be2-work', '.codex', '.agents'} for p in project.iterdir()):
                 blockers.append('Scaffold destination is nonempty; choose a new directory. Existing files will not be overwritten.')
             else:
                 next_action = action(root, 'map', 'new-game', state['name'], str(project), str(root), route['template'] or 'portable',

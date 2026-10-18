@@ -11,6 +11,30 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def consumers(engine=ROOT):
+    """Editable declared projects; never recurse into immutable dist/release exports.
+
+    A standalone engine-dependent project is also a consumer when passed as root.
+    Discovery deliberately does not depend on the historical migration inventory.
+    """
+    engine = Path(engine)
+    declarations = [engine / 'game.project.json'] if (engine / 'game.project.json').is_file() else []
+    for pattern in ('games/*/game.project.json', 'assets/games/*/game.project.json'):
+        declarations.extend(engine.glob(pattern))
+    projects = {p.parent for p in declarations}
+    # Older native projects can declare their maintained tooling without a
+    # dimensionality manifest. The pin is a live declaration, not migration history.
+    for pattern in ('games/*/scripts/tooling.json', 'assets/games/*/scripts/tooling.json'):
+        projects.update(p.parent.parent for p in engine.glob(pattern))
+    return sorted(projects)
+
+
+def tooling_paths(engine=ROOT):
+    return {str((game / 'scripts' / name).relative_to(engine)).replace('\\', '/')
+            for game in consumers(engine)
+            for name in ('check.py', 'ship.py', 'dev.py', 'project.py', 'tooling.py', 'tooling.json')}
+
+
 def module_from(path, name):
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -179,8 +203,9 @@ def migrate(game, engine=ROOT):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('action', choices=('check', 'migrate'))
-    parser.add_argument('games', type=Path, nargs='+')
+    parser.add_argument('games', type=Path, nargs='*', help='Default: all declared editable consumers')
     args = parser.parse_args(argv)
+    args.games = args.games or consumers()
     try:
         for game in args.games:
             {'check': check, 'migrate': migrate}[args.action](game.resolve())

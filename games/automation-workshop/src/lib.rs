@@ -3,6 +3,7 @@ pub mod content;
 #[cfg(feature = "online")]
 pub mod net;
 pub mod persistence;
+pub mod playtest;
 pub use content::{Definitions, Item, Recipe, Upgrade};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
@@ -70,6 +71,7 @@ pub struct Workshop {
     pub state: State,
     pub definitions: Definitions,
     pub outcomes: Vec<Outcome>,
+    blocked_counts: BTreeMap<String, u64>,
 }
 impl Workshop {
     pub fn standard() -> Self {
@@ -104,13 +106,13 @@ impl Workshop {
             machines,
             last_command: BTreeMap::new(),
         };
-        let sim = Self { state, definitions, outcomes: Vec::new() };
+        let sim = Self { state, definitions, outcomes: Vec::new(), blocked_counts: BTreeMap::new() };
         sim.validate_state(&sim.state)?;
         Ok(sim)
     }
-    /// Player action: validate a complete candidate, then activate it once.
+    /// Player action: validate every fallible condition before the atomic inventory commit.
     pub fn command(&mut self, command: &Command) -> Result<(), String> {
-        let mut next = self.state.clone();
+        let next = &mut self.state;
         match command {
             Command::Wait => return Ok(()),
             Command::Gather { item, amount } => {
@@ -179,6 +181,7 @@ impl Workshop {
                 let machine =
                     next.machines.get_mut(machine).ok_or_else(|| format!("WORKSHOP_MACHINE: unknown {machine}"))?;
                 machine.queue.first_mut().ok_or("WORKSHOP_IDLE: no work to cancel")?.cancel_pending = true;
+                machine.blocked = None;
             }
             Command::Upgrade { machine, upgrade } => {
                 let upgrade = self
@@ -195,8 +198,6 @@ impl Workshop {
                 machine.upgrades.insert(upgrade.id.clone());
             }
         }
-        self.validate_state(&next)?;
-        self.state = next;
         Ok(())
     }
     pub fn validate_state(&self, state: &State) -> Result<(), String> {
@@ -265,12 +266,19 @@ impl Workshop {
     /// inventory changes. Each preview uses the current shared inventory, not cached presentation state.
     pub fn recompute_blocked(&mut self) {
         let inventory = &self.state.inventory;
+        let changed = self.blocked_counts != *inventory.counts();
         for machine in self.state.machines.values_mut() {
+            if !changed && machine.blocked.is_some() {
+                continue;
+            }
             machine.blocked =
                 machine.queue.first().filter(|job| job.cancel_pending || job.remaining_ticks == 0).and_then(|job| {
                     let credits = if job.cancel_pending { &job.inputs } else { &job.outputs };
-                    inventory.clone().transact(&[], credits).err()
+                    inventory.preview(&[], credits).err()
                 });
+        }
+        if changed {
+            self.blocked_counts.clone_from(inventory.counts());
         }
     }
     pub fn inspect(&self, id: &str) -> Result<serde_json::Value, String> {
@@ -332,6 +340,7 @@ impl Simulation for Workshop {
                 detail: format!("WORKSHOP_COMMAND_LIMIT: max {MAX_COMMANDS}"),
             });
         }
+        let mut inventory_changed = self.blocked_counts != *self.state.inventory.counts();
         for machine in self.state.machines.values_mut() {
             let Some(job) = machine.queue.first_mut() else {
                 machine.blocked = None;
@@ -341,9 +350,13 @@ impl Simulation for Workshop {
                 job.remaining_ticks -= 1;
             }
             if job.cancel_pending || job.remaining_ticks == 0 {
+                if machine.blocked.is_some() && !inventory_changed {
+                    continue;
+                }
                 let credits = if job.cancel_pending { &job.inputs } else { &job.outputs };
                 match self.state.inventory.transact(&[], credits) {
                     Ok(_) => {
+                        inventory_changed = true;
                         machine.queue.remove(0);
                         machine.blocked = None;
                     }

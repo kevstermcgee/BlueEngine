@@ -1,20 +1,8 @@
-//! Application-owned foreground check. Keep OS unsafe calls out of the engine library.
-#[cfg(windows)]
-pub fn focused() -> bool {
-    // Read only the foreground process ID; no external window changes.
-    unsafe {
-        let mut pid = 0;
-        windows_sys::Win32::UI::WindowsAndMessaging::GetWindowThreadProcessId(
-            windows_sys::Win32::UI::WindowsAndMessaging::GetForegroundWindow(),
-            &mut pid,
-        );
-        pid == windows_sys::Win32::System::Threading::GetCurrentProcessId()
-    }
-}
-#[cfg(not(windows))]
+//! Application console/key hooks; shared presentation owns native focus.
+/// Compatibility hook: the shared GameShell owns native focus and neutral-input handling.
 pub fn focused() -> bool {
     true
-} // GameShell additionally handles minimization.
+}
 
 /// A windowed release build has no console of its own (see `windows_subsystem` in main.rs), so a game
 /// started from Explorer or a desktop shortcut opens no stray console window. Reattach to the terminal

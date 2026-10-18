@@ -355,3 +355,20 @@ def record(project, ship, observations, receipt=None):
     ship.write_json_atomic(path, data)
     # Invalid/partial observations are retained, and diagnostics explain why they cannot pass.
     return status(project, ship, path)
+
+
+def capture_subsystems(stdout, muted=False):
+    """Rendering is independent of audio telemetry; unknown devices stay unknown."""
+    audio = []
+    for line in (stdout or '').splitlines():
+        try:
+            record = json.loads(line)
+        except ValueError:
+            continue
+        if isinstance(record, dict) and record.get('subsystem') == 'audio':
+            audio.append(record)
+    return {'rendering': 'captured', 'scripted_behavior': 'separate assertions required',
+            'physical_input': 'unverified', 'audible_hardware': 'unverified',
+            'audio_intent': 'muted' if muted else 'requested',
+            'audio_telemetry': audio or 'unavailable',
+            'backend_health': 'unobservable: Macroquad does not expose device/worker health'}

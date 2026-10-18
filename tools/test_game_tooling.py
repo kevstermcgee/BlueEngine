@@ -128,6 +128,24 @@ class SharedToolingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'stale tooling pin'):
             tooling.check(self.game)
 
+    def test_stale_override_is_rejected_through_the_actual_checker_entry(self):
+        tooling.migrate(self.game)
+        stale = self.game / 'stale-tools'
+        fresh = self.game / 'fresh-tools'
+        stale.write_bytes(b'old executable')
+        fresh.write_bytes(b'fresh executable')
+        # Run the entry via runpy, retaining the real loader and freshness hook.
+        public = runpy.run_path(str(self.game / 'scripts/check.py'), run_name='checker')
+        implementation = sys.modules['be2_shared_check']
+        build = subprocess.CompletedProcess([], 0, json.dumps({'reason': 'compiler-artifact',
+            'target': {'name': 'be2-tools'}, 'executable': str(fresh)}) + '\n', '')
+        with patch.object(sys.modules['be2_game_tooling'].subprocess, 'run', return_value=build), \
+                patch.object(implementation, 'run') as execute, contextlib.redirect_stderr(io.StringIO()), \
+                patch.object(sys, 'argv', ['check.py', '--tools', str(stale)]):
+            with self.assertRaises(SystemExit):
+                public['main'](root=self.game)
+        execute.assert_not_called()
+
     def test_consumer_check_accepts_hook_but_detects_launcher_drift(self):
         tooling.migrate(self.game)
         (self.game / 'scripts/tooling_hooks.py').write_text('def prepare_package(project): pass\n')
@@ -252,10 +270,33 @@ class SharedToolingTests(unittest.TestCase):
         self.assertEqual(invoke.call_args.kwargs['env']['BLUEENGINE_DEV_EXE'], str(exe))
 
     def test_all_migrated_consumers_use_current_pin(self):
-        inventory = json.loads((self.engine / 'tools/game_tooling_inventory.json').read_text(encoding='utf-8'))
-        for item in inventory['projects']:
-            with self.subTest(game=item['game']):
-                tooling.check(self.engine / item['game'])
+        for game in tooling.consumers(self.engine):
+            with self.subTest(game=str(game)):
+                tooling.check(game)
+
+    def test_new_declaration_automatically_inherits_ownership_and_drift_checks(self):
+        from tools import workflow
+        root = Path(self.scratch.name) / 'engine'
+        shutil.copytree(self.engine / 'tools', root / 'tools', ignore=shutil.ignore_patterns('__pycache__'))
+        game = root / 'games/new-consumer'
+        (game / 'scripts').mkdir(parents=True)
+        (game / 'game.project.json').write_text('{}')
+        self.assertIn(game, tooling.consumers(root))
+        path = 'games/new-consumer/scripts/tooling.json'
+        plan = workflow.change_plan(root, [path])
+        self.assertEqual(plan['scope'], 'focused')
+        self.assertFalse(any(c[0] == 'cargo' for c in plan['commands']))
+        # A pin cannot conceal modified/copied entry scripts.
+        tooling.migrate(self.game)
+        (self.game / 'scripts/check.py').write_text('# bypass freshness\n')
+        with self.assertRaisesRegex(ValueError, 'drift'):
+            tooling.check(self.game)
+        self.assertEqual(workflow.change_plan(root, ['games/new-consumer/build.rs'])['scope'], 'full')
+        (game / 'src').mkdir()
+        (game / 'src/lib.rs').write_text('// newly declared game authority')
+        source = workflow.impact(root, ['games/new-consumer/src/lib.rs'])
+        self.assertFalse(source['unmapped'])
+        self.assertTrue(any(owner.startswith('consumer_') for owner in source['owners']))
 
     def test_historical_preparation_inventory_names_matching_reviewed_hooks(self):
         inventory = json.loads((self.engine / 'tools/game_tooling_inventory.json').read_text(encoding='utf-8'))

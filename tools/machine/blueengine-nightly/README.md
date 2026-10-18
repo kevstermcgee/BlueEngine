@@ -34,13 +34,23 @@ dirty `no_changes` result, failed engine checks, or concurrent remote update sto
 publication. Updates run the canonical engine checker and use an ordinary push
 after confirming the base still matches. Failed work and reports are retained.
 
-Before acknowledging actionable feedback, both an update and a clean `no_changes`
-result must pass the hosted Engine workflow for the exact SHA, `main` branch,
+Before acknowledging actionable feedback, an update must pass the hosted Engine
+workflow for the exact SHA, `main` branch,
 `push` event, and `.github/workflows/ci.yml` path. Failed, cancelled, missing, or
 unverifiable CI leaves the feedback eligible for retry. A push can therefore
 succeed while the run still reports failure pending CI; the report records that
 distinction. Successful temporary worktrees are removed; failed worktrees remain
 available for review.
+
+A clean `no_changes` result can cross at most 100 single-parent, feedback-only
+commits: only JSON below `docs/player-feedback/reviews/` and `games/`, plus
+`summary.json`. The current feedback validator must pass, and the first code
+ancestor must pass the same exact-SHA/push/main/workflow CI check. A merge or any
+other path stops inheritance. This handles both `[skip ci]` and GITHUB_TOKEN's
+suppression of automatic push workflows without accepting unverified code. The
+receipt records reviewed tip, every crossed commit and verified ancestor. Feedback
+stays untrusted observation. Successful results atomically acknowledge fingerprints
+and remove only their own worktree; retries skip AI once those fingerprints are seen.
 
 The default hosted CI wait is 5,400 seconds, polling every 30 seconds. Configuration
 may adjust these bounded waits. A service timeout must cover the agent, local

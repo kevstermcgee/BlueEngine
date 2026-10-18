@@ -518,19 +518,6 @@
     },
     "game_scaffolding": {
       "files": [
-        "games/corkscrew-key/scripts/tooling.json",
-        "games/gap-flip/scripts/tooling.json",
-        "games/idea-forge/scripts/tooling.json",
-        "games/lantern-grove/scripts/tooling.json",
-        "games/lantern-run/scripts/tooling.json",
-        "games/orchard-watch/scripts/tooling.json",
-        "games/pocket-breaker/scripts/tooling.json",
-        "games/reverie/scripts/tooling.json",
-        "games/rift-delver/scripts/tooling.json",
-        "games/signal-garden/scripts/tooling.json",
-        "games/sway/scripts/tooling.json",
-        "games/wormhole/scripts/tooling.json",
-        "assets/games/leo/scripts/tooling.json",
         "src/viewer/newgame.rs",
         "templates/custom-sim",
         "templates/game_ship.py",
@@ -1056,7 +1043,8 @@
         "docs/PORTABLE_GAMES.md",
         "templates/two-d/world.rs",
         "tests/portable_storage.rs",
-        "docs/GAME_AUTHORING_ENTRY.md"
+        "docs/GAME_AUTHORING_ENTRY.md",
+        "src/viewer/focus.rs"
       ],
       "read_first": [
         "docs/PORTABLE_GAMES.md",
@@ -2294,7 +2282,8 @@
         "assets/ui/LICENSE_LIBERATION",
         "src/viewer/stock_presentation.rs",
         "src/viewer/playable.rs",
-        "tests/stock_observatory.rs"
+        "tests/stock_observatory.rs",
+        "src/viewer/focus.rs"
       ],
       "checks": [
         "presentation module tests",
@@ -3196,12 +3185,16 @@
       "note": "External versioned custom-simulation reference: independently owned machines, shared inventory escrow, logical-time production, blocked output/cancellation recovery, game-owned indexed item/recipe/upgrade content and engine Snapshot migrations.",
       "files": [
         "games/automation-workshop/",
-        "docs/WORKSHOP.md"
+        "docs/WORKSHOP.md",
+        "tools/playtest.py",
+        "tools/test_playtest.py",
+        "docs/PLAYTESTING.md"
       ],
       "checks": [
         "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
         "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features --features online --test netplay",
-        "python -m unittest tools.test_discovery"
+        "python -m unittest tools.test_discovery",
+        "python -m unittest tools.test_playtest"
       ],
       "required_features": [
         "resources"

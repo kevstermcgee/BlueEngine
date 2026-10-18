@@ -1,4 +1,47 @@
-//! Native focus and physical key state, isolated from the rendering-free rules.
+//! Native focus adapter shared by presentation clients. No state enters simulation or saves.
+//! X11 is the supported Linux window backend; Windows retains foreground events between frames.
+#![allow(unsafe_code)] // Narrow OS adapter; all calls stay on the window thread.
+use std::cell::RefCell;
+static TITLE: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
+fn window_title_for(title: &str) -> String {
+    format!("{title} [{}]", std::process::id())
+}
+/// Register the native window identity before creation. The adapter restores the display title.
+pub fn window_title(title: &str) -> String {
+    *TITLE.lock().unwrap() = Some(title.into());
+    window_title_for(title)
+}
+thread_local! { static WINDOW: RefCell<Option<WindowFocus>> = const { RefCell::new(None) }; }
+/// Poll once per frame. Custom hosts may instead supply their own native focus observation.
+pub fn sample() -> Option<Sample> {
+    WINDOW.with(|slot| {
+        let mut slot = slot.borrow_mut();
+        if slot.is_none() {
+            let title = TITLE.lock().unwrap().clone()?;
+            *slot = Some(WindowFocus::new(&title));
+        }
+        Some(slot.as_mut().unwrap().sample())
+    })
+}
+/// A loss discards this frame; returning requires a complete neutral frame before fresh input.
+#[derive(Default)]
+pub struct NeutralGate {
+    blocked: bool,
+}
+impl NeutralGate {
+    pub fn observe(&mut self, focused: bool, lost: bool, neutral: bool) -> bool {
+        if !focused || lost {
+            self.blocked = true;
+            return false;
+        }
+        if self.blocked {
+            self.blocked = !neutral;
+            return false;
+        }
+        true
+    }
+}
+// Native focus and physical key state, isolated from the rendering-free rules.
 pub struct Sample {
     pub focused: bool,
     pub lost: bool,
@@ -51,7 +94,7 @@ mod platform {
     }
     pub struct WindowFocus(*mut c_void);
     impl WindowFocus {
-        pub fn new() -> Self {
+        pub fn new(_title: &str) -> Self {
             // EVENT_SYSTEM_FOREGROUND, out-of-context: callbacks use this thread's message pump.
             let hook =
                 unsafe { SetWinEventHook(3, 3, std::ptr::null_mut(), Some(foreground), 0, 0, 0) };
@@ -82,7 +125,7 @@ mod platform {
 #[cfg(target_os = "linux")]
 #[allow(non_snake_case)] // Exact Xlib symbol names in the existing dynamic-loader macro.
 mod platform {
-    use super::Sample;
+    use super::{window_title_for, Sample};
     use std::ffi::{c_char, c_int, c_long, c_uint, c_ulong, c_void, CStr, CString};
     type ErrorHandler = Option<unsafe extern "C" fn(*mut c_void, *mut c_void) -> c_int>;
     macroquad::miniquad::declare_module!(X11,
@@ -101,6 +144,7 @@ mod platform {
         fn XSync(*mut c_void, c_int) -> c_int,
         fn XSelectInput(*mut c_void, c_ulong, c_long) -> c_int,
         fn XCheckTypedWindowEvent(*mut c_void, c_ulong, c_int, *mut c_long) -> c_int,
+        fn XQueryPointer(*mut c_void, c_ulong, *mut c_ulong, *mut c_ulong, *mut c_int, *mut c_int, *mut c_int, *mut c_int, *mut c_uint) -> c_int,
         fn XQueryKeymap(*mut c_void, *mut c_char) -> c_int,
         fn XKeysymToKeycode(*mut c_void, c_ulong) -> u8,
         fn XFlush(*mut c_void) -> c_int,
@@ -116,7 +160,7 @@ mod platform {
 
     // A GLXWindow is a rendering resource, not the X Window it wraps. Looking
     // up our process-specific startup title works with both GLX and EGL, and
-    // distinguishes two concurrent copies of Afterpull under a reparenting WM.
+    // distinguishes two concurrent copies of BlueEngine under a reparenting WM.
     unsafe fn find_window(api: &X11, display: *mut c_void, title: &CStr) -> Option<c_ulong> {
         let mut pending = vec![(api.XDefaultRootWindow)(display)];
         while let Some(window) = pending.pop() {
@@ -153,25 +197,23 @@ mod platform {
     }
 
     impl WindowFocus {
-        pub fn new() -> Self {
+        pub fn new(title: &str) -> Self {
             let api = X11::try_load().expect("Xlib is required by the native X11 client");
             unsafe {
                 let display = (api.XOpenDisplay)(std::ptr::null());
                 assert!(
                     !display.is_null(),
-                    "Afterpull needs an X11 display for focus protection"
+                    "BlueEngine needs an X11 display for focus protection"
                 );
-                let title = CString::new(super::super::window_title()).unwrap();
+                let title = CString::new(window_title_for(title)).unwrap();
                 // Scope error suppression to read-only discovery on the client
                 // thread, draining its replies before restoring Xlib's handler.
                 let previous = (api.XSetErrorHandler)(Some(ignore_disappearing_window));
                 let found = find_window(&api, display, &title);
                 (api.XSync)(display, 0);
                 (api.XSetErrorHandler)(previous);
-                let window = found.expect("Cannot find Afterpull's native X11 window");
-                let title =
-                    CString::new(<afterpull::Afterpull as vesper3d::two_d::GameLogic>::TITLE)
-                        .unwrap();
+                let window = found.expect("Cannot find BlueEngine's native X11 window");
+                let title = CString::new(title).unwrap();
                 (api.XStoreName)(display, window, title.as_ptr());
                 let property = (api.XInternAtom)(display, c"_NET_WM_NAME".as_ptr(), 0);
                 let utf8 = (api.XInternAtom)(display, c"UTF8_STRING".as_ptr(), 0);
@@ -223,10 +265,23 @@ mod platform {
                 {}
                 let mut keys = [0u8; 32];
                 (self.api.XQueryKeymap)(self.display, keys.as_mut_ptr().cast());
+                let (mut root, mut child, mut rx, mut ry, mut wx, mut wy, mut mask) =
+                    (0, 0, 0, 0, 0, 0, 0);
+                (self.api.XQueryPointer)(
+                    self.display,
+                    self.window,
+                    &mut root,
+                    &mut child,
+                    &mut rx,
+                    &mut ry,
+                    &mut wx,
+                    &mut wy,
+                    &mut mask,
+                );
                 Sample {
                     focused: focus == self.window,
                     lost,
-                    neutral: keys.iter().all(|k| *k == 0),
+                    neutral: keys.iter().all(|k| *k == 0) && mask & 0x1f00 == 0,
                     space: keys[self.space as usize / 8] & (1 << (self.space % 8)) != 0,
                 }
             }
@@ -266,20 +321,20 @@ mod platform {
                 );
                 let root = (api.XDefaultRootWindow)(display);
                 // A WM may reparent our window. Another instance may already
-                // have the ordinary Afterpull title; neither changes ownership.
+                // have the ordinary BlueEngine title; neither changes ownership.
                 let parent = (test.XCreateSimpleWindow)(display, root, 0, 0, 300, 300, 0, 0, 0);
                 let own = (test.XCreateSimpleWindow)(display, parent, 0, 0, 100, 100, 0, 0, 0);
                 let other = (test.XCreateSimpleWindow)(display, root, 320, 0, 100, 100, 0, 0, 0);
-                let title = CString::new(super::super::super::window_title()).unwrap();
+                let title = CString::new(window_title_for("Focus fixture")).unwrap();
                 (api.XStoreName)(display, own, title.as_ptr());
-                (api.XStoreName)(display, other, c"Afterpull".as_ptr());
+                (api.XStoreName)(display, other, c"Focus fixture".as_ptr());
                 for window in [parent, own, other] {
                     (test.XMapWindow)(display, window);
                 }
                 (test.XSetInputFocus)(display, own, 0, 0);
                 (api.XSync)(display, 0);
 
-                let mut focus = WindowFocus::new();
+                let mut focus = WindowFocus::new("Focus fixture");
                 assert_eq!(
                     focus.window, own,
                     "subscribe to the X window, never a GLX drawable"
@@ -288,7 +343,7 @@ mod platform {
                 let mut name = std::ptr::null_mut();
                 (api.XFetchName)(display, own, &mut name);
                 assert!(!name.is_null());
-                assert_eq!(CStr::from_ptr(name), c"Afterpull");
+                assert_eq!(CStr::from_ptr(name), c"Focus fixture");
                 (api.XFree)(name.cast());
 
                 (test.XSetInputFocus)(display, other, 0, 0);
@@ -308,5 +363,22 @@ mod platform {
                 (api.XCloseDisplay)(display); // Also destroys the fixture windows.
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod gate_tests {
+    use super::NeutralGate;
+    #[test]
+    fn focus_between_frames_discards_edges_and_requires_release_frame() {
+        let mut gate = NeutralGate::default();
+        assert!(gate.observe(true, false, false));
+        assert!(!gate.observe(false, true, false));
+        assert!(!gate.observe(true, false, false)); // held keyboard/mouse/controller
+        assert!(!gate.observe(true, false, true)); // drain neutral frame
+        assert!(gate.observe(true, false, false)); // new press
+        assert!(!gate.observe(true, true, true)); // full away/back between frames
+        assert!(!gate.observe(true, false, true));
+        assert!(gate.observe(true, false, true));
     }
 }

@@ -3252,7 +3252,13 @@ class Verifier:
                 blank.append(f'{png.name} is blank (luminance spread {spread:.2f})')
         if blank:
             return FAIL, '; '.join(blank) + f' [{project.display(capture)}]'
-        return PASS, f'isolated declared-file package: {len(pngs)} PNG capture(s) in {project.display(capture)}: ' + ', '.join(described)
+        review, _ = _delivery_helper('review')
+        subsystems = review.capture_subsystems(done.stdout, '--mute' in arguments or '--audible' not in arguments)
+        evidence_path = scratch / f'{capture.name}.subsystems.json'
+        evidence_path.write_text(json.dumps(subsystems, indent=2) + '\n', encoding='utf-8')
+        return PASS, (f'isolated declared-file package: {len(pngs)} PNG capture(s) in {project.display(capture)}: '
+                      + ', '.join(described) + '; rendering only; audio/device health unverified; '
+                      + project.display(evidence_path))
 
 
 def prune_smoke_folders(scratch, keep=2):

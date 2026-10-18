@@ -179,7 +179,18 @@ pub fn scaffold_new_game_with(
     {
         return Err("Game name must be a Cargo-compatible identifier (letters, digits, - and _, not starting with a digit)".into());
     }
-    if target_dir.exists() && target_dir.read_dir()?.next().is_some() {
+    if target_dir.exists()
+        && target_dir.read_dir()?.any(|entry| {
+            entry
+                .map(|e| {
+                    !matches!(
+                        e.file_name().to_str(),
+                        Some(".git" | ".be2-work" | ".codex" | ".agents")
+                    )
+                })
+                .unwrap_or(true)
+        })
+    {
         return Err(format!(
             "Target directory '{}' already exists and is not empty",
             target_dir.display()
@@ -959,6 +970,36 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ))
+    }
+
+    #[test]
+    fn prepared_metadata_is_preserved_but_real_content_collides() {
+        let dir = temp("prepared");
+        fs::create_dir_all(dir.join(".be2-work")).unwrap();
+        fs::write(dir.join(".be2-work/runner.json"), "protected").unwrap();
+        fs::write(dir.join(".git"), "gitdir: preserved").unwrap();
+        scaffold_new_game_with("prepared", &dir, None, Template::Portable).unwrap();
+        assert_eq!(
+            fs::read_to_string(dir.join(".be2-work/runner.json")).unwrap(),
+            "protected"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join(".git")).unwrap(),
+            "gitdir: preserved"
+        );
+        let before = fs::read(dir.join("Cargo.toml")).unwrap();
+        assert!(scaffold_new_game_with("prepared", &dir, None, Template::Portable).is_err());
+        assert_eq!(fs::read(dir.join("Cargo.toml")).unwrap(), before);
+        fs::remove_dir_all(dir).unwrap();
+        let dir = temp("collision");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("notes.txt"), "user content").unwrap();
+        assert!(scaffold_new_game("collision", &dir, None).is_err());
+        assert_eq!(
+            fs::read_to_string(dir.join("notes.txt")).unwrap(),
+            "user content"
+        );
+        fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

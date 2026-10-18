@@ -74,8 +74,8 @@ identity are independent. The version-1-to-version-2 import is an explicit
 game-owned migration of a **copy** through the engine persistence contract. It
 validates the recognized old content and new definitions before accepting progress.
 Exact source definitions also permit v2 recipe/upgrade additions over existing items.
-Existing v2 recipe/upgrade tuning must match; retuning/removal requires another
-explicit migration. Missing/unsupported versions and unknown content fail;
+V2 item/source/sink rules and existing recipe/upgrade tuning must match; retuning/removal requires another
+explicit migration. An explicit copy migration may change item/recipe/upgrade labels only: compatibility ignores labels, while complete content identity and historical save validation still include them. Missing/unsupported versions and unknown content fail;
 normal exact-content checks remain enabled and original files are retained.
 Keep the original installation/save playable after a failed migration.
 
@@ -128,3 +128,18 @@ normal native package/installer gates for a release.
 Fresh-agent trials record all source/doc reads, tool calls, failures and verification
 time. Numeric CLI usage is model-token evidence when available; missing telemetry is
 unavailable, not zero. Scripted edit tests do not prove fresh-model completion.
+
+## Persistent single-player acceptance and bounded playtesting
+
+The native goal is to deliver three wire. Acquire ore/coal, smelt plates, choose
+fast tools or wire tools, draw wire, then deliver it. Storage competes with queued
+work; freeing capacity or cancelling pending work preserves every paid input.
+D delivers one selected item (Down or mouse selects it). F/F11 toggles display
+mode in place; Escape opens the menu; focus loss suppresses queued input through
+the shared shell. F5/F9 continue through the same engine snapshot authority.
+
+`tools/playtest.py` runs isolated headless seeded processes over this exact game.
+See [PLAYTESTING.md](PLAYTESTING.md) for budgets, accounting, trace replay and the
+deliberately broken fixture. Rendering, physical input and audible output remain
+separate claims. Resource transaction `preview` validates through the identical
+validator without cloning inventory; committing always revalidates with `transact`.

@@ -74,6 +74,9 @@ jobs:
               echo 'Player feedback is already current.'
               exit 0
             fi
+            # GITHUB_TOKEN pushes do not trigger push workflows, even without skip ci.
+            # Nightly validates these exact generated paths and requires successful
+            # Engine push CI on their code ancestor before acknowledging observations.
             git commit -m 'Sync player feedback from GitHub issues [skip ci]'
             if git push origin HEAD:main; then
               exit 0

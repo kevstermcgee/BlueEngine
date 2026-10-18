@@ -66,3 +66,9 @@ These tests exercise coherent conversion, full/blocked outputs, refunds,
 cooldowns, deterministic ordering, invalid serialized state, arithmetic bounds
 and an exhaustive small transaction domain. They are focused evidence; engine
 integration and native packaging remain separate required gates.
+
+`Inventory::preview(&self, debits, credits)` runs the same validation and returns
+an identical proposed receipt without cloning or mutating inventory. It is not a
+reservation: `transact` must validate again against current inventory before
+committing. Games may reuse blocked diagnostics only while all relevant counts
+and job conditions are unchanged.

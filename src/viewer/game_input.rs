@@ -173,6 +173,7 @@ impl ClientInput {
     ) {
         self.poll_devices(focused, source);
         self.latch_typing();
+        shell.device_neutral(self.frame.neutral());
         shell.begin_frame_with_actions(
             capture_cursor,
             focused,

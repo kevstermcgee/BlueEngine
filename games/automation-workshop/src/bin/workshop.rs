@@ -97,6 +97,20 @@ fn run() -> Result<(), String> {
             persistence::migrate_content(&mut game, &original, source, destination, "migrated-content")?;
             serde_json::json!({"ok":true,"output":destination.join("migrated-content.be2save"),"tick":game.state.tick,"content":game.definitions.fingerprint()})
         }
+        "playtest" => {
+            let seed = argument(&args, 1, "playtest SEED TICKS [fault]")?.parse().map_err(|_|"invalid seed")?;
+            let ticks: usize = argument(&args, 2, "playtest SEED TICKS [fault]")?.parse().map_err(|_|"invalid ticks")?;
+            if !(22..=100000).contains(&ticks) { return Err("ticks must be 22..100000".into()); }
+            let report = automation_workshop::playtest::run(seed,ticks,args.get(3).is_some_and(|s|s=="fault"));
+            serde_json::to_value(report).map_err(|e|e.to_string())?
+        }
+        "replay-playtest" => {
+            let path = argument(&args,1,"replay-playtest TRACE_JSON")?;
+            let bytes = std::fs::read(path).map_err(|e|e.to_string())?;
+            if bytes.len()>64*1024*1024 { return Err("trace exceeds 64 MiB".into()); }
+            let trace=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
+            serde_json::to_value(automation_workshop::playtest::replay(trace)).map_err(|e|e.to_string())?
+        }
         "probe" => probe()?,
         "play" => {
             let mut serial = 0;
@@ -116,6 +130,9 @@ fn run() -> Result<(), String> {
         _ => return Err("Commands: validate [CONTENT], inspect [MACHINE-ID], play, probe, edit CONTENT_JSON ADDITIONS_JSON, migrate-v1 SAVE OUTPUT_DIRECTORY, migrate-content SOURCE_CONTENT SAVE OUTPUT_DIRECTORY [TARGET_CONTENT]. V1 fixture generation lives at commit d7e4188.".into()),
     };
     println!("{}", serde_json::to_string_pretty(&output).map_err(|e| e.to_string())?);
+    if output.get("ok") == Some(&serde_json::Value::Bool(false)) {
+        std::process::exit(1);
+    }
     Ok(())
 }
 fn queue(machine: &str) -> Command {

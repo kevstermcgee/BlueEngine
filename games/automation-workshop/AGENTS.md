@@ -37,7 +37,7 @@ Schema/content migration must operate on a copy, preserve progress and retain or
 on failure. Resume command serials after load. Keep exact-content checks.
 
 Native controls: 1/2 machine, Left/Right recipe, Space queue, Backspace cancel,
-Tab next upgrade, U apply, O/C gather ore/coal, D deliver plate, Down next inventory
+Tab next upgrade, U apply, O/C gather ore/coal, D deliver selected item, Down next inventory
 item, mouse select/buttons, F5/F9 saves, Esc menu. Capture --script uses the same
 player-command path: smelt, gear, ore, coal, full, deliver, recovery, cancel, upgrade,
 queue, machine, recipe, upgrade_next, item. save/load are engine cues. Silence is intentional; custom audio uses AudioBank/SoundBank.

@@ -1,7 +1,7 @@
 {
   "title": "Automation Workshop",
   "tagline": "Two machines. One store. Every item has a job.",
-  "controls": "1/2 select machine; arrows select recipe; Tab upgrade; Down item; Space queue; O/C gather ore/coal; D deliver; Backspace cancel; U upgrade; F5/F9 save/load; Esc menu",
+  "controls": "1/2 select machine; arrows select recipe; Tab upgrade; Down item; Space queue; O/C gather ore/coal; D deliver selected item; Backspace cancel; U upgrade; F5/F9 save/load; Esc menu",
   "package": [
     "assets/workshop.json",
     "assets/content-v1.json",

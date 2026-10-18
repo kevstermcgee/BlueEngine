@@ -5,9 +5,9 @@ structured assertion outcomes. Scenario paths are portable: `game_path` is resol
 relative to the scenario file, not the current shell directory.
 
 ```sh
-cargo run --locked --no-default-features --bin be2-tools -- \
+cargo run --locked --no-default-features --features physics,networking --bin be2-tools -- \
   sim assets/games/three-switches/scenario.json trace.json
-cargo run --locked --no-default-features --bin be2-tools -- replay-trace trace.json
+cargo run --locked --no-default-features --features physics,networking --bin be2-tools -- replay-trace trace.json
 ```
 
 A scenario declares players, timestamped held movement/look values and press-edge

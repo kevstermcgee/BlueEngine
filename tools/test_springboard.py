@@ -23,7 +23,7 @@ class SpringboardTests(unittest.TestCase):
         (self.root / 'templates').mkdir()
         (self.root / 'src').mkdir()
         for name in ('be2.py', 'workflow.py', 'upgrade.py', 'springboard.py', 'task_inputs.py',
-                     'author.py', 'FEATURES.json'):
+                     'author.py', 'FEATURES.json', 'game_tooling.py'):
             shutil.copyfile(ROOT / 'tools' / name, self.root / 'tools' / name)
         for name in ('starters.json', 'game_project.py'):
             shutil.copyfile(ROOT / 'templates' / name, self.root / 'templates' / name)
@@ -246,6 +246,19 @@ class SpringboardTests(unittest.TestCase):
         change = self.start('Add multiplayer to the existing game', kind='change-game', project=game)
         self.assertEqual(change['workflow']['networking'], 'native-multiplayer')
         self.assertEqual(change['next_action']['kind'], 'clarify')
+
+    def test_metadata_only_target_uses_normal_scaffold_workflow(self):
+        target = Path(self.tmp.name) / 'prepared'
+        (target / '.be2-work').mkdir(parents=True)
+        sentinel = target / '.be2-work/runner.json'
+        sentinel.write_text('protected')
+        packet = self.start('Build an offline 2D game', kind='new-game', project=target, name='prepared')
+        self.assertEqual(packet['next_action']['kind'], 'command')
+        self.assertIn('new-game', packet['next_action']['argv'])
+        self.assertEqual(sentinel.read_text(), 'protected')
+        (target / 'notes.txt').write_text('user content')
+        packet = self.start('Build an offline 2D game', kind='new-game', project=target, name='prepared')
+        self.assertTrue(any('nonempty' in b for b in packet['blockers']))
 
     def test_existing_game_missing_or_broken_manifest_does_not_scaffold(self):
         game = self.game()

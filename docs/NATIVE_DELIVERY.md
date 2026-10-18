@@ -86,3 +86,20 @@ and physical audio output for audio checks must be stated. Known software render
 scripted input, silent/decoded audio counters and incomplete observations remain
 pending. Software captures are useful artifacts, but cannot become physical passes.
 Simulation, saves, networking, package smoke and installer gates remain separate.
+
+## Capture subsystem evidence
+
+A package smoke pass certifies isolated declared-file rendering only. Its log and
+`.subsystems.json` keep audio intent/telemetry separate from rendering, scripted
+behavior and physical input. `tools/xcapture.py` retains stdout/stderr and the same
+`subsystems.json`, even when an upstream worker fails but rendering exits zero.
+Unknown native audio health never becomes success from a screenshot. Macroquad
+0.4.14 eagerly creates its native audio context before game mute handling;
+`--mute` skips game synthesis/loading but cannot prevent that upstream device
+attempt. The backend exposes no device-worker health API. Review audible hardware
+on the actual target; successful asset decoding/playback submission is separate.
+
+Explicit capture/script/verification runs use their automated input independently
+of desktop focus. Pass `--native-input` to a capture that should exercise real
+focus/device gating (including synthesized X11 events). A native-input capture
+still cannot certify physical devices.

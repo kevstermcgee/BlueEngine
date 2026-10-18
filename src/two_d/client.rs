@@ -16,12 +16,14 @@ use serde::{Deserialize, Serialize};
 struct Settings {
     sound: bool,
     music: bool,
+    fullscreen: Option<bool>,
 }
 impl Default for Settings {
     fn default() -> Self {
         Self {
             sound: true,
             music: true,
+            fullscreen: None,
         }
     }
 }
@@ -135,7 +137,7 @@ impl Audio {
         settings: &Settings,
         dt: f32,
     ) -> Result<(), String> {
-        let active = active && !self.muted && platform::audio_active();
+        let active = active && !self.muted && platform::audio_requested();
         if active && !self.loop_evidence.playing && !self.loops.is_empty() {
             for track in &self.loops {
                 play_sound(
@@ -185,7 +187,7 @@ impl Audio {
     }
     fn play(&mut self, cue: usize, enabled: bool) {
         self.evidence.enabled = enabled && !self.muted;
-        self.evidence.activated = platform::audio_active();
+        self.evidence.activated = platform::audio_requested();
         if self.evidence.enabled && self.evidence.activated {
             if let Some(sound) = self.sounds.get(cue) {
                 play_sound(
@@ -217,7 +219,7 @@ pub fn config(title: &str) -> macroquad::conf::Conf {
     }
     macroquad::conf::Conf {
         miniquad_conf: Conf {
-            window_title: title.into(),
+            window_title: crate::viewer::focus::window_title(title),
             window_width: size.0 as i32,
             window_height: size.1 as i32,
             fullscreen: crate::viewer::startup::default_fullscreen(),
@@ -234,7 +236,6 @@ pub async fn run<G: Game>() {
     }
 }
 async fn run_inner<G: Game>() -> Result<(), String> {
-    crate::viewer::startup::show().await;
     let capture = {
         let args: Vec<_> = std::env::args().collect();
         let plan =
@@ -252,6 +253,11 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             format!("{error}; playing with session defaults"),
         ),
     };
+    let launch_args: Vec<_> = std::env::args().collect();
+    let initial_fullscreen =
+        crate::viewer::startup::fullscreen_preference(&launch_args, settings.fullscreen);
+    macroquad::miniquad::window::set_fullscreen(initial_fullscreen);
+    crate::viewer::startup::show().await;
     let mut game = G::new(7);
     let verification = platform::verify_mode();
     #[allow(unused_mut)]
@@ -282,14 +288,32 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut renderer = Renderer::default();
     let mut frame = 0;
     let mut last_pointer = None;
-    let mut fullscreen = crate::viewer::startup::default_fullscreen();
+    let mut focus_gate = crate::viewer::focus::NeutralGate::default();
+    let mut fullscreen = initial_fullscreen;
     #[cfg(feature = "gamepad")]
     let mut pads = crate::viewer::gamepad::Gamepads::new().ok();
     loop {
         frame += 1;
-        if is_key_pressed(KeyCode::F) || is_key_pressed(KeyCode::F11) {
+        let mut observation =
+            crate::viewer::focus::sample().ok_or("Native focus adapter is unavailable")?;
+        if crate::viewer::startup::automated_input(&launch_args) {
+            observation.focused = true;
+            observation.lost = false;
+            observation.neutral = true;
+        }
+        #[allow(unused_mut)]
+        let mut neutral = observation.neutral && get_keys_pressed().is_empty();
+
+        if observation.focused
+            && !observation.lost
+            && (is_key_pressed(KeyCode::F) || is_key_pressed(KeyCode::F11))
+        {
             fullscreen = !fullscreen;
             macroquad::miniquad::window::set_fullscreen(fullscreen);
+            settings.fullscreen = Some(fullscreen);
+            if capture.is_none() {
+                let _ = storage::write_settings(&store, &settings);
+            }
         }
         let dt = get_frame_time().clamp(0., 0.1);
         let view = Viewport::fit(800., 450., screen_width().max(1.), screen_height().max(1.));
@@ -320,7 +344,8 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         let mut look_native = [0.; 2];
         #[cfg(feature = "gamepad")]
         if let Some(pads) = pads.as_mut() {
-            let pad = pads.poll(true);
+            let pad = pads.poll(observation.focused && !observation.lost);
+            neutral &= pad.neutral();
             x += (pad.left_stick[0] * 1.5) as i32;
             y -= (pad.left_stick[1] * 1.5) as i32;
             action |= pad.menu_select();
@@ -329,6 +354,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 look_native = [pad.right_stick[0] * dt * 2., pad.right_stick[1] * dt * 2.];
             }
         }
+        let mut focused = focus_gate.observe(observation.focused, observation.lost, neutral);
         let mut look = [0.; 2];
         if G::drag_look() && is_mouse_button_down(MouseButton::Left) && pointer.is_some() {
             if let Some((x, y)) = last_pointer {
@@ -340,11 +366,11 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         }
         look[0] += look_native[0];
         look[1] += look_native[1];
-        if !started && start {
+        if focused && !started && start {
             started = true;
             audio.play(0, settings.sound);
         }
-        if platform::command_key(KeyCode::R) || digital.commands & 4 != 0 {
+        if focused && (platform::command_key(KeyCode::R) || digital.commands & 4 != 0) {
             game.restart();
             inputs.clear();
             pointer_actions.clear();
@@ -352,10 +378,12 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             started = true;
             notice.clear();
         }
-        if platform::command_key(KeyCode::Escape) || digital.commands & 2 != 0 {
+        if focused && (platform::command_key(KeyCode::Escape) || digital.commands & 2 != 0) {
             paused = !paused;
+            focus_gate.observe(true, true, false);
+            focused = false;
         }
-        if platform::command_key(KeyCode::M) || digital.commands & 8 != 0 {
+        if focused && (platform::command_key(KeyCode::M) || digital.commands & 8 != 0) {
             settings.sound = !settings.sound;
             match storage::write_settings(&store, &settings) {
                 Ok(()) => {
@@ -367,7 +395,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Err(e) => notice = e,
             }
         }
-        if platform::command_key(KeyCode::N) || digital.commands & 64 != 0 {
+        if focused && (platform::command_key(KeyCode::N) || digital.commands & 64 != 0) {
             settings.music = !settings.music;
             notice = match storage::write_settings(&store, &settings) {
                 Ok(()) => format!(
@@ -377,13 +405,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Err(e) => e,
             };
         }
-        if platform::command_key(KeyCode::K) || digital.commands & 16 != 0 {
+        if focused && (platform::command_key(KeyCode::K) || digital.commands & 16 != 0) {
             notice = match storage::save(&store, &game) {
                 Ok(()) => "Game saved. L resumes it.".into(),
                 Err(e) => e,
             };
         }
-        if platform::command_key(KeyCode::L) || digital.commands & 32 != 0 {
+        if focused && (platform::command_key(KeyCode::L) || digital.commands & 32 != 0) {
             notice = match storage::load(&store, &mut game) {
                 Ok(true) => {
                     inputs.clear();
@@ -394,7 +422,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 Err(e) => e,
             };
         }
-        let focused = platform::focused();
+
         let mut intent = if focused && started && !paused {
             game.device_input(Intent {
                 x: x.clamp(-1, 1),
@@ -417,11 +445,12 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             );
         }
         intent.action = false;
-        if !focused || paused || !started {
-            inputs.clear();
-            pointer_actions.clear();
-            last_pointer = None;
-        }
+        clear_inactive_input(
+            focused && started && !paused,
+            &mut inputs,
+            &mut pointer_actions,
+            &mut last_pointer,
+        );
         inputs.feed(
             intent,
             u32::from(action && focused && started && !paused),
@@ -542,12 +571,16 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             }
         }
         audio.evidence.enabled = settings.sound && !audio.muted;
-        audio.evidence.activated = platform::audio_active();
+        audio.evidence.activated = platform::audio_requested();
 
         {
             if capture.as_ref().is_some_and(|c| c.finished(frame))
                 || (capture.is_none() && verification && verification_tick >= G::VERIFY_TICKS)
             {
+                println!(
+                    "{}",
+                    serde_json::json!({"subsystem":"audio", "intent":if audio.muted {"muted"} else {"requested"}, "assets_loaded":audio.evidence.loaded,"playback_submissions":audio.evidence.submitted,"backend_health":"unobservable","audible_hardware":"unverified"})
+                );
                 println!(
                     "{}",
                     serde_json::json!({"tick":game.tick(),"hash":format!("{:016x}",game.state_hash()),"outcome":game.outcome()})
@@ -561,6 +594,20 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         Ok(())
     }
 }
+// Shared production path: inactive local clients cannot retain a press/target/look for later ticks.
+fn clear_inactive_input(
+    active: bool,
+    inputs: &mut InputAccumulator<Intent>,
+    targets: &mut ActionPointer,
+    pointer: &mut Option<(f32, f32)>,
+) {
+    if !active {
+        inputs.clear();
+        targets.clear();
+        *pointer = None;
+    }
+}
+
 /// The action target travels with its press edge across frames with no fixed tick.
 #[derive(Default)]
 struct ActionPointer {
@@ -617,10 +664,7 @@ mod platform {
             macroquad::prelude::is_key_pressed(key)
         }
     }
-    pub fn focused() -> bool {
-        true
-    }
-    pub fn audio_active() -> bool {
+    pub fn audio_requested() -> bool {
         true
     }
     pub fn error(error: &str) {
@@ -631,6 +675,36 @@ mod platform {
 #[cfg(test)]
 mod pointer_action_tests {
     use super::*;
+    #[test]
+    fn focus_and_menu_discard_subtick_edges_targets_and_look_before_neutral_return() {
+        let mut gate = crate::viewer::focus::NeutralGate::default();
+        let mut input = InputAccumulator::<Intent>::new();
+        let mut targets = ActionPointer::default();
+        let mut pointer = Some((5., 6.));
+        input.feed(
+            Intent {
+                x: 1,
+                ..Default::default()
+            },
+            1,
+            [1., 2.],
+        );
+        targets.feed(true, Some(Point::new(4, 5)), true, false);
+        let active = gate.observe(true, true, false); // out/in between frames, before any simulation tick
+        clear_inactive_input(active, &mut input, &mut targets, &mut pointer);
+        let tick = input.take_tick();
+        assert!(!tick.pressed(1));
+        assert_eq!(tick.held.x, 0);
+        assert_eq!(tick.look, [0., 0.]);
+        assert_eq!(targets.take(true), None);
+        assert_eq!(pointer, None);
+        assert!(!gate.observe(true, false, false)); // mouse/controller/key still held
+        assert!(!gate.observe(true, false, true)); // neutral frame is consumed
+        assert!(gate.observe(true, false, true));
+        input.feed(Intent::default(), 1, [0., 0.]);
+        clear_inactive_input(false, &mut input, &mut targets, &mut pointer); // menu opening
+        assert!(!input.take_tick().pressed(1));
+    }
     #[test]
     fn mapped_device_command_survives_a_frame_without_a_tick_and_fires_once() {
         let hover = Some(Point::new(400, 200));

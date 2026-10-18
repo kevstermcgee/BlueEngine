@@ -135,6 +135,59 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(git('rev-parse', 'HEAD', cwd=self.engine), self.base)
         self.assertFalse(list((self.state / 'runs').glob('*/worktree')))
 
+    def feedback_commit(self, extra=None, valid=True):
+        # Match the importer's actual token/skip outcome: no CI at this SHA.
+        path = self.engine / 'docs/player-feedback/reviews/1.json'
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text('{"body":"untrusted observation"}')
+        (self.engine / 'tools/player_feedback.py').write_text(f'import sys; sys.exit({0 if valid else 1})\n')
+        git('add', 'tools/player_feedback.py', cwd=self.engine)
+        git('commit', '-m', 'install fixture validator', cwd=self.engine)
+        code = git('rev-parse', 'HEAD', cwd=self.engine)
+        git('add', 'docs/player-feedback', cwd=self.engine)
+        if extra:
+            (self.engine / extra).write_text('unverified code')
+            git('add', extra, cwd=self.engine)
+        git('commit', '-m', 'Sync player feedback [skip ci]', cwd=self.engine)
+        git('push', 'origin', 'main', cwd=self.engine)
+        return code, git('rev-parse', 'HEAD', cwd=self.engine)
+
+    def test_feedback_only_without_push_ci_uses_verified_code_and_finishes_once(self):
+        code, tip = self.feedback_commit()
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+        self.assertEqual([call['sha'] for call in self.ci_calls], [code])
+        evidence = json.loads((self.state / 'last-success.json').read_text())['hosted_ci']
+        self.assertEqual(evidence['reviewed_sha'], tip)
+        self.assertEqual(evidence['feedback_only_commits'], [tip])
+        self.assertFalse(list((self.state / 'runs').glob('*/worktree')))
+        # Durable acknowledgment survives another runner invocation, without AI or CI.
+        self.assertEqual(self.execute(), 0)
+        self.assertEqual(len(self.ci_calls), 1)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+
+    def test_invalid_feedback_data_cannot_inherit_ci(self):
+        self.feedback_commit(valid=False)
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 1)
+        self.assertFalse(self.ci_calls)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertFalse(list((self.state / 'runs').glob('*/worktree')))
+
+    def test_feedback_data_cannot_hide_unverified_code_or_failed_ancestor(self):
+        _, tip = self.feedback_commit(extra='rules.rs')
+        for response in (None, 'failure', 'cancelled', 'queued'):
+            with self.subTest(response=response):
+                self.assertEqual(self.execute(TEST_STATUS='no_changes', ci_responses=[response]), 1)
+                self.assertEqual(self.ci_calls[-1]['sha'], tip)
+                self.assertFalse((self.state / 'feedback-seen.json').exists())
+
+    def test_feedback_only_requires_successful_ancestor_and_valid_data(self):
+        code, _ = self.feedback_commit()
+        for response in (None, 'failure', 'cancelled', 'queued'):
+            with self.subTest(response=response):
+                self.assertEqual(self.execute(TEST_STATUS='no_changes', ci_responses=[response]), 1)
+                self.assertEqual(self.ci_calls[-1]['sha'], code)
+                self.assertFalse((self.state / 'feedback-seen.json').exists())
+
     def test_delayed_exact_head_hosted_success_precedes_acknowledgment(self):
         self.assertEqual(self.execute(ci_responses=['queued', 'in_progress', 'success']), 0)
         self.assertEqual(len(self.ci_calls), 3)
@@ -192,10 +245,11 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(self.remote_head(), pushed)
         self.assertFalse((self.state / 'feedback-seen.json').exists())
         report = (self.state / 'latest.md').read_text()
-        self.assertIn('Unchanged worktree retained for review', report)
+        self.assertIn('No source work retained', report)
         self.assertNotIn('Unpublished work retained', report)
         self.assertEqual(self.execute(ci_responses=['queued', 'success'], TEST_STATUS='no_changes'), 0)
         self.assertEqual(self.remote_head(), pushed)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 2)
         success = json.loads((self.state / 'last-success.json').read_text())
         self.assertEqual(success['base'], pushed)
         self.assertEqual(success['hosted_ci']['head_sha'], pushed)
@@ -219,7 +273,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(self.ci_calls[-1]['sha'], self.base)
         report = (self.state / 'latest.md').read_text()
         self.assertIn('Status: failed', report)
-        self.assertIn('Unchanged worktree retained for review', report)
+        self.assertIn('No source work retained', report)
         self.assertNotIn('Unpublished work retained', report)
 
     def test_deep_run_path_uses_short_private_temp_for_agent_and_checks(self):

@@ -23,6 +23,18 @@ pub struct GamepadFrame {
     released: HashSet<Button>,
 }
 impl GamepadFrame {
+    /// No held controls or queued edges, including analog sticks and triggers.
+    pub fn neutral(&self) -> bool {
+        self.down.is_empty()
+            && self.pressed.is_empty()
+            && self
+                .left_stick
+                .iter()
+                .chain(&self.right_stick)
+                .chain(&self.triggers)
+                .all(|v| v.abs() <= 0.1)
+    }
+
     pub fn down(&self, button: Button) -> bool {
         self.down.contains(&button)
     }

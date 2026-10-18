@@ -68,6 +68,13 @@ class PublicDiscoveryTests(unittest.TestCase):
                 self.assertEqual(full['matches'][0]['limitations'], packet['matches'][0]['limitations'])
                 self.assertLessEqual(compact_bytes(full), 8000)
 
+    def test_compound_start_returns_both_presentation_and_audio_contracts(self):
+        query = 'Create a distinctive HUD and original audio'
+        packet = springboard.start(ROOT, query, kind='engine')
+        self.assertEqual([m['id'] for m in packet['context']['matches']], ['client_kit', 'audio_authoring'])
+        context = workflow.context(ROOT, query, level=1)
+        self.assertEqual(packet['context']['matches'], context['matches'])
+
     def test_workshop_discovery_preserves_failure_and_runtime_boundaries(self):
         resource = workflow.context(ROOT, 'Inventory::transact', level=1)['matches'][0]
         self.assertEqual(resource['id'], 'resource_transactions')
