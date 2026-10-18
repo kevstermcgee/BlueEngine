@@ -74,6 +74,10 @@ class PublicDiscoveryTests(unittest.TestCase):
         self.assertEqual([m['id'] for m in packet['context']['matches']], ['client_kit', 'audio_authoring'])
         context = workflow.context(ROOT, query, level=1)
         self.assertEqual(packet['context']['matches'], context['matches'])
+        wording = springboard.start(ROOT, 'Create distinctive presentation and authored audio', kind='engine')
+        self.assertEqual({m['id'] for m in wording['context']['matches']}, {'client_kit', 'audio_authoring'})
+        self.assertEqual(len(wording['context']['matches']), 2)
+
 
     def test_workshop_discovery_preserves_failure_and_runtime_boundaries(self):
         resource = workflow.context(ROOT, 'Inventory::transact', level=1)['matches'][0]

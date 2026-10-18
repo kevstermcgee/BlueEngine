@@ -43,7 +43,9 @@ already ancestors of main. Unrelated dirty worktrees were preserved.
   remain tested. Behavioral-testing commands now enable physics and networking,
   as the actual be2-tools target requires. Metadata-only prepared directories
   (`.git`, `.be2-work`, `.codex`, `.agents`) can scaffold without replacing them;
-  ordinary content collisions still fail before writes.
+  ordinary content collisions still fail before writes. Scaffolding checks rustfmt
+  before writes and formats assembled sources; all six starters pass their first
+  format gate. Workshop help now exits successfully without loading assets.
 * Native focus observation moved from Afterpull to shared presentation. Windows
   retains foreground-loss events; Linux uses the supported X11 backend, its own
   event connection and actual X window (never a GLX drawable). Physical keyboard

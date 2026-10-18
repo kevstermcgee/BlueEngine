@@ -69,6 +69,10 @@ fn save_bytes(path: &str) -> Result<Vec<u8>, String> {
 }
 fn run() -> Result<(), String> {
     let args: Vec<_> = std::env::args().skip(1).collect();
+    if args.first().is_some_and(|s| matches!(s.as_str(), "--help" | "-h" | "help")) {
+        println!("workshop: validate [CONTENT] | inspect [MACHINE] | edit CONTENT ADDITIONS | play | probe | playtest SEED TICKS [fault] | replay-playtest TRACE | migrate-v1 SAVE OUTPUT | migrate-content SOURCE SAVE OUTPUT [TARGET]");
+        return Ok(());
+    }
     let mut game = Workshop::standard();
     let output = match args.first().map(String::as_str).unwrap_or("inspect") {
         "validate" => {

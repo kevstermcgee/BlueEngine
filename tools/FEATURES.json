@@ -983,7 +983,8 @@
           "when": [
             [
               "hud",
-              "ui"
+              "ui",
+              "presentation"
             ],
             [
               "distinctive",
