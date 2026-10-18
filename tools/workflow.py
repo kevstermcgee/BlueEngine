@@ -64,7 +64,8 @@ def index(root):
     except ModuleNotFoundError:
         import game_tooling
     # Exact generated inputs only. Hooks, content and Rust retain their own gates.
-    features['game_scaffolding']['files'].extend(sorted(game_tooling.tooling_paths(root)))
+    if 'game_scaffolding' in features:
+        features['game_scaffolding']['files'].extend(sorted(game_tooling.tooling_paths(root)))
     generated = game_tooling.tooling_paths(root)
     for game in game_tooling.consumers(root):
         relative = game.relative_to(root).as_posix()
