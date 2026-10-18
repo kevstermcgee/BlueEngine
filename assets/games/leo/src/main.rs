@@ -91,6 +91,7 @@ async fn audio(root: &Path, muted: bool, settings: &Settings) -> Result<Option<(
 }
 #[macroquad::main(window)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     let args: Vec<String> = std::env::args().collect();
     let mut life = Lifecycle::<Held>::start_or_exit(&args, &CUES);
     let unattended = life.options.unattended();
