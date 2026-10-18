@@ -292,6 +292,9 @@ class SharedToolingTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'drift'):
             tooling.check(self.game)
         self.assertEqual(workflow.change_plan(root, ['games/new-consumer/build.rs'])['scope'], 'full')
+        for boundary in ('Cargo.toml', 'Cargo.lock', 'game.project.json'):
+            self.assertEqual(workflow.change_plan(root, ['games/new-consumer/' + boundary])['scope'], 'full')
+
         (game / 'src').mkdir()
         (game / 'src/lib.rs').write_text('// newly declared game authority')
         source = workflow.impact(root, ['games/new-consumer/src/lib.rs'])

@@ -286,7 +286,8 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     invalid = [s for s in suites if not re.fullmatch(r'[\w-]+', s) or not (root / 'tests' / (s + '.rs')).is_file()]
     boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json',
                                         'tools/check_dependency_boundaries.py') or
-                p.startswith('.github/') or p.endswith('build.rs')]
+                p.startswith('.github/') or p.endswith('build.rs')
+                or Path(p).name in ('Cargo.toml', 'Cargo.lock', 'game.project.json')]
     # A Markdown suffix is not proof of independence. Keep executable docs and
     # unknown recipes conservative; only exact guides and existing reviewed
     # independent Python/data scopes can narrow an iteration plan.
