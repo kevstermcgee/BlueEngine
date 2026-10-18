@@ -1,7 +1,7 @@
 [Setup]
 AppId=BlueEngineGames.harvest-hollow
 AppName=Harvest Hollow
-AppVersion=0.1.0
+AppVersion=0.1.1
 AppPublisher=BlueEngine Games
 DefaultDirName={localappdata}\BlueEngine\Games\harvest-hollow
 DefaultGroupName=BlueEngine Games

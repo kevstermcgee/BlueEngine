@@ -1,5 +1,7 @@
 # Harvest Hollow
 
+The game opens fullscreen with a brief **BlueEngine Games** studio card before its own title screen. Press a key, click, or use a controller button to skip; release the control before playing. F or F11 switches fullscreen. Use `--windowed` for a windowed launch. Explicit capture and scripted verification runs retain their original window size and frame timing.
+
 An original cozy farming game built with BlueEngine 2, pinned to the current October 13, 2026 engine release. No town, no combat, no deadline: just your little farm.
 
 Click a patch to walk over and work. The Smart tool clears debris, tills grass, plants your selected seed, waters it, and harvests ripe crops. Or choose a specific tool with 1–7. WASD/arrows move; E or Space works the patch in front of you. Tab changes crops. I opens the compact Farm drawer for seeds, shipping, improvements and sleep.

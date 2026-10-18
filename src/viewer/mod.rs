@@ -76,10 +76,12 @@ pub mod symbols;
 pub mod ui_check;
 pub mod verify;
 
-#[cfg(feature = "presentation")]
+#[cfg(any(feature = "presentation", feature = "two-d-draw"))]
 pub mod game_text;
 #[cfg(feature = "presentation")]
 pub mod game_visuals;
+#[cfg(any(feature = "presentation", feature = "two-d-draw"))]
+pub mod startup;
 
 #[cfg(feature = "presentation")]
 pub mod character_skins;

@@ -280,12 +280,12 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut renderer = Renderer::default();
     let mut frame = 0;
     let mut last_pointer = None;
-    let mut fullscreen = false;
+    let mut fullscreen = crate::viewer::startup::default_fullscreen();
     #[cfg(feature = "gamepad")]
     let mut pads = crate::viewer::gamepad::Gamepads::new().ok();
     loop {
         frame += 1;
-        if is_key_pressed(KeyCode::F) {
+        if is_key_pressed(KeyCode::F) || is_key_pressed(KeyCode::F11) {
             fullscreen = !fullscreen;
             macroquad::miniquad::window::set_fullscreen(fullscreen);
         }
