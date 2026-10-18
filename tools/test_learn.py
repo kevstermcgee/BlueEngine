@@ -887,7 +887,7 @@ class ContextHookTests(unittest.TestCase):
                 self.assertLessEqual(len(result['learned']), 5)
                 self.assertLessEqual(sum(len(line) for line in result['learned']), 600)
         self.assertNotIn('learned', workflow.context(ROOT, 'zyxquantumunknown'))
-        self.assertNotIn('learned', workflow.context(ROOT, 'movement', 1))
+        self.assertNotIn('learned', workflow.context(ROOT, 'movement', level=1))
 
 
 # ---------------------------------------------------------------------------------------------------------------
