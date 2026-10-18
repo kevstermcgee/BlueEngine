@@ -119,7 +119,40 @@ supported `scripts/tooling_hooks.py` hooks instead of editing shared launchers.
 
 Publication requires exact-commit full engine CI, generated-game Windows and Linux
 tests/resources/isolated launches, and a Windows installer review. The companion
-export includes its native download definition and real screenshot. Only then
+export includes its native download definition and real screenshot. Every new game
+also ships a substantive `games/SLUG/wiki.json` and real images in
+`games/SLUG/assets/wiki/`. The mini-wiki documents the actual game: overview, rules,
+goals and failure conditions, controls, progression, story/setting, every named
+character and a screenshot of each. A game without story or characters says so
+explicitly; invented lore and character art are not substitutes for game evidence.
+
+The version 1 wiki contract requires an overview of at least 120 characters,
+at least three rules (20 characters each), one control instruction (8 characters),
+and a story or explicit absence statement (40 characters). `characters` is an array
+of objects with `name`, `description` (40 characters), and `image`; an empty list
+needs `characters_note` (20 characters). Each character's image is a genuine
+in-game PNG, at least 96 by 96 pixels; cropping a real native capture is allowed.
+`gallery` contains at least three objects with `image`, `caption`, and `alt`
+(8 characters each for caption/alt). Gallery images must be different native
+gameplay moments or challenges, with distinct file contents, landscape dimensions
+of at least 320 by 180 pixels, and game-relative `assets/wiki/NAME.png` paths.
+Do not use icons, generated artwork, mockups, or superficial variations of a capture.
+
+`design` declares `origin: "ai"`, `original_prompt: null`, and a public `rationale`
+of at least 120 characters explaining why this specific game was chosen: intended
+player experience, interesting decisions, and differences from previous concepts.
+This is an authored decision summary based on the concept's `why_fun` and
+`novelty_check`, not private reasoning or a fabricated historical account.
+The original run brief reaches both builder and independent reviewer directly.
+The supervisor validates the wiki and image files before native checks and export,
+checks that export preserved their bytes, and requires the independent reviewer to
+inspect every referenced image and compare the wiki with the implemented game.
+An unpublished retained run without compliant artifacts returns to build/repair
+with prior verification gates invalidated; already published releases are preserved.
+The companion site's publication checks enforce the wiki contract for future
+games, including the original human creation prompt for human-designed additions.
+
+Only then
 does a fast-forward push publish the complete production catalog. The CLI waits
 for production and Pages, downloads the public installer/ZIP, checks published
 SHA-256 sums and asset digests, and verifies the live page and screenshot.

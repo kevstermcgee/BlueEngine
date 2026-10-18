@@ -258,6 +258,79 @@ def screenshot_from_package(game, not_before=0):
     raise ForgeError("The isolated package needs a landscape native screenshot")
 
 
+def validate_game_wiki(game):
+    """Gate authored publication facts; the independent review checks their truth."""
+    try:
+        wiki = load_json(game / "wiki.json")
+        if not isinstance(wiki, dict) or type(wiki.get("version")) is not int or wiki["version"] != 1:
+            raise ForgeError("Game wiki needs version 1")
+
+        def text(value, field, minimum=1):
+            if not isinstance(value, str) or len(value.strip()) < minimum:
+                raise ForgeError(f"Game wiki needs substantive {field}")
+            if learn.secret_like(value):
+                raise ForgeError(f"Game wiki {field} needs a sanitized public description")
+
+        def image(value, minimum, landscape=False):
+            if not isinstance(value, str) or not re.fullmatch(r"assets/wiki/[a-zA-Z0-9_-]+\.png", value):
+                raise ForgeError("Game wiki images must use game-relative assets/wiki/*.png paths")
+            path = game / value
+            if path.is_symlink() or not path.resolve().is_relative_to(game.resolve()):
+                raise ForgeError("Game wiki screenshot escapes the game folder")
+            data = path.read_bytes()
+            if len(data) < 33 or data[:16] != b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR":
+                raise ForgeError("Game wiki images must be PNG screenshots")
+            width, height = struct.unpack(">II", data[16:24])
+            if width < minimum[0] or height < minimum[1] or (landscape and width <= height):
+                raise ForgeError("Game wiki screenshot is too small or has the wrong aspect ratio")
+            return hashlib.sha256(data).hexdigest()
+
+        text(wiki.get("overview"), "overview", 120)
+        text(wiki.get("story"), "story (or an explicit absence of a story)", 40)
+        for field, count, minimum in (("rules", 3, 20), ("controls", 1, 8)):
+            values = wiki.get(field)
+            if not isinstance(values, list) or len(values) < count:
+                raise ForgeError(f"Game wiki needs at least {count} {field}")
+            for value in values:
+                text(value, field, minimum)
+        characters = wiki.get("characters")
+        if not isinstance(characters, list):
+            raise ForgeError("Game wiki needs a characters list")
+        if not characters:
+            text(wiki.get("characters_note"), "explanation that this game has no characters", 20)
+        names = set()
+        for character in characters:
+            if not isinstance(character, dict):
+                raise ForgeError("Game wiki character must be an object")
+            text(character.get("name"), "character name")
+            if character["name"] in names:
+                raise ForgeError("Game wiki character names must be distinct")
+            names.add(character["name"])
+            text(character.get("description"), "character description", 40)
+            image(character.get("image"), (96, 96))
+        gallery = wiki.get("gallery")
+        if not isinstance(gallery, list) or len(gallery) < 3:
+            raise ForgeError("Game wiki needs at least three distinct gameplay screenshots")
+        digests = []
+        for shot in gallery:
+            if not isinstance(shot, dict):
+                raise ForgeError("Game wiki gallery entry must be an object")
+            text(shot.get("caption"), "screenshot caption", 8)
+            text(shot.get("alt"), "screenshot alternative text", 8)
+            digests.append(image(shot.get("image"), (320, 180), landscape=True))
+        if len(set(digests)) != len(digests):
+            raise ForgeError("Game wiki needs distinct screenshot bytes, not repeated images")
+        design = wiki.get("design")
+        if not isinstance(design, dict) or design.get("origin") != "ai":
+            raise ForgeError("IdeaForge game wiki must declare AI design origin")
+        text(design.get("rationale"), "public design rationale explaining why this game was chosen", 120)
+        if "original_prompt" not in design or design["original_prompt"] is not None:
+            raise ForgeError("IdeaForge game wiki original_prompt must be null")
+        return wiki
+    except (OSError, ValueError, TypeError, KeyError) as error:
+        raise ForgeError("Game wiki or one of its screenshot files is missing or malformed") from error
+
+
 def codex_usage(path):
     """Keep only numeric turn.completed usage; never copy events/transcripts to feedback."""
     totals = {key: 0 for key in ("input_tokens", "cached_input_tokens", "output_tokens")}
@@ -473,6 +546,27 @@ Read root AGENTS.md, use tools/be2.py start and its selected documentation, and 
 fresh canonical map scaffold/icon tooling. The game lives at games/{idea['slug']}.
 Implement the distinctive mechanic, real player input, a clear goal and loss/retry loop,
 several escalating challenges, instructions, polished native visuals and its own icon.
+Mandatory user direction and quality requirements: {json.dumps(self.state['brief'])}.
+Author a substantive mini-wiki at games/{idea['slug']}/wiki.json, alongside the game:
+version: 1; overview: at least 120 characters explaining what players actually do;
+rules: at least three concrete rules (20+ characters each), including goals, failure
+and progression; controls: one or more exact input instructions (8+ characters each);
+story: 40+ characters of the implemented setting/story, or an explicit explanation
+that this game has no narrative. characters: an array listing every named playable
+character, ally and enemy with name, description (40+ characters) and image. For a
+game without characters use an empty array and characters_note (20+ characters).
+gallery: at least THREE distinct real gameplay screenshots, each with image, caption
+and alt (8+ characters each). All image paths must be game-relative assets/wiki/NAME.png.
+Gallery images must be landscape PNGs >=320x180, showing genuinely different moments,
+controls or challenges. Include an actual in-game screenshot of EACH named character
+(>=96x96; crops of genuine captures are okay); icons or concept art do not count.
+Use real native captures of the implemented game, never generated artwork, painted
+mockups, duplicated images or the same image with tiny edits. Inspect every image.
+design: origin 'ai', original_prompt null, rationale (120+ characters) explaining WHY
+this particular game was chosen: the interesting player decisions, intended experience
+and how it differs from prior games. Write a concise public design decision summary
+grounded in the concept's why_fun and novelty_check; do not expose private reasoning
+or invent a historical selection process. Describe implemented content accurately.
 Follow the concept's outcome rules: if it has no terminal loss, preserve that choice
 and implement its undo/retry behavior instead of adding hazards or a move budget.
 Use BlueEngine's fixed-step authoritative simulation, Intent input, Snapshot saving and
@@ -515,6 +609,12 @@ rule is implemented and understandable, whether its specified outcome/retry loop
 and whether its declared dimension is real: 3D requires a rendered 3D world with
 meaningful depth in the mechanic, while 2D requires a two-dimensional playable space.
 and any broken input, layout or fabricated verification shortcut. Do not edit files.
+Mandatory user direction and quality requirements: {json.dumps(self.state['brief'])}.
+Read wiki.json and inspect EVERY image it references. Block inaccurate or shallow wiki
+content, missing rules/story/controls, missing named characters or their real in-game
+screenshots, unclear rationale for choosing this particular game, fake screenshots,
+or a gallery that does not show at least three meaningfully different gameplay moments.
+The rationale is a public authored design summary, never a claim to private reasoning.
 approved must be false when there are blockers. Compilation/automated tests cannot prove
 subjective fun or global novelty. This is the LOCAL IMPLEMENTATION review, before
 Windows CI and installer publication. Assess the implementation and the native evidence
@@ -605,6 +705,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("The game presentation does not meet the requested dimension")
         if not {"windows", "linux"}.issubset(project.get("targets", [])) or "web" in project.get("targets", []):
             raise ForgeError("The game must declare native Windows delivery and Linux verification")
+        validate_game_wiki(game)
         self.ensure_game_scope()
         manifest = game / "Cargo.toml"
         self.command(["cargo", "fmt", "--manifest-path", manifest, "--check"], label="game-format")
@@ -767,6 +868,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         self.wait_ci(repository, "ci.yml", self.state["branch"], head, "engine-checks")
 
     def export(self):
+        wiki = validate_game_wiki(self.game)
         source = Path(self.state["games_root"])
         self.command(["git", "fetch", "origin", "main"], cwd=source, label="games-fetch")
         if not self.games.exists():
@@ -776,6 +878,13 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         self.command([sys.executable, "scripts/publish_games.py", "export", "--output", self.games,
                       "--revision", self.state["engine_head"]], label="export-game")
         slug = self.state["idea"]["slug"]
+        exported_game = self.games / "games" / slug
+        validate_game_wiki(exported_game)
+        wiki_files = {"wiki.json", *(shot["image"] for shot in wiki["gallery"]),
+                      *(character["image"] for character in wiki["characters"])}
+        if any((self.game / path).read_bytes() != (exported_game / path).read_bytes()
+               for path in wiki_files):
+            raise ForgeError("Export did not preserve the verified game wiki and screenshots")
         cargo = (self.game / "Cargo.toml").read_text()
         # Generated games may have helper binaries; release exactly the default playable.
         import tomllib
@@ -1017,6 +1126,16 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         self.save()
 
     def run(self):
+        completed = self.state.get("completed", [])
+        if ("build-and-review" in completed and "publish-games" not in completed
+                and not self.state.get("publication") and self.game.is_dir()):
+            try:
+                validate_game_wiki(self.game)
+            except ForgeError:
+                self.rebuild()
+                self.state["rebuild_reason"] += (
+                    " The game needs the current mini-wiki contract, public design rationale "
+                    "and at least three real gameplay captures before publication.")
         stages = [("setup", self.setup), ("generate", self.generate), ("build-and-review", self.build),
                   ("feedback", self.feedback), ("source-commit", self.register_source)]
         if self.state["publish"]:

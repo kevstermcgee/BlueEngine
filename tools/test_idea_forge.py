@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 import argparse
+import zlib
 from copy import deepcopy
 from datetime import datetime, timezone
 from unittest.mock import patch
@@ -35,6 +36,32 @@ def finding():
             "workaround": "Reserve the shared HUD margins and wrap the label.",
             "recommendation": "Provide a measured text layout helper for rule labels.",
             "keywords": ["rule", "label", "wrapping"]}
+
+
+def wiki_fixture(game):
+    gallery = []
+    for index in range(3):
+        path = f"assets/wiki/challenge-{index}.png"
+        destination = game / path
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        def chunk(kind, data):
+            return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+        destination.write_bytes(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", 320, 180, 8, 2, 0, 0, 0))
+                                + chunk(b"IDAT", zlib.compress((b"\0" + bytes([index, 60, 90]) * 320) * 180))
+                                + chunk(b"IEND", b""))
+        gallery.append({"image": path, "caption": f"Challenge {index}: transfer the physical rule",
+                        "alt": "Three machines and a door awaiting two rules"})
+    document = {"version": 1, "overview": "Transfer physical rules between machines to open an exit. " * 3,
+                "rules": ["Only one machine owns each physical rule.", "Transferring a rule consumes one turn.",
+                          "The exit door requires two rules to open."],
+                "controls": ["Click the donor, then click its recipient."],
+                "story": "This abstract logic game has no narrative or named characters.",
+                "characters": [], "characters_note": "The game uses machines and has no named characters.",
+                "gallery": gallery, "design": {"origin": "ai", "original_prompt": None,
+                    "rationale": "This design was selected to make every improvement create a weakness elsewhere. "
+                                 "Moving rules instead of collecting resources makes the player's tradeoffs visible."}}
+    forge.atomic_json(game / "wiki.json", document)
+    return document
 
 
 class SupervisorTests(unittest.TestCase):
@@ -81,7 +108,60 @@ class SupervisorTests(unittest.TestCase):
         capture = game / ".blue-check/smoke/shot_00030.png"
         capture.parent.mkdir(parents=True)
         capture.write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0\0\0\rIHDR" + struct.pack(">II", 800, 450) + b"\0" * 9)
+        wiki_fixture(game)
         return game, capture
+
+    def test_wiki_content_and_distinct_screenshots_are_required_before_commands(self):
+        game, _ = self.native_game()
+        original = forge.load_json(game / "wiki.json")
+        changes = ({"overview": "Short."}, {"rules": []}, {"controls": []}, {"story": None},
+                   {"characters_note": ""}, {"gallery": original["gallery"][:2]},
+                   {"design": {"origin": "ai", "original_prompt": None, "rationale": "A puzzle."}})
+        for change in changes:
+            with self.subTest(change=change):
+                forge.atomic_json(game / "wiki.json", {**original, **change})
+                with patch.object(self.worker, "command") as command:
+                    with self.assertRaises(forge.ForgeError):
+                        self.worker.verify_local()
+                    command.assert_not_called()
+        (game / "wiki.json").unlink()
+        with self.assertRaisesRegex(forge.ForgeError, "missing or malformed"):
+            self.worker.verify_local()
+
+    def test_renaming_the_same_screenshot_cannot_satisfy_the_gallery(self):
+        game, _ = self.native_game()
+        wiki = forge.load_json(game / "wiki.json")
+        shutil.copyfile(game / wiki["gallery"][0]["image"], game / wiki["gallery"][1]["image"])
+        with self.assertRaisesRegex(forge.ForgeError, "distinct screenshot bytes"):
+            forge.validate_game_wiki(game)
+
+    def test_character_needs_description_and_real_screenshot_inside_game(self):
+        game, _ = self.native_game()
+        wiki = forge.load_json(game / "wiki.json")
+        wiki["characters"] = [{"name": "Courier", "description": "The courier transfers rules between factory machines.",
+                               "image": "assets/wiki/missing.png"}]
+        forge.atomic_json(game / "wiki.json", wiki)
+        with self.assertRaisesRegex(forge.ForgeError, "missing or malformed"):
+            forge.validate_game_wiki(game)
+        for path in ("../outside.png", "assets/wiki/../../outside.png", "site/icon.png"):
+            wiki["characters"][0]["image"] = path
+            forge.atomic_json(game / "wiki.json", wiki)
+            with self.assertRaisesRegex(forge.ForgeError, "game-relative"):
+                forge.validate_game_wiki(game)
+        wiki["characters"][0]["image"] = wiki["gallery"][0]["image"]
+        forge.atomic_json(game / "wiki.json", wiki)
+        self.assertEqual(forge.validate_game_wiki(game), wiki)
+
+    def test_screenshot_symlink_cannot_escape_game(self):
+        game, _ = self.native_game()
+        wiki = forge.load_json(game / "wiki.json")
+        image = game / wiki["gallery"][0]["image"]
+        outside = self.directory / "outside.png"
+        shutil.copyfile(image, outside)
+        image.unlink()
+        image.symlink_to(outside)
+        with self.assertRaisesRegex(forge.ForgeError, "escapes"):
+            forge.validate_game_wiki(game)
 
     def test_schema_rejects_path_traversal_and_missing_rules(self):
         concept = idea()
@@ -411,6 +491,19 @@ class SupervisorTests(unittest.TestCase):
         build.assert_called_once()
         self.assertEqual(self.state["status"], "built-locally")
 
+    def test_unpublished_legacy_run_repairs_missing_wiki_and_invalidates_old_gates(self):
+        game, _ = self.native_game()
+        (game / "wiki.json").unlink()
+        self.state.update(completed=["setup", "generate", "build-and-review", "feedback", "source-commit"],
+                          feedback_path="docs/feedback/fixture.md", engine_head="old", ci={"old": {}})
+        with patch.object(self.worker, "build") as build, patch.object(self.worker, "feedback"), \
+                patch.object(self.worker, "register_source"):
+            self.worker.run()
+        build.assert_called_once()
+        self.assertIn("mini-wiki", self.state["rebuild_reason"])
+        self.assertNotIn("engine_head", self.state)
+        self.assertNotIn("ci", self.state)
+
     def test_actual_command_runner_rejects_exit_failure_and_preserves_private_log(self):
         with self.assertRaisesRegex(forge.ForgeError, "exit 7"):
             self.worker.command([sys.executable, "-c", "raise SystemExit(7)"], label="failure-fixture")
@@ -447,11 +540,16 @@ class SupervisorTests(unittest.TestCase):
     def test_local_review_defers_windows_delivery_to_the_supervisor_gates(self):
         _, capture = self.native_game()
         def agent(label, prompt, schema, **kwargs):
+            self.assertIn('Mandatory user direction and quality requirements: "test"', prompt)
             if label.startswith("build"):
+                self.assertIn("wiki.json", prompt)
+                self.assertIn("THREE distinct real gameplay screenshots", prompt)
+                self.assertIn("concise public design decision summary", prompt)
                 return {"summary": "Built", "findings": []}
             self.assertIn("before\nWindows CI and installer publication", prompt)
             self.assertIn("actual\nportability defect in the source remains a blocker", prompt)
             self.assertEqual(kwargs["image"], capture)
+            self.assertIn("inspect EVERY image", prompt)
             return {"approved": True, "mechanic_assessment": "Implemented",
                     "visual_assessment": "Readable", "blockers": [], "findings": []}
         with patch.object(self.worker, "agent", side_effect=agent), patch.object(self.worker, "verify_local"):
