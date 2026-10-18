@@ -1,9 +1,7 @@
 # Choose a native game path
 
-Read the answer and runtime in `be2.py context TASK --level 1 --compact`, then only
-the relevant contract below. Detailed guides are references for the current task,
-not mandatory initial reading. `context FEATURE --level 2` supplies contracts,
-examples and focused checks; level 3 supplies implementation ownership.
+`context TASK --level 1 --compact` gives public contracts; level 3 gives ownership.
+Read detailed guides as needed.
 
 ## Start a project
 
@@ -81,10 +79,8 @@ installer prepare`, then `installer build --iscc PATH` and explicit `installer t
 Declare game-owned device criteria in `assets/native-review.json`, then use
 `python scripts/ship.py review prepare`, `review record --observations FILE`, and
 `review status`. Review receipts bind package/source/settings/artifacts and keep
-software captures distinct from physical attestations. Commands and examples:
-[NATIVE_DELIVERY.md](NATIVE_DELIVERY.md).
+software captures distinct from physical attestations: [NATIVE_DELIVERY.md](NATIVE_DELIVERY.md).
 Linux development checks cannot certify Windows installers or physical devices. Full engine Linux/Windows gates
 remain required after engine changes. Publish/deploy only when explicitly authorized.
-New-game creation checks for rustfmt before writing, then formats the assembled
-Rust sources once so the first integration format gate passes.
+Scaffolding requires rustfmt and formats assembled sources before their first check.
 Browser gameplay/WASM is retired: [BROWSER_WORKFLOW.md](BROWSER_WORKFLOW.md).
