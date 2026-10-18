@@ -60,6 +60,10 @@ jobs:
           sys.argv = ['games/embertrail/scripts/ship.py', 'ship', '--folder', folder, '--force']
           try: runpy.run_path(sys.argv[0], run_name='__main__')
           finally: set_directory(None)
+      - name: Verify real studio card, fullscreen default and first toggle
+        shell: pwsh
+        run: |
+          ./tools/check_startup_windows.ps1 -Executable games/embertrail/dist/embertrail.exe -ExpectedTitle 'Embertrail' -OutputDirectory games/embertrail/.blue-check/startup -OpenGLDirectory $env:BE2_CI_OPENGL_DIR
       - name: Validate score, project requirements and verified package
         working-directory: .
         shell: pwsh

@@ -1,5 +1,7 @@
 # Embertrail
 
+The game opens fullscreen with a brief **BlueEngine Games** studio card before its own title screen. Press a key, click, or use a controller button to skip; release the control before playing. F or F11 switches fullscreen. Use `--windowed` for a windowed launch. Explicit capture and scripted verification runs retain their original window size and frame timing.
+
 **A little light. A very big adventure.** A controller-first 2D platforming campaign built with BlueEngine 0.2.0.
 
 Vesper, the Bell Regent, stole the Dawnheart from Mote's village. Without its warmth, home will freeze. Carry the first spark across eight islands, free their bound guardians, ring eight dawn bells, and bring the Dawnheart home. Characters greet Mote automatically as the journey unfolds; there are no dialogue choices.

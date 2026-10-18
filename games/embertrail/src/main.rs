@@ -10,6 +10,7 @@ fn config() -> macroquad::conf::Conf {
         vesper3d::viewer::identity::Identity::parse(include_str!("../assets/identity.json"))
             .unwrap();
     let mut config = client::config(&identity.title);
+    config.miniquad_conf.fullscreen = vesper3d::viewer::startup::default_fullscreen();
     config.miniquad_conf.icon = Some(macroquad::miniquad::conf::Icon {
         small: *include_bytes!("../assets/icon_16.rgba"),
         medium: *include_bytes!("../assets/icon_32.rgba"),
@@ -24,6 +25,7 @@ fn config() -> macroquad::conf::Conf {
 }
 #[macroquad::main(config)]
 async fn main() {
+    vesper3d::viewer::startup::show().await;
     if let Err(error) = game_client::run().await {
         eprintln!("Embertrail: {error}");
         std::process::exit(1);

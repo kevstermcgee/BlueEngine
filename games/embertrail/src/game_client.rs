@@ -650,7 +650,7 @@ pub async fn run() -> Result<(), String> {
     let mut save_clock = 0.;
     let mut saved_hash = None;
     let mut was_focused = true;
-    let mut fullscreen = false;
+    let mut fullscreen = vesper3d::viewer::startup::default_fullscreen();
     let mut presentation_seconds = 0.;
     prevent_quit();
     'client: loop {
@@ -674,7 +674,7 @@ pub async fn run() -> Result<(), String> {
         let held = |k| focused && is_key_down(k);
         let press = |name| focused && script_event(&script, frame, name);
         let hold = |name| focused && script_held(&script, frame, name);
-        if key(KeyCode::F) {
+        if key(KeyCode::F) || key(KeyCode::F11) {
             fullscreen = !fullscreen;
             macroquad::miniquad::window::set_fullscreen(fullscreen);
         }
