@@ -436,7 +436,9 @@ class AutomaticLoopTests(unittest.TestCase):
 
     def test_reviewed_consumer_pin_changes_use_compatibility_checks_without_cargo(self):
         from tools import game_tooling
-        paths = [str((game / 'scripts/tooling.json').relative_to(ROOT)) for game in game_tooling.consumers(ROOT)]
+        # Change plans consume Git paths, which use '/' on Windows too.
+        paths = [(game / 'scripts/tooling.json').relative_to(ROOT).as_posix()
+                 for game in game_tooling.consumers(ROOT)]
         plan = workflow.change_plan(ROOT, paths)
         self.assertEqual(plan['scope'], 'focused')
         self.assertFalse(plan['requirements']['unit'])
