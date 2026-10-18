@@ -21,6 +21,7 @@ public static class BlueEngineStartupWindow {
     public int Size; public Rect Monitor; public Rect Work; public uint Flags;
   }
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr window, out Rect rect);
+  [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW")] public static extern IntPtr GetWindowStyle(IntPtr window, int index);
   [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr window);
   [DllImport("user32.dll")] public static extern IntPtr MonitorFromWindow(IntPtr window, uint flags);
   [DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
@@ -60,7 +61,11 @@ function Test-Fullscreen([IntPtr]$Window) {
   $info.Size = [Runtime.InteropServices.Marshal]::SizeOf($info)
   $monitor = [BlueEngineStartupWindow]::MonitorFromWindow($Window, 2)
   if (-not [BlueEngineStartupWindow]::GetMonitorInfo($monitor, [ref]$info)) { throw 'Cannot read monitor bounds.' }
-  return [Math]::Abs($bounds.Left - $info.Monitor.Left) -le 2 -and
+  # Miniquad can retain monitor-sized outer bounds when restoring a normal window.
+  # Captions and resize borders distinguish that window from borderless fullscreen.
+  $style = [BlueEngineStartupWindow]::GetWindowStyle($Window, -16).ToInt64()
+  return ($style -band 0x00c40000) -eq 0 -and
+    [Math]::Abs($bounds.Left - $info.Monitor.Left) -le 2 -and
     [Math]::Abs($bounds.Top - $info.Monitor.Top) -le 2 -and
     [Math]::Abs($bounds.Right - $info.Monitor.Right) -le 2 -and
     [Math]::Abs($bounds.Bottom - $info.Monitor.Bottom) -le 2
