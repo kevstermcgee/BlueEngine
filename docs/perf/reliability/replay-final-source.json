@@ -1,0 +1,10 @@
+{
+  "binary_sha256": "68f6a636d356dd5e77b16024eb0a202a8e22bb0117e75da7504abd8757846872",
+  "oversized_read_rejected": true,
+  "replayed_fault": {
+    "failure": "duplicate command changed authoritative state",
+    "hash": "62b71b0d66bac721",
+    "ok": false,
+    "ticks": 28
+  }
+}

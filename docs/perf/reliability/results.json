@@ -74,6 +74,11 @@
       "suite": "publication declarations",
       "files_checked": 926,
       "ok": true
+    },
+    {
+      "suite": "shared menu pointer focus/neutral/transition gate",
+      "passed": 1,
+      "test": "viewer::game_client::settings_tests::menu_pointer_cannot_bypass_focus_loss_and_neutral_return"
     }
   ],
   "tooling": "tooling.json: 21 declared editable consumers; both reproduced pin-only plans are now 8 Python commands and zero Cargo commands. New declarations inherit checks. Child Cargo/project manifests retain full boundary checks.",
@@ -104,7 +109,10 @@
     "serial_seconds": 8.969,
     "fault": "seed 7 duplicate gather fails tick 28; exact retained trace replays same hash 62b71b0d66bac721",
     "fault_replay": "/PATH/TO/workshop replay-playtest docs/perf/reliability/duplicate-fault.trace.json",
-    "budgets": "2 workers, 128 MiB address space each, 30 s/run, 120 s total. Linux enforcement. Reports and complete failure trace retained."
+    "budgets": "2 workers, 128 MiB address space each, 30 s/run, 120 s total. Linux enforcement. Reports and complete failure trace retained.",
+    "final_source_report": "playtest-final-source.json: all eight seeds pass again in 6.392 s with identical hashes after bounded replay-read repair",
+    "final_source_binary_sha256": "68f6a636d356dd5e77b16024eb0a202a8e22bb0117e75da7504abd8757846872",
+    "final_source_replay": "replay-final-source.json: retained duplicate failure and oversized trace read rejection verified"
   },
   "performance": {
     "environment": "environment.json",
@@ -130,7 +138,7 @@
     "timing_limit": "Observed window starts after initial docs/intake reads. Warm shared target. Missing telemetry is not inferred. One help failure retained and repaired."
   },
   "gate_status_at_evidence_recording": {
-    "linux_canonical": "running: full Python batch and default/headless/offline Rust stages passed; final PR checks are authoritative for delivery tip",
+    "linux_canonical": "running: full Python batch, default/headless/offline/resources/narrative/Workshop and initial maintained-game stages passed; exact final PR checks remain authoritative",
     "windows_canonical": "prior push failed only new test Git-path separator fixture; repaired and focused test passed; rerun required at final tip",
     "windows_package": "prior implementation tip 1c66d85 passed native Workshop package/smoke and Inno installer build; final-tip rerun required",
     "cross_typecheck": "Windows default/headless all targets passed; does not replace Windows execution",

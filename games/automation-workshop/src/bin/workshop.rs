@@ -2,6 +2,7 @@
 use automation_workshop::{content, persistence, Command, Definitions, Envelope, Workshop, MAX_STATE_BYTES};
 use std::{
     alloc::{GlobalAlloc, Layout, System},
+    io::Read,
     path::Path,
     sync::atomic::{AtomicUsize, Ordering},
     time::Instant,
@@ -110,7 +111,10 @@ fn run() -> Result<(), String> {
         }
         "replay-playtest" => {
             let path = argument(&args,1,"replay-playtest TRACE_JSON")?;
-            let bytes = std::fs::read(path).map_err(|e|e.to_string())?;
+            let mut bytes = Vec::new();
+            // Bound the read itself, including files which grow while being read.
+            std::fs::File::open(path).map_err(|e|e.to_string())?.take(64*1024*1024+1)
+                .read_to_end(&mut bytes).map_err(|e|e.to_string())?;
             if bytes.len()>64*1024*1024 { return Err("trace exceeds 64 MiB".into()); }
             let trace=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
             serde_json::to_value(automation_workshop::playtest::replay(trace)).map_err(|e|e.to_string())?

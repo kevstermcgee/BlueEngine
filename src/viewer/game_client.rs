@@ -617,7 +617,12 @@ impl GameShell {
                 Color::from_rgba(24, 43, 53, 255)
             },
         );
-        hover && is_mouse_button_pressed(MouseButton::Left)
+        self.menu_click(hover, is_mouse_button_pressed(MouseButton::Left))
+    }
+    fn menu_click(&self, hover: bool, pressed: bool) -> bool {
+        // Pointer edges must obey the same focus/transition gate as shell actions.
+        // A click received while returning focus cannot resume or quit the game.
+        self.focus.active && !self.suppress && hover && pressed
     }
 }
 
@@ -685,6 +690,29 @@ fn menu_selection(current: usize, actions: ShellActions, count: usize) -> usize 
 #[cfg(test)]
 mod settings_tests {
     use super::*;
+    #[test]
+    fn menu_pointer_cannot_bypass_focus_loss_and_neutral_return() {
+        let mut shell = GameShell::in_state(false, true, false);
+        // Actual native observations feed the same gate in begin_frame. A stale
+        // click over Resume/Quit must be ignored through loss and held return.
+        for (focused, lost, neutral) in [
+            (false, true, false),
+            (true, true, false),
+            (true, false, false),
+            (true, false, true),
+        ] {
+            shell.suppress = !shell.neutral_gate.observe(focused, lost, neutral);
+            assert!(!shell.menu_click(true, true));
+            assert!(shell.paused);
+        }
+        shell.suppress = !shell.neutral_gate.observe(true, false, false);
+        assert!(shell.menu_click(true, true)); // fresh click after the neutral frame
+        shell.suppress = true; // Escape/fullscreen/cursor transition in this frame
+        assert!(!shell.menu_click(true, true));
+        shell.suppress = false;
+        shell.focus.active = false;
+        assert!(!shell.menu_click(true, true)); // custom-host focus without native adapter
+    }
     #[test]
     fn keyboard_settings_visit_only_available_rows_and_activate_without_closing() {
         for music in [false, true] {

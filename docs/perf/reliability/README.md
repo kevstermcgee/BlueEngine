@@ -58,7 +58,10 @@ job stall check and continued equivalence after save/restore.
 `playtest-fault.json` is an **expected failure**, not an unsuccessful game result
 hidden from the report. It injects duplicated gathering through the same authority;
 seed 7 fails at tick 28. The complete `duplicate-fault.trace.json` reproduces the
-same failure/hash. After building the recorded source, run:
+same failure/hash. `playtest-final-source.json` repeats all eight seeds after the
+CLI read-bound repair: all pass in 6.392 s with the same per-seed hashes.
+`replay-final-source.json` verifies the retained failure and rejection of an
+oversized trace on that binary. After building the recorded source, run:
 
 ```sh
 /PATH/TO/release/workshop replay-playtest docs/perf/reliability/duplicate-fault.trace.json
@@ -110,7 +113,8 @@ ordinary intake now passes the unchanged reading-budget tests.
 new-project inheritance and equivalent eight-Python/zero-Cargo pin-only plans.
 The original Reverie/Afterpull mismatch was reproduced as six versus 54 commands
 (49 Cargo) before replacing historical ownership with maintained declarations.
-Fresh standalone generation, reserved metadata preservation, first-format checks
+The final shared menu regression also prevents raw mouse edges from bypassing
+focus/neutral/transition suppression. Fresh standalone generation, reserved metadata preservation, first-format checks
 for every starter, exact bootstrap drift and stale explicit checker overrides are
 covered through their actual public paths. Content and build boundaries retain
 broader checks; immutable published exports were preserved.
