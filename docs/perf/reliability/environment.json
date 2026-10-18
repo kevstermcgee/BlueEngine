@@ -1,0 +1,37 @@
+{
+  "cpu": "Intel(R) N97",
+  "logical_cpus": 4,
+  "memory_total_kib": 16158380,
+  "kernel": "6.12.111+deb13-amd64",
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+  "profile": {
+    "release": {
+      "opt_level": 3,
+      "lto": "thin",
+      "codegen_units": 4,
+      "debug": false
+    }
+  },
+  "warmup_ticks": 2000,
+  "comparison_samples_per_workload": 50000,
+  "sustained_samples_per_workload": 1000000,
+  "snapshot_operations_per_comparison_workload": 20,
+  "snapshot_operations_per_sustained_workload": 400,
+  "allocator": "Instrumented System allocator requested sizes, including reallocations; excludes allocator metadata, OS mappings and GPU",
+  "latency_scope": "Tick wall time; save/load are in-memory engine Snapshot encode/hash/validate/restore, not filesystem durability latency",
+  "host_limits": [
+    "Shared Intel N97 host; concurrent compilation/verification contention during comparison. Not an exclusive CPU measurement or universal speedup.",
+    "Times include allocation instrumentation. Historical 51-sample probes are not reused as current evidence.",
+    "Sustained RSS includes the preallocated timing vector being paged in (8 MB for one million u64 samples), snapshot allocator retention and prior workload residue. Rising RSS alone is not a measured leak.",
+    "No GPU or physical-device performance claim."
+  ],
+  "baseline_revision": "1441a433a76aa3c8d0f507dfe370a5c9583882b1",
+  "after_runtime_rules_revision": "33c965f (resource/workshop optimization; later source changes are authoring, input, documentation and test fixes)",
+  "benchmark_source_sha256": "aae416f3f36e2c3a5ce737c9f528f9270d47f09686a36ee99da06a8dadc3a522",
+  "before_binary_sha256": "141a63b59f130813343100ad32a0a521be284225702f1c2da27d1589dda7f98e",
+  "after_binary_sha256": "38918599dd16cfb61b1f303802637a6cdeac3a4de46ff130c5608298df2c78e5",
+  "all_three_final_state_hashes_equal": true,
+  "reproduce": "cargo run --release --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin benchmark -- 50000",
+  "sustained_reproduce": "cargo run --release --locked --manifest-path games/automation-workshop/Cargo.toml --no-default-features --bin benchmark -- 1000000"
+}

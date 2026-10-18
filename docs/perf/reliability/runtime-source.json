@@ -1,0 +1,22 @@
+{
+  "recorded_revision": "d7c281f5e43935acc1546b745c6cf5df4bef6fd0",
+  "sha256": {
+    "Cargo.toml": "55a3343f9838937558a8a92ccccce935627e849d359c9ee466656e80517b4ca1",
+    "Cargo.lock": "789dc42fa9e165124045766ef5d6466ac2b2894ba7a60afc870ef533ada25cf8",
+    "src/runtime/resources.rs": "c4171ff7ac14d0a12f0d4e3eed3e344511e784a44d82b527d9bfb4266d3f7f75",
+    "games/automation-workshop/Cargo.lock": "56abbcf0b8e7b4e8640d331f01529ba7a1875bc94df232cdc7e4e2e79c8dc53d",
+    "games/automation-workshop/Cargo.toml": "c94b892a8326078d889b5a63b99d5ec4bf4d61968ab9f43639277c136980aba5",
+    "games/automation-workshop/assets/workshop.json": "60e20152990fc94c24eca47f765eea1ca344eeaed0b1bc3a68d949847572a27f",
+    "games/automation-workshop/src/bin/benchmark.rs": "aae416f3f36e2c3a5ce737c9f528f9270d47f09686a36ee99da06a8dadc3a522",
+    "games/automation-workshop/src/bin/server.rs": "dccc6d5d2767c36bdbfd18d2ee1d1f6f735897cfeefbdca2660e610b0afb752b",
+    "games/automation-workshop/src/bin/workshop.rs": "893e61476a09a77eace4e6d8af3ddd79c27588a8c7a8f53c4fff9640600517d5",
+    "games/automation-workshop/src/content.rs": "17a1f326bba104ef9710192ab07fa040374bc18f5fbe62231c0983a5d8d1324d",
+    "games/automation-workshop/src/lib.rs": "ee1f90320241d3ec2684ab2536a4f59bf38bd1ee5cae3adae1548e85d1d2a150",
+    "games/automation-workshop/src/main.rs": "9d2522b138564af07bc37fcecb2933a6f92784711bd5b63dab033890a5072f4d",
+    "games/automation-workshop/src/net.rs": "ec2537ecde1965c74ae44127b9d9a64e9a25a91002f58283970ddf704f8e511e",
+    "games/automation-workshop/src/persistence.rs": "d3849691bb0fda912a2bfc3ffee2042db5d04e2e42cac8be4d4bc6c3edb1dc4e",
+    "games/automation-workshop/src/platform.rs": "008310c976c60f45674e8d3203c48fbbd2f38caaaea578953c28e93e978aef20",
+    "games/automation-workshop/src/playtest.rs": "0993ba39cf7c40bf19b4739eaa311dfe2cba296291f7e8636d46c059b822fc25"
+  },
+  "note": "Compare these exact content and runtime bytes at the delivery revision. Measurements name their binaries separately. Benchmark/core workshop/resource sources have not changed since 33c965f; public CLI help was subsequently repaired."
+}

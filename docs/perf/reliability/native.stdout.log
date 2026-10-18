@@ -1,0 +1,4 @@
+{"frame":27,"width":1280,"height":768,"path":"/tmp/blueengine-workshop-wire-capture/shot_00027.png"}
+{"frame":40,"width":1280,"height":768,"path":"/tmp/blueengine-workshop-wire-capture/shot_00040.png"}
+{"frame":90,"width":1280,"height":768,"path":"/tmp/blueengine-workshop-wire-capture/shot_00090.png"}
+workshop: {"authority":"fixed-tick game-owned Workshop::step","capacity":12,"definition":null,"game":"blueengine:automation-workshop","instance":"workshop:world-0001","inventory":{"workshop:coal":0,"workshop:gear":0,"workshop:ore":4,"workshop:plate":1,"workshop:wire":0},"machine":{"id":"workshop:machine-a","queue":[],"upgrades":["workshop:wire-tools"]},"queued_work":0,"reason":null,"release":"0.1.0","rule":null,"tick":104,"total_units":5}

@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "starting_main": "1441a433a76aa3c8d0f507dfe370a5c9583882b1",
+  "implementation_revision": "d7c281f5e43935acc1546b745c6cf5df4bef6fd0",
+  "review": "https://github.com/kevstermcgee/BlueEngine/pull/28",
+  "delivery_identity": "Final branch tip and hosted checks are reported on the PR. This evidence-only commit follows implementation_revision; runtime-source.json pins the delivered workload bytes.",
+  "reviewed_defects": {
+    "still_present": [
+      "feedback-only exact-tip push-CI deadlock",
+      "copied Odd Matter/Corner Clutch scripts and historical ownership allowlists",
+      "compound start contract truncation and stale hints",
+      "reserved-metadata scaffold rejection",
+      "unformatted starter output",
+      "shared 2D focus always true",
+      "muted audio panic can coexist with rendering success",
+      "cosmetic labels rejected by explicit tuning compatibility",
+      "full-state/inventory clones and redundant blocked retries"
+    ],
+    "already_fixed": [
+      "jump-height contract",
+      "offline 2D routing",
+      "async/long-function source navigation",
+      "Cargo freshness primitive",
+      "explicit browser retirement",
+      "atomic resource transactions",
+      "historically validated V1 migration",
+      "optional narrative atomic/stale-choice/save behavior"
+    ]
+  },
+  "focused_regressions": [
+    {
+      "suite": "nightly runner",
+      "passed": 34,
+      "clock": "accelerated fixtures",
+      "covers": "missing/pending/success/failed/cancelled/wrong SHA/event/workflow; validated feedback-only current tip with no push run; code not acknowledged; retries reuse decision; durable receipts; own clean worktree cleanup"
+    },
+    {
+      "suite": "tooling/workflow/discovery/learning/start",
+      "passed": 191,
+      "skipped": 2,
+      "note": "Focused batch; later complete Python batch passed as well. Windows-only path fixture failure was subsequently repaired using Git path separators.",
+      "executed": 193
+    },
+    {
+      "suite": "storyless factual publication",
+      "passed": 61
+    },
+    {
+      "suite": "final intake reading budgets",
+      "passed": 16
+    },
+    {
+      "suite": "shared native X11 and XTest focus / held-key and mouse release",
+      "passed": 1,
+      "physical_hardware": false
+    },
+    {
+      "suite": "resource transactions",
+      "passed": 11
+    },
+    {
+      "suite": "workshop headless unit/integration",
+      "passed": 27
+    },
+    {
+      "suite": "parallel utility timeout/memory/deadline budgets",
+      "passed": 3
+    },
+    {
+      "suite": "all six generated starter first-format gates",
+      "passed": 1
+    },
+    {
+      "suite": "publication declarations",
+      "files_checked": 926,
+      "ok": true
+    }
+  ],
+  "tooling": "tooling.json: 21 declared editable consumers; both reproduced pin-only plans are now 8 Python commands and zero Cargo commands. New declarations inherit checks. Child Cargo/project manifests retain full boundary checks.",
+  "persistent_game": {
+    "game": "Automation Workshop",
+    "single_player": true,
+    "content": "cf811f3889685b31",
+    "goal": "deliver 3 wire",
+    "native_goal_capture": "goal.png",
+    "pre_delivery_saved_capture": "saved-wire.png",
+    "native_recovery_upgrade_capture": "workshop.png",
+    "actual_save": "captured-progress.be2save",
+    "capture_frames": [
+      27,
+      40,
+      90
+    ],
+    "saved_tick": 25,
+    "goal_frame": 40,
+    "goal_frame_authority_tick": 35,
+    "script": "smelt@0,upgrade_next@10,upgrade@11,smelt@12,queue@20,item@21,item@22,item@23,item@24,save@25,deliver@30,load@31,deliver@35,deliver@36,deliver@37",
+    "capture_command": "python3 tools/xcapture.py /PATH/TO/automation-workshop --frames 27,40,90 --size 1280x768 --out /tmp/new-capture -- --script 'smelt@0,upgrade_next@10,upgrade@11,smelt@12,queue@20,item@21,item@22,item@23,item@24,save@25,deliver@30,load@31,deliver@35,deliver@36,deliver@37' --save-dir /tmp/new-save-dir",
+    "migration": "tests/migration.rs: cosmetic edits, historical integrity, in-flight work, tuning rejection, repeated destinations and failed writes"
+  },
+  "playtest": {
+    "correct": "8 seeds x 10000 ticks: all pass, serial and two-worker final hashes identical",
+    "parallel_seconds": 5.033,
+    "serial_seconds": 8.969,
+    "fault": "seed 7 duplicate gather fails tick 28; exact retained trace replays same hash 62b71b0d66bac721",
+    "fault_replay": "/PATH/TO/workshop replay-playtest docs/perf/reliability/duplicate-fault.trace.json",
+    "budgets": "2 workers, 128 MiB address space each, 30 s/run, 120 s total. Linux enforcement. Reports and complete failure trace retained."
+  },
+  "performance": {
+    "environment": "environment.json",
+    "before": "release-before.json",
+    "after": "release-after.json",
+    "sustained": "release-sustained-million.json",
+    "comparison": "same 50000-tick release harness, 2000 warmup ticks, identical final state hashes for blocked/active/mixed",
+    "blocked_tick_allocation_calls_before": 1000000000,
+    "blocked_tick_allocation_calls_after": 0,
+    "sustained_total_measured_ticks": 3000000,
+    "save_load_samples_per_workload": 400,
+    "limits": "Shared CPU contention, allocator instrumentation, RSS includes sample-vector paging and retained allocator pages. Save/load latency is in-memory snapshot processing, not durable file writes. No universal performance or leak-free claim."
+  },
+  "authoring": {
+    "report": "authoring-trial.json",
+    "status": "fresh agent completed paid recipe/upgrade and public-action acceptance with no engine implementation reads",
+    "timed_build_and_test_seconds": 4.575813806965016,
+    "observed_window_seconds": 107.542641,
+    "total_elapsed_seconds": null,
+    "tokens": null,
+    "model_active_seconds": null,
+    "waiting_infrastructure_seconds": null,
+    "timing_limit": "Observed window starts after initial docs/intake reads. Warm shared target. Missing telemetry is not inferred. One help failure retained and repaired."
+  },
+  "gate_status_at_evidence_recording": {
+    "linux_canonical": "running: full Python batch and default/headless/offline Rust stages passed; final PR checks are authoritative for delivery tip",
+    "windows_canonical": "prior push failed only new test Git-path separator fixture; repaired and focused test passed; rerun required at final tip",
+    "windows_package": "prior implementation tip 1c66d85 passed native Workshop package/smoke and Inno installer build; final-tip rerun required",
+    "cross_typecheck": "Windows default/headless all targets passed; does not replace Windows execution",
+    "physical_keyboard_mouse_controller": "unavailable",
+    "audible_hardware": "unavailable",
+    "manual_windows_install_upgrade_uninstall": "unavailable",
+    "subjective_playtest": "not performed"
+  },
+  "remaining_defects": [
+    "Macroquad 0.4.14 eagerly opens quad-snd native audio context despite muted intent; native worker health is unobservable through public API. Actual muted Linux capture still logs ALSA worker panic. Rendering evidence is explicitly separate."
+  ],
+  "subsequent_milestones": [
+    "custom netplay snapshot/lifecycle and interest scheduling",
+    "installed-player signed updater with rollback",
+    "world-region save/streaming",
+    "advanced optional narrative"
+  ],
+  "public_player_feedback": "No real public-review-driven improvement loop claimed. Provenance and untrusted observation policy preserved.",
+  "authorization": "Isolated review branch and draft PR only. No merge, publication, deployment or live schedule change."
+}

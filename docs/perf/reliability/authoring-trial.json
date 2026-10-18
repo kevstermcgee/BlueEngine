@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "exercise": "fresh-agent bounded workshop recipe and upgrade authoring",
+  "status": "passed",
+  "engine_checkout": "/home/kevin/BlueEngine-persistent-reliability",
+  "engine_revision": "1441a433a76aa3c8d0f507dfe370a5c9583882b1",
+  "workflow_task": "0f2a155fd9d2",
+  "scratch_project": "/tmp/be-author-trial-20261018-recycling/automation-workshop",
+  "artifacts_retained": true,
+  "source_read_policy": {
+    "engine_implementation_reads": [],
+    "parent_source_edits": [],
+    "published": false,
+    "pushed": false,
+    "agents_spawned": false
+  },
+  "read_paths": [
+    "AGENTS.md",
+    "docs/GAME_AUTHORING_ENTRY.md",
+    "docs/WORKSHOP.md",
+    "games/automation-workshop/AGENTS.md",
+    "games/automation-workshop/assets/workshop.json",
+    "games/automation-workshop/Cargo.toml",
+    "games/automation-workshop/scripts/tooling.json",
+    "games/automation-workshop/tests/draw_wire.rs",
+    "games/automation-workshop/tests/transactions.rs"
+  ],
+  "file_discovery": [
+    "rg --files games/automation-workshop/tests"
+  ],
+  "commands": [
+    {
+      "argv": [
+        "cat",
+        "AGENTS.md"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/be2.py",
+        "start",
+        "Add a plate recycling recipe and a recycling upgrade to the automation workshop",
+        "--kind",
+        "change-game",
+        "--project",
+        "games/automation-workshop",
+        "--compact"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "cat",
+        "docs/GAME_AUTHORING_ENTRY.md",
+        "docs/WORKSHOP.md",
+        "games/automation-workshop/AGENTS.md"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "cat",
+        "games/automation-workshop/assets/workshop.json",
+        "games/automation-workshop/Cargo.toml",
+        "games/automation-workshop/scripts/tooling.json"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "rg",
+        "--files",
+        "games/automation-workshop/tests"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/game_tooling.py",
+        "migrate",
+        "--help"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "cat",
+        "games/automation-workshop/tests/draw_wire.rs",
+        "games/automation-workshop/tests/transactions.rs"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "/srv/storage/cache/cargo/default/itest/workshop",
+        "--help"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 1,
+      "note": "CLI emitted command usage; no --help option. Discovery only."
+    },
+    {
+      "operation": "python3 copytree",
+      "source": "/home/kevin/BlueEngine-persistent-reliability/games/automation-workshop",
+      "destination": "/tmp/be-author-trial-20261018-recycling/automation-workshop",
+      "excluded": [
+        "target",
+        "dist",
+        ".git"
+      ],
+      "exit_code": 0
+    },
+    {
+      "operation": "python3 scratch-only edit",
+      "files": [
+        "Cargo.toml",
+        "scripts/tooling.json",
+        "../recycling-additions.json"
+      ],
+      "note": "Absolute engine dependency and tooling root; authored recipe/upgrade additions.",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/game_tooling.py",
+        "migrate",
+        "/tmp/be-author-trial-20261018-recycling/automation-workshop"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "/srv/storage/cache/cargo/default/itest/workshop",
+        "edit",
+        "/tmp/be-author-trial-20261018-recycling/automation-workshop/assets/workshop.json",
+        "/tmp/be-author-trial-20261018-recycling/recycling-additions.json"
+      ],
+      "cwd": "/tmp/be-author-trial-20261018-recycling/automation-workshop",
+      "exit_code": 0,
+      "before": "cf811f3889685b31",
+      "after": "654213d0ba079637"
+    },
+    {
+      "argv": [
+        "/srv/storage/cache/cargo/default/itest/workshop",
+        "validate",
+        "/tmp/be-author-trial-20261018-recycling/automation-workshop/assets/workshop.json"
+      ],
+      "cwd": "/tmp/be-author-trial-20261018-recycling/automation-workshop",
+      "exit_code": 0,
+      "result": {
+        "ok": true,
+        "version": 2,
+        "content": "654213d0ba079637"
+      }
+    },
+    {
+      "operation": "python3 write acceptance test",
+      "path": "/tmp/be-author-trial-20261018-recycling/automation-workshop/tests/recycling.rs",
+      "exit_code": 0
+    },
+    {
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--profile",
+        "itest",
+        "--manifest-path",
+        "/tmp/be-author-trial-20261018-recycling/automation-workshop/Cargo.toml",
+        "--no-default-features",
+        "--test",
+        "recycling",
+        "--",
+        "--nocapture"
+      ],
+      "started_at": "2026-10-18T18:44:55.910665+00:00",
+      "wall_seconds": 4.575813806965016,
+      "exit_code": 0,
+      "log": "/tmp/be-author-trial-20261018-recycling/focused-test.log",
+      "cwd": "/tmp/be-author-trial-20261018-recycling/automation-workshop",
+      "environment": {
+        "CARGO_TARGET_DIR": "/srv/storage/cache/cargo/default"
+      }
+    },
+    {
+      "argv": [
+        "/srv/storage/cache/cargo/default/itest/workshop",
+        "inspect",
+        "workshop:machine-a"
+      ],
+      "cwd": "/tmp/be-author-trial-20261018-recycling/automation-workshop",
+      "exit_code": 0,
+      "wall_seconds": 0.0027587199583649635,
+      "note": "Idle machine; new active-rule inspect also asserted in focused test."
+    },
+    {
+      "argv": [
+        "python3",
+        "tools/game_tooling.py",
+        "check",
+        "/tmp/be-author-trial-20261018-recycling/automation-workshop"
+      ],
+      "cwd": "/home/kevin/BlueEngine-persistent-reliability",
+      "exit_code": 0
+    },
+    {
+      "operation": "python3 hash comparison and JSON evidence write",
+      "output": "/tmp/blueengine-authoring-trial.json",
+      "exit_code": 0
+    }
+  ],
+  "authored": {
+    "recipe": {
+      "id": "workshop:recycle-plate",
+      "inputs": [
+        [
+          "workshop:plate",
+          1
+        ]
+      ],
+      "outputs": [
+        [
+          "workshop:ore",
+          1
+        ]
+      ],
+      "duration_ticks": 8,
+      "required_upgrade": "workshop:recycling-tools"
+    },
+    "upgrade": {
+      "id": "workshop:recycling-tools",
+      "cost": [
+        [
+          "workshop:plate",
+          1
+        ],
+        [
+          "workshop:coal",
+          1
+        ]
+      ],
+      "duration_divisor": 2
+    }
+  },
+  "repairs": [
+    {
+      "scope": "scratch only",
+      "action": "Replaced relative vesper3d dependency and tooling engine root with absolute engine checkout; migrated tooling pin."
+    }
+  ],
+  "failed_attempts": [
+    {
+      "command": "workshop --help",
+      "exit_code": 1,
+      "effect": "None; usage returned and subsequent commands used listed syntax."
+    }
+  ],
+  "verification": {
+    "focused_test": "recycling_requires_paid_upgrade_and_resumes_blocked_production_exactly",
+    "passed": 1,
+    "failed": 0,
+    "profile": "itest",
+    "headless": true,
+    "checks": [
+      "Paid upgrade gate and debit",
+      "Upgrade scoped to selected machine",
+      "Public-command smelting produces input plates",
+      "Recycle plate consumes escrow and returns one ore",
+      "Upgrade reduces eight ticks to four",
+      "Active recipe inspection resolves new definition",
+      "Engine Snapshot mid-job restore equals uninterrupted capture/hash",
+      "Replayed saved serial does not duplicate gathering",
+      "Full inventory blocks output and retains job",
+      "Engine Snapshot blocked restore continues identically",
+      "Public delivery frees output space and completes exactly once",
+      "Replayed recovery delivery does not duplicate output"
+    ],
+    "test_log": "/tmp/be-author-trial-20261018-recycling/focused-test.log",
+    "shipping_claimed": false
+  },
+  "timing": {
+    "observed_window_start_utc": "2026-10-18T18:44:08+00:00",
+    "observed_window_end_utc": "2026-10-18T18:45:55.542641+00:00",
+    "observed_elapsed_seconds": 107.542641,
+    "observed_window_note": "Clock observation begins after initial workflow/docs reads; earlier wall time unavailable.",
+    "model_active_seconds": null,
+    "model_active_note": "Tooling exposes no model-active telemetry; not estimated.",
+    "build_check_seconds": 4.575813806965016,
+    "build_check_scope": "Timed cargo focused compilation and headless acceptance subprocess; minor CLI checks not separately instrumented.",
+    "waiting_infrastructure_seconds": null,
+    "waiting_infrastructure_note": "No separately measured infrastructure wait; no lock/network wait observed in build log."
+  },
+  "token_usage": {
+    "status": "unavailable",
+    "value": null,
+    "note": "No actual model-token telemetry supplied; not estimated.",
+    "uncached_input_tokens": null,
+    "cached_input_tokens": null,
+    "output_tokens": null
+  },
+  "friction": [
+    {
+      "kind": "CLI discovery",
+      "detail": "workshop --help returns exit 1 while printing commands; semantic edit, validate, and public-action acceptance succeeded without engine source."
+    }
+  ],
+  "comparison_against_current_parent": [
+    "Cargo.toml",
+    "assets/workshop.json",
+    "scripts/tooling.json",
+    "src/bin/workshop.rs",
+    "src/lib.rs",
+    "src/playtest.rs",
+    "tests/migration.rs",
+    "tests/recycling.rs"
+  ],
+  "changes": [
+    "Cargo.toml",
+    "assets/workshop.json",
+    "scripts/tooling.json",
+    "tests/recycling.rs"
+  ],
+  "additional_artifacts": [
+    "/tmp/be-author-trial-20261018-recycling/recycling-additions.json",
+    "/tmp/be-author-trial-20261018-recycling/focused-test.log",
+    "/tmp/be-author-trial-20261018-recycling/focused-test-result.json",
+    "/tmp/be-author-trial-20261018-recycling/inspect.log"
+  ],
+  "comparison_note": "Current parent comparison also differs in src/bin/workshop.rs, src/lib.rs, src/playtest.rs, tests/migration.rs. This agent only copied those files; it did not edit them. Parent checkout may have concurrent work, so current-parent hash comparison is not an authored-change baseline.",
+  "follow_up": "Root milestone subsequently repaired workshop --help exit status; the recorded failed authoring attempt remains historical.",
+  "checkout_identity_note": "Recorded HEAD was 1441a433 while the milestone implementation was already present as working-tree changes. This is an exercise of that in-progress repaired workflow, not of pristine historical main. Copied scratch sources and authored test/additions were retained; no complete token or initial-read timing telemetry was available.",
+  "retained_authoring_inputs": [
+    "authoring-additions.json",
+    "authoring-acceptance.rs"
+  ]
+}
