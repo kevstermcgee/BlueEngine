@@ -144,6 +144,19 @@ mod platform {
                 267 => 0x22,
                 268 => 0x24,
                 269 => 0x23,
+                280 => 0x14,
+                281 => 0x91,
+                282 => 0x90,
+                283 => 0x2c,
+                284 => 0x13,
+                348 => 0x5d,
+                330 => 0x6e,
+                331 => 0x6f,
+                332 => 0x6a,
+                333 => 0x6d,
+                334 => 0x6b,
+                335 => 0x0d,
+                336 => 0xbb,
                 290..=313 => 0x70 + code - 290,
                 320..=329 => 0x60 + code - 320,
                 340 => 0xa0,
@@ -282,11 +295,11 @@ mod platform {
                     !display.is_null(),
                     "BlueEngine needs an X11 display for focus protection"
                 );
-                let title = CString::new(window_title_for(title)).unwrap();
+                let search_title = CString::new(window_title_for(title)).unwrap();
                 // Scope error suppression to read-only discovery on the client
                 // thread, draining its replies before restoring Xlib's handler.
                 let previous = (api.XSetErrorHandler)(Some(ignore_disappearing_window));
-                let found = find_window(&api, display, &title);
+                let found = find_window(&api, display, &search_title);
                 (api.XSync)(display, 0);
                 (api.XSetErrorHandler)(previous);
                 let window = found.expect("Cannot find BlueEngine's native X11 window");
@@ -333,6 +346,19 @@ mod platform {
                 267 => 0xff56,
                 268 => 0xff50,
                 269 => 0xff57,
+                280 => 0xffe5,
+                281 => 0xff14,
+                282 => 0xff7f,
+                283 => 0xff61,
+                284 => 0xff13,
+                348 => 0xff67,
+                330 => 0xffae,
+                331 => 0xffaf,
+                332 => 0xffaa,
+                333 => 0xffad,
+                334 => 0xffab,
+                335 => 0xff8d,
+                336 => 0xffbd,
                 290..=314 => 0xffbe + code - 290,
                 320..=329 => 0xffb0 + code - 320,
                 340 => 0xffe1,
