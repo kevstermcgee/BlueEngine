@@ -50,6 +50,10 @@ jobs:
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress -y
+      - name: Shared Win32 focus and generated-client native hotkeys
+        if: runner.os == 'Windows'
+        # Real foreground windows and SendInput; software input does not certify physical devices.
+        run: cargo test --locked --profile itest --lib viewer::game_input::windows_tests::native_windows_focus_gates_generated_hotkeys -- --ignored --exact --nocapture
       # Same gate list and optimized dependency profile as local full verification.
       # Cache compilation only: every check and every test still executes.
       - name: Full engine verification
@@ -57,10 +61,6 @@ jobs:
       - name: Shared X11 focus and outside-window input releases
         if: runner.os == 'Linux'
         run: xvfb-run -a cargo test --locked --profile itest --no-default-features --features two-d --lib viewer::focus::platform::tests::native_focus_uses_real_window_without_a_gl_context -- --ignored --exact
-      - name: Shared Win32 focus and generated-client native hotkeys
-        if: runner.os == 'Windows'
-        # Real foreground windows and SendInput; software input does not certify physical devices.
-        run: cargo test --locked --profile itest --lib viewer::game_input::windows_tests::native_windows_focus_gates_generated_hotkeys -- --ignored --exact --nocapture
       - run: cargo build --release --locked
       - run: cargo build --release --locked --no-default-features --features physics,networking --bin be2-headless
 
