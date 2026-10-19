@@ -179,6 +179,7 @@ pub struct GameShell {
     settings_screen: bool,
     selection: usize,
     suppress: bool,
+    native_input_accepted: bool,
     actions: ShellActions,
 }
 impl Default for GameShell {
@@ -199,6 +200,7 @@ impl GameShell {
             settings_screen: false,
             selection: 0,
             suppress: false,
+            native_input_accepted: false,
             actions: ShellActions::default(),
             neutral_gate: super::focus::NeutralGate::default(),
             device_neutral: true,
@@ -236,13 +238,7 @@ impl GameShell {
             super::startup::save_fullscreen(self.fullscreen);
             self.suppress = true;
         }
-        if self.focus.active && self.actions.pause {
-            self.paused = !self.paused;
-            self.controls = false;
-            self.settings_screen = false;
-            self.suppress = true;
-            self.neutral_gate.observe(true, true, false);
-        }
+        self.apply_pause_action();
         if self.actions.diagnostics {
             self.diagnostics = !self.diagnostics;
         }
@@ -273,7 +269,8 @@ impl GameShell {
         let neutral = self.device_neutral
             && window_keys_neutral
             && observation.as_ref().is_none_or(|s| s.neutral);
-        self.suppress = !self.neutral_gate.observe(active, lost, neutral);
+        self.native_input_accepted = self.neutral_gate.observe(active, lost, neutral);
+        self.suppress = !self.native_input_accepted;
         self.actions = if self.device_input_allowed() {
             actions
         } else {
@@ -282,6 +279,22 @@ impl GameShell {
         if !self.focus.active || lost {
             self.paused = true;
         }
+    }
+    /// Handle the accepted pause edge, including the neutral boundary before resuming input.
+    /// Separate from window operations so adapter tests execute the same shell transition.
+    pub(crate) fn apply_pause_action(&mut self) {
+        if self.focus.active && self.actions.pause {
+            self.paused = !self.paused;
+            self.controls = false;
+            self.settings_screen = false;
+            self.suppress = true;
+            self.neutral_gate.observe(true, true, false);
+        }
+    }
+    /// The frame's focus/neutral decision before a shell action suppresses other device reads.
+    /// Only the adapter's explicit Start-to-restart convention needs this distinction.
+    pub(crate) fn native_input_allowed(&self) -> bool {
+        self.native_input_accepted
     }
     /// Whether device commands may be read, including in the game's focused pause menu.
     /// False during native focus loss, return-to-neutral and shell transitions. Unlike
@@ -303,6 +316,7 @@ impl GameShell {
             settings_screen: false,
             selection: 0,
             suppress,
+            native_input_accepted: false,
             actions: ShellActions::default(),
             neutral_gate: super::focus::NeutralGate::default(),
             device_neutral: true,
