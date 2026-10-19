@@ -78,8 +78,9 @@ impl ClientInput {
     pub fn frame_clock(&self) -> &FrameClock {
         &self.clock
     }
-    /// Poll once per frame, including during pause. Standard clients use `begin_frame` so
-    /// the shell's native observation also gates game-level keys and menu actions.
+    /// Low-level device poll: `focused` is the host's own accepted focus decision. This does
+    /// not observe native focus or apply the shell's return-to-neutral gate. Standard clients,
+    /// including custom modal menus, use [`ClientInput::begin_frame`] once every frame.
     pub fn poll(&mut self, focused: bool) {
         self.focused = focused;
         if let Some(p) = &mut self.backend {
@@ -149,8 +150,9 @@ impl ClientInput {
     ///
     /// `capture_cursor` is whether the game wants the mouse captured while unpaused and focused. Pass
     /// `true` while playing and `false` on a title, menu or game-over screen so the cursor is released
-    /// and clickable (an online session passes "connected"). Advanced hosts may poll and call
-    /// `shell_actions` separately to route their own modal screens.
+    /// and clickable (an online session passes "connected"). Custom modal screens use `false`
+    /// and read `navigation` / `menu_step` afterwards, retaining shared native focus acceptance.
+    /// Hosts using low-level `poll` / `shell_actions` own the equivalent focus and neutral gate.
     pub fn begin_frame(&mut self, shell: &mut GameShell, capture_cursor: bool, focused: bool) {
         self.begin_frame_with_keyboard(shell, capture_cursor, focused, None);
     }
@@ -192,7 +194,11 @@ impl ClientInput {
         self.poll_devices(focused, source);
         self.latch_typing();
         shell.device_neutral(
-            self.frame.neutral() && self.keyboard.as_ref().is_none_or(|k| k.previous.is_empty()),
+            self.frame.neutral()
+                && self
+                    .keyboard
+                    .as_ref()
+                    .is_none_or(|k| k.previous.is_empty() && k.pressed.is_empty()),
         );
         update_shell(
             shell,
@@ -753,6 +759,67 @@ mod tests {
             },
         );
         assert!(shell.device_input_allowed());
+    }
+    #[test]
+    fn native_taps_are_drained_before_the_return_to_neutral_boundary() {
+        use super::super::focus::Sample;
+        let mut input = input();
+        let mut shell = GameShell::in_state(false, false, false);
+        let native_value = std::cell::Cell::new(0);
+        let source = |vk| if vk == 0x74 { native_value.get() } else { 0 };
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: false,
+                lost: true,
+                neutral: true,
+            },
+        );
+        // GetAsyncKeyState reports a tap that was released before this rendered frame.
+        native_value.set(1);
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(!input.pressed(KeyCode::F5) && !shell.device_input_allowed());
+        native_value.set(0);
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(
+            !shell.device_input_allowed(),
+            "the first frame with no held or queued keys is the boundary"
+        );
+        native_value.set(0x8000u16 as i16);
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: false,
+            },
+        );
+        assert!(
+            input.pressed(KeyCode::F5),
+            "a fresh press after neutrality is accepted"
+        );
     }
     #[test]
     fn a_native_frame_reports_a_restart_key_edge_exactly_once() {
