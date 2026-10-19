@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Import public wiki reviews from current GitHub issues; never execute review text."""
+"""Store account-free player reviews and reconcile legacy issues; never execute review text."""
 from __future__ import annotations
 
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
@@ -11,7 +11,7 @@ import re
 import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 ROOT = Path(__file__).resolve().parent.parent
 REPOSITORY = "kevstermcgee/BlueEngine"
@@ -154,9 +154,65 @@ def record_from_issue(issue, games, repository=REPOSITORY):
             "version": version, "rating": int(rating), "enjoyed": enjoyed, "disliked": disliked}
 
 
+def submission_id(value):
+    if not isinstance(value, str):
+        raise FeedbackError("Invalid submission ID")
+    try:
+        parsed = UUID(value)
+    except ValueError as error:
+        raise FeedbackError("Invalid submission ID") from error
+    if str(parsed) != value or parsed.version != 4:
+        raise FeedbackError("Submission ID must be a canonical UUID v4")
+    return value
+
+
+def submission_source(identifier, repository=REPOSITORY):
+    return f"https://raw.githubusercontent.com/{repository}/main/{DIRECTORY.as_posix()}/reviews/{identifier}.json"
+
+
+def record_from_submission(payload, games, created_at=None):
+    """Validate public input; only the service supplies the receipt time and game title."""
+    required = {"format", "submission_id", "game", "rating"}
+    optional = {"name", "version", "enjoyed", "disliked"}
+    if not isinstance(payload, dict) or not required <= payload.keys() or payload.keys() - required - optional:
+        raise FeedbackError("Unexpected submission fields")
+    if payload["format"] != FORMAT:
+        raise FeedbackError("Unknown review format")
+    identifier = submission_id(payload["submission_id"])
+    slug, rating = payload["game"], payload["rating"]
+    if not isinstance(slug, str) or not SLUG.fullmatch(slug) or slug not in games:
+        raise FeedbackError("Unknown game slug")
+    if type(rating) is not int or not 1 <= rating <= 10:
+        raise FeedbackError("Rating must be an integer from 1 to 10")
+    name = text(payload.get("name", ""), 80, optional=True)
+    version = text(payload.get("version", ""), 160, optional=True) or "Not specified"
+    enjoyed = text(payload.get("enjoyed", ""), 2000, optional=True)
+    disliked = text(payload.get("disliked", ""), 2000, optional=True)
+    if not enjoyed and not disliked:
+        raise FeedbackError("Describe at least one part of the experience")
+    received = timestamp(created_at if created_at is not None else datetime.now(timezone.utc).isoformat())
+    return {"schema_version": 2, "submission_id": identifier, "source_url": submission_source(identifier),
+            "name": name, "created_at": received, "updated_at": received,
+            "game": slug, "game_title": games[slug], "version": version,
+            "rating": rating, "enjoyed": enjoyed, "disliked": disliked}
+
+
 def validate_record(record, games, repository=REPOSITORY):
     if not isinstance(record, dict):
         raise FeedbackError("Invalid stored review")
+    if type(record.get("schema_version")) is int and record["schema_version"] == 2:
+        expected = {"schema_version", "submission_id", "source_url", "name", "created_at", "updated_at",
+                    "game", "game_title", "version", "rating", "enjoyed", "disliked"}
+        if set(record) != expected:
+            raise FeedbackError("Unexpected stored review fields")
+        payload = {key: record[key] for key in ("submission_id", "game", "name", "version", "rating", "enjoyed", "disliked")}
+        canonical = record_from_submission({"format": FORMAT, **payload}, games, record["created_at"])
+        timestamp(record["updated_at"])
+        canonical["updated_at"] = record["updated_at"]
+        canonical["source_url"] = submission_source(record["submission_id"], repository)
+        if record != canonical:
+            raise FeedbackError("Invalid stored review source or normalized content")
+        return record
     expected_keys = {"schema_version", "issue_number", "source_url", "author", "created_at", "updated_at",
                      "game", "game_title", "version", "rating", "enjoyed", "disliked"}
     if set(record) != expected_keys or type(record["schema_version"]) is not int or record["schema_version"] != 1:
@@ -181,13 +237,19 @@ def load_records(root, repository=REPOSITORY):
     root, games = Path(root), game_catalog(root)
     result = []
     for path in sorted((root / DIRECTORY / "reviews").glob("*.json")):
-        if path.is_symlink() or not re.fullmatch(r"[1-9][0-9]*\.json", path.name) or path.stat().st_size > 25000:
+        if path.is_symlink() or not path.is_file() or path.stat().st_size > 25000:
             raise FeedbackError("Invalid stored review file")
         record = validate_record(json.loads(path.read_text(encoding="utf-8")), games, repository)
-        if path.stem != str(record["issue_number"]):
-            raise FeedbackError("Stored review filename does not match issue")
+        identifier = record["submission_id"] if record["schema_version"] == 2 else str(record["issue_number"])
+        if path.stem != identifier:
+            raise FeedbackError("Stored review filename does not match identity")
         result.append(record)
     return result
+
+
+def record_order(record):
+    identifier = record["submission_id"] if record["schema_version"] == 2 else f"{record['issue_number']:020d}"
+    return record["created_at"], identifier
 
 
 def summary(records):
@@ -196,7 +258,7 @@ def summary(records):
         grouped.setdefault(record["game"], []).append(record)
     games = {}
     for slug, reviews in sorted(grouped.items()):
-        reviews.sort(key=lambda row: (row["created_at"], row["issue_number"]), reverse=True)
+        reviews.sort(key=record_order, reverse=True)
         games[slug] = {"count": len(reviews), "average": round(sum(row["rating"] for row in reviews) / len(reviews), 2),
                        "reviews": reviews[:3]}
     return {"schema_version": 1, "games": games}
@@ -210,7 +272,7 @@ def public_feeds(records, games):
     return {
         slug: {"schema_version": 1, "game": slug, "count": len(reviews),
                "average": round(sum(row["rating"] for row in reviews) / len(reviews), 2) if reviews else None,
-               "reviews": sorted(reviews, key=lambda row: (row["created_at"], row["issue_number"]), reverse=True)}
+               "reviews": sorted(reviews, key=record_order, reverse=True)}
         for slug, reviews in sorted(grouped.items())
     }
 
@@ -346,14 +408,39 @@ def sync(root, github, issue_number=None):
             "public_feeds_changed": feeds_changed, "reviews": len(records)}
 
 
+def import_submission(root, payload, created_at=None):
+    """Add one immutable account-free review; a retry retains its original receipt time."""
+    root, games = Path(root), game_catalog(root)
+    record = record_from_submission(payload, games, created_at)
+    directory = root / DIRECTORY / "reviews"
+    if directory.is_symlink():
+        raise FeedbackError("Invalid stored review directory")
+    path = directory / f"{record['submission_id']}.json"
+    # Validate all current records and destinations before adding a new one.
+    load_records(root)
+    public_feed_paths(root)
+    imported = 0
+    if path.exists():
+        existing = validate_record(json.loads(path.read_text(encoding="utf-8")), games)
+        expected = {**record, "created_at": existing["created_at"], "updated_at": existing["updated_at"]}
+        if existing != expected:
+            raise FeedbackError("Submission ID already belongs to different feedback")
+    else:
+        imported = int(atomic_json(path, record))
+    records = load_records(root)
+    return {"imported": imported, "summary_changed": atomic_json(root / DIRECTORY / "summary.json", summary(records)),
+            "public_feeds_changed": write_public_feeds(root, records, games), "reviews": len(records),
+            "submission_id": record["submission_id"]}
+
+
 def context(root, *, game=None, maximum=14000):
     """Bounded, source-cited data for design/build/review; raw opinions never become engine commands."""
     records = load_records(root)
-    ordered = sorted(records, key=lambda row: (row["game"] == game, row["updated_at"], row["issue_number"]), reverse=True)
+    ordered = sorted(records, key=lambda row: (row["game"] == game, row["updated_at"], record_order(row)[1]), reverse=True)
     selected = []
     for record in ordered[:24]:
         selected.append({key: (value[:600] + "…" if key in ("enjoyed", "disliked") and len(value) > 600 else value)
-                         for key, value in record.items() if key != "author"})
+                         for key, value in record.items() if key not in ("author", "name")})
         document = {"schema_version": 1, "total_reviews": len(records), "reviews": selected}
         if len(json.dumps(document, ensure_ascii=True)) > maximum:
             selected.pop()
@@ -381,6 +468,9 @@ def main(argv=None):
     selection = command.add_mutually_exclusive_group(required=True)
     selection.add_argument("--issue", type=int)
     selection.add_argument("--all", action="store_true")
+    command = commands.add_parser("import", help="Import a received account-free JSON submission")
+    command.add_argument("submission", type=Path)
+    command.add_argument("--created-at", help="Trusted service receipt time; never take this from public input")
     commands.add_parser("check", help="Validate stored records, deterministic summary and public game feeds")
     commands.add_parser("context", help="Print bounded player experience data for game planning")
     args = parser.parse_args(argv)
@@ -389,6 +479,10 @@ def main(argv=None):
             if args.issue is not None and args.issue < 1:
                 raise FeedbackError("Issue number must be positive")
             result = sync(args.root, GitHub(args.repository), args.issue)
+        elif args.command == "import":
+            if args.submission.stat().st_size > 25000:
+                raise FeedbackError("Submission exceeds the limit")
+            result = import_submission(args.root, json.loads(args.submission.read_text(encoding="utf-8")), args.created_at)
         elif args.command == "check":
             records = load_records(args.root)
             actual = json.loads((args.root / DIRECTORY / "summary.json").read_text(encoding="utf-8"))

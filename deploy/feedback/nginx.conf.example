@@ -1,0 +1,42 @@
+# Replace this example hostname and certificate paths with the deployed HTTPS host.
+# This belongs inside nginx's http context. Provision valid TLS certificates first.
+limit_req_zone $binary_remote_addr zone=blueengine_feedback:1m rate=6r/m;
+
+server {
+    listen 443 ssl;
+    server_name feedback.example.com;
+    ssl_certificate /etc/letsencrypt/live/feedback.example.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/feedback.example.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    # Keep reviewer text, addresses and request query strings out of proxy logs.
+    access_log off;
+    error_log /dev/null crit;
+    client_max_body_size 20k;
+    client_header_timeout 10s;
+    client_body_timeout 10s;
+
+    location = /feedback {
+        limit_req zone=blueengine_feedback burst=3 nodelay;
+        limit_req_status 429;
+        proxy_pass http://127.0.0.1:8091;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 15s;
+        proxy_read_timeout 120s;
+        proxy_set_header Host $host;
+        proxy_set_header Connection close;
+        proxy_set_header X-Forwarded-For "";
+        proxy_set_header X-Real-IP "";
+    }
+
+    location = /health {
+        proxy_pass http://127.0.0.1:8091;
+        proxy_read_timeout 10s;
+        proxy_set_header Host $host;
+        proxy_set_header Connection close;
+        proxy_set_header X-Forwarded-For "";
+        proxy_set_header X-Real-IP "";
+    }
+
+    location / { return 404; }
+}

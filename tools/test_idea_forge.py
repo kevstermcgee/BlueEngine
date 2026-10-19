@@ -198,11 +198,12 @@ class SupervisorTests(unittest.TestCase):
 
     def player_review(self):
         from tools import player_feedback
-        from tools.test_player_feedback import issue, body
+        from tools.test_player_feedback import submission
         directory = self.engine / player_feedback.DIRECTORY
         player_feedback.atomic_json(directory / "games.json", {"schema_version": 1, "games": {"rule-relay": "Rule Relay"}})
-        record = player_feedback.record_from_issue(issue(body=body(enjoyed="The previews make every move understandable.")), {"rule-relay": "Rule Relay"})
-        player_feedback.atomic_json(directory / "reviews/3.json", record)
+        record = player_feedback.record_from_submission(
+            submission(enjoyed="The previews make every move understandable."), {"rule-relay": "Rule Relay"})
+        player_feedback.atomic_json(directory / "reviews" / f"{record['submission_id']}.json", record)
         return record
 
     def test_player_experience_reaches_concept_and_is_frozen_for_retry(self):
@@ -216,7 +217,7 @@ class SupervisorTests(unittest.TestCase):
         with patch.object(self.worker, "agent", side_effect=agent):
             self.worker.generate()
         original = self.worker.player_experience()
-        (self.engine / "docs/player-feedback/reviews/3.json").unlink()
+        (self.engine / "docs/player-feedback/reviews" / f"{record['submission_id']}.json").unlink()
         self.assertEqual(self.worker.player_experience(), original)
         self.assertTrue((self.directory / "player-feedback.json").is_file())
 
