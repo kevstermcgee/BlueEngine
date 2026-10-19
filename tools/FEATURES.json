@@ -3459,7 +3459,7 @@
       ],
       "depends_on": []
     },
-    "authoritative_playtesting": {
+    "playtesting": {
       "note": "Bounded headless gameplay tests use game-owned adapters around Workshop commands and Afterpull Intent, sharing only process budgets, source/binary identity, evidence and replay orchestration. Direct progress/recovery and undo/transition invariants detect injected stalls or corruption. Headless evidence does not certify rendering, networking, physical input, audio or enjoyment.",
       "files": [
         "tools/playtest.py",

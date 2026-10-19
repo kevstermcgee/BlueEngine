@@ -28,9 +28,9 @@ def compact_bytes(packet):
 
 class PublicDiscoveryTests(unittest.TestCase):
     def test_playtesting_and_focus_discover_shared_owners(self):
-        packet = workflow.context(ROOT, 'authoritative_playtesting', level=3)
+        packet = workflow.context(ROOT, 'playtesting', level=3)
         feature = packet['matches'][0]
-        self.assertEqual(feature['id'], 'authoritative_playtesting')
+        self.assertEqual(feature['id'], 'playtesting')
         self.assertIn('docs/PLAYTESTING.md', feature['read_first'])
         self.assertIn('games/afterpull/src/lib.rs', json.dumps(feature))
         focus = workflow.context(ROOT, 'game_presentation', level=3)['matches'][0]

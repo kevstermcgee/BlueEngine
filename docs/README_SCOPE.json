@@ -3,7 +3,6 @@
     "arena_shooter_foundation": "b9d9be4067beebbd08fb787ab7531fdd1c166f43b9ce24ed981fe08252a4a4ac",
     "asset_library": "fed0e7b776c8515aa044a97d832bac129bc1cd6e89c8027ccd6352e0b514db42",
     "audio_authoring": "980c074fac2a4239a4713314b8cdc18a80402599a25d4a97bebada7fa4750670",
-    "authoritative_playtesting": "6173d031c25104707ccc23156295083f6e75ec6431e3ab3a0926c05055018ad3",
     "automation_workshop": "7c84a38a66c90f5619d847acc8efee7e3ef7e76b566b5b7479919e0b77a61038",
     "blueprint": "9138b5b1663e700ea3da0841fc2c0dd6bc23b605819c7a798eb83af08e53d511",
     "browser_games": "32551b1054b8c231efa0fe17159899ebeb50a0ef88772ca99efc77ecca03e6ac",
@@ -40,6 +39,7 @@
     "optional_narrative": "668e7437b5a8cf40bd04df86ab322ae3921cc657341190a99bd03fc2249f6a70",
     "pathing_and_walk": "13808ba449986357422e0003cda91bc60952eb98ba580b504abe72a3af7644b0",
     "performance_regression_budgets": "04ca537dd449c104aa000bd367dc85c0a27cce195e5dbb1807d57865d4c00044",
+    "playtesting": "6173d031c25104707ccc23156295083f6e75ec6431e3ab3a0926c05055018ad3",
     "procedural_gen": "33ef440557a8a79dc2e14587a2de96e2e64f9ef16af499cc841c16b07f35f222",
     "prop_physics": "4b145d361f614c204a68bf561f8ea2d7c5cc8a8f56ba6ce7200eaf47dda895c8",
     "props": "e1d29feb1a5777feb8bb3bdafce9209ef631c123125dbb8fe4caeadd7ab3c6fb",
@@ -86,5 +86,5 @@
   "readme_sha256": "e9ec94cc34c833f5ed7c07f61bd35a7ce7319060bc4c517098971014f18cf3e6",
   "rust_version": "1.87",
   "starters_sha256": "fd931a4efe14309aff7611726b5e33f727bd77c704b934abe5f033fd3b30a7a7",
-  "unchanged_reason": "The README already describes native input and separate software/device evidence. Registering the Win32 regression source changes discovery ownership, with no additional public capability."
+  "unchanged_reason": "Shortening the new playtesting discovery ID preserves the existing native describe byte budget. README already links the two authoritative adapters and evidence limits."
 }
