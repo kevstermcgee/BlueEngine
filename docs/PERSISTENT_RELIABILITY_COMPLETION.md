@@ -56,6 +56,15 @@ exhausted its memory budget when serializing duplicate copies of the report;
 integration regression enforces the original 128 MiB limit. Original failures,
 including their saves, remain intact.
 
+The final input audit also found that shell pause handling consumed controller
+Start before the documented game-over restart helper could read it. The forward
+repair retains that one accepted edge for restart, using the frame's shared native
+focus/neutral decision before pause handling. Shared-adapter regressions execute
+the real pause transition and cover background input, held return, the neutral
+boundary and edge expiry. Ordinary hotkeys, menu actions and gameplay retain their
+transition suppression. Earlier isolated controller-helper tests missed this
+sequence; the final delivery links on PR #28 include the forward repair's checks.
+
 Workshop's doubled eight-seed serial/parallel workload exceeded the default
 120-second aggregate wall budget on this shared host; all eight parallel and four
 serial sessions had passed. Its retained retry explicitly budgets 300 seconds
