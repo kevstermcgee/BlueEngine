@@ -50,6 +50,27 @@ print(json.dumps({'ok':True, 'ticks':ticks, 'hash':f'{seed:016x}', 'failure':Non
             self.assertNotEqual(row['returncode'],0)
             self.assertTrue((root/'7/stderr.log').is_file())
 
+    def test_timeout_keeps_already_flushed_original_saves_before_final_json(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            binary = root/'checkpoint-then-hang'
+            binary.write_text('''#!/usr/bin/env python3
+import os, pathlib, time
+folder=pathlib.Path(os.environ['BE2_PLAYTEST_EVIDENCE_DIR'])/'0'
+folder.mkdir()
+with (folder/'original.be2save').open('xb') as save:
+    save.write(b'completed original framed save')
+    save.flush()
+    os.fsync(save.fileno())
+time.sleep(10)
+''')
+            binary.chmod(0o700)
+            row=playtest.run_one(binary,42,1000,64,.5,time.monotonic()+10,root)
+            self.assertFalse(row['ok'])
+            self.assertIn('time budget',row['failure'])
+            self.assertEqual((root/'42/streamed-checkpoints/0/original.be2save').read_bytes(), b'completed original framed save')
+            self.assertTrue((root/'42/run.json').is_file())
+
     def test_expired_global_budget_never_launches_a_process(self):
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary)
@@ -121,7 +142,7 @@ print(json.dumps({'ok':True, 'ticks':ticks, 'hash':f'{seed:016x}', 'failure':Non
             binary = root/'adapter'
             binary.touch(mode=0o700)
             valid = {'ok':True, 'trace':{}, 'ticks':22, 'hash':'0123456789abcdef'}
-            invalid = [{'ok':True, 'trace':{}}, *[{**valid, 'ticks':n} for n in [0, -1, 100001, True]],
+            invalid = [{'ok':True, 'trace':{}}, *[{**valid, 'ticks':n} for n in [0, 1, -1, 100001, True]],
                        {**valid, 'hash':'not-a-state-hash!'}]
             for seed, report in enumerate(invalid):
                 binary.write_text(f'#!/usr/bin/env python3\nprint({json.dumps(report)!r})\n')

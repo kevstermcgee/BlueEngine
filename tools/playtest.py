@@ -36,9 +36,12 @@ def execute(binary, command, row, memory, seconds, deadline, folder):
     remaining = min(seconds, deadline - time.monotonic())
     if remaining <= 0:
         return {**row, 'ok': False, 'failure': 'total time budget exhausted'}
+    streamed = folder / 'streamed-checkpoints'
+    streamed.mkdir()
     try:
         done = subprocess.run([sys.executable, str(Path(__file__).resolve()), '--worker', str(memory), *command],
-                              cwd=ROOT, capture_output=True, text=True, timeout=remaining)
+                              cwd=ROOT, capture_output=True, text=True, timeout=remaining,
+                              env={**os.environ, 'BE2_PLAYTEST_EVIDENCE_DIR': str(streamed)})
         (folder / 'stderr.log').write_text(done.stderr, encoding='utf-8')
         try:
             report = json.loads(done.stdout)
@@ -49,6 +52,7 @@ def execute(binary, command, row, memory, seconds, deadline, folder):
             (folder / 'stdout.log').write_text(done.stdout, encoding='utf-8')
             return {**row, 'ok': False, 'failure': 'invalid structured result', 'returncode': done.returncode}
         if report['ok'] and (type(report.get('ticks')) is not int or not 1 <= report['ticks'] <= 100000
+                             or ('ticks_budget' in row and report['ticks'] != row['ticks_budget'])
                              or not isinstance(report.get('hash'), str) or len(report['hash']) != 16
                              or any(c not in '0123456789abcdefABCDEF' for c in report['hash'])):
             (folder / 'stdout.log').write_text(done.stdout, encoding='utf-8')

@@ -249,6 +249,35 @@ fn room_route(room: usize, random: &mut u64) -> Vec<Intent> {
     route.push(Afterpull::command(-12, 0));
     route
 }
+fn persist_checkpoint(
+    root: &std::path::Path,
+    index: usize,
+    tick: usize,
+    bytes: &[u8],
+) -> Result<(), String> {
+    use std::io::Write;
+    let folder = root.join(index.to_string());
+    std::fs::create_dir(&folder).map_err(|e| e.to_string())?;
+    // Flush before restore/continuation so a later timeout/OOM retains completed originals.
+    for (name, data) in [
+        ("original.be2save", bytes.to_vec()),
+        (
+            "metadata.json",
+            serde_json::to_vec(&serde_json::json!({"tick":tick,"operation":"save/reload"}))
+                .map_err(|e| e.to_string())?,
+        ),
+    ] {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(folder.join(name))
+            .map_err(|e| e.to_string())?;
+        file.write_all(&data)
+            .and_then(|()| file.sync_all())
+            .map_err(|e| e.to_string())?;
+    }
+    Ok(())
+}
 pub fn run(seed: u64, ticks: usize, fault: bool) -> Report {
     let mut random = seed;
     let mut route: std::collections::VecDeque<_> = (0..ROOMS.len())
@@ -299,6 +328,14 @@ pub fn replay(mut trace: Trace) -> Report {
                         operation: "save/reload",
                         original_hex: bytes.iter().map(|byte| format!("{byte:02x}")).collect(),
                     });
+                    if let Some(root) = std::env::var_os("BE2_PLAYTEST_EVIDENCE_DIR") {
+                        persist_checkpoint(
+                            std::path::Path::new(&root),
+                            checkpoints.len() - 1,
+                            ticks,
+                            &bytes,
+                        )?;
+                    }
                     let mut restored = Afterpull::new(trace.seed);
                     snapshot::restore(&mut restored, &bytes).map_err(|e| e.to_string())?;
                     require(
@@ -334,6 +371,29 @@ pub fn replay(mut trace: Trace) -> Report {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn completed_original_checkpoint_is_flushed_and_existing_evidence_is_never_overwritten() {
+        use vesper3d::two_d::GameLogic;
+        let folder = std::env::temp_dir().join(format!(
+            "afterpull-checkpoint-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::fs::create_dir(&folder).unwrap();
+        let original =
+            vesper3d::runtime::snapshot::save(&super::Afterpull::new(0), "retained original")
+                .unwrap();
+        super::persist_checkpoint(&folder, 0, 4, &original).unwrap();
+        assert!(super::persist_checkpoint(&folder, 0, 5, b"replacement").is_err());
+        assert_eq!(
+            std::fs::read(folder.join("0/original.be2save")).unwrap(),
+            original
+        );
+        std::fs::remove_dir_all(folder).unwrap();
+    }
     #[test]
     fn real_actions_cover_campaign_failure_undo_retry_and_repeated_save_continuity() {
         for seed in [0, 7, 42] {
