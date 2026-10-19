@@ -2,6 +2,7 @@
 use serde::{Deserialize, Serialize};
 use vesper3d::two_d::*;
 pub mod focus_gate;
+pub mod playtest;
 pub mod rooms;
 use rooms::ROOMS;
 #[cfg(feature = "client")]

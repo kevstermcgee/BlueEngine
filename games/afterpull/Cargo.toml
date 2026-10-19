@@ -8,6 +8,9 @@ client = ["vesper3d/two-d", "vesper3d/gamepad", "dep:macroquad"]
 [[bin]]
 name = "afterpull"
 required-features = ["client"]
+[[bin]]
+name = "afterpull-playtest"
+path = "src/bin/playtest.rs"
 [dependencies]
 vesper3d = { package = "be2", path = "../..", default-features = false }
 serde = { version = "=1.0.219", features = ["derive"] }
