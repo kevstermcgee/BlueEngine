@@ -1,0 +1,272 @@
+{
+  "source_identity": {
+    "sha256": "22eaa96da1ae8f2ea0a7ab7efeca7419456c2d4dd672ec5911fd177b22ef6a26",
+    "files": 1956
+  },
+  "hardware": {
+    "architecture": "x86_64",
+    "cpu": "Intel(R) N97",
+    "logical_cpus": 4
+  },
+  "scope": "Headless single-player authority, process budgets, replay and save evidence. No engine-wide performance, physical-device or enjoyment certification.",
+  "workshop": {
+    "revision": "f849ad37a852aef445d152d7451277c71473631d",
+    "source_identity": {
+      "sha256": "22eaa96da1ae8f2ea0a7ab7efeca7419456c2d4dd672ec5911fd177b22ef6a26",
+      "files": 1956
+    },
+    "working_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "binary_sha256": "2b5825142f739b8fed69ee21ab47069a039fc177203da2e2cca6f3736ae93cf4",
+    "main_ok": true,
+    "serial_parallel_equal": true,
+    "seed_count": 8,
+    "ticks_per_session": 10000,
+    "executions": 16,
+    "ticks_per_group": 80000,
+    "coverage_per_group": {
+      "blocked_production": 211,
+      "blocked_refunds": 357,
+      "completions": 1523,
+      "delivery_recoveries": 182,
+      "migrations": 80,
+      "refunds": 2113,
+      "reloads": 2656
+    },
+    "serial_coverage": {
+      "blocked_production": 211,
+      "blocked_refunds": 357,
+      "completions": 1523,
+      "delivery_recoveries": 182,
+      "migrations": 80,
+      "refunds": 2113,
+      "reloads": 2656
+    },
+    "hashes": {
+      "0": "8b22f056419cc886",
+      "1": "58f6ba60ff9d4cce",
+      "2": "62e7d0ddee1263c9",
+      "3": "68c04d7fca120243",
+      "4": "e05723f5cbaff7ff",
+      "5": "abe56d9ceb79ecb7",
+      "6": "21b457562f291ba2",
+      "7": "fa348b33476bab5b"
+    },
+    "budgets": {
+      "memory_mib_per_process": 128,
+      "seconds_per_process": 30,
+      "aggregate_seconds": 300,
+      "parallel_concurrency": 4,
+      "serial_concurrency": 1
+    },
+    "elapsed_seconds": 175.599,
+    "default_aggregate_attempt": {
+      "ok": false,
+      "aggregate_seconds": 120,
+      "elapsed_seconds": 120.188,
+      "parallel_sessions_passed": 8,
+      "serial_sessions_passed": 4,
+      "cause": "Doubled parallel+serial workload exhausted aggregate deadline; original results and partial streamed saves preserved"
+    },
+    "replay_ok": true,
+    "replay_hash": "fa348b33476bab5b",
+    "replay_coverage_equal": true,
+    "fault_expected_failure": {
+      "ticks": 28,
+      "hash": "62b71b0d66bac721",
+      "failure": "duplicate command changed authoritative state",
+      "trace_sha256": "4c7f99b43cb5d0755659740e3c7b3ef62cc3f77488ba59a413ae9e5efea65618"
+    },
+    "fault_replayed_exactly": true,
+    "checkpoint_integrity": {
+      "ok": true,
+      "executions": 19,
+      "checkpoints": 5646,
+      "original_copies_checked": 11292,
+      "migrated_copies_checked": 340
+    },
+    "hard_kill": {
+      "ok": true,
+      "returncode": -9,
+      "child_elapsed_seconds": 2.233,
+      "checkpoint_folders_retained": 33,
+      "structured_result_emitted": false,
+      "engine_save_info_verified": true
+    },
+    "reports": {
+      "workshop-long-session": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/workshop-long-session/report.json",
+      "workshop-replay": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/workshop-replay/report.json",
+      "workshop-fault": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/workshop-fault/report.json",
+      "workshop-fault-replay": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/workshop-fault-replay/report.json",
+      "workshop-hard-kill": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/workshop-hard-kill/report.json"
+    },
+    "checkpoint_integrity_report": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/workshop-checkpoint-integrity.json",
+    "claims": "Authoritative Workshop actions, scheduling/blockage/escrow, duplicate handling, deterministic replay, exact restores, supported content migration, and retained evidence after process termination. Injected detector faults are self-tests, not naturally discovered gameplay defects. Rendering, networking, physical controls, audio and enjoyment require separate evidence. Process kill does not certify power-loss durability."
+  },
+  "afterpull": {
+    "revision": "f849ad37a852aef445d152d7451277c71473631d",
+    "source_identity": {
+      "sha256": "22eaa96da1ae8f2ea0a7ab7efeca7419456c2d4dd672ec5911fd177b22ef6a26",
+      "files": 1956
+    },
+    "working_diff_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "binary_sha256": "cdc437c4aa0efc390a2ee28e1b09974354c2e7894d6d1b91a4b05459b07bc629",
+    "main_ok": true,
+    "serial_parallel_equal": true,
+    "ticks_per_group": 80000,
+    "coverage_per_group": {
+      "moves": 44729,
+      "undos": 7010,
+      "retries": 3992,
+      "transitions": 40,
+      "losses": 1976,
+      "wins": 1976,
+      "reloads": 2584
+    },
+    "serial_coverage": {
+      "moves": 44729,
+      "undos": 7010,
+      "retries": 3992,
+      "transitions": 40,
+      "losses": 1976,
+      "wins": 1976,
+      "reloads": 2584
+    },
+    "checkpoint_count_per_group": 2584,
+    "hashes": {
+      "0": "bf681a79af2d0e4f",
+      "1": "692cf0d5b91f0e70",
+      "2": "520e3a5b9d735d76",
+      "3": "1014e46d983cada6",
+      "4": "9ed7141647970fdf",
+      "5": "bf681a79af2d0e4f",
+      "6": "1f83a957c649cb3d",
+      "7": "09669df30cad64c3"
+    },
+    "elapsed_seconds": 14.763,
+    "replay_ok": true,
+    "replay_hash": "09669df30cad64c3",
+    "fault_expected_failure": {
+      "ticks": 6,
+      "hash": "0c93af06435c59f4",
+      "failure": "whole-turn undo did not restore board/counters/history",
+      "trace_sha256": "a1883acba9652b436aaf7655c1fcc5a22fd8f1d002a43af79e63f8de34d620aa"
+    },
+    "fault_replayed_exactly": true,
+    "reports": {
+      "afterpull": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/afterpull/report.json",
+      "afterpull-replay": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/afterpull-replay/report.json",
+      "afterpull-fault": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/afterpull-fault/report.json",
+      "afterpull-fault-replay": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/afterpull-fault-replay/report.json"
+    }
+  },
+  "afterpull_100k": {
+    "ok": true,
+    "revision": "f849ad37a852aef445d152d7451277c71473631d",
+    "source_identity": {
+      "sha256": "22eaa96da1ae8f2ea0a7ab7efeca7419456c2d4dd672ec5911fd177b22ef6a26",
+      "files": 1956
+    },
+    "binary_sha256": "cdc437c4aa0efc390a2ee28e1b09974354c2e7894d6d1b91a4b05459b07bc629",
+    "seed": 42,
+    "ticks": 100000,
+    "hash": "2228df09e2c6351e",
+    "coverage": {
+      "moves": 56246,
+      "undos": 8750,
+      "retries": 4999,
+      "transitions": 5,
+      "losses": 2497,
+      "wins": 2497,
+      "reloads": 3226
+    },
+    "elapsed_seconds": 4.258,
+    "budgets": {
+      "concurrency": 1,
+      "memory_mib": 128,
+      "seconds_per_run": 30,
+      "total_seconds": 120
+    },
+    "original_framed_save_integrity_checks": 3226,
+    "originals_match_streamed_and_extracted": true,
+    "report": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/afterpull-100k/report.json"
+  },
+  "native_windows": {
+    "revision": "f849ad37a852aef445d152d7451277c71473631d",
+    "result": "passed",
+    "kind": "Win32 foreground windows + GetAsyncKeyState/SendInput through shared adapter; software native input",
+    "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39191007773/job/117863800617"
+  },
+  "sandbox": {
+    "revision": "f849ad37a852aef445d152d7451277c71473631d",
+    "result": "passed",
+    "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39191010625"
+  },
+  "artifact_root": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3",
+  "historical_artifacts": "docs/perf/reliability/ remain unchanged; the roughly 153x blocked-machine result is not generalized.",
+  "delivery_ci": "Exact delivery revision and final main outcome are recorded on PR #28 and in the completion response. Earlier observations certify only their recorded source.",
+  "seeded_matrix_revision": "f849ad37a852aef445d152d7451277c71473631d",
+  "latest_code_test_revision": "cc7eaad19a5ec3e051bbb6d6d5ea44ca272e073e",
+  "workshop_100k": {
+    "ok": true,
+    "revision": "cc7eaad19a5ec3e051bbb6d6d5ea44ca272e073e",
+    "source_identity": {
+      "sha256": "586ad05bd80333f661bf1224745b36273d7a2e045adb5dc6f1c9ee272bf85db9",
+      "files": 1958
+    },
+    "binary_sha256": "b1ec8739f4cc388c030aa73e9702bf5aec19316d267b76d52c41b71690bb11f3",
+    "profile": "release",
+    "seed": 42,
+    "ticks": 100000,
+    "hash": "6e65c264ef1ede04",
+    "trace_sha256": "dcf0ba17604c4706e9e25553a7f7a7b51c06ddece1de2321ff656722fdf3d39c",
+    "coverage": {
+      "completions": 2016,
+      "refunds": 2810,
+      "blocked_production": 205,
+      "blocked_refunds": 395,
+      "delivery_recoveries": 198,
+      "reloads": 3322,
+      "migrations": 100
+    },
+    "elapsed_seconds": 19.015,
+    "budgets": {
+      "memory_mib": 128,
+      "seconds_per_run": 300.0,
+      "total_seconds": 330.0,
+      "concurrency": 1
+    },
+    "replay_ok": true,
+    "replay_equal": true,
+    "report": "/srv/storage/artifacts/persistent-reliability-completion/cc7eaad/workshop-100k/report.json",
+    "replay_report": "/srv/storage/artifacts/persistent-reliability-completion/cc7eaad/workshop-100k-replay/report.json",
+    "real_cli_budget_regression": "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features --test playtest_cli: 1 passed in 36.19s",
+    "prior_failure": {
+      "revision": "f849ad37a852aef445d152d7451277c71473631d",
+      "report": "/srv/storage/artifacts/persistent-reliability-completion/f849ad3/workshop-100k/report.json",
+      "cause": "Report serialization duplicated the complete trace/checkpoint tree and exhausted the 128 MiB address-space budget after simulation finished. Original evidence retained.",
+      "repair": "Stream Report to locked stdout through BufWriter; no duplicate Value or giant serialized string; engine authority and saves unchanged."
+    },
+    "small_cli_and_fault_replays": "Small success and deliberate duplicate failure emit valid JSON with unchanged status/trace/coverage and replay exactly.",
+    "checkpoint_integrity": {
+      "ok": true,
+      "executions": 6,
+      "checkpoints": 6654,
+      "original_copies_checked": 13308,
+      "migrated_copies_checked": 400
+    },
+    "checkpoint_integrity_report": "/srv/storage/artifacts/persistent-reliability-completion/cc7eaad/workshop-checkpoint-integrity.json",
+    "working_tree_note": "Only root-owned untracked docs/perf/persistent-reliability-completion.json existed during tests; compiled game/tooling sources match commitcc7eaad."
+  },
+  "additional_correction": {
+    "revision": "95d9ef6d474ed6535a744d0e4235ecf1dc598322",
+    "cause": "Source documentation audit traversed retained generated dist output and falsely treated copied package README relative links as source links.",
+    "repair": "Exclude generated dist directories; regression still rejects broken source links and preserves package bytes.",
+    "verification": "Focused regression and actual doc_drift integration pass with completed package output retained."
+  },
+  "local_canonical_baseline": {
+    "revision": "f849ad37a852aef445d152d7451277c71473631d",
+    "report": ".be2-work/check-20261019T024027647908Z-u5rfn27h/report.json",
+    "ok": false,
+    "cause": "Retained generated dist documentation link (repaired in 95d9ef6); independent Python batch passed. Earlier interrupted checks and logs remain intact; they are not passes."
+  }
+}

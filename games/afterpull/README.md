@@ -14,7 +14,7 @@ Fill every gold dock simultaneously, then press Enter to continue. The last room
 
 Preview commands retain their preview meaning while waiting for a fixed tick, even if Space is released first. A direction pressed in the same native frame as a Space release is also treated as a preview; release Space, then make a fresh tap to commit.
 
-Focus loss freezes puzzle ticks and discards pending movement, previews, undo and room-advance commands. Return to the window, release all controls, then make a fresh tap. The native adapter shows FOCUS PAUSED until that boundary is safe; no queued turn is replayed. Escape still provides manual pause.
+Focus loss freezes puzzle ticks and discards pending movement, previews, undo and room-advance commands. Return to the window, release all controls, then make a fresh tap; no queued turn is replayed. Escape still provides manual pause.
 
 The engine's shared `two_d::client` owns native focus observation, physical held-state queries and the return-to-neutral gate through `viewer::focus`. Afterpull retains only its public Intent mapping; it has no game-local focus adapter. Linux uses X11 (including XWayland) and identifies its process-specific startup title before restoring the title to Afterpull. Windows retains foreground events between rendered frames. Device observations never enter puzzle snapshots. Automated `--verify` replays run independently of desktop focus; they do not certify actual window-focus behavior.
 
