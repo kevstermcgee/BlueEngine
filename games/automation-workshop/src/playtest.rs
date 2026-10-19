@@ -240,8 +240,28 @@ fn checkpoint(
     coverage: &mut Coverage,
     checkpoints: &mut Vec<Checkpoint>,
 ) -> Result<(), String> {
+    let directory = std::env::var_os("BE2_PLAYTEST_EVIDENCE_DIR").map(std::path::PathBuf::from);
+    checkpoint_at(game, migrate, coverage, checkpoints, directory.as_deref())
+}
+fn retain(path: &std::path::Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+        .map_err(|e| format!("retain {}: {e}", path.display()))?;
+    file.write_all(bytes).and_then(|()| file.sync_all()).map_err(|e| format!("retain {}: {e}", path.display()))
+}
+fn checkpoint_at(
+    game: &mut Workshop,
+    migrate: bool,
+    coverage: &mut Coverage,
+    checkpoints: &mut Vec<Checkpoint>,
+    root: Option<&std::path::Path>,
+) -> Result<(), String> {
     let hash = game.state_hash();
     let bytes = snapshot::save(game, "Parallel playtest checkpoint").map_err(|e| e.to_string())?;
+    let persistent = root.map(|root| root.join(checkpoints.len().to_string()));
     checkpoints.push(Checkpoint {
         tick: game.state.tick,
         operation: if migrate { "content-migration" } else { "exact-reload" },
@@ -249,9 +269,21 @@ fn checkpoint(
         target_content: None,
         original_hex: hex(&bytes),
         migrated_hex: None,
-        evidence_directory: None,
+        evidence_directory: persistent.as_ref().map(|p| p.display().to_string()),
     });
     let evidence = checkpoints.last_mut().unwrap();
+    // Write before restore/migration. A killed or memory-limited child may never emit its report.
+    // Exclusive creation also protects previous runs if an evidence directory is reused by mistake.
+    if let Some(directory) = &persistent {
+        std::fs::create_dir(directory).map_err(|e| format!("retain {}: {e}", directory.display()))?;
+        retain(&directory.join("original.be2save"), &bytes)?;
+        let metadata = serde_json::to_vec_pretty(&serde_json::json!({
+            "tick": game.state.tick, "operation": evidence.operation,
+            "source_content": evidence.source_content, "state_hash": format!("{hash:016x}"),
+        }))
+        .map_err(|e| e.to_string())?;
+        retain(&directory.join("metadata.json"), &metadata)?;
+    }
     let mut restored = Workshop::new(game.definitions.clone(), 2)?;
     snapshot::restore(&mut restored, &bytes).map_err(|e| e.to_string())?;
     if restored.state_hash() != hash {
@@ -273,14 +305,18 @@ fn checkpoint(
         static SEQUENCE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let nonce =
             std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_err(|e| e.to_string())?.as_nanos();
-        let directory = std::env::temp_dir().join(format!(
-            "workshop-playtest-{}-{nonce}-{}",
-            std::process::id(),
-            SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
-        ));
-        std::fs::create_dir(&directory).map_err(|e| e.to_string())?;
-        evidence.evidence_directory = Some(directory.display().to_string());
-        std::fs::write(directory.join("original.be2save"), &bytes).map_err(|e| e.to_string())?;
+        let directory = persistent.clone().unwrap_or_else(|| {
+            std::env::temp_dir().join(format!(
+                "workshop-playtest-{}-{nonce}-{}",
+                std::process::id(),
+                SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            ))
+        });
+        if persistent.is_none() {
+            std::fs::create_dir(&directory).map_err(|e| e.to_string())?;
+            evidence.evidence_directory = Some(directory.display().to_string());
+            retain(&directory.join("original.be2save"), &bytes)?;
+        }
         crate::persistence::migrate_content(&mut migrated, &bytes, game.definitions.clone(), &directory, "migrated")?;
         let completed = std::fs::read(directory.join("migrated.be2save")).map_err(|e| e.to_string())?;
         evidence.migrated_hex = Some(hex(&completed));
@@ -304,9 +340,12 @@ fn checkpoint(
         }
         restored = reloaded;
         coverage.migrations += 1;
-        // Completed bytes remain in the report; failed operations retain this directory as well.
-        std::fs::remove_dir_all(&directory).map_err(|e| e.to_string())?;
-        evidence.evidence_directory = None;
+        // Streaming evidence survives success and hard failures; ordinary unit runs also retain
+        // bytes in the report and keep their temporary directory on any validation failure.
+        if persistent.is_none() {
+            std::fs::remove_dir_all(&directory).map_err(|e| e.to_string())?;
+            evidence.evidence_directory = None;
+        }
     }
     *game = restored;
     Ok(())
@@ -593,6 +632,32 @@ mod progression_tests {
             assert_eq!(total(&game.state), before);
             game.validate_state(&game.state).unwrap();
         }
+    }
+    #[test]
+    fn streaming_checkpoints_retain_original_and_completed_copy_on_later_failure() {
+        let (mut game, mut coverage, _) = blocked();
+        let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_nanos();
+        let directory = std::env::temp_dir().join(format!("workshop-streamed-test-{}-{nonce}", std::process::id()));
+        std::fs::create_dir(&directory).unwrap();
+        let mut checkpoints = Vec::new();
+        checkpoint_at(&mut game, true, &mut coverage, &mut checkpoints, Some(&directory)).unwrap();
+        let original = std::fs::read(directory.join("0/original.be2save")).unwrap();
+        let migrated = std::fs::read(directory.join("0/migrated.be2save")).unwrap();
+        let metadata = std::fs::read(directory.join("0/metadata.json")).unwrap();
+        assert_ne!(
+            vesper3d::viewer::savestate::decode(&original).unwrap().header.content,
+            vesper3d::viewer::savestate::decode(&migrated).unwrap().header.content
+        );
+        // A later failed run may accidentally reuse the directory. It must refuse it before
+        // replacing even one completed byte, and the checkpoint exists independently of a report.
+        let hash = game.state_hash();
+        assert!(checkpoint_at(&mut game, true, &mut coverage, &mut Vec::new(), Some(&directory)).is_err());
+        assert_eq!(game.state_hash(), hash);
+        assert_eq!(std::fs::read(directory.join("0/original.be2save")).unwrap(), original);
+        assert_eq!(std::fs::read(directory.join("0/migrated.be2save")).unwrap(), migrated);
+        assert_eq!(std::fs::read(directory.join("0/metadata.json")).unwrap(), metadata);
+        assert!(checkpoints[0].evidence_directory.is_some());
+        std::fs::remove_dir_all(directory).unwrap();
     }
     #[test]
     fn blocked_work_and_paid_escrow_survive_repeated_restores_and_compatible_migration() {
