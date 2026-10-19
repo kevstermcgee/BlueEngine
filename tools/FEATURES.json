@@ -752,6 +752,7 @@
     "shared_gameplay": {
       "files": [
         "src/viewer/game_input.rs",
+        "src/viewer/game_input_windows_tests.rs",
         "src/viewer/game_ui.rs",
         "src/viewer/local_client.rs",
         "templates/native_focus.rs",
@@ -830,6 +831,9 @@
         "src/viewer/prop_view.rs": [
           "presentation",
           "physics"
+        ],
+        "src/viewer/game_input_windows_tests.rs": [
+          "native-client"
         ]
       },
       "keywords": [

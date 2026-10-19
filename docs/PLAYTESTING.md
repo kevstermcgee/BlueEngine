@@ -76,8 +76,12 @@ contract to exercise; Workshop supplies that coverage.
 `inputs.json` records the commit, tracked diff hash, complete source identity
 (including new files), binary hash, seeds and budgets. Each seed directory records
 its command before launching, stderr, full action/checkpoint trace and result.
-Timeout/OOM retains the seed command and captured output. Checkpoint directories
-retain original `.be2save` bytes and migrated bytes when applicable. Results are
+Timeout/OOM retains the seed command and captured output. Adapters also write
+original saves and metadata into immutable `streamed-checkpoints` directories
+before attempting restore, using exclusive creation and syncing completed writes.
+Completed originals and migration outputs survive a later hard process failure.
+The final `checkpoints` extraction retains original `.be2save` bytes and migrated
+bytes when applicable; it does not overwrite streamed evidence. Results are
 sorted by seed regardless of completion order. `comparison.json` retains serial
 results. Keep the original binary/source and `inputs.json`; traces do not restore
 source or certify that an arbitrary binary was freshly built.
