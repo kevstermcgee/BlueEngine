@@ -71,7 +71,7 @@ impl DocDriftReport {
     }
 }
 
-/// Recursively find all `.md` files starting from `root`, skipping build/git directories.
+/// Recursively find source `.md` files, skipping build, package and git directories.
 pub fn collect_markdown_files(root: &Path) -> Result<Vec<PathBuf>> {
     let mut files = Vec::new();
     collect_md_recursive(root, &mut files)?;
@@ -89,7 +89,9 @@ fn collect_md_recursive(dir: &Path, acc: &mut Vec<PathBuf>) -> Result<()> {
         let name = entry.file_name();
         let name_str = name.to_string_lossy();
 
-        if name_str.starts_with('.') || name_str == "target" || name_str == "node_modules" {
+        if name_str.starts_with('.')
+            || matches!(name_str.as_ref(), "target" | "node_modules" | "dist")
+        {
             continue;
         }
 
@@ -354,6 +356,35 @@ mod tests {
         let files = collect_markdown_files(root).unwrap();
         assert!(!files.is_empty());
         assert!(files.iter().any(|f| f.ends_with("README.md")));
+    }
+
+    #[test]
+    fn nested_game_packages_are_preserved_and_excluded_from_source_link_audits() {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let root =
+            std::env::temp_dir().join(format!("be2-doc-packages-{}-{nonce}", std::process::id()));
+        let source = root.join("games/workshop/README.md");
+        let package = root.join("games/workshop/dist/package/docs/README.md");
+        let completed = b"[retained package link](missing-package-guide.md)\n";
+        std::fs::create_dir_all(package.parent().unwrap()).unwrap();
+        std::fs::write(&package, completed).unwrap();
+        std::fs::write(&source, "[source link](missing-source-guide.md)\n").unwrap();
+
+        assert_eq!(collect_markdown_files(&root).unwrap(), vec![source]);
+        let report = audit_documentation(&root).unwrap();
+        let broken: Vec<_> = report
+            .violations
+            .iter()
+            .filter(|violation| violation.kind == ViolationKind::BrokenLink)
+            .collect();
+        assert_eq!(broken.len(), 1);
+        assert_eq!(broken[0].file, "games/workshop/README.md");
+        assert!(broken[0].message.contains("missing-source-guide.md"));
+        assert_eq!(std::fs::read(&package).unwrap(), completed);
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]
