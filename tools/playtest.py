@@ -48,6 +48,12 @@ def execute(binary, command, row, memory, seconds, deadline, folder):
         if not isinstance(report, dict) or not isinstance(report.get('trace'), dict) or not isinstance(report.get('ok'), bool):
             (folder / 'stdout.log').write_text(done.stdout, encoding='utf-8')
             return {**row, 'ok': False, 'failure': 'invalid structured result', 'returncode': done.returncode}
+        if report['ok'] and (type(report.get('ticks')) is not int or not 1 <= report['ticks'] <= 100000
+                             or not isinstance(report.get('hash'), str) or len(report['hash']) != 16
+                             or any(c not in '0123456789abcdefABCDEF' for c in report['hash'])):
+            (folder / 'stdout.log').write_text(done.stdout, encoding='utf-8')
+            return {**row, 'ok': False, 'failure': 'successful result lacks bounded ticks or authoritative hash',
+                    'returncode': done.returncode}
         trace = report.pop('trace')
         write(folder / 'trace.json', trace)
         # Keep the original framed saves independently of the summary, including on a failed run.

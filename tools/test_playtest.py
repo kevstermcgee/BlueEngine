@@ -22,7 +22,7 @@ if sys.argv[1] == 'playtest':
 else:
     trace = json.load(open(sys.argv[2]))
     seed, ticks = trace['turns']
-print(json.dumps({'ok':True, 'ticks':ticks, 'hash':str(seed), 'failure':None,
+print(json.dumps({'ok':True, 'ticks':ticks, 'hash':f'{seed:016x}', 'failure':None,
                   'trace':trace, 'checkpoints':[{'tick':4, 'original_hex':'424532', 'migrated_hex':'53415645'}]}))
 ''')
         binary.chmod(0o700)
@@ -88,7 +88,7 @@ print(json.dumps({'ok':True, 'ticks':ticks, 'hash':str(seed), 'failure':None,
             self.assertEqual((output/'replay/input-trace.json').read_bytes(), trace.read_bytes())
             result = json.loads((output/'report.json').read_text())
             self.assertTrue(result['ok'])
-            self.assertEqual(result['runs'][0]['hash'], '42')
+            self.assertEqual(result['runs'][0]['hash'], f'{42:016x}')
             self.assertIn('replay-playtest', result['runs'][0]['run_command'])
 
     def test_comparison_cli_retains_both_runs_and_checks_equivalence(self):
@@ -114,3 +114,22 @@ print(json.dumps({'ok':True, 'ticks':ticks, 'hash':str(seed), 'failure':None,
             self.assertFalse(row['ok'])
             self.assertTrue((root/'7/trace.json').is_file())
             self.assertEqual((root/'7/checkpoints/0/original.be2save').read_bytes(), b'BE2')
+
+    def test_empty_or_invalid_success_cannot_certify_gameplay_and_zero_tick_failure_is_retained(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            binary = root/'adapter'
+            binary.touch(mode=0o700)
+            valid = {'ok':True, 'trace':{}, 'ticks':22, 'hash':'0123456789abcdef'}
+            invalid = [{'ok':True, 'trace':{}}, *[{**valid, 'ticks':n} for n in [0, -1, 100001, True]],
+                       {**valid, 'hash':'not-a-state-hash!'}]
+            for seed, report in enumerate(invalid):
+                binary.write_text(f'#!/usr/bin/env python3\nprint({json.dumps(report)!r})\n')
+                row = playtest.run_one(binary, seed, 22, 64, 5, time.monotonic()+10, root)
+                self.assertFalse(row['ok'])
+                self.assertIn('lacks bounded ticks or authoritative hash', row['failure'])
+            report = {**valid, 'ok':False, 'ticks':0, 'failure':'content identity differs'}
+            binary.write_text(f'#!/usr/bin/env python3\nprint({json.dumps(report)!r})\n')
+            row = playtest.run_one(binary, 99, 22, 64, 5, time.monotonic()+10, root)
+            self.assertEqual(row['failure'], 'content identity differs')
+            self.assertTrue((root/'99/trace.json').is_file())
