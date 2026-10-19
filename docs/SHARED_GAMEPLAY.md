@@ -108,11 +108,13 @@ ClientInput/GameShell frame path: a second read can lose an intervening loss eve
 Do not place device backends in
 thread-local storage: Windows destroys worker threads before TLS cleanup.
 
-For modal screens, call `poll(focused)` once, route the frame's buttons to the
-modal first, then pass `shell_actions(paused, keyboard_edges)` to
-`GameShell::begin_frame_with_actions`. This avoids duplicate edges. Controllers
-are positional: A confirms, B backs out, Start pauses and D-pad changes focus.
-Keep keyboard text entry separate from gameplay shortcuts.
+For modal screens, keep the standard `begin_frame` path and route its accepted
+navigation to the modal. Use a distinct UI scope to prevent underlying buttons
+from consuming the same confirmation. `poll(focused)` is a lower-level device
+operation for hosts that own their complete focus/neutral policy; it does not
+observe OS focus or synchronize with a separate shell. Controllers are positional:
+A confirms, B backs out, Start pauses and D-pad changes focus. Keep keyboard text
+entry separate from gameplay shortcuts.
 
 Call `game_ui::begin_navigation(scope, input.navigation())`, draw enabled buttons,
 then `end_navigation()`. Use a distinct nonzero scope per screen; zero disables
