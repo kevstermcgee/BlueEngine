@@ -3054,6 +3054,9 @@
         "tools/test_idea_forge.py",
         "tools/player_feedback.py",
         "tools/test_player_feedback.py",
+        "tools/feedback_server.py",
+        "tools/test_feedback_server.py",
+        "deploy/feedback",
         "docs/player-feedback",
         ".github/workflows/player-feedback.yml",
         ".github/ISSUE_TEMPLATE/player-feedback.yml",
@@ -3062,7 +3065,7 @@
         ".github/workflows/forge-game-checks.yml"
       ],
       "checks": [
-        "python -m unittest tools.test_idea_forge tools.test_player_feedback"
+        "python -m unittest tools.test_idea_forge tools.test_player_feedback tools.test_feedback_server"
       ],
       "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates. Public wiki reviews are validated into docs/player-feedback; bounded untrusted player observations reach concept generation, building and independent review without becoming trusted engine commands or learning ledger entries.",
       "keywords": [

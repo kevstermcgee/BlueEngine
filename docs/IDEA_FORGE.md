@@ -174,8 +174,10 @@ the AI reports none.
 
 ## Player experience feedback
 
-Game-wiki reviews are imported from public BlueEngine GitHub issues into
-[`docs/player-feedback`](player-feedback/README.md). Future runs read these
+Players submit reviews directly from the launcher or game wiki without an account,
+with an optional display name. The intake service commits validated reviews into
+[`docs/player-feedback`](player-feedback/README.md). Legacy issue reviews remain
+available alongside these submissions. Future runs read these
 committed ratings and experiences during concept generation, implementation and
 independent review. Source-cited JSON is bounded and frozen in each run journal;
 players' opinions remain untrusted observations, never executable directions or

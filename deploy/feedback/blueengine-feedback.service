@@ -1,0 +1,26 @@
+[Unit]
+Description=BlueEngine account-free player feedback intake
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=blueengine-feedback
+Group=blueengine-feedback
+WorkingDirectory=/opt/blueengine-feedback
+StateDirectory=blueengine-feedback
+StateDirectoryMode=0700
+ExecStart=/usr/bin/python3 /opt/blueengine-feedback/tools/feedback_server.py --root /var/lib/blueengine-feedback/repository --host 127.0.0.1 --port 8091 --branch main
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/blueengine-feedback
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target
