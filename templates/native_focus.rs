@@ -1,5 +1,7 @@
 //! Application console/key hooks; shared presentation owns native focus.
-/// Compatibility hook: the shared GameShell owns native focus and neutral-input handling.
+/// Compatibility hint only. GameShell observes native focus once per frame and ClientInput
+/// applies its acceptance to gameplay, menu actions and save/load/restart keys, even when this
+/// hook returns true. Keep native device polling active while the application is unfocused.
 pub fn focused() -> bool {
     true
 }

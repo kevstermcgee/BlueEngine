@@ -258,6 +258,8 @@ async fn main() {
     let (mut world, mut alpha, mut add) = (Batch::new(), Batch::new(), Batch::new());
 
     loop {
+        // The shared frame observes native focus once and gates all device reads, including
+        // F5/F9 and restart below. A focused pause menu may still save/load; focus loss may not.
         // The cursor is captured while a run is in progress; the shell's menu releases it.
         input.begin_frame_with_keyboard(&mut shell, !sim.over, unattended || platform::focused(), platform::keyboard());
         let dt = life.begin_frame(input.frame_seconds());

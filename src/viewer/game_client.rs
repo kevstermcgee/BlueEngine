@@ -228,26 +228,8 @@ impl GameShell {
         if self.automated_input {
             self.focus.active = true;
         }
-        let lost_focus = !focused || observation.as_ref().is_some_and(|s| !s.focused || s.lost);
-        let native_active = observation
-            .map(|s| {
-                self.neutral_gate.observe(
-                    s.focused,
-                    s.lost,
-                    s.neutral && self.device_neutral && get_keys_pressed().is_empty(),
-                )
-            })
-            .unwrap_or(true);
-        let focused = focused && native_active;
-        self.actions = if focused {
-            actions
-        } else {
-            ShellActions::default()
-        };
-        self.suppress = !native_active;
-        if !self.focus.active || lost_focus {
-            self.paused = true;
-        }
+        self.observe_input(focused, observation, get_keys_pressed().is_empty(), actions);
+        let focused = self.device_input_allowed();
         if self.focus.active && self.actions.fullscreen {
             self.fullscreen = !self.fullscreen;
             set_fullscreen(self.fullscreen);
@@ -274,6 +256,38 @@ impl GameShell {
             self.captured = capture;
             self.suppress = true;
         }
+    }
+    /// Apply the frame's single native observation before any consumer reads device actions.
+    /// Kept separate from window operations so the shared adapter can be exercised headlessly.
+    pub(crate) fn observe_input(
+        &mut self,
+        focused: bool,
+        observation: Option<super::focus::Sample>,
+        window_keys_neutral: bool,
+        actions: ShellActions,
+    ) {
+        let lost = !focused
+            || !self.focus.active
+            || observation.as_ref().is_some_and(|s| !s.focused || s.lost);
+        let active = focused && self.focus.active && observation.as_ref().is_none_or(|s| s.focused);
+        let neutral = self.device_neutral
+            && window_keys_neutral
+            && observation.as_ref().is_none_or(|s| s.neutral);
+        self.suppress = !self.neutral_gate.observe(active, lost, neutral);
+        self.actions = if self.device_input_allowed() {
+            actions
+        } else {
+            ShellActions::default()
+        };
+        if !self.focus.active || lost {
+            self.paused = true;
+        }
+    }
+    /// Whether device commands may be read, including in the game's focused pause menu.
+    /// False during native focus loss, return-to-neutral and shell transitions. Unlike
+    /// [`GameShell::accepting_input`], this does not require the pause menu to be closed.
+    pub fn device_input_allowed(&self) -> bool {
+        self.focus.active && !self.suppress
     }
     /// A shell in a chosen state without a window: the real constructor registers a macroquad input subscriber.
     #[cfg(test)]
