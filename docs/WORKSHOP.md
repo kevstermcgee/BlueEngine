@@ -42,7 +42,9 @@ commands with the same seat/serial reject the complete command batch before muta
 Logical time/production still advance. The client resumes its serial after loading.
 
 Production consumes declared recipe inputs into the job's saved escrow. Each
-fixed step reduces logical time; wall time and rendered frames are not authority.
+fixed step visits one head job per machine in stable instance-ID order and reduces
+its remaining time once. A ready head attempts its output that step; a successor
+waits until the next step. Wall time and rendered frames are not authority.
 Completion commits the whole declared output transaction. A full destination
 keeps the completed job, its escrow and an actionable `TransactionError`; it does
 not silently drop products. Delivering inventory through a player command frees
