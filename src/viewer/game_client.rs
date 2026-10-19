@@ -293,6 +293,7 @@ impl GameShell {
     }
     /// The frame's focus/neutral decision before a shell action suppresses other device reads.
     /// Only the adapter's explicit Start-to-restart convention needs this distinction.
+    #[cfg(feature = "native-client")]
     pub(crate) fn native_input_allowed(&self) -> bool {
         self.native_input_accepted
     }
