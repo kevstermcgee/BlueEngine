@@ -78,7 +78,9 @@ contract to exercise; Workshop supplies that coverage.
 its command before launching, stderr, full action/checkpoint trace and result.
 Timeout/OOM retains the seed command and captured output. Adapters also write
 original saves and metadata into immutable `streamed-checkpoints` directories
-before attempting restore, using exclusive creation and syncing completed writes.
+before attempting restore, using exclusive creation and completed unbuffered writes
+followed by close. This retains evidence across process termination; engine-owned
+save and migration durability is unchanged.
 Completed originals and migration outputs survive a later hard process failure.
 The final `checkpoints` extraction retains original `.be2save` bytes and migrated
 bytes when applicable; it does not overwrite streamed evidence. Results are
