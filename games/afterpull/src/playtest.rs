@@ -258,7 +258,8 @@ fn persist_checkpoint(
     use std::io::Write;
     let folder = root.join(index.to_string());
     std::fs::create_dir(&folder).map_err(|e| e.to_string())?;
-    // Flush before restore/continuation so a later timeout/OOM retains completed originals.
+    // Complete writes and close files before continuing; kernel buffers survive a process kill.
+    // Power-loss durability belongs to engine save APIs, not these developer evidence copies.
     for (name, data) in [
         ("original.be2save", bytes.to_vec()),
         (
@@ -272,9 +273,7 @@ fn persist_checkpoint(
             .create_new(true)
             .open(folder.join(name))
             .map_err(|e| e.to_string())?;
-        file.write_all(&data)
-            .and_then(|()| file.sync_all())
-            .map_err(|e| e.to_string())?;
+        file.write_all(&data).map_err(|e| e.to_string())?;
     }
     Ok(())
 }

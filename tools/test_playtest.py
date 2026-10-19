@@ -61,7 +61,6 @@ folder.mkdir()
 with (folder/'original.be2save').open('xb') as save:
     save.write(b'completed original framed save')
     save.flush()
-    os.fsync(save.fileno())
 time.sleep(10)
 ''')
             binary.chmod(0o700)
