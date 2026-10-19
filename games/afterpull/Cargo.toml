@@ -2,6 +2,7 @@
 name = "afterpull"
 version = "0.1.0"
 edition = "2021"
+default-run = "afterpull"
 [features]
 default = ["client"]
 client = ["vesper3d/two-d", "vesper3d/gamepad", "dep:macroquad"]
