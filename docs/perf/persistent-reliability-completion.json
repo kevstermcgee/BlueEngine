@@ -205,7 +205,6 @@
   "historical_artifacts": "docs/perf/reliability/ remain unchanged; the roughly 153x blocked-machine result is not generalized.",
   "delivery_ci": "Exact delivery revision and final main outcome are recorded on PR #28 and in the completion response. Earlier observations certify only their recorded source.",
   "seeded_matrix_revision": "f849ad37a852aef445d152d7451277c71473631d",
-  "latest_code_test_revision": "cc7eaad19a5ec3e051bbb6d6d5ea44ca272e073e",
   "workshop_100k": {
     "ok": true,
     "revision": "cc7eaad19a5ec3e051bbb6d6d5ea44ca272e073e",
@@ -268,5 +267,12 @@
     "report": ".be2-work/check-20261019T024027647908Z-u5rfn27h/report.json",
     "ok": false,
     "cause": "Retained generated dist documentation link (repaired in 95d9ef6); independent Python batch passed. Earlier interrupted checks and logs remain intact; they are not passes."
+  },
+  "latest_long_session_revision": "cc7eaad19a5ec3e051bbb6d6d5ea44ca272e073e",
+  "controller_start_followup": {
+    "finding": "Final review found that shell pause-transition suppression hid controller Start from the documented game-over restart helper through the standard adapter. Earlier direct controller-helper tests bypassed that integration sequence.",
+    "repair": "Retain only an accepted Start edge for restart, using the frame native focus/neutral observation before shell pause handling. Other hotkeys, menus and gameplay keep transition suppression.",
+    "regression_scope": "Actual shared poll_frame adapter and production pause-transition helper; focused game-over and pause menu, running game, unrelated controls, background/held-return denial, neutral boundary and per-frame/low-level-poll expiry.",
+    "delivery_evidence": "Forward repair and exact final main CI are linked from PR #28; earlier source-bound observations above remain unchanged."
   }
 }

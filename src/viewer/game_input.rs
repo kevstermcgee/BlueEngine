@@ -29,6 +29,8 @@ pub struct ClientInput {
     frame: GamepadFrame,
     status: String,
     focused: bool,
+    /// An accepted Start edge also requests game-over restart when the shell consumes it as pause.
+    restart_start: bool,
     keyboard: Option<KeyboardFrame>,
     clock: FrameClock,
     menu_nav: MenuNav,
@@ -58,6 +60,7 @@ impl ClientInput {
             status,
             frame: GamepadFrame::default(),
             focused: false,
+            restart_start: false,
             keyboard: None,
             clock: FrameClock::new(),
             menu_nav: MenuNav::default(),
@@ -83,6 +86,7 @@ impl ClientInput {
     /// including custom modal menus, use [`ClientInput::begin_frame`] once every frame.
     pub fn poll(&mut self, focused: bool) {
         self.focused = focused;
+        self.restart_start = false;
         if let Some(p) = &mut self.backend {
             self.frame = p.poll(focused);
             self.status = p
@@ -183,7 +187,7 @@ impl ClientInput {
         });
     }
     /// One adapter path for real windows and native integration fixtures. Devices always drain;
-    /// the shell's authoritative acceptance then applies to every public keyboard/controller read.
+    /// ordinary reads use shell acceptance, while game-over Start retains its accepted pause edge.
     fn poll_frame(
         &mut self,
         shell: &mut GameShell,
@@ -193,6 +197,7 @@ impl ClientInput {
     ) {
         self.poll_devices(focused, source);
         self.latch_typing();
+        let start_pressed = self.frame.pressed(Button::Start);
         shell.device_neutral(
             self.frame.neutral()
                 && self
@@ -204,6 +209,9 @@ impl ClientInput {
             shell,
             self.shell_actions(shell.paused, |key| self.pressed(key)),
         );
+        // Start has two established meanings: pause while playing and restart when over. Keep
+        // only this edge through its pause transition; all ordinary reads retain shell suppression.
+        self.restart_start = start_pressed && shell.native_input_allowed();
         self.focused = shell.device_input_allowed();
         if !self.focused {
             self.frame = GamepadFrame::default();
@@ -263,14 +271,16 @@ impl ClientInput {
     /// True once per press while a game is over, for the shared "play again" convention: `R` (always a
     /// hotkey), Enter, or the controller's South (A / Cross) or Start button. False while the game is
     /// running or the window is unfocused. Call it every frame with the game's own over flag; a held
-    /// key does not repeat, because each source is an edge.
+    /// key does not repeat, because each source is an edge. An accepted Start edge remains available
+    /// here when the shell also handles that edge as pause; other reads keep transition suppression.
     pub fn restart_requested(&self, game_over: bool) -> bool {
         game_over
-            && self.focused
-            && (self.pressed(KeyCode::R)
-                || self.pressed(KeyCode::Enter)
-                || self.frame.pressed(Button::South)
-                || self.frame.pressed(Button::Start))
+            && (self.restart_start
+                || (self.focused
+                    && (self.pressed(KeyCode::R)
+                        || self.pressed(KeyCode::Enter)
+                        || self.frame.pressed(Button::South)
+                        || self.frame.pressed(Button::Start))))
     }
     /// Records and announces (once per key) a query the native table cannot answer.
     fn check_native_key(&self, key: KeyCode) {
@@ -450,6 +460,7 @@ mod tests {
             frame: GamepadFrame::default(),
             status: String::new(),
             focused: true,
+            restart_start: false,
             keyboard: None,
             clock: FrameClock::new(),
             menu_nav: MenuNav::default(),
@@ -628,7 +639,129 @@ mod tests {
         // keyboard poll with an already-correct focused=false supplied by the test.
         input.poll_frame(shell, true, Some(source), |shell, actions| {
             shell.observe_input(true, Some(observation), true, actions);
+            shell.apply_pause_action();
         });
+    }
+    #[test]
+    fn standard_adapter_preserves_start_restart_through_its_pause_transition_only() {
+        use super::super::focus::Sample;
+        // Both the game-over screen and an already-open focused pause menu use the standard path.
+        for paused in [false, true] {
+            let mut input = input();
+            let mut shell = GameShell::in_state(false, paused, false);
+            input.frame.button(Button::Start, true);
+            input.frame.button(Button::DPadDown, true);
+            input.frame.left_stick = [0., 1.];
+            observed_frame(
+                &mut input,
+                &mut shell,
+                &|vk| if vk == 0x74 { 0x8000u16 as i16 } else { 0 },
+                Sample {
+                    focused: true,
+                    lost: false,
+                    neutral: false,
+                },
+            );
+            assert_eq!(
+                shell.paused, !paused,
+                "Start still performs the shell pause action"
+            );
+            assert!(
+                input.restart_requested(true),
+                "the same accepted Start can restart"
+            );
+            assert!(
+                !input.restart_requested(false),
+                "Start only pauses a running game"
+            );
+            assert!(!shell.device_input_allowed() && !shell.accepting_input());
+            assert!(
+                !input.pressed(KeyCode::F5),
+                "unrelated hotkeys stay suppressed"
+            );
+            assert!(input.gamepad().neutral());
+            assert!(!input.menu_select() && !input.navigation().next);
+            assert_eq!(input.menu_step(), MenuStep::default());
+            assert_eq!(input.movement(&shell).forward, 0.);
+
+            observed_frame(
+                &mut input,
+                &mut shell,
+                &|_| 0,
+                Sample {
+                    focused: true,
+                    lost: false,
+                    neutral: true,
+                },
+            );
+            assert!(
+                !input.restart_requested(true),
+                "the retained edge lasts one frame"
+            );
+            assert!(
+                !shell.device_input_allowed(),
+                "pause still requires a neutral boundary"
+            );
+        }
+    }
+    #[test]
+    fn standard_adapter_denies_start_restart_until_native_focus_and_devices_are_neutral() {
+        use super::super::focus::Sample;
+        let mut input = input();
+        let mut shell = GameShell::in_state(false, false, false);
+        for (focused, lost) in [(false, true), (true, false), (true, false)] {
+            // Even a reported press on return cannot bypass the held-controller neutral gate.
+            input.frame.button(Button::Start, true);
+            observed_frame(
+                &mut input,
+                &mut shell,
+                &|_| 0,
+                Sample {
+                    focused,
+                    lost,
+                    neutral: true,
+                },
+            );
+            assert!(!input.restart_requested(true));
+            assert!(!shell.device_input_allowed());
+            assert!(
+                shell.paused,
+                "background Start cannot close the focused-return menu"
+            );
+        }
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &|_| 0,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(!input.restart_requested(true) && !shell.device_input_allowed());
+        input.frame.button(Button::Start, true);
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &|_| 0,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(
+            input.restart_requested(true),
+            "a fresh Start after neutrality restarts"
+        );
+        assert!(!shell.paused, "the focused pause action still runs");
+        assert!(!input.menu_select() && input.gamepad().neutral());
+        input.poll(false);
+        assert!(
+            !input.restart_requested(true),
+            "low-level polling also expires the edge"
+        );
     }
     #[test]
     fn native_focus_gates_generated_save_load_and_game_over_hotkeys() {
