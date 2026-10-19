@@ -359,6 +359,24 @@ impl Inventory {
         debits: &[(String, u64)],
         credits: &[(String, u64)],
     ) -> Result<TransactionReceipt, TransactionError> {
+        let receipt = self.preview(debits, credits)?;
+        // All validation precedes mutation; this receipt cannot outlive this exclusive borrow.
+        for balance in &receipt.balances {
+            *self
+                .counts
+                .get_mut(&balance.resource)
+                .expect("declared resource count") = balance.after;
+        }
+        Ok(receipt)
+    }
+
+    /// Validate the identical transaction without cloning or mutating the inventory.
+    /// The returned receipt is a preview only; committing must call `transact` again.
+    pub fn preview(
+        &self,
+        debits: &[(String, u64)],
+        credits: &[(String, u64)],
+    ) -> Result<TransactionReceipt, TransactionError> {
         if debits.len() > MAX_ENTRIES || credits.len() > MAX_ENTRIES - debits.len() {
             return Err(TransactionError::new(
                 "RESOURCE-ENTRIES", None,
@@ -440,13 +458,6 @@ impl Inventory {
             .ok_or_else(|| self.overflow(None))?;
         if total_after > self.max_units {
             return Err(self.budget(total_after));
-        }
-        // All checks finish before any authoritative mutation; no external callbacks run here.
-        for balance in &balances {
-            *self
-                .counts
-                .get_mut(&balance.resource)
-                .expect("declared resource count") = balance.after;
         }
         Ok(TransactionReceipt {
             balances,

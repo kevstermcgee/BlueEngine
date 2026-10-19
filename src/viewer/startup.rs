@@ -25,6 +25,12 @@ pub fn unattended(args: &[String]) -> bool {
     })
 }
 
+/// Scripted/capture runs have an explicit input source, independent of desktop focus.
+/// `--native-input` opts a capture into real focus/device handling for native probes.
+pub fn automated_input(args: &[String]) -> bool {
+    unattended(args) && !args.iter().any(|s| s == "--native-input")
+}
+
 /// Fullscreen for normal play. A requested size, windowed mode or automated run retains a window.
 /// `--fullscreen` can explicitly request fullscreen with `--size`; `--windowed` takes precedence.
 pub fn fullscreen_for(args: &[String]) -> bool {
@@ -35,7 +41,33 @@ pub fn fullscreen_for(args: &[String]) -> bool {
 
 /// Initial fullscreen state shared by window configuration and the F/F11 toggle state.
 pub fn default_fullscreen() -> bool {
-    fullscreen_for(&std::env::args().collect::<Vec<_>>())
+    let saved = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.join("window.json")))
+        .and_then(|p| std::fs::read(p).ok())
+        .and_then(|bytes| serde_json::from_slice::<bool>(&bytes).ok());
+    fullscreen_preference(&std::env::args().collect::<Vec<_>>(), saved)
+}
+
+/// Explicit launch flags/captures override preferences; ordinary launches restore saved mode.
+pub fn fullscreen_preference(args: &[String], saved: Option<bool>) -> bool {
+    if unattended(args)
+        || args
+            .iter()
+            .any(|s| matches!(s.as_str(), "--windowed" | "--fullscreen" | "--size"))
+    {
+        fullscreen_for(args)
+    } else {
+        saved.unwrap_or(true)
+    }
+}
+/// Store only the display preference, independent of a game's simulation/save schema.
+pub fn save_fullscreen(value: bool) {
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(parent) = exe.parent() {
+            let _ = super::devkit::store_atomic(&parent.join("window.json"), &value);
+        }
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -93,6 +125,11 @@ pub async fn show() {
             || is_mouse_button_down(MouseButton::Left)
             || is_mouse_button_down(MouseButton::Right)
             || is_mouse_button_down(MouseButton::Middle);
+        if let Some(observation) = super::focus::sample() {
+            skip &= observation.focused && !observation.lost;
+            // Window key-up events can be lost while switching applications.
+            held = !observation.focused || !observation.neutral;
+        }
         #[cfg(feature = "gamepad")]
         if let Some(pads) = pads.as_mut() {
             use super::gamepad::Button;
@@ -243,5 +280,29 @@ mod tests {
             assert_eq!(intro.advance(seconds, false, false), Stage::Display);
         }
         assert_eq!(intro.elapsed, 0.1);
+    }
+}
+
+#[cfg(test)]
+mod preference_tests {
+    use super::*;
+    fn args(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+    #[test]
+    fn explicit_window_capture_and_saved_preferences_are_distinct() {
+        assert!(!fullscreen_preference(&args(&[]), Some(false)));
+        assert!(!fullscreen_preference(&args(&["--windowed"]), Some(true)));
+        assert!(!fullscreen_preference(
+            &args(&["--capture", "shots"]),
+            Some(true)
+        ));
+        assert!(fullscreen_preference(&args(&["--fullscreen"]), Some(false)));
+        assert!(automated_input(&args(&["--capture", "shots"])));
+        assert!(!automated_input(&args(&[
+            "--capture",
+            "shots",
+            "--native-input"
+        ])));
     }
 }

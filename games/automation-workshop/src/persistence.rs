@@ -87,19 +87,32 @@ pub fn migrate_content(
         return Err("WORKSHOP_MIGRATION_SOURCE: original save must match the supplied source content exactly".into());
     }
     if source.content_version == 2 {
+        if source.inventory_capacity != live.definitions.inventory_capacity
+            || source.initial != live.definitions.initial
+            || source.sources != live.definitions.sources
+            || source.deliverable != live.definitions.deliverable
+            || source.items.len() != live.definitions.items.len()
+        {
+            return Err("WORKSHOP_MIGRATION: incompatible V2 inventory/source/sink tuning".into());
+        }
+        for (id, item) in &source.items {
+            if rule_value(item)?
+                != rule_value(live.definitions.items.get(id).ok_or("WORKSHOP_MIGRATION: removed item")?)?
+            {
+                return Err(format!("WORKSHOP_MIGRATION: incompatible V2 item tuning {id}"));
+            }
+        }
         // This bounded compatibility policy supports additions, not retroactive V2 retuning.
         for (id, recipe) in &source.recipes {
-            if serde_json::to_value(recipe).map_err(|e| e.to_string())?
-                != serde_json::to_value(live.definitions.recipes.get(id).ok_or("WORKSHOP_MIGRATION: removed recipe")?)
-                    .map_err(|e| e.to_string())?
+            if rule_value(recipe)?
+                != rule_value(live.definitions.recipes.get(id).ok_or("WORKSHOP_MIGRATION: removed recipe")?)?
             {
                 return Err(format!("WORKSHOP_MIGRATION: incompatible V2 recipe tuning {id}"));
             }
         }
         for (id, upgrade) in &source.upgrades {
-            if serde_json::to_value(upgrade).map_err(|e| e.to_string())?
-                != serde_json::to_value(live.definitions.upgrades.get(id).ok_or("WORKSHOP_MIGRATION: removed upgrade")?)
-                    .map_err(|e| e.to_string())?
+            if rule_value(upgrade)?
+                != rule_value(live.definitions.upgrades.get(id).ok_or("WORKSHOP_MIGRATION: removed upgrade")?)?
             {
                 return Err(format!("WORKSHOP_MIGRATION: incompatible V2 upgrade tuning {id}"));
             }
@@ -143,4 +156,12 @@ pub fn migrate_v1(live: &mut Workshop, original: &[u8], destination: &Path) -> R
     let source =
         Definitions::from_json(crate::content::V1_CONTENT, "frozen:content-v1.json").map_err(|e| e.to_string())?;
     migrate_content(live, original, source, destination, "migrated-v2")
+}
+
+// Compatibility excludes only presentation labels. Complete content identity and source save
+// integrity still include them; the explicit migration validates both historical and target state.
+fn rule_value(value: &impl serde::Serialize) -> Result<serde_json::Value, String> {
+    let mut value = serde_json::to_value(value).map_err(|e| e.to_string())?;
+    value.as_object_mut().ok_or("WORKSHOP_MIGRATION: expected definition")?.remove("label");
+    Ok(value)
 }

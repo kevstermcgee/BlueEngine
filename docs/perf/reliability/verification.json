@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "checked_revision": "63afc2039ea0f73c43f008d61b28266e494b51ae",
+  "sdk_and_workshop_git_objects": {
+    "src": "a1735f3abcf8508134cf4d3e0dcd8bc6c57c761b",
+    "templates": "67d73fcd8c5a3610c1db65543d817bcecf896ec7",
+    "tools": "e058b217d029cdff789b8416e72ef99649d791a4",
+    "Cargo.toml": "9bd445d8d035a6f53da8474d2e02123f34132315",
+    "Cargo.lock": "300b5d8ad2449f854f3c04ababf88661e768f287",
+    "games/automation-workshop": "ea1a643ef1f6420a5c555ea455134614579f7690"
+  },
+  "canonical": {
+    "ok": true,
+    "commands": 54,
+    "elapsed_seconds": 1511.766,
+    "python_tests_run": 832,
+    "python_skipped": 60,
+    "resources": {
+      "child_cpu_seconds": 1794.434,
+      "max_child_rss_bytes": 1433358336,
+      "rss_basis": "OS child high-water mark; not simultaneous whole-machine memory"
+    },
+    "report": ".be2-work/check-20261018T194833103738Z-p5717bzb/report.json",
+    "metrics": "docs/perf/metrics.jsonl: 55 rows at commit 63afc20 with the final frozen milestone note"
+  },
+  "prior_failed_full_attempts": [
+    {
+      "report": ".be2-work/check-20261018T184958731366Z-ygvr1lio/report.json",
+      "ok": false,
+      "elapsed_seconds": 926.041,
+      "commands_attempted": 7,
+      "category": "test_failure",
+      "first_diagnostic": "ERROR: test_a_generic_word_does_not_outvote_a_specific_one (tools.test_learn.ModuleTests.test_a_generic_word_does_not_outvote_a_specific_one)"
+    },
+    {
+      "report": ".be2-work/check-20261018T190444763319Z-gc646f2a/report.json",
+      "ok": false,
+      "elapsed_seconds": 537.182,
+      "commands_attempted": 4,
+      "category": "test_failure",
+      "first_diagnostic": "ERROR: test_a_generic_word_does_not_outvote_a_specific_one (tools.test_learn.ModuleTests.test_a_generic_word_does_not_outvote_a_specific_one)"
+    },
+    {
+      "report": ".be2-work/check-20261018T191453823653Z-r_89_keo/report.json",
+      "ok": false,
+      "elapsed_seconds": 1957.876,
+      "commands_attempted": 47,
+      "category": "command_failure",
+      "first_diagnostic": "README scope review needed: capability changed: client_kit"
+    }
+  ],
+  "prior_failed_full_elapsed_seconds": 3421.099,
+  "native_final_tip": {
+    "revision": "63afc2039ea0f73c43f008d61b28266e494b51ae",
+    "binary_sha256": "c5d495949a9d2330bf951f4d4555b4e4b9c1ef5071a2fd8a23a309ae5dcd39f3",
+    "capture": "/tmp/blueengine-native-final-tip-capture/shot_00040.png",
+    "capture_sha256": "a6c536b83df1cf645022faddb269bc91f80f674f58c6eb4792b102f9b50e6bc0",
+    "same_committed_capture_bytes": true,
+    "subsystems": {
+      "rendering": "captured",
+      "scripted_behavior": "separate assertions required",
+      "physical_input": "unverified",
+      "audible_hardware": "unverified",
+      "audio_intent": "muted",
+      "audio_telemetry": "unavailable",
+      "backend_health": "unobservable: Macroquad does not expose device/worker health"
+    },
+    "note": "Actual final source build and genuine capture. Byte equality links the retained artifact, not visual quality. Goal 3/3 at restored tick 35 inspected separately."
+  },
+  "correct_fault_trace_replay": {
+    "failure": null,
+    "hash": "d95fa260b238fb1d",
+    "ok": true,
+    "ticks": 28
+  },
+  "afterpull": {
+    "headless_tests": 15,
+    "native_tests": 15,
+    "native_clippy_all_targets": "passed with -D warnings",
+    "native_format": "passed",
+    "capture": "afterpull.png",
+    "verification_ticks": 1300,
+    "verification_outcome": "won",
+    "verification_hash": "c27a345ed9bcf76d",
+    "command": "python3 tools/xcapture.py /PATH/TO/afterpull --frames 30,60 --size 800x450 --out /tmp/new-afterpull-capture -- --verify",
+    "change_after_canonical": "Removed the obsolete is_key_down import from presentation.rs; the shared physical reader was already used. No SDK, rules or content change. These consumer checks were repeated on that cleanup."
+  },
+  "ordinary_final_start": {
+    "revision": "63afc2039ea0f73c43f008d61b28266e494b51ae",
+    "task": "7292421f9998",
+    "contracts": [
+      "audio_authoring",
+      "client_kit"
+    ],
+    "signatures_and_warnings_present": true
+  },
+  "hosted_status_at_recording": {
+    "revision": "63afc2039ea0f73c43f008d61b28266e494b51ae",
+    "engine_linux": "passed: canonical full matrix, X11/XTest focus integration, release/native/headless builds and stock-audio offscreen verification",
+    "engine_windows": "passed: canonical full matrix, native release and headless release builds",
+    "games_and_packages": "all passed, including Workshop Windows resources, isolated smoke and Inno x64 installer build",
+    "sandbox": "passed, including independent generated game build",
+    "pr_run": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39160443401",
+    "sandbox_run": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39160443406",
+    "engine_workflow_conclusion": "success"
+  },
+  "delivery": "This evidence commit also contains the Afterpull import cleanup. Final tip/hosted status is reported on PR 28. SDK, templates, tools, engine manifests and Workshop object IDs above must match the delivery tip; native and headless Afterpull consumer checks cover its only source difference."
+}

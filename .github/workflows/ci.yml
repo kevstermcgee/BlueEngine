@@ -46,14 +46,21 @@ jobs:
           shared-key: engine-checks-test
       - name: Install FFmpeg (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Install FFmpeg (Windows)
         if: runner.os == 'Windows'
         run: choco install ffmpeg --no-progress -y
+      - name: Shared Win32 focus and generated-client native hotkeys
+        if: runner.os == 'Windows'
+        # Real foreground windows and SendInput; software input does not certify physical devices.
+        run: cargo test --locked --profile itest --lib viewer::game_input::windows_tests::native_windows_focus_gates_generated_hotkeys -- --ignored --exact --nocapture
       # Same gate list and optimized dependency profile as local full verification.
       # Cache compilation only: every check and every test still executes.
       - name: Full engine verification
         run: python tools/be2.py check
+      - name: Shared X11 focus and outside-window input releases
+        if: runner.os == 'Linux'
+        run: xvfb-run -a cargo test --locked --profile itest --no-default-features --features two-d --lib viewer::focus::platform::tests::native_focus_uses_real_window_without_a_gl_context -- --ignored --exact
       - run: cargo build --release --locked
       - run: cargo build --release --locked --no-default-features --features physics,networking --bin be2-headless
 
@@ -128,7 +135,7 @@ jobs:
           save-if: false # Engine job owns writes; both restore compatible dependency artifacts.
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Build and package Leo
         shell: bash # Fail on EACH native command on Windows too.
         env:
@@ -179,7 +186,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-        game: [idea-forge, automation-workshop]
+        game: [idea-forge, automation-workshop, afterpull]
     runs-on: ${{ matrix.os }}
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
@@ -197,7 +204,7 @@ jobs:
           save-if: false
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Utility rules, exports, presentation and lint
         shell: bash
         run: |
@@ -253,6 +260,14 @@ jobs:
         run: |
           printf 'pcm.!default { type null }\nctl.!default { type null }\n' > "$RUNNER_TEMP/forge-asound.conf"
           xvfb-run -a env LIBGL_ALWAYS_SOFTWARE=1 ALSA_CONFIG_PATH="$RUNNER_TEMP/forge-asound.conf" python games/${{ matrix.game }}/scripts/ship.py ship --no-install
+      - name: Bounded authoritative gameplay and serial comparison
+        if: runner.os == 'Linux' && matrix.game != 'idea-forge'
+        shell: bash
+        run: |
+          adapter=workshop
+          if [ '${{ matrix.game }}' = afterpull ]; then adapter=afterpull-playtest; fi
+          cargo build --locked --release --manifest-path games/${{ matrix.game }}/Cargo.toml --no-default-features --bin "$adapter"
+          python tools/playtest.py --binary "$GITHUB_WORKSPACE/target/release/$adapter" --seeds 0,1,7,42 --ticks 10000 --compare-serial --out .be2-work/playtest-${{ matrix.game }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -260,6 +275,7 @@ jobs:
           path: |
             games/${{ matrix.game }}/dist/ship.json
             games/${{ matrix.game }}/.blue-check/
+            .be2-work/playtest-${{ matrix.game }}/
           include-hidden-files: true
 
   wormhole:
@@ -284,7 +300,7 @@ jobs:
           save-if: false
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Journey rules, presentation and lint
         shell: bash
         run: |
@@ -363,7 +379,7 @@ jobs:
           save-if: false
       - name: Install native dependencies (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config xvfb libgl1-mesa-dri libxtst6
       - name: Media analysis, variation rules, presentation and lint
         shell: bash
         run: |

@@ -1,0 +1,164 @@
+{
+  "consumers": [
+    "assets/games/leo",
+    "games/afterpull",
+    "games/automation-workshop",
+    "games/backstop",
+    "games/corkscrew-key",
+    "games/corner-clutch",
+    "games/crosshaul",
+    "games/gap-flip",
+    "games/idea-forge",
+    "games/lantern-grove",
+    "games/lantern-run",
+    "games/odd-matter",
+    "games/orchard-watch",
+    "games/peelturn",
+    "games/pinstride",
+    "games/pocket-breaker",
+    "games/reverie",
+    "games/rift-delver",
+    "games/signal-garden",
+    "games/sway",
+    "games/wormhole"
+  ],
+  "all_pins_and_launchers_pass": true,
+  "copy_reduction": {
+    "odd-matter": {
+      "before_four_script_lines": 3804,
+      "after_four_script_lines": 48
+    },
+    "corner-clutch": {
+      "before_four_script_lines": 3885,
+      "after_four_script_lines": 48
+    }
+  },
+  "pin_only_commands": {
+    "reverie": [
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_tooling"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_installer",
+        "tools.test_game_review"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_ship",
+        "tools.test_game_check"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_upgrade"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_idea_forge",
+        "tools.test_player_feedback"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "features",
+        "--validate"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_tooling",
+        "tools.test_game_check",
+        "tools.test_game_ship",
+        "tools.test_game_installer",
+        "tools.test_game_review"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/game_tooling.py",
+        "check"
+      ]
+    ],
+    "afterpull": [
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_tooling"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_installer",
+        "tools.test_game_review"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_ship",
+        "tools.test_game_check"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_upgrade"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_idea_forge",
+        "tools.test_player_feedback"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/be2.py",
+        "features",
+        "--validate"
+      ],
+      [
+        "/usr/bin/python3",
+        "-m",
+        "unittest",
+        "tools.test_game_tooling",
+        "tools.test_game_check",
+        "tools.test_game_ship",
+        "tools.test_game_installer",
+        "tools.test_game_review"
+      ],
+      [
+        "/usr/bin/python3",
+        "tools/game_tooling.py",
+        "check"
+      ]
+    ]
+  },
+  "cargo_commands_for_pin_only": {
+    "reverie": 0,
+    "afterpull": 0
+  },
+  "new_declaration_regression": "tools.test_game_tooling.SharedToolingTests.test_new_declaration_automatically_inherits_ownership_and_drift_checks",
+  "fresh_standalone": {
+    "path": "/tmp/blueengine-scaffold-final",
+    "format": "passed",
+    "pin_and_launcher": "passed",
+    "start_kind": "change-game",
+    "runtime": "portable"
+  },
+  "prepared_metadata_fixture": "src/viewer/newgame.rs::prepared_metadata_is_preserved_but_real_content_collides",
+  "all_six_formats": "viewer::newgame::tests::every_new_starter_passes_its_first_format_gate"
+}

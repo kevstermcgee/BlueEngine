@@ -134,6 +134,74 @@ fn generated_project_has_a_valid_game_document_and_shared_playable_entry() {
 }
 
 #[test]
+fn compiled_bootstrap_runs_generated_launchers_and_matches_live_digest() {
+    use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
+    let engine = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let dir = std::env::temp_dir().join(format!(
+        "blueengine-bootstrap-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    scaffold_new_game_with(
+        "bootstrap-probe",
+        &dir,
+        engine.to_str(),
+        Template::CustomSim,
+    )
+    .unwrap();
+    let python = if cfg!(windows) { "python" } else { "python3" };
+    // Each emitted launcher loads the embedded bootstrap and checks the pin
+    // produced by Rust against Python's current ordered digest inputs.
+    for command in ["check", "ship", "dev", "project"] {
+        let mut process = std::process::Command::new(python);
+        if matches!(command, "check" | "ship") {
+            process
+                .arg(dir.join(format!("scripts/{command}.py")))
+                .arg("--help");
+        } else {
+            // dev forwards arguments to Cargo rather than implementing --help.
+            // Import its actual generated entry without starting a game/build.
+            process
+                .args(["-c", "import runpy,sys; runpy.run_path(sys.argv[1])"])
+                .arg(dir.join(format!("scripts/{command}.py")));
+        }
+        let output = process
+            .env_remove("BE2_TOOLING_ROOT")
+            .current_dir(engine)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{command}: {}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    let pin_path = dir.join("scripts/tooling.json");
+    let mut pin: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(&pin_path).unwrap()).unwrap();
+    assert!(pin["sha256"]
+        .as_str()
+        .is_some_and(|value| value.len() == 64));
+    pin["sha256"] = "0".repeat(64).into();
+    std::fs::write(&pin_path, serde_json::to_vec(&pin).unwrap()).unwrap();
+    let output = std::process::Command::new(python)
+        .arg(dir.join("scripts/check.py"))
+        .arg("--help")
+        .env_remove("BE2_TOOLING_ROOT")
+        .output()
+        .unwrap();
+    assert!(!output.status.success());
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("tooling content differs from the pin")
+    );
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn all_starters_emit_native_requirements_and_no_browser_execution_path() {
     use vesper3d::viewer::newgame::{scaffold_new_game_with, Template};
     for (template, presentation) in [

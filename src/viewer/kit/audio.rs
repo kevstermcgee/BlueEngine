@@ -5,7 +5,8 @@
 //! bank therefore takes a `render` closure that runs on a worker thread and returns WAV files;
 //! [`SoundBank::poll`] hands them to the audio backend a few per frame. Generation stays off the game
 //! loop; decoder cost still depends on asset size and backend. The backend is initialised first because its
-//! first use costs tens of milliseconds. With no audio device everything degrades to silence.
+//! first use costs tens of milliseconds. Macroquad creates a native audio context at startup even when muted.
+//! Device health is unobservable: an upstream worker can fail independently of rendering.
 //!
 //! Sounds are addressed by index (`Preset as usize`, your own enum's discriminant) and variant; the
 //! bank plays variants round-robin so repeated sounds do not fatigue.
@@ -107,6 +108,7 @@ pub struct AudioStatus {
     pub muted: bool,
     pub rendered: bool,
     pub pending: bool,
+    /// Game-owned render worker, not the unobservable native device thread.
     pub worker_failed: bool,
     pub loaded_effects: usize,
     pub loaded_stems: usize,
@@ -204,7 +206,7 @@ impl SoundBank {
         let rx = if muted {
             None
         } else {
-            // First use of the audio backend initialises a device; do it now, not mid-game.
+            // Prime decoding now; Macroquad already created its native context before this call.
             let _ = load_sound_from_bytes(&silent_wav()).await;
             let (tx, rx) = channel();
             std::thread::spawn(move || {

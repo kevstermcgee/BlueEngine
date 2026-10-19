@@ -352,3 +352,16 @@ class ReviewTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class CaptureSubsystemTests(unittest.TestCase):
+    def test_render_success_keeps_audio_and_physical_devices_separate(self):
+        result = review.capture_subsystems('{"subsystem":"audio","intent":"muted"}', True)
+        self.assertEqual(result['rendering'], 'captured')
+        self.assertEqual(result['audio_intent'], 'muted')
+        self.assertEqual(result['audible_hardware'], 'unverified')
+        self.assertEqual(result['physical_input'], 'unverified')
+        failed = review.capture_subsystems('{"subsystem":"audio","status":"failed"}', False)
+        self.assertEqual(failed['audio_telemetry'][0]['status'], 'failed')
+        self.assertIn('unobservable', failed['backend_health'])
+        self.assertEqual(review.capture_subsystems('screenshots complete')['audio_telemetry'], 'unavailable')

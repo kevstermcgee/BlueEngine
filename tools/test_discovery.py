@@ -27,6 +27,16 @@ def compact_bytes(packet):
 
 
 class PublicDiscoveryTests(unittest.TestCase):
+    def test_playtesting_and_focus_discover_shared_owners(self):
+        packet = workflow.context(ROOT, 'playtesting', level=3)
+        feature = packet['matches'][0]
+        self.assertEqual(feature['id'], 'playtesting')
+        self.assertIn('docs/PLAYTESTING.md', feature['read_first'])
+        self.assertIn('games/afterpull/src/lib.rs', json.dumps(feature))
+        focus = workflow.context(ROOT, 'game_presentation', level=3)['matches'][0]
+        self.assertIn('src/viewer/focus.rs', json.dumps(focus))
+        self.assertIn('native focus', json.dumps(focus))
+
     def test_mcp_launcher_uses_shared_freshness_and_validates_explicit_override(self):
         from tools import mcp_server
         expected = ROOT / 'shared target with spaces' / 'itest' / 'be2-tools'
@@ -67,6 +77,17 @@ class PublicDiscoveryTests(unittest.TestCase):
                 self.assertEqual(full['matches'][0]['answer'], answer)
                 self.assertEqual(full['matches'][0]['limitations'], packet['matches'][0]['limitations'])
                 self.assertLessEqual(compact_bytes(full), 8000)
+
+    def test_compound_start_returns_both_presentation_and_audio_contracts(self):
+        query = 'Create a distinctive HUD and original audio'
+        packet = springboard.start(ROOT, query, kind='engine')
+        self.assertEqual([m['id'] for m in packet['context']['matches']], ['client_kit', 'audio_authoring'])
+        context = workflow.context(ROOT, query, level=1)
+        self.assertEqual(packet['context']['matches'], context['matches'])
+        wording = springboard.start(ROOT, 'Create distinctive presentation and authored audio', kind='engine')
+        self.assertEqual({m['id'] for m in wording['context']['matches']}, {'client_kit', 'audio_authoring'})
+        self.assertEqual(len(wording['context']['matches']), 2)
+
 
     def test_workshop_discovery_preserves_failure_and_runtime_boundaries(self):
         resource = workflow.context(ROOT, 'Inventory::transact', level=1)['matches'][0]

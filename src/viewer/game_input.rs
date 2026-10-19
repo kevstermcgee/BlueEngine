@@ -1,6 +1,6 @@
 //! Standard keyboard/mouse + native-controller adapter for standalone clients.
 //! Own this alongside GameShell (never in thread-local storage): native device
-//! workers must shut down before Windows TLS teardown. No OS calls live here.
+//! workers must shut down before Windows TLS teardown. The shell shares native focus acceptance.
 use super::{
     controller::Movement,
     devkit::{EditKey, FrameClock, MenuNav, MenuStep, TextField},
@@ -78,7 +78,9 @@ impl ClientInput {
     pub fn frame_clock(&self) -> &FrameClock {
         &self.clock
     }
-    /// Poll once per frame, including during pause. Native focus is supplied by the host.
+    /// Low-level device poll: `focused` is the host's own accepted focus decision. This does
+    /// not observe native focus or apply the shell's return-to-neutral gate. Standard clients,
+    /// including custom modal menus, use [`ClientInput::begin_frame`] once every frame.
     pub fn poll(&mut self, focused: bool) {
         self.focused = focused;
         if let Some(p) = &mut self.backend {
@@ -100,7 +102,11 @@ impl ClientInput {
     /// The discrete menu step of this frame (D-pad or stick flick, with auto-repeat), for custom menus
     /// and sliders (`left`/`right`). Valid after [`ClientInput::poll`] / `begin_frame`.
     pub fn menu_step(&self) -> MenuStep {
-        self.menu
+        if self.focused {
+            self.menu
+        } else {
+            MenuStep::default()
+        }
     }
     /// True on the frame the controller's confirm button (South: A / Cross) goes down.
     pub fn menu_select(&self) -> bool {
@@ -118,9 +124,9 @@ impl ClientInput {
     }
     pub fn navigation(&self) -> NavigationInput {
         NavigationInput {
-            next: self.menu.down || self.menu.right,
-            previous: self.menu.up || self.menu.left,
-            accept: self.frame.pressed(Button::South),
+            next: self.focused && (self.menu.down || self.menu.right),
+            previous: self.focused && (self.menu.up || self.menu.left),
+            accept: self.focused && self.frame.pressed(Button::South),
         }
     }
     pub fn shell_actions(&self, paused: bool, keys: impl Fn(KeyCode) -> bool) -> ShellActions {
@@ -144,8 +150,9 @@ impl ClientInput {
     ///
     /// `capture_cursor` is whether the game wants the mouse captured while unpaused and focused. Pass
     /// `true` while playing and `false` on a title, menu or game-over screen so the cursor is released
-    /// and clickable (an online session passes "connected"). Advanced hosts may poll and call
-    /// `shell_actions` separately to route their own modal screens.
+    /// and clickable (an online session passes "connected"). Custom modal screens use `false`
+    /// and read `navigation` / `menu_step` afterwards, retaining shared native focus acceptance.
+    /// Hosts using low-level `poll` / `shell_actions` own the equivalent focus and neutral gate.
     pub fn begin_frame(&mut self, shell: &mut GameShell, capture_cursor: bool, focused: bool) {
         self.begin_frame_with_keyboard(shell, capture_cursor, focused, None);
     }
@@ -171,13 +178,38 @@ impl ClientInput {
         focused: bool,
         source: Option<&dyn Fn(i32) -> i16>,
     ) {
+        self.poll_frame(shell, focused, source, |shell, actions| {
+            shell.begin_frame_with_actions(capture_cursor, focused, actions);
+        });
+    }
+    /// One adapter path for real windows and native integration fixtures. Devices always drain;
+    /// the shell's authoritative acceptance then applies to every public keyboard/controller read.
+    fn poll_frame(
+        &mut self,
+        shell: &mut GameShell,
+        focused: bool,
+        source: Option<&dyn Fn(i32) -> i16>,
+        update_shell: impl FnOnce(&mut GameShell, ShellActions),
+    ) {
         self.poll_devices(focused, source);
         self.latch_typing();
-        shell.begin_frame_with_actions(
-            capture_cursor,
-            focused,
+        shell.device_neutral(
+            self.frame.neutral()
+                && self
+                    .keyboard
+                    .as_ref()
+                    .is_none_or(|k| k.previous.is_empty() && k.pressed.is_empty()),
+        );
+        update_shell(
+            shell,
             self.shell_actions(shell.paused, |key| self.pressed(key)),
         );
+        self.focused = shell.device_input_allowed();
+        if !self.focused {
+            self.frame = GamepadFrame::default();
+            self.menu = MenuStep::default();
+            self.menu_nav.reset();
+        }
     }
     /// Start of a frame: whether a text field was fed last frame becomes this frame's shell rule.
     fn latch_typing(&mut self) {
@@ -226,7 +258,7 @@ impl ClientInput {
             && self
                 .keyboard
                 .as_ref()
-                .map_or_else(|| is_key_down(key), |k| k.down.contains(&key))
+                .map_or_else(|| super::focus::key_down(key), |k| k.down.contains(&key))
     }
     /// True once per press while a game is over, for the shared "play again" convention: `R` (always a
     /// hotkey), Enter, or the controller's South (A / Cross) or Start button. False while the game is
@@ -412,7 +444,7 @@ fn feed_text_with(
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn input() -> ClientInput {
+    pub(super) fn input() -> ClientInput {
         ClientInput {
             backend: None,
             frame: GamepadFrame::default(),
@@ -584,6 +616,210 @@ mod tests {
                 0
             }
         }
+    }
+    pub(super) fn observed_frame(
+        input: &mut ClientInput,
+        shell: &mut GameShell,
+        source: &dyn Fn(i32) -> i16,
+        observation: super::super::focus::Sample,
+    ) {
+        // The compatibility platform hook still reports true, as generated Windows games do.
+        // This is the real adapter, including its post-shell acceptance, rather than an isolated
+        // keyboard poll with an already-correct focused=false supplied by the test.
+        input.poll_frame(shell, true, Some(source), |shell, actions| {
+            shell.observe_input(true, Some(observation), true, actions);
+        });
+    }
+    #[test]
+    fn native_focus_gates_generated_save_load_and_game_over_hotkeys() {
+        use super::super::focus::Sample;
+        for (key, vk) in [
+            (KeyCode::F5, 0x74),
+            (KeyCode::F9, 0x78),
+            (KeyCode::R, 0x52),
+            (KeyCode::Enter, 0x0d),
+        ] {
+            let (mut input, held) = (input(), std::cell::Cell::new(None));
+            let mut shell = GameShell::in_state(false, false, false);
+            let os = fake_os(&held);
+            held.set(Some(vk));
+            for (focused, lost, neutral) in [(false, true, false), (true, false, false)] {
+                observed_frame(
+                    &mut input,
+                    &mut shell,
+                    &os,
+                    Sample {
+                        focused,
+                        lost,
+                        neutral,
+                    },
+                );
+                assert!(!input.pressed(key) && !input.down(key), "{key:?}");
+                assert!(!input.restart_requested(true));
+                assert!(!shell.device_input_allowed());
+                assert!(shell.paused, "focus loss opens the local menu");
+            }
+            held.set(None);
+            observed_frame(
+                &mut input,
+                &mut shell,
+                &os,
+                Sample {
+                    focused: true,
+                    lost: false,
+                    neutral: true,
+                },
+            );
+            assert!(
+                !shell.device_input_allowed(),
+                "release boundary is a complete frame"
+            );
+            held.set(Some(vk));
+            observed_frame(
+                &mut input,
+                &mut shell,
+                &os,
+                Sample {
+                    focused: true,
+                    lost: false,
+                    neutral: false,
+                },
+            );
+            assert!(
+                input.pressed(key),
+                "fresh {key:?} works in a focused pause menu"
+            );
+            assert_eq!(
+                input.restart_requested(true),
+                matches!(key, KeyCode::R | KeyCode::Enter)
+            );
+            assert!(
+                !shell.accepting_input(),
+                "focused pause and native focus are distinct"
+            );
+        }
+    }
+    #[test]
+    fn loss_and_reacquisition_between_frames_gates_all_adapter_consumers() {
+        use super::super::focus::Sample;
+        let (mut input, held) = (input(), std::cell::Cell::new(Some(0x74)));
+        let mut shell = GameShell::in_state(false, false, false);
+        let os = fake_os(&held);
+        input.frame.button(Button::South, true);
+        input.frame.right_stick = [1., 0.];
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &os,
+            Sample {
+                focused: true,
+                lost: true,
+                neutral: false,
+            },
+        );
+        assert!(!input.pressed(KeyCode::F5));
+        assert!(!input.menu_select() && !input.menu_back());
+        assert!(!input.navigation().accept && !input.navigation().next);
+        assert!(input.gamepad().neutral());
+        assert_eq!(input.menu_step(), MenuStep::default());
+        held.set(None);
+        // Native keyboard/mouse neutrality alone is insufficient while a controller is held.
+        input.frame.button(Button::South, true);
+        input.frame.right_stick = [1., 0.];
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &os,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(!shell.device_input_allowed() && !input.menu_select());
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &os,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(!shell.device_input_allowed());
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &os,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(shell.device_input_allowed());
+    }
+    #[test]
+    fn native_taps_are_drained_before_the_return_to_neutral_boundary() {
+        use super::super::focus::Sample;
+        let mut input = input();
+        let mut shell = GameShell::in_state(false, false, false);
+        let native_value = std::cell::Cell::new(0);
+        let source = |vk| if vk == 0x74 { native_value.get() } else { 0 };
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: false,
+                lost: true,
+                neutral: true,
+            },
+        );
+        // GetAsyncKeyState reports a tap that was released before this rendered frame.
+        native_value.set(1);
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(!input.pressed(KeyCode::F5) && !shell.device_input_allowed());
+        native_value.set(0);
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: true,
+            },
+        );
+        assert!(
+            !shell.device_input_allowed(),
+            "the first frame with no held or queued keys is the boundary"
+        );
+        native_value.set(0x8000u16 as i16);
+        observed_frame(
+            &mut input,
+            &mut shell,
+            &source,
+            Sample {
+                focused: true,
+                lost: false,
+                neutral: false,
+            },
+        );
+        assert!(
+            input.pressed(KeyCode::F5),
+            "a fresh press after neutrality is accepted"
+        );
     }
     #[test]
     fn a_native_frame_reports_a_restart_key_edge_exactly_once() {
@@ -1219,3 +1455,7 @@ mod keyboard_tests {
         assert_eq!(KEY_TABLE.len() + UNSUPPORTED_NATIVE_KEYS.len(), all.len());
     }
 }
+
+#[cfg(all(test, target_os = "windows"))]
+#[path = "game_input_windows_tests.rs"]
+mod windows_tests;

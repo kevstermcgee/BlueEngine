@@ -165,3 +165,42 @@ fn source_aware_content_edit_rejects_duplicate_and_unresolved_refs_before_write(
     assert_eq!(std::fs::read(&p).unwrap(), original);
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn cosmetic_labels_require_explicit_copy_migration_and_keep_inflight_rules() {
+    use automation_workshop::{Command, Envelope};
+    let mut old = Workshop::standard();
+    old.step(&vec![Envelope {
+        seat: 0,
+        serial: 1,
+        command: Command::Queue { machine: "workshop:machine-a".into(), recipe: "workshop:smelt".into() },
+    }]);
+    let original = snapshot::save(&old, "Before labels").unwrap();
+    let mut content: serde_json::Value = serde_json::from_str(include_str!("../assets/workshop.json")).unwrap();
+    content["recipes"][0]["label"] = "Refine plates".into();
+    content["upgrades"][0]["label"] = "Precision tools".into();
+    content["items"][0]["label"] = "Iron ore".into();
+    let target = Definitions::from_json(&content.to_string(), "cosmetic-v2").unwrap();
+    let mut live = Workshop::new(target, 2).unwrap();
+    assert!(snapshot::restore(&mut live, &original).is_err(), "exact identity still enforced");
+    let dir = temporary("cosmetic");
+    persistence::migrate_content(&mut live, &original, old.definitions.clone(), &dir, "labels").unwrap();
+    assert_eq!(live.capture(), old.capture());
+    let written = std::fs::read(dir.join("labels.be2save")).unwrap();
+    assert!(persistence::migrate_content(&mut live, &original, old.definitions.clone(), &dir, "labels").is_err());
+    assert_eq!(std::fs::read(dir.join("labels.be2save")).unwrap(), written);
+    for _ in 0..20 {
+        old.step(&vec![]);
+        live.step(&vec![]);
+        assert_eq!(old.state_hash(), live.state_hash());
+    }
+    content["recipes"][0]["duration_ticks"] = 7.into();
+    let mut tuned = Workshop::new(Definitions::from_json(&content.to_string(), "retuned").unwrap(), 2).unwrap();
+    let before = tuned.capture();
+    assert!(persistence::migrate_content(&mut tuned, &original, old.definitions.clone(), &dir, "rules")
+        .unwrap_err()
+        .contains("tuning"));
+    assert_eq!(tuned.capture(), before);
+    assert!(!dir.join("rules.be2save").exists());
+    std::fs::remove_dir_all(dir).unwrap();
+}

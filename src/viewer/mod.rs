@@ -83,6 +83,8 @@ pub mod ui_check;
 pub mod verify;
 
 #[cfg(any(feature = "presentation", feature = "two-d-draw"))]
+pub mod focus;
+#[cfg(any(feature = "presentation", feature = "two-d-draw"))]
 pub mod game_text;
 #[cfg(feature = "presentation")]
 pub mod game_visuals;

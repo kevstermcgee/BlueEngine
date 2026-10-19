@@ -58,7 +58,31 @@ def disk_report(locations, usage=shutil.disk_usage):
 
 
 def index(root):
-    return json.loads((root / 'tools/FEATURES.json').read_text(encoding='utf-8'))['features']
+    features = json.loads((root / 'tools/FEATURES.json').read_text(encoding='utf-8'))['features']
+    try:
+        from tools import game_tooling
+    except ModuleNotFoundError:
+        import game_tooling
+    # Exact generated inputs only. Hooks, content and Rust retain their own gates.
+    if 'game_scaffolding' in features:
+        features['game_scaffolding']['files'].extend(sorted(game_tooling.tooling_paths(root)))
+    generated = game_tooling.tooling_paths(root)
+    for game in game_tooling.consumers(root):
+        relative = game.relative_to(root).as_posix()
+        # Project declarations establish ownership for newly created standalone
+        # sources too. Existing detailed owners retain their richer contracts.
+        if any(any((owned == relative or owned.startswith(relative + '/')) and owned not in generated
+                       for owned in feature['files']) for feature in features.values()):
+            continue
+        features['consumer_' + relative.replace('/', '_').replace('-', '_')] = {
+            'files': [relative + '/' + name for name in ('src', 'tests', 'assets', 'Cargo.toml',
+                       'Cargo.lock', 'game.project.json', 'scripts/tooling_hooks.py') if (game / name).exists()],
+            'depends_on': [], 'keywords': [],
+            'note': 'Declared standalone game: game-owned authoritative rules, content and presentation; use check --game for target gates.',
+            'read_first': [relative + '/AGENTS.md'] if (game / 'AGENTS.md').is_file() else [],
+            'checks': ['cargo test --locked --manifest-path ' + relative + '/Cargo.toml --no-default-features'],
+        }
+    return features
 
 
 def modules(root):
@@ -83,9 +107,19 @@ def closure(features, names, reverse=False):
 
 def impact(root, paths):
     features = index(root)
-    owners = {name for name, feature in features.items()
-              if any(path == owned or path.startswith(owned.rstrip('/') + '/')
-                     for path in paths for owned in feature['files'])}
+    try:
+        from tools import game_tooling
+    except ImportError:
+        import game_tooling
+    generated = game_tooling.tooling_paths(root)
+    owners = set()
+    for path in paths:
+        if path in generated and 'game_scaffolding' in features:
+            owners.add('game_scaffolding')
+        else:
+            owners.update(name for name, feature in features.items()
+                          if any(path == owned or path.startswith(owned.rstrip('/') + '/')
+                                 for owned in feature['files']))
     covered = {path for path in paths if any(
         path == owned or path.startswith(owned.rstrip('/') + '/')
         for name in owners for owned in features[name]['files'])}
@@ -252,7 +286,8 @@ def change_plan(root, paths, base=None, *, loop='inner', test_profile='itest'):
     invalid = [s for s in suites if not re.fullmatch(r'[\w-]+', s) or not (root / 'tests' / (s + '.rs')).is_file()]
     boundary = [p for p in paths if p in ('Cargo.toml', 'Cargo.lock', 'tools/FEATURES.json',
                                         'tools/check_dependency_boundaries.py') or
-                p.startswith('.github/') or p.endswith('build.rs')]
+                p.startswith('.github/') or p.endswith('build.rs')
+                or Path(p).name in ('Cargo.toml', 'Cargo.lock', 'game.project.json')]
     # A Markdown suffix is not proof of independence. Keep executable docs and
     # unknown recipes conservative; only exact guides and existing reviewed
     # independent Python/data scopes can narrow an iteration plan.
@@ -821,6 +856,14 @@ def full_commands(test_profile='itest'):
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest,
          '--no-default-features', '--features', 'online', '--test', 'netplay'],
     ])
+    # The second game proves shared playtest orchestration against different rules.
+    afterpull_manifest = 'games/afterpull/Cargo.toml'
+    commands.extend([
+        ['cargo', 'fmt', '--manifest-path', afterpull_manifest, '--check'],
+        ['cargo', 'test', '--locked', '--manifest-path', afterpull_manifest, '--no-default-features'],
+        ['cargo', 'clippy', '--locked', '--manifest-path', afterpull_manifest,
+         '--no-default-features', '--all-targets', '--', '-D', 'warnings'],
+    ])
     # Opt-in narrative must be tested explicitly: ordinary/default games keep it disabled.
     commands.extend([
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
@@ -873,7 +916,7 @@ def full_commands(test_profile='itest'):
          'tools.test_hub_deploy','tools.test_browser_retirement','tools.test_springboard',
          'tools.test_machine_utilities', 'tools.test_idea_forge', 'tools.test_player_feedback', 'tools.test_engine_fix',
          'tools.test_game_tooling', 'tools.test_game_installer', 'tools.test_game_review', 'tools.test_discovery',
-         'tools.test_readme_scope'],
+         'tools.test_readme_scope', 'tools.test_playtest'],
     ]
 
 
@@ -1161,7 +1204,21 @@ def validation_plan(paths=None, base=None, test_profile='itest'):
                       'docs/learning/dupes.json', 'docs/learning/dupes.md'},
                      [[sys.executable, '-m', 'unittest', 'tools.test_learn']]),
     }
-    covered = set().union(*(files for files, _ in scopes.values()))
+    try:
+        from tools import game_tooling
+    except ModuleNotFoundError:
+        import game_tooling
+    scopes['game_tooling'] = (game_tooling.tooling_paths(Path(__file__).resolve().parents[1]) |
+        {'tools/game_tooling.py', 'tools/game_tooling_inventory.json', 'tools/test_game_tooling.py',
+         'templates/game_entry.py', 'templates/game_check.py', 'templates/game_ship.py',
+         'templates/game_project.py', 'templates/game_dev.py', 'templates/game_installer.py', 'templates/game_review.py'},
+        [[sys.executable, '-m', 'unittest', 'tools.test_game_tooling', 'tools.test_game_check',
+          'tools.test_game_ship', 'tools.test_game_installer', 'tools.test_game_review'],
+         [sys.executable, 'tools/game_tooling.py', 'check']])
+    # An embedded script changes the compiled generator and its emitted project.
+    # Python compatibility checks alone cannot certify that shipping boundary,
+    # even when tooling_paths also lists the file as shared tooling.
+    covered = set().union(*(files for files, _ in scopes.values())) - COMPILED_TEMPLATE_INPUTS
     unknown = sorted(set(paths) - covered)
     commands = []
     selected = []

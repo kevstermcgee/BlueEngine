@@ -1,0 +1,36 @@
+{
+  "revision": "1c66d853b6f1992a58847c5dee8b9b86105fc7e2",
+  "working_diff_sha256": "b2196c06d49a9bf5c31e03151c22ed0f93edc3cefacd6559f41ef9256e890c16",
+  "binary_sha256": "9adff5da803faec85c1659735df5d462e3859a5b06b5aebcd523042c359bf976",
+  "binary": "/srv/storage/cache/cargo/default/release/workshop",
+  "source_identity": {
+    "sha256": "28827de7ac7e5630b11ba9e1b784a64315e2de1ab94a0d6a606e6f448ac49275",
+    "files": 1930
+  },
+  "concurrency": 2,
+  "seeds": [
+    7
+  ],
+  "ticks_per_run": 100,
+  "memory_mib_per_run": 128,
+  "seconds_per_run": 30,
+  "total_seconds": 120,
+  "ok": false,
+  "runs": [
+    {
+      "seed": 7,
+      "ticks_budget": 100,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 7 100 fault",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-release-fault/7/trace.json",
+      "failure": "duplicate command changed authoritative state",
+      "hash": "62b71b0d66bac721",
+      "ok": false,
+      "ticks": 28,
+      "returncode": 1
+    }
+  ],
+  "elapsed_seconds": 0.217,
+  "claims": "Behavioral simulation evidence only; no rendering, physical input, audible output or enjoyment claim",
+  "retained_failure_trace": "docs/perf/reliability/duplicate-fault.trace.json"
+}

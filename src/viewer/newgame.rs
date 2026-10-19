@@ -179,12 +179,29 @@ pub fn scaffold_new_game_with(
     {
         return Err("Game name must be a Cargo-compatible identifier (letters, digits, - and _, not starting with a digit)".into());
     }
-    if target_dir.exists() && target_dir.read_dir()?.next().is_some() {
+    if target_dir.exists()
+        && target_dir.read_dir()?.any(|entry| {
+            entry
+                .map(|e| {
+                    !matches!(
+                        e.file_name().to_str(),
+                        Some(".git" | ".be2-work" | ".codex" | ".agents")
+                    )
+                })
+                .unwrap_or(true)
+        })
+    {
         return Err(format!(
             "Target directory '{}' already exists and is not empty",
             target_dir.display()
         )
         .into());
+    }
+    // Check this prerequisite before creating any source. All supported project
+    // integration gates require rustfmt; assemble then format exactly once.
+    if !std::process::Command::new("rustfmt").arg("--version").output()
+        .map_err(|_| "new-game requires rustfmt; select/install the Rust rustfmt component before scaffolding")?.status.success() {
+        return Err("new-game requires a working rustfmt component; no project files were written".into());
     }
     let engine_arg = engine_rel_path.unwrap_or("../BlueEngine");
     let project = Project {
@@ -208,6 +225,33 @@ pub fn scaffold_new_game_with(
     write_shipping_files(&project, identity, template)?;
     write_scripts(&project)?;
     fs::write(target_dir.join("CLAUDE.md"), "@AGENTS.md\n")?;
+    let mut sources = Vec::new();
+    for directory in [
+        target_dir.to_path_buf(),
+        target_dir.join("src"),
+        target_dir.join("tests"),
+    ] {
+        for entry in fs::read_dir(directory)? {
+            let path = entry?.path();
+            if path.is_file() && path.extension().is_some_and(|e| e == "rs") {
+                sources.push(fs::canonicalize(path)?);
+            }
+        }
+    }
+    sources.sort();
+    let formatted = std::process::Command::new("rustfmt")
+        .args(["--edition", "2021"])
+        .args(sources)
+        .current_dir(target_dir)
+        .output()?;
+    if !formatted.status.success() {
+        return Err(format!(
+            "Generated source was preserved at {} but rustfmt failed: {}",
+            target_dir.display(),
+            String::from_utf8_lossy(&formatted.stderr)
+        )
+        .into());
+    }
     Ok(())
 }
 
@@ -456,8 +500,9 @@ fn tooling_digest(engine: &Path) -> Option<String> {
     ] {
         digest.update(name.as_bytes());
         digest.update(&[0]);
-        // The implementation is distributed with the engine, not embedded in
-        // this Rust binary. Editing Python tooling must not rebuild the engine.
+        // Most implementations are distributed Python and need no Rust rebuild.
+        // game_entry.py is also embedded above: changes must verify this native
+        // generator and its emitted bootstrap as well as the distributed digest.
         // The legacy API can scaffold before its dependency exists; that project
         // needs an explicit tooling migration after restoring the dependency.
         let content = fs::read(engine.join(name)).ok()?;
@@ -959,6 +1004,64 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         ))
+    }
+
+    #[test]
+    fn every_new_starter_passes_its_first_format_gate() {
+        for template in [
+            Template::Stock,
+            Template::CustomSim,
+            Template::TwoD,
+            Template::ThreeD,
+            Template::Hybrid,
+            Template::Portable,
+        ] {
+            let dir = temp(template.name());
+            scaffold_new_game_with("format-probe", &dir, None, template).unwrap();
+            let output = std::process::Command::new("cargo")
+                .args(["fmt", "--check"])
+                .current_dir(&dir)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}: {}{}",
+                template.name(),
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr)
+            );
+            fs::remove_dir_all(dir).unwrap();
+        }
+    }
+
+    #[test]
+    fn prepared_metadata_is_preserved_but_real_content_collides() {
+        let dir = temp("prepared");
+        fs::create_dir_all(dir.join(".be2-work")).unwrap();
+        fs::write(dir.join(".be2-work/runner.json"), "protected").unwrap();
+        fs::write(dir.join(".git"), "gitdir: preserved").unwrap();
+        scaffold_new_game_with("prepared", &dir, None, Template::Portable).unwrap();
+        assert_eq!(
+            fs::read_to_string(dir.join(".be2-work/runner.json")).unwrap(),
+            "protected"
+        );
+        assert_eq!(
+            fs::read_to_string(dir.join(".git")).unwrap(),
+            "gitdir: preserved"
+        );
+        let before = fs::read(dir.join("Cargo.toml")).unwrap();
+        assert!(scaffold_new_game_with("prepared", &dir, None, Template::Portable).is_err());
+        assert_eq!(fs::read(dir.join("Cargo.toml")).unwrap(), before);
+        fs::remove_dir_all(dir).unwrap();
+        let dir = temp("collision");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("notes.txt"), "user content").unwrap();
+        assert!(scaffold_new_game("collision", &dir, None).is_err());
+        assert_eq!(
+            fs::read_to_string(dir.join("notes.txt")).unwrap(),
+            "user content"
+        );
+        fs::remove_dir_all(dir).unwrap();
     }
 
     #[test]

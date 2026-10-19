@@ -11,7 +11,7 @@ For runtime changes, consult docs/BE2_ARCHITECTURE.md and the matching feature r
 docs/archive/BLUE_ARCHITECTURE.md is historical viewer context. Read docs/archive/AI_REFERENCE.md for Vesper
 scene-contract changes and docs/archive/ARCHITECTURE.md before changing the offline renderer.
 
-Keep the engine and authoring API native Rust. Keep player movement independent from the frame rate and from rendering. Preserve the library's unsafe-code prohibition; Windows input/focus queries and own-window lifecycle calls belong only in the executable.
+Keep the engine and authoring API native Rust. Keep player movement independent from the frame rate and from rendering. The library denies unsafe code by default. Its narrow `viewer::focus` native adapter explicitly allows the documented OS calls needed for shared focus and physical held-state observation; keep those calls on the window thread and outside authoritative simulation. Executable compatibility hooks may supply native keyboard queries, but shared ClientInput/GameShell must own the effective focus and acceptance policy. Reuse the shared adapter rather than copying it into games.
 
 Preserve completed outputs on failure. Never shell-interpolate scene values. Keep semantic entity IDs stable for future interaction components.
 

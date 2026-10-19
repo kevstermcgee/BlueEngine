@@ -1,0 +1,39 @@
+{
+  "recipes": [
+    {
+      "id": "workshop:recycle-plate",
+      "label": "Recycle plate",
+      "duration_ticks": 8,
+      "inputs": [
+        [
+          "workshop:plate",
+          1
+        ]
+      ],
+      "outputs": [
+        [
+          "workshop:ore",
+          1
+        ]
+      ],
+      "required_upgrade": "workshop:recycling-tools"
+    }
+  ],
+  "upgrades": [
+    {
+      "id": "workshop:recycling-tools",
+      "label": "Recycling tools",
+      "cost": [
+        [
+          "workshop:plate",
+          1
+        ],
+        [
+          "workshop:coal",
+          1
+        ]
+      ],
+      "duration_divisor": 2
+    }
+  ]
+}

@@ -174,7 +174,14 @@ fn draw_workshop(sim: &Workshop, choice: &mut Selection, interactive: bool, stat
     clear_background(PAPER);
     draw_rectangle(0., 0., WIDTH, 110., INK);
     text("THE LITTLE AUTOMATION WORKSHOP", 24., 44., 30., PAPER);
-    text("Two machines. One store. Every item has a job.", 24., 79., 20., Color::new(0.65, 0.83, 0.76, 1.));
+    let delivered = sim.state.delivered.get("workshop:wire").copied().unwrap_or(0);
+    text(
+        &format!("Deliver 3 wire: {}/3 | Smelt plates, buy wire tools, draw and deliver.", delivered.min(3)),
+        24.,
+        79.,
+        20.,
+        Color::new(0.65, 0.83, 0.76, 1.),
+    );
     text(&format!("TICK {}", sim.state.tick), 1030., 44., 20., PAPER);
     text("SHARED STORE", 24., 148., 23., INK);
     text(
@@ -289,7 +296,7 @@ fn draw_workshop(sim: &Workshop, choice: &mut Selection, interactive: bool, stat
     for (index, line) in lines.iter().enumerate() {
         text(line, 24., top + index as f32 * 21., 18., RUST);
     }
-    text("1/2 machine | Arrows recipe | Space queue | Backspace cancel | U upgrade | O/C gather | D deliver | F5/F9 save/load | Esc menu", 24., 744., 16., INK);
+    text("1/2 machine | Arrows recipe | Space queue | Backspace cancel | U upgrade | O/C gather | D deliver selected | F5/F9 save/load | Esc menu", 24., 744., 16., INK);
     commands
 }
 
@@ -321,6 +328,9 @@ async fn main() {
         );
         let dt = life.begin_frame(input.frame_seconds());
         let accepting = shell.accepting_input();
+        if !accepting {
+            pending.clear();
+        }
         let mut commands = Vec::new();
         if accepting {
             if let Some(script) = life.script() {
@@ -352,7 +362,9 @@ async fn main() {
                     commands.extend(item_command(&sim, "coal", 2, true));
                 }
                 if script.starts("deliver") {
-                    commands.extend(item_command(&sim, "plate", 1, false));
+                    if let Some(item) = selected(&sim.definitions.items, choice.item) {
+                        commands.push(Command::Deliver { item, amount: 1 });
+                    }
                 }
                 if script.starts("full") {
                     commands.extend(fill_source(&sim));
@@ -412,7 +424,9 @@ async fn main() {
                     commands.extend(item_command(&sim, "coal", 2, true));
                 }
                 if input.pressed(KeyCode::D) {
-                    commands.extend(item_command(&sim, "plate", 1, false));
+                    if let Some(item) = selected(&sim.definitions.items, choice.item) {
+                        commands.push(Command::Deliver { item, amount: 1 });
+                    }
                 }
                 if input.pressed(KeyCode::Backspace) {
                     if let Some(machine) = selected(&sim.state.machines, choice.machine) {

@@ -1,6 +1,6 @@
 //! Shared, opt-in presentation defaults for standalone games.
 //! F/F11 changes fullscreen in place. Escape opens the menu and gates all gameplay
-//! input. Online authority continues while the menu is open. No OS unsafe calls.
+//! input. Online authority continues while the menu is open. Native observation lives in `focus`.
 use super::game_text::draw_text;
 use super::{controller::Collider, mesh};
 use crate::{geometry::World, math::V};
@@ -35,7 +35,7 @@ pub fn exit_requested() -> bool {
 pub fn window_config(title: &str) -> macroquad::conf::Conf {
     macroquad::conf::Conf {
         miniquad_conf: Conf {
-            window_title: title.into(),
+            window_title: super::focus::window_title(title),
             window_width: 1280,
             window_height: 720,
             fullscreen: super::startup::default_fullscreen(),
@@ -166,6 +166,9 @@ pub struct MenuOutcome {
     pub cycle_shadows: bool,
 }
 pub struct GameShell {
+    neutral_gate: super::focus::NeutralGate,
+    device_neutral: bool,
+    automated_input: bool,
     pub paused: bool,
     pub fullscreen: bool,
     pub diagnostics: bool,
@@ -197,6 +200,9 @@ impl GameShell {
             selection: 0,
             suppress: false,
             actions: ShellActions::default(),
+            neutral_gate: super::focus::NeutralGate::default(),
+            device_neutral: true,
+            automated_input: super::startup::automated_input(&std::env::args().collect::<Vec<_>>()),
         }
     }
     /// `capture_cursor` is whether the game wants the mouse captured while it is unpaused and focused:
@@ -217,19 +223,17 @@ impl GameShell {
         focused: bool,
         actions: ShellActions,
     ) {
-        self.actions = if focused {
-            actions
-        } else {
-            ShellActions::default()
-        };
         repeat_all_miniquad_input(&mut self.focus, self.subscriber);
-        self.suppress = false;
-        if !self.focus.active || !focused {
-            self.paused = true;
+        let observation = super::focus::sample().filter(|_| !self.automated_input);
+        if self.automated_input {
+            self.focus.active = true;
         }
+        self.observe_input(focused, observation, get_keys_pressed().is_empty(), actions);
+        let focused = self.device_input_allowed();
         if self.focus.active && self.actions.fullscreen {
             self.fullscreen = !self.fullscreen;
             set_fullscreen(self.fullscreen);
+            super::startup::save_fullscreen(self.fullscreen);
             self.suppress = true;
         }
         if self.focus.active && self.actions.pause {
@@ -237,6 +241,7 @@ impl GameShell {
             self.controls = false;
             self.settings_screen = false;
             self.suppress = true;
+            self.neutral_gate.observe(true, true, false);
         }
         if self.actions.diagnostics {
             self.diagnostics = !self.diagnostics;
@@ -251,6 +256,38 @@ impl GameShell {
             self.captured = capture;
             self.suppress = true;
         }
+    }
+    /// Apply the frame's single native observation before any consumer reads device actions.
+    /// Kept separate from window operations so the shared adapter can be exercised headlessly.
+    pub(crate) fn observe_input(
+        &mut self,
+        focused: bool,
+        observation: Option<super::focus::Sample>,
+        window_keys_neutral: bool,
+        actions: ShellActions,
+    ) {
+        let lost = !focused
+            || !self.focus.active
+            || observation.as_ref().is_some_and(|s| !s.focused || s.lost);
+        let active = focused && self.focus.active && observation.as_ref().is_none_or(|s| s.focused);
+        let neutral = self.device_neutral
+            && window_keys_neutral
+            && observation.as_ref().is_none_or(|s| s.neutral);
+        self.suppress = !self.neutral_gate.observe(active, lost, neutral);
+        self.actions = if self.device_input_allowed() {
+            actions
+        } else {
+            ShellActions::default()
+        };
+        if !self.focus.active || lost {
+            self.paused = true;
+        }
+    }
+    /// Whether device commands may be read, including in the game's focused pause menu.
+    /// False during native focus loss, return-to-neutral and shell transitions. Unlike
+    /// [`GameShell::accepting_input`], this does not require the pause menu to be closed.
+    pub fn device_input_allowed(&self) -> bool {
+        self.focus.active && !self.suppress
     }
     /// A shell in a chosen state without a window: the real constructor registers a macroquad input subscriber.
     #[cfg(test)]
@@ -267,7 +304,14 @@ impl GameShell {
             selection: 0,
             suppress,
             actions: ShellActions::default(),
+            neutral_gate: super::focus::NeutralGate::default(),
+            device_neutral: true,
+            automated_input: false,
         }
+    }
+    /// Supply held-controller neutrality before beginning the frame.
+    pub fn device_neutral(&mut self, neutral: bool) {
+        self.device_neutral = neutral;
     }
     /// True only while the mouse is **captured**, the menu is closed and no shell key was just handled.
     ///
@@ -587,7 +631,12 @@ impl GameShell {
                 Color::from_rgba(24, 43, 53, 255)
             },
         );
-        hover && is_mouse_button_pressed(MouseButton::Left)
+        self.menu_click(hover, is_mouse_button_pressed(MouseButton::Left))
+    }
+    fn menu_click(&self, hover: bool, pressed: bool) -> bool {
+        // Pointer edges must obey the same focus/transition gate as shell actions.
+        // A click received while returning focus cannot resume or quit the game.
+        self.focus.active && !self.suppress && hover && pressed
     }
 }
 
@@ -655,6 +704,29 @@ fn menu_selection(current: usize, actions: ShellActions, count: usize) -> usize 
 #[cfg(test)]
 mod settings_tests {
     use super::*;
+    #[test]
+    fn menu_pointer_cannot_bypass_focus_loss_and_neutral_return() {
+        let mut shell = GameShell::in_state(false, true, false);
+        // Actual native observations feed the same gate in begin_frame. A stale
+        // click over Resume/Quit must be ignored through loss and held return.
+        for (focused, lost, neutral) in [
+            (false, true, false),
+            (true, true, false),
+            (true, false, false),
+            (true, false, true),
+        ] {
+            shell.suppress = !shell.neutral_gate.observe(focused, lost, neutral);
+            assert!(!shell.menu_click(true, true));
+            assert!(shell.paused);
+        }
+        shell.suppress = !shell.neutral_gate.observe(true, false, false);
+        assert!(shell.menu_click(true, true)); // fresh click after the neutral frame
+        shell.suppress = true; // Escape/fullscreen/cursor transition in this frame
+        assert!(!shell.menu_click(true, true));
+        shell.suppress = false;
+        shell.focus.active = false;
+        assert!(!shell.menu_click(true, true)); // custom-host focus without native adapter
+    }
     #[test]
     fn keyboard_settings_visit_only_available_rows_and_activate_without_closing() {
         for music in [false, true] {

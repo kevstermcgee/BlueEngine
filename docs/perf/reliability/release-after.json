@@ -1,0 +1,171 @@
+{
+  "instrumentation": "System allocator requested sizes; per-tick allocations exclude player input construction and save/load; no GPU",
+  "profile": "release",
+  "workloads": [
+    {
+      "accepted_commands": 0,
+      "elapsed_seconds": 0.923144241,
+      "final_hash": "5d849b58ca327201",
+      "linux_rss_series": [
+        10420224,
+        10711040,
+        10743808,
+        10776576,
+        10801152,
+        10825728,
+        10854400,
+        10874880,
+        10895360,
+        10911744,
+        10932224,
+        10952704,
+        10977280,
+        10997760,
+        11022336,
+        11042816,
+        11063296,
+        11087872,
+        11108352,
+        11128832
+      ],
+      "load_ns": {
+        "max": 9758526,
+        "p50": 7144861,
+        "p95": 9758526,
+        "p99": 9758526
+      },
+      "machines": 1000,
+      "refused_commands": 0,
+      "requested_live_bytes": 1297340,
+      "samples": 50000,
+      "save_bytes": 287684,
+      "save_load_samples": 20,
+      "save_ns": {
+        "max": 17002334,
+        "p50": 12902359,
+        "p95": 17002334,
+        "p99": 17002334
+      },
+      "tick_allocation_calls": 0,
+      "tick_ns": {
+        "max": 32810,
+        "p50": 8655,
+        "p95": 11010,
+        "p99": 12045
+      },
+      "tick_requested_bytes": 0,
+      "warmup": 2000,
+      "workload": "blocked"
+    },
+    {
+      "accepted_commands": 50000,
+      "elapsed_seconds": 0.052461291,
+      "final_hash": "258ea78b9a3bbb7c",
+      "linux_rss_series": [
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808
+      ],
+      "load_ns": {
+        "max": 33493,
+        "p50": 24965,
+        "p95": 33493,
+        "p99": 33493
+      },
+      "machines": 2,
+      "refused_commands": 0,
+      "requested_live_bytes": 426704,
+      "samples": 50000,
+      "save_bytes": 1091,
+      "save_load_samples": 20,
+      "save_ns": {
+        "max": 64388,
+        "p50": 44927,
+        "p95": 64388,
+        "p99": 64388
+      },
+      "tick_allocation_calls": 710020,
+      "tick_ns": {
+        "max": 13724,
+        "p50": 747,
+        "p95": 1233,
+        "p99": 1418
+      },
+      "tick_requested_bytes": 62287680,
+      "warmup": 2000,
+      "workload": "active"
+    },
+    {
+      "accepted_commands": 47059,
+      "elapsed_seconds": 1.404232022,
+      "final_hash": "e9975c70a8b4c868",
+      "linux_rss_series": [
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808,
+        10743808
+      ],
+      "load_ns": {
+        "max": 1869735,
+        "p50": 1718874,
+        "p95": 1869735,
+        "p99": 1869735
+      },
+      "machines": 1000,
+      "refused_commands": 2941,
+      "requested_live_bytes": 1047396,
+      "samples": 50000,
+      "save_bytes": 80745,
+      "save_load_samples": 20,
+      "save_ns": {
+        "max": 3346073,
+        "p50": 3145201,
+        "p95": 3346073,
+        "p99": 3346073
+      },
+      "tick_allocation_calls": 738588,
+      "tick_ns": {
+        "max": 254697,
+        "p50": 11481,
+        "p95": 13419,
+        "p99": 16572
+      },
+      "tick_requested_bytes": 71063977,
+      "warmup": 2000,
+      "workload": "mixed"
+    }
+  ]
+}

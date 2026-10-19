@@ -1,0 +1,391 @@
+{
+  "content": "cf811f3889685b31",
+  "fault": true,
+  "seed": 7,
+  "turns": [
+    {
+      "input": [
+        {
+          "command": {
+            "Queue": {
+              "machine": "workshop:machine-a",
+              "recipe": "workshop:smelt"
+            }
+          },
+          "seat": 0,
+          "serial": 1
+        },
+        {
+          "command": {
+            "Queue": {
+              "machine": "workshop:machine-a",
+              "recipe": "workshop:smelt"
+            }
+          },
+          "seat": 0,
+          "serial": 1
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Queue": {
+              "machine": "workshop:machine-b",
+              "recipe": "workshop:smelt"
+            }
+          },
+          "seat": 0,
+          "serial": 2
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Gather": {
+              "amount": 4,
+              "item": "workshop:ore"
+            }
+          },
+          "seat": 0,
+          "serial": 3
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Gather": {
+              "amount": 2,
+              "item": "workshop:coal"
+            }
+          },
+          "seat": 0,
+          "serial": 4
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 5
+        }
+      ],
+      "reload": true
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 6
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 7
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 8
+        },
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 8
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Cancel": {
+              "machine": "workshop:machine-a"
+            }
+          },
+          "seat": 0,
+          "serial": 9
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Deliver": {
+              "amount": 6,
+              "item": "workshop:ore"
+            }
+          },
+          "seat": 0,
+          "serial": 10
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Upgrade": {
+              "machine": "workshop:machine-a",
+              "upgrade": "workshop:wire-tools"
+            }
+          },
+          "seat": 0,
+          "serial": 11
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Queue": {
+              "machine": "workshop:machine-a",
+              "recipe": "workshop:smelt"
+            }
+          },
+          "seat": 0,
+          "serial": 12
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 13
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 14
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 15
+        },
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 15
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Queue": {
+              "machine": "workshop:machine-a",
+              "recipe": "workshop:draw-wire"
+            }
+          },
+          "seat": 0,
+          "serial": 16
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 17
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 18
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 19
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 20
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 21
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Deliver": {
+              "amount": 3,
+              "item": "workshop:wire"
+            }
+          },
+          "seat": 0,
+          "serial": 22
+        },
+        {
+          "command": {
+            "Deliver": {
+              "amount": 3,
+              "item": "workshop:wire"
+            }
+          },
+          "seat": 0,
+          "serial": 22
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Queue": {
+              "machine": "workshop:machine-a",
+              "recipe": "workshop:smelt"
+            }
+          },
+          "seat": 0,
+          "serial": 23
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Deliver": {
+              "amount": 1,
+              "item": "workshop:plate"
+            }
+          },
+          "seat": 0,
+          "serial": 24
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": "Wait",
+          "seat": 0,
+          "serial": 25
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Deliver": {
+              "amount": 1,
+              "item": "workshop:coal"
+            }
+          },
+          "seat": 0,
+          "serial": 26
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Queue": {
+              "machine": "workshop:machine-b",
+              "recipe": "workshop:gears"
+            }
+          },
+          "seat": 0,
+          "serial": 27
+        }
+      ],
+      "reload": false
+    },
+    {
+      "input": [
+        {
+          "command": {
+            "Gather": {
+              "amount": 1,
+              "item": "workshop:coal"
+            }
+          },
+          "seat": 0,
+          "serial": 28
+        }
+      ],
+      "reload": false
+    }
+  ]
+}

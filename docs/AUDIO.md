@@ -245,3 +245,12 @@ unchanged, so no existing game is forced to adopt it.
 - Stock audio is opt-in as described above; it has settings toggles but no music export provider yet.
 - `downloads_dir` returns the plain default location on every platform; a Linux user's custom
   `XDG_DOWNLOAD_DIR` in `user-dirs.dirs` is not consulted.
+
+Native health limitation (Macroquad 0.4.14): its context creates quad-snd before
+application mute code. An ALSA worker panic can coexist with successful graphics;
+no runtime device/worker-health query is exposed. Explicitly muted game banks skip
+synthesis and priming, but cannot avoid upstream context creation in audio-enabled
+builds. Capture subsystem evidence reports that limit and retains diagnostics.
+SoundBank status distinguishes intentional mute, loading, asset/render-worker
+failure, empty banks and successful loading/submissions; it certifies no physical
+output device. Screenshots and audio health are independent verification claims.

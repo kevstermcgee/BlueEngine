@@ -2,6 +2,7 @@
 use automation_workshop::{content, persistence, Command, Definitions, Envelope, Workshop, MAX_STATE_BYTES};
 use std::{
     alloc::{GlobalAlloc, Layout, System},
+    io::{Read, Write},
     path::Path,
     sync::atomic::{AtomicUsize, Ordering},
     time::Instant,
@@ -69,6 +70,10 @@ fn save_bytes(path: &str) -> Result<Vec<u8>, String> {
 }
 fn run() -> Result<(), String> {
     let args: Vec<_> = std::env::args().skip(1).collect();
+    if args.first().is_some_and(|s| matches!(s.as_str(), "--help" | "-h" | "help")) {
+        println!("workshop: validate [CONTENT] | inspect [MACHINE] | edit CONTENT ADDITIONS | play | probe | playtest SEED TICKS [fault] | replay-playtest TRACE | migrate-v1 SAVE OUTPUT | migrate-content SOURCE SAVE OUTPUT [TARGET]");
+        return Ok(());
+    }
     let mut game = Workshop::standard();
     let output = match args.first().map(String::as_str).unwrap_or("inspect") {
         "validate" => {
@@ -97,6 +102,23 @@ fn run() -> Result<(), String> {
             persistence::migrate_content(&mut game, &original, source, destination, "migrated-content")?;
             serde_json::json!({"ok":true,"output":destination.join("migrated-content.be2save"),"tick":game.state.tick,"content":game.definitions.fingerprint()})
         }
+        "playtest" => {
+            let seed = argument(&args, 1, "playtest SEED TICKS [fault]")?.parse().map_err(|_|"invalid seed")?;
+            let ticks: usize = argument(&args, 2, "playtest SEED TICKS [fault]")?.parse().map_err(|_|"invalid ticks")?;
+            if !(22..=100000).contains(&ticks) { return Err("ticks must be 22..100000".into()); }
+            let report = automation_workshop::playtest::run(seed,ticks,args.get(3).is_some_and(|s|s=="fault"));
+            return print_playtest(report);
+        }
+        "replay-playtest" => {
+            let path = argument(&args,1,"replay-playtest TRACE_JSON")?;
+            let mut bytes = Vec::new();
+            // Bound the read itself, including files which grow while being read.
+            std::fs::File::open(path).map_err(|e|e.to_string())?.take(64*1024*1024+1)
+                .read_to_end(&mut bytes).map_err(|e|e.to_string())?;
+            if bytes.len()>64*1024*1024 { return Err("trace exceeds 64 MiB".into()); }
+            let trace=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
+            return print_playtest(automation_workshop::playtest::replay(trace));
+        }
         "probe" => probe()?,
         "play" => {
             let mut serial = 0;
@@ -116,6 +138,21 @@ fn run() -> Result<(), String> {
         _ => return Err("Commands: validate [CONTENT], inspect [MACHINE-ID], play, probe, edit CONTENT_JSON ADDITIONS_JSON, migrate-v1 SAVE OUTPUT_DIRECTORY, migrate-content SOURCE_CONTENT SAVE OUTPUT_DIRECTORY [TARGET_CONTENT]. V1 fixture generation lives at commit d7e4188.".into()),
     };
     println!("{}", serde_json::to_string_pretty(&output).map_err(|e| e.to_string())?);
+    if output.get("ok") == Some(&serde_json::Value::Bool(false)) {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+// A long trace already owns its action and checkpoint evidence. Stream it once instead of
+// allocating a second JSON tree and a complete output string inside the worker's memory budget.
+fn print_playtest(report: automation_workshop::playtest::Report) -> Result<(), String> {
+    let ok = report.ok;
+    let mut output = std::io::BufWriter::new(std::io::stdout().lock());
+    serde_json::to_writer_pretty(&mut output, &report).map_err(|e| e.to_string())?;
+    output.write_all(b"\n").and_then(|()| output.flush()).map_err(|e| e.to_string())?;
+    if !ok {
+        std::process::exit(1);
+    }
     Ok(())
 }
 fn queue(machine: &str) -> Command {

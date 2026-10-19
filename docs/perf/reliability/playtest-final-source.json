@@ -1,0 +1,126 @@
+{
+  "revision": "5adbdcea76a37dbd68d1462bc0a5427a51a9420e",
+  "working_diff_sha256": "a5a297ec4cb85c236cc94850f6269473d522ce019f06fef079e58e3330ae43a9",
+  "binary_sha256": "68f6a636d356dd5e77b16024eb0a202a8e22bb0117e75da7504abd8757846872",
+  "binary": "/srv/storage/cache/cargo/default/release/workshop",
+  "source_identity": {
+    "sha256": "8fbcf1c8a9382ff3940fcc03999dafecd3129a08bd58f3ea532bfeeae13276d2",
+    "files": 1948
+  },
+  "concurrency": 2,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "ticks_per_run": 10000,
+  "memory_mib_per_run": 128,
+  "seconds_per_run": 30,
+  "total_seconds": 120,
+  "ok": true,
+  "runs": [
+    {
+      "seed": 0,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 0 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/0/trace.json",
+      "failure": null,
+      "hash": "ac715f4283cb653f",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    },
+    {
+      "seed": 1,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 1 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/1/trace.json",
+      "failure": null,
+      "hash": "a5ce4c20364f6c30",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    },
+    {
+      "seed": 2,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 2 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/2/trace.json",
+      "failure": null,
+      "hash": "9088d42ed6c26f19",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    },
+    {
+      "seed": 3,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 3 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/3/trace.json",
+      "failure": null,
+      "hash": "9db8f554e5fed0cc",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    },
+    {
+      "seed": 4,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 4 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/4/trace.json",
+      "failure": null,
+      "hash": "abfb9aae1da3ec38",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    },
+    {
+      "seed": 5,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 5 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/5/trace.json",
+      "failure": null,
+      "hash": "74238010a1ddf6a4",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    },
+    {
+      "seed": 6,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 6 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/6/trace.json",
+      "failure": null,
+      "hash": "3373259962cb7cb7",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    },
+    {
+      "seed": 7,
+      "ticks_budget": 10000,
+      "memory_mib": 128,
+      "run_command": "/srv/storage/cache/cargo/default/release/workshop playtest 7 10000",
+      "replay_command": "/srv/storage/cache/cargo/default/release/workshop replay-playtest /tmp/blueengine-playtest-final-source/7/trace.json",
+      "failure": null,
+      "hash": "963528f9ce1725aa",
+      "ok": true,
+      "ticks": 10000,
+      "returncode": 0
+    }
+  ],
+  "elapsed_seconds": 6.392,
+  "claims": "Behavioral simulation evidence only; no rendering, physical input, audible output or enjoyment claim"
+}

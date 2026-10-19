@@ -426,3 +426,25 @@ fn headless_ability_reuses_transactions_with_game_owned_cost_refund_and_cooldown
     );
     assert_eq!(ability.inventory.quantity("ability:ward"), 1);
 }
+
+#[test]
+fn previews_share_commit_validation_without_mutation_or_credit_financing() {
+    let mut store = inventory();
+    let before = store.clone();
+    let debits = [pair("test:ore", 2)];
+    let credits = [pair("test:plate", 1)];
+    let preview = store.preview(&debits, &credits).unwrap();
+    assert_eq!(store, before);
+    assert_eq!(store.transact(&debits, &credits).unwrap(), preview);
+    let before = store.clone();
+    for (debits, credits) in [
+        (vec![pair("test:ore", 8)], vec![pair("test:ore", 8)]),
+        (vec![], vec![pair("test:plate", 9)]),
+    ] {
+        assert_eq!(
+            store.preview(&debits, &credits).unwrap_err(),
+            store.transact(&debits, &credits).unwrap_err()
+        );
+        assert_eq!(store, before);
+    }
+}

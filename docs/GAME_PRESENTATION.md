@@ -69,7 +69,11 @@ GameShell, movement_axes, static_meshes}`. Call `begin_frame` before reading gam
 input and gate every action with `playing()` if the game captures the mouse (first person), or with
 `accepting_input()` if it does not (`playing()` is false for ever without a captured mouse). `ClientInput::movement` and
 `stick_look` already use `accepting_input()`; `mouse_look` needs the capture. Call `menu` after drawing the scene/HUD;
-its return value requests quit. Native focus/input queries belong in the executable.
+its return value requests quit. Shared `viewer::focus` owns native focus observation;
+ClientInput shares the shell's effective acceptance with keyboard/controller reads
+and hotkeys. `device_input_allowed()` permits intended focused-menu commands while
+rejecting unfocused and return-to-neutral frames. Poll devices even when rejected.
+Keep native state outside authoritative simulation and snapshots.
 `viewer::presentation::PoseStream` rejects reordered samples and interpolates remote
 actors with a 50 ms delay. Its bounded local extrapolation is a visual aid, **not** full
 input prediction/reconciliation. High-latency games still need acknowledged input replay.

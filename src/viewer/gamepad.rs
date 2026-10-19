@@ -23,6 +23,18 @@ pub struct GamepadFrame {
     released: HashSet<Button>,
 }
 impl GamepadFrame {
+    /// No held controls or queued edges, including analog sticks and triggers.
+    pub fn neutral(&self) -> bool {
+        self.down.is_empty()
+            && self.pressed.is_empty()
+            && self
+                .left_stick
+                .iter()
+                .chain(&self.right_stick)
+                .chain(&self.triggers)
+                .all(|v| v.abs() <= 0.1)
+    }
+
     pub fn down(&self, button: Button) -> bool {
         self.down.contains(&button)
     }
@@ -235,6 +247,25 @@ impl GamepadInput {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn neutral_gate_observes_held_buttons_sticks_and_triggers_without_press_edges() {
+        let mut frame = GamepadFrame::default();
+        assert!(frame.neutral());
+        frame.button(Button::South, true);
+        frame.begin_frame();
+        assert!(!frame.neutral());
+        frame.button(Button::South, false);
+        frame.begin_frame();
+        assert!(frame.neutral());
+        frame.left_stick[0] = 0.5;
+        assert!(!frame.neutral());
+        frame.left_stick = [0.; 2];
+        frame.right_stick[1] = 0.3;
+        assert!(!frame.neutral());
+        frame.right_stick = [0.; 2];
+        frame.triggers[0] = 1.;
+        assert!(!frame.neutral());
+    }
     #[test]
     fn stick_look_is_the_devkit_convention() {
         let frame = GamepadFrame {

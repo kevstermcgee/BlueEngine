@@ -1,6 +1,7 @@
 """Selection tests use real Git changes, not only hand-written path lists."""
 import json
 import os
+import re
 import runpy
 import shlex
 from pathlib import Path
@@ -275,11 +276,11 @@ class AutomaticLoopTests(unittest.TestCase):
 
     def test_integration_covers_both_feature_modes_and_portable_mode(self):
         plan = workflow.change_plan(ROOT, ['src/two_d/mod.rs'], loop='integration')
-        rust = [c for c in plan['commands'] if c[:2] == ['cargo', 'test']]
-        self.assertEqual(len(rust), 3)
-        self.assertNotIn('--no-default-features', rust[0])
-        self.assertIn('--no-default-features', rust[1])
-        self.assertIn('two-d', rust[2])
+        rust = [c for c in plan['commands'] if c[:2] == ['cargo', 'test'] and '--manifest-path' not in c]
+        self.assertTrue(any('--no-default-features' not in c for c in rust))
+        self.assertTrue(any('--no-default-features' in c and '--features' in c and
+                            {'physics', 'networking'} <= set(c[c.index('--features') + 1].split(',')) for c in rust))
+        self.assertTrue(any('--no-default-features' in c and 'two-d' in c for c in rust))
         self.assertIn('packaging', plan['requirements'])
 
     def test_optional_narrative_has_explicit_full_gates(self):
@@ -435,14 +436,16 @@ class AutomaticLoopTests(unittest.TestCase):
             self.assertIn('1 passed', repaired.stdout)
 
     def test_reviewed_consumer_pin_changes_use_compatibility_checks_without_cargo(self):
-        inventory = json.loads((ROOT / 'tools/game_tooling_inventory.json').read_text())
-        paths = [item['game'] + '/scripts/tooling.json' for item in inventory['projects']]
+        from tools import game_tooling
+        # Change plans consume Git paths, which use '/' on Windows too.
+        paths = [(game / 'scripts/tooling.json').relative_to(ROOT).as_posix()
+                 for game in game_tooling.consumers(ROOT)]
         plan = workflow.change_plan(ROOT, paths)
         self.assertEqual(plan['scope'], 'focused')
         self.assertFalse(plan['requirements']['unit'])
         self.assertTrue(all(command[0] != 'cargo' for command in plan['commands']))
         self.assertTrue(any('tools.test_game_tooling' in command for command in plan['commands']))
-        # Ownership of the inventoried pin does not classify game content or a
+        # Ownership of a declared pin does not classify game content or a
         # new project's policy as independent Python tooling.
         for path in ('games/unreviewed/scripts/tooling.json', 'games/reverie/game.json',
                      'assets/games/leo/assets/identity.json'):
@@ -498,6 +501,22 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertEqual(embedded['scope'], 'focused')
         self.assertTrue(embedded['requirements']['unit'])
         self.assertTrue(any(command[:2] == ['cargo', 'test'] for command in embedded['commands']))
+
+    def test_embedded_bootstrap_shipping_retains_native_generator_checks(self):
+        for plan in (workflow.validation_plan(['templates/game_entry.py']),
+                     workflow.change_plan(ROOT, ['templates/game_entry.py'], loop='shipping'),
+                     workflow.change_plan(ROOT, ['templates/game_entry.py',
+                                                 'games/afterpull/scripts/tooling.json'], loop='shipping')):
+            self.assertEqual(plan['scope'], 'full')
+            self.assertTrue(any(command[:2] == ['cargo', 'test'] for command in plan['commands']))
+            self.assertTrue(any('tools/check_authoring.py' in command for command in plan['commands']))
+
+    def test_maintained_tooling_pin_only_shipping_remains_python_only(self):
+        for game in ('reverie', 'afterpull'):
+            plan = workflow.change_plan(ROOT, [f'games/{game}/scripts/tooling.json'], loop='shipping')
+            self.assertEqual(plan['scope'], 'game_tooling', game)
+            self.assertFalse(any(command[0] == 'cargo' for command in plan['commands']), game)
+            self.assertIn([sys.executable, 'tools/game_tooling.py', 'check'], plan['commands'])
 
     def test_content_link_gate_reads_current_files_on_every_run(self):
         from tools.check_docs import broken_links
@@ -736,12 +755,17 @@ class AutomaticLoopTests(unittest.TestCase):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         job = ci.split('\n  idea-forge:\n', 1)[1].split('\n  wormhole:\n', 1)[0]
         self.assertIn('os: [ubuntu-latest, windows-latest]', job)
-        self.assertIn('game: [idea-forge, automation-workshop]', job)
+        games = re.search(r'^\s*game:\s*\[([^\]]+)\]', job, re.MULTILINE)
+        self.assertIsNotNone(games)
+        self.assertTrue({'idea-forge', 'automation-workshop', 'afterpull'} <=
+                        {game.strip() for game in games[1].split(',')})
         self.assertNotIn('games/idea-forge', job)
         self.assertIn('games/${{ matrix.game }}/Cargo.toml', job)
         self.assertIn('games/${{ matrix.game }}/scripts/ship.py', job)
         self.assertIn('name: ${{ matrix.game }}-native-${{ runner.os }}', job)
         self.assertIn('games/${{ matrix.game }}/.blue-check/', job)
+        self.assertIn('--compare-serial', job)
+        self.assertIn('.be2-work/playtest-${{ matrix.game }}/', job)
         for gate in ('cargo fmt', 'cargo test --locked', 'cargo clippy --locked --all-targets',
                      'Prepare pinned software OpenGL for Windows CI',
                      'Mesa archive checksum mismatch', 'Windows package resources and isolated smoke',
@@ -844,6 +868,11 @@ class SelectionTests(unittest.TestCase):
 
     def test_all_original_engine_gates_remain(self):
         commands = workflow.full_commands()
+        self.assertTrue(any(command[:2] == ['cargo', 'test'] and
+                            'games/afterpull/Cargo.toml' in command and
+                            '--no-default-features' in command for command in commands))
+        self.assertTrue(all('--profile' not in command for command in commands
+                            if 'games/afterpull/Cargo.toml' in command))
         self.assertIn(['cargo', 'fmt', '--check'], commands)
         for features in ([], ['--no-default-features', '--features', 'physics,networking']):
             self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', *features], commands)

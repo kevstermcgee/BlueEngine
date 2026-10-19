@@ -67,6 +67,19 @@ def main(argv):
             print(json.loads(line)['path'])
         else:
             print(line)  # retain gameplay/audio/performance evidence from the executable
+    # Keep worker diagnostics even when the render process exits successfully.
+    if out.is_dir():
+        (out / 'native.stdout.log').write_text(done.stdout, encoding='utf-8')
+        (out / 'native.stderr.log').write_text(done.stderr, encoding='utf-8')
+    import importlib.util
+    spec = importlib.util.spec_from_file_location('be_capture_evidence', ROOT / 'templates/game_review.py')
+    review = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(review)
+    evidence = review.capture_subsystems(done.stdout, '--audible' not in extra)
+    evidence['rendering'] = 'captured' if shots and done.returncode == 0 else 'failed'
+    if out.is_dir():
+        (out / 'subsystems.json').write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
+    print(json.dumps({'capture_evidence': evidence}))
     if done.returncode or not shots:
         print(done.stderr[-1500:] or done.stdout[-1500:], file=sys.stderr)
         return done.returncode or 1

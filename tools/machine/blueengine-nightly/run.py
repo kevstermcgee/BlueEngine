@@ -33,8 +33,16 @@ def git(repo, *args, **kwargs):
 
 def write_json(path, value):
     temp = path.with_suffix(path.suffix + '.tmp')
-    temp.write_text(json.dumps(value, indent=2) + '\n')
+    with temp.open('w') as stream:
+        stream.write(json.dumps(value, indent=2) + '\n')
+        stream.flush()
+        os.fsync(stream.fileno())
     temp.replace(path)
+    directory = os.open(path.parent, os.O_DIRECTORY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
 
 
 def wait_for_hosted_ci(config, sha, run, log):
@@ -98,6 +106,40 @@ def wait_for_hosted_ci(config, sha, run, log):
         if remaining <= 0:
             expired()
         time.sleep(min(poll, remaining))
+
+
+def verify_no_changes(config, work, sha, run, log):
+    """Only generated review data may inherit a code ancestor's successful CI.
+
+    Never infer verification from a commit message, author, or the AI's result.
+    Walk single-parent commits, inspecting every changed path (including deletes).
+    A merge, unknown path, or exhausted bound requires CI on that revision.
+    """
+    current, skipped = sha, []
+    for _ in range(100):
+        parents = git(work, 'rev-list', '--parents', '-n', '1', current).split()
+        if len(parents) != 2:
+            break
+        names = git(work, 'diff-tree', '--no-commit-id', '--name-only', '-r',
+                    '--no-renames', current).splitlines()
+        if not names or not all(
+            name == 'docs/player-feedback/summary.json'
+            or (name.startswith('docs/player-feedback/reviews/') and name.endswith('.json'))
+            or (name.startswith('docs/player-feedback/games/') and name.endswith('.json'))
+            for name in names
+        ):
+            break
+        skipped.append(current)
+        current = parents[1]
+    if skipped:
+        # Use the current checkout's validator; review bodies remain untrusted data.
+        command(['python3', 'tools/player_feedback.py', 'check'], cwd=work,
+                timeout=180, log=log)
+    evidence = wait_for_hosted_ci(config, current, run, log)
+    evidence.update(reviewed_sha=sha, feedback_only_commits=skipped,
+                    policy='validated-feedback-data-on-verified-code')
+    write_json(run / 'hosted-ci.json', evidence)
+    return evidence
 
 
 def feedback_path(name):
@@ -330,14 +372,20 @@ def main():
                     if (state / 'latest.md').exists():
                         prompt += f'Previous morning report (read-only): {state / "latest.md"}\n'
                     (run / 'prompt.txt').write_text(prompt)
-                    with (run / 'codex.jsonl').open('w') as events, (run / 'codex.stderr.log').open('w') as errors:
-                        subprocess.run([config['codex'], 'exec', '--dangerously-bypass-approvals-and-sandbox',
-                                        '--cd', str(work), '--color', 'never', '--json',
-                                        '--output-schema', str(CONFIG_DIR / 'result.schema.json'),
-                                        '--output-last-message', str(run / 'result.json'), '-'],
-                                       input=prompt, text=True, stdout=events, stderr=errors,
-                                       timeout=config['codex_timeout_seconds'], check=True)
-                    result = json.loads((run / 'result.json').read_text())
+                    decision_path = state / 'no-change-decision.json'
+                    decision = json.loads(decision_path.read_text()) if decision_path.exists() else {}
+                    if decision.get('base') == base and decision.get('signals') == sorted(current):
+                        result = decision['result']
+                        log.write('Reusing clean no-change decision for identical revision and feedback; CI still required.\n')
+                    else:
+                        with (run / 'codex.jsonl').open('w') as events, (run / 'codex.stderr.log').open('w') as errors:
+                            subprocess.run([config['codex'], 'exec', '--dangerously-bypass-approvals-and-sandbox',
+                                            '--cd', str(work), '--color', 'never', '--json',
+                                            '--output-schema', str(CONFIG_DIR / 'result.schema.json'),
+                                            '--output-last-message', str(run / 'result.json'), '-'],
+                                           input=prompt, text=True, stdout=events, stderr=errors,
+                                           timeout=config['codex_timeout_seconds'], check=True)
+                        result = json.loads((run / 'result.json').read_text())
                     if result.get('status') not in {'updated', 'no_changes', 'blocked'} or not isinstance(result.get('summary'), str):
                         raise RuntimeError('Codex returned an invalid maintenance result')
                     if git(work, 'rev-parse', 'HEAD').strip() != base:
@@ -349,7 +397,8 @@ def main():
                         if dirty:
                             raise RuntimeError('Codex reported no changes but left modified files')
                         confirmed_no_changes = True
-                        hosted_ci = wait_for_hosted_ci(config, base, run, log)
+                        write_json(decision_path, {'base': base, 'signals': sorted(current), 'result': result})
+                        hosted_ci = verify_no_changes(config, work, base, run, log)
                         outcome, detail, exit_code = 'no_changes', 'No actionable engine changes were needed; nothing pushed.', 0
                     else:
                         if not dirty:
@@ -417,19 +466,21 @@ def main():
                     if result.get(key):
                         report += f'\n{label}:\n\n' + ''.join(f'- {item}\n' for item in result[key])
                 report += f'\nLogs and feedback: {run}\n'
-                if outcome == 'failed' and work.exists():
+                if outcome == 'failed' and work.exists() and not confirmed_no_changes:
                     label = ('Pushed worktree retained for review' if pushed_commit else
                              'Unchanged worktree retained for review' if confirmed_no_changes else
                              'Worktree retained; push was not confirmed' if publication_attempted else
                              'Unpublished work retained')
                     report += f'\n{label}: {work}\n'
+                if confirmed_no_changes:
+                    report += '\nNo source work retained: clean no-change decision is cached; retries only recheck CI.\n'
                 (run / 'report.md').write_text(report)
                 if not args.collect_only:
                     latest = state / 'latest.md'
                     temporary = state / 'latest.md.tmp'
                     temporary.write_text(report)
                     temporary.replace(latest)
-                if exit_code == 0 and work.exists():
+                if (exit_code == 0 or confirmed_no_changes) and work.exists():
                     try:
                         git(config['engine'], 'worktree', 'remove', work, timeout=180, log=log)
                     except Exception as exc:

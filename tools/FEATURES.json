@@ -518,19 +518,6 @@
     },
     "game_scaffolding": {
       "files": [
-        "games/corkscrew-key/scripts/tooling.json",
-        "games/gap-flip/scripts/tooling.json",
-        "games/idea-forge/scripts/tooling.json",
-        "games/lantern-grove/scripts/tooling.json",
-        "games/lantern-run/scripts/tooling.json",
-        "games/orchard-watch/scripts/tooling.json",
-        "games/pocket-breaker/scripts/tooling.json",
-        "games/reverie/scripts/tooling.json",
-        "games/rift-delver/scripts/tooling.json",
-        "games/signal-garden/scripts/tooling.json",
-        "games/sway/scripts/tooling.json",
-        "games/wormhole/scripts/tooling.json",
-        "assets/games/leo/scripts/tooling.json",
         "src/viewer/newgame.rs",
         "templates/custom-sim",
         "templates/game_ship.py",
@@ -765,6 +752,7 @@
     "shared_gameplay": {
       "files": [
         "src/viewer/game_input.rs",
+        "src/viewer/game_input_windows_tests.rs",
         "src/viewer/game_ui.rs",
         "src/viewer/local_client.rs",
         "templates/native_focus.rs",
@@ -805,10 +793,10 @@
         "game_presentation"
       ],
       "read_first": [
-        "src/viewer/game_session.rs",
+        "docs/SHARED_GAMEPLAY.md",
         "src/viewer/game_input.rs",
-        "src/viewer/playable.rs",
-        "tests/game_runtime.rs"
+        "src/viewer/game_client.rs",
+        "src/viewer/focus.rs"
       ],
       "public_api": [
         "GameSession::local",
@@ -843,6 +831,9 @@
         "src/viewer/prop_view.rs": [
           "presentation",
           "physics"
+        ],
+        "src/viewer/game_input_windows_tests.rs": [
+          "native-client"
         ]
       },
       "keywords": [
@@ -996,7 +987,8 @@
           "when": [
             [
               "hud",
-              "ui"
+              "ui",
+              "presentation"
             ],
             [
               "distinctive",
@@ -1056,7 +1048,8 @@
         "docs/PORTABLE_GAMES.md",
         "templates/two-d/world.rs",
         "tests/portable_storage.rs",
-        "docs/GAME_AUTHORING_ENTRY.md"
+        "docs/GAME_AUTHORING_ENTRY.md",
+        "src/viewer/focus.rs"
       ],
       "read_first": [
         "docs/PORTABLE_GAMES.md",
@@ -2294,7 +2287,8 @@
         "assets/ui/LICENSE_LIBERATION",
         "src/viewer/stock_presentation.rs",
         "src/viewer/playable.rs",
-        "tests/stock_observatory.rs"
+        "tests/stock_observatory.rs",
+        "src/viewer/focus.rs"
       ],
       "checks": [
         "presentation module tests",
@@ -2306,7 +2300,7 @@
         "simulation_contract"
       ],
       "contract": {
-        "owns": "Window, menus, cosmetic rendering and input adaptation; optional stock objective/outcome wording, counter labels/visibility/units/clock, palette and HUD configuration",
+        "owns": "Window, menus, cosmetic rendering and input adaptation; optional stock objective/outcome wording, counter labels/visibility/units/clock, palette and HUD configuration; shared native focus observation and neutral-return acceptance for input and hotkeys",
         "inputs": "Shared authoritative state and neutral gameplay inputs",
         "outputs": "Frames and intentions",
         "may_depend_on": [
@@ -2341,7 +2335,12 @@
         "palette",
         "counter labels",
         "clock",
-        "presentation"
+        "presentation",
+        "native focus",
+        "focus loss",
+        "return to neutral",
+        "hotkeys",
+        "foreground"
       ],
       "read_first": [
         "src/viewer/game_client.rs",
@@ -3196,12 +3195,16 @@
       "note": "External versioned custom-simulation reference: independently owned machines, shared inventory escrow, logical-time production, blocked output/cancellation recovery, game-owned indexed item/recipe/upgrade content and engine Snapshot migrations.",
       "files": [
         "games/automation-workshop/",
-        "docs/WORKSHOP.md"
+        "docs/WORKSHOP.md",
+        "tools/playtest.py",
+        "tools/test_playtest.py",
+        "docs/PLAYTESTING.md"
       ],
       "checks": [
         "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features",
         "cargo test --locked --profile itest --manifest-path games/automation-workshop/Cargo.toml --no-default-features --features online --test netplay",
-        "python -m unittest tools.test_discovery"
+        "python -m unittest tools.test_discovery",
+        "python -m unittest tools.test_playtest"
       ],
       "required_features": [
         "resources"
@@ -3455,6 +3458,36 @@
         "NarrativeState"
       ],
       "depends_on": []
+    },
+    "playtesting": {
+      "note": "Bounded headless gameplay tests use game-owned adapters around Workshop commands and Afterpull Intent, sharing only process budgets, source/binary identity, evidence and replay orchestration. Direct progress/recovery and undo/transition invariants detect injected stalls or corruption. Headless evidence does not certify rendering, networking, physical input, audio or enjoyment.",
+      "files": [
+        "tools/playtest.py",
+        "tools/test_playtest.py",
+        "docs/PLAYTESTING.md",
+        "games/afterpull/"
+      ],
+      "checks": [
+        "python -m unittest tools.test_playtest",
+        "cargo test --locked --manifest-path games/afterpull/Cargo.toml --no-default-features"
+      ],
+      "depends_on": [
+        "save_state",
+        "two_dimensional"
+      ],
+      "keywords": [
+        "bounded playtesting",
+        "seeded playtesting",
+        "headless gameplay testing",
+        "authoritative playtesting",
+        "serial parallel replay",
+        "Afterpull undo"
+      ],
+      "read_first": [
+        "docs/PLAYTESTING.md",
+        "games/afterpull/AGENTS.md"
+      ],
+      "canonical_example": "games/afterpull/src/lib.rs"
     }
   },
   "format": 1,
@@ -3613,7 +3646,7 @@
     "src/viewer/devkit/audio_project.rs": "Named audio: checked stereo scores and crossfaded imported ambience loops, rendered before runtime.",
     "src/viewer/savestate/world.rs": "The engine world's save state: what HeadlessWorld::save_state captures and restore_state accepts.",
     "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
-    "templates/native_focus.rs": "Application-owned foreground check.",
+    "templates/native_focus.rs": "Executable compatibility hooks; shared viewer::focus and ClientInput/GameShell own native focus acceptance.",
     "src/viewer/spans.rs": "A handful of named timing spans and one compact summary, for seeing where a tick goes.",
     "src/viewer/devkit/scale.rs": "Size checks a headless agent can run: how big is this thing, in metres, next to a person?",
     "tools/mcp_server.py": "BlueEngine MCP Server launcher.",

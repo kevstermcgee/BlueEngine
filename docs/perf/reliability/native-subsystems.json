@@ -1,0 +1,9 @@
+{
+  "rendering": "captured",
+  "scripted_behavior": "separate assertions required",
+  "physical_input": "unverified",
+  "audible_hardware": "unverified",
+  "audio_intent": "muted",
+  "audio_telemetry": "unavailable",
+  "backend_health": "unobservable: Macroquad does not expose device/worker health"
+}
