@@ -41,17 +41,15 @@ Saved command serials prevent repeats. Identical duplicates apply once; conflict
 commands with the same seat/serial reject the complete command batch before mutation.
 Logical time/production still advance. The client resumes its serial after loading.
 
-Production consumes declared recipe inputs into the job's saved escrow. Each
-fixed step visits one head job per machine in stable instance-ID order and reduces
-its remaining time once. A ready head attempts its output that step; a successor
-waits until the next step. Wall time and rendered frames are not authority.
+Production escrows recipe inputs. Each fixed step visits one head per machine in
+stable instance-ID order, reducing its time once. Ready heads attempt output that
+step; successors wait until the next. Wall time and rendering never advance production.
 Completion commits the whole declared output transaction. A full destination
 keeps the completed job, its escrow and an actionable `TransactionError`; it does
 not silently drop products. Delivering inventory through a player command frees
 space and retries production. Cancelling refunds the complete escrow transaction;
 if that refund cannot fit, the cancellation remains pending until space is freed.
-Two machines update in stable instance-ID order, so contention has a deterministic
-winner. Resource counts change only at validated commits or explicitly declared
+Stable order resolves contention. Resource counts change only at validated commits or explicitly declared
 recipe/source/sink boundaries.
 
 Persistent item/recipe/upgrade IDs are namespaced definitions; machine IDs identify

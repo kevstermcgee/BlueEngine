@@ -1,6 +1,7 @@
 """Selection tests use real Git changes, not only hand-written path lists."""
 import json
 import os
+import re
 import runpy
 import shlex
 from pathlib import Path
@@ -754,12 +755,17 @@ class AutomaticLoopTests(unittest.TestCase):
         ci = (ROOT / '.github/workflows/ci.yml').read_text()
         job = ci.split('\n  idea-forge:\n', 1)[1].split('\n  wormhole:\n', 1)[0]
         self.assertIn('os: [ubuntu-latest, windows-latest]', job)
-        self.assertIn('game: [idea-forge, automation-workshop]', job)
+        games = re.search(r'^\s*game:\s*\[([^\]]+)\]', job, re.MULTILINE)
+        self.assertIsNotNone(games)
+        self.assertTrue({'idea-forge', 'automation-workshop', 'afterpull'} <=
+                        {game.strip() for game in games[1].split(',')})
         self.assertNotIn('games/idea-forge', job)
         self.assertIn('games/${{ matrix.game }}/Cargo.toml', job)
         self.assertIn('games/${{ matrix.game }}/scripts/ship.py', job)
         self.assertIn('name: ${{ matrix.game }}-native-${{ runner.os }}', job)
         self.assertIn('games/${{ matrix.game }}/.blue-check/', job)
+        self.assertIn('--compare-serial', job)
+        self.assertIn('.be2-work/playtest-${{ matrix.game }}/', job)
         for gate in ('cargo fmt', 'cargo test --locked', 'cargo clippy --locked --all-targets',
                      'Prepare pinned software OpenGL for Windows CI',
                      'Mesa archive checksum mismatch', 'Windows package resources and isolated smoke',
@@ -865,6 +871,8 @@ class SelectionTests(unittest.TestCase):
         self.assertTrue(any(command[:2] == ['cargo', 'test'] and
                             'games/afterpull/Cargo.toml' in command and
                             '--no-default-features' in command for command in commands))
+        self.assertTrue(all('--profile' not in command for command in commands
+                            if 'games/afterpull/Cargo.toml' in command))
         self.assertIn(['cargo', 'fmt', '--check'], commands)
         for features in ([], ['--no-default-features', '--features', 'physics,networking']):
             self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', *features], commands)

@@ -97,7 +97,9 @@ shell. Its key/controller reads suppress unfocused and return-to-neutral command
 including F5/F9 and game-over restart. `shell.device_input_allowed()` distinguishes
 focused-menu commands from gameplay acceptance; `shell.paused` alone cannot do so.
 Continue polling while unfocused. Script/capture input is explicit automation;
-`--native-input` selects real devices for unattended review. See
+`--native-input` enables native focus/device gating for unattended probes; it does
+not disable explicit script/playback intentions. Software-generated OS input can
+exercise that path. See
 [shared input ownership](SHARED_GAMEPLAY.md#custom-loops).
 
 The engine provides the parts every such game rewrites, each independent and optional:

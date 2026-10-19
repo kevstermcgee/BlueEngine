@@ -3469,7 +3469,7 @@
       ],
       "checks": [
         "python -m unittest tools.test_playtest",
-        "cargo test --locked --profile itest --manifest-path games/afterpull/Cargo.toml --no-default-features"
+        "cargo test --locked --manifest-path games/afterpull/Cargo.toml --no-default-features"
       ],
       "depends_on": [
         "save_state",

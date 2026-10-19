@@ -860,8 +860,8 @@ def full_commands(test_profile='itest'):
     afterpull_manifest = 'games/afterpull/Cargo.toml'
     commands.extend([
         ['cargo', 'fmt', '--manifest-path', afterpull_manifest, '--check'],
-        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', afterpull_manifest, '--no-default-features'],
-        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--manifest-path', afterpull_manifest,
+        ['cargo', 'test', '--locked', '--manifest-path', afterpull_manifest, '--no-default-features'],
+        ['cargo', 'clippy', '--locked', '--manifest-path', afterpull_manifest,
          '--no-default-features', '--all-targets', '--', '-D', 'warnings'],
     ])
     # Opt-in narrative must be tested explicitly: ordinary/default games keep it disabled.
