@@ -250,7 +250,9 @@ fn retain(path: &std::path::Path, bytes: &[u8]) -> Result<(), String> {
         .create_new(true)
         .open(path)
         .map_err(|e| format!("retain {}: {e}", path.display()))?;
-    file.write_all(bytes).and_then(|()| file.sync_all()).map_err(|e| format!("retain {}: {e}", path.display()))
+    // File writes are unbuffered: completed bytes survive a child-process kill in the kernel
+    // cache. Engine SaveSlots retains its stronger fsync contract for actual player migration.
+    file.write_all(bytes).map_err(|e| format!("retain {}: {e}", path.display()))
 }
 fn checkpoint_at(
     game: &mut Workshop,
