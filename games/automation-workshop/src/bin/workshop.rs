@@ -2,7 +2,7 @@
 use automation_workshop::{content, persistence, Command, Definitions, Envelope, Workshop, MAX_STATE_BYTES};
 use std::{
     alloc::{GlobalAlloc, Layout, System},
-    io::Read,
+    io::{Read, Write},
     path::Path,
     sync::atomic::{AtomicUsize, Ordering},
     time::Instant,
@@ -107,7 +107,7 @@ fn run() -> Result<(), String> {
             let ticks: usize = argument(&args, 2, "playtest SEED TICKS [fault]")?.parse().map_err(|_|"invalid ticks")?;
             if !(22..=100000).contains(&ticks) { return Err("ticks must be 22..100000".into()); }
             let report = automation_workshop::playtest::run(seed,ticks,args.get(3).is_some_and(|s|s=="fault"));
-            serde_json::to_value(report).map_err(|e|e.to_string())?
+            return print_playtest(report);
         }
         "replay-playtest" => {
             let path = argument(&args,1,"replay-playtest TRACE_JSON")?;
@@ -117,7 +117,7 @@ fn run() -> Result<(), String> {
                 .read_to_end(&mut bytes).map_err(|e|e.to_string())?;
             if bytes.len()>64*1024*1024 { return Err("trace exceeds 64 MiB".into()); }
             let trace=serde_json::from_slice(&bytes).map_err(|e|e.to_string())?;
-            serde_json::to_value(automation_workshop::playtest::replay(trace)).map_err(|e|e.to_string())?
+            return print_playtest(automation_workshop::playtest::replay(trace));
         }
         "probe" => probe()?,
         "play" => {
@@ -139,6 +139,18 @@ fn run() -> Result<(), String> {
     };
     println!("{}", serde_json::to_string_pretty(&output).map_err(|e| e.to_string())?);
     if output.get("ok") == Some(&serde_json::Value::Bool(false)) {
+        std::process::exit(1);
+    }
+    Ok(())
+}
+// A long trace already owns its action and checkpoint evidence. Stream it once instead of
+// allocating a second JSON tree and a complete output string inside the worker's memory budget.
+fn print_playtest(report: automation_workshop::playtest::Report) -> Result<(), String> {
+    let ok = report.ok;
+    let mut output = std::io::BufWriter::new(std::io::stdout().lock());
+    serde_json::to_writer_pretty(&mut output, &report).map_err(|e| e.to_string())?;
+    output.write_all(b"\n").and_then(|()| output.flush()).map_err(|e| e.to_string())?;
+    if !ok {
         std::process::exit(1);
     }
     Ok(())
