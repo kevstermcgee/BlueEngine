@@ -24,7 +24,7 @@
     {
       "id": "focus-loss",
       "area": "controls",
-      "instructions": "At high refresh, tap a direction then switch applications before the next fixed tick. The game-local native focus adapter must discard pending movement, preview, Z and Enter commands and freeze puzzle ticks. Return with a direction or Space held: release every control, then make a fresh tap. No delayed turn may occur. Repeat with a pit preview, an already-cleared room, and focus-out/focus-in between ticks. Confirm K/L and Escape still work after returning. Verify separately on Windows and Linux X11."
+      "instructions": "At high refresh, tap a direction then switch applications before the next fixed tick. The shared engine native focus adapter must discard pending movement, preview, Z and Enter commands and freeze puzzle ticks. Return with a direction or Space held: release every control, then make a fresh tap. No delayed turn may occur. Repeat with a pit preview, an already-cleared room, and focus-out/focus-in between ticks. Confirm K/L and Escape still work after returning. Verify separately on Windows and Linux X11."
     },
     {
       "id": "feedback",

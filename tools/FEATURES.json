@@ -792,10 +792,10 @@
         "game_presentation"
       ],
       "read_first": [
-        "src/viewer/game_session.rs",
+        "docs/SHARED_GAMEPLAY.md",
         "src/viewer/game_input.rs",
-        "src/viewer/playable.rs",
-        "tests/game_runtime.rs"
+        "src/viewer/game_client.rs",
+        "src/viewer/focus.rs"
       ],
       "public_api": [
         "GameSession::local",
@@ -2296,7 +2296,7 @@
         "simulation_contract"
       ],
       "contract": {
-        "owns": "Window, menus, cosmetic rendering and input adaptation; optional stock objective/outcome wording, counter labels/visibility/units/clock, palette and HUD configuration",
+        "owns": "Window, menus, cosmetic rendering and input adaptation; optional stock objective/outcome wording, counter labels/visibility/units/clock, palette and HUD configuration; shared native focus observation and neutral-return acceptance for input and hotkeys",
         "inputs": "Shared authoritative state and neutral gameplay inputs",
         "outputs": "Frames and intentions",
         "may_depend_on": [
@@ -2331,7 +2331,12 @@
         "palette",
         "counter labels",
         "clock",
-        "presentation"
+        "presentation",
+        "native focus",
+        "focus loss",
+        "return to neutral",
+        "hotkeys",
+        "foreground"
       ],
       "read_first": [
         "src/viewer/game_client.rs",
@@ -3449,6 +3454,36 @@
         "NarrativeState"
       ],
       "depends_on": []
+    },
+    "authoritative_playtesting": {
+      "note": "Bounded headless gameplay tests use game-owned adapters around Workshop commands and Afterpull Intent, sharing only process budgets, source/binary identity, evidence and replay orchestration. Direct progress/recovery and undo/transition invariants detect injected stalls or corruption. Headless evidence does not certify rendering, networking, physical input, audio or enjoyment.",
+      "files": [
+        "tools/playtest.py",
+        "tools/test_playtest.py",
+        "docs/PLAYTESTING.md",
+        "games/afterpull/"
+      ],
+      "checks": [
+        "python -m unittest tools.test_playtest",
+        "cargo test --locked --profile itest --manifest-path games/afterpull/Cargo.toml --no-default-features"
+      ],
+      "depends_on": [
+        "save_state",
+        "two_dimensional"
+      ],
+      "keywords": [
+        "bounded playtesting",
+        "seeded playtesting",
+        "headless gameplay testing",
+        "authoritative playtesting",
+        "serial parallel replay",
+        "Afterpull undo"
+      ],
+      "read_first": [
+        "docs/PLAYTESTING.md",
+        "games/afterpull/AGENTS.md"
+      ],
+      "canonical_example": "games/afterpull/src/lib.rs"
     }
   },
   "format": 1,
@@ -3607,7 +3642,7 @@
     "src/viewer/devkit/audio_project.rs": "Named audio: checked stereo scores and crossfaded imported ambience loops, rendered before runtime.",
     "src/viewer/savestate/world.rs": "The engine world's save state: what HeadlessWorld::save_state captures and restore_state accepts.",
     "tools/contact_sheet.py": "Contact sheet: many screenshots -> ONE labelled PNG, with blank-frame detection.",
-    "templates/native_focus.rs": "Application-owned foreground check.",
+    "templates/native_focus.rs": "Executable compatibility hooks; shared viewer::focus and ClientInput/GameShell own native focus acceptance.",
     "src/viewer/spans.rs": "A handful of named timing spans and one compact summary, for seeing where a tick goes.",
     "src/viewer/devkit/scale.rs": "Size checks a headless agent can run: how big is this thing, in metres, next to a person?",
     "tools/mcp_server.py": "BlueEngine MCP Server launcher.",

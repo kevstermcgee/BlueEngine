@@ -92,6 +92,14 @@ loop {
 if let Some(report) = life.report() { println!("{report}"); } // --perf
 ```
 
+The standard ClientInput frame path shares one native focus observation with the
+shell. Its key/controller reads suppress unfocused and return-to-neutral commands,
+including F5/F9 and game-over restart. `shell.device_input_allowed()` distinguishes
+focused-menu commands from gameplay acceptance; `shell.paused` alone cannot do so.
+Continue polling while unfocused. Script/capture input is explicit automation;
+`--native-input` selects real devices for unattended review. See
+[shared input ownership](SHARED_GAMEPLAY.md#custom-loops).
+
 The engine provides the parts every such game rewrites, each independent and optional:
 
 | Module | Piece | Job |

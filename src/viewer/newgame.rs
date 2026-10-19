@@ -500,8 +500,9 @@ fn tooling_digest(engine: &Path) -> Option<String> {
     ] {
         digest.update(name.as_bytes());
         digest.update(&[0]);
-        // The implementation is distributed with the engine, not embedded in
-        // this Rust binary. Editing Python tooling must not rebuild the engine.
+        // Most implementations are distributed Python and need no Rust rebuild.
+        // game_entry.py is also embedded above: changes must verify this native
+        // generator and its emitted bootstrap as well as the distributed digest.
         // The legacy API can scaffold before its dependency exists; that project
         // needs an explicit tooling migration after restoring the dependency.
         let content = fs::read(engine.join(name)).ok()?;

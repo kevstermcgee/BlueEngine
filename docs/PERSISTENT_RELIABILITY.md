@@ -1,5 +1,9 @@
 # Persistent reliability milestone
 
+Follow-up corrections and current verification are recorded in
+[PERSISTENT_RELIABILITY_COMPLETION.md](PERSISTENT_RELIABILITY_COMPLETION.md).
+The measurements below retain their original source identities.
+
 Review branch: `milestone/persistent-reliability`. Starting main was
 `1441a433a76aa3c8d0f507dfe370a5c9583882b1` (fetched 2026-10-18).
 `cb19b58` is historical comparison only. No old checkout was reset. Existing

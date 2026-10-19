@@ -856,6 +856,14 @@ def full_commands(test_profile='itest'):
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', workshop_manifest,
          '--no-default-features', '--features', 'online', '--test', 'netplay'],
     ])
+    # The second game proves shared playtest orchestration against different rules.
+    afterpull_manifest = 'games/afterpull/Cargo.toml'
+    commands.extend([
+        ['cargo', 'fmt', '--manifest-path', afterpull_manifest, '--check'],
+        ['cargo', 'test', '--locked', *profile_flags(test_profile), '--manifest-path', afterpull_manifest, '--no-default-features'],
+        ['cargo', 'clippy', '--locked', *profile_flags(test_profile), '--manifest-path', afterpull_manifest,
+         '--no-default-features', '--all-targets', '--', '-D', 'warnings'],
+    ])
     # Opt-in narrative must be tested explicitly: ordinary/default games keep it disabled.
     commands.extend([
         ['cargo', 'test', '--locked', *profile_flags(test_profile), '--no-default-features',
@@ -1207,7 +1215,10 @@ def validation_plan(paths=None, base=None, test_profile='itest'):
         [[sys.executable, '-m', 'unittest', 'tools.test_game_tooling', 'tools.test_game_check',
           'tools.test_game_ship', 'tools.test_game_installer', 'tools.test_game_review'],
          [sys.executable, 'tools/game_tooling.py', 'check']])
-    covered = set().union(*(files for files, _ in scopes.values()))
+    # An embedded script changes the compiled generator and its emitted project.
+    # Python compatibility checks alone cannot certify that shipping boundary,
+    # even when tooling_paths also lists the file as shared tooling.
+    covered = set().union(*(files for files, _ in scopes.values())) - COMPILED_TEMPLATE_INPUTS
     unknown = sorted(set(paths) - covered)
     commands = []
     selected = []

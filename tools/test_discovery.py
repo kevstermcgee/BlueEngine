@@ -27,6 +27,16 @@ def compact_bytes(packet):
 
 
 class PublicDiscoveryTests(unittest.TestCase):
+    def test_playtesting_and_focus_discover_shared_owners(self):
+        packet = workflow.context(ROOT, 'authoritative_playtesting', level=3)
+        feature = packet['matches'][0]
+        self.assertEqual(feature['id'], 'authoritative_playtesting')
+        self.assertIn('docs/PLAYTESTING.md', feature['read_first'])
+        self.assertIn('games/afterpull/src/lib.rs', json.dumps(feature))
+        focus = workflow.context(ROOT, 'game_presentation', level=3)['matches'][0]
+        self.assertIn('src/viewer/focus.rs', json.dumps(focus))
+        self.assertIn('native focus', json.dumps(focus))
+
     def test_mcp_launcher_uses_shared_freshness_and_validates_explicit_override(self):
         from tools import mcp_server
         expected = ROOT / 'shared target with spaces' / 'itest' / 'be2-tools'

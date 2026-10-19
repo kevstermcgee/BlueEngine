@@ -69,10 +69,12 @@ ownership, objectives, timers and movers. Old-round sequenced input is rejected.
 
 `GameOptions` exposes connection/profile, cosmetics, perspective and verification
 options. `--character astronaut --third-person` changes presentation only; the
-GameDocument still owns the movement profile. Native foreground/key-state queries remain in
-the generated executable. `options.keyboard = platform::keyboard()` supplies the
-Windows adapter to shared ClientInput; the library owns key-edge tracking and
-focus gating. `run_game_with_focus` remains the simpler window-event input entry. Non-Windows focus relies on GameShell minimization events.
+GameDocument still owns the movement profile. Shared `viewer::focus` observes native
+foreground events and physical held state on Windows and Linux X11. The generated
+executable's `options.keyboard = platform::keyboard()` compatibility hook supplies
+Windows key-state reports; shared ClientInput/GameShell apply the effective native
+focus and neutral-return decision to keyboard, mouse, controller and game hotkeys.
+`run_game_with_focus` remains the simpler window-event input entry.
 
 `local_client::run_map` and `MapPlayer` remain lightweight static viewers. They do
 not load game documents, execute rules or simulate props. `examples/custom_client.rs`
@@ -88,8 +90,10 @@ cursor is released (an online session passes "connected").
 Use `input.movement(&shell)` and `input.look_delta(&shell)` only for gameplay
 (`mouse_look` and `stick_look(&shell, seconds)` are the two halves when you want your
 own stick sensitivity). The adapter gates these when capture/focus/pause prevents play.
-`focused` is a
-host-provided foreground signal; the shell additionally handles minimization.
+`focused` is an optional host veto. The shared shell also observes native focus and
+minimization; passing `true` does not override native focus loss. A focused pause
+menu can accept intended commands, while native focus loss and the complete neutral
+return frame suppress device commands. Device polling continues throughout.
 `begin_frame` also starts the engine's frame clock: read the frame length from
 `input.frame_seconds()`, the wall-clock interval between frame starts. macroquad's
 `get_frame_time()` is stamped after the GL flush and reads 33 ms then 1 ms when one
@@ -98,7 +102,10 @@ turns into a doubled step and a repeated frame. `devkit::FixedStepper` turns fra
 lengths into whole 60 Hz ticks and `devkit::InputAccumulator` delivers exactly one
 input per tick (edges once, look immediately). A game with its own rules builds on
 these: [custom clients](CUSTOM_CLIENT.md#a-custom-simulation).
-Native OS focus queries remain in the executable. Do not place device backends in
+Native focus queries belong to the shared presentation adapter, outside authority
+and snapshots. Do not independently consume `focus::sample()` when using the standard
+ClientInput/GameShell frame path: a second read can lose an intervening loss event.
+Do not place device backends in
 thread-local storage: Windows destroys worker threads before TLS cleanup.
 
 For modal screens, call `poll(focused)` once, route the frame's buttons to the

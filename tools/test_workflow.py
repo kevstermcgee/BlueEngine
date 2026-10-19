@@ -275,11 +275,11 @@ class AutomaticLoopTests(unittest.TestCase):
 
     def test_integration_covers_both_feature_modes_and_portable_mode(self):
         plan = workflow.change_plan(ROOT, ['src/two_d/mod.rs'], loop='integration')
-        rust = [c for c in plan['commands'] if c[:2] == ['cargo', 'test']]
-        self.assertEqual(len(rust), 3)
-        self.assertNotIn('--no-default-features', rust[0])
-        self.assertIn('--no-default-features', rust[1])
-        self.assertIn('two-d', rust[2])
+        rust = [c for c in plan['commands'] if c[:2] == ['cargo', 'test'] and '--manifest-path' not in c]
+        self.assertTrue(any('--no-default-features' not in c for c in rust))
+        self.assertTrue(any('--no-default-features' in c and '--features' in c and
+                            {'physics', 'networking'} <= set(c[c.index('--features') + 1].split(',')) for c in rust))
+        self.assertTrue(any('--no-default-features' in c and 'two-d' in c for c in rust))
         self.assertIn('packaging', plan['requirements'])
 
     def test_optional_narrative_has_explicit_full_gates(self):
@@ -500,6 +500,22 @@ class AutomaticLoopTests(unittest.TestCase):
         self.assertEqual(embedded['scope'], 'focused')
         self.assertTrue(embedded['requirements']['unit'])
         self.assertTrue(any(command[:2] == ['cargo', 'test'] for command in embedded['commands']))
+
+    def test_embedded_bootstrap_shipping_retains_native_generator_checks(self):
+        for plan in (workflow.validation_plan(['templates/game_entry.py']),
+                     workflow.change_plan(ROOT, ['templates/game_entry.py'], loop='shipping'),
+                     workflow.change_plan(ROOT, ['templates/game_entry.py',
+                                                 'games/afterpull/scripts/tooling.json'], loop='shipping')):
+            self.assertEqual(plan['scope'], 'full')
+            self.assertTrue(any(command[:2] == ['cargo', 'test'] for command in plan['commands']))
+            self.assertTrue(any('tools/check_authoring.py' in command for command in plan['commands']))
+
+    def test_maintained_tooling_pin_only_shipping_remains_python_only(self):
+        for game in ('reverie', 'afterpull'):
+            plan = workflow.change_plan(ROOT, [f'games/{game}/scripts/tooling.json'], loop='shipping')
+            self.assertEqual(plan['scope'], 'game_tooling', game)
+            self.assertFalse(any(command[0] == 'cargo' for command in plan['commands']), game)
+            self.assertIn([sys.executable, 'tools/game_tooling.py', 'check'], plan['commands'])
 
     def test_content_link_gate_reads_current_files_on_every_run(self):
         from tools.check_docs import broken_links
@@ -846,6 +862,9 @@ class SelectionTests(unittest.TestCase):
 
     def test_all_original_engine_gates_remain(self):
         commands = workflow.full_commands()
+        self.assertTrue(any(command[:2] == ['cargo', 'test'] and
+                            'games/afterpull/Cargo.toml' in command and
+                            '--no-default-features' in command for command in commands))
         self.assertIn(['cargo', 'fmt', '--check'], commands)
         for features in ([], ['--no-default-features', '--features', 'physics,networking']):
             self.assertIn(['cargo', 'test', '--locked', '--profile', 'itest', *features], commands)
