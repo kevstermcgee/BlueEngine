@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import unittest
 from unittest.mock import patch
+from tools.test_game_metadata import pe
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -32,6 +33,8 @@ class ReviewTests(unittest.TestCase):
         (self.engine / 'src').mkdir(parents=True)
         (self.engine / 'assets').mkdir()
         (self.engine / 'templates').mkdir()
+        (self.engine / 'tools').mkdir()
+        shutil.copyfile(ROOT / 'tools/game_metadata.py', self.engine / 'tools/game_metadata.py')
         (self.engine / 'Cargo.toml').write_text('[package]\nname="be2"\nversion="0.2.0"\n')
         (self.engine / 'src/lib.rs').write_text('// shared rendering-free rules\n')
         (self.engine / 'assets/font.bin').write_bytes(b'original-font')
@@ -54,7 +57,7 @@ class ReviewTests(unittest.TestCase):
             {'id': 'bell', 'area': 'audio', 'instructions': 'Press Space and hear the authored bell.'}]}))
         self.project = ship.Project(self.root, 'windows')
         for name in ('review-fixture.exe', 'review-fixture.ico', 'review-fixture.png'):
-            (self.root / 'dist' / name).write_bytes(b'fixture bytes; not a physical-device result')
+            (self.root / 'dist' / name).write_bytes(pe() if name.endswith('.exe') else b'fixture bytes; not a physical-device result')
         for path in (self.root / 'assets').iterdir():
             shutil.copyfile(path, self.root / 'dist/assets' / path.name)
         names = sorted(p.relative_to(self.root / 'dist').as_posix() for p in (self.root / 'dist').rglob('*') if p.is_file())
@@ -317,7 +320,9 @@ class ReviewTests(unittest.TestCase):
         self.assertTrue(result['review_source_bound'])
         self.assertEqual(self.project.read_stamp()['review_source_sha256'], review.source_binding(self.project, ship)['sha256'])
         self.assertTrue(self.packaged(no_build=True)['review_source_bound'])
-        (self.base / 'build/review-fixture.exe').write_bytes(b'different release executable')
+        different_executable = bytearray(pe())
+        different_executable[-1] ^= 1
+        (self.base / 'build/review-fixture.exe').write_bytes(different_executable)
         self.assertFalse(self.packaged(no_build=True)['review_source_bound'])
         self.assertNotIn('review_source_sha256', self.project.read_stamp())
 
