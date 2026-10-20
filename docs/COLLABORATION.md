@@ -41,7 +41,9 @@ Renaming or copying a file does not discard its description.
 
 Drop the generated file into creator tools to preview its details and prepare a
 registration or update. An already registered source revision opens that
-revision. A fork uses the recorded parent reservation; a changed existing game
+revision. Unchanged source is also recognized across snapshot commits and
+repository exports, avoiding duplicate history. A fork uses the recorded parent
+reservation; a changed existing game
 uses its current server history and stale updates require reconciliation. The
 file describes the game; account permissions, source verification and native
 release gates still determine whether it can be published. Import reads the

@@ -1211,10 +1211,11 @@ def validation_plan(paths=None, base=None, test_profile='itest'):
     except ModuleNotFoundError:
         import game_tooling
     scopes['game_tooling'] = (game_tooling.tooling_paths(Path(__file__).resolve().parents[1]) |
-        {'tools/game_tooling.py', 'tools/game_tooling_inventory.json', 'tools/test_game_tooling.py',
+        {'tools/game_tooling.py', 'tools/game_metadata.py', 'tools/test_game_metadata.py',
+         'tools/game_tooling_inventory.json', 'tools/test_game_tooling.py',
          'templates/game_entry.py', 'templates/game_check.py', 'templates/game_ship.py',
          'templates/game_project.py', 'templates/game_dev.py', 'templates/game_installer.py', 'templates/game_review.py'},
-        [[sys.executable, '-m', 'unittest', 'tools.test_game_tooling', 'tools.test_game_check',
+        [[sys.executable, '-m', 'unittest', 'tools.test_game_tooling', 'tools.test_game_metadata', 'tools.test_game_check',
           'tools.test_game_ship', 'tools.test_game_installer', 'tools.test_game_review'],
          [sys.executable, 'tools/game_tooling.py', 'check']])
     # An embedded script changes the compiled generator and its emitted project.

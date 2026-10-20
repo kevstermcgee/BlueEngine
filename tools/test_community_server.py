@@ -118,6 +118,27 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(result[0], 200, result[2])
         return payload, result[2]
 
+    def test_public_source_tree_is_local_content_identity_without_rewriting_history(self):
+        expected = git(self.root, "rev-parse", f"{self.source_commit}:games/rule-relay")
+        catalog = self.publisher.catalog()
+        recorded = json.dumps(catalog.require_game("rule-relay")["revisions"], sort_keys=True)
+        with patch.object(self.publisher, "git", wraps=self.publisher.git) as reads:
+            first = catalog.public_game("rule-relay")
+            count = reads.call_count
+            self.assertEqual(first["revisions"][0]["source_tree"], expected)
+            self.assertEqual(catalog.public_game("rule-relay"), first)
+            self.assertEqual(reads.call_count, count)
+            self.assertTrue(all(call.args[0] in ("rev-parse", "cat-file") for call in reads.call_args_list))
+        self.assertEqual(json.dumps(catalog.require_game("rule-relay")["revisions"], sort_keys=True), recorded)
+        source = dict(catalog.require_game("rule-relay")["revisions"][0])
+        source.update(source_commit="a" * 40)
+        source["source"] = dict(source["source"], commit="a" * 40)
+        catalog.games["rule-relay"]["revisions"] = [source]
+        self.assertIsNone(catalog.public_game("rule-relay")["revisions"][0]["source_tree"])
+        source["source_commit"] = self.source_commit
+        source["source"] = dict(source["source"], commit=self.source_commit, game_path="games/rule-relay/game.project.json")
+        self.assertIsNone(catalog.public_game("rule-relay")["revisions"][0]["source_tree"])
+
     def test_native_fork_pins_retrievable_source_and_preserves_parent_evolution(self):
         parent = self.game()
         request, receipt = self.fork()
