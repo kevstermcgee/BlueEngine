@@ -12,6 +12,33 @@ from tools import community, community_release
 
 
 class CreatorTests(unittest.TestCase):
+    def test_invalid_credential_cannot_reach_header_errors_or_diagnostics(self):
+        with patch.dict(community.os.environ, {"BLUEENGINE_COMMUNITY_TOKEN": "private-test-value\n"}):
+            with self.assertRaises(community.CommunityError) as caught:
+                community.token()
+        self.assertNotIn("private-test-value", str(caught.exception))
+
+    def test_existing_game_checkout_cannot_follow_source_metadata_symlink(self):
+        game = {"slug": "original", "source": {"repository": "owner/repo", "commit": "a" * 40,
+                                                 "game_path": "games/original"}}
+        with tempfile.TemporaryDirectory() as temporary:
+            destination = Path(temporary) / "checkout"
+            victim = Path(temporary) / "existing-user-file"
+            victim.write_text("preserve this file")
+            def git(argv, cwd=None):
+                if "clone" in argv:
+                    source = destination / "games/original"
+                    source.mkdir(parents=True)
+                    try:
+                        (source / "community-source.json").symlink_to(victim)
+                    except OSError:
+                        self.skipTest("Host does not allow symlink fixtures")
+                return ""
+            with patch.object(community, "command", side_effect=git):
+                with self.assertRaisesRegex(community.CommunityError, "symlinks"):
+                    community.checkout(game, destination)
+            self.assertEqual(victim.read_text(), "preserve this file")
+
     def test_fork_receipt_and_public_game_resolve_same_head_source(self):
         source = {"repository": "owner/repo", "commit": "a" * 40, "game_path": "games/original"}
         revision = {"id": "b" * 64, "source": source}
@@ -37,7 +64,7 @@ class CreatorTests(unittest.TestCase):
                 responses.append(json.loads(request.data))
                 if len(responses) == 1:
                     raise TimeoutError()
-                answer = io.BytesIO(b'{"accepted":true}')
+                answer = io.BytesIO(json.dumps({"accepted": True, "request_id": responses[-1]["request_id"]}).encode())
                 return answer
             client.opener.open.side_effect = receive
             body = {"note": "Feedback text must not be stored in the local retry journal"}
@@ -50,6 +77,17 @@ class CreatorTests(unittest.TestCase):
             self.assertNotIn("private-test-value", text)
             self.assertNotIn(body["note"], text)
             self.assertNotIn("request_id", body)
+
+    def test_post_requires_exact_remote_acceptance_receipt(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            client = community.Client(state_directory=temporary)
+            for result in ({"accepted": False}, {"accepted": True},
+                           {"accepted": True, "request_id": "another-request"}):
+                client.opener = Mock()
+                client.opener.open.return_value = io.BytesIO(json.dumps(result).encode())
+                with patch.object(community, "token", return_value="private-test-value"):
+                    with self.assertRaisesRegex(community.CommunityError, "did not confirm"):
+                        client.request("/feedback", {"note": "test"})
 
     def test_source_pin_rejects_mutable_refs_paths_and_non_github_repository(self):
         source = {"slug": "fork-game", "source": {"repository": "owner/repo", "commit": "a" * 40,

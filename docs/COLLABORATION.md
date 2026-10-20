@@ -104,6 +104,14 @@ python3 tools/be2.py community release my-corkscrew \
 python3 tools/be2.py community resume-release /path/printed/by/the/failed/run
 ```
 
+For games whose editable source belongs to BlueEngineGames, add
+`--source companion`. That lane freezes the companion source and its catalog's
+engine pin, validates its native release definition, runs Windows installer CI,
+and verifies the production release and public downloads. It preserves the
+companion's owned source and uses its existing native build methods. It does not
+export the engine catalog over a modified companion game. The creator service's
+publication request supplies the correct source lane in its maintainer command.
+
 This pipeline creates isolated worktrees, registers the source export, executes
 local game checks and package smoke, waits for full engine CI and the game's
 Linux/Windows CI, exports its wiki and screenshots, updates the native download

@@ -41,12 +41,14 @@ def command(argv, cwd=None):
 
 def token():
     value = os.environ.get("BLUEENGINE_COMMUNITY_TOKEN")
-    if value:
-        return value
-    try:
-        return command(["gh", "auth", "token"])
-    except (CommunityError, OSError):
-        raise CommunityError("Sign in with gh auth login, or set BLUEENGINE_COMMUNITY_TOKEN privately") from None
+    if not value:
+        try:
+            value = command(["gh", "auth", "token"])
+        except (CommunityError, OSError):
+            raise CommunityError("Sign in with gh auth login, or set BLUEENGINE_COMMUNITY_TOKEN privately") from None
+    if not value or len(value) > 1000 or any(ord(char) < 33 or ord(char) > 126 for char in value):
+        raise CommunityError("Invalid GitHub credential format; sign in again")
+    return value
 
 
 class Client:
@@ -87,7 +89,11 @@ class Client:
                           data=json.dumps(body).encode() if body is not None else None)
         try:
             with self.opener.open(request, timeout=90) as response:
-                return json.load(response)
+                result = json.load(response)
+                if body is not None and (not isinstance(result, dict) or result.get("accepted") is not True
+                                         or result.get("request_id") != request_id):
+                    raise CommunityError("The service did not confirm this request; retry with the retained request ID")
+                return result
         except HTTPError as error:
             # Never include arbitrary server response bodies or credentials in diagnostics.
             detail = {401: "Sign in again", 403: "This account lacks the required repository access",
@@ -146,12 +152,12 @@ def checkout(game, destination):
     if (not original.resolve().is_relative_to(destination.resolve()) or not original.is_dir()
             or any(path.is_symlink() for path in [original, *original.parents] if path.is_relative_to(destination))):
         raise CommunityError("Pinned game source directory is missing or unsafe; checkout retained")
+    if any(path.is_symlink() for path in original.rglob("*")):
+        raise CommunityError("Game source contains symlinks; checkout retained for review")
     target = destination / "games" / slug
     if target != original:
         if target.exists():
             raise CommunityError("The fork slug collides with existing source; checkout retained")
-        if any(path.is_symlink() for path in original.rglob("*")):
-            raise CommunityError("Game source contains symlinks; checkout retained for review")
         shutil.copytree(original, target)
         for path, key, value in ((target / "game.project.json", "id", slug),
                                  (target / "assets/identity.json", "title", game.get("title", slug))):
@@ -161,7 +167,10 @@ def checkout(game, destination):
                 path.write_text(json.dumps(document, indent=2) + "\n")
     metadata = {"schema_version": 1, "slug": slug, "source": {"repository": repository,
                 "commit": commit, "game_path": str(relative)}, "revision_id": game.get("head_revision", game.get("revision_id"))}
-    (target / "community-source.json").write_text(json.dumps(metadata, indent=2) + "\n")
+    metadata_path = target / "community-source.json"
+    descriptor = os.open(metadata_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as output:
+        output.write(json.dumps(metadata, indent=2) + "\n")
     return {"checkout": str(destination), "game": str(target), "source": metadata["source"],
             "creator_cli": str(Path(__file__).resolve()),
             "next": f"Read {target / 'AGENTS.md'}, make the game your own, and retain community-source.json. "
@@ -185,9 +194,15 @@ def record_release(client, directory, revision=None):
                           if item.get("source_commit") in (state["base"], state["engine_head"])), None)
         if candidate:
             revision = candidate["id"]
+        elif game.get("head_revision"):
+            # Merges/registry commits may change the commit ID without changing
+            # the game. The server independently proves exact tree equality.
+            revision = game["head_revision"]
     if not revision:
         raise CommunityError("Register/submit the released source revision, then use record-release RUN --revision REVISION_ID")
-    labels = ("engine-checks", "generated-game-linux-windows", "windows-installer-review", "production-release", "download-page")
+    labels = ("windows-installer-review", "production-release", "download-page")
+    if state.get("source_kind", "engine") == "engine":
+        labels = ("engine-checks", "generated-game-linux-windows", *labels)
     body = {"revision_id": revision, "source_commit": state["engine_head"], "games_commit": state["games_head"],
             "receipt": state["publication"], "gates": {label: state["ci"][label]["run"] for label in labels}}
     value = client.request("/games/" + state["idea"]["slug"] + "/releases", body)
@@ -246,6 +261,7 @@ def parser():
     release.add_argument("--games-root", type=Path, required=True)
     release.add_argument("--runs-root", type=Path)
     release.add_argument("--revision", help="Creator revision ID to attach the verified release receipt")
+    release.add_argument("--source", choices=("engine", "companion"), default="engine", help="Repository that owns this game's source")
     resume = commands.add_parser("resume-release")
     resume.add_argument("directory", type=Path)
     record = commands.add_parser("record-release")
@@ -260,10 +276,17 @@ def main(argv=None):
         if args.command == "record-release":
             value = record_release(Client(args.endpoint), args.directory, args.revision)
         elif args.command in ("release", "resume-release"):
-            try:
-                from tools import community_release
-            except ModuleNotFoundError:
-                import community_release
+            source = args.source if args.command == "release" else json.loads((args.directory / "state.json").read_text()).get("source_kind", "engine")
+            if source == "companion":
+                try:
+                    from tools import community_release_companion as community_release
+                except ModuleNotFoundError:
+                    import community_release_companion as community_release
+            else:
+                try:
+                    from tools import community_release
+                except ModuleNotFoundError:
+                    import community_release
             if args.command == "release":
                 value = community_release.run(args.engine_root, args.games_root, args.slug, runs_root=args.runs_root)
             else:
@@ -274,7 +297,8 @@ def main(argv=None):
                 # Delivery already passed all native/public gates. A metadata
                 # outage must not cause a second installer release on retry.
                 value["community_receipt"] = {"status": "pending", "reason": str(error),
-                                               "retry": f"python3 tools/community.py record-release {value['run']}"}
+                                               "retry": f"python3 tools/community.py record-release {value['run']}" +
+                                                        (f" --revision {args.revision}" if getattr(args, "revision", None) else "")}
         else:
             client = Client(args.endpoint)
             if args.command in ("show", "history", "checkout", "submit", "register", "publish") and not SLUG.fullmatch(args.slug):
