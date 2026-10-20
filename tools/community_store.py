@@ -405,6 +405,13 @@ class GitHub:
                 if run.get("event") != "workflow_dispatch" or not isinstance(run.get("head_branch"), str) or not run["head_branch"]:
                     raise CommunityError("Native game and Windows installer review must use explicit review workflows")
                 review_branches[label] = run["head_branch"]
+            if label in ("generated-game-linux-windows", "companion-native-checks"):
+                prefix = "forge" if label == "generated-game-linux-windows" else "native"
+                expected_artifacts = {f"{prefix}-{game['slug']}-{system}" for system in ("Linux", "Windows")}
+                document = self.api(f"/repos/{gate_repository}/actions/runs/{run_id}/artifacts?per_page=100")
+                artifacts = {item.get("name") for item in document.get("artifacts", []) if item.get("expired") is False}
+                if not expected_artifacts <= artifacts:
+                    raise CommunityError("The native workflow does not retain Linux and Windows evidence for this game slug")
             verified_gates[label] = {"run": run_id, "head": expected_head,
                                      "url": f"https://github.com/{gate_repository}/actions/runs/{run_id}"}
         if companion and len(set(review_branches.values())) != 1:
