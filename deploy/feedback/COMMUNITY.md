@@ -23,6 +23,24 @@ write credential is unnecessary. Restart only this service after copying its
 code. Preserve its state and clean clone; never use a developer worktree for
 the publication checkout.
 
+Existing sparse checkouts must also include `docs/community`. With the service
+stopped, inspect its selection and extend it without replacing the original
+player-feedback selection:
+
+```sh
+systemctl --user stop blueengine-feedback.service
+git -C SERVICE_CLONE sparse-checkout list
+git -C SERVICE_CLONE sparse-checkout add docs/community
+git -C SERVICE_CLONE sparse-checkout list
+systemctl --user start blueengine-feedback.service
+```
+
+A full checkout needs no sparse configuration change. Keep
+`docs/player-feedback` selected in a sparse checkout. Without the community
+selection, Git rejects the new event at staging and the API returns 503. Do not
+work around this with `git add --sparse`: later synchronization must keep
+committed community events visible to the catalog and request retry lookup.
+
 The optional companion source cache fetches public history into
 `refs/blueengine-community/companion-main` inside that clone. It never checks out
 or executes the companion source. Preload a large first fetch with the service
