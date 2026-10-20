@@ -258,7 +258,7 @@ def screenshot_from_package(game, not_before=0):
     raise ForgeError("The isolated package needs a landscape native screenshot")
 
 
-def validate_game_wiki(game):
+def validate_game_wiki(game, *, allow_human=False):
     """Gate authored publication facts; the independent review checks their truth."""
     try:
         wiki = load_json(game / "wiki.json")
@@ -322,11 +322,14 @@ def validate_game_wiki(game):
         if len(set(digests)) != len(digests):
             raise ForgeError("Game wiki needs distinct screenshot bytes, not repeated images")
         design = wiki.get("design")
-        if not isinstance(design, dict) or design.get("origin") != "ai":
+        if not isinstance(design, dict) or design.get("origin") not in ({"ai", "human"} if allow_human else {"ai"}):
             raise ForgeError("IdeaForge game wiki must declare AI design origin")
-        text(design.get("rationale"), "public design rationale explaining why this game was chosen", 120)
-        if "original_prompt" not in design or design["original_prompt"] is not None:
-            raise ForgeError("IdeaForge game wiki original_prompt must be null")
+        if design["origin"] == "human":
+            text(design.get("original_prompt"), "original human creation prompt")
+        else:
+            text(design.get("rationale"), "public design rationale explaining why this game was chosen", 120)
+            if "original_prompt" not in design or design["original_prompt"] is not None:
+                raise ForgeError("IdeaForge game wiki original_prompt must be null")
         return wiki
     except (OSError, ValueError, TypeError, KeyError) as error:
         raise ForgeError("Game wiki or one of its screenshot files is missing or malformed") from error
@@ -368,6 +371,9 @@ class Forge:
 
     def save(self):
         atomic_json(self.directory / "state.json", self.state)
+
+    def validate_wiki(self, game):
+        return validate_game_wiki(game)
 
     def command(self, argv, cwd=None, label="command", stdin=None, timeout=None):
         """No shell interpolation; only this command's process group is stopped on timeout."""
@@ -728,7 +734,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("The game presentation does not meet the requested dimension")
         if not {"windows", "linux"}.issubset(project.get("targets", [])) or "web" in project.get("targets", []):
             raise ForgeError("The game must declare native Windows delivery and Linux verification")
-        validate_game_wiki(game)
+        self.validate_wiki(game)
         self.ensure_game_scope()
         manifest = game / "Cargo.toml"
         self.command(["cargo", "fmt", "--manifest-path", manifest, "--check"], label="game-format")
@@ -927,8 +933,18 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                      "generated-game-linux-windows", dispatch=True, fields={"game_slug": self.state["idea"]["slug"]})
         self.wait_ci(repository, "ci.yml", self.state["branch"], head, "engine-checks")
 
+    def update_native_definition(self, manifest, entry):
+        entries = manifest["native_playables"]
+        existing = next((item for item in entries if item["slug"] == entry["slug"]), None)
+        if existing and existing != entry:
+            raise ForgeError("An independently maintained download definition uses this slug")
+        if existing:
+            return False
+        entries.append(entry)
+        return True
+
     def export(self):
-        wiki = validate_game_wiki(self.game)
+        wiki = self.validate_wiki(self.game)
         source = Path(self.state["games_root"])
         self.command(["git", "fetch", "origin", "main"], cwd=source, label="games-fetch")
         if not self.games.exists():
@@ -939,7 +955,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                       "--revision", self.state["engine_head"]], label="export-game")
         slug = self.state["idea"]["slug"]
         exported_game = self.games / "games" / slug
-        validate_game_wiki(exported_game)
+        self.validate_wiki(exported_game)
         wiki_files = {"wiki.json", *(shot["image"] for shot in wiki["gallery"]),
                       *(character["image"] for character in wiki.get("characters", []))}
         if any((self.game / path).read_bytes() != (exported_game / path).read_bytes()
@@ -954,14 +970,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("The generated Cargo package has no unambiguous playable binary")
         path = self.games / ".release-games.json"
         manifest = load_json(path)
-        entries = manifest["native_playables"]
         entry = {"slug": slug, "name": self.state["idea"]["title"], "directory": "games/" + slug,
                  "kind": "cargo-package", "binary": binary}
-        existing = next((e for e in entries if e["slug"] == slug), None)
-        if existing and existing != entry:
-            raise ForgeError("An independently maintained download definition uses this slug")
-        if not existing:
-            entries.append(entry)
+        if self.update_native_definition(manifest, entry):
             atomic_json(path, manifest)
         shutil.copyfile(self.state["screenshot"], self.games / "site/thumbs" / (slug + ".png"))
         self.command([sys.executable, "distribution/check_catalog.py"], cwd=self.games, label="catalog-check")
@@ -1190,7 +1201,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         if ("build-and-review" in completed and "publish-games" not in completed
                 and not self.state.get("publication") and self.game.is_dir()):
             try:
-                validate_game_wiki(self.game)
+                self.validate_wiki(self.game)
             except ForgeError:
                 self.rebuild()
                 self.state["rebuild_reason"] += (
