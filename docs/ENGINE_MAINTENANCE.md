@@ -67,20 +67,21 @@ changes and failure/edge semantics alongside code. Add ADRs for meaningful desig
 decisions; do not add traits or duplicate generated indexes solely for navigation.
 CLAUDE.md imports the root AGENTS.md; keep shared task routing there.
 
-## Official branding
+## Branding
 
-Use `assets/branding/blueengine.ico` as the official BlueEngine icon and
-`assets/branding/blueengine.png` as the default project logo unless the user
-explicitly specifies otherwise. This is the user-approved white rat on a blue tile,
-originally `scripts/test_lab.ico`. Preserve the artwork; do not regenerate, replace
-or redesign it as part of routine engine/game work. See assets/branding/README.md.
+Keep the shared **BlueEngine Games** studio card simple and text-only. The Feta
+white-rat image is retired from reuse in title screens, new projects and branding
+unless the user explicitly requests it in a future task. The files in
+`assets/branding/` remain only for compatibility with existing projects; see
+assets/branding/README.md.
 
-That is the *engine's* identity (its own clients and the sandbox). A game made with the engine ships
-its own title, tagline, icon and verified package created by `scripts/ship.py`.
+A game made with the engine ships its own title, tagline, artwork, icon and verified
+package created by `scripts/ship.py`.
 Use `ship --no-install` for package and isolated smoke without desktop access; plain `ship`
 adds a requested desktop shortcut and verifies its wiring/icon. Desktop-wide similarity is
 optional advisory only (see
-docs/GAME_QUICKSTART.md, Definition of done). The gate rejects the engine logo as a game's icon, and
+docs/GAME_QUICKSTART.md, Definition of done). The gate rejects the historical engine
+logo as a game's icon, and
 `be2-tools icon TITLE DIRECTORY` generates a title-seeded starter icon so a game with no art is still distinct.
 Runtime modules for such games live in `viewer::devkit` (graphics-free) and `viewer::kit`
 (presentation); keep them free of genre logic, and keep `devkit` in the headless dependency graph.

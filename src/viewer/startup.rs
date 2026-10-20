@@ -98,7 +98,7 @@ impl Intro {
     }
 }
 
-/// Brief, silent studio card using the approved BlueEngine artwork. The game's own title/menu follows.
+/// Brief, silent, text-only studio card. The game's own title/menu follows.
 /// No simulation, game clock, gameplay audio or input accumulator exists during this future.
 /// Keyboard, mouse and controller can skip; their held state is released before play receives input.
 pub async fn show() {
@@ -106,11 +106,6 @@ pub async fn show() {
     if unattended(&args) || SHOWN.swap(true, std::sync::atomic::Ordering::SeqCst) {
         return;
     }
-    let logo = Texture2D::from_file_with_format(
-        include_bytes!("../../assets/branding/blueengine.png"),
-        Some(ImageFormat::Png),
-    );
-    logo.set_filter(FilterMode::Linear);
     super::game_text::initialize();
     let mut intro = Intro::default();
     #[cfg(feature = "gamepad")]
@@ -163,7 +158,7 @@ pub async fn show() {
                 || pad.triggers.iter().any(|trigger| *trigger > 0.1);
         }
         let stage = intro.advance(get_frame_time(), skip, held);
-        draw(&logo, intro.elapsed, stage == Stage::Release);
+        draw(intro.elapsed, stage == Stage::Release);
         // Consume this frame's press edges, including an immediate press/release, before returning.
         next_frame().await;
         if stage == Stage::Finished {
@@ -172,38 +167,27 @@ pub async fn show() {
     }
 }
 
-fn draw(logo: &Texture2D, elapsed: f32, releasing: bool) {
+fn draw(elapsed: f32, releasing: bool) {
     set_default_camera();
     clear_background(Color::new(0.018, 0.031, 0.060, 1.));
     let (w, h) = (screen_width(), screen_height());
     let scale = (w / 900.).min(h / 600.).clamp(0.3, 2.);
     let fade = (elapsed / 0.24).clamp(0., 1.);
-    let size = 112. * scale;
-    let center_y = h * 0.43;
-    draw_texture_ex(
-        logo,
-        (w - size) / 2.,
-        center_y - size,
-        Color::new(1., 1., 1., fade),
-        DrawTextureParams {
-            dest_size: Some(vec2(size, size)),
-            ..Default::default()
-        },
-    );
+    let center_y = h * 0.5;
     let title_size = 42. * scale;
     let text = "BlueEngine Games";
     let width = super::game_text::measure_text(text, None, 42, scale).width;
     super::game_text::draw_text(
         text,
         (w - width) / 2.,
-        center_y + 61. * scale,
+        center_y,
         title_size,
         Color::new(0.94, 0.97, 1., fade),
     );
     let line_w = 148. * scale;
     draw_rectangle(
         (w - line_w) / 2.,
-        center_y + 89. * scale,
+        center_y + 28. * scale,
         line_w,
         2. * scale,
         Color::new(0.22, 0.58, 0.94, fade * 0.6),
