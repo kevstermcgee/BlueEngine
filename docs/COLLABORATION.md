@@ -66,9 +66,10 @@ original Cargo binary name unless the game implementation and lockfile are
 updated together. Public distribution still uses the fork's distinct game slug.
 
 Commit and push the source branch to your repository. The creator API accepts
-the upstream engine repository and its verified GitHub fork network. Use a
-GitHub fork of BlueEngine for a new independent contributor; an unrelated source
-repository cannot impersonate engine ancestry. Obtain the current revision ID
+the upstream BlueEngine and BlueEngineGames repositories and their verified
+GitHub fork networks. Retain the source lane shown by the game: use a GitHub fork
+of the corresponding repository for a new independent contributor. An unrelated
+source repository cannot impersonate that ancestry. Obtain the current revision ID
 from `show`, then submit the new version:
 
 ```sh
@@ -174,6 +175,10 @@ journalctl --user -u ideaforge-daily.service -n 40
 A working timer does not mean its last job passed. Failed tests block source
 publication and retained work stays available. Nightly status/disposition reports
 distinguish attempted work, checked fixes, deferred observations, and blockers.
+Publication requests enter the same evidence queue. The AI must check the exact
+requested revision, permissions, and review state before using the native release
+command. Requests that still need source integration or review stay pending; an
+AI disposition alone cannot mark a game published.
 The nightly runner's detailed contract lives in
 [`tools/machine/blueengine-nightly`](../tools/machine/blueengine-nightly/).
 
