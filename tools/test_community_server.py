@@ -128,7 +128,8 @@ class CommunityTests(unittest.TestCase):
             self.assertEqual(first["revisions"][0]["source_tree"], expected)
             self.assertEqual(catalog.public_game("rule-relay"), first)
             self.assertEqual(reads.call_count, count)
-            self.assertTrue(all(call.args[0] in ("rev-parse", "cat-file") for call in reads.call_args_list))
+            self.assertTrue(all(call.args[0] == "--no-lazy-fetch" for call in reads.call_args_list))
+            self.assertTrue(all("ls-tree" in call.args or "rev-parse" in call.args for call in reads.call_args_list))
         self.assertEqual(json.dumps(catalog.require_game("rule-relay")["revisions"], sort_keys=True), recorded)
         source = dict(catalog.require_game("rule-relay")["revisions"][0])
         source.update(source_commit="a" * 40)
@@ -138,6 +139,9 @@ class CommunityTests(unittest.TestCase):
         source["source_commit"] = self.source_commit
         source["source"] = dict(source["source"], commit=self.source_commit, game_path="games/rule-relay/game.project.json")
         self.assertIsNone(catalog.public_game("rule-relay")["revisions"][0]["source_tree"])
+        source["source"] = dict(source["source"], game_path=".")
+        self.assertEqual(catalog.public_game("rule-relay")["revisions"][0]["source_tree"],
+                         git(self.root, "rev-parse", f"{self.source_commit}^{{tree}}"))
 
     def test_native_fork_pins_retrievable_source_and_preserves_parent_evolution(self):
         parent = self.game()

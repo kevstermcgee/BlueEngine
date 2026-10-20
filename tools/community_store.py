@@ -607,11 +607,25 @@ class Catalog:
         for source in game["revisions"]:
             key = (source["source_repository"], source["source_commit"], source["source"]["game_path"])
             if key not in self._public_source_trees:
-                tree = self.local_tree(source)
-                if tree:
-                    kind = self.publisher.git("cat-file", "-t", tree, check=False)
-                    if kind.returncode or kind.stdout.strip() != b"tree":
-                        tree = None
+                # A public read must not lazily fetch missing objects from a
+                # partial clone. Tree entries already declare their object type;
+                # inspecting a blob's type could otherwise fetch its full bytes.
+                commit, path = source["source_commit"], source["source"]["game_path"]
+                tree = None
+                if path == ".":
+                    result = self.publisher.git("--no-lazy-fetch", "rev-parse", "--verify", f"{commit}^{{tree}}", check=False)
+                    value = result.stdout.decode().strip()
+                    if not result.returncode and SHA.fullmatch(value):
+                        tree = value
+                else:
+                    result = self.publisher.git("--no-lazy-fetch", "--literal-pathspecs", "ls-tree", "-z", commit, "--", path, check=False)
+                    entries = result.stdout.split(b"\0")
+                    if not result.returncode and len(entries) == 2 and not entries[1]:
+                        header, separator, name = entries[0].partition(b"\t")
+                        fields = header.split()
+                        if (separator and len(fields) == 3 and fields[:2] == [b"040000", b"tree"]
+                                and name == path.encode("utf-8") and SHA.fullmatch(fields[2].decode())):
+                            tree = fields[2].decode()
                 self._public_source_trees[key] = tree
             revisions.append({**source, "source_tree": self._public_source_trees[key]})
         return {**game, "revisions": revisions,
