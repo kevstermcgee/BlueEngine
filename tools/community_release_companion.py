@@ -9,14 +9,16 @@ from __future__ import annotations
 from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
+import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path, PurePosixPath
 import re
 import shutil
+import subprocess
 import sys
 import time
-import tomllib
 from uuid import uuid4
 
 try:
@@ -151,23 +153,62 @@ class CompanionRelease(forge.Forge):
 
     @contextmanager
     def bound_engine(self):
-        """Mirror Windows' temporary inline path binding and restore exact bytes."""
+        """Use Windows' trusted SDK binder and prove the resolved immutable SDK."""
         manifest, lock = self.game / "Cargo.toml", self.game / "Cargo.lock"
+        if any(path.is_symlink() or not path.is_file() for path in (manifest, lock)):
+            raise forge.ForgeError("Native SDK binding needs committed real Cargo.toml and Cargo.lock files")
         originals = {path: path.read_bytes() for path in (manifest, lock)}
-        text = originals[manifest].decode("utf-8")
-        dependency = tomllib.loads(text).get("dependencies", {}).get("vesper3d", {})
-        pattern = r'(?m)^(vesper3d\s*=\s*\{[^}\r\n]*\bpath\s*=\s*)"[^"]+"'
-        bound, count = re.subn(pattern, lambda match: match[1] + json.dumps(self.engine.as_posix()), text)
-        if isinstance(dependency, dict) and dependency.get("path") and not count:
-            raise forge.ForgeError("Use the native release workflow's inline vesper3d path dependency form before publication")
-        if count:
-            manifest.write_bytes(bound.encode("utf-8"))
+        evidence = self.directory / "sdk-evidence" / uuid4().hex
+        evidence.mkdir(mode=0o700, parents=True)
+        for path, data in originals.items():
+            (evidence / ("original-" + path.name)).write_bytes(data)
         try:
+            binder = self.sdk_binder()
+            # This includes binder invocation: a partial manifest write followed
+            # by a lock error must restore both original byte snapshots as well.
+            try:
+                binder.bind(manifest, self.engine)
+            except ValueError as error:
+                raise forge.ForgeError("Native SDK binding failed; use one supported inline vesper3d dependency on package be2 with a compatible committed Cargo.lock: " + str(error)) from None
+            for path in originals:
+                if path.is_symlink() or not path.is_file():
+                    raise forge.ForgeError("The SDK binder replaced a source input with an unsafe path")
+                (evidence / ("bound-" + path.name)).write_bytes(path.read_bytes())
+            bound_inputs = {path: path.read_bytes() for path in originals}
+            log = self.command(["cargo", "metadata", "--quiet", "--locked", "--format-version", "1",
+                                "--manifest-path", str(manifest)], cwd=self.game, label="native-sdk-provenance")
+            documents = []
+            for line in log.read_text(encoding="utf-8").splitlines():
+                try:
+                    candidate = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(candidate, dict) and isinstance(candidate.get("packages"), list):
+                    documents.append(candidate)
+            if len(documents) != 1:
+                raise forge.ForgeError("Cargo did not produce one complete locked SDK metadata proof")
+            if any(path.is_symlink() or path.read_bytes() != data for path, data in bound_inputs.items()):
+                raise forge.ForgeError("Locked SDK metadata changed its bound Cargo inputs; preserve the evidence and update the committed lock")
+            packages = [item for item in documents[0]["packages"] if item.get("name") == "be2"]
+            expected = (self.engine / "Cargo.toml").resolve()
+            if (len(packages) != 1 or packages[0].get("source") is not None
+                    or not isinstance(packages[0].get("manifest_path"), str)
+                    or Path(packages[0]["manifest_path"]).resolve() != expected):
+                raise forge.ForgeError("Resolved SDK does not match the frozen catalog Engine; integrate current Games main and update the game's dependency/lock before native publication")
+            proof = {"inputs": self.sdk_inputs(originals), "tooling": deepcopy(self.state.get("sdk_tooling")),
+                     "evidence": str(evidence), "metadata_log": log.name,
+                     "bound_manifest_sha256": hashlib.sha256(manifest.read_bytes()).hexdigest(),
+                     "bound_lock_sha256": hashlib.sha256(lock.read_bytes()).hexdigest()}
+            forge.atomic_json(evidence / "proof.json", proof)
+            self.state["sdk_provenance"] = proof
+            self.save()
             yield
         finally:
+            unsafe = []
             for path, original in originals.items():
-                if path.is_symlink():
-                    raise forge.ForgeError("Native checks replaced a source manifest with a symlink; retained without following it")
+                if path.is_symlink() or path.exists() and not path.is_file():
+                    unsafe.append(path.name)
+                    continue
                 current = path.read_bytes() if path.exists() else None
                 if current != original:
                     # Keep generated lock evidence without letting a build alter
@@ -176,6 +217,59 @@ class CompanionRelease(forge.Forge):
                         saved = self.directory / ("build-lock-" + uuid4().hex[:8] + ".toml")
                         saved.write_bytes(current)
                     path.write_bytes(original)
+            if unsafe:
+                raise forge.ForgeError("Native checks replaced source inputs with unsafe paths; retained without following them: " + ", ".join(unsafe))
+
+    def sdk_inputs(self, originals=None):
+        originals = originals or {path: path.read_bytes() for path in (self.game / "Cargo.toml", self.game / "Cargo.lock")}
+        try:
+            controller = forge.git(self.games, "rev-parse", "HEAD:distribution/bind_engine.py")
+        except forge.ForgeError:
+            raise forge.ForgeError("Integrate latest Games main before native review; the frozen source needs its trusted SDK binding controller") from None
+        return {"engine_head": self.state["engine_head"],
+                "game_tree": forge.git(self.games, "rev-parse", "HEAD:" + self.state["definition"]["directory"]),
+                "controller_blob": controller,
+                "manifest_sha256": hashlib.sha256(originals[self.game / "Cargo.toml"]).hexdigest(),
+                "lock_sha256": hashlib.sha256(originals[self.game / "Cargo.lock"]).hexdigest()}
+
+    def sdk_binder(self):
+        """Execute only a frozen public-main controller matching reviewed source."""
+        relative = "distribution/bind_engine.py"
+        commit = self.state.get("sdk_tooling_base") or forge.git(self.games, "rev-parse", "origin/main")
+        try:
+            trusted = forge.git(self.games, "ls-tree", commit, "--", relative).split()
+            source = forge.git(self.games, "ls-tree", "HEAD", "--", relative).split()
+            if (len(trusted) != 4 or trusted[0] not in {"100644", "100755"}
+                    or len(source) != 4 or source[:3] != trusted[:3]):
+                raise forge.ForgeError("mismatched controller")
+            process = subprocess.run(["git", "-C", str(self.games), "show", commit + ":" + relative], capture_output=True, timeout=60)
+            if process.returncode:
+                raise forge.ForgeError("missing controller")
+            code = process.stdout
+        except forge.ForgeError:
+            raise forge.ForgeError("Integrate latest trusted Games main before native review: frozen source must include the same distribution/bind_engine.py controller as its trusted baseline") from None
+        tooling = {"repository": GAMES_REPOSITORY, "commit": commit, "blob": trusted[2],
+                   "sha256": hashlib.sha256(code).hexdigest()}
+        path = self.directory / "sdk-tooling" / trusted[2] / "bind_engine.py"
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if path.is_symlink() or path.exists() and path.read_bytes() != code:
+            raise forge.ForgeError("The private trusted SDK controller changed; preserve it for review")
+        if not path.exists():
+            path.write_bytes(code)
+        self.state["sdk_tooling"] = tooling
+        self.state["sdk_tooling_base"] = commit
+        self.save()
+        spec = importlib.util.spec_from_file_location("blueengine_sdk_" + trusted[2], path)
+        module = importlib.util.module_from_spec(spec)
+        # Compile the verified Git bytes directly; an old private __pycache__
+        # cannot substitute a different controller behind an unchanged source.
+        exec(compile(code, str(path), "exec"), module.__dict__)
+        return module
+
+    def assert_sdk_provenance(self):
+        if self.state.get("sdk_provenance", {}).get("inputs") != self.sdk_inputs():
+            with self.bound_engine():
+                pass
 
     def verify_local(self):
         self.assert_clean()
@@ -251,6 +345,7 @@ class CompanionRelease(forge.Forge):
         expected = {"games_head": self.state["games_head"], "engine_head": self.state["engine_head"]}
         if self.state.get("local_receipt") != expected:
             raise forge.ForgeError("Native source changed after local checks; repeat local gates before hosted checks")
+        self.assert_sdk_provenance()
         self.command(["git", "push", "-u", "origin", "HEAD"], cwd=self.games, label="push-native-review")
         self.wait_ci(self.state["games_repository"], "native-game-checks.yml", self.state["branch"], self.state["games_head"],
                      "companion-native-checks", dispatch=True, fields={"game_slug": self.state["idea"]["slug"]})
@@ -262,6 +357,7 @@ class CompanionRelease(forge.Forge):
             raise forge.ForgeError("Native source changed after local checks; repeat the exact-source local gates")
         if self.state.get("ci", {}).get("companion-native-checks", {}).get("head") != self.state["games_head"]:
             raise forge.ForgeError("Linux/Windows native checks must pass for this exact source before installer review")
+        self.assert_sdk_provenance()
         self.command(["git", "push", "-u", "origin", "HEAD"], cwd=self.games, label="push-installer-review")
         self.wait_ci(self.state["games_repository"], "releases.yml", self.state["branch"], self.state["games_head"],
                      "windows-installer-review", dispatch=True, fields={"game_slug": self.state["idea"]["slug"]})
@@ -279,6 +375,7 @@ class CompanionRelease(forge.Forge):
                     or run.get("event") != "workflow_dispatch" or run.get("path", "").split("@", 1)[0] != ".github/workflows/" + workflow
                     or run.get("status") != "completed" or run.get("conclusion") != "success"):
                 raise forge.ForgeError(f"The exact-source {label} gate is no longer successful")
+        self.assert_sdk_provenance()
 
     def integrate_main(self):
         self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="companion-main-fetch")
@@ -315,6 +412,7 @@ class CompanionRelease(forge.Forge):
             self.state.setdefault("ci", {}).pop("windows-installer-review", None)
             self.state["ci"].pop("companion-native-checks", None)
         self.state.pop("integration_pending", None)
+        self.state["sdk_tooling_base"] = forge.git(self.games, "rev-parse", "origin/main")
         self.pin_engine()
         self.save()
 

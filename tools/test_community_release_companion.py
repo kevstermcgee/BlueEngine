@@ -13,13 +13,18 @@ class CompanionTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
-        self.root = Path(self.temp.name)
+        self.root = Path(self.temp.name).resolve()
         self.engine = self.repository('engine')
         (self.engine / 'Cargo.toml').write_text('[package]\nname="be2"\nversion="0.1.0"\n')
         self.commit(self.engine, 'Engine source')
         self.git(self.engine, 'push', 'origin', 'main')
         self.engine_head = self.git(self.engine, 'rev-parse', 'HEAD')
         self.games = self.repository('games')
+        # Frozen first-party controller contract from BlueEngineGames3aabaf6.
+        # The adapter must load the trusted Git blob, never creator-edited code.
+        (self.games / 'distribution').mkdir()
+        fixture = Path(__file__).with_name('testdata') / 'companion-bind-engine-3a.txt'
+        (self.games / 'distribution/bind_engine.py').write_bytes(fixture.read_bytes())
         self.game = self.games / 'games/legacy-game'
         (self.game / 'src').mkdir(parents=True)
         (self.game / 'Cargo.toml').write_bytes(b'[package]\r\nname="legacy-game"\r\nversion="0.1.0"\r\n[dependencies]\r\nvesper3d = { package="be2", path="../../../BlueEngine" }\r\n')
@@ -44,6 +49,19 @@ class CompanionTests(unittest.TestCase):
                           companion.ENGINE_REPOSITORY if Path(root) == self.engine else companion.GAMES_REPOSITORY):
             self.release = companion.create(self.engine, self.games, 'legacy-game', runs_root=self.root / 'runs')
         self.release.prepare()
+        command = self.release.command
+        self.sdk_commands = []
+        self.metadata_packages = None
+        def command_with_metadata(argv, **options):
+            if options.get('label') != 'native-sdk-provenance':
+                return command(argv, **options)
+            self.sdk_commands.append(argv)
+            log = self.release.directory / ('sdk-metadata-' + str(len(self.sdk_commands)) + '.log')
+            packages = self.metadata_packages if self.metadata_packages is not None else [
+                {'name': 'be2', 'source': None, 'manifest_path': str(self.release.engine / 'Cargo.toml')}]
+            log.write_text(json.dumps({'packages': packages}) + '\n')
+            return log
+        self.release.command = command_with_metadata
 
     @staticmethod
     def git(root, *args):
@@ -155,6 +173,92 @@ class CompanionTests(unittest.TestCase):
         self.assertTrue(list(self.release.directory.glob('build-lock-*.toml')))
         self.release.assert_clean()
 
+    def committed_manifest(self, dependency):
+        manifest = self.release.game / 'Cargo.toml'
+        manifest.write_text('[package]\nname="legacy-game"\nversion="0.1.0"\n[dependencies]\n' + dependency)
+        self.commit(self.release.games, 'Authored SDK source')
+        self.release.state['games_head'] = self.git(self.release.games, 'rev-parse', 'HEAD')
+        return manifest
+
+    def test_old_git_sdk_is_safely_bound_with_locked_proof_and_exact_source_restoration(self):
+        url, revision = 'https://github.com/kevstermcgee/BlueEngine.git', '1441a433a76aa3c8d0f507dfe370a5c9583882b1'
+        manifest = self.committed_manifest('vesper3d={package="be2",git="' + url + '",rev="' + revision + '",features=["presentation"]}\n')
+        lock = self.release.game / 'Cargo.lock'
+        lock.write_text('version=4\n[[package]]\nname="be2"\nversion="0.1.0"\nsource="git+' + url + '?rev=' + revision + '#' + revision + '"\n')
+        self.commit(self.release.games, 'Committed original git lock')
+        self.release.state['games_head'] = self.git(self.release.games, 'rev-parse', 'HEAD')
+        original = {path: path.read_bytes() for path in (manifest, lock)}
+        with self.release.bound_engine():
+            import tomllib
+            dependency = tomllib.loads(manifest.read_text())['dependencies']['vesper3d']
+            self.assertEqual(dependency['path'], self.release.engine.as_posix())
+            self.assertEqual(dependency['features'], ['presentation'])
+            self.assertNotIn('source', tomllib.loads(lock.read_text())['package'][0])
+        self.assertEqual(original, {path: path.read_bytes() for path in original})
+        self.assertIn('--locked', self.sdk_commands[-1])
+        proof = self.release.state['sdk_provenance']
+        evidence = Path(proof['evidence'])
+        self.assertEqual((evidence / 'original-Cargo.lock').read_bytes(), original[lock])
+        self.assertNotEqual((evidence / 'bound-Cargo.lock').read_bytes(), original[lock])
+        self.assertEqual(proof['tooling']['repository'], companion.GAMES_REPOSITORY)
+
+    def test_missing_and_unrecognized_sdk_fail_before_metadata_and_restore_source(self):
+        for declaration in ('serde="1"\n', 'vesper3d="0.1"\n', 'vesper3d={package="be2",version="0.1"}\n',
+                            '[dependencies.vesper3d]\npackage="be2"\npath="old"\n',
+                            'vesper3d={package="be2",path="old"}\n[target.\'cfg(windows)\'.dependencies]\n'
+                            'vesper3d={package="be2",path="other"}\n'):
+            with self.subTest(declaration=declaration):
+                manifest = self.committed_manifest(declaration)
+                original = manifest.read_bytes()
+                before = len(self.sdk_commands)
+                with self.assertRaisesRegex(companion.forge.ForgeError, 'supported inline'):
+                    with self.release.bound_engine():
+                        self.fail('Unrecognized SDK reached the native build')
+                self.assertEqual(len(self.sdk_commands), before)
+                self.assertEqual(manifest.read_bytes(), original)
+
+    def test_wrong_git_duplicate_or_foreign_metadata_sdk_cannot_authorize_build(self):
+        original = (self.release.game / 'Cargo.toml').read_bytes()
+        variants = ([{'name': 'be2', 'source': 'git+old', 'manifest_path': str(self.release.engine / 'Cargo.toml')}],
+                    [{'name': 'be2', 'source': None, 'manifest_path': str(self.engine / 'Cargo.toml')}],
+                    [{'name': 'be2', 'source': None, 'manifest_path': str(self.release.engine / 'Cargo.toml')}] * 2,
+                    [])
+        for packages in variants:
+            with self.subTest(packages=packages):
+                self.metadata_packages = packages
+                with self.assertRaisesRegex(companion.forge.ForgeError, 'Resolved SDK'):
+                    with self.release.bound_engine():
+                        self.fail('Unproven SDK reached the native build')
+                self.assertEqual((self.release.game / 'Cargo.toml').read_bytes(), original)
+
+    def test_partial_binder_write_failure_restores_both_inputs(self):
+        manifest, lock = self.release.game / 'Cargo.toml', self.release.game / 'Cargo.lock'
+        original = {path: path.read_bytes() for path in (manifest, lock)}
+        def broken(manifest, engine):
+            manifest.write_text('partially bound manifest')
+            raise OSError('lock write failed')
+        with patch.object(self.release, 'sdk_binder', return_value=Mock(bind=broken)):
+            with self.assertRaisesRegex(OSError, 'lock write failed'):
+                with self.release.bound_engine():
+                    self.fail('Partial binder failure reached native build')
+        self.assertEqual(original, {path: path.read_bytes() for path in original})
+
+    def test_creator_edited_binding_controller_is_never_executed(self):
+        (self.release.games / 'distribution/bind_engine.py').write_text('raise RuntimeError("untrusted creator controller executed")\n')
+        self.commit(self.release.games, 'Untrusted release controller change')
+        self.release.state['games_head'] = self.git(self.release.games, 'rev-parse', 'HEAD')
+        with self.assertRaisesRegex(companion.forge.ForgeError, 'Integrate latest trusted Games main'):
+            with self.release.bound_engine():
+                self.fail('Untrusted controller reached native build')
+
+    def test_private_binding_controller_tampering_is_not_executed(self):
+        self.release.sdk_binder()
+        path = self.release.directory / 'sdk-tooling' / self.release.state['sdk_tooling']['blob'] / 'bind_engine.py'
+        path.write_text('raise RuntimeError("altered private tooling executed")\n')
+        with self.assertRaisesRegex(companion.forge.ForgeError, 'private trusted SDK controller changed'):
+            with self.release.bound_engine():
+                self.fail('Changed private controller reached native build')
+
     def test_stale_source_and_stale_windows_receipts_cannot_publish(self):
         self.release.state['ci'] = {'windows-installer-review': {'head': 'wrong-source', 'run': 1}}
         self.release.api = Mock()
@@ -174,13 +278,14 @@ class CompanionTests(unittest.TestCase):
             if label == 'native-build':
                 self.assertIn(self.release.engine.as_posix(), (self.release.game / 'Cargo.toml').read_text())
             log = self.release.directory / (label + '.log')
-            log.write_text('test result: ok. 2 passed; 0 failed\n')
+            log.write_text(json.dumps({'packages': [{'name': 'be2', 'source': None, 'manifest_path': str(self.release.engine / 'Cargo.toml')}]})
+                           if label == 'native-sdk-provenance' else 'test result: ok. 2 passed; 0 failed\n')
             return log
         with patch.object(self.release, 'command', side_effect=command):
             self.release.verify_local()
         labels = [label for _, label, _ in calls]
-        self.assertEqual(labels, ['catalog-check', 'distribution-tests', 'site-tests', 'game-format', 'game-headless-tests', 'game-clippy', 'native-build'])
-        self.assertIn('--no-default-features', calls[4][0])
+        self.assertEqual(labels, ['catalog-check', 'distribution-tests', 'site-tests', 'native-sdk-provenance', 'game-format', 'game-headless-tests', 'game-clippy', 'native-build'])
+        self.assertIn('--no-default-features', calls[5][0])
         self.assertEqual((self.release.game / 'Cargo.toml').read_bytes(), original)
         self.assertEqual(self.release.state['local_receipt']['games_head'], self.source_head)
         self.assertEqual(self.git(self.games, 'status', '--porcelain'), '')
@@ -192,7 +297,8 @@ class CompanionTests(unittest.TestCase):
         def command(argv, *, cwd=None, label):
             calls.append(label)
             log = self.release.directory / (label + '.log')
-            log.write_text('test result: ok. 0 passed; 0 failed\n')
+            log.write_text(json.dumps({'packages': [{'name': 'be2', 'source': None, 'manifest_path': str(self.release.engine / 'Cargo.toml')}]})
+                           if label == 'native-sdk-provenance' else 'test result: ok. 0 passed; 0 failed\n')
             return log
         with patch.object(self.release, 'command', side_effect=command), self.assertRaisesRegex(companion.forge.ForgeError, 'executed behavioral tests'):
             self.release.verify_local()
