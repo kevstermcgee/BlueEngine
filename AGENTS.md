@@ -45,6 +45,9 @@ Never violate:
 - Preserve public vesper3d compatibility, semantic IDs and visual/collision agreement.
 - Preserve completed outputs on failure; never shell-interpolate scene values.
 - Preserve official assets/branding artwork. No plugin/service installation needed.
+- Do not reuse Feta/the white-rat image in title screens, new projects or branding
+  unless the user explicitly requests it in a future task. Keep the BlueEngine Games
+  studio card simple and text-only. Historical assets remain for compatibility only.
 
 Scaffolding/authoring uses `python3 tools/be2.py map ...` with fresh shared itest tooling;
 release builds are for shipping. Browser commands return retirement diagnostics without building.
