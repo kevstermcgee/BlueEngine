@@ -30,14 +30,19 @@ installer = module('game_installer')
 
 
 def pe(machine=0x8664, magic=0x20b, dll=False):
-    data = bytearray(64 + 24 + 240)
+    data = bytearray(1024)
     data[:2] = b'MZ'
     struct.pack_into('<I', data, 60, 64)
     data[64:68] = b'PE\0\0'
     struct.pack_into('<H', data, 68, machine)
+    struct.pack_into('<H', data, 70, 1)
     struct.pack_into('<H', data, 84, 240)
     struct.pack_into('<H', data, 86, 0x2002 if dll else 0x0002)
     struct.pack_into('<H', data, 88, magic)
+    directory_count = 108 if magic == 0x20b else 92
+    struct.pack_into('<I', data, 88 + directory_count, 16)
+    data[328:336] = b'.text\0\0\0'
+    struct.pack_into('<II', data, 344, 512, 512)
     return bytes(data)
 
 

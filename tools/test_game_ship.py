@@ -258,6 +258,8 @@ def make_game(root, title='Zephyr Quest', seed=1, exe='zephyr', identity=None, p
         (root / '.gitignore').write_text(gitignore, encoding='utf-8')
     if ship_py:
         shutil.copy(ROOT / 'templates/game_ship.py', root / 'scripts/ship.py')
+        (root / 'tools').mkdir(exist_ok=True)
+        shutil.copy(ROOT / 'tools/game_metadata.py', root / 'tools/game_metadata.py')
     return root
 
 
@@ -886,11 +888,29 @@ class PackageTests(TempTestCase):
         self.target = self.tmp / 'build output'
         (self.target / 'release').mkdir(parents=True)
         self.built = self.target / 'release' / exe_name()
-        self.built.write_bytes(b'MZ built exe v1')
+        self.write_build(b'MZ built exe v1')
         self.env = {'CARGO_TARGET_DIR': str(self.target)}
 
     def package(self, *extra):
         return call_main(self.root, 'package', '--no-build', *extra, env=self.env)
+
+    def write_build(self, label):
+        if os.name == 'nt':
+            from tools.test_game_metadata import pe
+            data = bytearray(pe())
+            data[-len(label):] = label
+            self.built.write_bytes(data)
+        else:
+            self.built.write_bytes(label)
+
+    def assert_packaged_build(self):
+        data = (self.root / 'dist' / exe_name()).read_bytes()
+        if os.name == 'nt':
+            self.assertTrue(data.startswith(self.built.read_bytes()))
+            from tools import game_metadata
+            self.assertEqual(game_metadata.extract(self.root / 'dist' / exe_name())['game']['title'], 'Zephyr Quest')
+        else:
+            self.assertEqual(data, self.built.read_bytes())
 
     def test_copies_exe_icons_and_extras_and_writes_the_stamp(self):
         (self.root / 'game.json').write_text('{"map": "maps/main.json"}', encoding='utf-8')
@@ -901,7 +921,7 @@ class PackageTests(TempTestCase):
         code, result, _err = self.package()
         self.assertEqual(code, 0, result)
         dist = self.root / 'dist'
-        self.assertEqual((dist / exe_name()).read_bytes(), b'MZ built exe v1')
+        self.assert_packaged_build()
         self.assertEqual((dist / 'zephyr.ico').read_bytes(), (self.root / 'assets/icon.ico').read_bytes())
         self.assertEqual((dist / 'zephyr.png').read_bytes(), (self.root / 'assets/icon.png').read_bytes())
         self.assertEqual((dist / 'maps/sub/deep.json').read_text(encoding='utf-8'), '{"deep": true}')
@@ -932,9 +952,9 @@ class PackageTests(TempTestCase):
         (dist / 'records.json').write_text('{"best": 12345}', encoding='utf-8')  # the game's own save data
         (dist / 'extras' / 'user.txt').write_text('mine', encoding='utf-8')
         (self.root / 'extras/b.txt').unlink()
-        self.built.write_bytes(b'MZ built exe v2')
+        self.write_build(b'MZ built exe v2')
         self.assertEqual(self.package()[0], 0)
-        self.assertEqual((dist / exe_name()).read_bytes(), b'MZ built exe v2')
+        self.assert_packaged_build()
         self.assertFalse((dist / 'extras/b.txt').exists())  # no longer part of the package
         self.assertTrue((dist / 'extras/a.txt').exists())
         self.assertEqual((dist / 'records.json').read_text(encoding='utf-8'), '{"best": 12345}')
@@ -963,7 +983,7 @@ class PackageTests(TempTestCase):
         stamp['verified'] = {'at': 'then', 'launch': True, 'smoke': True}
         stamp['custom'] = 'kept'
         project.write_stamp(stamp)
-        self.built.write_bytes(b'MZ a new build')
+        self.write_build(b'MZ a new build')
         self.package()
         stamp = project.read_stamp()
         self.assertEqual(stamp['shortcut'], {'path': 'somewhere', 'created_at': 'then'})
@@ -1037,6 +1057,26 @@ class PackageTests(TempTestCase):
         second = {p.name: p.read_bytes() for p in (self.root / 'dist').iterdir() if p.name != 'ship.json'}
         self.assertEqual(first, second)
 
+    def test_windows_exe_and_batch_carry_the_same_hashed_package_metadata(self):
+        from tools import game_metadata
+        from tools.test_game_metadata import pe
+        built = self.target / 'release/zephyr.exe'
+        built.write_bytes(pe())
+        body = b'@echo off\r\nzephyr.exe\r\n'
+        (self.root / 'launch.bat').write_bytes(body)
+        self.write_identity(package=['launch.bat'])
+        project = game_ship.Project(self.root, 'windows')
+        with mock.patch.dict(os.environ, self.env):
+            game_ship.cmd_package(project, no_build=True)
+        document = game_metadata.decode_payload((project.dist / game_metadata.MANIFEST).read_bytes())
+        self.assertEqual(game_metadata.extract(project.dist / 'zephyr.exe'), document)
+        self.assertEqual(game_metadata.extract(project.dist / 'launch.bat'), document)
+        self.assertEqual(built.read_bytes(), pe())
+        self.assertEqual((self.root / 'launch.bat').read_bytes(), body)
+        self.assertIn(game_metadata.MANIFEST, game_ship.package_integrity(project))
+        stamp = project.read_stamp()
+        self.assertEqual(stamp['file_sha256'][game_metadata.MANIFEST], game_ship.sha256_file(project.dist / game_metadata.MANIFEST))
+
     def install_user_files(self):
         """What a running game writes beside its exe."""
         dist = self.root / 'dist'
@@ -1058,14 +1098,14 @@ class PackageTests(TempTestCase):
         self.write_identity(package=['game.json', 'notes.txt'])
         self.assertEqual(self.package()[0], 0)
         files = self.install_user_files()
-        self.built.write_bytes(b'MZ built exe v2')
+        self.write_build(b'MZ built exe v2')
         self.write_identity(package=['game.json'])  # an extra is dropped from the package
         code, result, _err = self.package()
         self.assertEqual(code, 0, result)
         self.assert_files_intact(files)
         self.assertFalse((self.root / 'dist/notes.txt').exists())  # the stale packaged extra is gone
         self.assertEqual(result['removed'], ['notes.txt'])
-        self.assertEqual((self.root / 'dist' / exe_name()).read_bytes(), b'MZ built exe v2')  # and the rest refreshed
+        self.assert_packaged_build()  # and the rest refreshed
         self.assertTrue((self.root / 'dist/game.json').exists())
         self.assertEqual(self.package()[0], 0)  # a third run changes nothing about the player's files either
         self.assert_files_intact(files)
@@ -1078,7 +1118,7 @@ class PackageTests(TempTestCase):
         self.write_identity(package=[])
         self.package()
         stamp = game_ship.Project(self.root).read_stamp()
-        self.assertEqual(sorted(stamp['files']), sorted([exe_name(), 'zephyr.ico', 'zephyr.png']))
+        self.assertEqual(sorted(stamp['files']), sorted([exe_name(), 'zephyr.ico', 'zephyr.png', 'blueengine.game.json']))
         self.assert_files_intact(files)
 
     def test_a_missing_or_damaged_stamp_overwrites_package_files_and_deletes_nothing(self):
@@ -1267,6 +1307,13 @@ print(json.dumps({"reason": "build-finished", "success": True}))
 
 
 class CargoTests(TempTestCase):
+    def write_executable(self, path, label):
+        if WINDOWS:
+            from tools.test_game_metadata import pe
+            path.write_bytes(pe())
+        else:
+            path.write_bytes(label)
+
     def setUp(self):
         super().setUp()
         self.root = make_game(self.tmp / 'game', exe='zephyr')
@@ -1274,7 +1321,11 @@ class CargoTests(TempTestCase):
         self.elsewhere = self.tmp / 'somewhere odd' / 'out'
         self.elsewhere.mkdir(parents=True)
         self.exe = self.elsewhere / exe_name()
-        self.exe.write_bytes(b'MZ from cargo')
+        if WINDOWS:
+            from tools.test_game_metadata import pe
+            self.exe.write_bytes(pe())
+        else:
+            self.exe.write_bytes(b'MZ from cargo')
         self.other = self.elsewhere / exe_name('other')
         self.other.write_bytes(b'MZ other')
 
@@ -1291,7 +1342,12 @@ class CargoTests(TempTestCase):
         self.assertEqual(done.returncode, 0, done.stderr)
         result = json.loads(done.stdout)
         self.assertEqual(result['built_from'], str(self.exe))
-        self.assertEqual((self.root / 'dist' / exe_name()).read_bytes(), b'MZ from cargo')
+        if WINDOWS:
+            from tools import game_metadata
+            self.assertEqual(game_metadata.extract(self.root / 'dist' / exe_name())['game']['title'], 'Zephyr Quest')
+            self.assertTrue((self.root / 'dist' / exe_name()).read_bytes().startswith(self.exe.read_bytes()))
+        else:
+            self.assertEqual((self.root / 'dist' / exe_name()).read_bytes(), b'MZ from cargo')
         self.assertIn('Compiling zephyr', done.stderr)  # the compiler's messages pass through to stderr
         self.assertEqual(len(done.stdout.strip().splitlines()), 1)  # stdout is exactly one JSON object
 
@@ -1304,7 +1360,7 @@ class CargoTests(TempTestCase):
     def test_no_build_asks_cargo_metadata_for_the_target_directory(self):
         release = self.tmp / 'release'
         release.mkdir()
-        (release / exe_name()).write_bytes(b'MZ from metadata dir')
+        self.write_executable(release / exe_name(), b'MZ from metadata dir')
         env = self.env()
         env.pop('CARGO_TARGET_DIR')
         with mock.patch.dict(os.environ, env):
@@ -1316,17 +1372,17 @@ class CargoTests(TempTestCase):
     def test_cargo_target_dir_beats_everything_else(self):
         chosen = self.tmp / 'chosen'
         (chosen / 'release').mkdir(parents=True)
-        (chosen / 'release' / exe_name()).write_bytes(b'MZ chosen')
+        self.write_executable(chosen / 'release' / exe_name(), b'MZ chosen')
         code, result, _err = call_main(self.root, 'package', '--no-build', env=self.env(CARGO_TARGET_DIR=str(chosen)))
         self.assertEqual(code, 0, result)
-        self.assertEqual((self.root / 'dist' / exe_name()).read_bytes(), b'MZ chosen')
+        self.assertTrue((self.root / 'dist' / exe_name()).read_bytes().startswith((chosen / 'release' / exe_name()).read_bytes()))
 
     def test_relative_cargo_target_dir_is_relative_to_the_project(self):
         (self.root / 'out/release').mkdir(parents=True)
-        (self.root / 'out/release' / exe_name()).write_bytes(b'MZ relative')
+        self.write_executable(self.root / 'out/release' / exe_name(), b'MZ relative')
         code, result, _err = call_main(self.root, 'package', '--no-build', env={'CARGO_TARGET_DIR': 'out'})
         self.assertEqual(code, 0, result)
-        self.assertEqual((self.root / 'dist' / exe_name()).read_bytes(), b'MZ relative')
+        self.assertTrue((self.root / 'dist' / exe_name()).read_bytes().startswith((self.root / 'out/release' / exe_name()).read_bytes()))
 
     def test_without_cargo_the_error_says_so(self):
         empty = self.tmp / 'empty path'
@@ -1538,6 +1594,8 @@ def make_engine(base, logo_seed=None):
     engine = Path(base) / 'engine'
     (engine / 'assets/branding').mkdir(parents=True, exist_ok=True)
     (engine / 'Cargo.toml').write_text('[package]\nname = "be2"\n', encoding='utf-8')
+    (engine / 'tools').mkdir(exist_ok=True)
+    shutil.copy(ROOT / 'tools/game_metadata.py', engine / 'tools/game_metadata.py')
     if logo_seed is not None:
         (engine / 'assets/branding/blueengine.ico').write_bytes(icon_set(logo_seed)['icon.ico'])
     return engine
@@ -3029,11 +3087,15 @@ class InfoTests(TempTestCase):
     def test_info_sees_the_package_once_it_exists(self):
         release = self.tmp / 'out' / 'release'
         release.mkdir(parents=True)
-        (release / exe_name()).write_bytes(b'MZ')
+        if WINDOWS:
+            from tools.test_game_metadata import pe
+            (release / exe_name()).write_bytes(pe())
+        else:
+            (release / exe_name()).write_bytes(b'MZ')
         self.assertEqual(call_main(self.root, 'package', '--no-build', env={'CARGO_TARGET_DIR': str(release.parent)})[0], 0)
         _code, info, _err = call_main(self.root, 'info', '--json')
         self.assertTrue(info['dist_exe']['exists'])
-        self.assertEqual(info['dist_exe']['bytes'], 2)
+        self.assertEqual(info['dist_exe']['bytes'], (self.root / 'dist' / exe_name()).stat().st_size)
         self.assertEqual(info['stamp']['title'], 'Zephyr Quest')
 
     def test_info_survives_an_invalid_identity_and_says_why(self):
