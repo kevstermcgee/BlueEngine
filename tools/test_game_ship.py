@@ -2576,9 +2576,12 @@ class WindowsVerifyTests(TempTestCase):
         self.assertIn('not the game', detail)
 
     def test_a_copy_of_a_real_exe_exercises_shortcut_icon_and_uniqueness(self):
-        """The spec's end-to-end: the shortcut targets a copy of a real GUI-less exe (python.exe)."""
+        """A real owned unsigned EXE has foreign resources but the game's shortcut icon."""
+        if not CSC.exists():
+            self.skipTest('needs the .NET Framework C# compiler for an owned unsigned executable')
+        foreign = compile_game(self.tmp / 'foreign-unsigned', 'Foreign Fixture', icon_set(4)['icon.ico'], 'foreign-fixture')
         release = Path(self.env['CARGO_TARGET_DIR']) / 'release'
-        shutil.copy(sys.executable, release / 'zephyr.exe')
+        shutil.copy(foreign, release / 'zephyr.exe')
         self.assertEqual(call_main(self.root, 'package', '--no-build', env=self.env)[0], 0)
         self.make_other('Another Game', icon_set(4)['icon.ico'])
         game_ship.write_shortcut(self.lnk, self.project.dist / 'zephyr.exe', self.project.dist,
@@ -2589,8 +2592,8 @@ class WindowsVerifyTests(TempTestCase):
         self.assertEqual(statuses['shortcut-icon'], 'pass')
         self.assertEqual(statuses['shortcut-unique'], 'pass')
         self.assertIn('nearest is "Another Game"', check_by_name(report, 'shortcut-unique')['detail'])
-        self.assertEqual(statuses['exe-resources'], 'fail')  # python.exe carries Python's name and icon
-        self.assertIn('Python', check_by_name(report, 'exe-resources')['detail'].replace('""', ''))
+        self.assertEqual(statuses['exe-resources'], 'fail')  # Our foreign fixture carries a different name and icon.
+        self.assertIn('Foreign Fixture', check_by_name(report, 'exe-resources')['detail'].replace('""', ''))
         self.assertEqual(code, 1)
         self.assertFalse(report['ok'])
 
