@@ -351,6 +351,165 @@ class SourceReleaseIntegrationTests(unittest.TestCase):
         self.release.wait_ci.assert_not_called()
         self.assertEqual(self.git(self.writer, 'ls-remote', 'origin', 'refs/heads/main').split()[0], other)
 
+    def test_skip_ci_intake_head_gets_real_review_commit_without_source_changes(self):
+        self.git(self.engine, 'commit', '--amend', '-m', 'Record community event [skip ci]')
+        original = self.git(self.engine, 'rev-parse', 'HEAD')
+        tree = self.git(self.engine, 'rev-parse', 'HEAD^{tree}')
+        self.release.ensure_review_commit()
+        reviewed = self.git(self.engine, 'rev-parse', 'HEAD')
+        self.assertNotEqual(reviewed, original)
+        self.assertEqual(self.git(self.engine, 'rev-parse', 'HEAD^'), original)
+        self.assertEqual(self.git(self.engine, 'rev-parse', 'HEAD^{tree}'), tree)
+        self.assertEqual(self.release.state['source_review_base'], original)
+        self.release.ensure_review_commit()
+        self.assertEqual(self.git(self.engine, 'rev-parse', 'HEAD'), reviewed)
+
+    def test_games_integration_engine_guard_rejects_source_change_before_building(self):
+        self.state['verified_code'] = community_release.forge.code_digest(self.engine)
+        self.state['ci'] = {label: {'head': self.source, 'run': index + 1}
+                            for index, label in enumerate(('engine-checks', 'generated-game-linux-windows'))}
+        self.release.api = Mock(return_value={'head_sha': self.source, 'status': 'completed', 'conclusion': 'success'})
+        self.release.assert_engine_gates()
+        self.assertEqual(self.release.api.call_count, 2)
+        (self.engine / 'games/test-game/rules.rs').write_text('different unreviewed engine game\n')
+        with self.assertRaisesRegex(community_release.forge.ForgeError, 'Engine source changed'):
+            self.release.assert_engine_gates()
+        self.assertEqual(self.release.api.call_count, 2)
+
+
+class GamesReleaseIntegrationTests(unittest.TestCase):
+    """Retained native releases reconcile real Games Git races without CI reuse."""
+
+    git = staticmethod(SourceReleaseIntegrationTests.git)
+    configure = SourceReleaseIntegrationTests.configure
+    commit = SourceReleaseIntegrationTests.commit
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        self.directory = self.root / 'run'
+        self.directory.mkdir()
+        self.remote, self.writer = self.root / 'games.git', self.root / 'writer'
+        self.games = self.directory / 'games-repository'
+        self.git(self.root, 'init', '--bare', '--initial-branch=main', str(self.remote))
+        self.git(self.root, 'clone', str(self.remote), str(self.writer))
+        self.configure(self.writer)
+        game = self.writer / 'games/test-game'
+        game.mkdir(parents=True)
+        (game / 'rules.rs').write_text('old game\n')
+        (game / 'wiki.json').write_text('{"guide":"reviewed game guide"}\n')
+        (self.writer / 'site/thumbs').mkdir(parents=True)
+        (self.writer / 'site/thumbs/test-game.png').write_bytes(b'reviewed native capture')
+        self.definition = {'slug': 'test-game', 'name': 'Test Game', 'binary': 'test-game',
+                           'kind': 'cargo-package', 'directory': 'games/test-game'}
+        (self.writer / '.release-games.json').write_text(json.dumps({'native_playables': [self.definition]}))
+        self.catalog = {'source_repository': 'fixture/engine', 'target_repository': 'fixture/games',
+                        'source_revision': 'e' * 40, 'preserved_paths': [],
+                        'files': [{'path': 'games/test-game/rules.rs', 'sha256': 'a' * 64}]}
+        (self.writer / '.games-catalog.json').write_text(json.dumps(self.catalog))
+        self.commit(self.writer, 'Original export')
+        self.git(self.writer, 'push', 'origin', 'main')
+        self.git(self.root, 'clone', str(self.remote), str(self.games))
+        self.configure(self.games)
+        self.git(self.games, 'switch', '-c', 'community-release/test-game')
+        (self.games / 'games/test-game/rules.rs').write_text('reviewed new rules\n')
+        self.commit(self.games, 'Reviewed game source')
+        self.source = self.git(self.games, 'rev-parse', 'HEAD')
+        self.state = {'target_dir': str(self.root), 'timeout': 10, 'idea': {'slug': 'test-game'},
+                      'engine_repository': 'fixture/engine', 'engine_head': 'e' * 40,
+                      'games_repository': 'fixture/games', 'games_head': self.source,
+                      'branch': 'community-release/test-game',
+                      'ci': {'windows-installer-review': {'head': self.source, 'run': 1}}}
+        self.release = community_release.Release(self.directory, self.state)
+        self.release.assert_engine_gates = Mock()
+        self.release.assert_source_gates = Mock()
+        def reviewed():
+            self.release.state['ci']['windows-installer-review'] = {'head': self.release.state['games_head'], 'run': 2}
+            self.release.save()
+        self.release.installer_review = Mock(side_effect=reviewed)
+
+    def advance_main(self, path='feedback.txt', text='concurrent observation\n'):
+        self.git(self.writer, 'fetch', 'origin', 'main')
+        self.git(self.writer, 'merge', '--ff-only', 'origin/main')
+        (self.writer / path).write_text(text)
+        self.commit(self.writer, 'Independent main update')
+        self.git(self.writer, 'push', 'origin', 'main')
+        return self.git(self.writer, 'rev-parse', 'HEAD')
+
+    def public_head(self):
+        return self.git(self.writer, 'ls-remote', 'origin', 'refs/heads/main').split()[0]
+
+    def test_unrelated_main_advance_is_merged_and_exact_installer_review_repeated(self):
+        other = self.advance_main()
+        frozen = self.release.games_snapshot(self.source)
+        self.release.publish_games()
+        head = self.public_head()
+        self.assertNotEqual(head, self.source)
+        self.assertTrue(community_release.forge.git_ancestor(self.games, self.source, head))
+        self.assertTrue(community_release.forge.git_ancestor(self.games, other, head))
+        self.assertEqual(self.release.games_snapshot(head), frozen)
+        self.assertEqual(self.release.state['engine_head'], 'e' * 40)
+        self.assertEqual(self.release.state['ci']['windows-installer-review']['head'], head)
+        self.release.installer_review.assert_called_once()
+
+    def test_failed_installer_retry_uses_retained_merge_and_serialized_snapshot(self):
+        other = self.advance_main()
+        reviewed = self.release.installer_review.side_effect
+        self.release.installer_review.side_effect = community_release.forge.ForgeError('installer failed')
+        with self.assertRaisesRegex(community_release.forge.ForgeError, 'installer failed'):
+            self.release.publish_games()
+        head = self.release.state['games_head']
+        self.assertEqual(self.public_head(), other)
+        self.release.state = json.loads((self.directory / 'state.json').read_text())
+        self.release.installer_review.side_effect = reviewed
+        self.release.publish_games()
+        self.assertEqual(self.public_head(), head)
+        self.assertEqual(self.release.installer_review.call_count, 2)
+
+    def test_successful_push_with_lost_ack_and_later_main_reuses_original_reviewed_sha(self):
+        self.advance_main()
+        command = self.release.command
+        def lost_ack(argv, **options):
+            result = command(argv, **options)
+            if options.get('label') == 'publish-games':
+                raise community_release.forge.ForgeError('lost acknowledgment')
+            return result
+        with patch.object(self.release, 'command', side_effect=lost_ack):
+            with self.assertRaisesRegex(community_release.forge.ForgeError, 'lost acknowledgment'):
+                self.release.publish_games()
+        reviewed = self.release.state['games_head']
+        newer = self.advance_main('feed.txt', 'another published game\n')
+        self.release.publish_games()
+        self.assertEqual(self.public_head(), newer)
+        self.assertEqual(self.release.state['games_head'], reviewed)
+        self.release.installer_review.assert_called_once()
+
+    def assert_source_change_blocks(self, path, text):
+        changed = self.advance_main(path, text)
+        with self.assertRaisesRegex(community_release.forge.ForgeError, 'released game|pinned engine'):
+            self.release.publish_games()
+        self.assertEqual(self.public_head(), changed)
+        self.release.installer_review.assert_not_called()
+
+    def test_changed_game_tree_blocks_stale_publication(self):
+        self.assert_source_change_blocks('games/test-game/new-feature.rs', 'unreviewed rule\n')
+
+    def test_changed_native_definition_blocks_stale_publication(self):
+        self.assert_source_change_blocks('.release-games.json', json.dumps({'native_playables': [dict(self.definition, binary='different')]}))
+
+    def test_changed_thumbnail_blocks_stale_publication(self):
+        self.assert_source_change_blocks('site/thumbs/test-game.png', 'different capture')
+
+    def test_changed_engine_pin_blocks_stale_publication(self):
+        self.assert_source_change_blocks('.games-catalog.json', json.dumps(dict(self.catalog, source_revision='f' * 40)))
+
+    def test_changed_engine_source_blocks_before_games_commands(self):
+        self.release.assert_engine_gates = Mock(side_effect=community_release.forge.ForgeError('stale engine gates'))
+        with patch.object(self.release, 'command') as command, self.assertRaisesRegex(community_release.forge.ForgeError, 'stale engine'):
+            self.release.publish_games()
+        command.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
