@@ -326,6 +326,38 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(self.request(f"{server.PREFIX}/games", registration, token="cousin_token")[0], 200)
         self.assertFalse(self.game("archived-game").get("source_unavailable", False))
 
+    def test_trusted_published_metadata_preserves_historical_and_standalone_fork_sources(self):
+        git(self.seed, "pull", "--ff-only", "origin", "main")
+        feedback.atomic_json(self.seed / feedback.DIRECTORY / "games.json",
+                             {"schema_version": 1, "games": {"rule-relay": "Rule Relay", "historical-game": "Historical Game",
+                                                               "standalone-game": "Standalone Game"}})
+        git(self.seed, "add", ".")
+        git(self.seed, "commit", "-m", "Retain independently published source games")
+        git(self.seed, "push", "origin", "main")
+        companion = self.base / "published-source-companion"
+        git(self.base, "init", "--initial-branch=main", str(companion))
+        feedback.atomic_json(companion / "site/released-games.json", {"version": 1, "games": [
+            {"slug": "historical-game", "game_version": "v1", "source_url": f"https://github.com/{store.REPOSITORY}/tree/" + "a" * 40 + "/games/historical-game"},
+            {"slug": "standalone-game", "game_version": "v2", "source_url": "https://github.com/owner/Standalone/tree/" + "b" * 40 + "/src"}]})
+        git(companion, "add", ".")
+        git(companion, "commit", "-m", "Pin trusted independently published native source")
+        git(self.root, "fetch", str(companion), f"main:{store.COMPANION_REF}")
+        self.publisher.companion_sources = True
+        self.publisher.companion_synced_at = time.monotonic()
+        historical = self.game("historical-game")
+        self.assertEqual(historical["revisions"][0]["source"], {"repository": store.REPOSITORY, "commit": "a" * 40, "game_path": "games/historical-game"})
+        standalone = self.game("standalone-game")
+        self.assertEqual(standalone["source_kind"], "independent")
+        self.assertEqual(standalone["revisions"][0]["source"], {"repository": "owner/Standalone", "commit": "b" * 40, "game_path": "."})
+        status, _, receipt = self.request(f"{server.PREFIX}/games/standalone-game/forks",
+                                          {"request_id": str(uuid4()), "slug": "standalone-variant", "title": "My Variant"}, token="alice_token")
+        self.assertEqual(status, 200, receipt)
+        self.assertEqual(receipt["event"]["revision"]["source"]["game_path"], ".")
+        self.assertEqual(self.game("standalone-variant")["parent_revision"], standalone["head_revision"])
+        self.assertEqual(self.request(f"{server.PREFIX}/games/standalone-game/publish",
+                                      {"request_id": str(uuid4()), "revision_id": standalone["head_revision"]})[0], 409)
+        self.assertEqual(store.main(["check", "--root", str(self.root)]), 0)
+
     def test_public_catalog_cache_avoids_git_contention_and_writes_invalidate_it(self):
         first = self.game()
         with patch.object(self.publisher, "git", side_effect=AssertionError("Cached public reads must not invoke Git")):

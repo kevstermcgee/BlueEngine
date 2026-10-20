@@ -159,8 +159,11 @@ def canonical_request(action, payload):
 
 
 def source_revision(source_repository, commit, game, *, version="", note="", actor=None,
-                    created_at=None, kind="upstream", branch=None):
+                    created_at=None, kind="upstream", branch=None, game_path=None):
     source_repository, commit, game = repository(source_repository), sha(commit), slug(game)
+    game_path = game_path if game_path is not None else f"games/{game}"
+    if game_path not in (".", f"games/{game}", f"assets/games/{game}"):
+        raise CommunityError("Invalid trusted source game path")
     version, note = feedback.text(version, 160, optional=True), feedback.text(note, 8000, optional=True)
     if kind not in ("upstream", "fork", "submitted"):
         raise CommunityError("Invalid source provenance kind")
@@ -173,11 +176,13 @@ def source_revision(source_repository, commit, game, *, version="", note="", act
     if branch is not None and (not isinstance(branch, str) or not re.fullmatch(
             r"blueengine-community/[a-z0-9]+(?:-[a-z0-9]+)*/[0-9a-f]{64}", branch)):
         raise CommunityError("Invalid immutable source branch")
-    identifier = hashlib.sha256(f"{source_repository.lower()}\0{commit}\0{game}".encode()).hexdigest()
+    identity = game if game_path == f"games/{game}" else game_path
+    identifier = hashlib.sha256(f"{source_repository.lower()}\0{commit}\0{identity}".encode()).hexdigest()
+    source_url = f"https://github.com/{source_repository}/tree/{commit}" + ("" if game_path == "." else "/" + game_path)
     return {"id": identifier, "source_repository": source_repository, "source_commit": commit,
             "source_game": game, "source": {"repository": source_repository, "commit": commit,
-                                             "game_path": f"games/{game}"},
-            "source_url": f"https://github.com/{source_repository}/tree/{commit}/games/{game}",
+                                             "game_path": game_path},
+            "source_url": source_url,
             "download_source_url": f"https://github.com/{source_repository}/archive/{commit}.tar.gz",
             "source_branch": branch, "version": version, "note": note, "actor": actor,
             "created_at": created_at, "kind": kind}
@@ -464,6 +469,7 @@ class Catalog:
                                         "history_url": self.games[game_slug]["source_history_url"],
                                         "has_more": len(commits) > MAX_UPSTREAM_REVISIONS}
             self.games[game_slug]["submission_upstream_revision"] = source["id"]
+        self.seed_published_source_pins()
         paths = sorted((publisher.root / DIRECTORY).glob("*.json"))
         if len(paths) > MAX_EVENTS:
             raise CommunityError("Community event limit requires operator archival")
@@ -489,8 +495,52 @@ class Catalog:
             self.apply(event)
         self.reconcile_upstream()
 
+    def seed_published_source_pins(self):
+        """Recover historical/standalone roots from the trusted site's source pins.
+
+        The public submission API still accepts games/<slug> only. A standalone
+        root is a read-only parent that the creator CLI imports into a new fork.
+        """
+        if not getattr(self.publisher, "companion_sources", False):
+            return
+        result = self.publisher.git("show", f"{COMPANION_REF}:site/released-games.json", check=False)
+        if result.returncode:
+            return
+        try:
+            if len(result.stdout) > 1_000_000:
+                raise ValueError
+            document = json.loads(result.stdout)
+            if document.get("version") != 1 or not isinstance(document.get("games"), list) or len(document["games"]) > 500:
+                raise ValueError
+            for entry in document["games"]:
+                game_slug = slug(entry.get("slug"))
+                if game_slug not in self.games or not self.games[game_slug].get("source_unavailable"):
+                    continue
+                match = re.fullmatch(r"https://github\.com/(" + REPO.pattern + r")/tree/(" + SHA.pattern + r")(?:/([A-Za-z0-9_./-]+))?", entry.get("source_url", ""))
+                if not match:
+                    raise ValueError
+                source_repository, commit, path = match[1], match[2], match[3] or "."
+                if any(part in ("", "..") for part in path.split("/")) or path.startswith("/"):
+                    raise ValueError
+                independent = source_repository.lower() not in (self.publisher.repository.lower(), self.publisher.games_repository.lower())
+                game_path = "." if independent else path
+                source = source_revision(source_repository, commit, game_slug, game_path=game_path,
+                                         version=feedback.text(entry.get("game_version", ""), 160, optional=True))
+                game = self.games[game_slug]
+                game.pop("source_unavailable", None)
+                game.pop("source_unavailable_reason", None)
+                game.update(owner=source_repository.split("/")[0], head_revision=source["id"], revisions=[source],
+                            source_kind="independent" if independent else "engine" if source_repository.lower() == self.publisher.repository.lower() else "companion",
+                            submission_upstream_revision=source["id"], source_history_has_more=True,
+                            source_history_url=f"https://github.com/{source_repository}/commits/{commit}" + ("" if game_path == "." else "/" + game_path))
+                self.upstream[game_slug] = {"source": source, "revisions": [source], "history_url": game["source_history_url"], "has_more": True}
+        except (ValueError, TypeError, KeyError):
+            raise CommunityError("Invalid trusted published game source metadata") from None
+
     def local_tree(self, source):
-        result = self.publisher.git("rev-parse", "--verify", f"{source['source_commit']}:games/{source['source_game']}", check=False)
+        path = source["source"]["game_path"]
+        target = f"{source['source_commit']}^{{tree}}" if path == "." else f"{source['source_commit']}:{path}"
+        result = self.publisher.git("rev-parse", "--verify", target, check=False)
         value = result.stdout.decode().strip()
         return value if result.returncode == 0 and SHA.fullmatch(value) else None
 
@@ -713,6 +763,8 @@ class CommunityPublisher(feedback_server.Publisher):
                 if request["revision_id"] != game["head_revision"]:
                     raise Conflict("Only the current revision can be queued; fetch the latest game history")
                 source = next(item for item in game["revisions"] if item["id"] == request["revision_id"])
+                if source["source"]["game_path"] != f"games/{target}":
+                    raise Conflict("Import this standalone or historical source into games/<your-fork-slug> and submit that native fork before publishing")
                 # Re-verify ownership and the immutable source, even if the caller
                 # obtained the revision through a different session or account.
                 client.verify_source(self.repository, source["source_repository"], source["source_commit"], source["source_game"],
@@ -828,7 +880,8 @@ def validate_event(event):
         source = event["revision"]
         expected = source_revision(source["source_repository"], source["source_commit"], source["source_game"],
                                    version=source["version"], note=source["note"], actor=source["actor"],
-                                   created_at=source["created_at"], kind=source["kind"], branch=source["source_branch"])
+                                   created_at=source["created_at"], kind=source["kind"], branch=source["source_branch"],
+                                   game_path=source["source"]["game_path"])
         if "parent_revision" in source:
             expected["parent_revision"] = revision_id(source["parent_revision"])
         if expected != source:
