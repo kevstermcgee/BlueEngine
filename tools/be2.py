@@ -377,6 +377,8 @@ def main():
     f.add_argument('--validate', action='store_true', help='Check indexed paths, dependency edges and test suites without a build')
     web = sub.add_parser('web', help='Retired browser command: migration diagnostic only'); web.add_argument('arguments', nargs=argparse.REMAINDER)
     pub = sub.add_parser('publish', help='Retired browser publication: use native shipping'); pub.add_argument('arguments', nargs=argparse.REMAINDER)
+    community = sub.add_parser('community', help='Collaborative native game forks, feedback, and publishing')
+    community.add_argument('arguments', nargs=argparse.REMAINDER)
     u = sub.add_parser('upgrade', help='Plan and verify moving an external game to a chosen engine revision')
     uc = u.add_subparsers(dest='upgrade_command', required=True)
     up = uc.add_parser('plan', help='Read-only: baseline/target identity, runtime, applicable migrations')
@@ -400,6 +402,9 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == 'schemas':
         import schemas
         raise SystemExit(schemas.main(sys.argv[2:]))
+    if len(sys.argv) > 1 and sys.argv[1] == 'community':
+        from community import main as community_main
+        raise SystemExit(community_main(sys.argv[2:]))
     args = parser.parse_args()
     if args.command in ('start', 'next', 'resume'):
         import springboard
@@ -412,6 +417,9 @@ def main():
             packet = springboard.resume(ROOT, args.task, args.note, args.detail, persist=not args.no_save)
         print(json.dumps(packet, separators=(',', ':')) if args.compact else
               json.dumps(packet, indent=2) if args.json or args.detail else springboard.readable(packet))
+    elif args.command == 'community':
+        from community import main as community_main
+        raise SystemExit(community_main(args.arguments))
     elif args.command in ('web', 'publish'):
         from web_games import main as web_main
         raise SystemExit(web_main((['publish'] if args.command == 'publish' else []) + args.arguments))

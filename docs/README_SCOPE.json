@@ -21,7 +21,7 @@
     "game_upgrade": "69e64d2a9d9e22dae052d56e3544925f97a9d299fb9a84a2088a6116746a0aea",
     "geometry_kit": "f2224bac20c92a18e4bbc3ea442d83fe07d5bae7046110b5438d75fb27e22257",
     "graphics": "a7a8d804e12d863318a70a5f98197fe832c55a10acaedd4b72386b8926f6d9b7",
-    "idea_forge": "9808532b51e581d74c36fa379d6553e7b20411a4df89425f612b84a5adb95023",
+    "idea_forge": "d2519aa2b21474a4ce46c0d67c6e6949f34219257ace930ff84b61cd2f71713a",
     "interactions": "d51200e602e0561ad23b0978f6bc4acfec44cf621d37c6df2f3454f426078c15",
     "interior_prefabs": "f8c2024f8f2b5e2e83f3ae65058b7337f054f28fa60b1c0a1f8a3053ce4d92ee",
     "landscaping": "ffba37e24b71e9d2b8b147381f197abd34c764519bca9b5897e2aac758e07d49",
@@ -83,8 +83,8 @@
     "docs/adr/0049-retire-browser-gameplay.md": "25fb0a971337a5d86a1479492e241c61e6d3b3e020d747fe7eb87cff2da48563"
   },
   "format": 1,
-  "readme_sha256": "e9ec94cc34c833f5ed7c07f61bd35a7ce7319060bc4c517098971014f18cf3e6",
+  "readme_sha256": "1dfbbef50996fb45781e5ca668ea4a82fe0bc2d9725e027ccc3595e84cb96bc9",
   "rust_version": "1.87",
   "starters_sha256": "fd931a4efe14309aff7611726b5e33f727bd77c704b934abe5f033fd3b30a7a7",
-  "unchanged_reason": "Afterpull playtest checks use its declared standalone Cargo profile. README scope and evidence limits remain unchanged."
+  "unchanged_reason": null
 }

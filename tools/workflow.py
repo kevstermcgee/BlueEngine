@@ -915,7 +915,8 @@ def full_commands(test_profile='itest'):
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
          'tools.test_hub_deploy','tools.test_browser_retirement','tools.test_springboard',
          'tools.test_machine_utilities', 'tools.test_idea_forge', 'tools.test_player_feedback',
-         'tools.test_feedback_server', 'tools.test_engine_fix',
+         'tools.test_feedback_server', 'tools.test_community', 'tools.test_community_store',
+         'tools.test_community_server', 'tools.test_engine_fix',
          'tools.test_game_tooling', 'tools.test_game_installer', 'tools.test_game_review', 'tools.test_discovery',
          'tools.test_readme_scope', 'tools.test_playtest'],
     ]

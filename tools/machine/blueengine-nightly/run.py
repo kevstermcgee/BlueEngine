@@ -581,7 +581,7 @@ def main():
                         write_json(decision_path, {'base': base, 'signals': sorted(current),
                                                    'selection': selection, 'result': result})
                         hosted_ci = verify_no_changes(config, work, base, run, log)
-                        outcome, detail, exit_code = 'no_changes', 'No actionable engine changes were needed; nothing pushed.', 0
+                        outcome, detail, exit_code = 'no_changes', 'No engine patch was needed; the maintenance harness did not push an engine change.', 0
                     else:
                         if not dirty:
                             raise RuntimeError('Codex reported an update but no source changes exist')

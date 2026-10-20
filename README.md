@@ -68,6 +68,9 @@ remains `vesper3d` for compatibility.
 - **AI game building:** [IdeaForge](docs/IDEA_FORGE.md) builds and verifies native
   games. [Wiki reviews](docs/player-feedback/README.md) become public repository
   records that inform future concepts, implementation and independent review.
+  The [collaborative creator workflow](docs/COLLABORATION.md) adds source forks,
+  revision history, shared maintainer publishing, and human/AI feedback for daily
+  improvements. Authored games use the same Windows installer release gates.
 - **Multiplayer:** custom simulations use [netplay](docs/NETPLAY.md); the stock
   client/server retains its own prediction and replication path. Their capacity,
   snapshot and transport contracts differ; [hosting](docs/HOSTING.md) documents
