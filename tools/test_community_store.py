@@ -103,6 +103,11 @@ class GitHubContractTests(unittest.TestCase):
                 patch.object(store.GitHub, "api", return_value=[pull]) as api:
             self.client().pull_request(store.REPOSITORY, game, revision, str(uuid4()))
             self.assertEqual(api.call_count, 1)
+        with patch.object(store.GitHub, "pin_source", return_value="branch"), \
+                patch.object(store.GitHub, "source_upstream", return_value=store.REPOSITORY), \
+                patch.object(store.GitHub, "api", return_value=[{**pull, "state": "closed", "merged_at": None}]):
+            with self.assertRaises(store.Conflict):
+                self.client().pull_request(store.REPOSITORY, game, revision, str(uuid4()))
         companion_pull = {**pull, "html_url": f"https://github.com/{store.GAMES_REPOSITORY}/pull/22"}
         with patch.object(store.GitHub, "pin_source", return_value="branch"), \
                 patch.object(store.GitHub, "source_upstream", return_value=store.GAMES_REPOSITORY), \

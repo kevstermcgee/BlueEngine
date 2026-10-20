@@ -305,6 +305,8 @@ class GitHub:
             raise feedback_server.PublicationError("GitHub did not confirm the publication queue")
         if existing:
             pull = existing[0]
+            if pull.get("state") == "closed" and not pull.get("merged_at"):
+                raise Conflict("This source publication pull request was closed without merging; reopen it or submit a new revision before publishing again")
         else:
             body = (f"Publish **{game['title']}** (`{game['slug']}`).\n\n"
                     f"Source: `{revision['source_repository']}@{revision['source_commit']}`\n"
