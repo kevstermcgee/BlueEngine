@@ -185,7 +185,7 @@ def feedback_signals(name, data):
     elif name.startswith('docs/community/events/'):
         event = json.loads(data)
         if event.get('event_type') == 'publication_requested':
-            values = [{'event_type': event['event_type'], 'request': event.get('request')}]
+            values = [{'event_type': event['event_type'], 'target': event.get('target'), 'request': event.get('request')}]
         elif event.get('event_type') != 'feedback':
             return []
         else:
@@ -218,8 +218,9 @@ def feedback_observations(name, data):
             feedback = record.get('feedback', {})
             if record.get('event_type') == 'publication_requested':
                 scope = 'game'
-                game = record.get('request', {}).get('game')
-                evidence = 'Publication requested: ' + json.dumps(record.get('request', {}), sort_keys=True)[:1600]
+                game = record.get('target') or record.get('request', {}).get('game')
+                evidence = 'Publication requested: ' + json.dumps({
+                    'game': game, 'request': record.get('request'), 'publication': record.get('publication')}, sort_keys=True)[:1600]
             else:
                 scope, game = feedback.get('target_type'), feedback.get('target')
                 evidence = str(feedback.get('note') or '')[:1800]
