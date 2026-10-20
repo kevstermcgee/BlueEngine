@@ -496,6 +496,16 @@ def reject_constant(value):
 
 
 def main(argv=None):
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if "--community" in arguments:
+        # Both routes share one publisher, checkout lock and mutation lock. A
+        # community transaction therefore cannot race an anonymous review reset.
+        try:
+            from tools import community_server
+        except ModuleNotFoundError:
+            import community_server
+        arguments.remove("--community")
+        return community_server.main(arguments)
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path, help="Dedicated clean Git clone with a writable origin")
     parser.add_argument("--host", default="127.0.0.1")
@@ -503,7 +513,8 @@ def main(argv=None):
     parser.add_argument("--branch", default="main")
     parser.add_argument("--cert", type=Path, help="TLS certificate; otherwise an HTTPS reverse proxy is required")
     parser.add_argument("--key", type=Path, help="TLS private key")
-    args = parser.parse_args(argv)
+    parser.add_argument("--community", action="store_true", help="Also serve authenticated /community/v1 collaboration")
+    args = parser.parse_args(arguments)
     if bool(args.cert) != bool(args.key):
         parser.error("--cert and --key must be supplied together")
     if args.host not in ("127.0.0.1", "::1", "localhost") and not args.cert:

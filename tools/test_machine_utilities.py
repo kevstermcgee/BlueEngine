@@ -19,7 +19,7 @@ class MachineUtilitiesTests(unittest.TestCase):
     def run_suite(self, folder):
         env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
         result = subprocess.run([sys.executable, "-m", "unittest", "discover", "-v"],
-            cwd=folder, env=env, text=True, capture_output=True, timeout=60)
+            cwd=folder, env=env, text=True, capture_output=True, timeout=300)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
 

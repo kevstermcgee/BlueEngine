@@ -1,5 +1,6 @@
 """Integration checks using real local Git repositories; no production writes."""
 import contextlib
+from datetime import datetime, timedelta, timezone
 import importlib.util
 import io
 import json
@@ -8,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -50,8 +52,15 @@ sys.exit(int(os.environ.get('TEST_CHECK_FAIL', '0')))
         self.config_dir.mkdir()
         self.fake = self.root / 'codex'
         self.fake.write_text('''#!/usr/bin/python3
-import json, os, pathlib, sys
+import json, os, pathlib, re, sys
 args = sys.argv
+prompt = sys.stdin.read()
+digest_path = re.search(r'Feedback digest: (.+)', prompt).group(1)
+selected = json.loads(pathlib.Path(digest_path).read_text())['selected']
+dispositions = [{'feedback_id': item['feedback_id'], 'status': os.environ.get('TEST_DISPOSITION', 'addressed'),
+                 'summary': 'Verified observation', 'next_step': 'Reproduce the remaining case'} for item in selected]
+if os.environ.get('TEST_OMIT_DISPOSITIONS'):
+    dispositions = []
 work = pathlib.Path(args[args.index('--cd') + 1])
 report = pathlib.Path(args[args.index('--output-last-message') + 1]).parent
 (report / 'agent-tmpdir.txt').write_text(os.environ['TMPDIR'])
@@ -60,12 +69,23 @@ report = pathlib.Path(args[args.index('--output-last-message') + 1]).parent
 (report / 'agent-workdir.txt').write_text(str(work))
 (report / 'agent-workmode.txt').write_text(str(work.stat().st_mode & 0o777))
 status = os.environ.get('TEST_STATUS', 'updated')
-if status != 'no_changes':
+if status != 'no_changes' and not os.environ.get('TEST_COMPANION_ONLY'):
     (work / 'source.txt').write_text(os.environ.get('TEST_SOURCE', 'nightly fix') + '\\n')
+if os.environ.get('TEST_COMPANION_DIR'):
+    (pathlib.Path(os.environ['TEST_COMPANION_DIR']) / 'fix.txt').write_text('companion fix\\n')
+if os.environ.get('TEST_AUTOMATION_EDIT'):
+    path = work / '.github/workflows/unsafe.yml'
+    path.parent.mkdir(parents=True)
+    path.write_text('unreviewed automation\\n')
+if os.environ.get('TEST_GAME_EDIT'):
+    path = work / 'games/unselected/source.txt'
+    path.parent.mkdir(parents=True)
+    path.write_text('unselected game edit\\n')
 if os.environ.get('TEST_DIRTY_NO_CHANGE'):
     (work / 'source.txt').write_text('unexpected\\n')
 pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dumps({
-    'status': status, 'summary': 'Fixed feedback item.', 'feedback_addressed': [], 'checks': [], 'deferred': []}))
+    'status': status, 'summary': 'Fixed feedback item.', 'feedback_addressed': [], 'checks': [], 'deferred': [],
+    'dispositions': dispositions}))
 ''')
         self.fake.chmod(0o700)
         self.state = self.root / 'state'
@@ -82,7 +102,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         os.umask(self.old_umask)
         self.temp.cleanup()
 
-    def execute(self, *options, ci_responses=None, **env):
+    def execute(self, *options, ci_responses=None, companion=None, restored=None, delivery=None, restored_delivery=None, **env):
         def feedback(*args):
             return {'files': [{'sha256': 'feedback-hash',
                                'feedback_signals': [os.environ.get('TEST_FEEDBACK', 'feedback-hash')]}], 'warnings': []}
@@ -116,6 +136,10 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
             clock[0] += seconds
 
         with patch.object(nightly, 'CONFIG_DIR', self.config_dir), patch.object(nightly, 'preflight'), \
+             patch.object(nightly, 'prepare_companion', return_value=companion), \
+             patch.object(nightly, 'restore_companion', return_value=restored), \
+             patch.object(nightly, 'prepare_engine_games', return_value=delivery), \
+             patch.object(nightly, 'restore_engine_games', return_value=restored_delivery), \
              patch.object(nightly, 'collect_feedback', side_effect=feedback), \
              patch.object(nightly, 'command', side_effect=ci_command), \
              patch.object(nightly.os, 'fsync'), \
@@ -180,6 +204,32 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertFalse(self.ci_calls)
         self.assertFalse((self.state / 'feedback-seen.json').exists())
         self.assertFalse(list((self.state / 'runs').glob('*/worktree')))
+
+    def test_community_events_require_validation_before_inheriting_code_ci(self):
+        validator = self.engine / 'tools/community_store.py'
+        validator.write_text('import sys; sys.exit(0)\n')
+        git('add', validator, cwd=self.engine)
+        git('commit', '-m', 'Install fixture event validator', cwd=self.engine)
+        code = git('rev-parse', 'HEAD', cwd=self.engine)
+        event = self.engine / 'docs/community/events/feedback.json'
+        event.parent.mkdir(parents=True)
+        event.write_text('{"event_type":"feedback"}')
+        git('add', event, cwd=self.engine)
+        git('commit', '-m', 'Community feedback [skip ci]', cwd=self.engine)
+        git('push', 'origin', 'main', cwd=self.engine)
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+        self.assertEqual(self.ci_calls[-1]['sha'], code)
+        # A broken validator is code and cannot inherit a previous receipt.
+        validator.write_text('import sys; sys.exit(1)\n')
+        git('add', validator, cwd=self.engine)
+        git('commit', '-m', 'Invalid fixture event validator', cwd=self.engine)
+        event.write_text('{"event_type":"feedback","note":"changed"}')
+        git('add', event, cwd=self.engine)
+        git('commit', '-m', 'More feedback [skip ci]', cwd=self.engine)
+        git('push', 'origin', 'main', cwd=self.engine)
+        before = len(self.ci_calls)
+        self.assertEqual(self.execute(TEST_STATUS='no_changes', TEST_FEEDBACK='another-observation'), 1)
+        self.assertEqual(len(self.ci_calls), before)
 
     def test_feedback_data_cannot_hide_unverified_code_or_failed_ancestor(self):
         _, tip = self.feedback_commit(extra='rules.rs')
@@ -405,6 +455,26 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(manifest['files'][0]['origins'][0]['source'], str(checkouts[-1]))
         self.assertEqual(Path(manifest['files'][0]['file']).read_text(), 'Feedback from checkout 3')
 
+    def test_malformed_local_event_is_retained_as_warning_without_blocking_other_feedback(self):
+        directory = self.engine / 'docs/community/events'
+        directory.mkdir(parents=True)
+        (directory / 'bad.json').write_text('{unfinished draft')
+        good = self.engine / 'docs/feedback/useful.md'
+        good.parent.mkdir(parents=True)
+        good.write_text('Reproduce a launch crash')
+        run = self.root / 'collection'
+        run.mkdir()
+        git('fetch', 'origin', 'main', cwd=self.engine)
+        original = nightly.command
+        def local_command(args, **kwargs):
+            return '[[]]' if args[:2] == ['gh', 'api'] else original(args, **kwargs)
+        with patch.object(nightly, 'command', side_effect=local_command):
+            manifest = nightly.collect_feedback(json.loads((self.config_dir / 'config.json').read_text()), None, run, {})
+        self.assertEqual(len(manifest['warnings']), 1)
+        self.assertIn('Malformed feedback omitted', manifest['warnings'][0])
+        self.assertTrue(any(item['feedback_signals'] for item in manifest['files']))
+        self.assertTrue(any(Path(item['file']).read_text() == '{unfinished draft' for item in manifest['files']))
+
     def test_failed_verification_never_pushes(self):
         self.assertEqual(self.execute(TEST_CHECK_FAIL='1'), 1)
         self.assertEqual(self.remote_head(), self.base)
@@ -412,6 +482,181 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertTrue(list((self.state / 'runs').glob('*/worktree/source.txt')))
         run = next((self.state / 'runs').iterdir())
         self.assertFalse(Path((run / 'agent-tmpdir.txt').read_text()).exists())
+
+    def companion_fixture(self, *, fails=False, pending=False):
+        from unittest.mock import Mock
+        work = self.root / 'companion-private'
+        work.mkdir()
+        helper = SimpleNamespace(work=work, base='companion-base', games={'companion-game'},
+                                 state={'status': 'prepared'}, cleanup=Mock())
+        helper.changes = Mock(side_effect=lambda: ['site/fix.txt'] if (work / 'fix.txt').exists() else [])
+        helper.freeze = Mock()
+        def publish(*args):
+            self.assertFalse((self.state / 'feedback-seen.json').exists())
+            self.assertFalse((self.state / 'feedback-queue.json').exists())
+            if fails:
+                if pending:
+                    helper.state.update(status='pushed-awaiting-publication', commit='verified-companion-commit')
+                raise RuntimeError('companion hosted review failed')
+            helper.state.update(status='verified', commit='verified-companion-commit')
+            return helper.state
+        helper.publish = Mock(side_effect=publish)
+        def finish(*args):
+            helper.state.update(status='verified')
+            return helper.state
+        helper.finish_publication = Mock(side_effect=finish)
+        helper.resume_candidate = Mock(side_effect=lambda *args: helper.finish_publication(args[0]))
+        return helper
+
+    def test_companion_only_update_uses_same_agent_and_waits_for_both_receipts_before_ack(self):
+        helper = self.companion_fixture()
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_ONLY='1', TEST_COMPANION_DIR=str(helper.work)), 0)
+        self.assertEqual(self.remote_head(), self.base)
+        helper.publish.assert_called_once()
+        helper.cleanup.assert_called_once()
+        result = json.loads((self.state / 'last-success.json').read_text())
+        self.assertEqual(result['companion']['commit'], 'verified-companion-commit')
+        self.assertEqual(result['hosted_ci']['head_sha'], self.base)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+
+    def test_companion_failure_retains_work_and_feedback_after_engine_already_published(self):
+        helper = self.companion_fixture(fails=True)
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_DIR=str(helper.work)), 1)
+        self.assertNotEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertFalse((self.state / 'feedback-queue.json').exists())
+        self.assertTrue((helper.work / 'fix.txt').is_file())
+        helper.cleanup.assert_not_called()
+        self.assertIn('Companion worktree retained', (self.state / 'latest.md').read_text())
+
+    def test_agent_cannot_change_nightly_or_ci_orchestration(self):
+        self.assertEqual(self.execute(TEST_AUTOMATION_EDIT='1'), 1)
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertIn('orchestration or CI', (self.state / 'latest.md').read_text())
+
+    def engine_delivery_fixture(self, *, fails=False):
+        from unittest.mock import Mock
+        helper = SimpleNamespace(state={'status': 'prepared', 'baselines': {'owned': {}},
+            'blocked_games': {}, 'wanted': ['owned']}, select=Mock())
+        helper.intend = Mock(side_effect=lambda source: helper.state.update(source_commit=source, status='delivery-pending'))
+        proof = {'status': 'verified', 'games': {'owned': {'community_revision': 'verified-revision', 'publication': {'verified': True}}}}
+        helper.deliver = Mock(side_effect=RuntimeError('Native installer pending') if fails else lambda work: proof)
+        return helper
+
+    def test_engine_game_delivery_failure_is_resumed_without_new_ai_or_acknowledgment(self):
+        delivery = self.engine_delivery_fixture(fails=True)
+        self.assertEqual(self.execute(delivery=delivery), 1)
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        resumed = self.engine_delivery_fixture()
+        self.assertEqual(self.execute(restored_delivery=resumed), 0)
+        resumed.deliver.assert_called_once()
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+        self.assertEqual(json.loads((self.state / 'last-success.json').read_text())['engine_games']['status'], 'verified')
+
+    def test_engine_game_ci_failure_after_main_push_resumes_ci_before_delivery(self):
+        delivery = self.engine_delivery_fixture()
+        self.assertEqual(self.execute(delivery=delivery, ci_responses=['failure']), 1)
+        delivery.deliver.assert_not_called()
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertEqual(self.execute(restored_delivery=delivery), 0)
+        delivery.deliver.assert_called_once()
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+
+    def test_engine_game_accepted_push_lost_ack_resumes_without_second_ai_or_source_push(self):
+        delivery = self.engine_delivery_fixture()
+        original, lost = nightly.command, [False]
+        def accepted_then_error(argv, **kwargs):
+            output = original(argv, **kwargs)
+            if 'push' in argv and 'HEAD:refs/heads/main' in argv and not lost[0]:
+                lost[0] = True
+                raise subprocess.CalledProcessError(128, argv)
+            return output
+        with patch.object(nightly, 'command', side_effect=accepted_then_error):
+            self.assertEqual(self.execute(delivery=delivery), 1)
+        pushed = self.remote_head()
+        self.assertNotEqual(pushed, self.base)
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertEqual(self.execute(restored_delivery=delivery), 0)
+        self.assertEqual(self.remote_head(), pushed)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+
+    def test_game_edit_without_captured_baseline_never_publishes_or_acknowledges(self):
+        self.assertEqual(self.execute(TEST_GAME_EDIT='1'), 1)
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertIn('captured native source baseline', (self.state / 'latest.md').read_text())
+
+    def test_pending_companion_delivery_resumes_before_another_ai_or_feedback_ack(self):
+        helper = self.companion_fixture(fails=True, pending=True)
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_DIR=str(helper.work)), 1)
+        pending = self.state / 'pending-companion.json'
+        self.assertTrue(pending.exists())
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        pushed = self.remote_head()
+        self.assertEqual(self.execute(restored=helper), 0)
+        self.assertEqual(self.remote_head(), pushed)
+        self.assertFalse(pending.exists())
+        self.assertTrue((self.state / 'feedback-seen.json').exists())
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+        helper.finish_publication.assert_called_once()
+
+    def test_failed_pending_resume_retains_work_without_consuming_feedback(self):
+        helper = self.companion_fixture(fails=True, pending=True)
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_DIR=str(helper.work)), 1)
+        helper.finish_publication.side_effect = RuntimeError('Installer feed pending')
+        self.assertEqual(self.execute(restored=helper), 1)
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+        helper.cleanup.assert_not_called()
+
+    def test_publication_topic_cannot_be_closed_without_exact_revision_or_closed_review(self):
+        digest = {'selected': [{'feedback_id': 'f', 'game': 'game', 'required_action': {
+            'type': 'publication_requested', 'revision_id': 'requested', 'publication': {}}}]}
+        result = {'dispositions': [{'feedback_id': 'f', 'status': 'no_change'}]}
+        with patch.object(nightly, 'command', return_value=json.dumps({'game': {'releases': [{'revision_id': 'other'}]}})):
+            with self.assertRaisesRegex(RuntimeError, 'exact revision release'):
+                nightly.verify_action_dispositions(digest, result, self.engine, {'engine_repo': 'e/r', 'games_repo': 'g/r'})
+        with patch.object(nightly, 'command', return_value=json.dumps({'game': {'releases': [{'revision_id': 'requested'}]}})):
+            nightly.verify_action_dispositions(digest, result, self.engine, {})
+
+    def test_omitted_dispositions_prevent_publication_or_acknowledgment(self):
+        self.assertEqual(self.execute(TEST_OMIT_DISPOSITIONS='1'), 1)
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertFalse((self.state / 'feedback-queue.json').exists())
+
+    def test_deferred_feedback_retries_when_due_then_holds_after_three_attempts(self):
+        for attempt in range(3):
+            self.assertEqual(self.execute(TEST_STATUS='no_changes', TEST_DISPOSITION='deferred'), 0)
+            path = self.state / 'feedback-queue.json'
+            queue = json.loads(path.read_text())
+            item = queue['items']['feedback-hash']
+            self.assertEqual(item['attempts'], attempt + 1)
+            self.assertEqual(item['status'], 'needs_human' if attempt == 2 else 'deferred')
+            # Same-day wakeups launch no AI; successful deferrals remain visible.
+            self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+            self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), attempt + 1)
+            if attempt < 2:
+                item['retry_after'] = '2000-01-01T00:00:00+00:00'
+                path.write_text(json.dumps(queue))
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertIn('1 held for a human', (self.state / 'latest.md').read_text())
+        self.assertEqual(self.execute('--retry-feedback', 'feedback-hash'), 0)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 3)
+        queue = json.loads(path.read_text())
+        self.assertEqual(queue['items']['feedback-hash']['manual_retries'][0]['previous_attempts'], 3)
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 4)
+
+    def test_failed_ci_does_not_consume_a_selected_queue_disposition(self):
+        self.assertEqual(self.execute(ci_responses=['failure'], TEST_STATUS='no_changes'), 1)
+        self.assertFalse((self.state / 'feedback-queue.json').exists())
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+        item = json.loads((self.state / 'feedback-queue.json').read_text())['items']['feedback-hash']
+        self.assertEqual(item['attempts'], 1)
 
     def test_blocked_agent_never_pushes(self):
         self.assertEqual(self.execute(TEST_STATUS='blocked'), 1)
@@ -436,7 +681,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(self.remote_head(), self.base)
         self.assertFalse((self.state / 'feedback-seen.json').exists())
 
-    def test_concurrent_update_rejects_publication(self):
+    def test_concurrent_update_rejects_publication_and_retires_proven_unpublished_intent(self):
         competitor = self.root / 'competitor'
         git('clone', self.remote, competitor)
         git('config', 'user.name', 'Test', cwd=competitor)
@@ -454,8 +699,11 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
             return output
 
         with patch.object(nightly, 'command', side_effect=concurrent):
-            self.assertEqual(self.execute(), 1)
+            delivery = self.engine_delivery_fixture()
+            self.assertEqual(self.execute(delivery=delivery), 1)
         self.assertEqual(self.remote_head(), competing_head)
+        self.assertFalse((self.state / 'pending-companion.json').exists())
+        delivery.deliver.assert_not_called()
         self.assertIn('Status: failed', (self.state / 'latest.md').read_text())
 
 
@@ -529,6 +777,71 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
 
 
 class FeedbackSignalTests(unittest.TestCase):
+    def test_nightly_cannot_rewrite_release_authentication_or_validation_controllers(self):
+        for path in ('tools/community.py', 'tools/community_release_companion.py', 'tools/community_server.py',
+                     'tools/be2.py', 'tools/workflow.py', 'scripts/publish_games.py', 'tools/check_docs.py'):
+            self.assertTrue(nightly.protected_engine_path(path), path)
+        for path in ('src/lib.rs', 'games/owned/src/main.rs', 'tools/test_community.py', 'docs/learning/ledger.jsonl'):
+            self.assertFalse(nightly.protected_engine_path(path), path)
+
+    def test_review_metadata_and_generated_feeds_do_not_trigger_work(self):
+        review = {'game': 'test', 'version': 'v1', 'rating': 2, 'disliked': 'Cannot launch',
+                  'name': 'Cousin', 'updated_at': 'yesterday'}
+        updated = dict(review, name='AI assistant', updated_at='today')
+        name = 'docs/player-feedback/reviews/review.json'
+        self.assertEqual(nightly.feedback_signals(name, json.dumps(review).encode()),
+                         nightly.feedback_signals(name, json.dumps(updated).encode()))
+        updated['disliked'] = 'Controls jump unexpectedly'
+        self.assertNotEqual(nightly.feedback_signals(name, json.dumps(review).encode()),
+                            nightly.feedback_signals(name, json.dumps(updated).encode()))
+        for path in ('docs/player-feedback/summary.json', 'docs/player-feedback/games/test.json'):
+            self.assertEqual(nightly.feedback_signals(path, b'{"changed":true}'), [])
+
+    def test_community_human_ai_feedback_have_equal_fingerprints_and_target_routing(self):
+        event = {'event_type': 'feedback', 'actor': {'login': 'Owner'},
+                 'feedback': {'target_type': 'launcher', 'target': '', 'kind': 'human',
+                              'category': 'bug', 'note': 'Cannot publish an update', 'version': 'v1'}}
+        other = json.loads(json.dumps(event))
+        other['actor']['login'] = 'Cousin'
+        other['feedback']['kind'] = 'ai'
+        name = 'docs/community/events/receipt.json'
+        self.assertTrue(nightly.feedback_path(name))
+        self.assertEqual(nightly.feedback_signals(name, json.dumps(event).encode()),
+                         nightly.feedback_signals(name, json.dumps(other).encode()))
+        observation = nightly.feedback_observations(name, json.dumps(other).encode())[0]
+        self.assertEqual(observation['scope'], 'launcher')
+        self.assertEqual(observation['priority'], 2)
+        self.assertEqual(nightly.feedback_signals(name, b'{"event_type":"revision_submitted"}'), [])
+        request = {'event_type': 'publication_requested', 'request': {'game': 'test', 'revision': 'r1'}}
+        self.assertTrue(nightly.feedback_signals(name, json.dumps(request).encode()))
+
+    def test_digest_deduplicates_origins_bounds_work_and_retains_unselected_topics(self):
+        now = datetime(2026, 10, 20, tzinfo=timezone.utc)
+        manifest = {'files': [
+            {'file': '/private/one', 'feedback_signals': ['same', 'other'],
+             'origins': [{'source': 'engine', 'path': 'one'}]},
+            {'file': '/private/two', 'feedback_signals': ['same'],
+             'origins': [{'source': 'games', 'path': 'two'}]}]}
+        digest, items = nightly.feedback_digest(manifest, {}, {}, {'max_feedback_items': 1}, now)
+        self.assertEqual(len(digest['selected']), 1)
+        self.assertEqual(digest['remaining'], 1)
+        self.assertEqual(len(items['same']['origins']), 2)
+        selected = digest['selected'][0]['feedback_id']
+        receipt = nightly.feedback_receipt(digest, items, {'dispositions': [
+            {'feedback_id': selected, 'status': 'no_change', 'summary': 'Already fixed', 'next_step': ''}]}, now)
+        next_digest, _ = nightly.feedback_digest(manifest, {'feedback_signals': ['same', 'other']}, receipt,
+                                                 {'max_feedback_items': 1}, now + timedelta(days=1))
+        self.assertEqual(len(next_digest['selected']), 1)
+        self.assertNotEqual(next_digest['selected'][0]['feedback_id'], selected)
+
+    def test_disposition_rejects_unknown_duplicate_and_vague_deferred_items(self):
+        now = datetime(2026, 10, 20, tzinfo=timezone.utc)
+        digest, items = nightly.feedback_digest({'files': [{'feedback_signals': ['one']}]}, {}, {}, {}, now)
+        valid = {'feedback_id': 'one', 'status': 'deferred', 'summary': 'Needs reproduction', 'next_step': 'Add a failing save test'}
+        for dispositions in ([], [dict(valid, feedback_id='other')], [valid, valid], [dict(valid, next_step='')]):
+            with self.subTest(dispositions=dispositions), self.assertRaises(RuntimeError):
+                nightly.feedback_receipt(digest, items, {'dispositions': dispositions}, now)
+
     def test_promotion_and_discovery_edits_are_not_new_feedback(self):
         old = {'id': 'L-001', 'game': 'test', 'area': 'tooling', 'note': 'An authoring problem',
                'status': 'open', 'keywords': ['authoring'], 'tokens': 20}

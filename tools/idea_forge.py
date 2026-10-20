@@ -258,7 +258,7 @@ def screenshot_from_package(game, not_before=0):
     raise ForgeError("The isolated package needs a landscape native screenshot")
 
 
-def validate_game_wiki(game):
+def validate_game_wiki(game, *, allow_human=False):
     """Gate authored publication facts; the independent review checks their truth."""
     try:
         wiki = load_json(game / "wiki.json")
@@ -322,11 +322,14 @@ def validate_game_wiki(game):
         if len(set(digests)) != len(digests):
             raise ForgeError("Game wiki needs distinct screenshot bytes, not repeated images")
         design = wiki.get("design")
-        if not isinstance(design, dict) or design.get("origin") != "ai":
+        if not isinstance(design, dict) or design.get("origin") not in ({"ai", "human"} if allow_human else {"ai"}):
             raise ForgeError("IdeaForge game wiki must declare AI design origin")
-        text(design.get("rationale"), "public design rationale explaining why this game was chosen", 120)
-        if "original_prompt" not in design or design["original_prompt"] is not None:
-            raise ForgeError("IdeaForge game wiki original_prompt must be null")
+        if design["origin"] == "human":
+            text(design.get("original_prompt"), "original human creation prompt")
+        else:
+            text(design.get("rationale"), "public design rationale explaining why this game was chosen", 120)
+            if "original_prompt" not in design or design["original_prompt"] is not None:
+                raise ForgeError("IdeaForge game wiki original_prompt must be null")
         return wiki
     except (OSError, ValueError, TypeError, KeyError) as error:
         raise ForgeError("Game wiki or one of its screenshot files is missing or malformed") from error
@@ -368,6 +371,9 @@ class Forge:
 
     def save(self):
         atomic_json(self.directory / "state.json", self.state)
+
+    def validate_wiki(self, game):
+        return validate_game_wiki(game)
 
     def command(self, argv, cwd=None, label="command", stdin=None, timeout=None):
         """No shell interpolation; only this command's process group is stopped on timeout."""
@@ -728,7 +734,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("The game presentation does not meet the requested dimension")
         if not {"windows", "linux"}.issubset(project.get("targets", [])) or "web" in project.get("targets", []):
             raise ForgeError("The game must declare native Windows delivery and Linux verification")
-        validate_game_wiki(game)
+        self.validate_wiki(game)
         self.ensure_game_scope()
         manifest = game / "Cargo.toml"
         self.command(["cargo", "fmt", "--manifest-path", manifest, "--check"], label="game-format")
@@ -825,9 +831,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         path = self.engine / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\n".join(lines), encoding="utf-8")
-        self.state["supervisor_files"] = {
+        self.state.setdefault("supervisor_files", {}).update({
             file.relative_to(self.engine).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
-            for file in (ledger, cost_file) if file.is_file()}
+            for file in (ledger, cost_file) if file.is_file()})
         self.save()
 
     def register_source(self):
@@ -841,11 +847,48 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         if not any(e["source"] == source for e in entries):
             entries.append({"source": source, "destination": self.state["idea"]["slug"]})
             atomic_json(path, manifest)
+        # A later stage may fail or request a rebuild. On resume this exact
+        # supervisor-authored registration remains allowed, never arbitrary edits.
+        self.state.setdefault("supervisor_files", {})["games-publish.json"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.save()
         self.command([sys.executable, "scripts/publish_games.py", "check"], label="source-publication-check")
         git(self.engine, "add", "--all")
         self.commit(self.engine, "Build " + self.state["idea"]["title"] + " with IdeaForge and record AI feedback")
         self.state["engine_head"] = git(self.engine, "rev-parse", "HEAD")
         self.state["verified_code"] = code_digest(self.engine)
+
+    def repair_source_registration_receipt(self):
+        """Explicit legacy recovery: admit only base manifest plus this game."""
+        slug = self.state["idea"]["slug"]
+        if not re.fullmatch(SLUG, slug) or not self.state.get("base_commit"):
+            raise ForgeError("Source receipt repair requires a valid game and recorded base")
+        path = self.engine / "games-publish.json"
+        if path.is_symlink() or not path.is_file():
+            raise ForgeError("Source receipt repair requires a regular publication manifest")
+        expected = json.loads(git(self.engine, "show", self.state["base_commit"] + ":games-publish.json"))
+        entries = expected["collections"]["games"]
+        own = {"source": "games/" + slug, "destination": slug}
+        if own not in entries:
+            entries.append(own)
+        if load_json(path) != expected:
+            raise ForgeError("Source manifest differs from the base plus this game's exact registration; preserved for review")
+        original = dict(self.state["supervisor_files"]) if "supervisor_files" in self.state else None
+        self.state.setdefault("supervisor_files", {})["games-publish.json"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        try:
+            # Other supervisor files still need their prior exact receipts. This
+            # repair cannot bless unrelated source or learning-ledger changes.
+            self.ensure_game_scope()
+        except (ForgeError, OSError):
+            if original is None:
+                self.state.pop("supervisor_files", None)
+            else:
+                self.state["supervisor_files"] = original
+            raise
+        self.state.setdefault("receipt_repairs", []).append({"kind": "source-registration-receipt",
+            "base": self.state["base_commit"], "game": slug,
+            "sha256": self.state["supervisor_files"]["games-publish.json"],
+            "at": datetime.now(timezone.utc).isoformat()})
+        self.save()
 
     def commit(self, root, message):
         if git(root, "diff", "--cached", "--name-only"):
@@ -890,8 +933,18 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                      "generated-game-linux-windows", dispatch=True, fields={"game_slug": self.state["idea"]["slug"]})
         self.wait_ci(repository, "ci.yml", self.state["branch"], head, "engine-checks")
 
+    def update_native_definition(self, manifest, entry):
+        entries = manifest["native_playables"]
+        existing = next((item for item in entries if item["slug"] == entry["slug"]), None)
+        if existing and existing != entry:
+            raise ForgeError("An independently maintained download definition uses this slug")
+        if existing:
+            return False
+        entries.append(entry)
+        return True
+
     def export(self):
-        wiki = validate_game_wiki(self.game)
+        wiki = self.validate_wiki(self.game)
         source = Path(self.state["games_root"])
         self.command(["git", "fetch", "origin", "main"], cwd=source, label="games-fetch")
         if not self.games.exists():
@@ -902,7 +955,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                       "--revision", self.state["engine_head"]], label="export-game")
         slug = self.state["idea"]["slug"]
         exported_game = self.games / "games" / slug
-        validate_game_wiki(exported_game)
+        self.validate_wiki(exported_game)
         wiki_files = {"wiki.json", *(shot["image"] for shot in wiki["gallery"]),
                       *(character["image"] for character in wiki.get("characters", []))}
         if any((self.game / path).read_bytes() != (exported_game / path).read_bytes()
@@ -917,14 +970,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("The generated Cargo package has no unambiguous playable binary")
         path = self.games / ".release-games.json"
         manifest = load_json(path)
-        entries = manifest["native_playables"]
         entry = {"slug": slug, "name": self.state["idea"]["title"], "directory": "games/" + slug,
                  "kind": "cargo-package", "binary": binary}
-        existing = next((e for e in entries if e["slug"] == slug), None)
-        if existing and existing != entry:
-            raise ForgeError("An independently maintained download definition uses this slug")
-        if not existing:
-            entries.append(entry)
+        if self.update_native_definition(manifest, entry):
             atomic_json(path, manifest)
         shutil.copyfile(self.state["screenshot"], self.games / "site/thumbs" / (slug + ".png"))
         self.command([sys.executable, "distribution/check_catalog.py"], cwd=self.games, label="catalog-check")
@@ -1153,7 +1201,7 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         if ("build-and-review" in completed and "publish-games" not in completed
                 and not self.state.get("publication") and self.game.is_dir()):
             try:
-                validate_game_wiki(self.game)
+                self.validate_wiki(self.game)
             except ForgeError:
                 self.rebuild()
                 self.state["rebuild_reason"] += (
@@ -1385,6 +1433,8 @@ def main(argv=None):
                         help="Invalidate old gates and rebuild/review the same idea after worktree changes")
     status = sub.add_parser("status", help="Inspect a run's phase and verified delivery")
     status.add_argument("directory", type=Path)
+    repair = sub.add_parser("repair-source-receipt", help="Repair a legacy run's exact supervisor source-registration receipt")
+    repair.add_argument("directory", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "daily" and args.config:
@@ -1404,7 +1454,7 @@ def main(argv=None):
                 install_schedule(args)
                 return 0
             return daily_batch(args)
-        if args.command in ("resume", "status"):
+        if args.command in ("resume", "status", "repair-source-receipt"):
             state = load_json(args.directory / "state.json")
             if state.get("version") != 1:
                 raise ForgeError("Unsupported run state version")
@@ -1426,6 +1476,10 @@ def main(argv=None):
                 print(f"Concept only. To build: ideaforge resume {forge.directory}", file=sys.stderr)
                 return 0
         with run_lock(forge.directory):
+            if args.command == "repair-source-receipt":
+                forge.repair_source_registration_receipt()
+                print("Recorded the exact source-registration receipt; no source edits or publication performed.")
+                return 0
             if args.command == "resume":
                 if args.rebuild:
                     forge.rebuild()

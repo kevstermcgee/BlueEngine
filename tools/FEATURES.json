@@ -3062,12 +3062,27 @@
         ".github/ISSUE_TEMPLATE/player-feedback.yml",
         "ideaforge",
         "docs/IDEA_FORGE.md",
-        ".github/workflows/forge-game-checks.yml"
+        ".github/workflows/forge-game-checks.yml",
+        "tools/community.py",
+        "tools/community_release.py",
+        "tools/community_store.py",
+        "tools/community_server.py",
+        "tools/test_community.py",
+        "tools/test_community_store.py",
+        "tools/test_community_server.py",
+        "docs/COLLABORATION.md",
+        "tools/community_release_companion.py",
+        "tools/test_community_release_companion.py",
+        "tools/machine/blueengine-nightly",
+        "tools/machine/config/nightly",
+        "tools/test_machine_utilities.py"
       ],
       "checks": [
-        "python -m unittest tools.test_idea_forge tools.test_player_feedback tools.test_feedback_server"
+        "python -m unittest tools.test_idea_forge tools.test_player_feedback tools.test_feedback_server",
+        "python -m unittest tools.test_community tools.test_community_store tools.test_community_server tools.test_community_release_companion",
+        "python -m unittest tools.test_machine_utilities"
       ],
-      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates. Public wiki reviews are validated into docs/player-feedback; bounded untrusted player observations reach concept generation, building and independent review without becoming trusted engine commands or learning ledger entries.",
+      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates. Public wiki reviews are validated into docs/player-feedback; bounded untrusted player observations reach concept generation, building and independent review without becoming trusted engine commands or learning ledger entries. The community workflow supports immutable game ancestry, equal GitHub maintainer capabilities, human/AI feedback and pre-authored native game publication through the same exact-source CI, installer and public-download gates. Scheduled maintenance uses isolated engine and companion worktrees, bounded evidence-driven feedback dispositions, exact-source review and public delivery receipts before acknowledging completed work.",
       "keywords": [
         "ideaforge",
         "idea forge",
@@ -3082,9 +3097,17 @@
         "feedback center",
         "daily games",
         "2d and 3d",
-        "systemd schedule"
+        "systemd schedule",
+        "collaborative publishing",
+        "fork game",
+        "game branching history",
+        "cousin access",
+        "daily engine improvement",
+        "nightly feedback queue",
+        "launcher maintenance"
       ],
       "read_first": [
+        "docs/COLLABORATION.md",
         "docs/IDEA_FORGE.md",
         "tools/idea_forge.py"
       ],
@@ -3098,7 +3121,11 @@
         "ideaforge resume",
         "ideaforge status",
         "ideaforge daily",
-        "ideaforge schedule"
+        "ideaforge schedule",
+        "be2.py community fork",
+        "be2.py community submit",
+        "be2.py community release",
+        "be2.py community feedback"
       ]
     },
     "resource_transactions": {

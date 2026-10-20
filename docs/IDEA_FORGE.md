@@ -192,6 +192,17 @@ or faster disk. A run lock prevents two supervisors advancing one run. Timeouts
 stop only the supervisor's own command process group. Completed phases survive;
 `resume` retries the failed phase rather than starting a new idea.
 
+Legacy runs that registered their source before exact supervisor receipts were
+recorded can stop on the game-scope guard after a later rebuild. Inspect the
+retained run, then use `ideaforge repair-source-receipt /path/to/run`. This command
+accepts only the original base publication manifest plus that run's exact game
+registration, requires every other changed path to pass the existing scope guard,
+and records the exact manifest hash. It changes only the private run journal;
+source, verification receipts and releases remain intact. Resume normally after
+repair. A changed unrelated game, manifest field or unreceipted source still
+blocks repair. Newly registered sources retain their receipt across feedback
+updates and rebuilds automatically.
+
 An agent's completion claim never substitutes for executed checks. Changed code
 or commits invalidate old publication gates. Repository pushes never force or
 overwrite another author's updates. If main advances concurrently, integrate it

@@ -6,7 +6,21 @@
     "summary": {"type": "string"},
     "feedback_addressed": {"type": "array", "items": {"type": "string"}},
     "checks": {"type": "array", "items": {"type": "string"}},
-    "deferred": {"type": "array", "items": {"type": "string"}}
+    "deferred": {"type": "array", "items": {"type": "string"}},
+    "dispositions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "feedback_id": {"type": "string"},
+          "status": {"type": "string", "enum": ["addressed", "no_change", "deferred", "needs_human"]},
+          "summary": {"type": "string"},
+          "next_step": {"type": "string"}
+        },
+        "required": ["feedback_id", "status", "summary", "next_step"]
+      }
+    }
   },
-  "required": ["status", "summary", "feedback_addressed", "checks", "deferred"]
+  "required": ["status", "summary", "feedback_addressed", "checks", "deferred", "dispositions"]
 }
