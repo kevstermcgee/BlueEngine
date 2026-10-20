@@ -825,9 +825,9 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         path = self.engine / relative
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text("\n".join(lines), encoding="utf-8")
-        self.state["supervisor_files"] = {
+        self.state.setdefault("supervisor_files", {}).update({
             file.relative_to(self.engine).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
-            for file in (ledger, cost_file) if file.is_file()}
+            for file in (ledger, cost_file) if file.is_file()})
         self.save()
 
     def register_source(self):
@@ -841,11 +841,48 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         if not any(e["source"] == source for e in entries):
             entries.append({"source": source, "destination": self.state["idea"]["slug"]})
             atomic_json(path, manifest)
+        # A later stage may fail or request a rebuild. On resume this exact
+        # supervisor-authored registration remains allowed, never arbitrary edits.
+        self.state.setdefault("supervisor_files", {})["games-publish.json"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        self.save()
         self.command([sys.executable, "scripts/publish_games.py", "check"], label="source-publication-check")
         git(self.engine, "add", "--all")
         self.commit(self.engine, "Build " + self.state["idea"]["title"] + " with IdeaForge and record AI feedback")
         self.state["engine_head"] = git(self.engine, "rev-parse", "HEAD")
         self.state["verified_code"] = code_digest(self.engine)
+
+    def repair_source_registration_receipt(self):
+        """Explicit legacy recovery: admit only base manifest plus this game."""
+        slug = self.state["idea"]["slug"]
+        if not re.fullmatch(SLUG, slug) or not self.state.get("base_commit"):
+            raise ForgeError("Source receipt repair requires a valid game and recorded base")
+        path = self.engine / "games-publish.json"
+        if path.is_symlink() or not path.is_file():
+            raise ForgeError("Source receipt repair requires a regular publication manifest")
+        expected = json.loads(git(self.engine, "show", self.state["base_commit"] + ":games-publish.json"))
+        entries = expected["collections"]["games"]
+        own = {"source": "games/" + slug, "destination": slug}
+        if own not in entries:
+            entries.append(own)
+        if load_json(path) != expected:
+            raise ForgeError("Source manifest differs from the base plus this game's exact registration; preserved for review")
+        original = dict(self.state["supervisor_files"]) if "supervisor_files" in self.state else None
+        self.state.setdefault("supervisor_files", {})["games-publish.json"] = hashlib.sha256(path.read_bytes()).hexdigest()
+        try:
+            # Other supervisor files still need their prior exact receipts. This
+            # repair cannot bless unrelated source or learning-ledger changes.
+            self.ensure_game_scope()
+        except (ForgeError, OSError):
+            if original is None:
+                self.state.pop("supervisor_files", None)
+            else:
+                self.state["supervisor_files"] = original
+            raise
+        self.state.setdefault("receipt_repairs", []).append({"kind": "source-registration-receipt",
+            "base": self.state["base_commit"], "game": slug,
+            "sha256": self.state["supervisor_files"]["games-publish.json"],
+            "at": datetime.now(timezone.utc).isoformat()})
+        self.save()
 
     def commit(self, root, message):
         if git(root, "diff", "--cached", "--name-only"):
@@ -1385,6 +1422,8 @@ def main(argv=None):
                         help="Invalidate old gates and rebuild/review the same idea after worktree changes")
     status = sub.add_parser("status", help="Inspect a run's phase and verified delivery")
     status.add_argument("directory", type=Path)
+    repair = sub.add_parser("repair-source-receipt", help="Repair a legacy run's exact supervisor source-registration receipt")
+    repair.add_argument("directory", type=Path)
     args = parser.parse_args(argv)
     try:
         if args.command == "daily" and args.config:
@@ -1404,7 +1443,7 @@ def main(argv=None):
                 install_schedule(args)
                 return 0
             return daily_batch(args)
-        if args.command in ("resume", "status"):
+        if args.command in ("resume", "status", "repair-source-receipt"):
             state = load_json(args.directory / "state.json")
             if state.get("version") != 1:
                 raise ForgeError("Unsupported run state version")
@@ -1426,6 +1465,10 @@ def main(argv=None):
                 print(f"Concept only. To build: ideaforge resume {forge.directory}", file=sys.stderr)
                 return 0
         with run_lock(forge.directory):
+            if args.command == "repair-source-receipt":
+                forge.repair_source_registration_receipt()
+                print("Recorded the exact source-registration receipt; no source edits or publication performed.")
+                return 0
             if args.command == "resume":
                 if args.rebuild:
                     forge.rebuild()

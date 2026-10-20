@@ -82,6 +82,17 @@ paths explicitly, require storage admission before starting, defer while a
 supervisor or storage maintenance is active, and fetch/fast-forward only a clean
 IdeaForge runtime. They do not reset or stash local changes.
 
+For a nightly runner version 3 upgrade, deploy `blueengine-nightly/run.py`,
+`blueengine-nightly/VERSION`, `nightly/prompt.txt`, and `nightly/result.schema.json`
+together while its existing service is idle. Preserve host paths, timeout values,
+`run.lock`, `feedback-seen.json`, `feedback-queue.json`, and all retained reports.
+The new output schema requires one disposition per selected digest topic; an old
+schema cannot express these receipts and will safely fail before publication.
+`max_feedback_items` is optional (default 24); it bounds daily triage without
+discarding the rest. No timer changes are required. Run the upgraded runner's
+`--check` and `--collect-only`, then inspect its private `feedback-digest.json`.
+Collection never acknowledges, builds or publishes.
+
 The schedules use `America/Los_Angeles`: storage review at 22:40, nightly engine
 feedback maintenance at 23:00, and an hourly IdeaForge wakeup at minute 10 to
 finish one 2D and one 3D game per day. Update the timers and daily JSON together

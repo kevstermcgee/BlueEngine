@@ -411,6 +411,61 @@ class SupervisorTests(unittest.TestCase):
         with self.assertRaisesRegex(forge.ForgeError, 'outside its game scope'):
             self.worker.ensure_game_scope()
 
+    def source_manifest_fixture(self):
+        manifest = {'version': 2, 'collections': {'games': [{'source': 'games/existing', 'destination': 'existing'}]}}
+        forge.atomic_json(self.engine / 'games-publish.json', manifest)
+        forge.git(self.engine, 'add', 'games-publish.json')
+        forge.git(self.engine, 'commit', '-qm', 'Base publication manifest')
+        self.state['base_commit'] = forge.git(self.engine, 'rev-parse', 'HEAD')
+        self.state['verified_code'] = forge.code_digest(self.engine)
+        return manifest
+
+    def test_registered_source_receipt_survives_feedback_and_rebuild_but_refuses_tampering(self):
+        self.source_manifest_fixture()
+        with patch.object(self.worker, 'command'), patch.object(self.worker, 'commit'):
+            self.worker.register_source()
+        self.worker.feedback()
+        self.worker.rebuild()
+        self.worker.ensure_game_scope()
+        path = self.engine / 'games-publish.json'
+        manifest = forge.load_json(path)
+        manifest['collections']['games'].append({'source': 'games/injected', 'destination': 'injected'})
+        forge.atomic_json(path, manifest)
+        with self.assertRaisesRegex(forge.ForgeError, 'outside its game scope'):
+            self.worker.ensure_game_scope()
+
+    def test_explicit_legacy_receipt_repair_accepts_only_exact_own_registration(self):
+        manifest = self.source_manifest_fixture()
+        manifest['collections']['games'].append({'source': 'games/rule-relay', 'destination': 'rule-relay'})
+        forge.atomic_json(self.engine / 'games-publish.json', manifest)
+        with self.assertRaisesRegex(forge.ForgeError, 'outside its game scope'):
+            self.worker.ensure_game_scope()
+        self.worker.repair_source_registration_receipt()
+        self.worker.ensure_game_scope()
+        self.assertEqual(self.state['receipt_repairs'][0]['game'], 'rule-relay')
+        self.assertIn('games-publish.json', self.state['supervisor_files'])
+
+    def test_legacy_receipt_repair_preserves_manifest_and_state_on_unrelated_changes(self):
+        manifest = self.source_manifest_fixture()
+        own = {'source': 'games/rule-relay', 'destination': 'rule-relay'}
+        for mutation in ('extra_game', 'metadata', 'source'):
+            with self.subTest(mutation=mutation):
+                candidate = deepcopy(manifest)
+                candidate['collections']['games'].append(own)
+                if mutation == 'extra_game':
+                    candidate['collections']['games'].append({'source': 'games/injected', 'destination': 'injected'})
+                elif mutation == 'metadata':
+                    candidate['version'] = 7
+                else:
+                    (self.engine / 'source.rs').write_text('unexpected source alteration')
+                path = self.engine / 'games-publish.json'
+                forge.atomic_json(path, candidate)
+                before, state = path.read_bytes(), deepcopy(self.state)
+                with self.assertRaises(forge.ForgeError):
+                    self.worker.repair_source_registration_receipt()
+                self.assertEqual(path.read_bytes(), before)
+                self.assertEqual(self.state, state)
+
     def test_resumed_feedback_updates_cost_without_duplicating_findings(self):
         self.state['build_reports'] = [{'summary': 'Built', 'findings': [finding()]}]
         self.worker.feedback()

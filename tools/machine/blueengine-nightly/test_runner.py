@@ -1,5 +1,6 @@
 """Integration checks using real local Git repositories; no production writes."""
 import contextlib
+from datetime import datetime, timedelta, timezone
 import importlib.util
 import io
 import json
@@ -50,8 +51,15 @@ sys.exit(int(os.environ.get('TEST_CHECK_FAIL', '0')))
         self.config_dir.mkdir()
         self.fake = self.root / 'codex'
         self.fake.write_text('''#!/usr/bin/python3
-import json, os, pathlib, sys
+import json, os, pathlib, re, sys
 args = sys.argv
+prompt = sys.stdin.read()
+digest_path = re.search(r'Feedback digest: (.+)', prompt).group(1)
+selected = json.loads(pathlib.Path(digest_path).read_text())['selected']
+dispositions = [{'feedback_id': item['feedback_id'], 'status': os.environ.get('TEST_DISPOSITION', 'addressed'),
+                 'summary': 'Verified observation', 'next_step': 'Reproduce the remaining case'} for item in selected]
+if os.environ.get('TEST_OMIT_DISPOSITIONS'):
+    dispositions = []
 work = pathlib.Path(args[args.index('--cd') + 1])
 report = pathlib.Path(args[args.index('--output-last-message') + 1]).parent
 (report / 'agent-tmpdir.txt').write_text(os.environ['TMPDIR'])
@@ -65,7 +73,8 @@ if status != 'no_changes':
 if os.environ.get('TEST_DIRTY_NO_CHANGE'):
     (work / 'source.txt').write_text('unexpected\\n')
 pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dumps({
-    'status': status, 'summary': 'Fixed feedback item.', 'feedback_addressed': [], 'checks': [], 'deferred': []}))
+    'status': status, 'summary': 'Fixed feedback item.', 'feedback_addressed': [], 'checks': [], 'deferred': [],
+    'dispositions': dispositions}))
 ''')
         self.fake.chmod(0o700)
         self.state = self.root / 'state'
@@ -180,6 +189,32 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertFalse(self.ci_calls)
         self.assertFalse((self.state / 'feedback-seen.json').exists())
         self.assertFalse(list((self.state / 'runs').glob('*/worktree')))
+
+    def test_community_events_require_validation_before_inheriting_code_ci(self):
+        validator = self.engine / 'tools/community_store.py'
+        validator.write_text('import sys; sys.exit(0)\n')
+        git('add', validator, cwd=self.engine)
+        git('commit', '-m', 'Install fixture event validator', cwd=self.engine)
+        code = git('rev-parse', 'HEAD', cwd=self.engine)
+        event = self.engine / 'docs/community/events/feedback.json'
+        event.parent.mkdir(parents=True)
+        event.write_text('{"event_type":"feedback"}')
+        git('add', event, cwd=self.engine)
+        git('commit', '-m', 'Community feedback [skip ci]', cwd=self.engine)
+        git('push', 'origin', 'main', cwd=self.engine)
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+        self.assertEqual(self.ci_calls[-1]['sha'], code)
+        # A broken validator is code and cannot inherit a previous receipt.
+        validator.write_text('import sys; sys.exit(1)\n')
+        git('add', validator, cwd=self.engine)
+        git('commit', '-m', 'Invalid fixture event validator', cwd=self.engine)
+        event.write_text('{"event_type":"feedback","note":"changed"}')
+        git('add', event, cwd=self.engine)
+        git('commit', '-m', 'More feedback [skip ci]', cwd=self.engine)
+        git('push', 'origin', 'main', cwd=self.engine)
+        before = len(self.ci_calls)
+        self.assertEqual(self.execute(TEST_STATUS='no_changes', TEST_FEEDBACK='another-observation'), 1)
+        self.assertEqual(len(self.ci_calls), before)
 
     def test_feedback_data_cannot_hide_unverified_code_or_failed_ancestor(self):
         _, tip = self.feedback_commit(extra='rules.rs')
@@ -405,6 +440,26 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(manifest['files'][0]['origins'][0]['source'], str(checkouts[-1]))
         self.assertEqual(Path(manifest['files'][0]['file']).read_text(), 'Feedback from checkout 3')
 
+    def test_malformed_local_event_is_retained_as_warning_without_blocking_other_feedback(self):
+        directory = self.engine / 'docs/community/events'
+        directory.mkdir(parents=True)
+        (directory / 'bad.json').write_text('{unfinished draft')
+        good = self.engine / 'docs/feedback/useful.md'
+        good.parent.mkdir(parents=True)
+        good.write_text('Reproduce a launch crash')
+        run = self.root / 'collection'
+        run.mkdir()
+        git('fetch', 'origin', 'main', cwd=self.engine)
+        original = nightly.command
+        def local_command(args, **kwargs):
+            return '[[]]' if args[:2] == ['gh', 'api'] else original(args, **kwargs)
+        with patch.object(nightly, 'command', side_effect=local_command):
+            manifest = nightly.collect_feedback(json.loads((self.config_dir / 'config.json').read_text()), None, run, {})
+        self.assertEqual(len(manifest['warnings']), 1)
+        self.assertIn('Malformed feedback omitted', manifest['warnings'][0])
+        self.assertTrue(any(item['feedback_signals'] for item in manifest['files']))
+        self.assertTrue(any(Path(item['file']).read_text() == '{unfinished draft' for item in manifest['files']))
+
     def test_failed_verification_never_pushes(self):
         self.assertEqual(self.execute(TEST_CHECK_FAIL='1'), 1)
         self.assertEqual(self.remote_head(), self.base)
@@ -412,6 +467,42 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertTrue(list((self.state / 'runs').glob('*/worktree/source.txt')))
         run = next((self.state / 'runs').iterdir())
         self.assertFalse(Path((run / 'agent-tmpdir.txt').read_text()).exists())
+
+    def test_omitted_dispositions_prevent_publication_or_acknowledgment(self):
+        self.assertEqual(self.execute(TEST_OMIT_DISPOSITIONS='1'), 1)
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertFalse((self.state / 'feedback-queue.json').exists())
+
+    def test_deferred_feedback_retries_when_due_then_holds_after_three_attempts(self):
+        for attempt in range(3):
+            self.assertEqual(self.execute(TEST_STATUS='no_changes', TEST_DISPOSITION='deferred'), 0)
+            path = self.state / 'feedback-queue.json'
+            queue = json.loads(path.read_text())
+            item = queue['items']['feedback-hash']
+            self.assertEqual(item['attempts'], attempt + 1)
+            self.assertEqual(item['status'], 'needs_human' if attempt == 2 else 'deferred')
+            # Same-day wakeups launch no AI; successful deferrals remain visible.
+            self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+            self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), attempt + 1)
+            if attempt < 2:
+                item['retry_after'] = '2000-01-01T00:00:00+00:00'
+                path.write_text(json.dumps(queue))
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertIn('1 held for a human', (self.state / 'latest.md').read_text())
+        self.assertEqual(self.execute('--retry-feedback', 'feedback-hash'), 0)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 3)
+        queue = json.loads(path.read_text())
+        self.assertEqual(queue['items']['feedback-hash']['manual_retries'][0]['previous_attempts'], 3)
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 4)
+
+    def test_failed_ci_does_not_consume_a_selected_queue_disposition(self):
+        self.assertEqual(self.execute(ci_responses=['failure'], TEST_STATUS='no_changes'), 1)
+        self.assertFalse((self.state / 'feedback-queue.json').exists())
+        self.assertEqual(self.execute(TEST_STATUS='no_changes'), 0)
+        item = json.loads((self.state / 'feedback-queue.json').read_text())['items']['feedback-hash']
+        self.assertEqual(item['attempts'], 1)
 
     def test_blocked_agent_never_pushes(self):
         self.assertEqual(self.execute(TEST_STATUS='blocked'), 1)
@@ -529,6 +620,64 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
 
 
 class FeedbackSignalTests(unittest.TestCase):
+    def test_review_metadata_and_generated_feeds_do_not_trigger_work(self):
+        review = {'game': 'test', 'version': 'v1', 'rating': 2, 'disliked': 'Cannot launch',
+                  'name': 'Cousin', 'updated_at': 'yesterday'}
+        updated = dict(review, name='AI assistant', updated_at='today')
+        name = 'docs/player-feedback/reviews/review.json'
+        self.assertEqual(nightly.feedback_signals(name, json.dumps(review).encode()),
+                         nightly.feedback_signals(name, json.dumps(updated).encode()))
+        updated['disliked'] = 'Controls jump unexpectedly'
+        self.assertNotEqual(nightly.feedback_signals(name, json.dumps(review).encode()),
+                            nightly.feedback_signals(name, json.dumps(updated).encode()))
+        for path in ('docs/player-feedback/summary.json', 'docs/player-feedback/games/test.json'):
+            self.assertEqual(nightly.feedback_signals(path, b'{"changed":true}'), [])
+
+    def test_community_human_ai_feedback_have_equal_fingerprints_and_target_routing(self):
+        event = {'event_type': 'feedback', 'actor': {'login': 'Owner'},
+                 'feedback': {'target_type': 'launcher', 'target': '', 'kind': 'human',
+                              'category': 'bug', 'note': 'Cannot publish an update', 'version': 'v1'}}
+        other = json.loads(json.dumps(event))
+        other['actor']['login'] = 'Cousin'
+        other['feedback']['kind'] = 'ai'
+        name = 'docs/community/events/receipt.json'
+        self.assertTrue(nightly.feedback_path(name))
+        self.assertEqual(nightly.feedback_signals(name, json.dumps(event).encode()),
+                         nightly.feedback_signals(name, json.dumps(other).encode()))
+        observation = nightly.feedback_observations(name, json.dumps(other).encode())[0]
+        self.assertEqual(observation['scope'], 'launcher')
+        self.assertEqual(observation['priority'], 2)
+        self.assertEqual(nightly.feedback_signals(name, b'{"event_type":"revision_submitted"}'), [])
+        request = {'event_type': 'publication_requested', 'request': {'game': 'test', 'revision': 'r1'}}
+        self.assertTrue(nightly.feedback_signals(name, json.dumps(request).encode()))
+
+    def test_digest_deduplicates_origins_bounds_work_and_retains_unselected_topics(self):
+        now = datetime(2026, 10, 20, tzinfo=timezone.utc)
+        manifest = {'files': [
+            {'file': '/private/one', 'feedback_signals': ['same', 'other'],
+             'origins': [{'source': 'engine', 'path': 'one'}]},
+            {'file': '/private/two', 'feedback_signals': ['same'],
+             'origins': [{'source': 'games', 'path': 'two'}]}]}
+        digest, items = nightly.feedback_digest(manifest, {}, {}, {'max_feedback_items': 1}, now)
+        self.assertEqual(len(digest['selected']), 1)
+        self.assertEqual(digest['remaining'], 1)
+        self.assertEqual(len(items['same']['origins']), 2)
+        selected = digest['selected'][0]['feedback_id']
+        receipt = nightly.feedback_receipt(digest, items, {'dispositions': [
+            {'feedback_id': selected, 'status': 'no_change', 'summary': 'Already fixed', 'next_step': ''}]}, now)
+        next_digest, _ = nightly.feedback_digest(manifest, {'feedback_signals': ['same', 'other']}, receipt,
+                                                 {'max_feedback_items': 1}, now + timedelta(days=1))
+        self.assertEqual(len(next_digest['selected']), 1)
+        self.assertNotEqual(next_digest['selected'][0]['feedback_id'], selected)
+
+    def test_disposition_rejects_unknown_duplicate_and_vague_deferred_items(self):
+        now = datetime(2026, 10, 20, tzinfo=timezone.utc)
+        digest, items = nightly.feedback_digest({'files': [{'feedback_signals': ['one']}]}, {}, {}, {}, now)
+        valid = {'feedback_id': 'one', 'status': 'deferred', 'summary': 'Needs reproduction', 'next_step': 'Add a failing save test'}
+        for dispositions in ([], [dict(valid, feedback_id='other')], [valid, valid], [dict(valid, next_step='')]):
+            with self.subTest(dispositions=dispositions), self.assertRaises(RuntimeError):
+                nightly.feedback_receipt(digest, items, {'dispositions': dispositions}, now)
+
     def test_promotion_and_discovery_edits_are_not_new_feedback(self):
         old = {'id': 'L-001', 'game': 'test', 'area': 'tooling', 'note': 'An authoring problem',
                'status': 'open', 'keywords': ['authoring'], 'tokens': 20}
