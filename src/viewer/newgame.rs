@@ -497,6 +497,7 @@ fn tooling_digest(engine: &Path) -> Option<String> {
         "templates/game_review.py",
         "templates/game_entry.py",
         "tools/game_tooling.py",
+        "tools/game_metadata.py",
     ] {
         digest.update(name.as_bytes());
         digest.update(&[0]);

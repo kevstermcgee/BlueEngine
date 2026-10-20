@@ -224,6 +224,12 @@ def checkout(game, destination):
                 path.write_text(json.dumps(document, indent=2) + "\n")
     metadata = {"schema_version": 1, "slug": slug, "source": {"repository": repository,
                 "commit": commit, "game_path": str(relative)}, "revision_id": game.get("head_revision", game.get("revision_id"))}
+    lineage = {key: game[key] for key in ("root_game", "parent_game", "parent_revision")
+               if game.get(key) is not None}
+    if lineage:
+        if metadata["revision_id"] is not None:
+            lineage["revision_id"] = metadata["revision_id"]
+        metadata["lineage"] = lineage
     metadata_path = target / "community-source.json"
     descriptor = os.open(metadata_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | getattr(os, "O_NOFOLLOW", 0), 0o600)
     with os.fdopen(descriptor, "w", encoding="utf-8") as output:

@@ -1962,7 +1962,7 @@ def package_plan(project, built_exe):
             plan.append((source, entry))
         else:
             raise ConfigError(f'package entry {entry!r} does not exist in the project')
-    seen = {STAMP_NAME.lower()}
+    seen = {STAMP_NAME.lower(), 'blueengine.game.json'}
     for source, name in plan:
         if source.is_symlink() or any(p.is_symlink() for p in source.parents if inside(p, project.root)):
             raise ConfigError(f'package source {source} is a symlink: ship regular files inside the project')
@@ -2035,6 +2035,18 @@ def package_integrity(project, plat=None):
             raise ShipError(f'dist/{name} does not match dist/ship.json (modified or damaged): package again')
     if stamp.get('exe_sha256') != hashes[exe]:
         raise ShipError('ship.json exe_sha256 disagrees with file_sha256: package again')
+    if 'blueengine.game.json' in files:
+        metadata = metadata_helper(project)
+        try:
+            document = metadata.decode_payload((project.dist / metadata.MANIFEST).read_bytes())
+            if document['game']['title'] != project.identity.title or document['game']['controls'] != project.identity.controls:
+                raise metadata.MetadataError('metadata title/controls differ from assets/identity.json')
+            for name in files:
+                if name == exe and (plat or project.platform) == 'windows' or name.lower().endswith(('.bat', '.cmd')):
+                    if metadata.extract(project.dist / name) != document:
+                        raise metadata.MetadataError(f'{name} does not carry its package metadata')
+        except metadata.MetadataError as error:
+            raise ShipError(f'Portable game metadata: {error}; package again') from error
     # The stock runtime has a discoverable file dependency: GameDocument.map. Check it without
     # launching graphics. Custom code's arbitrary file reads still need the isolated runtime smoke.
     for name in files:
@@ -2067,6 +2079,19 @@ def _delivery_helper(name):
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module, types.SimpleNamespace(**globals())
+
+
+def metadata_helper(project):
+    """The same pinned stdlib metadata implementation used by the publisher."""
+    import importlib.util
+    engine = project.engine()
+    path = (engine if engine else Path(__file__).resolve().parents[1]) / 'tools/game_metadata.py'
+    if not path.is_file():
+        raise ShipError(f'{path}: portable metadata tooling is missing; restore the pinned engine or migrate the game tooling')
+    spec = importlib.util.spec_from_file_location('be2_portable_game_metadata', path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _review_source(project, warnings):
@@ -2123,6 +2148,13 @@ def cmd_package(project, no_build=False):
         source_before = _review_source(project, warnings)
         built = cargo_build_release(project)
     plan = package_plan(project, built)
+    metadata = metadata_helper(project)
+    try:
+        document = metadata.build_document(project.root, engine=metadata.repository_binding(project.engine()), cargo=project.cargo)
+        document['game']['executable'] = project.exe_file()
+        metadata_payload = metadata.canonical_payload(document)
+    except metadata.MetadataError as error:
+        raise ConfigError(f'Portable game metadata: {error}') from error
     # dist/ also holds what the game writes beside its exe (saves, settings, records, logs). Only the files
     # this tool installed are ever replaced or removed, and they are known from the stamp of the last run
     # (a missing or damaged stamp means: overwrite the package files, delete nothing).
@@ -2134,6 +2166,15 @@ def cmd_package(project, no_build=False):
     for source, name in plan:
         _copy_file(source, project.dist / name)
     wanted = {name for _source, name in plan}
+    try:
+        for _source, name in plan:
+            if name == project.exe_file() and project.platform == 'windows' or name.lower().endswith(('.bat', '.cmd')):
+                metadata.embed(project.dist / name, document)
+        metadata_path = package_file(project.dist, metadata.MANIFEST)
+        write_text_atomic(metadata_path, metadata_payload.decode('utf-8'))
+        wanted.add(metadata.MANIFEST)
+    except metadata.MetadataError as error:
+        raise ShipError(f'Portable game metadata: {error}') from error
     removed, kept = [], []
     for name in previous:  # installed earlier, no longer part of the package
         if not isinstance(name, str) or name in wanted:

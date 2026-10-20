@@ -30,14 +30,19 @@ installer = module('game_installer')
 
 
 def pe(machine=0x8664, magic=0x20b, dll=False):
-    data = bytearray(64 + 24 + 240)
+    data = bytearray(1024)
     data[:2] = b'MZ'
     struct.pack_into('<I', data, 60, 64)
     data[64:68] = b'PE\0\0'
     struct.pack_into('<H', data, 68, machine)
+    struct.pack_into('<H', data, 70, 1)
     struct.pack_into('<H', data, 84, 240)
     struct.pack_into('<H', data, 86, 0x2002 if dll else 0x0002)
     struct.pack_into('<H', data, 88, magic)
+    directory_count = 108 if magic == 0x20b else 92
+    struct.pack_into('<I', data, 88 + directory_count, 16)
+    data[328:336] = b'.text\0\0\0'
+    struct.pack_into('<II', data, 344, 512, 512)
     return bytes(data)
 
 
@@ -90,6 +95,16 @@ class InstallerTests(unittest.TestCase):
         self.assertEqual(authored.read_text(encoding='utf-8'), 'custom Inno path')
         self.assertTrue(result['unverified'])
         self.assertIsNone(result['package_shipping_evidence'])
+
+    def test_metadata_producer_changes_invalidate_prepared_installer(self):
+        helper = self.root / 'metadata-helper.py'
+        helper.write_text('# reviewed metadata producer\n')
+        with mock.patch.object(ship, 'metadata_helper', return_value=types.SimpleNamespace(__file__=str(helper))):
+            report = installer.prepare(self.project, ship)
+            self.assertEqual(report['package_binding']['producer_sha256']['game_metadata.py'], ship.sha256_file(helper))
+            helper.write_text('# a different metadata producer\n')
+            with self.assertRaisesRegex(ship.ShipError, 'changed since preparation'):
+                installer._validate_stage(self.project, ship, Path(report['stage']))
 
     def test_prepared_outputs_do_not_enter_whole_project_source_exports(self):
         from scripts import publish_games

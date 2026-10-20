@@ -155,7 +155,9 @@ class CreatorTests(unittest.TestCase):
                 community.source_document(invalid)
 
     def test_checkout_preserves_original_and_rebinds_fork_identity_without_executing_source(self):
-        game = {"slug": "my-fork", "title": "My Fork", "source": {"repository": "owner/repo",
+        game = {"slug": "my-fork", "title": "My Fork", "root_game": "original",
+                "parent_game": "original", "parent_revision": "b" * 64, "head_revision": "c" * 64,
+                "source": {"repository": "owner/repo",
                 "commit": "a" * 40, "game_path": "games/original"}}
         with tempfile.TemporaryDirectory() as temporary:
             destination = Path(temporary) / "checkout"
@@ -176,6 +178,9 @@ class CreatorTests(unittest.TestCase):
             self.assertEqual(json.loads((destination / "games/my-fork/game.project.json").read_text())["id"], "my-fork")
             self.assertEqual((destination / "games/my-fork/src/main.rs").read_text(), "unchanged source")
             self.assertEqual(receipt["source"]["commit"], "a" * 40)
+            metadata = json.loads((destination / "games/my-fork/community-source.json").read_text())
+            self.assertEqual(metadata["lineage"], {"root_game": "original", "parent_game": "original",
+                                                 "parent_revision": "b" * 64, "revision_id": "c" * 64})
             self.assertTrue(all(argv[0] == "git" for argv in commands))
             with self.assertRaisesRegex(community.CommunityError, "already exists"):
                 community.checkout(game, destination)

@@ -431,6 +431,7 @@ class GitHub:
 class Catalog:
     def __init__(self, publisher):
         self.publisher, self.games, self.events, self.upstream = publisher, {}, [], {}
+        self._public_source_trees = {}
         for game_slug, title in feedback.game_catalog(publisher.root).items():
             self.games[game_slug] = {"slug": game_slug, "title": title, "owner": publisher.repository.split("/")[0],
                                      "root_game": game_slug, "parent_game": None, "parent_revision": None,
@@ -602,7 +603,33 @@ class Catalog:
 
     def public_game(self, game_slug):
         game = self.require_game(game_slug)
-        return {**game, "forks": [{key: child[key] for key in ("slug", "title", "owner", "head_revision")}
+        revisions = []
+        for source in game["revisions"]:
+            key = (source["source_repository"], source["source_commit"], source["source"]["game_path"])
+            if key not in self._public_source_trees:
+                # A public read must not lazily fetch missing objects from a
+                # partial clone. Tree entries already declare their object type;
+                # inspecting a blob's type could otherwise fetch its full bytes.
+                commit, path = source["source_commit"], source["source"]["game_path"]
+                tree = None
+                if path == ".":
+                    result = self.publisher.git("--no-lazy-fetch", "rev-parse", "--verify", f"{commit}^{{tree}}", check=False)
+                    value = result.stdout.decode().strip()
+                    if not result.returncode and SHA.fullmatch(value):
+                        tree = value
+                else:
+                    result = self.publisher.git("--no-lazy-fetch", "--literal-pathspecs", "ls-tree", "-z", commit, "--", path, check=False)
+                    entries = result.stdout.split(b"\0")
+                    if not result.returncode and len(entries) == 2 and not entries[1]:
+                        header, separator, name = entries[0].partition(b"\t")
+                        fields = header.split()
+                        if (separator and len(fields) == 3 and fields[:2] == [b"040000", b"tree"]
+                                and name == path.encode("utf-8") and SHA.fullmatch(fields[2].decode())):
+                            tree = fields[2].decode()
+                self._public_source_trees[key] = tree
+            revisions.append({**source, "source_tree": self._public_source_trees[key]})
+        return {**game, "revisions": revisions,
+                "forks": [{key: child[key] for key in ("slug", "title", "owner", "head_revision")}
                                   for child in self.games.values() if child["parent_game"] == game_slug]}
 
     def history(self, game_slug):

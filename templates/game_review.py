@@ -16,7 +16,7 @@ RECEIPT = '.blue-check/native-review.json'
 # Only root-level generated outputs are omitted. Authored assets/scripts/config stay inputs.
 OUTPUTS = {'.git', 'target', 'dist', 'installers', '.blue-check', '.be2-work', '.learning'}
 ENGINE_INPUTS = ('Cargo.toml', 'Cargo.lock', 'build.rs', '.cargo', 'src', 'assets', 'templates',
-                 'tools/FEATURES.json', 'tools/game_tooling.py', 'tools/mcp.schemas.json',
+                 'tools/FEATURES.json', 'tools/game_tooling.py', 'tools/game_metadata.py', 'tools/mcp.schemas.json',
                  'tools/game.schema.json', 'docs/archive/AI_REFERENCE.md',
                  'deploy/hub/hub.conf.example', 'PACKAGE-MANIFEST.json')
 AREAS = {'controls', 'camera', 'ui', 'audio', 'gameplay', 'other'}

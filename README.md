@@ -71,6 +71,8 @@ remains `vesper3d` for compatibility.
   The [collaborative creator workflow](docs/COLLABORATION.md) adds source forks,
   revision history, shared maintainer publishing, and human/AI feedback for daily
   improvements. Authored games use the same Windows installer release gates.
+  Game details travel inside EXE, BAT/CMD and ZIP exports and fill in creator
+  forms when a file is dropped; see [portable metadata](docs/GAME_METADATA.md).
 - **Multiplayer:** custom simulations use [netplay](docs/NETPLAY.md); the stock
   client/server retains its own prediction and replication path. Their capacity,
   snapshot and transport contracts differ; [hosting](docs/HOSTING.md) documents
