@@ -911,7 +911,7 @@ def full_commands(test_profile='itest'):
         [sys.executable, 'tools/check_authoring.py', *(['--profile', 'dev'] if test_profile == 'dev' else [])],
         [sys.executable, '-m', 'unittest', 'tools.test_workflow',
          'tools.test_assets', 'tools.test_model_import', 'tools.test_schemas', 'scripts.test_publish_games',
-         'tools.test_game_check', 'tools.test_game_ship', 'tools.test_media_tools',
+         'tools.test_game_check', 'tools.test_game_ship', 'tools.test_game_metadata', 'tools.test_media_tools',
          'tools.test_xcapture', 'tools.test_upgrade', 'tools.test_learn',
          'tools.test_hub_deploy','tools.test_browser_retirement','tools.test_springboard',
          'tools.test_machine_utilities', 'tools.test_idea_forge', 'tools.test_player_feedback',

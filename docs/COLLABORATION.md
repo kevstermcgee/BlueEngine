@@ -30,6 +30,43 @@ The creator tools use `/community/v1` on the existing HTTPS feedback service.
 Public reads expose source pins and evolution history. Authentication is required
 for creator writes; existing rated player reviews remain account-free.
 
+## Drop a game file to prepare publication
+
+The creator tools accept a dropped or selected Windows EXE, BAT/CMD launcher, or
+ZIP package containing portable game metadata. Packaging derives the title,
+slug, version, description, controls, public credits, source commit and available
+fork ancestry from the game project. The same metadata travels inside the EXE
+and BAT/CMD, and inside the ZIP as `blueengine.game.json` and its ZIP comment.
+Renaming or copying a file does not discard its description.
+
+Drop the generated file into creator tools to preview its details and prepare a
+registration or update. An already registered source revision opens that
+revision. A fork uses the recorded parent reservation; a changed existing game
+uses its current server history and stale updates require reconciliation. The
+file describes the game; account permissions, source verification and native
+release gates still determine whether it can be published. Import reads the
+metadata locally without executing the game or uploading the binary.
+
+Use the normal project shipping and native release commands to produce these
+files. For an existing owned build, the portable helper can derive and embed a
+manifest without typing game information again:
+
+```sh
+python3 tools/game_metadata.py create games/my-corkscrew --output /tmp/my-corkscrew.json
+python3 tools/game_metadata.py embed /path/to/my-corkscrew.exe --manifest /tmp/my-corkscrew.json
+python3 tools/game_metadata.py inspect /path/to/my-corkscrew.exe
+```
+
+`embed` also accepts BAT/CMD and ZIP. Stamp owned outputs before computing release
+hashes or signing; signed EXEs and unknown self-extracting installers cannot be
+rewritten by this command. The release pipeline handles its own newly compiled
+Inno Setup installers. A clean, tracked source checkout provides an immutable
+source pin. Uncommitted or unavailable source produces a draft requiring a
+committed-source export before publication. Old files without metadata need a
+new export; the importer does not guess missing information. Other archive
+formats need repackaging as ZIP. The complete carrier contract is documented in
+[portable game metadata](GAME_METADATA.md).
+
 ## Commands for a fresh AI session
 
 Run from a current BlueEngine checkout with Python 3.11+, Git, Rust/Cargo, and

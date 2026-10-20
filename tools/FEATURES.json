@@ -2631,7 +2631,7 @@
       "checks": [
         "cargo test --locked --lib identity",
         "cargo test --locked --lib icon",
-        "python -m unittest tools.test_game_ship tools.test_game_check",
+        "python -m unittest tools.test_game_ship tools.test_game_check tools.test_game_metadata",
         "generated project: scripts/blue ship into a temp folder, then verify --launch --smoke (real window title and icon read back)",
         "python -m unittest tools.test_game_tooling",
         "python -m unittest tools.test_game_installer tools.test_game_review"
@@ -2644,6 +2644,9 @@
         "templates/game_check.py",
         "tools/test_game_ship.py",
         "tools/test_game_check.py",
+        "tools/game_metadata.py",
+        "tools/test_game_metadata.py",
+        "docs/GAME_METADATA.md",
         "docs/GAME_QUICKSTART.md",
         "src/viewer/devkit/save.rs",
         "docs/GAME_AUTHORING_ENTRY.md",
@@ -2689,7 +2692,10 @@
         "physical device review",
         "native review receipt",
         "Inno Setup",
-        "app_id"
+        "app_id",
+        "embedded metadata",
+        "drag and drop",
+        "portable game metadata"
       ],
       "depends_on": [
         "game_scaffolding"
