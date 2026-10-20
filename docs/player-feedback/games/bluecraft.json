@@ -1,7 +1,22 @@
 {
   "schema_version": 1,
   "game": "bluecraft",
-  "count": 0,
-  "average": null,
-  "reviews": []
+  "count": 1,
+  "average": 1.0,
+  "reviews": [
+    {
+      "schema_version": 2,
+      "submission_id": "a24bf7c2-c222-4a31-a779-f11829138c45",
+      "source_url": "https://raw.githubusercontent.com/kevstermcgee/BlueEngine/main/docs/player-feedback/reviews/a24bf7c2-c222-4a31-a779-f11829138c45.json",
+      "name": "Kevin",
+      "created_at": "2026-10-20T01:35:34.853927+00:00",
+      "updated_at": "2026-10-20T01:35:34.853927+00:00",
+      "game": "bluecraft",
+      "game_title": "BlueCraft",
+      "version": "bluecraft-v0.1.0",
+      "rating": 1,
+      "enjoyed": "",
+      "disliked": "- The sounds are absurdly cartoonish and aren't subtle/intuitive like in minecraft\n- The map doesn't go on forever like in actual minecraft\n- I don't like the prebuilt house\n- One of the things that minecraft is most known for is music. You HAVE to create and add calming relaxing music to this\n- Controller support is halfway there. Analog sticks work. The A button to jump works. But none of the other buttons and triggers work like they would in a real game."
+    }
+  ]
 }
