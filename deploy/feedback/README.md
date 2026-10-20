@@ -27,10 +27,22 @@ disposable clone and resets it to the fetched remote before each publication.
 
 Provision a repository-scoped write deploy key or equivalent server-only Git
 credential. Store it outside the source repository, readable only by the service
-account. Pin the remote SSH host key using a verified `known_hosts` file; configure
-the clone's `core.sshCommand` with `BatchMode=yes`, `StrictHostKeyChecking=yes`, and
-explicit private-key/known-hosts paths under `/var/lib/blueengine-feedback`. An HTTPS
-remote with an appropriately scoped non-interactive credential helper also works.
+account. Pin the remote SSH host key using a verified `known_hosts` file. Configure
+SSH specifically for this clone, with explicit identity and host verification:
+
+```sh
+sudo -u blueengine-feedback git -C /var/lib/blueengine-feedback/repository config core.sshCommand \
+  'ssh -F /dev/null -i /var/lib/blueengine-feedback/auth/repository_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/var/lib/blueengine-feedback/auth/known_hosts -o StrictHostKeyChecking=yes -o BatchMode=yes -o ConnectTimeout=10'
+```
+
+`-F /dev/null` bypasses unrelated user/system SSH configuration while the explicit
+options retain private-key selection and strict pinned-host verification. Some
+systemd user sandboxes reject included system SSH configuration with `Bad owner or
+permissions` even when an interactive SSH command succeeds. Verify
+`git ls-remote origin refs/heads/main` with the actual service account, environment
+and sandbox settings, such as a diagnostic unit matching the installed service;
+an interactive-shell check alone does not verify service access. An HTTPS remote
+with an appropriately scoped non-interactive credential helper also works.
 Never place credentials in the endpoint URL, launcher, website, payloads or commits.
 Ensure branch protection permits this identity to publish validated feedback data.
 
@@ -124,10 +136,28 @@ recovery before and after publication.
 
 After deployment, fetch `GET https://YOUR_DEPLOYED_HOST/health`. A 200 JSON response
 identifies the running service without adding fake reviews. This is a liveness check,
-not proof that Git credentials can push; confirm non-interactive remote access
-separately as the service account. Verify allowed-origin OPTIONS and the launcher's
-configured endpoint. Then a genuine user submission must receive accepted=true and
-appear in `docs/player-feedback/reviews` on the remote before claiming intake works.
+not proof that Git credentials can fetch or push. Verify allowed-origin OPTIONS and
+the launcher's configured endpoint.
+
+Before a real submission, exercise the actual HTTPS POST and service-side fetch with
+a well-formed request whose game slug is absent from the current engine catalog.
+Confirm that `feedback-diagnostic-invalid` is unknown before using this example:
+
+```sh
+curl --silent --show-error --include \
+  -H 'Content-Type: application/json' \
+  --data '{"format":"blueengine-player-feedback-v1","submission_id":"f9b5b420-2c40-4f5b-8c65-1253f8bb0c7d","game":"feedback-diagnostic-invalid","rating":1,"enjoyed":"Deployment connectivity check; unknown game must be rejected."}' \
+  https://YOUR_DEPLOYED_HOST/feedback
+```
+
+Expect HTTP 400 with `{"accepted":false,"error":"Unknown game slug"}`. Unlike a
+malformed-input rejection, this response occurs after the running service fetches
+the remote, refreshes its dedicated clone and checks the current catalog. It creates
+no review and attempts no push. A 503 instead indicates the backend is unavailable
+even if `/health` returns 200; check remote access inside the service sandbox.
+This probe verifies the read path, not write permission or successful publication.
+A genuine user submission must receive accepted=true and appear in
+`docs/player-feedback/reviews` on the remote before claiming publication works.
 Do not submit fabricated reviews to the production repository as a health probe.
 
 Back up the remote repository through normal repository retention. The local clone
