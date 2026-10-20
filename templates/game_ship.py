@@ -2150,7 +2150,7 @@ def cmd_package(project, no_build=False):
     plan = package_plan(project, built)
     metadata = metadata_helper(project)
     try:
-        document = metadata.build_document(project.root, engine=metadata.repository_binding(project.engine()))
+        document = metadata.build_document(project.root, engine=metadata.repository_binding(project.engine()), cargo=project.cargo)
         document['game']['executable'] = project.exe_file()
         metadata_payload = metadata.canonical_payload(document)
     except metadata.MetadataError as error:

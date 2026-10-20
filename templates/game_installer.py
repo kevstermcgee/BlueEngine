@@ -152,7 +152,8 @@ def _binding(project, ship, config):
             'cargo_sha256': ship.sha256_file(project.root / 'Cargo.toml'),
             'settings_sha256': ship.sha256_file(project.root / 'scripts/installer.json') if (project.root / 'scripts/installer.json').is_file() else None,
             'producer_sha256': {'game_installer.py': ship.sha256_file(Path(__file__)),
-                                'game_ship.py': ship.sha256_file(Path(ship.__file__))},
+                                'game_ship.py': ship.sha256_file(Path(ship.__file__)),
+                                'game_metadata.py': ship.sha256_file(Path(ship.metadata_helper(project).__file__))},
             'config': config}
 
 
@@ -282,7 +283,7 @@ def build(project, ship, iscc):
         manifest = project.dist / metadata.MANIFEST
         try:
             document = (metadata.decode_payload(manifest.read_bytes()) if manifest.is_file()
-                        else metadata.build_document(project.root, engine=metadata.repository_binding(project.engine())))
+                        else metadata.build_document(project.root, engine=metadata.repository_binding(project.engine()), cargo=project.cargo))
             metadata.embed(artifact, document, allow_inno=True)
         except metadata.MetadataError as error:
             raise ship.ShipError(f'Installer portable game metadata: {error}') from error

@@ -96,6 +96,16 @@ class InstallerTests(unittest.TestCase):
         self.assertTrue(result['unverified'])
         self.assertIsNone(result['package_shipping_evidence'])
 
+    def test_metadata_producer_changes_invalidate_prepared_installer(self):
+        helper = self.root / 'metadata-helper.py'
+        helper.write_text('# reviewed metadata producer\n')
+        with mock.patch.object(ship, 'metadata_helper', return_value=types.SimpleNamespace(__file__=str(helper))):
+            report = installer.prepare(self.project, ship)
+            self.assertEqual(report['package_binding']['producer_sha256']['game_metadata.py'], ship.sha256_file(helper))
+            helper.write_text('# a different metadata producer\n')
+            with self.assertRaisesRegex(ship.ShipError, 'changed since preparation'):
+                installer._validate_stage(self.project, ship, Path(report['stage']))
+
     def test_prepared_outputs_do_not_enter_whole_project_source_exports(self):
         from scripts import publish_games
         authored = self.root / 'scripts/installer.iss'

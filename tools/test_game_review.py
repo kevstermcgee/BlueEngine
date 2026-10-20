@@ -180,6 +180,7 @@ class ReviewTests(unittest.TestCase):
         self.prepare()
         self.assertTrue(self.record(self.observations())['manual'])
         for path in (self.root / 'src/lib.rs', self.engine / 'src/lib.rs', self.engine / 'assets/font.bin',
+                     self.engine / 'tools/game_metadata.py',
                      self.root / 'dist/review-fixture.exe'):
             before = path.read_bytes()
             path.write_bytes(before + b'changed')

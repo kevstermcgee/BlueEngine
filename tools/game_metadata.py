@@ -107,6 +107,8 @@ def validate(document):
             raise MetadataError(f'{name}.commit must be a complete Git object id')
         if name == 'source':
             _relative(binding.get('game_path'))
+            if 'tree' in binding and (not isinstance(binding['tree'], str) or not re.fullmatch(r'(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})', binding['tree'])):
+                raise MetadataError('source.tree must be a complete Git tree object id')
             if 'dirty' in binding and not isinstance(binding['dirty'], bool):
                 raise MetadataError('source.dirty must be boolean')
     if 'wiki' in document and not isinstance(document['wiki'], dict):
@@ -497,23 +499,38 @@ def repository_binding(directory, *, game=False):
         result = {'repository': match[1], 'commit': revision}
         if game:
             result['game_path'] = relative
+            tree = git('rev-parse', 'HEAD^{tree}' if relative == '.' else 'HEAD:' + relative)
+            if not tree or not re.fullmatch(r'(?:[0-9a-fA-F]{40}|[0-9a-fA-F]{64})', tree) or git('cat-file', '-t', tree) != 'tree':
+                return None
+            result['tree'] = tree
         return result
     except (OSError, subprocess.SubprocessError, ValueError):
         return None
 
 
 def build_document(project_root, *, slug=None, title=None, version=None, description=None,
-                   source=_AUTO, engine=_AUTO, lineage=None, wiki=None):
+                   source=_AUTO, engine=_AUTO, lineage=None, wiki=None, cargo=None):
     """Collect public authoring data. Explicit null source/engine disables inference."""
     root = Path(project_root)
     identity, project = _json(root / 'assets/identity.json'), _json(root / 'game.project.json')
-    try:
-        import tomllib
-        cargo = tomllib.loads((root / 'Cargo.toml').read_text(encoding='utf-8')).get('package', {})
-    except (OSError, ValueError):
+    if cargo is None:
         cargo = {}
+        if (root / 'Cargo.toml').is_file():
+            try:
+                import tomllib
+            except ImportError as error:
+                raise MetadataError('Creating metadata directly from Cargo.toml requires Python 3.11+; '
+                                    'use the existing scripts/ship.py package command on Python 3.10, '
+                                    'or supply already parsed cargo data to build_document') from error
+            try:
+                cargo = tomllib.loads((root / 'Cargo.toml').read_text(encoding='utf-8'))
+            except (OSError, ValueError) as error:
+                raise MetadataError('Cannot read the game Cargo.toml; repair it before exporting metadata') from error
+    if not isinstance(cargo, dict) or not isinstance(cargo.get('package', {}), dict):
+        raise MetadataError('parsed cargo data must contain a package table')
+    cargo = cargo.get('package', {})
     title = title if title is not None else identity.get('title') or cargo.get('name') or root.name
-    slug = slug if slug is not None else project.get('id') or re.sub('[^a-z0-9]+', '-', title.lower()).strip('-')
+    slug = slug if slug is not None else project.get('id') or re.sub('[^a-z0-9]+', '-', (cargo.get('name') or title).lower()).strip('-') or 'game'
     authors = []
     declared_authors = identity.get('authors', cargo.get('authors', []))
     if not isinstance(declared_authors, list):

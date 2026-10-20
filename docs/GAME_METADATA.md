@@ -46,6 +46,10 @@ they contain `repository` (`owner/repository`, maximum 200 characters) and `comm
 `game_path`, a portable relative slash path or `.`. Traversal, backslashes,
 Windows device names, trailing dots/spaces, control characters, and Windows
 reserved filename characters are rejected. Optional `source.dirty` is boolean.
+Optional `source.tree` is a complete Git tree object ID for the selected game
+folder. It identifies unchanged content across repository commits or exported
+paths; it is omitted when unknown. It remains an untrusted content hint until
+matched against the collaboration service's verified revision history.
 `lineage` can retain public `root_game`, `parent_game`, `parent_revision`, and
 `revision_id`; `wiki` is an optional bounded object.
 
@@ -96,5 +100,8 @@ python3 tools/game_metadata.py embed path/to/owned-unsigned.exe --manifest /tmp/
 ```
 
 The reusable stdlib implementation is [game_metadata.py](../tools/game_metadata.py).
+The direct `create` command uses Python 3.11+ to read Cargo TOML. Existing shipping
+commands retain their Python 3.10 TOML fallback and pass the parsed package data
+to the metadata helper. Inspecting supported files needs no TOML parser.
 Game tooling pins include it; restore the pinned engine or run the existing
 reviewed `tools/game_tooling.py migrate GAME` workflow to adopt a tooling update.

@@ -195,6 +195,35 @@ class MetadataTests(unittest.TestCase):
         self.assertEqual(result['lineage'], receipt['lineage'])
         self.assertIsNone(result['source'])
 
+    def test_shipping_parsed_cargo_preserves_metadata_without_python311_tomllib(self):
+        (self.root / 'Cargo.toml').write_text('[package]\nname="portable-game"\nversion="3.10.0"\n')
+        parsed = {'package': {'name': 'portable-game', 'version': '3.10.0',
+                              'authors': ['Public Name <private@example.invalid>'], 'keywords': ['offline']}}
+        with mock.patch.dict('sys.modules', {'tomllib': None}):
+            result = metadata.build_document(self.root, cargo=parsed)
+            self.assertEqual(result['game']['version'], '3.10.0')
+            self.assertEqual(result['game']['authors'], ['Public Name'])
+            self.assertEqual(result['game']['tags'], ['offline'])
+            with self.assertRaisesRegex(metadata.MetadataError, 'Python 3.11.*scripts/ship.py package'):
+                metadata.build_document(self.root)
+
+    def test_legacy_unicode_title_uses_stable_cargo_identity(self):
+        (self.root / 'assets').mkdir()
+        (self.root / 'assets/identity.json').write_text(json.dumps({'title': '星の道', 'tagline': 'An original route', 'controls': 'Arrows'}))
+        parsed = {'package': {'name': 'star_route', 'version': '1.0.0'}}
+        result = metadata.build_document(self.root, cargo=parsed)
+        self.assertEqual(result['game']['title'], '星の道')
+        self.assertEqual(result['game']['slug'], 'star-route')
+
+    def test_tree_content_hint_requires_a_complete_git_object_id(self):
+        for tree in (None, '', 'abc123', 'not-a-tree', 42):
+            changed = document()
+            changed['source']['tree'] = tree
+            with self.subTest(tree=tree), self.assertRaisesRegex(metadata.MetadataError, 'source.tree'):
+                metadata.canonical_payload(changed)
+        changed['source']['tree'] = 'c' * 40
+        self.assertEqual(metadata.decode_payload(metadata.canonical_payload(changed)), changed)
+
     def test_noncanonical_duplicate_invalid_source_and_oversize_rejected(self):
         with self.assertRaisesRegex(metadata.MetadataError, 'canonical'):
             metadata.decode_payload(json.dumps(document()).encode())
@@ -227,6 +256,7 @@ class MetadataTests(unittest.TestCase):
         result = metadata.build_document(root)
         self.assertEqual(result['source']['repository'], 'public/games')
         self.assertEqual(result['source']['game_path'], '.')
+        self.assertEqual(result['source']['tree'], subprocess.run(['git', '-C', str(root), 'rev-parse', 'HEAD^{tree}'], check=True, capture_output=True, text=True).stdout.strip())
         self.assertEqual(result['game']['authors'], ['Public Name'])
         self.assertNotIn('private@example.com', metadata.canonical_payload(result).decode())
         (root / 'untracked.rs').write_text('unpublished source')
