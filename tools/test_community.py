@@ -16,7 +16,8 @@ class CreatorTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             community.command(["git", "init", "-q", str(root)])
-            (root / "Cargo.toml").write_text('[package]\nname="original"\nversion="0.1.0"\n')
+            community.command(["git", "config", "core.autocrlf", "true"], root)
+            (root / "Cargo.toml").write_bytes(b'[package]\r\nname="original"\r\nversion="0.1.0"\r\n')
             (root / "assets").mkdir()
             (root / "assets/bytes.bin").write_bytes(b"\x00\xff\x01")
             (root / "dist").mkdir()
@@ -33,7 +34,8 @@ class CreatorTests(unittest.TestCase):
             self.assertEqual((target / "assets/bytes.bin").read_bytes(), b"\x00\xff\x01")
             self.assertFalse((target / "dist").exists())
             self.assertFalse((target / "games").exists())
-            self.assertEqual((target / "Cargo.toml").read_bytes(), (root / "Cargo.toml").read_bytes())
+            committed = subprocess.check_output(["git", "show", pin + ":Cargo.toml"], cwd=root)
+            self.assertEqual((target / "Cargo.toml").read_bytes(), committed)
 
     def test_standalone_pin_cannot_import_symlink_or_parent_escape(self):
         with tempfile.TemporaryDirectory() as temporary:
