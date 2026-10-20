@@ -2,6 +2,10 @@
 
 Every playable BlueEngine game should meet this baseline before delivery:
 
+- Keep the shared **BlueEngine Games** studio card simple and text-only. The Feta
+  white-rat image is retired from title screens, new projects and branding unless
+  the user explicitly requests it in a future task. Keep each game's own title,
+  artwork and icon. Preserve studio-card timing, skipping and held-input release.
 - F toggles fullscreen in place; F11 may be an alias. Never restart the renderer or match.
 - Escape opens a compact Resume / Controls / Quit menu. Opening it releases the mouse
   and suppresses movement, fire, reload, weapon selection and look. Resume clicks must
