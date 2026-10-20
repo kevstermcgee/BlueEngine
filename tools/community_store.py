@@ -425,6 +425,11 @@ class Catalog:
     def __init__(self, publisher):
         self.publisher, self.games, self.events, self.upstream = publisher, {}, [], {}
         for game_slug, title in feedback.game_catalog(publisher.root).items():
+            self.games[game_slug] = {"slug": game_slug, "title": title, "owner": publisher.repository.split("/")[0],
+                                     "root_game": game_slug, "parent_game": None, "parent_revision": None,
+                                     "head_revision": None, "revisions": [], "publication_requests": [], "releases": [],
+                                     "source_unavailable": True,
+                                     "source_unavailable_reason": "No recoverable source is registered for this published game. A maintainer can register recovered native source; reviews remain available."}
             source_repository, source_ref = publisher.repository, "HEAD"
             present = publisher.git("cat-file", "-t", f"HEAD:games/{game_slug}", check=False)
             if present.returncode or present.stdout.strip() != b"tree":
@@ -434,6 +439,11 @@ class Catalog:
                 if present.returncode or present.stdout.strip() != b"tree":
                     continue
                 source_repository, source_ref = publisher.games_repository, COMPANION_REF
+            archive = publisher.git("cat-file", "-e", f"{source_ref}:games/{game_slug}/release-source.json", check=False)
+            if archive.returncode == 0:
+                names = publisher.git("ls-tree", "--name-only", f"{source_ref}:games/{game_slug}").stdout.decode().splitlines()
+                if not set(names) & {"Cargo.toml", "game.project.json", "game.json"}:
+                    continue  # A pinned executable archive is not editable source.
             commits = publisher.git("log", f"-{MAX_UPSTREAM_REVISIONS + 1}", "--format=%H%x00%cI", source_ref, "--", f"games/{game_slug}").stdout.decode().splitlines()
             if not commits:
                 continue
@@ -664,11 +674,15 @@ class CommunityPublisher(feedback_server.Publisher):
         if action in ("create", "fork"):
             game_slug = request["slug"]
             if game_slug in catalog.games:
-                raise Conflict("This game slug already exists; choose your own unique slug")
+                existing = catalog.games[game_slug]
+                if not (action == "create" and existing.get("source_unavailable") and actor["role"] == "maintainer"):
+                    raise Conflict("This game slug already exists; choose your own unique slug")
             game = {"slug": game_slug, "title": request["title"], "owner": actor["login"],
                     "root_game": game_slug, "parent_game": None, "parent_revision": None}
             if action == "fork":
                 parent = catalog.require_game(target)
+                if parent.get("source_unavailable"):
+                    raise Conflict("This published game has no recoverable source pin yet; a maintainer must register native source before it can be forked")
                 parent_revision = request.get("source_revision", parent["head_revision"])
                 source = next((item for item in parent["revisions"] if item["id"] == parent_revision), None)
                 if source is None:

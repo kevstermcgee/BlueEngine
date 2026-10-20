@@ -303,6 +303,29 @@ class CommunityTests(unittest.TestCase):
         self.assertEqual(status, 200, body)
         self.assertEqual(self.game("legacy-variant")["revisions"][0]["source_commit"], commit)
 
+    def test_unavailable_source_keeps_game_reviews_and_reserves_recovery_to_maintainers(self):
+        git(self.seed, "pull", "--ff-only", "origin", "main")
+        feedback.atomic_json(self.seed / feedback.DIRECTORY / "games.json",
+                             {"schema_version": 1, "games": {"rule-relay": "Rule Relay", "archived-game": "Archived Game"}})
+        git(self.seed, "add", ".")
+        git(self.seed, "commit", "-m", "Retain archived published game")
+        git(self.seed, "push", "origin", "main")
+        game = self.game("archived-game")
+        self.assertTrue(game["source_unavailable"])
+        self.assertIsNone(game["head_revision"])
+        self.assertEqual(game["revisions"], [])
+        status, _, body = self.request(f"{server.PREFIX}/feedback",
+                                       {"request_id": str(uuid4()), "target_type": "game", "target": "archived-game",
+                                        "kind": "ai", "category": "recovery", "note": "The source should be recovered"}, token="alice_token")
+        self.assertEqual(status, 200, body)
+        self.assertEqual(self.request(f"{server.PREFIX}/games/archived-game/forks",
+                                      {"request_id": str(uuid4()), "slug": "archive-fork", "title": "Archive Fork"})[0], 409)
+        registration = {"request_id": str(uuid4()), "slug": "archived-game", "title": "Recovered Game",
+                        "source_commit": "a" * 40, "version": "recovered-v1", "note": "Recover native source"}
+        self.assertEqual(self.request(f"{server.PREFIX}/games", registration, token="alice_token")[0], 409)
+        self.assertEqual(self.request(f"{server.PREFIX}/games", registration, token="cousin_token")[0], 200)
+        self.assertFalse(self.game("archived-game").get("source_unavailable", False))
+
     def test_public_catalog_cache_avoids_git_contention_and_writes_invalidate_it(self):
         first = self.game()
         with patch.object(self.publisher, "git", side_effect=AssertionError("Cached public reads must not invoke Git")):
@@ -340,6 +363,45 @@ class CommunityTests(unittest.TestCase):
         stale = {**update, "request_id": str(uuid4()), "expected_revision": draft["head_revision"], "source_commit": "b" * 40}
         self.assertEqual(self.request(f"{server.PREFIX}/games/rule-relay/revisions", stale)[0], 409)
         self.assertEqual(self.game()["head_revision"], draft["head_revision"])
+
+    def test_published_creator_head_advances_to_later_trusted_source_without_using_dates(self):
+        original = self.game()
+        git(self.seed, "switch", "-c", "creator-source")
+        (self.seed / "games/rule-relay/source-change.txt").write_text("Submitted rules")
+        git(self.seed, "add", ".")
+        git(self.seed, "commit", "-m", "Creator game source")
+        source_commit = git(self.seed, "rev-parse", "HEAD")
+        git(self.seed, "push", "origin", "creator-source")
+        update = {"request_id": str(uuid4()), "expected_revision": original["head_revision"],
+                  "source_commit": source_commit, "version": "creator-v1", "note": "Submitted source"}
+        with patch.object(FakeGitHub, "verify_source", return_value=None):
+            status, _, body = self.request(f"{server.PREFIX}/games/rule-relay/revisions", update)
+        self.assertEqual(status, 200, body)
+        submitted = self.game()["head_revision"]
+        git(self.seed, "switch", "main")
+        git(self.seed, "merge", "--ff-only", "creator-source")
+        git(self.seed, "fetch", "origin", "main")
+        git(self.seed, "merge", "--no-edit", "origin/main")
+        git(self.seed, "push", "origin", "main")
+        release = {"request_id": str(uuid4()), "revision_id": submitted, "source_commit": source_commit,
+                   "games_commit": "b" * 40,
+                   "receipt": {"page": "https://kevstermcgee.github.io/BlueEngineGames/games/rule-relay/",
+                               "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/native-games-" + "b" * 12 + "-v1",
+                               "installer_sha256": "c" * 64, "zip_sha256": "d" * 64, "verified_at": "2026-10-20T12:00:00+00:00"},
+                   "gates": {label: index for index, label in enumerate(store.RELEASE_GATES, 1) if label in store.ENGINE_GATES}}
+        status, _, body = self.request(f"{server.PREFIX}/games/rule-relay/releases", release)
+        self.assertEqual(status, 200, body)
+        git(self.seed, "pull", "--ff-only", "origin", "main")
+        (self.seed / "games/rule-relay/source-change.txt").write_text("Trusted subsequent source improvement")
+        git(self.seed, "add", ".")
+        git(self.seed, "commit", "-m", "Improve trusted released source")
+        git(self.seed, "push", "origin", "main")
+        self.publisher._catalog_cache = None
+        game = self.game()
+        self.assertEqual(game["head_revision"], game["upstream_revision"])
+        self.assertNotEqual(game["head_revision"], submitted)
+        self.assertFalse(game["upstream_diverged"])
+        self.assertIn(submitted, [item["id"] for item in game["revisions"]])
 
 
 if __name__ == "__main__":
