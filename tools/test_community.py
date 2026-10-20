@@ -12,6 +12,57 @@ from tools import community, community_release
 
 
 class CreatorTests(unittest.TestCase):
+    def test_standalone_import_reads_exact_git_blobs_without_recursive_copy(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            community.command(["git", "init", "-q", str(root)])
+            (root / "Cargo.toml").write_text('[package]\nname="original"\nversion="0.1.0"\n')
+            (root / "assets").mkdir()
+            (root / "assets/bytes.bin").write_bytes(b"\x00\xff\x01")
+            (root / "dist").mkdir()
+            (root / "dist/old.exe").write_bytes(b"excluded build")
+            community.command(["git", "add", "."], root)
+            community.command(["git", "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "commit", "-qm", "source"], root)
+            pin = community.command(["git", "rev-parse", "HEAD"], root)
+            target = root / "games/new-fork"
+            original_command = community.command
+            def commands(argv, cwd=None):
+                return "" if "fetch" in argv else original_command(argv, cwd)
+            with patch.object(community, "command", side_effect=commands):
+                community.import_standalone(["git"], "owner/standalone", pin, root, target)
+            self.assertEqual((target / "assets/bytes.bin").read_bytes(), b"\x00\xff\x01")
+            self.assertFalse((target / "dist").exists())
+            self.assertFalse((target / "games").exists())
+            self.assertEqual((target / "Cargo.toml").read_bytes(), (root / "Cargo.toml").read_bytes())
+
+    def test_standalone_pin_cannot_import_symlink_or_parent_escape(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for tree in (f"120000 blob {'a' * 40}\tCargo.toml\0", f"100644 blob {'a' * 40}\t../outside\0"):
+                with patch.object(community, "command", side_effect=["", tree]):
+                    with self.assertRaises(community.CommunityError):
+                        community.import_standalone(["git"], "owner/standalone", "b" * 40, root, root / "game")
+                self.assertFalse((root / "game").exists())
+
+    def test_standalone_import_rejects_windows_git_metadata_aliases_and_streams(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for name in (".GIT/hooks/pre-commit", "sub/.Git/config", "git~1/config", "src/file:stream", "CON.txt", "src/trailing. "):
+                tree = f"100644 blob {'a' * 40}\t{name}\0"
+                with patch.object(community, "command", side_effect=["", tree]):
+                    with self.assertRaisesRegex(community.CommunityError, "unsafe path"):
+                        community.import_standalone(["git"], "owner/standalone", "b" * 40, root, root / "game")
+            self.assertFalse((root / "game").exists())
+
+    def test_standalone_import_preserves_source_by_rejecting_case_collisions(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            tree = "".join(f"100644 blob {'a' * 40}\t{name}\0" for name in ("Cargo.toml", "Assets/one.png", "assets/two.png"))
+            with patch.object(community, "command", side_effect=["", tree]):
+                with self.assertRaisesRegex(community.CommunityError, "collide on Windows"):
+                    community.import_standalone(["git"], "owner/standalone", "b" * 40, root, root / "game")
+            self.assertFalse((root / "game").exists())
+
     def test_invalid_credential_cannot_reach_header_errors_or_diagnostics(self):
         with patch.dict(community.os.environ, {"BLUEENGINE_COMMUNITY_TOKEN": "private-test-value\n"}):
             with self.assertRaises(community.CommunityError) as caught:

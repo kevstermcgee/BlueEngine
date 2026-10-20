@@ -125,12 +125,59 @@ def source_document(game):
     commit = source.get("commit", game.get("source_commit"))
     game_path = source.get("game_path", "games/" + game.get("source_game", game.get("slug", "")))
     relative = PurePosixPath(game_path)
+    standalone = game_path == "." and repository not in ("kevstermcgee/BlueEngine", "kevstermcgee/BlueEngineGames")
     if (not isinstance(repository, str) or not REPOSITORY.fullmatch(repository)
             or not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit)
             or relative.is_absolute() or ".." in relative.parts or "\\" in game_path
-            or len(relative.parts) < 2 or relative.parts[0] not in ("games", "assets")):
+            or (not standalone and (len(relative.parts) < 2 or relative.parts[0] not in ("games", "assets")))):
         raise CommunityError("The game has no valid immutable source pin")
     return repository, commit, relative
+
+
+def import_standalone(git, repository, commit, destination, target):
+    """Import tracked blobs from a pinned standalone game into a fresh engine fork.
+
+    Read Git objects directly; no archive extraction, checkout filters, hooks,
+    symlink traversal, submodule initialization, or submitted code execution.
+    """
+    command([*git, "fetch", "--no-write-fetch-head", "--no-tags", "https://github.com/" + repository + ".git", commit], destination)
+    entries = command([*git, "ls-tree", "-r", "-z", "--full-tree", commit], destination).split("\0")
+    files = []
+    windows_names = {}
+    excluded = {".git", ".github", "target", "dist", ".be2-work", ".blue-check", "__pycache__"}
+    for entry in filter(None, entries):
+        description, name = entry.split("\t", 1)
+        mode, kind, object_id = description.split(" ")
+        relative = PurePosixPath(name)
+        if (relative.is_absolute() or ".." in relative.parts or "\\" in name
+                or any(ord(char) < 32 or char in '<>:"|?*' for char in name) or not relative.parts
+                or any(part.endswith((" ", ".")) or part.casefold().rstrip(" .") == ".git"
+                       or re.fullmatch(r"\.?git~[0-9]+", part, re.I)
+                       or re.fullmatch(r"(?:CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])", part.split(".", 1)[0], re.I)
+                       for part in relative.parts)):
+            raise CommunityError("Standalone source contains an unsafe path; checkout retained")
+        if relative.parts[0] in excluded:
+            continue
+        for index in range(1, len(relative.parts) + 1):
+            prefix = "/".join(relative.parts[:index])
+            previous = windows_names.setdefault(prefix.casefold(), prefix)
+            if previous != prefix:
+                raise CommunityError("Standalone source paths collide on Windows; checkout retained")
+        if mode not in ("100644", "100755") or kind != "blob" or not re.fullmatch(r"[0-9a-f]{40,64}", object_id):
+            raise CommunityError("Standalone source contains symlinks or submodules; checkout retained for review")
+        files.append((relative, object_id, mode))
+    if not any(str(path) == "Cargo.toml" for path, _, _ in files):
+        raise CommunityError("Standalone source needs a committed Cargo project before import")
+    target.mkdir(parents=True)
+    for relative, object_id, mode in files:
+        result = subprocess.run([*git, "cat-file", "blob", object_id], cwd=destination, capture_output=True)
+        if result.returncode:
+            raise CommunityError("Could not retrieve a pinned source blob; checkout retained")
+        path = target.joinpath(*relative.parts)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(result.stdout)
+        if mode == "100755":
+            path.chmod(0o755)
 
 
 def checkout(game, destination):
@@ -144,21 +191,31 @@ def checkout(game, destination):
         raise CommunityError("Checkout destination already exists; choose a new directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
     git = ["git", "-c", "core.hooksPath=/dev/null", "-c", "core.fsmonitor=false"]
-    command([*git, "clone", "--no-checkout", "--filter=blob:none", "https://github.com/" + repository + ".git", str(destination)])
-    command([*git, "fetch", "origin", commit], destination)
-    command([*git, "checkout", "--detach", commit], destination)
+    standalone = str(relative) == "."
+    checkout_repository = "kevstermcgee/BlueEngine" if standalone else repository
+    command([*git, "clone", "--no-checkout", "--filter=blob:none", "https://github.com/" + checkout_repository + ".git", str(destination)])
+    if standalone:
+        command([*git, "checkout", "--detach", "origin/main"], destination)
+    else:
+        command([*git, "fetch", "origin", commit], destination)
+        command([*git, "checkout", "--detach", commit], destination)
     command([*git, "switch", "-c", "community/" + slug + "-" + uuid4().hex[:8]], destination)
-    original = destination.joinpath(*relative.parts)
+    target = destination / "games" / slug
+    if standalone:
+        if target.exists() or (target.parent.exists() and (target.parent.is_symlink() or not target.parent.resolve().is_relative_to(destination.resolve()))):
+            raise CommunityError("The fork slug collides with existing source; checkout retained")
+        import_standalone(git, repository, commit, destination, target)
+    original = target if standalone else destination.joinpath(*relative.parts)
     if (not original.resolve().is_relative_to(destination.resolve()) or not original.is_dir()
             or any(path.is_symlink() for path in [original, *original.parents] if path.is_relative_to(destination))):
         raise CommunityError("Pinned game source directory is missing or unsafe; checkout retained")
     if any(path.is_symlink() for path in original.rglob("*")):
         raise CommunityError("Game source contains symlinks; checkout retained for review")
-    target = destination / "games" / slug
     if target != original:
         if target.exists():
             raise CommunityError("The fork slug collides with existing source; checkout retained")
         shutil.copytree(original, target)
+    if target != original or standalone:
         for path, key, value in ((target / "game.project.json", "id", slug),
                                  (target / "assets/identity.json", "title", game.get("title", slug))):
             if path.is_file():
@@ -177,7 +234,9 @@ def checkout(game, destination):
                     "Use a new icon and title. Commit/push the source, submit a revision, then request publication. "
                     "Native Windows installer gates remain required. For companion-owned source, bind its engine "
                     "dependency using the project's documented tooling before checking it. Use creator_cli from "
-                    "the current tools checkout for collaboration commands if the pinned source predates them."}
+                    "the current tools checkout for collaboration commands if the pinned source predates them. "
+                    "Imported standalone games retain their original build files; migrate their engine/tooling "
+                    "bindings and declare the new native release definition before publishing."}
 
 
 def record_release(client, directory, revision=None):
@@ -203,6 +262,8 @@ def record_release(client, directory, revision=None):
     labels = ("windows-installer-review", "production-release", "download-page")
     if state.get("source_kind", "engine") == "engine":
         labels = ("engine-checks", "generated-game-linux-windows", *labels)
+    else:
+        labels = ("companion-native-checks", *labels)
     body = {"revision_id": revision, "source_commit": state["engine_head"], "games_commit": state["games_head"],
             "receipt": state["publication"], "gates": {label: state["ci"][label]["run"] for label in labels}}
     value = client.request("/games/" + state["idea"]["slug"] + "/releases", body)

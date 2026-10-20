@@ -185,15 +185,19 @@ The nightly runner's detailed contract lives in
 
    ```sh
    COUSIN_GITHUB=his-github-username
-   gh api --method PUT repos/kevstermcgee/BlueEngine/collaborators/"$COUSIN_GITHUB" -f permission=push
-   gh api --method PUT repos/kevstermcgee/BlueEngineGames/collaborators/"$COUSIN_GITHUB" -f permission=push
-   gh api repos/kevstermcgee/BlueEngine/collaborators/"$COUSIN_GITHUB"/permission --jq .permission
-   gh api repos/kevstermcgee/BlueEngineGames/collaborators/"$COUSIN_GITHUB"/permission --jq .permission
+   for repo in BlueEngine BlueEngineGames BlueCraft Embertrail HarvestHollow; do
+     gh api --method PUT "repos/kevstermcgee/$repo/collaborators/$COUSIN_GITHUB" -f permission=push
+   done
+   for repo in BlueEngine BlueEngineGames BlueCraft Embertrail HarvestHollow; do
+     gh api "repos/kevstermcgee/$repo/collaborators/$COUSIN_GITHUB/permission" --jq .permission
+   done
    ```
 
    The application treats both accounts as equal maintainers when GitHub reports
    push access. Each uses their own identity and credentials. Repository ownership,
    billing, and organization administration are separate account settings.
+   The three named game repositories host independently published legacy games;
+   including them gives him access to their existing release paths as well.
 2. **Developer authentication on his computer.** He runs `gh auth login`, accepts
    invitations, clones the repositories, and runs `community me`. His AI can use
    the same CLI and gates as yours. Do not share your login or deploy keys.
@@ -204,5 +208,6 @@ The nightly runner's detailed contract lives in
    GitHub Actions publishing secrets stay server-side.
 
 Deployment requires the tested service modules and enabling community routes on
-the existing feedback checkout, as described in the community deployment guide. Committing these files
+the existing feedback checkout, as described in the
+[community deployment guide](../deploy/feedback/COMMUNITY.md). Committing these files
 alone does not update a running service, website, or installed launcher.
