@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "request_id": "4ae5d2c4-3604-4b59-8c1f-0d8ec5656b9b",
+  "sequence": 1,
+  "created_at": "2026-10-20T16:37:41.504557+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "4ae5d2c4-3604-4b59-8c1f-0d8ec5656b9b",
+    "note": "Observed while developing the creator workflow: full engine verification in the same passing CI run took engine (ubuntu-latest): 22.4 minutes; engine (windows-latest): 35.0 minutes. Evidence: https://github.com/kevstermcgee/BlueEngine/actions/runs/39451595952 . Cache state may differ; this is an iteration-cost observation, not a proven root cause. Profile Windows Python/Git fixture setup and process startup before optimizing. Consider reusable immutable fixture templates with isolated clones where measurements support it; retain behavioral assertions and every required native gate.",
+    "version": "",
+    "category": "tooling",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  },
+  "target": "engine",
+  "event_type": "feedback",
+  "feedback": {
+    "note": "Observed while developing the creator workflow: full engine verification in the same passing CI run took engine (ubuntu-latest): 22.4 minutes; engine (windows-latest): 35.0 minutes. Evidence: https://github.com/kevstermcgee/BlueEngine/actions/runs/39451595952 . Cache state may differ; this is an iteration-cost observation, not a proven root cause. Profile Windows Python/Git fixture setup and process startup before optimizing. Consider reusable immutable fixture templates with isolated clones where measurements support it; retain behavioral assertions and every required native gate.",
+    "version": "",
+    "category": "tooling",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  }
+}
