@@ -38,12 +38,15 @@ LOGIN = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]{0,38}")
 MAX_EVENTS = 10000
 MAX_UPSTREAM_REVISIONS = 200
 COMPANION_REF = "refs/blueengine-community/companion-main"
+CATALOG_CACHE_SECONDS = 5
 RELEASE_GATES = {"engine-checks": ("engine", "ci.yml"),
                  "generated-game-linux-windows": ("engine", "forge-game-checks.yml"),
                  "windows-installer-review": ("games", "releases.yml"),
                  "production-release": ("games", "releases.yml"),
-                 "download-page": ("games", "pages.yml")}
-COMPANION_GATES = frozenset(("windows-installer-review", "production-release", "download-page"))
+                 "download-page": ("games", "pages.yml"),
+                 "companion-native-checks": ("games", "native-game-checks.yml")}
+ENGINE_GATES = frozenset(RELEASE_GATES) - {"companion-native-checks"}
+COMPANION_GATES = frozenset(("companion-native-checks", "windows-installer-review", "production-release", "download-page"))
 
 
 class CommunityError(feedback.FeedbackError):
@@ -132,7 +135,7 @@ def canonical_request(action, payload):
             result["receipt"][key] = revision_id(receipt[key])
         result["receipt"]["verified_at"] = feedback.timestamp(receipt["verified_at"])
         gates = payload["gates"]
-        if (not isinstance(gates, dict) or set(gates) not in (set(RELEASE_GATES), COMPANION_GATES)
+        if (not isinstance(gates, dict) or set(gates) not in (ENGINE_GATES, COMPANION_GATES)
                 or any(type(run) is not int or run < 1 for run in gates.values())):
             raise CommunityError("Supply the complete successful native release workflow run IDs")
         result["gates"] = dict(gates)
@@ -187,6 +190,7 @@ class GitHub:
         if not isinstance(token, str) or not 10 <= len(token) <= 500 or not re.fullmatch(r"[A-Za-z0-9_]+", token):
             raise AccessDenied("Supply a GitHub token in Authorization: Bearer")
         self.token, self.timeout = token, timeout
+        self.deadline = time.monotonic() + 60
 
     def api(self, path, *, method="GET", data=None, missing=False):
         if not path.startswith("/") or "\r" in path or "\n" in path:
@@ -197,7 +201,10 @@ class GitHub:
                                    "X-GitHub-Api-Version": "2022-11-28", "User-Agent": "BlueEngine-Community",
                                    "Content-Type": "application/json"}, method=method)
         try:
-            with build_opener(NoRedirect()).open(request, timeout=self.timeout) as response:
+            remaining = self.deadline - time.monotonic()
+            if remaining <= 0:
+                raise feedback_server.PublicationError("GitHub verification exceeded its request deadline")
+            with build_opener(NoRedirect()).open(request, timeout=min(self.timeout, remaining)) as response:
                 body = response.read(1_000_001)
             if len(body) > 1_000_000:
                 raise ValueError
@@ -327,20 +334,31 @@ class GitHub:
             tree = sha(entry.get("sha"))
         return tree
 
+    def require_current_upstream(self, source, upstream):
+        if self.game_tree(source["source_repository"], source["source_commit"], source["source_game"]) == self.game_tree(
+                upstream["source_repository"], upstream["source_commit"], upstream["source_game"]):
+            return
+        comparison = self.api(f"/repos/{source['source_repository']}/compare/{upstream['source_commit']}...{source['source_commit']}", missing=True)
+        if (not isinstance(comparison, dict) or comparison.get("status") not in ("ahead", "identical")
+                or comparison.get("merge_base_commit", {}).get("sha") != upstream["source_commit"]):
+            raise Conflict("Upstream game source changed since this submission; merge its latest immutable source and submit a new revision before publishing")
+
     def verify_release(self, engine_repository, games_repository, game, source, request):
         """Independent server checks of the supervisor's exact-source receipt."""
         if source["source_game"] != game["slug"]:
             raise CommunityError("A release receipt must identify this game's submitted source")
         upstream = self.source_upstream(engine_repository, source["source_repository"], require_write=False)
         companion = upstream == games_repository
-        expected_gates = COMPANION_GATES if companion else set(RELEASE_GATES)
+        expected_gates = COMPANION_GATES if companion else ENGINE_GATES
         if set(request["gates"]) != expected_gates:
             raise CommunityError("This source repository requires its complete native release gate set")
         reviewed_repository = games_repository if companion else engine_repository
         reviewed_commit = request["games_commit"] if companion else request["source_commit"]
-        if self.game_tree(source["source_repository"], source["source_commit"], source["source_game"]) != self.game_tree(
-                reviewed_repository, reviewed_commit, game["slug"]):
+        original_tree = self.game_tree(source["source_repository"], source["source_commit"], source["source_game"])
+        if original_tree != self.game_tree(reviewed_repository, reviewed_commit, game["slug"]):
             raise CommunityError("The released game source differs from the registered immutable revision")
+        if not companion and original_tree != self.game_tree(games_repository, request["games_commit"], game["slug"]):
+            raise CommunityError("The exported companion game differs from the registered engine source")
         content = self.api(f"/repos/{games_repository}/contents/.games-catalog.json?ref={request['games_commit']}")
         try:
             if (content.get("type") != "file" or content.get("encoding") != "base64"
@@ -368,7 +386,7 @@ class GitHub:
             asset = assets.get(filename, {})
             if asset.get("state") != "uploaded" or asset.get("digest") != "sha256:" + receipt[key]:
                 raise CommunityError("GitHub's production asset digest does not confirm the downloaded native receipt")
-        verified_gates = {}
+        verified_gates, review_branches = {}, {}
         for label, (scope, workflow) in RELEASE_GATES.items():
             if label not in expected_gates:
                 continue
@@ -383,17 +401,22 @@ class GitHub:
             allowed_events = ("push", "workflow_run") if label == "download-page" else ("push",)
             if label in ("production-release", "download-page") and (run.get("head_branch") != "main" or run.get("event") not in allowed_events):
                 raise CommunityError("Production release and page receipts must come from the main production workflows")
-            if label == "windows-installer-review" and run.get("event") != "workflow_dispatch":
-                raise CommunityError("Windows installer review must use the explicit native review workflow")
+            if label in ("windows-installer-review", "companion-native-checks"):
+                if run.get("event") != "workflow_dispatch" or not isinstance(run.get("head_branch"), str) or not run["head_branch"]:
+                    raise CommunityError("Native game and Windows installer review must use explicit review workflows")
+                review_branches[label] = run["head_branch"]
             verified_gates[label] = {"run": run_id, "head": expected_head,
                                      "url": f"https://github.com/{gate_repository}/actions/runs/{run_id}"}
-        return {"state": "published", "revision_id": source["id"], "source_commit": request["source_commit"],
+        if companion and len(set(review_branches.values())) != 1:
+            raise CommunityError("Native rules and Windows installer reviews must certify the same source branch")
+        return {"state": "published", "source_kind": "companion" if companion else "engine", "game_tree": original_tree,
+                "revision_id": source["id"], "source_commit": request["source_commit"],
                 "games_commit": request["games_commit"], "receipt": receipt, "gates": verified_gates}
 
 
 class Catalog:
     def __init__(self, publisher):
-        self.publisher, self.games, self.events = publisher, {}, []
+        self.publisher, self.games, self.events, self.upstream = publisher, {}, [], {}
         for game_slug, title in feedback.game_catalog(publisher.root).items():
             source_repository, source_ref = publisher.repository, "HEAD"
             present = publisher.git("cat-file", "-t", f"HEAD:games/{game_slug}", check=False)
@@ -420,6 +443,10 @@ class Catalog:
                                      "head_revision": source["id"], "revisions": history, "publication_requests": [], "releases": [],
                                      "source_history_has_more": len(commits) > MAX_UPSTREAM_REVISIONS,
                                      "source_history_url": f"https://github.com/{source_repository}/commits/main/games/{game_slug}"}
+            self.upstream[game_slug] = {"source": source, "revisions": history,
+                                        "history_url": self.games[game_slug]["source_history_url"],
+                                        "has_more": len(commits) > MAX_UPSTREAM_REVISIONS}
+            self.games[game_slug]["submission_upstream_revision"] = source["id"]
         paths = sorted((publisher.root / DIRECTORY).glob("*.json"))
         if len(paths) > MAX_EVENTS:
             raise CommunityError("Community event limit requires operator archival")
@@ -443,6 +470,37 @@ class Catalog:
             raise CommunityError("Invalid community event sequence")
         for event in self.events:
             self.apply(event)
+        self.reconcile_upstream()
+
+    def local_tree(self, source):
+        result = self.publisher.git("rev-parse", "--verify", f"{source['source_commit']}:games/{source['source_game']}", check=False)
+        value = result.stdout.decode().strip()
+        return value if result.returncode == 0 and SHA.fullmatch(value) else None
+
+    def reconcile_upstream(self):
+        for game_slug, game in self.games.items():
+            upstream = self.upstream.get(game_slug)
+            game.update(upstream_revision=None, upstream_source=None, upstream_diverged=False)
+            if upstream is None:
+                continue
+            source = upstream["source"]
+            known = {item["id"] for item in game["revisions"]}
+            game["revisions"].extend(item for item in upstream["revisions"] if item["id"] not in known)
+            game.update(upstream_revision=source["id"], upstream_source=source,
+                        source_history_url=upstream["history_url"], source_history_has_more=upstream["has_more"])
+            if game["head_revision"] == source["id"] or game.get("submission_upstream_revision") == source["id"]:
+                continue
+            head = next(item for item in game["revisions"] if item["id"] == game["head_revision"])
+            upstream_tree, head_tree = self.local_tree(source), self.local_tree(head)
+            if upstream_tree is not None and upstream_tree == head_tree:
+                continue
+            released = next((item for item in reversed(game["releases"]) if item["revision_id"] == game["head_revision"]), None)
+            if released and upstream_tree is not None and (released.get("game_tree") or head_tree) and upstream_tree != (released.get("game_tree") or head_tree):
+                # The last creator head was released, so a subsequent trusted
+                # source edit starts the next revision. Never replace a draft.
+                game["head_revision"] = source["id"]
+            else:
+                game["upstream_diverged"] = True
 
     def apply(self, event):
         event_type = event["event_type"]
@@ -451,11 +509,13 @@ class Catalog:
             if game["slug"] in self.games and self.games[game["slug"]].get("community_created"):
                 raise CommunityError("Duplicate community game identity")
             self.games[game["slug"]] = {**game, "community_created": True,
-                                       "revisions": [event["revision"]], "publication_requests": [], "releases": []}
+                                       "revisions": [event["revision"]], "publication_requests": [], "releases": [],
+                                       "submission_upstream_revision": None}
         elif event_type == "revision_submitted":
             game = self.require_game(event["target"])
             game["head_revision"] = event["revision"]["id"]
             game["revisions"].append(event["revision"])
+            game["submission_upstream_revision"] = event.get("upstream_revision", event["request"]["expected_revision"])
         elif event_type == "publication_requested":
             self.require_game(event["target"])["publication_requests"].append(
                 {"request_id": event["request_id"], "revision_id": event["request"]["revision_id"],
@@ -494,6 +554,7 @@ class CommunityPublisher(feedback_server.Publisher):
         self.repository = globals()["repository"](repository)
         self.games_repository = globals()["repository"](games_repository)
         self.companion_sources, self.companion_synced_at = companion_sources, 0
+        self._catalog_cache = None
         self.github_factory = github_factory
         self.community_journal = Path(root).resolve() / ".git/blueengine-community-inflight.json"
         super().__init__(root, **kwargs)
@@ -567,11 +628,16 @@ class CommunityPublisher(feedback_server.Publisher):
         if self.companion_sources and time.monotonic() - self.companion_synced_at > 300:
             # Only public Git objects enter a namespaced ref. Never check out or
             # run companion source inside the intake service.
-            self.git("fetch", "--quiet", "--no-tags", f"https://github.com/{self.games_repository}.git",
+            self.git("fetch", "--quiet", "--no-tags", "--no-write-fetch-head", f"https://github.com/{self.games_repository}.git",
                      f"refs/heads/main:{COMPANION_REF}")
             self.companion_synced_at = time.monotonic()
 
     def catalog(self):
+        cached = self._catalog_cache
+        if cached is not None and time.monotonic() - cached[0] < CATALOG_CACHE_SECONDS:
+            # This immutable snapshot was confirmed against origin. Serving it
+            # does not contend with Git writes or trigger fetches per page view.
+            return cached[1]
         if not self.lock.acquire(timeout=0.25):
             raise feedback_server.PublicationError("Another publication is active; retry shortly")
         try:
@@ -579,7 +645,9 @@ class CommunityPublisher(feedback_server.Publisher):
             self.require_clean()
             self.sync()
             self.safe_directories()
-            return Catalog(self)
+            catalog = Catalog(self)
+            self._catalog_cache = (time.monotonic(), catalog)
+            return catalog
         finally:
             self.lock.release()
 
@@ -614,10 +682,12 @@ class CommunityPublisher(feedback_server.Publisher):
                 if request["expected_revision"] != game["head_revision"]:
                     raise Conflict("Game changed since your checkout; fetch its latest history before updating")
                 source = self.submitted_source(request, target, actor, client, received)
+                if game.get("upstream_source"):
+                    client.require_current_upstream(source, game["upstream_source"])
                 if any(item["id"] == source["id"] for item in game["revisions"]):
                     raise Conflict("This source revision is already in the game's history")
                 source["parent_revision"] = game["head_revision"]
-                event.update(event_type="revision_submitted", revision=source)
+                event.update(event_type="revision_submitted", revision=source, upstream_revision=game.get("upstream_revision"))
             elif action == "publish":
                 if request["revision_id"] != game["head_revision"]:
                     raise Conflict("Only the current revision can be queued; fetch the latest game history")
@@ -626,6 +696,8 @@ class CommunityPublisher(feedback_server.Publisher):
                 # obtained the revision through a different session or account.
                 client.verify_source(self.repository, source["source_repository"], source["source_commit"], source["source_game"],
                                      require_write=actor["role"] != "maintainer")
+                if game.get("upstream_source"):
+                    client.require_current_upstream(source, game["upstream_source"])
                 event.update(event_type="publication_requested",
                              publication=client.pull_request(self.repository, game, source, request["request_id"]))
             else:
@@ -676,6 +748,7 @@ class CommunityPublisher(feedback_server.Publisher):
                     if (previous["request"] != request or previous["actor"]["login"] != actor["login"]
                             or previous["event_type"] != expected_type or previous["target"] != expected_target):
                         raise Conflict("Request ID already identifies a different operation")
+                    self._catalog_cache = None
                     return previous
                 event = self.prepare(action, target, request, actor, client, catalog, received)
                 relative = f"{DIRECTORY.as_posix()}/{request['request_id']}.json"
@@ -695,6 +768,7 @@ class CommunityPublisher(feedback_server.Publisher):
                     pushed = self.git("push", "--quiet", "origin", f"HEAD:refs/heads/{self.branch}", check=False)
                     if pushed.returncode == 0:
                         self.clear_community_journal()
+                        self._catalog_cache = None
                         return event
                 except Exception:
                     self.rollback(base, {relative})
@@ -721,6 +795,10 @@ def validate_event(event):
             or not LOGIN.fullmatch(actor["login"]) or actor["role"] not in ("maintainer", "contributor")):
         raise CommunityError("Invalid stored authenticated provenance")
     common = {"schema_version", "request_id", "sequence", "created_at", "actor", "request", "target", "event_type"}
+    if action == "revision" and "upstream_revision" in event:
+        common.add("upstream_revision")
+        if event["upstream_revision"] is not None:
+            revision_id(event["upstream_revision"])
     additional = {"create": {"game", "revision"}, "fork": {"game", "revision"}, "revision": {"revision"},
                   "publish": {"publication"}, "release": {"release"}, "feedback": {"feedback"}}[action]
     if set(event) != common | additional:
@@ -774,12 +852,18 @@ def validate_event(event):
                 raise CommunityError("Invalid stored native publication request")
         elif action == "release":
             release = event["release"]
+            if "game_tree" in release:
+                sha(release["game_tree"])
+            if "source_kind" in release and (
+                    release["source_kind"] not in ("engine", "companion")
+                    or set(release.get("gates", {})) != (COMPANION_GATES if release["source_kind"] == "companion" else ENGINE_GATES)):
+                raise CommunityError("Invalid native source ownership gate set")
             if (actor["role"] != "maintainer" or release.get("state") != "published"
                     or release.get("revision_id") != event["request"]["revision_id"]
                     or release.get("receipt") != event["request"]["receipt"]
                     or release.get("source_commit") != event["request"]["source_commit"]
                     or release.get("games_commit") != event["request"]["games_commit"]
-                    or set(release.get("gates", {})) not in (set(RELEASE_GATES), COMPANION_GATES)):
+                    or set(release.get("gates", {})) not in (ENGINE_GATES, COMPANION_GATES)):
                 raise CommunityError("Invalid stored native production release receipt")
 
 

@@ -19,6 +19,7 @@ class FakeGitHub:
     pins = {}
     pulls = {}
     sources = []
+    stale_sources = set()
 
     def __init__(self, token):
         if token not in ("owner_token", "cousin_token", "alice_token", "bob_token"):
@@ -33,6 +34,10 @@ class FakeGitHub:
         if commit not in ("a" * 40, "b" * 40, "c" * 40):
             raise store.CommunityError("Unknown source commit")
         self.sources.append((source_repository, commit, game))
+
+    def require_current_upstream(self, source, upstream):
+        if source["source_commit"] in self.stale_sources:
+            raise store.Conflict("Merge the latest upstream source before publishing")
 
     def pin_source(self, source, game_slug):
         branch = f"blueengine-community/{game_slug}/{source['id']}"
@@ -74,6 +79,7 @@ class CommunityTests(unittest.TestCase):
         git(self.seed, "push", "origin", "main")
         git(self.base, "clone", str(self.remote), str(self.root))
         FakeGitHub.pins, FakeGitHub.pulls, FakeGitHub.sources = {}, {}, []
+        FakeGitHub.stale_sources = set()
         self.publisher = store.CommunityPublisher(self.root, github_factory=FakeGitHub)
         self.addCleanup(self.publisher.close)
         self.http = server.CommunityServer(("127.0.0.1", 0), self.publisher,
@@ -127,6 +133,7 @@ class CommunityTests(unittest.TestCase):
         git(self.seed, "add", ".")
         git(self.seed, "commit", "-m", "Evolve upstream")
         git(self.seed, "push", "origin", "main")
+        self.publisher._catalog_cache = None  # Observe the next public refresh boundary.
         self.assertNotEqual(self.game()["head_revision"], parent["head_revision"])
         self.assertIn(parent["head_revision"], [revision["id"] for revision in self.game()["revisions"]])
         self.assertEqual(self.game("alice-relay")["head_revision"], parent["head_revision"])
@@ -192,7 +199,9 @@ class CommunityTests(unittest.TestCase):
         request, receipt = self.fork()
         path = f"{server.PREFIX}/games/rule-relay/forks"
         head = git(self.remote, "rev-parse", "main")
+        self.game()
         self.assertEqual(self.request(path, request, token="alice_token")[2], receipt)
+        self.assertIsNone(self.publisher._catalog_cache)
         self.assertEqual(git(self.remote, "rev-parse", "main"), head)
         self.assertEqual(self.request(path, request, token="bob_token")[0], 409)
         self.assertEqual(self.request(path, {**request, "title": "Spoofed"}, token="alice_token")[0], 409)
@@ -204,7 +213,7 @@ class CommunityTests(unittest.TestCase):
                    "receipt": {"page": "https://kevstermcgee.github.io/BlueEngineGames/games/rule-relay/",
                                "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/native-games-" + "b" * 12 + "-v1",
                                "installer_sha256": "c" * 64, "zip_sha256": "d" * 64, "verified_at": "2026-10-20T12:00:00+00:00"},
-                   "gates": {label: index for index, label in enumerate(store.RELEASE_GATES, 1)}}
+                   "gates": {label: index for index, label in enumerate(store.RELEASE_GATES, 1) if label in store.ENGINE_GATES}}
         path = f"{server.PREFIX}/games/rule-relay/releases"
         self.assertEqual(self.request(path, payload, token="alice_token")[0], 403)
         status, _, body = self.request(path, payload, token="cousin_token")
@@ -293,6 +302,44 @@ class CommunityTests(unittest.TestCase):
                                        {"request_id": str(uuid4()), "slug": "legacy-variant", "title": "Legacy Variant"}, token="alice_token")
         self.assertEqual(status, 200, body)
         self.assertEqual(self.game("legacy-variant")["revisions"][0]["source_commit"], commit)
+
+    def test_public_catalog_cache_avoids_git_contention_and_writes_invalidate_it(self):
+        first = self.game()
+        with patch.object(self.publisher, "git", side_effect=AssertionError("Cached public reads must not invoke Git")):
+            self.publisher.lock.acquire()
+            try:
+                self.assertEqual(self.game()["head_revision"], first["head_revision"])
+                self.assertEqual(self.request(f"{server.PREFIX}/games/rule-relay/history", token=None)[0], 200)
+            finally:
+                self.publisher.lock.release()
+        self.fork()
+        self.assertEqual(self.game()["forks"][0]["slug"], "alice-relay")
+
+    def test_direct_upstream_edits_preserve_draft_head_and_block_stale_submission_and_publish(self):
+        original = self.game()
+        update = {"request_id": str(uuid4()), "expected_revision": original["head_revision"],
+                  "source_commit": "a" * 40, "version": "draft-v1", "note": "Work in progress"}
+        status, _, body = self.request(f"{server.PREFIX}/games/rule-relay/revisions", update)
+        self.assertEqual(status, 200, body)
+        draft = self.game()
+        self.assertFalse(draft["upstream_diverged"])
+        git(self.seed, "pull", "--ff-only", "origin", "main")
+        (self.seed / "games/rule-relay/source-change.txt").write_text("A trusted direct source improvement")
+        git(self.seed, "add", ".")
+        git(self.seed, "commit", "-m", "Direct upstream improvement")
+        git(self.seed, "push", "origin", "main")
+        self.publisher._catalog_cache = None
+        observed = self.game()
+        self.assertEqual(observed["head_revision"], draft["head_revision"])
+        self.assertNotEqual(observed["upstream_revision"], original["head_revision"])
+        self.assertTrue(observed["upstream_diverged"])
+        self.assertIn(observed["upstream_revision"], [item["id"] for item in observed["revisions"]])
+        FakeGitHub.stale_sources = {"a" * 40, "b" * 40}
+        publication = {"request_id": str(uuid4()), "revision_id": draft["head_revision"]}
+        self.assertEqual(self.request(f"{server.PREFIX}/games/rule-relay/publish", publication)[0], 409)
+        stale = {**update, "request_id": str(uuid4()), "expected_revision": draft["head_revision"], "source_commit": "b" * 40}
+        self.assertEqual(self.request(f"{server.PREFIX}/games/rule-relay/revisions", stale)[0], 409)
+        self.assertEqual(self.game()["head_revision"], draft["head_revision"])
 
 
 if __name__ == "__main__":

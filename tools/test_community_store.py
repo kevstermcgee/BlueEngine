@@ -19,6 +19,21 @@ class GitHubContractTests(unittest.TestCase):
         with patch.object(store.GitHub, "api", side_effect=[{"login": "alice"}, {"permissions": {"pull": True}}]):
             self.assertEqual(self.client().actor(store.REPOSITORY)["role"], "contributor")
 
+    def test_upstream_updates_require_identical_source_or_confirmed_ancestry(self):
+        source = store.source_revision("alice/BlueEngine", "a" * 40, "alice-game")
+        upstream = store.source_revision(store.REPOSITORY, "b" * 40, "alice-game")
+        client = self.client()
+        with patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", side_effect=AssertionError("Identical trees need no compare")):
+            client.require_current_upstream(source, upstream)
+        with patch.object(client, "game_tree", side_effect=["1" * 40, "2" * 40]), \
+                patch.object(client, "api", return_value={"status": "ahead", "merge_base_commit": {"sha": "b" * 40}}):
+            client.require_current_upstream(source, upstream)
+        for comparison in (None, {"status": "diverged", "merge_base_commit": {"sha": "b" * 40}},
+                           {"status": "ahead", "merge_base_commit": {"sha": "c" * 40}}):
+            with patch.object(client, "game_tree", side_effect=["1" * 40, "2" * 40]), patch.object(client, "api", return_value=comparison):
+                with self.assertRaises(store.Conflict):
+                    client.require_current_upstream(source, upstream)
+
     def test_maintainers_can_queue_a_verified_cousin_fork_without_personal_fork_write(self):
         info = {"full_name": "cousin/BlueEngine", "source": {"full_name": store.REPOSITORY},
                 "permissions": {"push": False}, "private": False}
@@ -105,26 +120,31 @@ class GitHubContractTests(unittest.TestCase):
                    "installer_sha256": "d" * 64, "zip_sha256": "e" * 64, "verified_at": "2026-10-20T12:00:00+00:00"}
         request = {"request_id": str(uuid4()), "revision_id": source["id"], "source_commit": "b" * 40,
                    "games_commit": "c" * 40, "receipt": receipt,
-                   "gates": {label: index for index, label in enumerate(store.RELEASE_GATES, 1)}}
+                   "gates": {label: index for index, label in enumerate(store.RELEASE_GATES, 1) if label in store.ENGINE_GATES}}
         release = {"draft": False, "prerelease": False, "html_url": receipt["release"],
                    "assets": [{"name": "alice-game-setup-windows-x64.exe", "state": "uploaded", "digest": "sha256:" + "d" * 64},
                               {"name": "alice-game-windows-x64.zip", "state": "uploaded", "digest": "sha256:" + "e" * 64}]}
-        runs = []
+        runs = {}
         for label, (scope, workflow) in store.RELEASE_GATES.items():
-            event = "workflow_dispatch" if label == "windows-installer-review" else "workflow_run" if label == "download-page" else "push"
-            runs.append({"head_sha": "b" * 40 if scope == "engine" else "c" * 40,
+            event = "workflow_dispatch" if label in ("windows-installer-review", "companion-native-checks") else "workflow_run" if label == "download-page" else "push"
+            runs[label] = {"head_sha": "b" * 40 if scope == "engine" else "c" * 40,
                          "status": "completed", "conclusion": "success", "head_branch": "main", "event": event,
-                         "path": ".github/workflows/" + workflow + "@main"})
+                         "path": ".github/workflows/" + workflow + "@main"}
+        engine_runs = [run for label, run in runs.items() if label in store.ENGINE_GATES]
         client = self.client()
         client.source_repositories = (store.REPOSITORY, store.GAMES_REPOSITORY)
         catalog = {"type": "file", "encoding": "base64", "size": 100,
                    "content": base64.b64encode(json.dumps({"source_repository": store.REPOSITORY, "source_revision": "b" * 40}).encode()).decode()}
         with patch.object(client, "source_upstream", return_value=store.REPOSITORY), \
-                patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", side_effect=[catalog, release, *runs]):
+                patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", side_effect=[catalog, release, *engine_runs]):
             result = client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, source, request)
             self.assertEqual(result["state"], "published")
-            self.assertEqual(set(result["gates"]), set(store.RELEASE_GATES))
+            self.assertEqual(set(result["gates"]), store.ENGINE_GATES)
         with patch.object(client, "source_upstream", return_value=store.REPOSITORY), patch.object(client, "game_tree", side_effect=["f" * 40, "1" * 40]):
+            with self.assertRaises(store.CommunityError):
+                client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, source, request)
+        with patch.object(client, "source_upstream", return_value=store.REPOSITORY), \
+                patch.object(client, "game_tree", side_effect=["f" * 40, "f" * 40, "2" * 40]):
             with self.assertRaises(store.CommunityError):
                 client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, source, request)
         for bad in ({**release, "draft": True}, {**release, "assets": []}):
@@ -132,17 +152,28 @@ class GitHubContractTests(unittest.TestCase):
                     patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", return_value=bad):
                 with self.assertRaises(store.CommunityError):
                     client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, source, request)
-        wrong = [{**runs[0], "head_sha": "9" * 40}, *runs[1:]]
+        wrong = [{**engine_runs[0], "head_sha": "9" * 40}, *engine_runs[1:]]
         with patch.object(client, "source_upstream", return_value=store.REPOSITORY), \
                 patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", side_effect=[catalog, release, *wrong]):
             with self.assertRaises(store.CommunityError):
                 client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, source, request)
         companion_source = store.source_revision("alice/BlueEngineGames", "a" * 40, "alice-game")
-        companion_request = {**request, "gates": {key: value for key, value in request["gates"].items() if key in store.COMPANION_GATES}}
+        companion_request = {**request, "gates": {label: index for index, label in enumerate(store.RELEASE_GATES, 1) if label in store.COMPANION_GATES}}
+        companion_runs = [run for label, run in runs.items() if label in store.COMPANION_GATES]
         with patch.object(client, "source_upstream", return_value=store.GAMES_REPOSITORY), \
-                patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", side_effect=[catalog, release, *runs[2:]]):
+                patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", side_effect=[catalog, release, *companion_runs]):
             result = client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, companion_source, companion_request)
             self.assertEqual(set(result["gates"]), store.COMPANION_GATES)
+        missing_native = {**companion_request, "gates": {label: run for label, run in companion_request["gates"].items() if label != "companion-native-checks"}}
+        with patch.object(client, "source_upstream", return_value=store.GAMES_REPOSITORY):
+            with self.assertRaises(store.CommunityError):
+                client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, companion_source, missing_native)
+        mismatched_review = [dict(run) for run in companion_runs]
+        mismatched_review[-1]["head_branch"] = "unrelated-branch"
+        with patch.object(client, "source_upstream", return_value=store.GAMES_REPOSITORY), \
+                patch.object(client, "game_tree", return_value="f" * 40), patch.object(client, "api", side_effect=[catalog, release, *mismatched_review]):
+            with self.assertRaises(store.CommunityError):
+                client.verify_release(store.REPOSITORY, store.GAMES_REPOSITORY, game, companion_source, companion_request)
         for wrong_pin in ({"source_repository": store.REPOSITORY, "source_revision": "9" * 40},
                           {"source_repository": "attacker/Engine", "source_revision": "b" * 40}):
             wrong_catalog = {**catalog, "content": base64.b64encode(json.dumps(wrong_pin).encode()).decode()}
