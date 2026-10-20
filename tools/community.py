@@ -231,7 +231,7 @@ def checkout(game, destination):
     return {"checkout": str(destination), "game": str(target), "source": metadata["source"],
             "creator_cli": str(Path(__file__).resolve()),
             "next": f"Read {target / 'AGENTS.md'}, make the game your own, and retain community-source.json. "
-                    "Use a new icon and title. Commit/push the source, submit a revision, then request publication. "
+                    "Use a new icon and title. Keep the BlueEngine Games opening card centered and text-only; do not reuse retired Feta/white-rat artwork in new art or branding. Commit/push the source, submit a revision, then request publication. "
                     "Native Windows installer gates remain required. For companion-owned source, bind its engine "
                     "dependency using the project's documented tooling before checking it. Use creator_cli from "
                     "the current tools checkout for collaboration commands if the pinned source predates them. "
