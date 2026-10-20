@@ -112,12 +112,13 @@ and verifies the production release and public downloads. It preserves the
 companion's owned source and uses its existing native build methods. It does not
 export the engine catalog over a modified companion game. The creator service's
 publication request supplies the correct source lane in its maintainer command.
-Cargo games use an inline `vesper3d` dependency with `package = "be2"` and a
-`path` to BlueEngine, retaining their existing feature flags. The release harness
-binds that path to the catalog's checked engine revision and restores the source
-manifest afterward. An old Git SDK pin or an unrecognized binding must be migrated
-and its lockfile updated before publication; it cannot silently bypass engine
-updates or retain the retired studio artwork.
+Cargo games use one inline `vesper3d` dependency with `package = "be2"`,
+retaining their existing feature flags. Native checks and releases temporarily
+bind either its path or Git source to the catalog's checked engine revision and
+verify Cargo actually resolved that engine. They restore the original manifest
+and lockfile afterward. Other locked dependencies remain unchanged; a dependency
+layout or lock incompatibility requires an explicit source update before release.
+An old authoring pin cannot silently bypass the catalog's engine improvements.
 The adapter checks both the authored catalog and current public main to prevent
 editing engine-managed files through the companion lane. A new companion fork
 can use its own unowned `games/SLUG` folder directly: the exporter preserves
