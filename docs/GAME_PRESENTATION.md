@@ -2,6 +2,7 @@
 
 Every playable BlueEngine game should meet this baseline before delivery:
 
+- The shared BlueEngine Games startup card uses simple centered text and a blue underline.
 - F toggles fullscreen in place; F11 may be an alias. Never restart the renderer or match.
 - Escape opens a compact Resume / Controls / Quit menu. Opening it releases the mouse
   and suppresses movement, fire, reload, weapon selection and look. Resume clicks must

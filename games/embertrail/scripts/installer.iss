@@ -1,7 +1,7 @@
 [Setup]
 AppId=BlueEngineGames.embertrail
 AppName=Embertrail
-AppVersion=0.2.3
+AppVersion=0.2.4
 AppPublisher=BlueEngine Games
 DefaultDirName={localappdata}\BlueEngine\Games\embertrail
 DefaultGroupName=BlueEngine Games
