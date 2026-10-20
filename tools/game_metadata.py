@@ -273,6 +273,11 @@ def _zip_bounds(stream, size):
             break
     if found is None:
         raise MetadataError('invalid ZIP end record')
+    # zipfile chooses the last signature without validating its comment length.
+    # A later fake record in the comment must not override the directory whose
+    # allocation limits we just validated (including on sparse multi-GB inputs).
+    if tail.rfind(b'PK\x05\x06') != found:
+        raise MetadataError('ambiguous ZIP end record inside archive comment')
     disk, start_disk, disk_count, count, directory_size, directory_offset = struct.unpack_from('<HHHHII', tail, found + 4)
     if disk or start_disk or disk_count != count:
         raise MetadataError('multi-disk ZIP is unsupported')

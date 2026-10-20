@@ -75,6 +75,9 @@ bytes, its byte length as an unsigned 8-byte little-endian integer, and the
   binary envelope is the ZIP comment. Both copies must match. No outside sidecar
   is needed. Readers reject missing copies, duplicate/case-aliased or unsafe
   member paths, more than 20,000 entries, and central directories over 16 MiB.
+  An extra end-of-central-directory signature (`PK` followed by bytes `05 06`)
+  inside the ZIP comment is rejected, keeping bounded preflight and stdlib ZIP
+  parsing on the same directory record.
   ZIP64 is supported within those inspection limits. The browser reads bounded
   slices and the stored manifest; it does not expand game payloads.
 

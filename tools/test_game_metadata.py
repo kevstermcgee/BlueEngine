@@ -174,6 +174,19 @@ class MetadataTests(unittest.TestCase):
                 metadata.embed(path, document())
             self.assertEqual(path.read_bytes(), original)
 
+    def test_fake_directory_in_zip_comment_cannot_bypass_inspection_limits(self):
+        path = self.root / 'ambiguous.zip'
+        with zipfile.ZipFile(path, 'w') as archive:
+            archive.writestr('game.exe', b'owned payload')
+            # This fake EOCD deliberately has a comment length that misses EOF.
+            # stdlib zipfile still picks it, whereas a validated ZIP reader must
+            # keep the real record and its bounded directory authoritative.
+            archive.comment = struct.pack('<4sHHHHIIH', b'PK\x05\x06', 0, 0, 1, 1,
+                                          metadata.MAX_DIRECTORY + 1, 0, 0) + b'x'
+        with mock.patch.object(metadata.zipfile, 'ZipFile', side_effect=AssertionError('unbounded archive parser reached')):
+            with self.assertRaisesRegex(metadata.MetadataError, 'ambiguous ZIP end record'):
+                metadata.extract(path)
+
     def test_public_lineage_is_kept_without_claiming_parent_as_current_source(self):
         (self.root / 'Cargo.toml').write_text('[package]\nname="child-game"\nversion="1.0.0"\n')
         receipt = {'source': document()['source'], 'lineage': {'root_game': 'ancestor', 'parent_game': 'parent', 'parent_revision': 'a' * 64, 'revision_id': 'b' * 64}}
