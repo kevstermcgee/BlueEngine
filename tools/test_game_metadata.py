@@ -158,11 +158,17 @@ class MetadataTests(unittest.TestCase):
                     metadata.extract(path)
 
     def test_unsafe_archive_members_and_script_encodings_are_not_stamped(self):
-        for member in ('../outside.exe', './blueengine.game.json', 'dir\\play.exe', '/root.exe', 'NUL.txt', 'dir/trailing. '):
+        for member in ('../outside.exe', './blueengine.game.json', 'dir\\play.exe', '/root.exe', 'NUL.txt', 'dir/trailing. ',
+                       'dir/play.exe\0ignored', 'blueengine.game.json\0ignored'):
             with self.subTest(member=member):
                 path = self.root / 'unsafe.zip'
+                placeholder = 'x' * len(member)
                 with zipfile.ZipFile(path, 'w') as archive:
-                    archive.writestr(member, b'payload')
+                    archive.writestr(placeholder, b'payload')
+                # ZIP writers normalize Windows separators and NUL themselves.
+                # Inject the actual hostile bytes into both equal-sized headers
+                # so the reader is tested against the original archive names.
+                path.write_bytes(path.read_bytes().replace(placeholder.encode('ascii'), member.encode('ascii')))
                 original = path.read_bytes()
                 with self.assertRaises(metadata.MetadataError):
                     metadata.embed(path, document())

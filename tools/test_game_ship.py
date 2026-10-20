@@ -2357,11 +2357,14 @@ def is_running(image_name):
     return image_name.lower() in done.stdout.lower()
 
 
-def windows_game(tmp, title='Zephyr Quest', seed=1, exe='zephyr', exe_bytes=b'MZ stand-in exe', **kwargs):
+def windows_game(tmp, title='Zephyr Quest', seed=1, exe='zephyr', exe_bytes=None, **kwargs):
     """A game project whose release build (a stand-in file) sits in a redirected target folder."""
     root = make_game(Path(tmp) / 'game', title=title, seed=seed, exe=exe, **kwargs)
     release = Path(tmp) / 'redirected target' / 'release'
     release.mkdir(parents=True, exist_ok=True)
+    if exe_bytes is None:
+        from tools.test_game_metadata import pe
+        exe_bytes = pe()
     (release / f'{exe}.exe').write_bytes(exe_bytes)
     return root, {'CARGO_TARGET_DIR': str(release.parent)}
 

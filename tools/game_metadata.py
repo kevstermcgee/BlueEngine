@@ -312,7 +312,10 @@ def _zip_extract(stream, size, *, allow_manifest_only=False):
             if len(archive.infolist()) > MAX_ENTRIES:
                 raise MetadataError('too many ZIP entries')
             for item in archive.infolist():
-                member_name = item.filename.rstrip('/')
+                # ZipInfo.filename truncates NUL and normalizes backslashes on
+                # Windows. Validate the original archive name before that can
+                # disguise an unsafe member as a portable path.
+                member_name = item.orig_filename.rstrip('/')
                 if member_name == '.':
                     raise MetadataError('ZIP entries must use canonical relative paths')
                 _relative(member_name)
