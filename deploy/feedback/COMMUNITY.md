@@ -78,8 +78,8 @@ Linux/Windows game, installer, production, and Pages receipts. Both lanes verify
 exact engine pin, public release asset hashes, and the registered game source.
 
 The existing nightly runner consumes community feedback and publication requests.
-Install its reviewed `run.py` and sibling `companion.py`, plus its prompt and
-result schema together; preserve private configuration and feedback queue state. Keep the existing nightly timer. See the
+Install its reviewed `run.py` and siblings `companion.py` and `engine_games.py`,
+plus its prompt and result schema together; preserve private configuration and feedback queue state. Keep the existing nightly timer. See the
 [daily runner contract](../../tools/machine/blueengine-nightly/README.md) and
 [collaborative workflow](../../docs/COLLABORATION.md) for developer commands and
 the account invitation steps.
