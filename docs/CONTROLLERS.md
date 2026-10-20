@@ -85,6 +85,38 @@ y = 0 as ground when it checks for floating props.
 Look and stick input: `ClientInput::look_delta` is `mouse_look` plus `stick_look`; the stick term is scaled
 by the engine frame clock (`ClientInput::frame_seconds`), not macroquad's bumpy `get_frame_time()`.
 
+### Custom simulations and voxel worlds
+
+Import the body and movement input from `viewer::controller`, and its validated profile from
+`viewer::profile`. Profile dimensions and `jump_height` are metres; speeds are metres per second.
+`jump_height` defaults to `0.35` and accepts finite values in `0..=3`.
+
+```rust
+use vesper3d::{
+    math::V,
+    viewer::{controller::{Collider, Controller, Movement}, profile::ControllerProfile},
+};
+
+let profile = ControllerProfile { jump_height: 1.0, ..ControllerProfile::default() };
+let mut body = Controller::for_profile(profile, V(0., 2., 0.), 0.)?; // feet position, yaw
+body.set_floor(None); // terrain colliders provide the ground, including pits
+// In the authoritative fixed tick, pass the current nearby solid block boxes:
+let nearby_blocks = [Collider { min: V(-1., 0., -1.), max: V(1., 1., 1.) }];
+body.update(Movement::default(), 1. / 60., &nearby_blocks); // replace with this tick's intent
+```
+
+Voxel worlds can supply nearby block `Collider { min, max }` boxes to the same controller.
+Include every box the body can contact during the tick, including headroom and step-up clearance;
+keep those boxes consistent with the rendered blocks. The controller does not load terrain chunks.
+
+In a custom simulation's [`Snapshot`](SAVE_STATE.md#a-game-with-its-own-simulation) state, store the
+complete `viewer::controller::ControllerState` from `body.network_state()` and restore it with
+`body.restore_network_state(&saved_body)`. It includes position, yaw, pitch, smoothed velocity, feet,
+body height, vertical velocity, grounded state and horizontal push. Recreate the same profile, floor,
+gravity and push-drag configuration before restoring; these are not serialized in `ControllerState`.
+Save the terrain and other authoritative state alongside it, then verify continuation with
+`snapshot::assert_resumes_as_promised`.
+
 ## Verification
 
 `cargo test --locked --lib gamepad` covers dead zones, analog magnitude, bounded

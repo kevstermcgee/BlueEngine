@@ -20,4 +20,11 @@ an Intel N97 mini PC:
 - A world that renders as an empty void is almost always a wrongly wound quad or an oversize template: use
   `Template::quad_facing`, and see `Template::split`.
 
-Without `xvfb-run` the helper says so and exits with status 2; nothing else is needed.
+Use a new `--out` directory for each run; an existing directory is rejected with status 2 so completed captures stay intact.
+The helper retains `native.stdout.log`, `native.stderr.log`, `xvfb.stderr.log` and `subsystems.json` in the output
+directory even when the virtual display fails before the game can create it, or the run times out. On failure it prints
+the output directory and the tail of the server diagnostics. An `XOpenDisplay()` failure can come from Xvfb being unable
+to bind local display sockets; inspect `xvfb.stderr.log` before retrying on a display-capable worker. Failed captures
+leave rendering evidence marked failed and do not establish current visual or control behavior.
+
+Without `xvfb-run` the helper says so and exits with status 2.

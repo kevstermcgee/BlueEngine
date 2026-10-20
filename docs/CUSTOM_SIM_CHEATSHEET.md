@@ -33,6 +33,9 @@ The simulation implements `Simulation { type Input; fn step; fn state_hash; fn h
 Test with `assert_deterministic(|| Sim::new(7), &inputs)`, `run_inputs`, `snapshot::assert_resumes_as_promised`.
 Random numbers: `Rng::new(seed)`: `range(lo,hi)`, `below(n)`, `chance(p)`, `sign()`, `pick(&items)`, `shuffle(&mut v)`.
 
+For a player body, including voxel block collision, use `viewer::controller::Controller` with
+`viewer::profile::ControllerProfile`; see [movement setup and complete saved state](CONTROLLERS.md#custom-simulations-and-voxel-worlds).
+
 ## Devices (`game_input::ClientInput`, `game_client::GameShell`, `gamepad`)
 
 `input.begin_frame_with_keyboard(&mut shell, capture_cursor, focused, platform::keyboard())`,

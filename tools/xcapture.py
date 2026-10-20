@@ -22,12 +22,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def build_command(game, frames, size, out, extra, xvfb='xvfb-run'):
+def build_command(game, frames, size, out, extra, xvfb='xvfb-run', xvfb_log=None):
     """The command line for one capture run (pure, so it is testable without a display)."""
     width, height = size.split('x')
     last = max(int(f) for f in frames.split(','))
     audio = [] if '--audible' in extra else ['--mute']
-    return [xvfb, '-a', '-s', f'-screen 0 {width}x{height}x24', str(game),
+    diagnostics = ['-e', str(xvfb_log)] if xvfb_log is not None else []
+    return [xvfb, '-a', *diagnostics, '-s', f'-screen 0 {width}x{height}x24', str(game),
             '--capture', str(out), '--frames', frames, '--exit-after', str(last + 20),
             '--size', size, *audio, *extra]
 
@@ -54,34 +55,55 @@ def main(argv):
         print(f'{game} is not a file: build the game first', file=sys.stderr)
         return 2
     out = Path(args.out) if args.out else Path(tempfile.mkdtemp(prefix='xcapture-')) / 'shots'
-    command = build_command(game, args.frames, args.size, out, extra)
+    if out.exists():
+        print(f'{out} already exists: choose a new capture directory', file=sys.stderr)
+        return 2
     env = {**os.environ, 'LIBGL_ALWAYS_SOFTWARE': '1'}
-    try:
-        done = subprocess.run(command, env=env, capture_output=True, text=True, timeout=args.timeout)
-    except subprocess.TimeoutExpired:
-        print(f'timed out after {args.timeout} s: ask for fewer or earlier frames', file=sys.stderr)
-        return 3
+    timed_out = False
+    # The game owns creation of its capture directory. Keep server diagnostics
+    # elsewhere until it exits so a failed Xvfb startup is retained too.
+    with tempfile.TemporaryDirectory(prefix='xcapture-xvfb-') as log_dir:
+        xvfb_log = Path(log_dir) / 'xvfb.stderr.log'
+        command = build_command(game, args.frames, args.size, out, extra, xvfb_log=xvfb_log)
+        try:
+            done = subprocess.run(command, env=env, capture_output=True, text=True, timeout=args.timeout)
+        except subprocess.TimeoutExpired as error:
+            timed_out = True
+            # TimeoutExpired can carry bytes even when text=True was requested.
+            def decoded(value):
+                return value.decode('utf-8', errors='replace') if isinstance(value, bytes) else value or ''
+
+            done = subprocess.CompletedProcess(command, 3, decoded(error.stdout), decoded(error.stderr))
+        server_stderr = xvfb_log.read_text(encoding='utf-8', errors='replace') if xvfb_log.exists() else ''
+    out.mkdir(parents=True, exist_ok=True)
     shots = sorted(out.glob('*.png'))
     for line in done.stdout.splitlines():
-        if line.startswith('{"frame"'):
-            print(json.loads(line)['path'])
+        if line.startswith('{"frame"') and not timed_out:
+            try:
+                print(json.loads(line)['path'])
+            except (ValueError, KeyError, TypeError):
+                print(line)
         else:
             print(line)  # retain gameplay/audio/performance evidence from the executable
     # Keep worker diagnostics even when the render process exits successfully.
-    if out.is_dir():
-        (out / 'native.stdout.log').write_text(done.stdout, encoding='utf-8')
-        (out / 'native.stderr.log').write_text(done.stderr, encoding='utf-8')
+    (out / 'native.stdout.log').write_text(done.stdout, encoding='utf-8')
+    (out / 'native.stderr.log').write_text(done.stderr, encoding='utf-8')
+    (out / 'xvfb.stderr.log').write_text(server_stderr, encoding='utf-8')
     import importlib.util
     spec = importlib.util.spec_from_file_location('be_capture_evidence', ROOT / 'templates/game_review.py')
     review = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(review)
     evidence = review.capture_subsystems(done.stdout, '--audible' not in extra)
     evidence['rendering'] = 'captured' if shots and done.returncode == 0 else 'failed'
-    if out.is_dir():
-        (out / 'subsystems.json').write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
+    (out / 'subsystems.json').write_text(json.dumps(evidence, indent=2) + '\n', encoding='utf-8')
     print(json.dumps({'capture_evidence': evidence}))
     if done.returncode or not shots:
+        if timed_out:
+            print(f'timed out after {args.timeout} s: ask for fewer or earlier frames', file=sys.stderr)
         print(done.stderr[-1500:] or done.stdout[-1500:], file=sys.stderr)
+        if server_stderr:
+            print('Xvfb diagnostics:\n' + server_stderr[-1500:], file=sys.stderr)
+        print(f'capture diagnostics: {out}', file=sys.stderr)
         return done.returncode or 1
     if args.sheet and len(shots) > 1:
         sheet = out / 'sheet.png'
