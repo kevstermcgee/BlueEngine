@@ -138,7 +138,7 @@ class CommunityTests(unittest.TestCase):
         self.assertIn(parent["head_revision"], [revision["id"] for revision in self.game()["revisions"]])
         self.assertEqual(self.game("alice-relay")["head_revision"], parent["head_revision"])
         self.assertEqual(self.game()["forks"][0]["slug"], "alice-relay")
-        stored = json.loads(git(self.remote, "show", f"main:{store.DIRECTORY}/{request['request_id']}.json"))
+        stored = json.loads(git(self.remote, "show", f"main:{store.DIRECTORY.as_posix()}/{request['request_id']}.json"))
         self.assertEqual(stored, receipt["event"])
 
     def test_equal_maintainers_can_update_each_others_and_contributor_games(self):
@@ -189,7 +189,7 @@ class CommunityTests(unittest.TestCase):
             self.assertEqual(status, 200, body)
             self.assertEqual(body["event"]["feedback"]["kind"], kind)
             self.assertEqual(body["event"]["feedback"]["note"], payload["note"])
-            self.assertNotIn(token, git(self.remote, "show", f"main:{store.DIRECTORY}/{payload['request_id']}.json"))
+            self.assertNotIn(token, git(self.remote, "show", f"main:{store.DIRECTORY.as_posix()}/{payload['request_id']}.json"))
         self.assertEqual(self.request("/feedback", submission(), token=None)[0], 200)
         self.assertEqual(len(list((self.root / store.DIRECTORY).glob("*.json"))), 3)
         invalid = {**payload, "request_id": str(uuid4()), "actor": {"login": "owner"}}
@@ -247,7 +247,7 @@ class CommunityTests(unittest.TestCase):
     def test_interrupted_event_is_rolled_back_without_removing_unrelated_paths(self):
         identifier = str(uuid4())
         base = git(self.root, "rev-parse", "HEAD")
-        relative = f"{store.DIRECTORY}/{identifier}.json"
+        relative = f"{store.DIRECTORY.as_posix()}/{identifier}.json"
         self.publisher.save_community_journal({"request_id": identifier, "base": base, "commit": None})
         feedback.atomic_json(self.root / relative, {"interrupted": True})
         self.publisher.recover_interrupted()
