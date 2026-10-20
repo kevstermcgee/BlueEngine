@@ -36,17 +36,19 @@ class CompanionMaintenanceTests(unittest.TestCase):
             directory = self.source / 'games' / slug
             directory.mkdir(parents=True)
             (directory / 'Cargo.toml').write_text('[package]\nname="' + slug + '"\nversion="0.1.0"\n')
-        self.catalog = {'files': [{'path': 'games/owned/Cargo.toml'}, {'path': 'games/engine-game/Cargo.toml'}],
+        self.catalog = {'source_repository': 'fixture/engine', 'target_repository': 'fixture/games',
+                        'files': [{'path': 'games/engine-game/Cargo.toml', 'sha256': 'a' * 64}],
                         'preserved_paths': ['games/owned', 'games/other']}
         git(self.source, 'add', '.')
         git(self.source, 'commit', '-qm', 'Baseline')
         git(self.source, 'push', 'origin', 'main')
         self.base = git(self.source, 'rev-parse', 'HEAD')
+        self.catalog['source_revision'] = self.base
         # The actual user checkout must remain untouched, including unfinished edits.
         (self.source / 'site/view.mjs').write_text('valuable unfinished user work\n')
         self.work = self.run / 'worktree'
         git(self.source, 'worktree', 'add', '--detach', self.work, self.base)
-        self.config = {'games': str(self.source), 'games_repo': 'fixture/games',
+        self.config = {'games': str(self.source), 'games_repo': 'fixture/games', 'engine_repo': 'fixture/engine',
                        'check_timeout_seconds': 10, 'ci_timeout_seconds': 1, 'ci_poll_seconds': 1}
         self.log = io.StringIO()
         self.maintenance = companion.Maintenance(self.config, self.run, self.work, self.base, self.catalog, self.definitions,
@@ -91,11 +93,15 @@ class CompanionMaintenanceTests(unittest.TestCase):
                 self.maintenance.changes()
             path.unlink()
 
-    def test_unregistered_unpreserved_game_is_not_assumed_companion_owned(self):
+    def test_defined_unowned_game_is_companion_owned_but_preserve_cannot_override_managed_source(self):
         self.catalog['preserved_paths'] = ['games/owned']
         other = companion.Maintenance(self.config, self.run, self.work, self.base, self.catalog, self.definitions,
             command=self.command, git=git, write_json=lambda path, value: path.write_text(json.dumps(value)), log=self.log)
-        self.assertEqual(other.games, {'owned'})
+        self.assertEqual(other.games, {'owned', 'other'})
+        self.catalog['files'].append({'path': 'games/owned/Cargo.toml', 'sha256': 'b' * 64})
+        conflicting = companion.Maintenance(self.config, self.run, self.work, self.base, self.catalog, self.definitions,
+            command=self.command, git=git, write_json=lambda path, value: path.write_text(json.dumps(value)), log=self.log)
+        self.assertEqual(conflicting.games, {'other'})
 
     def test_ordinary_engine_export_is_integrated_before_companion_checks_without_touching_user_work(self):
         (self.work / 'site/view.mjs').write_text('candidate fix\n')
@@ -216,7 +222,7 @@ class CompanionMaintenanceTests(unittest.TestCase):
         (self.work / 'games/owned/Cargo.toml').write_text('[package]\nname="owned"\nversion="0.1.1"\n')
         game_run = self.run / 'native-release'
         game_run.mkdir()
-        (game_run / 'state.json').write_text(json.dumps({'publication': {'verified': True}}))
+        (game_run / 'state.json').write_text(json.dumps({'status': 'published', 'publication': {'verified': True}}))
         def check(argv, label, **kwargs):
             if label == 'owned-native-review':
                 (self.run / 'owned-native-review.json').write_text(json.dumps({'run': str(game_run)}))
@@ -236,7 +242,7 @@ class CompanionMaintenanceTests(unittest.TestCase):
     def test_creator_draft_advanced_after_authoring_cannot_be_overwritten_by_release(self):
         with self.assertRaisesRegex(RuntimeError, 'Creator head advanced'):
             self.deliver_game('cousins-unmerged-draft')
-        self.assertEqual(self.maintenance.state['status'], 'pushed-awaiting-publication')
+        self.assertEqual(self.maintenance.state['status'], 'reviewing')
         self.assertEqual(self.maintenance.state['games']['owned']['lineage']['expected_revision'], 'before-owned')
 
     def test_auto_advanced_exact_delivered_creator_source_reuses_revision_without_duplicate_submit(self):
@@ -266,6 +272,47 @@ class CompanionMaintenanceTests(unittest.TestCase):
         self.maintenance.command = Mock(return_value=json.dumps({'workflow_runs': impostors + [valid]}))
         receipt = self.maintenance.wait_ci('launcher.yml', 'review', self.base, 'launcher-review', after_id=7)
         self.assertEqual(receipt['id'], 8)
+
+    def test_launcher_metadata_uses_trusted_base_cargo_graph_and_exact_production_signing_config(self):
+        helper = self.source / 'launcher/publish.py'
+        helper.write_text('''import json
+class GitHub:
+    def __init__(self, repository): self.repository = repository
+    def release(self, tag): return {"tag": tag}
+def verify_signature(root, config, installer, signature, version):
+    manifest = (root / "launcher/src-tauri/Cargo.toml").read_text()
+    assert "untrusted-verifier-dependency" not in manifest
+    return {"verifier_root": str(root), "manifest": manifest, "config": json.loads(config.read_text())}
+def verify_release(github, release, source, version, directory, signature_check):
+    metadata = signature_check(directory / "setup.exe", directory / "setup.exe.sig", version)
+    return dict(metadata, source=source, version=version)
+''')
+        git(self.source, 'add', 'launcher/publish.py')
+        git(self.source, 'commit', '-qm', 'Trusted publisher fixture')
+        trusted_base = git(self.source, 'rev-parse', 'HEAD')
+        self.maintenance.base = trusted_base
+        git(self.work, 'reset', '--hard', trusted_base)
+        trusted_manifest = (self.work / 'launcher/src-tauri/Cargo.toml').read_text()
+        (self.work / 'launcher/publish.py').write_text('raise RuntimeError("AI-edited helper executed")')
+        with (self.work / 'launcher/src-tauri/Cargo.toml').open('a') as manifest:
+            manifest.write('\n# untrusted-verifier-dependency\n')
+        config = self.work / 'launcher/src-tauri/tauri.conf.json'
+        config.write_text(json.dumps({'version': '0.1.1', 'plugins': {'updater': {'pubkey': 'production-key'}}}))
+        git(self.work, 'add', 'launcher')
+        git(self.work, 'commit', '-qm', 'Production source with edited dependencies')
+        production = git(self.work, 'rev-parse', 'HEAD')
+        self.maintenance.state['ci']['launcher-production'] = {'head_sha': production}
+
+        metadata, release = self.maintenance.launcher_metadata('0.1.1')
+
+        self.assertEqual(metadata['manifest'], trusted_manifest)
+        self.assertEqual(metadata['config']['plugins']['updater']['pubkey'], 'production-key')
+        self.assertEqual(metadata['source'], production)
+        self.assertEqual(release['tag'], 'launcher-v0.1.1')
+        self.assertNotEqual(Path(metadata['verifier_root']), self.work)
+        self.assertFalse(Path(metadata['verifier_root']).exists())
+        self.assertNotIn('trusted-source', git(self.work, 'worktree', 'list', '--porcelain'))
+        self.assertEqual((self.source / 'site/view.mjs').read_text(), 'valuable unfinished user work\n')
 
     def launcher_publication(self, altered=False):
         binary, signature = b'MZverified Windows installer', 'signed-asset-proof'

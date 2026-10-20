@@ -77,6 +77,10 @@ if os.environ.get('TEST_AUTOMATION_EDIT'):
     path = work / '.github/workflows/unsafe.yml'
     path.parent.mkdir(parents=True)
     path.write_text('unreviewed automation\\n')
+if os.environ.get('TEST_GAME_EDIT'):
+    path = work / 'games/unselected/source.txt'
+    path.parent.mkdir(parents=True)
+    path.write_text('unselected game edit\\n')
 if os.environ.get('TEST_DIRTY_NO_CHANGE'):
     (work / 'source.txt').write_text('unexpected\\n')
 pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dumps({
@@ -98,7 +102,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         os.umask(self.old_umask)
         self.temp.cleanup()
 
-    def execute(self, *options, ci_responses=None, companion=None, restored=None, **env):
+    def execute(self, *options, ci_responses=None, companion=None, restored=None, delivery=None, restored_delivery=None, **env):
         def feedback(*args):
             return {'files': [{'sha256': 'feedback-hash',
                                'feedback_signals': [os.environ.get('TEST_FEEDBACK', 'feedback-hash')]}], 'warnings': []}
@@ -134,6 +138,8 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         with patch.object(nightly, 'CONFIG_DIR', self.config_dir), patch.object(nightly, 'preflight'), \
              patch.object(nightly, 'prepare_companion', return_value=companion), \
              patch.object(nightly, 'restore_companion', return_value=restored), \
+             patch.object(nightly, 'prepare_engine_games', return_value=delivery), \
+             patch.object(nightly, 'restore_engine_games', return_value=restored_delivery), \
              patch.object(nightly, 'collect_feedback', side_effect=feedback), \
              patch.object(nightly, 'command', side_effect=ci_command), \
              patch.object(nightly.os, 'fsync'), \
@@ -484,6 +490,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         helper = SimpleNamespace(work=work, base='companion-base', games={'companion-game'},
                                  state={'status': 'prepared'}, cleanup=Mock())
         helper.changes = Mock(side_effect=lambda: ['site/fix.txt'] if (work / 'fix.txt').exists() else [])
+        helper.freeze = Mock()
         def publish(*args):
             self.assertFalse((self.state / 'feedback-seen.json').exists())
             self.assertFalse((self.state / 'feedback-queue.json').exists())
@@ -498,6 +505,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
             helper.state.update(status='verified')
             return helper.state
         helper.finish_publication = Mock(side_effect=finish)
+        helper.resume_candidate = Mock(side_effect=lambda *args: helper.finish_publication(args[0]))
         return helper
 
     def test_companion_only_update_uses_same_agent_and_waits_for_both_receipts_before_ack(self):
@@ -526,6 +534,59 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(self.remote_head(), self.base)
         self.assertFalse((self.state / 'feedback-seen.json').exists())
         self.assertIn('orchestration or CI', (self.state / 'latest.md').read_text())
+
+    def engine_delivery_fixture(self, *, fails=False):
+        from unittest.mock import Mock
+        helper = SimpleNamespace(state={'status': 'prepared', 'baselines': {'owned': {}},
+            'blocked_games': {}, 'wanted': ['owned']}, select=Mock())
+        helper.intend = Mock(side_effect=lambda source: helper.state.update(source_commit=source, status='delivery-pending'))
+        proof = {'status': 'verified', 'games': {'owned': {'community_revision': 'verified-revision', 'publication': {'verified': True}}}}
+        helper.deliver = Mock(side_effect=RuntimeError('Native installer pending') if fails else lambda work: proof)
+        return helper
+
+    def test_engine_game_delivery_failure_is_resumed_without_new_ai_or_acknowledgment(self):
+        delivery = self.engine_delivery_fixture(fails=True)
+        self.assertEqual(self.execute(delivery=delivery), 1)
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        resumed = self.engine_delivery_fixture()
+        self.assertEqual(self.execute(restored_delivery=resumed), 0)
+        resumed.deliver.assert_called_once()
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+        self.assertEqual(json.loads((self.state / 'last-success.json').read_text())['engine_games']['status'], 'verified')
+
+    def test_engine_game_ci_failure_after_main_push_resumes_ci_before_delivery(self):
+        delivery = self.engine_delivery_fixture()
+        self.assertEqual(self.execute(delivery=delivery, ci_responses=['failure']), 1)
+        delivery.deliver.assert_not_called()
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertEqual(self.execute(restored_delivery=delivery), 0)
+        delivery.deliver.assert_called_once()
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+
+    def test_engine_game_accepted_push_lost_ack_resumes_without_second_ai_or_source_push(self):
+        delivery = self.engine_delivery_fixture()
+        original, lost = nightly.command, [False]
+        def accepted_then_error(argv, **kwargs):
+            output = original(argv, **kwargs)
+            if 'push' in argv and 'HEAD:refs/heads/main' in argv and not lost[0]:
+                lost[0] = True
+                raise subprocess.CalledProcessError(128, argv)
+            return output
+        with patch.object(nightly, 'command', side_effect=accepted_then_error):
+            self.assertEqual(self.execute(delivery=delivery), 1)
+        pushed = self.remote_head()
+        self.assertNotEqual(pushed, self.base)
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertEqual(self.execute(restored_delivery=delivery), 0)
+        self.assertEqual(self.remote_head(), pushed)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+
+    def test_game_edit_without_captured_baseline_never_publishes_or_acknowledges(self):
+        self.assertEqual(self.execute(TEST_GAME_EDIT='1'), 1)
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertIn('captured native source baseline', (self.state / 'latest.md').read_text())
 
     def test_pending_companion_delivery_resumes_before_another_ai_or_feedback_ack(self):
         helper = self.companion_fixture(fails=True, pending=True)
@@ -620,7 +681,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         self.assertEqual(self.remote_head(), self.base)
         self.assertFalse((self.state / 'feedback-seen.json').exists())
 
-    def test_concurrent_update_rejects_publication(self):
+    def test_concurrent_update_rejects_publication_and_retires_proven_unpublished_intent(self):
         competitor = self.root / 'competitor'
         git('clone', self.remote, competitor)
         git('config', 'user.name', 'Test', cwd=competitor)
@@ -638,8 +699,11 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
             return output
 
         with patch.object(nightly, 'command', side_effect=concurrent):
-            self.assertEqual(self.execute(), 1)
+            delivery = self.engine_delivery_fixture()
+            self.assertEqual(self.execute(delivery=delivery), 1)
         self.assertEqual(self.remote_head(), competing_head)
+        self.assertFalse((self.state / 'pending-companion.json').exists())
+        delivery.deliver.assert_not_called()
         self.assertIn('Status: failed', (self.state / 'latest.md').read_text())
 
 

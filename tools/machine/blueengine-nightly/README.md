@@ -72,8 +72,11 @@ their source, role and review state using the community release workflow.
 
 Selected launcher or companion-game topics create a second private worktree from
 current companion main. The same AI session sees both private paths. Engine-owned
-games remain in engine source; only explicitly preserved companion game paths
-are writable. The creator head/source tree is captured before authoring; pending
+games remain in engine source; a companion game must have a trusted native
+definition and no managed engine files under its source directory. An explicit
+preserve entry never overrides contradictory engine ownership. Unknown source is
+not removed by the exporter, so newly published companion forks remain writable.
+The creator head/source tree is captured before authoring; pending
 edits absent from main must be integrated before corrective maintenance. Other local checkouts, including unfinished
 user work, stay read-only. The companion scope permits `launcher/`, `site/`,
 `distribution/` and companion-owned game folders. Workflow/automation changes,
@@ -93,8 +96,9 @@ game baselines are unchanged. Conflicts retain the patch and private checkout.
 Another main advance after hosted review retains checked work; it never force-pushes stale checks.
 
 Companion game production uses the native release adapter and its immutable
-public installer/ZIP receipt. Delivered corrections submit an optimistic creator
-revision and attach the checked release, preserving history. Launcher production
+public installer/ZIP receipt. Reviewed corrections register an optimistic creator
+revision before source/public publication and attach the checked release,
+preserving concurrent drafts. Launcher production
 uses the existing signed workflow, then checks the live feed version, immutable
 asset metadata, exact production tag/source, four immutable assets, cryptographic
 signature and signed version, downloaded EXE size and SHA-256. Site/distribution-only
@@ -114,6 +118,19 @@ expected revision, or reuses an already delivered identical game tree.
 Missing account access, unavailable source or true external prerequisites can need
 human action. An ordinary launcher/game correction does not require approval
 merely because its source lives in the companion repository.
+
+Selected engine-owned `game.project.json` games also capture creator source before
+the AI starts. Every directly edited game and addressed game topic needs that
+baseline. The harness retains a delivery intent before engine main publication,
+then uses the authored native release adapter for local, engine/native CI,
+Windows installer and immutable public gates. Source revision registration comes
+before native review, and creator head is checked again before public delivery.
+`engine-games-receipt.json` retains release journals and creator receipts; a
+metadata outage reuses an already completed release. The existing pending pointer
+resumes either or both repositories without another AI session. Unselected game
+edits and legacy `assets/games` changes are retained before publication for native
+source migration. Addressed game topics cannot be acknowledged solely from
+Engine CI; unsupported source needs an explicit deferred migration step.
 
 Publication requests are actionable AI work, not an unconditional queue executor.
 The prompt permits the trusted release/resume helper for reviewed authenticated

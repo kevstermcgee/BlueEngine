@@ -84,14 +84,15 @@ IdeaForge runtime. They do not reset or stash local changes.
 
 For a nightly runner version 4 upgrade, deploy `blueengine-nightly/run.py`,
 `blueengine-nightly/companion.py`,
+`blueengine-nightly/engine_games.py`,
 `blueengine-nightly/VERSION`, `nightly/prompt.txt`, and `nightly/result.schema.json`
 together while its existing service is idle. Preserve host paths, timeout values,
 `run.lock`, `feedback-seen.json`, `feedback-queue.json`, `pending-companion.json`
 when present, and all retained reports.
 The new output schema requires one disposition per selected digest topic; an old
 schema cannot express these receipts and will safely fail before publication.
-The helper file must remain alongside `run.py`; it runs the same-session companion
-validation/publication phases and imports native release tools from the checked
+Both helper files must remain alongside `run.py`; they run same-session native
+validation/publication phases and import native release tools from the checked
 engine worktree. Preserve both repositories and all failed private worktrees.
 `max_feedback_items` is optional (default 24); it bounds daily triage without
 discarding the rest. No timer changes are required. Run the upgraded runner's

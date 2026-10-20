@@ -39,28 +39,65 @@ def restore_companion(config, run, log):
     return companion_module().Maintenance.resume(config, run, command=command, git=git, write_json=write_json, log=log)
 
 
+def engine_games_module():
+    spec = importlib.util.spec_from_file_location('nightly_engine_games', Path(__file__).with_name('engine_games.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def prepare_engine_games(config, run, digest, work, log):
+    return engine_games_module().Delivery.prepare(config, run, digest, work, command=command, git=git, write_json=write_json, log=log)
+
+
+def restore_engine_games(config, run, log):
+    return engine_games_module().Delivery.resume(config, run, command=command, git=git, write_json=write_json, log=log)
+
+
+def verify_game_deliveries(digest, result, engine_result, companion_result):
+    statuses = {item['feedback_id']: item['status'] for item in result['dispositions']}
+    for item in digest['selected']:
+        if item.get('scope') != 'game' or item.get('required_action') or statuses[item['feedback_id']] != 'addressed':
+            continue
+        records = [proof.get('games', {}).get(item['game'], {}) for proof in (engine_result, companion_result) if proof]
+        if not any(record.get('community_revision') and record.get('publication') for record in records):
+            raise RuntimeError('Addressed game feedback lacks verified public native delivery and creator lineage; defer with a concrete release or source-migration step')
+
+
 def resume_pending_companion(config, state, pending_path):
     """Finish public delivery before a fresh AI can mistake fixed source for delivery."""
     pending = json.loads(pending_path.read_text())
     run, engine_work = Path(pending['run']), Path(pending['engine_work'])
     stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')
-    helper, exit_code, detail = None, 1, ''
+    helper, delivery, exit_code, detail = None, None, 1, ''
     with (run / ('companion-resume-' + stamp + '.log')).open('w') as log:
         try:
             preflight(config)
-            if pending['hosted_ci'].get('wait_outcome') != 'success':
-                raise RuntimeError('Pending companion publication lacks verified engine CI')
             if git(engine_work, 'status', '--porcelain').strip():
                 raise RuntimeError('Retained engine source changed; previous checks cannot authorize a resume')
             if git(engine_work, 'rev-parse', 'HEAD').strip() != (pending['commit'] or pending['base']):
                 raise RuntimeError('Retained engine source revision changed; previous checks cannot authorize a resume')
             git(engine_work, 'fetch', 'origin', config['branch'], timeout=180, log=log)
+            expected = pending['commit'] or pending['base']
+            remote = git(engine_work, 'rev-parse', 'FETCH_HEAD').strip()
+            if remote == pending['base'] and expected != pending['base']:
+                git(engine_work, 'push', 'origin', expected + ':refs/heads/' + config['branch'], timeout=180, log=log)
+                git(engine_work, 'fetch', 'origin', config['branch'], timeout=180, log=log)
             git(engine_work, 'merge-base', '--is-ancestor', 'HEAD', 'FETCH_HEAD')
-            helper = restore_companion(config, run, log)
-            companion_result = helper.finish_publication(engine_work)
-            if companion_result.get('status') != 'verified':
-                raise RuntimeError('Pending companion publication still lacks verified public receipts')
+            if not pending.get('hosted_ci') or pending['hosted_ci'].get('wait_outcome') != 'success':
+                pending['hosted_ci'] = wait_for_hosted_ci(config, expected, run, log)
+                write_json(pending_path, pending)
+            engine_result, companion_result = None, None
+            if pending.get('engine_delivery'):
+                delivery = restore_engine_games(config, run, log)
+                engine_result = delivery.deliver(engine_work)
+            if pending.get('companion_present', True):
+                helper = restore_companion(config, run, log)
+                companion_result = helper.resume_candidate(engine_work, pending['result']['summary'])
+                if companion_result.get('status') != 'verified':
+                    raise RuntimeError('Pending companion publication still lacks verified public receipts')
             verify_action_dispositions(pending['digest'], pending['result'], engine_work, config)
+            verify_game_deliveries(pending['digest'], pending['result'], engine_result, companion_result)
             queue_path, seen_path = state / 'feedback-queue.json', state / 'feedback-seen.json'
             current_queue = json.loads(queue_path.read_text()) if queue_path.exists() else {'items': {}}
             receipt = pending['receipt']
@@ -75,21 +112,29 @@ def resume_pending_companion(config, state, pending_path):
             write_json(seen_path, observation)
             write_json(state / 'last-success.json', {'completed_at': datetime.now(timezone.utc).isoformat(),
                        'commit': pending['commit'], 'base': pending['base'], 'result': pending['result'],
-                       'hosted_ci': pending['hosted_ci'], 'companion': companion_result,
+                       'hosted_ci': pending['hosted_ci'], 'companion': companion_result, 'engine_games': engine_result,
                        'feedback_hashes': pending['feedback_hashes']})
             pending_path.unlink()
             exit_code, detail = 0, 'Verified the retained public publication and acknowledged its feedback; no AI rerun was needed.'
         except Exception as exc:
             detail = f'{type(exc).__name__}: {exc}'
             log.write(detail + '\n')
+            if (isinstance(exc, subprocess.CalledProcessError) and exc.returncode == 1
+                    and 'merge-base' in exc.cmd and '--is-ancestor' in exc.cmd and pending['commit']
+                    and pending['commit'] != pending['base']):
+                companion_state = json.loads((run / 'companion-receipt.json').read_text()) if pending.get('companion_present') else {}
+                if companion_state.get('status', 'prepared') in {'prepared', 'reviewing'}:
+                    pending_path.unlink()
+                    detail += ' Remote history proves this candidate was not published; retained source is available to the next scheduled AI session.'
         if exit_code == 0:
             try:
-                helper.cleanup()
+                if helper:
+                    helper.cleanup()
                 git(config['engine'], 'worktree', 'remove', str(engine_work), timeout=180, log=log)
             except Exception as exc:
                 log.write(f'Resume cleanup incomplete: {exc}\n')
-    report = (f'# BlueEngine nightly — companion publication resume\n\nStatus: {"updated" if exit_code == 0 else "failed"}\n\n'
-              f'{detail}\n\nReceipt and retained evidence: {run / "companion-receipt.json"}\n'
+    report = (f'# BlueEngine nightly — native publication resume\n\nStatus: {"updated" if exit_code == 0 else "failed"}\n\n'
+              f'{detail}\n\nReceipt and retained evidence directory: {run}\n'
               f'\nFeedback remains eligible until engine and companion publication both pass.\n')
     (state / 'latest.md').write_text(report)
     print(report)
@@ -602,7 +647,7 @@ def main():
         queue = json.loads(queue_path.read_text()) if queue_path.exists() else {}
         result, commit, base, manifest, hosted_ci = {}, None, None, {}, None
         digest, receipt = {}, None
-        companion, companion_result = None, None
+        companion, companion_result, delivery, engine_result = None, None, None, None
         publication_attempted, pushed_commit, confirmed_no_changes = False, None, False
         temp = None
         outcome, detail, exit_code = 'failed', '', 1
@@ -649,6 +694,7 @@ def main():
                     temp = Path(tempfile.mkdtemp(prefix='be2n-', dir=os.environ.get('TMPDIR', '/tmp')))
                     os.environ['TMPDIR'] = str(temp)
                     os.environ['CARGO_TARGET_DIR'] = os.environ.get('CARGO_TARGET_DIR') or str(state / 'target')
+                    delivery = prepare_engine_games(config, run, digest, work, log)
                     companion = prepare_companion(config, run, digest, log, work)
                     prompt = (CONFIG_DIR / 'prompt.txt').read_text()
                     prompt += f'\nBASE: {base}\nFeedback manifest: {run / "feedback-manifest.json"}\n'
@@ -670,6 +716,12 @@ def main():
                                    'Changed companion games require a Cargo package version increase and matching lock. '
                                    'The harness will validate, review native/installer CI, publish, verify signed public feeds, '
                                    'and record game lineage; no human approval is needed merely because a fix belongs to this companion repository.\n')
+                    if delivery:
+                        prompt += ('Engine native delivery baselines: ' + json.dumps(delivery.state['baselines']) + '\n'
+                                   'Engine game sources requiring prior integration: ' + json.dumps(delivery.state['blocked_games']) + '\n')
+                    prompt += ('Addressed game topics require actual native delivery and creator lineage; the harness releases selected engine game.project games. '
+                               'Do not edit an unselected game or legacy assets/games source without a captured native source baseline. '
+                               'Use no_change for observations requiring no game update, or defer unavailable native source migration with exact steps.\n')
                     prompt += f'Last successful result: {json.dumps(previous.get("result", {}))}\n'
                     if (state / 'latest.md').exists():
                         prompt += f'Previous morning report (read-only): {state / "latest.md"}\n'
@@ -698,6 +750,23 @@ def main():
                         raise RuntimeError('Codex changed HEAD; automated publication stopped')
                     dirty = git(work, 'status', '--porcelain').strip()
                     companion_dirty = bool(companion and companion.changes())
+                    changed = git(work, 'diff', '--name-only', '--no-renames', base).splitlines()
+                    changed += git(work, 'ls-files', '--others', '--exclude-standard').splitlines()
+                    game_paths = [name for name in changed if name.startswith(('games/', 'assets/games/'))]
+                    if any(name.startswith('assets/games/') for name in game_paths):
+                        raise RuntimeError('Legacy assets/games changes require native source migration before automated delivery; retained without publication')
+                    if delivery:
+                        delivery.select(digest, result, game_paths)
+                    elif game_paths:
+                        raise RuntimeError('Changed engine games lack a captured native source baseline; retained without publication')
+                    if companion_dirty:
+                        companion.freeze()
+                    def save_pending():
+                        write_json(pending_path, {'run': str(run), 'engine_work': str(work),
+                            'commit': commit, 'base': base, 'result': result, 'hosted_ci': hosted_ci,
+                            'receipt': receipt, 'observation': observation, 'digest': digest,
+                            'engine_delivery': bool(delivery and delivery.state['wanted']), 'companion_present': companion_dirty,
+                            'feedback_hashes': [item['sha256'] for item in manifest['files']]})
                     if result['status'] == 'blocked':
                         raise RuntimeError('Codex reported incomplete or blocked work')
                     if result['status'] == 'no_changes':
@@ -731,6 +800,10 @@ def main():
                         # A concurrent change to main rejects this ordinary push.
                         # Never force-push or silently rebase already checked work.
                         publication_attempted = True
+                        if delivery:
+                            delivery.intend(commit)
+                        if companion_dirty or (delivery and delivery.state['wanted']):
+                            save_pending()
                         git(work, 'push', 'origin', f'HEAD:refs/heads/{config["branch"]}', timeout=180, log=log)
                         pushed_commit = commit
                         published = git(work, 'ls-remote', 'origin', f'refs/heads/{config["branch"]}').split()[0]
@@ -740,16 +813,26 @@ def main():
                         hosted_ci = wait_for_hosted_ci(config, commit, run, log)
                         outcome, detail, exit_code = 'updated', f'Validated and pushed {commit} to {config["branch"]}.', 0
                     else:
-                        if not companion_dirty:
+                        if not companion_dirty and not (delivery and delivery.state['wanted']):
                             raise RuntimeError('Codex reported an update but neither private worktree has source changes')
                         hosted_ci = verify_no_changes(config, work, base, run, log)
                         outcome, detail, exit_code = 'updated', 'Engine source was unchanged; companion publication gates follow.', 0
+                    if delivery and delivery.state['wanted']:
+                        delivery.intend(commit or base)
+                        save_pending()
+                        engine_result = delivery.deliver(work)
+                        if not engine_result or engine_result.get('status') != 'verified':
+                            raise RuntimeError('Engine game delivery lacks verified native/public/creator receipts')
+                        outcome = 'updated'
+                        detail += ' Engine game native releases and creator history are verified.'
                     if companion_dirty:
+                        save_pending()
                         companion_result = companion.publish(work, result['summary'])
                         if not companion_result or companion_result.get('status') != 'verified':
                             raise RuntimeError('Companion publication lacks verified native/public receipts')
                         detail += f' Companion {companion_result["commit"]} passed review and public publication gates.'
                     verify_action_dispositions(digest, result, work, config)
+                    verify_game_deliveries(digest, result, engine_result, companion_result)
                     # Ignore feedback-document/ledger edits produced by maintenance
                     # itself so they cannot trigger a session the following night.
                     for name in git(work, 'ls-files').splitlines():
@@ -762,18 +845,36 @@ def main():
                                               'commit': commit, 'base': base, 'result': result,
                                               'hosted_ci': hosted_ci,
                                               'companion': companion_result,
+                                              'engine_games': engine_result,
                                               'feedback_hashes': [item['sha256'] for item in manifest['files']]})
+                    pending_path.unlink(missing_ok=True)
             except Exception as exc:
                 # Exception strings from command failures can contain paths but do
                 # not contain captured output, authorization headers, or tokens.
                 outcome, exit_code = 'failed', 1
                 detail = f'{type(exc).__name__}: {exc}'
                 log.write(detail + '\n')
-                if companion and companion.state.get('status') in {'publication-intent', 'pushed-awaiting-publication', 'verified'} and receipt:
-                    write_json(pending_path, {'run': str(run), 'engine_work': str(work),
-                               'commit': commit, 'base': base, 'result': result, 'hosted_ci': hosted_ci,
-                               'receipt': receipt, 'observation': observation, 'digest': digest,
-                               'feedback_hashes': [item['sha256'] for item in manifest['files']]})
+                if pending_path.exists():
+                    save_pending()
+                    if (not publication_attempted and not (delivery and delivery.state.get('source_commit'))
+                            and companion and companion.state.get('status') in {'prepared', 'reviewing'}):
+                        pending_path.unlink()
+                    elif publication_attempted and not pushed_commit:
+                        try:
+                            git(work, 'fetch', 'origin', config['branch'], timeout=180, log=log)
+                            remote = git(work, 'rev-parse', 'FETCH_HEAD').strip()
+                            if remote != base:
+                                try:
+                                    git(work, 'merge-base', '--is-ancestor', commit, remote)
+                                except subprocess.CalledProcessError as ancestor_error:
+                                    # A confirmed rejected NFF published no source.
+                                    # Retain its patch but let fresh feedback main
+                                    # start a new AI; ambiguity keeps the intent.
+                                    if ancestor_error.returncode == 1:
+                                        pending_path.unlink()
+                                        detail += ' Main rejected this unpublished candidate; retained source can be reviewed by the next scheduled session.'
+                        except Exception:
+                            pass
             finally:
                 if temp is not None:
                     shutil.rmtree(temp, ignore_errors=True)
@@ -785,8 +886,10 @@ def main():
                 if companion:
                     report += (f'\nCompanion status: {companion.state["status"]}; receipt: {run / "companion-receipt.json"}.\n'
                                f'Companion worktree {"completed" if exit_code == 0 else "retained"}: {companion.work}\n')
-                    if pending_path.exists():
-                        report += '\nPublic publication is pending. The next scheduled run resumes its immutable receipts before launching another AI or acknowledging feedback.\n'
+                if delivery:
+                    report += f'\nEngine game delivery: {delivery.state["status"]}; receipt: {run / "engine-games-receipt.json"}.\n'
+                if pending_path.exists():
+                    report += '\nPublic publication is pending. The next scheduled run resumes its immutable receipts before launching another AI or acknowledging feedback.\n'
                 ci_path = run / 'hosted-ci.json'
                 if ci_path.exists():
                     evidence = json.loads(ci_path.read_text())
@@ -817,7 +920,7 @@ def main():
                              'Worktree retained; push was not confirmed' if publication_attempted else
                              'Unpublished work retained')
                     report += f'\n{label}: {work}\n'
-                if confirmed_no_changes:
+                if confirmed_no_changes and not pending_path.exists():
                     report += '\nNo source work retained: clean no-change decision is cached; retries only recheck CI.\n'
                 (run / 'report.md').write_text(report)
                 if not args.collect_only:
@@ -825,7 +928,7 @@ def main():
                     temporary = state / 'latest.md.tmp'
                     temporary.write_text(report)
                     temporary.replace(latest)
-                if (exit_code == 0 or confirmed_no_changes) and work.exists():
+                if (exit_code == 0 or (confirmed_no_changes and not pending_path.exists())) and work.exists():
                     try:
                         git(config['engine'], 'worktree', 'remove', work, timeout=180, log=log)
                     except Exception as exc:

@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 import hashlib
 import importlib.util
 import json
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import re
 import subprocess
 import sys
@@ -47,9 +47,21 @@ class Maintenance:
         self.config, self.run, self.work, self.base = config, run, work, base
         self.command, self.git, self.write_json, self.log = command, git, write_json, log
         self.definitions = {item['slug']: item for item in definitions.get('native_playables', [])}
-        preserved = catalog.get('preserved_paths', [])
-        self.games = {slug for slug in self.definitions if any(
-            path == 'games/' + slug or path.startswith('games/' + slug + '/') for path in preserved)}
+        if (catalog.get('source_repository') != config['engine_repo'] or catalog.get('target_repository') != config['games_repo']
+                or not re.fullmatch(r'[0-9a-f]{40}(?:[0-9a-f]{24})?', catalog.get('source_revision', ''))
+                or not isinstance(catalog.get('files'), list)):
+            raise RuntimeError('Companion ownership requires the complete trusted immutable engine export catalog')
+        managed = []
+        for item in catalog['files']:
+            path, digest = item.get('path'), item.get('sha256')
+            if (not isinstance(path, str) or '\\' in path or PurePosixPath(path).is_absolute()
+                    or '..' in PurePosixPath(path).parts or len(PurePosixPath(path).parts) < 2
+                    or PurePosixPath(path).as_posix() != path or PurePosixPath(path).parts[0] not in {'games', 'prototypes', 'tests', 'demos'}
+                    or not isinstance(digest, str) or not re.fullmatch(r'[0-9a-f]{64}', digest)):
+                raise RuntimeError('Companion ownership catalog contains an invalid managed path or digest')
+            managed.append(path.casefold())
+        self.games = {slug for slug in self.definitions if not any(
+            path == ('games/' + slug).casefold() or path.startswith(('games/' + slug + '/').casefold()) for path in managed)}
         self.state = {'base': base, 'worktree': str(work), 'status': 'prepared', 'checks': [], 'ci': {},
                       'branch': 'nightly-companion/' + run.name, 'games': {}, 'commit': None}
         self.save()
@@ -78,6 +90,8 @@ class Maintenance:
         instance.state['game_baselines'], instance.state['blocked_games'] = {}, {}
         for slug in sorted(instance.games):
             try:
+                if instance.definitions[slug]['kind'] not in {'cargo', 'cargo-package'}:
+                    raise RuntimeError('Migrate this immutable/engine-sandbox definition to companion-owned Cargo source before automatic updates')
                 game = instance.json_command([sys.executable, str(Path(engine_work or config['engine']) / 'tools/community.py'), 'show', slug])
                 game = game.get('game', game)
                 revision = next(item for item in game['revisions'] if item['id'] == game['head_revision'])
@@ -112,6 +126,33 @@ class Maintenance:
                     or any((self.work / parent).is_symlink() for parent in [relative, *relative.parents] if str(parent) != '.')):
                 raise RuntimeError('Companion edits escaped launcher/site/distribution or companion-owned game source; publication stopped')
         return sorted(paths)
+
+    def freeze(self):
+        self.state['allowed_games'] = sorted(self.games)
+        self.state['intended_source'] = {path: hashlib.sha256((self.work / path).read_bytes()).hexdigest()
+            if (self.work / path).is_file() else None for path in self.changes()}
+        self.save()
+
+    def resume_candidate(self, engine_work, summary):
+        if self.state['status'] in {'publication-intent', 'pushed-awaiting-publication', 'verified'}:
+            return self.finish_publication(engine_work)
+        if self.state['status'] == 'prepared':
+            actual = {path: hashlib.sha256((self.work / path).read_bytes()).hexdigest()
+                if (self.work / path).is_file() else None for path in self.changes()}
+            if actual != self.state.get('intended_source'):
+                raise RuntimeError('Retained companion candidate changed since its source was frozen')
+            return self.publish(engine_work, summary)
+        sha = self.state['commit']
+        if self.git(self.work, 'rev-parse', 'HEAD').strip() != sha or self.git(self.work, 'status', '--porcelain').strip():
+            raise RuntimeError('Retained reviewed companion source changed')
+        self.git(self.work, 'fetch', 'origin', 'main', timeout=180, log=self.log)
+        if self.git(self.work, 'rev-parse', 'FETCH_HEAD').strip() != self.base:
+            self.git(self.work, 'reset', '--soft', self.base, log=self.log)
+            self.state.setdefault('review_history', []).append({'commit': sha, 'ci': self.state['ci'], 'games': self.state['games']})
+            self.state.update(status='prepared', branch=self.state['branch'] + '-r' + uuid4().hex[:8], ci={}, games={})
+            self.save()
+            return self.publish(engine_work, summary)
+        return self.complete_review(engine_work)
 
     def validate_versions(self, paths):
         launcher = any(path.startswith('launcher/') or path in SHARED_LAUNCHER for path in paths)
@@ -202,19 +243,27 @@ class Maintenance:
         return json.loads(self.command(argv, cwd=self.work, timeout=self.config['check_timeout_seconds']))
 
     def launcher_metadata(self, version):
-        # Publishing/signing helpers cannot be edited by the nightly worker.
-        spec = importlib.util.spec_from_file_location('trusted_launcher_publish', self.work / 'launcher/publish.py')
-        publisher = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(publisher)
-        github = publisher.GitHub(self.config['games_repo'])
-        release = github.release('launcher-v' + version)
+        # Compile the verifier and its entire Cargo graph from the trusted base,
+        # never from the worker's edited source or dependency declarations.
         source = self.state['ci']['launcher-production']['head_sha']
         with tempfile.TemporaryDirectory(prefix='nightly-launcher-proof-') as temporary:
             directory = Path(temporary)
-            config = directory / 'tauri.conf.json'
-            config.write_text(self.git(self.work, 'show', source + ':launcher/src-tauri/tauri.conf.json'))
-            metadata = publisher.verify_release(github, release, source, version, directory,
-                lambda exe, signature, signed_version: publisher.verify_signature(self.work, config, exe, signature, signed_version))
+            trusted = directory / 'trusted-source'
+            self.git(self.work, 'worktree', 'add', '--detach', str(trusted), self.base, log=self.log)
+            try:
+                if self.git(trusted, 'rev-parse', 'HEAD').strip() != self.base:
+                    raise RuntimeError('Launcher verifier checkout did not match the trusted base')
+                spec = importlib.util.spec_from_file_location('trusted_launcher_publish', trusted / 'launcher/publish.py')
+                publisher = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(publisher)
+                github = publisher.GitHub(self.config['games_repo'])
+                release = github.release('launcher-v' + version)
+                config = directory / 'tauri.conf.json'
+                config.write_text(self.git(self.work, 'show', source + ':launcher/src-tauri/tauri.conf.json'))
+                metadata = publisher.verify_release(github, release, source, version, directory,
+                    lambda exe, signature, signed_version: publisher.verify_signature(trusted, config, exe, signature, signed_version))
+            finally:
+                self.git(self.work, 'worktree', 'remove', '--force', str(trusted), log=self.log)
         return metadata, release
 
     def verify_launcher_feed(self, version):
@@ -277,6 +326,11 @@ class Maintenance:
         sha = self.git(self.work, 'rev-parse', 'HEAD').strip()
         self.state.update(commit=sha, status='reviewing')
         self.save()
+        return self.complete_review(engine_work)
+
+    def complete_review(self, engine_work):
+        sha, games = self.state['commit'], self.state['changed_games']
+        launcher = bool(self.state.get('launcher_version'))
         self.git(self.work, 'push', 'origin', 'HEAD:refs/heads/' + self.state['branch'], timeout=180, log=self.log)
         self.wait_ci('releases.yml', self.state['branch'], sha, 'distribution-review', fields={'checks_only': 'true'})
         if launcher:
@@ -286,8 +340,10 @@ class Maintenance:
             self.check([sys.executable, str(Path(__file__).resolve()), 'review-game', '--engine-root', str(engine_work),
                         '--games-root', str(self.work), '--slug', slug, '--runs-root', str(self.run / 'game-releases'),
                         '--receipt', str(receipt)], slug + '-native-review')
-            self.state['games'][slug] = json.loads(receipt.read_text())
+            self.state['games'].setdefault(slug, {}).update(json.loads(receipt.read_text()))
             self.save()
+        for slug in games:
+            self.register_revision(engine_work, slug)
         self.git(self.work, 'fetch', 'origin', 'main', timeout=180, log=self.log)
         if self.git(self.work, 'rev-parse', 'FETCH_HEAD').strip() != self.base:
             raise RuntimeError('Companion main advanced during review; exact checked work is retained without a force push')
@@ -322,35 +378,18 @@ class Maintenance:
             if self.state['games'][slug].get('community_revision'):
                 continue
             game_run = self.state['games'][slug]['run']
-            self.check([sys.executable, str(Path(__file__).resolve()), 'finish-game', '--directory', game_run,
-                        '--engine-root', str(engine_work)], slug + '-public-release')
             state = json.loads((Path(game_run) / 'state.json').read_text())
-            version = tomllib.loads((self.work / 'games' / slug / 'Cargo.toml').read_text())['package']['version']
+            if state.get('status') != 'published':
+                self.register_revision(engine_work, slug)
+                self.check([sys.executable, str(Path(__file__).resolve()), 'finish-game', '--directory', game_run,
+                            '--engine-root', str(engine_work)], slug + '-public-release')
+                state = json.loads((Path(game_run) / 'state.json').read_text())
+            revision = self.state['games'][slug].get('revision_id')
+            if not revision:
+                revision = self.register_revision(engine_work, slug)
             cli = str(Path(engine_work) / 'tools/community.py')
-            game = self.json_command([sys.executable, cli, 'show', slug])
-            game = game.get('game', game)
-            pending = self.state['games'][slug].setdefault('lineage', {'request_id': str(uuid4()),
-                'expected_revision': self.state['game_baselines'][slug]['expected_revision']})
-            self.save()
-            head = next(item for item in game['revisions'] if item['id'] == game['head_revision'])
-            source = head['source']
-            delivered = False
-            if source['repository'] == self.config['games_repo'] and source['game_path'] == 'games/' + slug:
-                self.git(self.work, 'fetch', 'origin', source['commit'], timeout=180, log=self.log)
-                delivered = (self.git(self.work, 'rev-parse', source['commit'] + ':games/' + slug).strip()
-                             == self.git(self.work, 'rev-parse', sha + ':games/' + slug).strip())
-            if delivered:
-                revision = head['id']
-            else:
-                if game['head_revision'] != pending['expected_revision']:
-                    raise RuntimeError('Creator head advanced during maintenance; retained delivery cannot overwrite another revision')
-                event = self.json_command([sys.executable, cli, '--request-id', pending['request_id'], 'submit', slug,
-                                          '--commit', sha, '--source-repository', self.config['games_repo'], '--source-game', slug,
-                                          '--expected-revision', pending['expected_revision'], '--version', version,
-                                          '--note', 'Validated corrective update from daily collaborative feedback.'])
-                revision = event.get('event', event).get('revision', event.get('revision', {}))['id']
-            self.json_command([sys.executable, cli, 'record-release', game_run, '--revision', revision])
-            self.state['games'][slug].update(publication=state['publication'], community_revision=revision)
+            receipt = self.json_command([sys.executable, cli, 'record-release', game_run, '--revision', revision])
+            self.state['games'][slug].update(publication=state['publication'], community_revision=revision, community_receipt=receipt)
             self.save()
         if launcher:
             prior = self.state['ci'].get('launcher-production')
@@ -376,15 +415,50 @@ class Maintenance:
         self.save()
         return self.state
 
+    def register_revision(self, engine_work, slug):
+        sha = self.state['commit']
+        record = self.state['games'][slug]
+        cli = str(Path(engine_work) / 'tools/community.py')
+        game = self.json_command([sys.executable, cli, 'show', slug])
+        game = game.get('game', game)
+        if record.get('revision_id'):
+            if game['head_revision'] != record['revision_id']:
+                raise RuntimeError('Creator head advanced during maintenance; retained delivery cannot overwrite another revision')
+            return record['revision_id']
+        pending = record.setdefault('lineage', {'request_id': str(uuid4()),
+            'expected_revision': self.state['game_baselines'][slug]['expected_revision']})
+        self.save()
+        head = next(item for item in game['revisions'] if item['id'] == game['head_revision'])
+        source = head['source']
+        delivered = False
+        if source['repository'] == self.config['games_repo'] and source['game_path'] == 'games/' + slug:
+            self.git(self.work, 'fetch', 'origin', source['commit'], timeout=180, log=self.log)
+            delivered = (self.git(self.work, 'rev-parse', source['commit'] + ':games/' + slug).strip()
+                         == self.git(self.work, 'rev-parse', sha + ':games/' + slug).strip())
+        if delivered:
+            revision = head['id']
+        else:
+            if game['head_revision'] != pending['expected_revision']:
+                raise RuntimeError('Creator head advanced during maintenance; retained delivery cannot overwrite another revision')
+            version = tomllib.loads((self.work / 'games' / slug / 'Cargo.toml').read_text())['package']['version']
+            event = self.json_command([sys.executable, cli, '--request-id', pending['request_id'], 'submit', slug,
+                                      '--commit', sha, '--source-repository', self.config['games_repo'], '--source-game', slug,
+                                      '--expected-revision', pending['expected_revision'], '--version', version,
+                                      '--note', 'Validated corrective update from daily collaborative feedback.'])
+            revision = event.get('event', event).get('revision', event.get('revision', {}))['id']
+        record['revision_id'] = revision
+        self.save()
+        return revision
+
     @classmethod
     def resume(cls, config, run, *, command, git, write_json, log):
         state = json.loads((run / 'companion-receipt.json').read_text())
-        if state.get('status') not in {'publication-intent', 'pushed-awaiting-publication', 'verified'} or not state.get('commit'):
-            raise RuntimeError('Only an already reviewed companion main publication can resume without AI')
+        if state.get('status') not in {'prepared', 'reviewing', 'publication-intent', 'pushed-awaiting-publication', 'verified'}:
+            raise RuntimeError('Unknown retained companion maintenance phase')
         instance = cls.__new__(cls)
         instance.config, instance.run, instance.work, instance.base = config, run, Path(state['worktree']), state['base']
         instance.command, instance.git, instance.write_json, instance.log = command, git, write_json, log
-        instance.state, instance.games, instance.definitions = state, set(state['changed_games']), {}
+        instance.state, instance.games, instance.definitions = state, set(state.get('allowed_games', state.get('changed_games', []))), {}
         return instance
 
     def cleanup(self):
@@ -406,11 +480,17 @@ def native_phase(argv=None):
     if args.phase == 'finish-game':
         community_release_companion.resume(args.directory)
         return
-    release = community_release_companion.create(args.engine_root, args.games_root, args.slug, runs_root=args.runs_root)
-    args.receipt.write_text(json.dumps({'run': str(release.directory)}) + '\n')
+    if args.receipt.exists():
+        directory = Path(json.loads(args.receipt.read_text())['run'])
+        release = community_release_companion.CompanionRelease(directory, json.loads((directory / 'state.json').read_text()))
+    else:
+        release = community_release_companion.create(args.engine_root, args.games_root, args.slug, runs_root=args.runs_root)
+        args.receipt.write_text(json.dumps({'run': str(release.directory)}) + '\n')
     with community_release_companion.forge.run_lock(release.directory):
         for phase, operation in (('prepare', release.prepare), ('local', release.verify_local),
                                  ('native', release.native_checks), ('installer', release.installer_review)):
+            if phase in release.state['completed']:
+                continue
             operation()
             release.state['completed'].append(phase)
             release.save()
