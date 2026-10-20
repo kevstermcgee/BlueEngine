@@ -10,9 +10,15 @@ import time
 from pathlib import Path
 import struct
 import zlib
+import argparse
 root=Path(__file__).resolve().parents[1]
-out=root/'evidence'/'controls'
-out.mkdir(parents=True,exist_ok=True)
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('binary')
+parser.add_argument('--out',type=Path,default=root/'evidence'/'current-controls')
+parser.add_argument('--opening-only',action='store_true',help='Capture the text-only opening card, then stop the review child.')
+args=parser.parse_args()
+out=args.out.resolve()
+out.mkdir(parents=True,exist_ok=False)
 x=C.CDLL('libX11.so.6');xt=C.CDLL('libXtst.so.6')
 x.XOpenDisplay.restype=C.c_void_p;d=x.XOpenDisplay(None)
 if not d:raise SystemExit('X11 display unavailable; run under xvfb-run')
@@ -59,16 +65,20 @@ def shot(name,selected=None):
             highlighted=red>20 and green>45 and blue>45
             if highlighted != (i==selected):
                 raise AssertionError(f'{name}: beacon row {i} selection incorrect; inspect capture')
-exe=sys.argv[1]
+exe=args.binary
 alsa=out/'alsa-null.conf'
 alsa.write_text('pcm.!default { type null }\nctl.!default { type null }\n')
 process=subprocess.Popen([exe,'--size','1280x800','--mute','--save-dir',str(out/'saves')],cwd=root,env={**os.environ,'ALSA_CONFIG_PATH':str(alsa)},stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
 try:
+    if args.opening_only:
+        time.sleep(.2)
+        shot('00-opening')
+        raise SystemExit(0)
     time.sleep(2)
     shot('01-start',selected=0)
     key('2');shot('01b-number-beacon-b',selected=1)
     key('1');shot('01c-number-beacon-a',selected=0)
-    motion(825,460);button(1,1);time.sleep(.12);button(1,0);time.sleep(.4)
+    motion(790,335);button(1,1);time.sleep(.12);button(1,0);time.sleep(.4)
     shot('01d-world-beacon-b',selected=1);key('1')
     key('q');key('space');key('e');key('space');shot('02-exhausted')
     key('z');shot('03-undo');key('r')

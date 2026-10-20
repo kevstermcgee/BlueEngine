@@ -70,9 +70,8 @@ fn stage(s: &Sim) -> Template {
     cage(&mut t, vec3(0., 4., 0.), vec3(6., 4., 6.), 0.025, [0.15, 0.35, 0.43], 0.5);
     for x in [-6., 6.] {
         for z in [-6., 6.] {
-            t.box_(vec3(x, 4., z), vec3(0.09, 4.1, 0.09), [0.10, 0.16, 0.21], 0.1);
             for y in 0..9 {
-                t.box_(vec3(x, y as f32, z), vec3(0.13, 0.022, 0.13), [0.30, 0.68, 0.77], 0.8);
+                t.box_(vec3(x, y as f32, z), vec3(0.065, 0.018, 0.065), [0.30, 0.68, 0.77], 0.8);
             }
         }
     }
@@ -134,7 +133,9 @@ async fn main() {
     let mut batch = Batch::new();
     let mut statics = stage(&sim).to_meshes();
     let mut built_level = sim.state.level;
-    let (mut yaw, mut pitch, mut radius) = (0.68f32, 0.48f32, 18.5f32);
+    // Look across the formation's diagonal so cargo and its separate paths stay readable.
+    let (mut yaw, mut pitch, mut radius) = (-0.72f32, 0.48f32, 18.5f32);
+    let mut opening = if unattended { 0. } else { 1.15f32 };
     let mut previous = sim.state.config.positions.clone();
     let mut anim = 1f32;
     let mut notice = String::new();
@@ -142,6 +143,7 @@ async fn main() {
     loop {
         input.begin_frame_with_keyboard(&mut shell, false, unattended || platform::focused(), platform::keyboard());
         let dt = life.begin_frame(input.frame_seconds());
+        opening = (opening - dt).max(0.);
         sounds.poll().await;
         let time = life.time();
         let sw = screen_width();
@@ -182,7 +184,7 @@ async fn main() {
                 }
             }
             yaw += script.value("orbit", 0);
-        } else if shell.accepting_input() {
+        } else if shell.accepting_input() && opening == 0. {
             for (key, bit) in [
                 (KeyCode::Tab, TAB),
                 (KeyCode::E, SPREAD),
@@ -309,7 +311,7 @@ async fn main() {
                     if j % 2 == 0 {
                         let a = j as f32 / count as f32;
                         let b = ((j + 1) as f32 / count as f32).min(1.);
-                        rod(&mut objects, at.lerp(dest, a), at.lerp(dest, b), 0.014, pc, 0.9);
+                        rod(&mut objects, at.lerp(dest, a), at.lerp(dest, b), 0.028, pc, 0.9);
                     }
                 }
             }
@@ -365,6 +367,13 @@ async fn main() {
             }
         }
         let ink = Color::new(0.9, 0.94, 0.97, 1.);
+        for (i, p) in c.sockets.iter().enumerate() {
+            if !cfg.docked[i] {
+                if let Some(pos) = view.project(v(*p) - Vec3::Y * 0.78, sw, sh) {
+                    text(&format!("{} BERTH", i + 1), pos.x - 22. * ui, pos.y, 13. * ui, color(COLORS[i]));
+                }
+            }
+        }
         let dim = Color::new(0.50, 0.65, 0.72, 1.);
         let mint = Color::new(0.70, 0.96, 0.68, 1.);
         panel(18. * ui, 18. * ui, rail - 18. * ui, sh - 36. * ui);
@@ -470,6 +479,20 @@ async fn main() {
             16. * ui,
             dim,
         );
+        text(
+            "E doubles distance / Q halves distance. Cube size never changes.",
+            rail + 30. * ui,
+            92. * ui,
+            15. * ui,
+            dim,
+        );
+        if opening > 0. {
+            clear_background(Color::new(0.025, 0.045, 0.075, 1.));
+            let title = "BlueEngine Games";
+            let size = 38. * ui;
+            let width = measure_text(title, None, size as u16, 1.).width;
+            text(title, (sw - width) * 0.5, sh * 0.5, size, ink);
+        }
         if notice_time > 0. {
             panel(rail + 30. * ui, 86. * ui, sw - rail - 55. * ui, 48. * ui);
             text(&notice, rail + 44. * ui, 116. * ui, 17. * ui, ink);

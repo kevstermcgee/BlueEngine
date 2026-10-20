@@ -1,0 +1,13 @@
+{"frame":30,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00030.png"}
+{"frame":115,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00115.png"}
+{"frame":250,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00250.png"}
+{"frame":385,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00385.png"}
+{"frame":650,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00650.png"}
+{"frame":745,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00745.png"}
+{"frame":835,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00835.png"}
+{"frame":880,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_00880.png"}
+{"frame":1105,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_01105.png"}
+{"frame":1210,"width":1280,"height":800,"path":"/srv/storage/artifacts/ideaforge/runs/20261017T224935-e8fc229b/engine/games/scatterlock/evidence/campaign-current/frames/shot_01210.png"}
+frames 1190  avg 16.67 ms (60 fps)  p50 16.67  p95 16.67  p99 16.67  max 16.67  slow(>25ms) 0 at []
+  own work per frame: p50 1.50 ms  max 93.43 ms
+scatterlock: chamber=6 remaining=0 docked=3 hash=1526581793912035673
