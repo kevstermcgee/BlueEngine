@@ -112,6 +112,11 @@ and verifies the production release and public downloads. It preserves the
 companion's owned source and uses its existing native build methods. It does not
 export the engine catalog over a modified companion game. The creator service's
 publication request supplies the correct source lane in its maintainer command.
+The adapter checks both the authored catalog and current public main to prevent
+editing engine-managed files through the companion lane. A new companion fork
+can use its own unowned `games/SLUG` folder directly: the exporter preserves
+unowned files and rejects collisions. It does not require a separate engine
+ownership commit for each new fork.
 
 This pipeline creates isolated worktrees, registers the source export, executes
 local game checks and package smoke, waits for full engine CI and the game's
