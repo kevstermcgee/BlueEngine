@@ -12,5 +12,6 @@
   "worktrees_root": "/srv/storage/artifacts/bn",
   "ci_timeout_seconds": 5400,
   "ci_poll_seconds": 30,
-  "max_feedback_items": 24
+  "max_feedback_items": 24,
+  "companion_ci_timeout_seconds": 5400
 }

@@ -1,6 +1,6 @@
 # Scheduled collaborative feedback maintenance
 
-Runner version 3. Extend the existing nightly timer; do not install a second
+Runner version 4. Extend the existing nightly timer; do not install a second
 feedback-maintenance schedule.
 
 `run.py` is the optional Linux host runner for BlueEngine's nightly feedback loop.
@@ -66,10 +66,62 @@ outcomes become durable only after existing local and exact-source hosted gates
 pass; AI claims never close a finding. New evidence can create a new topic.
 
 Community publication requests also appear in the digest. The runner verifies
-their source, role and review state using the community release workflow. It can
-change only the isolated engine checkout. Game/launcher work needing another
-repository is routed with a concrete next step. Native Windows packaging,
-installer review and immutable public-release gates remain required.
+their source, role and review state using the community release workflow.
+
+## Engine, launcher and game corrections in one session
+
+Selected launcher or companion-game topics create a second private worktree from
+current companion main. The same AI session sees both private paths. Engine-owned
+games remain in engine source; only explicitly preserved companion game paths
+are writable. The creator head/source tree is captured before authoring; pending
+edits absent from main must be integrated before corrective maintenance. Other local checkouts, including unfinished
+user work, stay read-only. The companion scope permits `launcher/`, `site/`,
+`distribution/` and companion-owned game folders. Workflow/automation changes,
+credentials, updater signing trust/endpoints, and generated release feeds are
+rejected. Both private HEADs must remain unchanged until the harness takes over.
+
+Launcher/shared feedback UI fixes require a consistent version increase in all
+five version files; each changed game needs a Cargo package version increase and
+matching lock. The harness runs site/distribution/JavaScript checks and affected
+launcher core/build gates. It commits an isolated candidate, waits for exact-source
+Windows distribution review, signed launcher UI/upgrade review when affected,
+and each changed game's native Linux/Windows and installer review. Every changed
+game is reviewed before any companion main push. The engine's automatic export
+can advance companion main while engine checks run. Before companion checks,
+the harness saves its complete patch and applies it to current main if the edited
+game baselines are unchanged. Conflicts retain the patch and private checkout.
+Another main advance after hosted review retains checked work; it never force-pushes stale checks.
+
+Companion game production uses the native release adapter and its immutable
+public installer/ZIP receipt. Delivered corrections submit an optimistic creator
+revision and attach the checked release, preserving history. Launcher production
+uses the existing signed workflow, then checks the live feed version, immutable
+asset metadata, exact production tag/source, four immutable assets, cryptographic
+signature and signed version, downloaded EXE size and SHA-256. Site/distribution-only
+corrections require their exact main production gates. `companion-receipt.json`
+records checks, commits, hosted runs, game journals and public proofs privately.
+
+Feedback acknowledgments and queue outcomes are saved only after both repositories'
+required gates succeed. One repository can already be published when a later gate
+fails; reports record that distinction and retain unfinished source and receipts.
+If companion source reached main but public delivery failed, private
+`pending-companion.json` makes the next scheduled run resume the original receipt
+before another AI session or feedback acknowledgment. Failed launcher publication
+reruns the original workflow/source and a newer attempt; it never rebuilds the
+same immutable version from a later source commit. A concurrent creator draft
+cannot become the parent of a corrective update: submission uses the pre-authoring
+expected revision, or reuses an already delivered identical game tree.
+Missing account access, unavailable source or true external prerequisites can need
+human action. An ordinary launcher/game correction does not require approval
+merely because its source lives in the companion repository.
+
+Publication requests are actionable AI work, not an unconditional queue executor.
+The prompt permits the trusted release/resume helper for reviewed authenticated
+maintainer source; contributor requests still require source review/integration.
+The harness rejects `addressed` or `no_change` for a request without a server
+release receipt for its exact requested revision. An explicitly closed unmerged
+publication PR can support `no_change`; otherwise defer with the precise review,
+integration or release step still needed.
 
 New feedback runs Codex in a separate worktree. A blocked result, changed HEAD,
 dirty `no_changes` result, failed engine checks, or concurrent remote update stops

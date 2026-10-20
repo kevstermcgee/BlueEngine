@@ -4,6 +4,7 @@ import argparse
 from datetime import datetime, timedelta, timezone
 import fcntl
 import hashlib
+import importlib.util
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,84 @@ import tempfile
 import time
 
 CONFIG_DIR = Path.home() / '.config' / 'blueengine-nightly'
+
+
+def protected_engine_path(name):
+    return (name.startswith(('tools/machine/', '.github/workflows/', 'tools/community', 'tools/check_', 'scripts/check_'))
+            or name in {'tools/idea_forge.py', 'tools/be2.py', 'tools/workflow.py', 'tools/FEATURES.json',
+                        'tools/feedback_server.py', 'scripts/publish_games.py'})
+
+
+def companion_module():
+    spec = importlib.util.spec_from_file_location('nightly_companion', Path(__file__).with_name('companion.py'))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def prepare_companion(config, run, digest, log, engine_work=None):
+    return companion_module().Maintenance.prepare(config, run, digest, command=command, git=git, write_json=write_json, log=log, engine_work=engine_work)
+
+
+def restore_companion(config, run, log):
+    return companion_module().Maintenance.resume(config, run, command=command, git=git, write_json=write_json, log=log)
+
+
+def resume_pending_companion(config, state, pending_path):
+    """Finish public delivery before a fresh AI can mistake fixed source for delivery."""
+    pending = json.loads(pending_path.read_text())
+    run, engine_work = Path(pending['run']), Path(pending['engine_work'])
+    stamp = datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S%f')
+    helper, exit_code, detail = None, 1, ''
+    with (run / ('companion-resume-' + stamp + '.log')).open('w') as log:
+        try:
+            preflight(config)
+            if pending['hosted_ci'].get('wait_outcome') != 'success':
+                raise RuntimeError('Pending companion publication lacks verified engine CI')
+            if git(engine_work, 'status', '--porcelain').strip():
+                raise RuntimeError('Retained engine source changed; previous checks cannot authorize a resume')
+            if git(engine_work, 'rev-parse', 'HEAD').strip() != (pending['commit'] or pending['base']):
+                raise RuntimeError('Retained engine source revision changed; previous checks cannot authorize a resume')
+            git(engine_work, 'fetch', 'origin', config['branch'], timeout=180, log=log)
+            git(engine_work, 'merge-base', '--is-ancestor', 'HEAD', 'FETCH_HEAD')
+            helper = restore_companion(config, run, log)
+            companion_result = helper.finish_publication(engine_work)
+            if companion_result.get('status') != 'verified':
+                raise RuntimeError('Pending companion publication still lacks verified public receipts')
+            verify_action_dispositions(pending['digest'], pending['result'], engine_work, config)
+            queue_path, seen_path = state / 'feedback-queue.json', state / 'feedback-seen.json'
+            current_queue = json.loads(queue_path.read_text()) if queue_path.exists() else {'items': {}}
+            receipt = pending['receipt']
+            for key, item in current_queue['items'].items():
+                proposed = receipt['items'].get(key)
+                if proposed is None or len(item.get('manual_retries', [])) > len(proposed.get('manual_retries', [])):
+                    receipt['items'][key] = item
+            seen = json.loads(seen_path.read_text()) if seen_path.exists() else {}
+            observation = pending['observation']
+            observation['feedback_signals'] = sorted(set(observation['feedback_signals']) | set(seen.get('feedback_signals', [])))
+            write_json(queue_path, receipt)
+            write_json(seen_path, observation)
+            write_json(state / 'last-success.json', {'completed_at': datetime.now(timezone.utc).isoformat(),
+                       'commit': pending['commit'], 'base': pending['base'], 'result': pending['result'],
+                       'hosted_ci': pending['hosted_ci'], 'companion': companion_result,
+                       'feedback_hashes': pending['feedback_hashes']})
+            pending_path.unlink()
+            exit_code, detail = 0, 'Verified the retained public publication and acknowledged its feedback; no AI rerun was needed.'
+        except Exception as exc:
+            detail = f'{type(exc).__name__}: {exc}'
+            log.write(detail + '\n')
+        if exit_code == 0:
+            try:
+                helper.cleanup()
+                git(config['engine'], 'worktree', 'remove', str(engine_work), timeout=180, log=log)
+            except Exception as exc:
+                log.write(f'Resume cleanup incomplete: {exc}\n')
+    report = (f'# BlueEngine nightly — companion publication resume\n\nStatus: {"updated" if exit_code == 0 else "failed"}\n\n'
+              f'{detail}\n\nReceipt and retained evidence: {run / "companion-receipt.json"}\n'
+              f'\nFeedback remains eligible until engine and companion publication both pass.\n')
+    (state / 'latest.md').write_text(report)
+    print(report)
+    return exit_code
 
 
 def command(args, *, cwd=None, timeout=120, log=None):
@@ -240,8 +319,12 @@ def feedback_observations(name, data):
         lower = evidence.lower()
         priority = 3 if any(word in lower for word in ('data loss', 'save corruption', 'security vulnerability')) else (
             2 if any(word in lower for word in ('crash', 'cannot launch', 'cannot publish', 'broken', 'panic')) else 1)
-        observations.append({'feedback_id': signal, 'scope': scope, 'game': game,
-                             'priority': priority, 'evidence_excerpt': evidence})
+        observation = {'feedback_id': signal, 'scope': scope, 'game': game,
+                       'priority': priority, 'evidence_excerpt': evidence}
+        if record and name.startswith('docs/community/events/') and record.get('event_type') == 'publication_requested':
+            observation['required_action'] = {'type': 'publication_requested',
+                'revision_id': record.get('request', {}).get('revision_id'), 'publication': record.get('publication', {})}
+        observations.append(observation)
     return observations
 
 
@@ -260,6 +343,8 @@ def feedback_digest(manifest, seen, queue, config, now=None):
                 continue
             item = items.setdefault(key, {**observation, 'status': 'pending', 'attempts': 0,
                                           'first_seen': now.isoformat(), 'origins': [], 'files': []})
+            if observation.get('required_action'):
+                item['required_action'] = observation['required_action']
             for origin in entry.get('origins', []):
                 if origin not in item['origins']:
                     item['origins'].append(origin)
@@ -314,6 +399,27 @@ def feedback_receipt(digest, items, result, now=None):
     if received != selected:
         raise RuntimeError('Maintenance omitted selected feedback dispositions')
     return {'schema_version': 1, 'updated_at': now.isoformat(), 'items': items}
+
+
+def verify_action_dispositions(digest, result, engine_work, config):
+    """Only trusted release/closed-review evidence can finish a publication request."""
+    dispositions = {item['feedback_id']: item['status'] for item in result['dispositions']}
+    for item in digest['selected']:
+        action = item.get('required_action')
+        status = dispositions[item['feedback_id']]
+        if not action or status not in {'addressed', 'no_change'}:
+            continue
+        game = json.loads(command([sys.executable, str(Path(engine_work) / 'tools/community.py'), 'show', item['game']], timeout=180))
+        game = game.get('game', game)
+        if action.get('revision_id') and any(release.get('revision_id') == action['revision_id'] for release in game.get('releases', [])):
+            continue
+        publication = action.get('publication', {})
+        repo, number = publication.get('target_repository'), publication.get('pull_request_number')
+        if status == 'no_change' and repo in {config['engine_repo'], config['games_repo']} and type(number) is int:
+            pull = json.loads(command(['gh', 'api', f'repos/{repo}/pulls/{number}'], timeout=180))
+            if pull.get('state') == 'closed' and pull.get('merged') is False:
+                continue
+        raise RuntimeError('Publication request lacks the exact revision release or closed review; keep it deferred with a concrete next step')
 
 
 def worktrees(repo):
@@ -481,6 +587,9 @@ def main():
             write_json(queue_path, queue)
             print('Feedback requeued for the existing daily schedule; no agent or publication was run.')
             return 0
+        pending_path = state / 'pending-companion.json'
+        if pending_path.exists() and not (args.collect_only or args.baseline):
+            return resume_pending_companion(config, state, pending_path)
         stamp = datetime.now().astimezone().strftime('%Y-%m-%d_%H-%M-%S-%f')
         run = Path(config.get('runs_root') or state / 'runs') / stamp
         run.mkdir(parents=True)
@@ -493,6 +602,7 @@ def main():
         queue = json.loads(queue_path.read_text()) if queue_path.exists() else {}
         result, commit, base, manifest, hosted_ci = {}, None, None, {}, None
         digest, receipt = {}, None
+        companion, companion_result = None, None
         publication_attempted, pushed_commit, confirmed_no_changes = False, None, False
         temp = None
         outcome, detail, exit_code = 'failed', '', 1
@@ -539,14 +649,27 @@ def main():
                     temp = Path(tempfile.mkdtemp(prefix='be2n-', dir=os.environ.get('TMPDIR', '/tmp')))
                     os.environ['TMPDIR'] = str(temp)
                     os.environ['CARGO_TARGET_DIR'] = os.environ.get('CARGO_TARGET_DIR') or str(state / 'target')
+                    companion = prepare_companion(config, run, digest, log, work)
                     prompt = (CONFIG_DIR / 'prompt.txt').read_text()
                     prompt += f'\nBASE: {base}\nFeedback manifest: {run / "feedback-manifest.json"}\n'
                     prompt += f'Feedback digest: {run / "feedback-digest.json"}\n'
                     prompt += ('Work only on selected digest topics, including due deferred topics. '
                                'Return dispositions for every selected feedback_id, with status addressed, no_change, deferred, or needs_human; '
                                'each requires summary and next_step (concrete and nonempty when deferred or needs_human). '
-                               'Do not rank human or AI feedback by identity. Launcher/game feedback outside this engine checkout '
-                               'requires a concrete routed next step; never claim it fixed by an engine-only patch.\n')
+                               'Do not rank human or AI feedback by identity. Use the provided private companion checkout '
+                               'for launcher/site/distribution and companion-owned game fixes; engine-managed games stay in the engine.\n')
+                    if companion:
+                        prompt += (f'Private companion worktree: {companion.work}\nCompanion BASE: {companion.base}\n'
+                                   f'Companion-owned native games: {", ".join(sorted(companion.games))}\n'
+                                   f'Creator revisions requiring integration before edits: {json.dumps(companion.state.get("blocked_games", {}))}\n'
+                                   'Leave intended changes uncommitted in both private worktrees. Do not change either HEAD. '
+                                   'Companion edits are limited to launcher/, site/, distribution/, and the listed game directories. '
+                                   'Do not edit workflows, automation, signing trust/endpoints, credentials or generated release feeds. '
+                                   'Launcher/shared feedback UI changes require one version increase across launcher/package.json, '
+                                   'package-lock.json (both root and packages[""]), src-tauri/Cargo.toml, Cargo.lock and tauri.conf.json. '
+                                   'Changed companion games require a Cargo package version increase and matching lock. '
+                                   'The harness will validate, review native/installer CI, publish, verify signed public feeds, '
+                                   'and record game lineage; no human approval is needed merely because a fix belongs to this companion repository.\n')
                     prompt += f'Last successful result: {json.dumps(previous.get("result", {}))}\n'
                     if (state / 'latest.md').exists():
                         prompt += f'Previous morning report (read-only): {state / "latest.md"}\n'
@@ -555,7 +678,8 @@ def main():
                     decision = json.loads(decision_path.read_text()) if decision_path.exists() else {}
                     selection = [[item['feedback_id'], item['attempts']] for item in digest['selected']]
                     if (decision.get('base') == base and decision.get('signals') == sorted(current)
-                            and decision.get('selection') == selection):
+                            and decision.get('selection') == selection
+                            and decision.get('companion_base') == (companion.base if companion else None)):
                         result = decision['result']
                         log.write('Reusing clean no-change decision for identical revision and feedback; CI still required.\n')
                     else:
@@ -573,19 +697,23 @@ def main():
                     if git(work, 'rev-parse', 'HEAD').strip() != base:
                         raise RuntimeError('Codex changed HEAD; automated publication stopped')
                     dirty = git(work, 'status', '--porcelain').strip()
+                    companion_dirty = bool(companion and companion.changes())
                     if result['status'] == 'blocked':
                         raise RuntimeError('Codex reported incomplete or blocked work')
                     if result['status'] == 'no_changes':
-                        if dirty:
+                        if dirty or companion_dirty:
                             raise RuntimeError('Codex reported no changes but left modified files')
                         confirmed_no_changes = True
                         write_json(decision_path, {'base': base, 'signals': sorted(current),
-                                                   'selection': selection, 'result': result})
+                                                   'selection': selection, 'result': result,
+                                                   'companion_base': companion.base if companion else None})
                         hosted_ci = verify_no_changes(config, work, base, run, log)
                         outcome, detail, exit_code = 'no_changes', 'No engine patch was needed; the maintenance harness did not push an engine change.', 0
-                    else:
-                        if not dirty:
-                            raise RuntimeError('Codex reported an update but no source changes exist')
+                    elif dirty:
+                        changed = git(work, 'diff', '--name-only', '--no-renames', base).splitlines()
+                        changed += git(work, 'ls-files', '--others', '--exclude-standard').splitlines()
+                        if any(protected_engine_path(name) for name in changed):
+                            raise RuntimeError('Nightly worker changed its orchestration or CI; automated publication stopped')
                         git(work, 'add', '-A', log=log)
                         git(work, 'diff', '--cached', '--check', log=log)
                         command(['python3', 'tools/be2.py', 'check', '--changed', '--base', base],
@@ -611,6 +739,17 @@ def main():
                             git(work, 'merge-base', '--is-ancestor', commit, 'FETCH_HEAD')
                         hosted_ci = wait_for_hosted_ci(config, commit, run, log)
                         outcome, detail, exit_code = 'updated', f'Validated and pushed {commit} to {config["branch"]}.', 0
+                    else:
+                        if not companion_dirty:
+                            raise RuntimeError('Codex reported an update but neither private worktree has source changes')
+                        hosted_ci = verify_no_changes(config, work, base, run, log)
+                        outcome, detail, exit_code = 'updated', 'Engine source was unchanged; companion publication gates follow.', 0
+                    if companion_dirty:
+                        companion_result = companion.publish(work, result['summary'])
+                        if not companion_result or companion_result.get('status') != 'verified':
+                            raise RuntimeError('Companion publication lacks verified native/public receipts')
+                        detail += f' Companion {companion_result["commit"]} passed review and public publication gates.'
+                    verify_action_dispositions(digest, result, work, config)
                     # Ignore feedback-document/ledger edits produced by maintenance
                     # itself so they cannot trigger a session the following night.
                     for name in git(work, 'ls-files').splitlines():
@@ -622,6 +761,7 @@ def main():
                     write_json(previous_path, {'completed_at': datetime.now(timezone.utc).isoformat(),
                                               'commit': commit, 'base': base, 'result': result,
                                               'hosted_ci': hosted_ci,
+                                              'companion': companion_result,
                                               'feedback_hashes': [item['sha256'] for item in manifest['files']]})
             except Exception as exc:
                 # Exception strings from command failures can contain paths but do
@@ -629,6 +769,11 @@ def main():
                 outcome, exit_code = 'failed', 1
                 detail = f'{type(exc).__name__}: {exc}'
                 log.write(detail + '\n')
+                if companion and companion.state.get('status') in {'publication-intent', 'pushed-awaiting-publication', 'verified'} and receipt:
+                    write_json(pending_path, {'run': str(run), 'engine_work': str(work),
+                               'commit': commit, 'base': base, 'result': result, 'hosted_ci': hosted_ci,
+                               'receipt': receipt, 'observation': observation, 'digest': digest,
+                               'feedback_hashes': [item['sha256'] for item in manifest['files']]})
             finally:
                 if temp is not None:
                     shutil.rmtree(temp, ignore_errors=True)
@@ -637,6 +782,11 @@ def main():
                 report += result.get('summary', fallback) + '\n\n' + detail + '\n'
                 if pushed_commit:
                     report += f'\nPushed commit: {pushed_commit}. Hosted CI evidence below determines acknowledgment.\n'
+                if companion:
+                    report += (f'\nCompanion status: {companion.state["status"]}; receipt: {run / "companion-receipt.json"}.\n'
+                               f'Companion worktree {"completed" if exit_code == 0 else "retained"}: {companion.work}\n')
+                    if pending_path.exists():
+                        report += '\nPublic publication is pending. The next scheduled run resumes its immutable receipts before launching another AI or acknowledging feedback.\n'
                 ci_path = run / 'hosted-ci.json'
                 if ci_path.exists():
                     evidence = json.loads(ci_path.read_text())
@@ -680,6 +830,11 @@ def main():
                         git(config['engine'], 'worktree', 'remove', work, timeout=180, log=log)
                     except Exception as exc:
                         log.write(f'Cleanup incomplete: {exc}\n')
+                if exit_code == 0 and companion:
+                    try:
+                        companion.cleanup()
+                    except Exception as exc:
+                        log.write(f'Companion cleanup incomplete: {exc}\n')
                 print(report)
         return exit_code
 

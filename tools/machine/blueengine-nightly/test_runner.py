@@ -9,6 +9,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -68,8 +69,14 @@ report = pathlib.Path(args[args.index('--output-last-message') + 1]).parent
 (report / 'agent-workdir.txt').write_text(str(work))
 (report / 'agent-workmode.txt').write_text(str(work.stat().st_mode & 0o777))
 status = os.environ.get('TEST_STATUS', 'updated')
-if status != 'no_changes':
+if status != 'no_changes' and not os.environ.get('TEST_COMPANION_ONLY'):
     (work / 'source.txt').write_text(os.environ.get('TEST_SOURCE', 'nightly fix') + '\\n')
+if os.environ.get('TEST_COMPANION_DIR'):
+    (pathlib.Path(os.environ['TEST_COMPANION_DIR']) / 'fix.txt').write_text('companion fix\\n')
+if os.environ.get('TEST_AUTOMATION_EDIT'):
+    path = work / '.github/workflows/unsafe.yml'
+    path.parent.mkdir(parents=True)
+    path.write_text('unreviewed automation\\n')
 if os.environ.get('TEST_DIRTY_NO_CHANGE'):
     (work / 'source.txt').write_text('unexpected\\n')
 pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dumps({
@@ -91,7 +98,7 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         os.umask(self.old_umask)
         self.temp.cleanup()
 
-    def execute(self, *options, ci_responses=None, **env):
+    def execute(self, *options, ci_responses=None, companion=None, restored=None, **env):
         def feedback(*args):
             return {'files': [{'sha256': 'feedback-hash',
                                'feedback_signals': [os.environ.get('TEST_FEEDBACK', 'feedback-hash')]}], 'warnings': []}
@@ -125,6 +132,8 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
             clock[0] += seconds
 
         with patch.object(nightly, 'CONFIG_DIR', self.config_dir), patch.object(nightly, 'preflight'), \
+             patch.object(nightly, 'prepare_companion', return_value=companion), \
+             patch.object(nightly, 'restore_companion', return_value=restored), \
              patch.object(nightly, 'collect_feedback', side_effect=feedback), \
              patch.object(nightly, 'command', side_effect=ci_command), \
              patch.object(nightly.os, 'fsync'), \
@@ -468,6 +477,90 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
         run = next((self.state / 'runs').iterdir())
         self.assertFalse(Path((run / 'agent-tmpdir.txt').read_text()).exists())
 
+    def companion_fixture(self, *, fails=False, pending=False):
+        from unittest.mock import Mock
+        work = self.root / 'companion-private'
+        work.mkdir()
+        helper = SimpleNamespace(work=work, base='companion-base', games={'companion-game'},
+                                 state={'status': 'prepared'}, cleanup=Mock())
+        helper.changes = Mock(side_effect=lambda: ['site/fix.txt'] if (work / 'fix.txt').exists() else [])
+        def publish(*args):
+            self.assertFalse((self.state / 'feedback-seen.json').exists())
+            self.assertFalse((self.state / 'feedback-queue.json').exists())
+            if fails:
+                if pending:
+                    helper.state.update(status='pushed-awaiting-publication', commit='verified-companion-commit')
+                raise RuntimeError('companion hosted review failed')
+            helper.state.update(status='verified', commit='verified-companion-commit')
+            return helper.state
+        helper.publish = Mock(side_effect=publish)
+        def finish(*args):
+            helper.state.update(status='verified')
+            return helper.state
+        helper.finish_publication = Mock(side_effect=finish)
+        return helper
+
+    def test_companion_only_update_uses_same_agent_and_waits_for_both_receipts_before_ack(self):
+        helper = self.companion_fixture()
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_ONLY='1', TEST_COMPANION_DIR=str(helper.work)), 0)
+        self.assertEqual(self.remote_head(), self.base)
+        helper.publish.assert_called_once()
+        helper.cleanup.assert_called_once()
+        result = json.loads((self.state / 'last-success.json').read_text())
+        self.assertEqual(result['companion']['commit'], 'verified-companion-commit')
+        self.assertEqual(result['hosted_ci']['head_sha'], self.base)
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+
+    def test_companion_failure_retains_work_and_feedback_after_engine_already_published(self):
+        helper = self.companion_fixture(fails=True)
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_DIR=str(helper.work)), 1)
+        self.assertNotEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertFalse((self.state / 'feedback-queue.json').exists())
+        self.assertTrue((helper.work / 'fix.txt').is_file())
+        helper.cleanup.assert_not_called()
+        self.assertIn('Companion worktree retained', (self.state / 'latest.md').read_text())
+
+    def test_agent_cannot_change_nightly_or_ci_orchestration(self):
+        self.assertEqual(self.execute(TEST_AUTOMATION_EDIT='1'), 1)
+        self.assertEqual(self.remote_head(), self.base)
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertIn('orchestration or CI', (self.state / 'latest.md').read_text())
+
+    def test_pending_companion_delivery_resumes_before_another_ai_or_feedback_ack(self):
+        helper = self.companion_fixture(fails=True, pending=True)
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_DIR=str(helper.work)), 1)
+        pending = self.state / 'pending-companion.json'
+        self.assertTrue(pending.exists())
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        pushed = self.remote_head()
+        self.assertEqual(self.execute(restored=helper), 0)
+        self.assertEqual(self.remote_head(), pushed)
+        self.assertFalse(pending.exists())
+        self.assertTrue((self.state / 'feedback-seen.json').exists())
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+        helper.finish_publication.assert_called_once()
+
+    def test_failed_pending_resume_retains_work_without_consuming_feedback(self):
+        helper = self.companion_fixture(fails=True, pending=True)
+        self.assertEqual(self.execute(companion=helper, TEST_COMPANION_DIR=str(helper.work)), 1)
+        helper.finish_publication.side_effect = RuntimeError('Installer feed pending')
+        self.assertEqual(self.execute(restored=helper), 1)
+        self.assertTrue((self.state / 'pending-companion.json').exists())
+        self.assertFalse((self.state / 'feedback-seen.json').exists())
+        self.assertEqual(len(list((self.state / 'runs').glob('*/codex.jsonl'))), 1)
+        helper.cleanup.assert_not_called()
+
+    def test_publication_topic_cannot_be_closed_without_exact_revision_or_closed_review(self):
+        digest = {'selected': [{'feedback_id': 'f', 'game': 'game', 'required_action': {
+            'type': 'publication_requested', 'revision_id': 'requested', 'publication': {}}}]}
+        result = {'dispositions': [{'feedback_id': 'f', 'status': 'no_change'}]}
+        with patch.object(nightly, 'command', return_value=json.dumps({'game': {'releases': [{'revision_id': 'other'}]}})):
+            with self.assertRaisesRegex(RuntimeError, 'exact revision release'):
+                nightly.verify_action_dispositions(digest, result, self.engine, {'engine_repo': 'e/r', 'games_repo': 'g/r'})
+        with patch.object(nightly, 'command', return_value=json.dumps({'game': {'releases': [{'revision_id': 'requested'}]}})):
+            nightly.verify_action_dispositions(digest, result, self.engine, {})
+
     def test_omitted_dispositions_prevent_publication_or_acknowledgment(self):
         self.assertEqual(self.execute(TEST_OMIT_DISPOSITIONS='1'), 1)
         self.assertEqual(self.remote_head(), self.base)
@@ -620,6 +713,13 @@ pathlib.Path(args[args.index('--output-last-message') + 1]).write_text(json.dump
 
 
 class FeedbackSignalTests(unittest.TestCase):
+    def test_nightly_cannot_rewrite_release_authentication_or_validation_controllers(self):
+        for path in ('tools/community.py', 'tools/community_release_companion.py', 'tools/community_server.py',
+                     'tools/be2.py', 'tools/workflow.py', 'scripts/publish_games.py', 'tools/check_docs.py'):
+            self.assertTrue(nightly.protected_engine_path(path), path)
+        for path in ('src/lib.rs', 'games/owned/src/main.rs', 'tools/test_community.py', 'docs/learning/ledger.jsonl'):
+            self.assertFalse(nightly.protected_engine_path(path), path)
+
     def test_review_metadata_and_generated_feeds_do_not_trigger_work(self):
         review = {'game': 'test', 'version': 'v1', 'rating': 2, 'disliked': 'Cannot launch',
                   'name': 'Cousin', 'updated_at': 'yesterday'}

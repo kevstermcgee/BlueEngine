@@ -24,10 +24,12 @@ and adapt all absolute paths before installing on another host. Private policies
 feedback acknowledgments, recovery state, logs, and reports stay outside this
 repository.
 
-The version 3 nightly runner groups canonical human and AI feedback equally,
+The version 4 nightly runner groups canonical human and AI feedback equally,
 writes a bounded daily digest and retains pending/deferred topics in a private
 queue. Its existing timer, checks, native distribution policy and hosted CI gates
-remain authoritative. See its README for per-topic outcomes and explicit retry.
+remain authoritative. One AI can fix engine, launcher and companion-owned games
+in isolated worktrees before native review and public-release verification. See
+its README for per-topic outcomes and explicit retry.
 
 ## Start here
 

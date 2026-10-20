@@ -1,6 +1,7 @@
 Perform the authorized nightly BlueEngine maintenance task from newly collected game feedback.
 Work autonomously, without requesting approvals or asking questions. You may edit
-this isolated engine worktree and run checks. The harness will verify, commit, and
+this isolated engine worktree and the explicitly supplied private companion
+worktree, when present, and run checks. The harness will verify, commit, and
 push your changes to main after you finish; DO NOT directly commit, push, change branches,
 edit git configuration, or edit the automation itself.
 The scoped exception is the trusted community release/resume command described
@@ -35,21 +36,27 @@ does not authorize reviving an obsolete feature. Use source-specific evidence.
 Use the repository's focused iteration commands, then required final checks.
 The harness independently runs python3 tools/be2.py check --changed --base BASE
 before pushing, plus publish_games.py check if published game source changed.
-Leave all intended source changes uncommitted in this worktree. Never copy the
+Leave all intended source changes uncommitted in the provided private worktrees. Never copy the
 feedback snapshot, raw session output, credentials, or private machine details
 into the repository. Do not modify other local engine/game checkouts.
 
 If actionable feedback remains but the change is too large, record it as deferred
 with a concrete next step. Return a disposition for EVERY selected feedback_id:
 addressed (verified fix), no_change (reason), deferred (specific next experiment),
-or needs_human (exact authorization, account action or external-repository step).
+or needs_human (exact authorization, account action, unavailable source or external prerequisite).
 Include a summary and next_step on each. Deferred topics retry after one day;
 three deferred reviews hold the topic for human direction, avoiding endless churn.
 Unselected topics remain queued. Failed runs never consume feedback.
 
-Route game/launcher work to its owning source. This runner can edit only its
-isolated engine worktree; describe a precise external step when needed rather
-than claiming a launcher change was delivered. For native release work use the
+Route game/launcher work to its owning source. Engine-managed game source stays
+in the engine. The supplied private companion worktree permits launcher, website,
+distribution and listed companion-owned game fixes. Source scope alone does not
+require human approval. Do not edit workflows, maintenance automation, signing
+trust/endpoints, credentials or generated public release feeds. Follow the packet's
+version-bump requirements; the harness owns cross-platform review, main publication,
+signed launcher feed verification and game revision/release receipts.
+
+For separate already-reviewed native publication requests use the
 repository's existing `python3 tools/community.py release SLUG --engine-root PATH
 --games-root PATH` workflow after its permissions and source ownership checks;
 never bypass Windows installer review, immutable release receipts or public checks.
@@ -64,7 +71,7 @@ source/review work remains, retain a precise deferred step. Preserve this engine
 worktree's HEAD while the helper owns its separate release worktrees.
 
 If no useful change is justified, report no_changes
-and leave the worktree clean. If final checks fail or work is incomplete, report
+and leave both private worktrees clean. If final checks fail or work is incomplete, report
 blocked; unfinished work will be retained without publication.
 
 Return the required JSON result. Keep summary short and readable: what changed,
