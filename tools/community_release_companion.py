@@ -28,6 +28,34 @@ ENGINE_REPOSITORY = "kevstermcgee/BlueEngine"
 GAMES_REPOSITORY = "kevstermcgee/BlueEngineGames"
 
 
+def companion_owned(catalog, directory):
+    """Unowned native source is safe: the exporter never removes unknown files.
+
+    Read the immutable file ownership record, rather than treating an absent
+    preserve entry as permission for the engine to overwrite a creator's game.
+    A contradictory preserve entry cannot override recorded Engine ownership.
+    """
+    if (not isinstance(catalog, dict) or catalog.get("source_repository") != ENGINE_REPOSITORY
+            or catalog.get("target_repository") != GAMES_REPOSITORY
+            or not isinstance(catalog.get("source_revision"), str)
+            or not re.fullmatch(r"[0-9a-f]{40}(?:[0-9a-f]{24})?", catalog["source_revision"])
+            or not isinstance(catalog.get("files"), list)):
+        raise forge.ForgeError("Companion source ownership needs the trusted Engine export catalog with its complete files record")
+    owned = False
+    for item in catalog["files"]:
+        path = item.get("path") if isinstance(item, dict) else None
+        digest = item.get("sha256") if isinstance(item, dict) else None
+        if (not isinstance(path, str) or "\\" in path or PurePosixPath(path).is_absolute()
+                or ".." in PurePosixPath(path).parts or len(PurePosixPath(path).parts) < 2
+                or PurePosixPath(path).as_posix() != path
+                or PurePosixPath(path).parts[0] not in {"games", "prototypes", "tests", "demos"}
+                or not isinstance(digest, str) or not re.fullmatch(r"[0-9a-f]{64}", digest)):
+            raise forge.ForgeError("The Engine export catalog has an invalid file ownership record")
+        if path.casefold() == directory.casefold() or path.casefold().startswith(directory.casefold() + "/"):
+            owned = True
+    return not owned
+
+
 class CompanionRelease(forge.Forge):
     def __init__(self, directory, state):
         super().__init__(directory, state)
@@ -87,6 +115,17 @@ class CompanionRelease(forge.Forge):
             raise forge.ForgeError("The private pinned engine worktree changed; preserve it for review")
         self.save()
 
+    def assert_companion_ownership(self):
+        """Check both authored and public-main ownership before source delivery."""
+        selected = self.state["definition"]["directory"]
+        catalogs = (forge.load_json(self.games / ".games-catalog.json"),
+                    json.loads(forge.git(self.games, "show", "origin/main:.games-catalog.json")))
+        if not all(companion_owned(catalog, selected) for catalog in catalogs):
+            raise forge.ForgeError("This game has Engine-managed files; use the Engine release lane or choose a new companion fork slug")
+        self.state["ownership"] = {"directory": selected, "public_main": forge.git(self.games, "rev-parse", "origin/main"),
+                                   "source_head": self.state["games_head"], "kind": "companion"}
+        self.save()
+
     def prepare(self):
         if not self.games.exists():
             self.command(["git", "worktree", "add", "-b", self.state["branch"], str(self.games), self.state["base"]],
@@ -101,6 +140,8 @@ class CompanionRelease(forge.Forge):
                 raise forge.ForgeError("Commit the native game's Cargo.toml and Cargo.lock before publication")
         if self.state["definition"]["kind"] == "cargo-package" and not (self.game / "scripts/ship.py").is_file():
             raise forge.ForgeError("A cargo-package definition needs its committed native scripts/ship.py")
+        self.integrate_main()
+        self.assert_companion_ownership()
         self.pin_engine()
         screenshot = self.games / "site/thumbs" / (self.state["idea"]["slug"] + ".png")
         if screenshot.is_symlink() or not screenshot.is_file():
@@ -251,7 +292,12 @@ class CompanionRelease(forge.Forge):
             raise forge.ForgeError("Companion HEAD changed outside the retained integration; prior checks cannot authorize it")
         if not forge.git_ancestor(self.games, self.state["base"], head):
             raise forge.ForgeError("Companion integration lost its frozen source commit")
-        if not (forge.git_ancestor(self.games, head, "origin/main") or forge.git_ancestor(self.games, "origin/main", head)):
+        if head != forge.git(self.games, "rev-parse", "origin/main") and forge.git_ancestor(self.games, head, "origin/main"):
+            self.state["integration_pending"] = head
+            self.save()
+            self.command(["git", "merge", "--ff-only", "origin/main"], cwd=self.games, label="companion-fast-forward-main")
+            head = forge.git(self.games, "rev-parse", "HEAD")
+        elif not forge.git_ancestor(self.games, "origin/main", head):
             self.state["integration_pending"] = head
             self.save()
             self.command(["git", "-c", "user.name=BlueEngine Community", "-c", "user.email=community@users.noreply.github.com",
@@ -274,6 +320,7 @@ class CompanionRelease(forge.Forge):
 
     def publish_games(self):
         self.integrate_main()
+        self.assert_companion_ownership()
         if self.state.get("local_receipt") != {"games_head": self.state["games_head"], "engine_head": self.state["engine_head"]}:
             self.verify_local()
         if self.state.get("ci", {}).get("companion-native-checks", {}).get("head") != self.state["games_head"]:
@@ -282,6 +329,7 @@ class CompanionRelease(forge.Forge):
             self.installer_review()
         self.assert_review()
         self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="companion-publication-fetch")
+        self.assert_companion_ownership()
         head = self.state["games_head"]
         if not forge.git_ancestor(self.games, head, "origin/main"):
             if not forge.git_ancestor(self.games, "origin/main", head):

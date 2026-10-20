@@ -29,7 +29,8 @@ class CompanionTests(unittest.TestCase):
                            'kind': 'cargo', 'binary': 'legacy-game'}
         (self.games / '.release-games.json').write_text(json.dumps({'version': 1, 'native_playables': [self.definition]}))
         (self.games / '.games-catalog.json').write_text(json.dumps({'source_repository': companion.ENGINE_REPOSITORY,
-            'target_repository': companion.GAMES_REPOSITORY, 'source_revision': self.engine_head}))
+            'target_repository': companion.GAMES_REPOSITORY, 'source_revision': self.engine_head,
+            'files': [], 'preserved_paths': []}))
         (self.games / '.gitignore').write_text('**/dist/\n**/target/\n**/.blue-check/\n.be2-work/\n')
         (self.games / 'site/thumbs').mkdir(parents=True)
         (self.games / 'site/thumbs/legacy-game.png').write_bytes(b'committed native screenshot')
@@ -81,6 +82,66 @@ class CompanionTests(unittest.TestCase):
         self.assertEqual(self.git(self.games, 'status', '--porcelain'), '')
         self.assertEqual(self.git(self.engine, 'status', '--porcelain'), '')
         self.assertEqual(self.release.state['source_kind'], 'companion')
+
+    def test_new_unpreserved_companion_source_is_safe_without_engine_mutation(self):
+        catalog = json.loads((self.release.games / '.games-catalog.json').read_text())
+        self.assertEqual(catalog['preserved_paths'], [])
+        self.assertTrue(companion.companion_owned(catalog, 'games/legacy-game'))
+        self.assertEqual(self.release.state['ownership']['source_head'], self.source_head)
+        self.assertEqual(self.git(self.engine, 'ls-remote', 'origin', 'refs/heads/main').split()[0], self.engine_head)
+        commands = self.release.state['commands']
+        self.assertFalse(any('ownership' in item['label'] or 'preserve' in item['label'] for item in commands))
+
+    def test_owned_files_block_companion_lane_even_with_contradictory_preserve(self):
+        catalog = json.loads((self.release.games / '.games-catalog.json').read_text())
+        catalog['files'] = [{'path': 'games/legacy-game/src/lib.rs', 'sha256': 'a' * 64}]
+        catalog['preserved_paths'] = ['games/legacy-game']
+        self.assertFalse(companion.companion_owned(catalog, 'games/legacy-game'))
+        catalog['files'][0]['path'] = 'games/Legacy-Game/src/lib.rs'
+        self.assertFalse(companion.companion_owned(catalog, 'games/legacy-game'))
+        catalog['files'][0]['path'] = 'games/other-game/src/lib.rs'
+        self.assertTrue(companion.companion_owned(catalog, 'games/legacy-game'))
+
+    def test_malformed_catalog_cannot_establish_unowned_source(self):
+        catalog = json.loads((self.release.games / '.games-catalog.json').read_text())
+        for invalid in (None, [], {}, dict(catalog, files=None), dict(catalog, source_revision=7),
+                        dict(catalog, files=[{'path': 'games//legacy-game/source', 'sha256': 'a' * 64}]),
+                        dict(catalog, files=[{'path': 'games/legacy-game/source', 'sha256': 'bad'}])):
+            with self.subTest(invalid=invalid), self.assertRaises(companion.forge.ForgeError):
+                companion.companion_owned(invalid, 'games/legacy-game')
+
+    def test_fast_forward_main_incorporates_metadata_without_changing_frozen_game(self):
+        self.git(self.games, 'push', 'origin', self.source_head + ':main')
+        other = self.competing_main()
+        frozen = self.git(self.release.games, 'rev-parse', self.source_head + ':games/legacy-game')
+        self.release.integrate_main()
+        self.assertEqual(self.release.state['games_head'], other)
+        self.assertEqual(self.git(self.release.games, 'rev-parse', 'HEAD:games/legacy-game'), frozen)
+        self.assertEqual(self.git(self.games, 'rev-parse', 'HEAD'), self.source_head)
+
+    def test_ownership_race_after_native_review_blocks_public_source_push(self):
+        writer = self.root / 'ownership-writer'
+        self.git(self.root, 'clone', str(self.root / 'games.git'), str(writer))
+        self.configure(writer)
+        def claim_ownership():
+            catalog = json.loads((writer / '.games-catalog.json').read_text())
+            catalog['files'].append({'path': 'games/legacy-game/src/lib.rs', 'sha256': 'a' * 64})
+            (writer / '.games-catalog.json').write_text(json.dumps(catalog))
+            self.commit(writer, 'Export now owns selected game')
+            self.git(writer, 'push', 'origin', 'main')
+            self.release.state.setdefault('ci', {})['windows-installer-review'] = {'head': self.release.state['games_head']}
+        self.release.verify_local = Mock(side_effect=lambda: self.release.state.update(local_receipt={
+            key: self.release.state[key] for key in ('games_head', 'engine_head')}))
+        self.release.native_checks = Mock(side_effect=lambda: self.release.state.setdefault('ci', {}).update(
+            {'companion-native-checks': {'head': self.release.state['games_head']}}))
+        self.release.installer_review = Mock(side_effect=claim_ownership)
+        self.release.assert_review = Mock()
+        with self.assertRaisesRegex(companion.forge.ForgeError, 'Engine-managed'):
+            self.release.publish_games()
+        public = self.git(self.games, 'ls-remote', 'origin', 'refs/heads/main').split()[0]
+        self.assertEqual(public, self.git(writer, 'rev-parse', 'HEAD'))
+        self.assertFalse(companion.forge.git_ancestor(self.release.games, self.source_head, public))
+        self.assertEqual((self.game / 'src/lib.rs').read_text(), 'reviewed updated legacy rules\n')
 
     def test_temporary_binding_and_failed_build_restore_manifest_and_lock_exactly(self):
         original = {name: (self.release.game / name).read_bytes() for name in ('Cargo.toml', 'Cargo.lock')}
