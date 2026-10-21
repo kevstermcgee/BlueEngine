@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "sample_rate": 44100,
+  "effects": {},
+  "music": {
+    "foundation": {
+      "file": "music-foundation.wav",
+      "checksum": "92b7673621fb0c66",
+      "frames": 756000,
+      "peak": 0.10605853,
+      "rms": 0.044973355,
+      "dc": 0.0000032528424,
+      "seam_jump": 0.0
+    },
+    "pulse": {
+      "file": "music-pulse.wav",
+      "checksum": "8e433b5388d005ee",
+      "frames": 756000,
+      "peak": 0.13423467,
+      "rms": 0.020656835,
+      "dc": 5.813933e-7,
+      "seam_jump": 0.0
+    }
+  },
+  "music_scale": 1.0
+}

@@ -30,6 +30,21 @@ mouse. Rumble, saved remapping, browser/mobile support and split-screen assignme
 are outside this implementation. Custom games opt into the API; GameShell does not
 silently replace application-owned input.
 
+## Portable 2D and hybrid games
+
+The portable client combines D-pad and left-stick axes. Digital directions take
+priority over analog drift on the same axis, including cancellation of opposite
+D-pad directions. South confirms/starts and supplies the default action; Start
+starts or pauses/resumes; Select retries. Games can override positional gameplay
+buttons with `draw::Game::gamepad_input`, receiving the already polled, focus-gated
+frame after keyboard `device_input`. The hook runs only during active play; do not
+create another backend. Inactive input and its command targets are discarded.
+
+Tetris maps D-pad left/right to movement, down to soft drop and up to hard drop.
+South rotates clockwise; East reverses; West or either bumper holds; North also
+hard-drops; right-stick click cycles Marathon/Sprint/Ultra. Direction repeats,
+rotation, drops and hold remain authoritative fixed-step simulation rules.
+
 ## Native API
 
 Use `features = ["gamepad"]` with `default-features = false` for device input without

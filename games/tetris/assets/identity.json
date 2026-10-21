@@ -1,0 +1,9 @@
+{
+  "title": "Tetris",
+  "tagline": "Find your flow. Seven shapes, endless possibilities.",
+  "controls": "D-pad move/drop; A rotate; B reverse; X/bumpers hold; Start pause; Select retry; right stick click mode. Keyboard: arrows, Z/C/Space, 1-3, Esc/R, K/L.",
+  "engine_revision": "b2d559b43217",
+  "package": [
+    "assets"
+  ]
+}

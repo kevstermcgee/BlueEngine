@@ -1,0 +1,23 @@
+{
+  "complexity": "medium",
+  "description": "A minimal falling-block puzzler with a large centered board, two tiny next-piece hints, SRS rotation, hold, ghost placement, T-spins and Marathon, Sprint and Ultra modes.",
+  "id": "tetris",
+  "input": [
+    "keyboard",
+    "mouse",
+    "controller"
+  ],
+  "mobile_controls": {
+    "action_label": null,
+    "layout": "dpad"
+  },
+  "networking": "offline",
+  "presentation": "2d",
+  "runtime": "portable",
+  "schema_version": 1,
+  "session_minutes": 10,
+  "targets": [
+    "windows",
+    "linux"
+  ]
+}

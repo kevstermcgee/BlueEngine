@@ -59,6 +59,17 @@ Leo retains its optional native portable presentation with the same authoritativ
 These preserve pause/input/audio/storage behavior. `show_hud()` independently controls title/control labels.
 Fatal runtime errors still reach stderr. Wormhole demonstrates a fully unobstructed experience.
 
+`Game::default_fullscreen()` defaults to true. Return false for a window-first
+experience; explicit flags and saved user settings take precedence. Supply the
+preferred window dimensions through the game's normal native configuration.
+
+With `gamepad` enabled, `Game::gamepad_input(input, frame)` receives the shared
+focus-gated `GamepadFrame` after `device_input`, while started and unpaused.
+Override it for game-specific positional buttons. The client polls one backend
+once per frame, including while paused, and supplies D-pad/left-stick axes;
+D-pad directions take priority over stick drift. Start opens/pauses/resumes,
+Select retries. Keyboard and controller commands share the same accumulator.
+
 `Game::drag_look()` opts into canvas dragging/right-stick look. Intent carries accumulated `look`
 radians and `sprint`; look and press edges are consumed once per fixed tick. F toggles fullscreen in
 portable native players. Unsupported device operations produce an explicit notice.

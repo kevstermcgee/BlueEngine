@@ -254,8 +254,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         ),
     };
     let launch_args: Vec<_> = std::env::args().collect();
-    let initial_fullscreen =
-        crate::viewer::startup::fullscreen_preference(&launch_args, settings.fullscreen);
+    let initial_fullscreen = crate::viewer::startup::fullscreen_preference(
+        &launch_args,
+        settings.fullscreen.or(Some(G::default_fullscreen())),
+    );
     macroquad::miniquad::window::set_fullscreen(initial_fullscreen);
     crate::viewer::startup::show().await;
     let mut game = G::new(7);
@@ -291,7 +293,13 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut focus_gate = crate::viewer::focus::NeutralGate::default();
     let mut fullscreen = initial_fullscreen;
     #[cfg(feature = "gamepad")]
-    let mut pads = crate::viewer::gamepad::Gamepads::new().ok();
+    let mut pads = match crate::viewer::gamepad::Gamepads::new() {
+        Ok(pads) => Some(pads),
+        Err(error) => {
+            eprintln!("Controller input unavailable: {error}; keyboard remains available");
+            None
+        }
+    };
     loop {
         frame += 1;
         let mut observation =
@@ -351,13 +359,24 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         #[allow(unused_mut)]
         let mut look_native = [0.; 2];
         #[cfg(feature = "gamepad")]
-        if let Some(pads) = pads.as_mut() {
-            let pad = pads.poll(observation.focused && !observation.lost);
+        let pad_frame = pads
+            .as_mut()
+            .map(|pads| pads.poll(observation.focused && !observation.lost));
+        #[cfg(feature = "gamepad")]
+        if let Some(pad) = pad_frame.as_ref() {
+            use crate::viewer::gamepad::Button;
             neutral &= pad.neutral();
-            x += (pad.left_stick[0] * 1.5) as i32;
-            y -= (pad.left_stick[1] * 1.5) as i32;
+            let axes = portable_pad_axes(pad);
+            x += axes[0];
+            y += axes[1];
             action |= pad.menu_select();
-            start |= pad.menu_select();
+            start |= pad.menu_select() || pad.pressed(Button::Start);
+            if started && pad.pressed(Button::Start) {
+                digital.commands |= 2;
+            }
+            if pad.pressed(Button::Select) {
+                digital.commands |= 4;
+            }
             if G::drag_look() {
                 look_native = [pad.right_stick[0] * dt * 2., pad.right_stick[1] * dt * 2.];
             }
@@ -446,6 +465,12 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         } else {
             Intent::default()
         };
+        #[cfg(feature = "gamepad")]
+        if focused && started && !paused {
+            if let Some(pad) = pad_frame.as_ref() {
+                intent = game.gamepad_input(intent, pad);
+            }
+        }
         action = intent.action;
         if G::pointer_target_only_on_press() {
             pointer_actions.feed(
@@ -605,6 +630,30 @@ async fn run_inner<G: Game>() -> Result<(), String> {
         Ok(())
     }
 }
+#[cfg(feature = "gamepad")]
+fn portable_pad_axes(pad: &crate::viewer::gamepad::GamepadFrame) -> [i32; 2] {
+    pad_axes(pad.left_stick, pad.dpad())
+}
+#[cfg(any(feature = "gamepad", test))]
+fn pad_axes(stick: [f32; 2], dpad: [bool; 4]) -> [i32; 2] {
+    let [up, down, left, right] = dpad;
+    let digital = [
+        i32::from(right) - i32::from(left),
+        i32::from(down) - i32::from(up),
+    ];
+    [
+        if left || right {
+            digital[0]
+        } else {
+            (stick[0] * 1.5) as i32
+        },
+        if up || down {
+            digital[1]
+        } else {
+            (-stick[1] * 1.5) as i32
+        },
+    ]
+}
 // Shared production path: inactive local clients cannot retain a press/target/look for later ticks.
 fn clear_inactive_input(
     active: bool,
@@ -687,6 +736,14 @@ mod platform {
 #[cfg(test)]
 mod pointer_action_tests {
     use super::*;
+    #[test]
+    fn dpad_moves_without_a_stick_and_overrides_drift() {
+        assert_eq!(pad_axes([0., 0.], [false, false, true, false]), [-1, 0]);
+        assert_eq!(pad_axes([0., 0.], [false, true, false, true]), [1, 1]);
+        assert_eq!(pad_axes([1., 1.], [false, true, true, false]), [-1, 1]);
+        assert_eq!(pad_axes([1., 1.], [true, true, true, true]), [0, 0]);
+        assert_eq!(pad_axes([-1., 1.], [false; 4]), [-1, -1]);
+    }
     #[test]
     fn focus_and_menu_discard_subtick_edges_targets_and_look_before_neutral_return() {
         let mut gate = crate::viewer::focus::NeutralGate::default();

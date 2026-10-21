@@ -392,6 +392,20 @@ pub trait Game: super::GameLogic {
     fn device_input(&mut self, input: super::Intent) -> super::Intent {
         input
     }
+    /// Map the shared, focus-gated native controller frame into game-owned commands.
+    /// The client still polls one backend once per frame, including in menus.
+    #[cfg(feature = "gamepad")]
+    fn gamepad_input(
+        &mut self,
+        input: super::Intent,
+        _pad: &crate::viewer::gamepad::GamepadFrame,
+    ) -> super::Intent {
+        input
+    }
+    /// Initial preference when neither saved settings nor launch flags select a mode.
+    fn default_fullscreen() -> bool {
+        true
+    }
     /// Optional third-person look: drag inside the canvas or use the controller's right stick.
     fn drag_look() -> bool {
         false

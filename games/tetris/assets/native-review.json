@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "checks": [
+    {
+      "id": "controls",
+      "area": "controls",
+      "instructions": "Exercise horizontal movement, both rotations, hold, soft/hard drop, all three modes, pause/focus and save/load; verify the controls in the guide."
+    },
+    {
+      "id": "minimal-ui",
+      "area": "ui",
+      "instructions": "Review portrait and landscape native windows: centered board fills available height, only two small previews appear, and statistics are confined to pause/results."
+    },
+    {
+      "id": "audio",
+      "area": "audio",
+      "instructions": "Listen to the original two-layer loop and lock/clear/loss cues; verify sound/music toggles, pause and focus behavior on the actual output device."
+    }
+  ]
+}
