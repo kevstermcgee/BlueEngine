@@ -351,6 +351,10 @@
       {
         "source": "games/scatterlock",
         "destination": "scatterlock"
+      },
+      {
+        "source": "games/tetris",
+        "destination": "tetris"
       }
     ],
     "prototypes": [
