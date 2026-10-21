@@ -148,6 +148,28 @@ def record_status(job, status, home=None, now=None):
     outcome = "completed" if completed else "failed"
     detail = ("Scheduled attempt completed. Publication details are recorded in the linked batch journals."
               if completed else "The scheduled attempt did not complete; a preflight failure may occur before the runner starts.")
+    if job == "ideaforge-daily":
+        from ideaforge_idle import daily_root
+        try:
+            root = daily_root(home / ".config/ideaforge/daily.json", home)
+            for journal in sorted((root / "batches").glob("*/state.json")):
+                batch = json.loads(journal.read_text())
+                if batch.get("status") == "published":
+                    continue
+                for dimension in batch.get("order", []):
+                    slot = batch.get("slots", {}).get(dimension, {})
+                    if slot.get("status") == "published":
+                        continue
+                    retry = datetime.fromisoformat(slot["retry_after"]) if slot.get("retry_after") else None
+                    outcome = "waiting" if completed and retry and retry > now else "pending" if completed else "failed"
+                    detail = f"Publication remains pending for {token(batch.get('date'))} {token(dimension)}."
+                    if retry:
+                        detail += f" Next retry after {retry.isoformat()}."
+                    detail += " The retained slot journal contains the failed gate and run path."
+                    break
+                break
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
     body = (f"# {title}\n\nStatus: {outcome}\n\n"
             f"Observed: {now.isoformat()}\n\n"
             f"Service `{job}.service`: result `{token(status.get('Result'))}`, "

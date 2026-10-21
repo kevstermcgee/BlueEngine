@@ -24,7 +24,7 @@ import sys
 import time
 import unicodedata
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -951,6 +951,14 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             self.command(["git", "worktree", "add", "-b", self.state["branch"], str(self.games), "origin/main"],
                          cwd=source, label="games-worktree")
         self.state["games_repository"] = github_repository(source)
+        catalog = load_json(self.games / ".games-catalog.json")
+        exported = catalog.get("source_revision")
+        if (catalog.get("source_repository") != self.state["engine_repository"]
+                or not isinstance(exported, str) or not re.fullmatch(r"[0-9a-f]{40}", exported)):
+            raise ForgeError("Existing catalog lacks a trusted engine source pin; retain it for inspection")
+        self.command(["git", "fetch", "origin", exported], label="catalog-source-fetch")
+        if not git_ancestor(self.engine, exported, self.state["engine_head"]):
+            raise ForgeError("Catalog contains newer or divergent engine source; integrate current main and reverify the retained game before exporting")
         self.command([sys.executable, "scripts/publish_games.py", "export", "--output", self.games,
                       "--revision", self.state["engine_head"]], label="export-game")
         slug = self.state["idea"]["slug"]
@@ -1290,7 +1298,8 @@ def daily_batch(args, now=None):
     """Two persistent slots per local date; retries always resume the same games."""
     daily_root = (args.daily_root or args.engine_root / ".be2-work/idea-forge/daily").resolve()
     daily_root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    today = (now or datetime.now(timezone.utc)).astimezone(ZoneInfo(args.timezone)).date().isoformat()
+    instant = now or datetime.now(timezone.utc)
+    today = instant.astimezone(ZoneInfo(args.timezone)).date().isoformat()
     with run_lock(daily_root):
         batches = daily_root / "batches"
         paths = sorted(batches.glob("*/state.json"))
@@ -1317,6 +1326,9 @@ def daily_batch(args, now=None):
                     batch["slots"][dimension] = slot
                     atomic_json(path, batch)
                 directory = Path(slot["directory"])
+                if slot.get("retry_after") and instant < datetime.fromisoformat(slot["retry_after"]):
+                    print(f"IdeaForge daily: {batch['date']} {dimension} waiting until {slot['retry_after']}; retained run {directory}", flush=True)
+                    break
                 try:
                     if (directory / "state.json").exists():
                         state = load_json(directory / "state.json")
@@ -1333,10 +1345,16 @@ def daily_batch(args, now=None):
                     if not delivery_complete(worker.state):
                         raise ForgeError("Daily completion requires verified publication and feedback")
                     slot["status"] = "published"
+                    for key in ("retry_after", "last_error", "attempts"):
+                        slot.pop(key, None)
                 except (ForgeError, OSError, ValueError, KeyError) as error:
                     failed = True
                     slot["status"] = "failed"
-                    print(f"IdeaForge daily: {batch['date']} {dimension} retained for retry ({type(error).__name__})",
+                    slot["attempts"] = min(int(slot.get("attempts", 0)) + 1, 24)
+                    slot["retry_after"] = ((now or datetime.now(timezone.utc)) + timedelta(hours=min(2 ** (slot["attempts"] - 1), 8))).isoformat()
+                    message = str(error).split("; private log:")[0][:500] if isinstance(error, ForgeError) else type(error).__name__
+                    slot["last_error"] = message if not learn.secret_like(message) else type(error).__name__
+                    print(f"IdeaForge daily: {batch['date']} {dimension} retained: {slot['last_error']}; retry after {slot['retry_after']}; run {directory}",
                           file=sys.stderr, flush=True)
                 atomic_json(path, batch)
                 if slot["status"] != "published":

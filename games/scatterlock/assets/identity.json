@@ -1,0 +1,16 @@
+{
+  "title": "Scatterlock",
+  "tagline": "Transport a constellation. Every delivery changes the puzzle.",
+  "controls": "Tab or click beacon, Q Gather / E Spread, Space pulse / next chamber, Z undo, R restart, right drag orbit, wheel zoom, F5/F9 save/load, Esc pause",
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30,90,190",
+    "--exit-after",
+    "200",
+    "--script",
+    "pulse@10,b@55,gather@55,pulse@55,undo@105,pulse@145"
+  ],
+  "engine_revision": "b5e80388b0db"
+}

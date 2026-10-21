@@ -126,6 +126,12 @@ def resume_pending_companion(config, state, pending_path):
                 if companion_state.get('status', 'prepared') in {'prepared', 'reviewing'}:
                     pending_path.unlink()
                     detail += ' Remote history proves this candidate was not published; retained source is available to the next scheduled AI session.'
+            if pending_path.exists():
+                pending['resume_attempts'] = min(int(pending.get('resume_attempts', 0)) + 1, 24)
+                pending['retry_after'] = (datetime.now(timezone.utc) + timedelta(
+                    hours=min(2 ** (pending['resume_attempts'] - 1), 8))).isoformat()
+                write_json(pending_path, pending)
+                detail += f" Next scheduled retry after {pending['retry_after']}."
         if exit_code == 0:
             try:
                 if helper:
@@ -139,6 +145,24 @@ def resume_pending_companion(config, state, pending_path):
     (state / 'latest.md').write_text(report)
     print(report)
     return exit_code
+
+
+def scheduled_attempt(state, pending_path, now=None):
+    """Hourly wakes resume delivery; only the 23:00 Pacific wake starts new AI work."""
+    from zoneinfo import ZoneInfo
+    instant = now or datetime.now(timezone.utc)
+    if pending_path.exists():
+        pending = json.loads(pending_path.read_text())
+        return not pending.get('retry_after') or instant >= datetime.fromisoformat(pending['retry_after'])
+    local = instant.astimezone(ZoneInfo('America/Los_Angeles'))
+    if local.hour != 23:
+        return False
+    marker = state / 'scheduled-start.json'
+    date = local.date().isoformat()
+    if marker.exists() and json.loads(marker.read_text()).get('date') == date:
+        return False
+    write_json(marker, {'date': date, 'started_at': instant.isoformat()})
+    return True
 
 
 def command(args, *, cwd=None, timeout=120, log=None):
@@ -602,6 +626,7 @@ def main():
     mode.add_argument('--collect-only', action='store_true', help='Exercise feedback collection without Codex or pushes')
     mode.add_argument('--baseline', action='store_true', help='Remember current feedback without running Codex')
     mode.add_argument('--retry-feedback', metavar='ID', help='Requeue one deferred/held topic; no agent or publication')
+    mode.add_argument('--scheduled', action='store_true', help='Start new work once at 23:00 Pacific; otherwise resume only due publication')
     args = parser.parse_args()
     config = json.loads((CONFIG_DIR / 'config.json').read_text())
     os.umask(0o077)
@@ -633,6 +658,9 @@ def main():
             print('Feedback requeued for the existing daily schedule; no agent or publication was run.')
             return 0
         pending_path = state / 'pending-companion.json'
+        if args.scheduled and not scheduled_attempt(state, pending_path):
+            print('No scheduled work due; retained publication uses bounded retry delays.')
+            return 0
         if pending_path.exists() and not (args.collect_only or args.baseline):
             return resume_pending_companion(config, state, pending_path)
         stamp = datetime.now().astimezone().strftime('%Y-%m-%d_%H-%M-%S-%f')
@@ -718,6 +746,7 @@ def main():
                                    'and record game lineage; no human approval is needed merely because a fix belongs to this companion repository.\n')
                     if delivery:
                         prompt += ('Engine native delivery baselines: ' + json.dumps(delivery.state['baselines']) + '\n'
+                                   'Engine game release prerequisites: ' + json.dumps(delivery.state.get('release_requirements', {})) + '\n'
                                    'Engine game sources requiring prior integration: ' + json.dumps(delivery.state['blocked_games']) + '\n')
                     prompt += ('Addressed game topics require actual native delivery and creator lineage; the harness releases selected engine game.project games. '
                                'Do not edit an unselected game or legacy assets/games source without a captured native source baseline. '

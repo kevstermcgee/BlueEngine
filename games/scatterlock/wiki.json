@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "overview": "Scatterlock is a six-chamber spatial cargo puzzle. Choose a beacon and preview a pulse that spreads or gathers every loose cube at once, then execute it to carry the formation through a suspended 3D chamber. Match numbered, colored cargo to its wire berth, account for walls and other cubes along the whole journey, and plan the order of delivery: a secured cube stays behind as a solid obstacle. Orbit the room to judge height and depth, experiment with previews, and undo freely to find a route within each chamber’s pulse allowance.",
+  "rules": [
+    "Spread doubles every loose cube’s distance from the selected beacon in all three coordinates; Gather halves it. Cube sizes stay fixed, and there is no gravity.",
+    "All loose cubes travel simultaneously along straight paths. A pulse is rejected without spending allowance if any cube would cross the chamber boundary, a solid baffle, another moving cube or docked cargo.",
+    "A cube docks only when its center ends inside the capture region of its matching numbered, colored berth. Passing through a berth does not dock cargo. Docked cubes stop responding to pulses and remain solid.",
+    "Dock every cube to secure a chamber. Press Space after securing it to enter the next one; completing all six chambers finishes the game.",
+    "Each valid pulse spends one allowance. Spending the last pulse with cargo loose causes allowance exhaustion; press Z to undo and restore that allowance, or R to restart the chamber. Rejected previews never consume a pulse.",
+    "Wire destinations and dotted travel paths preview the selected pulse. Red paths mark a blocked pulse and a red marker shows its first obstruction; receiving berths illuminate on clear delivery previews."
+  ],
+  "controls": [
+    "Press Tab to cycle beacons, press 1–5 for an available beacon, or left-click its world badge or sidebar row.",
+    "Press E to preview Spread or Q to preview Gather. Press Space or Enter to execute the selected pulse.",
+    "Hold the right mouse button and drag to orbit the 3D chamber; scroll the mouse wheel to zoom.",
+    "Press Z to undo a valid pulse, including a delivery and its spent allowance. Press R to restart the current chamber.",
+    "Press Escape to pause. Use Up/Down and Enter in the native pause menu.",
+    "Press F5 to quick-save; press F9 to load the engine-owned save, including the chamber and undo history."
+  ],
+  "gallery": [
+    {
+      "image": "assets/wiki/origin-shift.png",
+      "caption": "Origin shift: two loose cubes and their Spread destinations around beacon A.",
+      "alt": "Amber and cyan cargo float in a gridded 3D chamber, with wire berths, destination ghosts and beacon A selected."
+    },
+    {
+      "image": "assets/wiki/upper-berth.png",
+      "caption": "The upper berth: another Gather would collide the cargo; change the origin to clear the low baffle.",
+      "alt": "Elevated amber and cyan cargo above an orange-edged baffle, with a red collision preview and two pulses remaining."
+    },
+    {
+      "image": "assets/wiki/delivery-detour.png",
+      "caption": "Delivery is an obstacle: cyan is locked while amber takes a raised detour around it.",
+      "alt": "Chamber five shows secured cyan cargo, raised amber cargo and five selectable beacons for a three-dimensional detour."
+    },
+    {
+      "image": "assets/wiki/constellation-secured.png",
+      "caption": "The last constellation: all three cargo cubes secured among offset baffles, completing all six chambers.",
+      "alt": "Amber, cyan and violet cargo are locked at different heights and depths; the sidebar confirms all six chambers are secured."
+    }
+  ],
+  "design": {
+    "origin": "ai",
+    "original_prompt": null,
+    "rationale": "Scatterlock centers on a shared transformation that produces unequal journeys: cargo farther from a beacon moves farther, while every cube keeps its size. Switching origins turns spreading and gathering into transportation, and docking turns a successful delivery into an obstacle for the remaining formation. This supports short, readable experiments and satisfying delivery-order discoveries. Height and depth determine clearance in six compact 3D chambers. Unlike silhouette fitting, perspective resizing or exchanging coordinates between pairs, the same distance rule affects every loose cube. Previews and unrestricted undo encourage spatial experimentation; small pulse allowances reward finding a clean route without a timer."
+  }
+}

@@ -31,9 +31,15 @@ class Delivery:
         if not games:
             return None
         instance = cls(config, run, {'status': 'prepared', 'baselines': {}, 'blocked_games': {}, 'games': {},
-                                    'selected_games': sorted(games), 'wanted': [], 'source_commit': None}, **callbacks)
+                                    'selected_games': sorted(games), 'wanted': [], 'source_commit': None,
+                                    'release_requirements': {}}, **callbacks)
         base = instance.git(work, 'rev-parse', 'HEAD').strip()
         for slug in sorted(games):
+            if not (Path(work) / 'games' / slug / 'wiki.json').is_file():
+                instance.state['release_requirements'][slug] = (
+                    'Native publication requires wiki.json with exact rules/controls, public creation provenance '
+                    'and at least three distinct real gameplay captures under assets/wiki. Include these before '
+                    'addressing a game update, or defer it with the missing evidence named.')
             try:
                 game = instance.api(work, 'show', slug)
                 game = game.get('game', game)

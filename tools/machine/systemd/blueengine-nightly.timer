@@ -1,8 +1,8 @@
 [Unit]
-Description=Run BlueEngine maintenance every night at 11 pm Pacific
+Description=Nightly BlueEngine maintenance with hourly pending-delivery recovery
 
 [Timer]
-OnCalendar=*-*-* 23:00:00 America/Los_Angeles
+OnCalendar=*-*-* *:00:00 America/Los_Angeles
 AccuracySec=1min
 Persistent=true
 Unit=blueengine-nightly.service

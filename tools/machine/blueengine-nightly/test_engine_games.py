@@ -94,6 +94,10 @@ class EngineGameDeliveryTests(unittest.TestCase):
         self.assertEqual(result['status'], 'verified')
         self.assertEqual(result['games']['owned']['community_revision'], 'corrected')
 
+    def test_missing_game_wiki_is_reported_before_authoring(self):
+        self.assertIn('wiki.json', self.delivery.state['release_requirements']['owned'])
+        self.assertIn('owned', self.delivery.state['baselines'])
+
     def test_concurrent_draft_before_delivery_stops_before_privileged_build(self):
         self.source_update()
         self.current['head_revision'] = 'cousins-draft'

@@ -73,6 +73,12 @@ replacement. Once both games have verified public downloads and committed engine
 feedback, further wakeups that date do nothing. A retained earlier day's batch
 finishes before today's games start. Publication checks still apply; infrastructure
 failures or long builds can delay delivery beyond the intended calendar day.
+
+Repeated failures retain their error and run path in the daily slot journal and
+wait 1, 2, 4, then at most 8 hours between attempts. Waiting wakeups do no game work.
+Manual `resume` still attempts immediately. An export refuses a catalog pinned to
+newer or divergent engine source before changing files: integrate current main
+and repeat the exact-source native gates before publishing that retained game.
 Concurrent-main conflicts retain their worktrees for the integration/rebuild
 procedure below rather than forcing a push.
 

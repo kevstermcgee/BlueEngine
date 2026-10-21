@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "overview": "Crosshaul is a three-dimensional logistics puzzle across eight chambers. Select two cargo cubes and trade one world coordinate: height, width or depth. Every exchange moves both partners along a clear route, so reaching one dock can complicate another delivery. Later chambers add obstacles and a fourth cargo, with a limited exchange allowance and unlimited undo.",
+  "rules": [
+    "Dock every cargo at its matching color and symbol before the exchange allowance runs out.",
+    "An exchange swaps only the selected world coordinate between two cargoes; their other coordinates stay unchanged.",
+    "Both simultaneous routes must clear baffles, stationary cargo and the moving partner. Rejected routes and equal-coordinate commands cost no allowance.",
+    "An accepted exchange spends one allowance. Zero remaining exchanges with undocked cargo fails the chamber; undo refunds the exchange and restart restores its initial state.",
+    "After all cargoes dock and their slides finish, advance through all eight chambers. An already docked cargo can be moved again to lend a useful coordinate."
+  ],
+  "controls": [
+    "Left-click cargo cubes or their list rows; number keys 1\u20134 also select the two partners.",
+    "X / Y / Z select width / height / depth; Space performs the previewed exchange.",
+    "Right-drag orbits the camera and the mouse wheel zooms. Camera orbit never changes the world axes.",
+    "Backspace undoes and refunds an exchange; R restarts; Enter advances a completed chamber.",
+    "H reveals one legal next-move hint; Tab displays rules; F5 / F9 quick-save and quick-load; Esc opens the menu; F toggles fullscreen."
+  ],
+  "story": null,
+  "characters": [],
+  "gallery": [
+    {
+      "image": "assets/wiki/two-way-lift.png",
+      "caption": "Two-way lift: exchange the height of A and B while the third cargo stays docked.",
+      "alt": "First chamber showing the cyan and amber cargoes during their height exchange, with violet cargo above."
+    },
+    {
+      "image": "assets/wiki/third-carrier.png",
+      "caption": "The third carrier: borrow coordinates from a docked cargo to route both slides around baffles.",
+      "alt": "Third chamber showing three cargoes, symbol-marked docks, striped obstacles and a selected depth exchange."
+    },
+    {
+      "image": "assets/wiki/four-way-freight.png",
+      "caption": "Four-way freight: a fourth cargo adds another partner choice around the central obstacle.",
+      "alt": "Sixth chamber showing four cargoes and matching colored docks around a tall striped baffle."
+    }
+  ],
+  "design": {
+    "origin": "ai",
+    "original_prompt": null,
+    "rationale": "Exchanging one coordinate couples two deliveries: helping one cargo necessarily relocates its partner. The appeal is planning both clear routes and temporarily disturbing a completed dock to lend a useful coordinate. World-aligned movement and route previews make that spatial trade visible while later obstacles and a fourth cargo develop the same rule.",
+    "rationale_source": "docs/feedback/2026-10-17-crosshaul-700e43c5.md: recorded generated mechanic and public novelty/playtesting notes."
+  }
+}

@@ -19,7 +19,7 @@ import tempfile
 import time
 import urllib.request
 
-VERSION = "1.8.1"
+VERSION = "1.8.2"
 HOME = Path.home()
 STATE = HOME / ".local/state/dev-tools"
 BIN = HOME / ".local/bin"

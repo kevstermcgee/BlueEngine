@@ -23,6 +23,20 @@ def git(*args, cwd=None):
 
 
 class PublicationTests(unittest.TestCase):
+    def test_hourly_schedule_starts_one_nightly_session_and_resumes_only_due_receipts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            state = Path(temporary)
+            pending = state / 'pending-companion.json'
+            daytime = datetime(2026, 10, 21, 19, tzinfo=timezone.utc)
+            night = datetime(2026, 10, 22, 6, tzinfo=timezone.utc)
+            self.assertFalse(nightly.scheduled_attempt(state, pending, daytime))
+            self.assertTrue(nightly.scheduled_attempt(state, pending, night))
+            self.assertFalse(nightly.scheduled_attempt(state, pending, night + timedelta(minutes=5)))
+            pending.write_text(json.dumps({'retry_after': (night + timedelta(hours=2)).isoformat()}))
+            self.assertFalse(nightly.scheduled_attempt(state, pending, night + timedelta(hours=1)))
+            self.assertTrue(nightly.scheduled_attempt(state, pending, night + timedelta(hours=2)))
+            self.assertEqual(json.loads(pending.read_text())['retry_after'], (night + timedelta(hours=2)).isoformat())
+
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)

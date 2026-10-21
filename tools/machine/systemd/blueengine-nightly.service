@@ -9,7 +9,7 @@ WorkingDirectory=%h
 Environment=PATH=%h/.local/bin:%h/.cargo/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
 Environment=GIT_TERMINAL_PROMPT=0
-ExecStart=/usr/bin/python3 %h/BlueEngine/tools/machine/blueengine-nightly/run.py
+ExecStart=/usr/bin/python3 %h/BlueEngine/tools/machine/blueengine-nightly/run.py --scheduled
 TimeoutStartSec=8h
 TimeoutStopSec=30s
 KillMode=control-group

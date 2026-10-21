@@ -1,6 +1,6 @@
 # Development machine utilities
 
-Version 1.8.1. Debian/Linux, Python standard library, native Git/Cargo/systemd tools.
+Version 1.8.2. Debian/Linux, Python standard library, native Git/Cargo/systemd tools.
 Source lives here; six commands in `~/.local/bin` point to `dev_tools.py`;
 `dev-server-load` points to `server_load.py`, and `dev-server-isolation-test`
 points to `server_isolation_test.py`. `dev-storage-manage` points to
@@ -24,12 +24,16 @@ and adapt all absolute paths before installing on another host. Private policies
 feedback acknowledgments, recovery state, logs, and reports stay outside this
 repository.
 
-The version 4 nightly runner groups canonical human and AI feedback equally,
+The version 5 nightly runner groups canonical human and AI feedback equally,
 writes a bounded daily digest and retains pending/deferred topics in a private
 queue. Its existing timer, checks, native distribution policy and hosted CI gates
 remain authoritative. One AI can fix engine, launcher and companion-owned games
 in isolated worktrees before native review and public-release verification. See
 its README for per-topic outcomes and explicit retry.
+
+IdeaForge's successful backoff wakeups report `waiting` with the next retry time
+while a retained batch is incomplete; a successful service exit alone never
+changes that journal into a published game.
 
 ## Start here
 

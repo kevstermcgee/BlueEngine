@@ -81,6 +81,18 @@ class ScheduledStatusTest(unittest.TestCase):
                                                                       "InactiveExitTimestampMonotonic": "2000", "ExecMainExitTimestampMonotonic": last_exit}, self.home, self.now))
         self.assertEqual(path.read_text(), report)
 
+    def test_backoff_wakeup_reports_waiting_without_claiming_delivery(self):
+        root = self.home / "BlueEngine-idea-forge-native/.be2-work/idea-forge/daily/batches/2026-10-17"
+        root.mkdir(parents=True)
+        (root / "state.json").write_text(json.dumps({"date": "2026-10-17", "status": "pending", "order": ["3d", "2d"],
+            "slots": {"3d": {"status": "failed", "retry_after": "2026-10-17T20:00:00+00:00"}}}))
+        service = {**self.failed, "Result": "success", "ActiveState": "inactive", "SubState": "dead",
+                   "InactiveExitTimestampMonotonic": "1000", "ExecMainExitTimestampMonotonic": "2000"}
+        report = status.record_status("ideaforge-daily", service, self.home, self.now).read_text()
+        self.assertIn("Status: waiting", report)
+        self.assertIn("2026-10-17T20:00:00+00:00", report)
+        self.assertNotIn("Scheduled attempt completed", report)
+
     def test_observed_exec_condition_skip_preserves_status_but_condition_error_reports_failure(self):
         state = self.home / ".local/state/ideaforge"
         state.mkdir()

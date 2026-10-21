@@ -11,7 +11,7 @@ import unittest
 import argparse
 import zlib
 from copy import deepcopy
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
@@ -561,6 +561,20 @@ class SupervisorTests(unittest.TestCase):
                                           after="2026-10-08T00:10:00Z")
         self.assertEqual(receipt["run"], 2)
 
+    def test_stale_export_cannot_replace_newer_catalog_content(self):
+        game, _ = self.native_game()
+        self.worker.games.mkdir()
+        self.state.update(engine_repository="owner/BlueEngine", games_root=str(self.directory), engine_head="a" * 40)
+        forge.atomic_json(self.worker.games / ".games-catalog.json", {
+            "source_repository": "owner/BlueEngine", "source_revision": "b" * 40})
+        marker = self.worker.games / "newer-game.txt"
+        marker.write_text("preserve newer source")
+        with patch.object(self.worker, "command") as command, patch.object(forge, "github_repository", return_value="owner/Games"), patch.object(forge, "git_ancestor", return_value=False):
+            with self.assertRaisesRegex(forge.ForgeError, "newer or divergent"):
+                self.worker.export()
+        self.assertEqual(marker.read_text(), "preserve newer source")
+        self.assertFalse(any("export" in list(map(str, call.args[0])) for call in command.call_args_list))
+
     def test_agent_uses_stdin_schema_and_bounded_sandbox_without_a_shell(self):
         self.state["model"] = None
         def response(argv, **kwargs):
@@ -997,7 +1011,7 @@ class DailyTests(unittest.TestCase):
         self.assertEqual(forge.daily_batch(self.args, self.now), 1)
         self.assertEqual(len(self.built), 1)
         first = self.built[0]
-        self.assertEqual(forge.daily_batch(self.args, self.now), 0)
+        self.assertEqual(forge.daily_batch(self.args, self.now + timedelta(hours=1)), 0)
         self.assertEqual(self.built[1], first)
         self.assertNotEqual(self.built[2][0], first[0])
         self.assertEqual(self.create.call_count, 2)
@@ -1018,8 +1032,22 @@ class DailyTests(unittest.TestCase):
         state = forge.load_json(directory / "state.json")
         state.update(status="published", publication={"page": "https://example.invalid/game"})
         forge.atomic_json(directory / "state.json", state)
-        forge.daily_batch(self.args, self.now)
+        forge.daily_batch(self.args, self.now + timedelta(hours=1))
         self.assertEqual(self.built[0], self.built[1])
+
+    def test_failed_slots_back_off_without_replacing_or_rebuilding_the_game(self):
+        for hours, delay in ((0, 1), (1, 2), (3, 4), (7, 8), (15, 8)):
+            instant = self.now + timedelta(hours=hours)
+            self.fail_next = True
+            self.assertEqual(forge.daily_batch(self.args, instant), 1)
+            batch = forge.load_json(self.args.daily_root / "batches/2026-10-08/state.json")
+            slot = next(iter(batch["slots"].values()))
+            self.assertEqual(datetime.fromisoformat(slot["retry_after"]), instant + timedelta(hours=delay))
+            self.assertIn("genuine publication gate", slot["last_error"])
+            count = len(self.built)
+            self.assertEqual(forge.daily_batch(self.args, instant + timedelta(minutes=30)), 0)
+            self.assertEqual(len(self.built), count)
+        self.assertEqual(self.create.call_count, 1)
 
     def test_calendar_date_uses_pacific_midnight_and_handles_daylight_saving(self):
         if not self.real_timezones:
