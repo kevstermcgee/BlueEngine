@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "request_id": "c207a0f3-9e90-4bdd-add6-466e621f865e",
+  "sequence": 9,
+  "created_at": "2026-10-21T16:06:16.174628+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "c207a0f3-9e90-4bdd-add6-466e621f865e",
+    "slug": "tetris",
+    "source_game": "tetris",
+    "source_commit": "f1d67e3271ad3f0830c510b9bd54c507d28ad604",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "title": "Tetris",
+    "note": "Owner-requested classic 10x20 Tetris with a minimal centered portrait board, two readable previews and full D-pad/positional controller mappings. Native installer publication requires the separate exact-source release gates.",
+    "version": "0.1.0"
+  },
+  "target": null,
+  "event_type": "game_created",
+  "game": {
+    "slug": "tetris",
+    "title": "Tetris",
+    "owner": "kevstermcgee",
+    "root_game": "tetris",
+    "parent_game": null,
+    "parent_revision": null,
+    "head_revision": "7add85909192251f0499fce36944cfe8032221b26c10405064da31b4619c98e3"
+  },
+  "revision": {
+    "id": "7add85909192251f0499fce36944cfe8032221b26c10405064da31b4619c98e3",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "source_commit": "f1d67e3271ad3f0830c510b9bd54c507d28ad604",
+    "source_game": "tetris",
+    "source": {
+      "repository": "kevstermcgee/BlueEngine",
+      "commit": "f1d67e3271ad3f0830c510b9bd54c507d28ad604",
+      "game_path": "games/tetris"
+    },
+    "source_url": "https://github.com/kevstermcgee/BlueEngine/tree/f1d67e3271ad3f0830c510b9bd54c507d28ad604/games/tetris",
+    "download_source_url": "https://github.com/kevstermcgee/BlueEngine/archive/f1d67e3271ad3f0830c510b9bd54c507d28ad604.tar.gz",
+    "source_branch": "blueengine-community/tetris/7add85909192251f0499fce36944cfe8032221b26c10405064da31b4619c98e3",
+    "version": "0.1.0",
+    "note": "Owner-requested classic 10x20 Tetris with a minimal centered portrait board, two readable previews and full D-pad/positional controller mappings. Native installer publication requires the separate exact-source release gates.",
+    "actor": {
+      "login": "kevstermcgee",
+      "role": "maintainer"
+    },
+    "created_at": "2026-10-21T16:06:16.174628+00:00",
+    "kind": "submitted"
+  }
+}
