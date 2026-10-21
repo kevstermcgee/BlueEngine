@@ -1,14 +1,14 @@
 {
   "version": 1,
-  "overview": "Tetris is a precise, minimal falling-block puzzle built with BlueEngine. A roomier 12 by 24 centered playfield fills the native window, with only two small upcoming-piece previews above it. Arrange seven tetrominoes into complete horizontal rows, plan with the landing ghost and hold, and choose Marathon, a 40-line Sprint or a two-minute Ultra score attack.",
+  "overview": "Tetris is a precise, minimal falling-block puzzle built with BlueEngine. A classic 10 by 20 centered playfield fills the native window, with only two clearly readable upcoming-piece previews above it. Arrange seven tetrominoes into complete horizontal rows, plan with the landing ghost and hold, and choose Marathon, a 40-line Sprint or a two-minute Ultra score attack.",
   "rules": [
-    "The playfield is twelve columns by twenty-four visible rows, with two hidden rows. A complete horizontal row clears after a short flash and every row above it falls. A blocked spawn or remaining blocks in the hidden rows after a lock ends the run.",
+    "The playfield is ten columns by twenty visible rows, with two hidden rows. A complete horizontal row clears after a short flash and every row above it falls. A blocked spawn or remaining blocks in the hidden rows after a lock ends the run.",
     "Each shuffled bag contains all seven shapes once. The next two pieces appear as small previews above the board. Hold stores or swaps the current piece once per lock; a new piece enables hold again. The ghost outlines where a hard drop will land.",
     "SRS rotation tries standard wall and floor offsets. A grounded piece locks after 30 simulation ticks (half a second); successful grounded movement or rotation can reset that timer at most fifteen times. Left/right repeat begins after ten ticks and repeats every two ticks.",
     "Normal single/double/triple/four-row clears score 100/300/500/800 times the level. Three-corner T-spins score 400/800/1200/1600 for zero through three rows. Consecutive difficult clears gain a 50 percent back-to-back bonus; consecutive row-clearing pieces gain a growing 50-point combo bonus before the level multiplier. Emptying the board awards 3500 times level.",
     "Soft drops award one point per row; hard drops award two. Every ten cleared rows raises the level and speeds gravity. Marathon continues until top-out. Sprint wins at forty rows. Ultra completes after two active minutes and reports your score. Pausing stops the simulation and timer.",
     "R retries the selected mode. Selecting 1, 2 or 3, starts a fresh run. K saves and L loads through BlueEngine; normal play also restores automatic progress on the next launch.",
-    "Gameplay displays only the centered board, the landing ghost and two small next-piece hints. Score, line count and mode appear in the pause/result panel instead of permanent sidebars."
+    "Gameplay displays only the centered board, the landing ghost and two next-piece previews. Score, line count and mode appear in the pause/result panel instead of permanent sidebars."
   ],
   "controls": [
     "Left/Right or A/D: move; Down or S: soft drop; Up or W: rotate clockwise; X: clockwise rotation; Z or Q: reverse rotation.",
@@ -36,6 +36,6 @@
   "design": {
     "origin": "human",
     "original_prompt": "Using the latest BlueEngine, create a high quality Tetris game. Once complete, publish to BlueEngineGames and add your development feedback to the engine for improvement",
-    "prompt_note": "Presentation refinement requested by the user: \"I want the board to be centered. Piece hints can be small and only show the next piece or two. I want the window to be mainly just the board, none of the extra boxes and data\" Later refinements requested tighter margins, full D-pad controller support and a roomier 12x24 grid."
+    "prompt_note": "Presentation refinement requested by the user: \"I want the board to be centered. Piece hints can be small and only show the next piece or two. I want the window to be mainly just the board, none of the extra boxes and data\" Later refinements requested tighter margins, full D-pad controller support and a roomier 12x24 grid. The final refinement restores the classic 10x20 grid and enlarges the two next-piece previews."
   }
 }

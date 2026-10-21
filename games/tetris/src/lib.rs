@@ -5,8 +5,8 @@ use vesper3d::runtime::snapshot;
 use vesper3d::two_d::*;
 
 // I, O, T, S, Z, J, L. SRS spawn matrices and rotation centres.
-pub const WIDTH: usize = 12;
-pub const HEIGHT: usize = 24;
+pub const WIDTH: usize = 10;
+pub const HEIGHT: usize = 20;
 pub const ROWS: usize = HEIGHT + 2;
 pub mod controls;
 const SHAPES: [[(i32, i32); 4]; 7] = [

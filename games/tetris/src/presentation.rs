@@ -116,12 +116,12 @@ impl draw::Game for Tetris {
             ),
             BG,
         );
-        let cell = (((height - 28.) / HEIGHT as f32).min((width - 6.) / WIDTH as f32) / scale)
+        let cell = (((height - 66.) / HEIGHT as f32).min((width - 6.) / WIDTH as f32) / scale)
             .floor()
             .max(8.) as i32;
         let (left, top) = (
             (800 - cell * WIDTH as i32) / 2,
-            (450 - cell * HEIGHT as i32) / 2,
+            (450 - cell * HEIGHT as i32) / 2 + (12. / scale) as i32,
         );
         s.rect(
             0,
@@ -207,7 +207,7 @@ impl draw::Game for Tetris {
             }
         }
         // Just two unobtrusive piece previews above the board; no sidebars or boxes.
-        let mini = (cell / 7).max(4);
+        let mini = (cell / 4).max(8);
         for (n, &kind) in st.queue.iter().take(2).enumerate() {
             let x = 400 - 5 * mini + n as i32 * 6 * mini;
             for (cx, cy) in SHAPES[kind as usize] {

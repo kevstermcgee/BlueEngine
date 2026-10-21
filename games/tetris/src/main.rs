@@ -7,7 +7,7 @@ fn config() -> macroquad::conf::Conf {
     if !std::env::args().any(|a| a == "--size") {
         config.miniquad_conf.fullscreen = std::env::args().any(|a| a == "--fullscreen");
         config.miniquad_conf.window_width = 460;
-        config.miniquad_conf.window_height = 940;
+        config.miniquad_conf.window_height = 960;
     }
     config.miniquad_conf.icon = Some(macroquad::miniquad::conf::Icon {
         small: *include_bytes!("../assets/icon_16.rgba"),
