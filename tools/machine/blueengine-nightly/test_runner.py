@@ -32,6 +32,8 @@ class PublicationTests(unittest.TestCase):
             self.assertFalse(nightly.scheduled_attempt(state, pending, daytime))
             self.assertTrue(nightly.scheduled_attempt(state, pending, night))
             self.assertFalse(nightly.scheduled_attempt(state, pending, night + timedelta(minutes=5)))
+            self.assertTrue(nightly.scheduled_attempt(state, pending, night + timedelta(days=1, hours=5)))
+            self.assertFalse(nightly.scheduled_attempt(state, pending, night + timedelta(days=1, hours=6)))
             pending.write_text(json.dumps({'retry_after': (night + timedelta(hours=2)).isoformat()}))
             self.assertFalse(nightly.scheduled_attempt(state, pending, night + timedelta(hours=1)))
             self.assertTrue(nightly.scheduled_attempt(state, pending, night + timedelta(hours=2)))

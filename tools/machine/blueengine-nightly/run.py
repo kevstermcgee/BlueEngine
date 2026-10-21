@@ -148,18 +148,19 @@ def resume_pending_companion(config, state, pending_path):
 
 
 def scheduled_attempt(state, pending_path, now=None):
-    """Hourly wakes resume delivery; only the 23:00 Pacific wake starts new AI work."""
+    """Resume delivery or start one nightly session, including a missed 23:00 wake."""
     from zoneinfo import ZoneInfo
     instant = now or datetime.now(timezone.utc)
     if pending_path.exists():
         pending = json.loads(pending_path.read_text())
         return not pending.get('retry_after') or instant >= datetime.fromisoformat(pending['retry_after'])
     local = instant.astimezone(ZoneInfo('America/Los_Angeles'))
-    if local.hour != 23:
-        return False
     marker = state / 'scheduled-start.json'
-    date = local.date().isoformat()
-    if marker.exists() and json.loads(marker.read_text()).get('date') == date:
+    date = (local - timedelta(hours=23)).date().isoformat()
+    if marker.exists():
+        if json.loads(marker.read_text()).get('date', '') >= date:
+            return False
+    elif local.hour != 23:
         return False
     write_json(marker, {'date': date, 'started_at': instant.isoformat()})
     return True
@@ -626,7 +627,7 @@ def main():
     mode.add_argument('--collect-only', action='store_true', help='Exercise feedback collection without Codex or pushes')
     mode.add_argument('--baseline', action='store_true', help='Remember current feedback without running Codex')
     mode.add_argument('--retry-feedback', metavar='ID', help='Requeue one deferred/held topic; no agent or publication')
-    mode.add_argument('--scheduled', action='store_true', help='Start new work once at 23:00 Pacific; otherwise resume only due publication')
+    mode.add_argument('--scheduled', action='store_true', help='Start once per Pacific night, catching up missed wakes; resume only due publication')
     args = parser.parse_args()
     config = json.loads((CONFIG_DIR / 'config.json').read_text())
     os.umask(0o077)

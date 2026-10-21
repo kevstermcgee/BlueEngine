@@ -4,8 +4,8 @@ Runner version 5. Extend the existing nightly timer; do not install a second
 feedback-maintenance schedule.
 
 The existing timer now wakes hourly. Its service passes `--scheduled`: new AI work
-starts once per Pacific date during the 23:00 hour; other wakeups only resume a
-pending immutable delivery. Failed delivery resumes wait 1, 2, 4, then at most 8
+starts once per Pacific night at 23:00, or the next wake if that start was missed;
+other wakeups only resume a pending immutable delivery. Failed delivery resumes wait 1, 2, 4, then at most 8
 hours. The journal retains the next retry time, and the shared runner lock prevents
 overlap. Direct invocation without `--scheduled` bypasses the delay for recovery.
 Missing wiki prerequisites are included in the pre-authoring game context.
