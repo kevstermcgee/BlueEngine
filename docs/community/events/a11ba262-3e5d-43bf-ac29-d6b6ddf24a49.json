@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "request_id": "a11ba262-3e5d-43bf-ac29-d6b6ddf24a49",
+  "sequence": 10,
+  "created_at": "2026-10-21T16:13:04.001684+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "a11ba262-3e5d-43bf-ac29-d6b6ddf24a49",
+    "source_game": "tetris",
+    "expected_revision": "7add85909192251f0499fce36944cfe8032221b26c10405064da31b4619c98e3",
+    "source_commit": "a4fc0049cc64f56d53bc445e531e42af721b8a5b",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "note": "Complete native Windows icon sizes, DIB frames and shaded transparent artwork. Classic 10x20 board, readable two-piece previews and controller support are unchanged. Icon file/art gates pass; installer gates still required.",
+    "version": "0.1.0"
+  },
+  "target": "tetris",
+  "event_type": "revision_submitted",
+  "revision": {
+    "id": "9f4deaba3741565651704aae27e1806700533b1249414b814a50e721dce18221",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "source_commit": "a4fc0049cc64f56d53bc445e531e42af721b8a5b",
+    "source_game": "tetris",
+    "source": {
+      "repository": "kevstermcgee/BlueEngine",
+      "commit": "a4fc0049cc64f56d53bc445e531e42af721b8a5b",
+      "game_path": "games/tetris"
+    },
+    "source_url": "https://github.com/kevstermcgee/BlueEngine/tree/a4fc0049cc64f56d53bc445e531e42af721b8a5b/games/tetris",
+    "download_source_url": "https://github.com/kevstermcgee/BlueEngine/archive/a4fc0049cc64f56d53bc445e531e42af721b8a5b.tar.gz",
+    "source_branch": "blueengine-community/tetris/9f4deaba3741565651704aae27e1806700533b1249414b814a50e721dce18221",
+    "version": "0.1.0",
+    "note": "Complete native Windows icon sizes, DIB frames and shaded transparent artwork. Classic 10x20 board, readable two-piece previews and controller support are unchanged. Icon file/art gates pass; installer gates still required.",
+    "actor": {
+      "login": "kevstermcgee",
+      "role": "maintainer"
+    },
+    "created_at": "2026-10-21T16:13:04.001684+00:00",
+    "kind": "submitted",
+    "parent_revision": "7add85909192251f0499fce36944cfe8032221b26c10405064da31b4619c98e3"
+  },
+  "upstream_revision": null
+}
