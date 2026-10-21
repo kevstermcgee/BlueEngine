@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "request_id": "58a50b46-f9ba-46ee-99bd-cc48bb11d0de",
+  "sequence": 12,
+  "created_at": "2026-10-21T18:47:48.526815+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "58a50b46-f9ba-46ee-99bd-cc48bb11d0de",
+    "revision_id": "ee9375a34950432c9fa2198328f5e06ea500dd226fb260bfadc0888e036b88b1",
+    "source_commit": "33449f5532371972441712ed4383d036e4c99c86",
+    "games_commit": "bc268c56c29802f44b4bb58f3e3fdd80ec0ade20",
+    "receipt": {
+      "page": "https://kevstermcgee.github.io/BlueEngineGames/games/tetris/",
+      "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-33449f553237-games-bc268c56c298-39650480821-1",
+      "installer_sha256": "00f1e61250ed66057b77a2bff9a8a830ecc476769ba11820ef2ac0d63d384461",
+      "zip_sha256": "03e707d1468d56fe46b3feefb487f31f94c4c0bea8ab4d0c0353a58505ffc517",
+      "verified_at": "2026-10-21T18:47:39.173322+00:00"
+    },
+    "gates": {
+      "engine-checks": 39634456084,
+      "generated-game-linux-windows": 39634461746,
+      "windows-installer-review": 39649803246,
+      "production-release": 39650480821,
+      "download-page": 39655754883
+    }
+  },
+  "target": "tetris",
+  "event_type": "release_verified",
+  "release": {
+    "state": "published",
+    "source_kind": "engine",
+    "game_tree": "3d33e55ec2adfaa5722c0fa970a5e2e46cc516e6",
+    "revision_id": "ee9375a34950432c9fa2198328f5e06ea500dd226fb260bfadc0888e036b88b1",
+    "source_commit": "33449f5532371972441712ed4383d036e4c99c86",
+    "games_commit": "bc268c56c29802f44b4bb58f3e3fdd80ec0ade20",
+    "receipt": {
+      "page": "https://kevstermcgee.github.io/BlueEngineGames/games/tetris/",
+      "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-33449f553237-games-bc268c56c298-39650480821-1",
+      "installer_sha256": "00f1e61250ed66057b77a2bff9a8a830ecc476769ba11820ef2ac0d63d384461",
+      "zip_sha256": "03e707d1468d56fe46b3feefb487f31f94c4c0bea8ab4d0c0353a58505ffc517",
+      "verified_at": "2026-10-21T18:47:39.173322+00:00"
+    },
+    "gates": {
+      "engine-checks": {
+        "run": 39634456084,
+        "head": "33449f5532371972441712ed4383d036e4c99c86",
+        "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39634456084"
+      },
+      "generated-game-linux-windows": {
+        "run": 39634461746,
+        "head": "33449f5532371972441712ed4383d036e4c99c86",
+        "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39634461746"
+      },
+      "windows-installer-review": {
+        "run": 39649803246,
+        "head": "bc268c56c29802f44b4bb58f3e3fdd80ec0ade20",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39649803246"
+      },
+      "production-release": {
+        "run": 39650480821,
+        "head": "bc268c56c29802f44b4bb58f3e3fdd80ec0ade20",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39650480821"
+      },
+      "download-page": {
+        "run": 39655754883,
+        "head": "bc268c56c29802f44b4bb58f3e3fdd80ec0ade20",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39655754883"
+      }
+    }
+  }
+}
