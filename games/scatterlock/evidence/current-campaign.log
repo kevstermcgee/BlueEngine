@@ -1,4 +1,0 @@
-
-thread 'main' (43) panicked at /home/kevin/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/miniquad-0.4.8/src/native/linux_x11.rs:644:13:
-XOpenDisplay() failed!
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
