@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "request_id": "0b721474-d71d-4efd-a8f5-096db172c9b7",
+  "sequence": 13,
+  "created_at": "2026-10-21T18:48:32.318812+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "0b721474-d71d-4efd-a8f5-096db172c9b7",
+    "note": "Tetris is published with verified installer/ZIP hashes. Full local engine validation took 2652.4 seconds across 57 commands. Production initially rejected a correct text-only Pocket Breaker studio card because a fixed 650ms screenshot caught its fade-in below the brightness threshold. Fixed Games startup verification in bc268c56c298: bounded polling of the unchanged raster criterion, retaining retired-artwork checks; Windows tests cover faded, opaque and missing titles; full production startup now passes. Cheap native-icon and portrait/landscape preflight should precede compilation. Add bounded retry and sanitized HTTP diagnostics for transient GitHub API failures; one interrupted this release despite valid access. Consider source-bound artifact reuse to reduce full-catalog rebuilds without weakening exact-source gates.",
+    "version": "",
+    "category": "workflow",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  },
+  "target": "engine",
+  "event_type": "feedback",
+  "feedback": {
+    "note": "Tetris is published with verified installer/ZIP hashes. Full local engine validation took 2652.4 seconds across 57 commands. Production initially rejected a correct text-only Pocket Breaker studio card because a fixed 650ms screenshot caught its fade-in below the brightness threshold. Fixed Games startup verification in bc268c56c298: bounded polling of the unchanged raster criterion, retaining retired-artwork checks; Windows tests cover faded, opaque and missing titles; full production startup now passes. Cheap native-icon and portrait/landscape preflight should precede compilation. Add bounded retry and sanitized HTTP diagnostics for transient GitHub API failures; one interrupted this release despite valid access. Consider source-bound artifact reuse to reduce full-catalog rebuilds without weakening exact-source gates.",
+    "version": "",
+    "category": "workflow",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  }
+}
