@@ -9,3 +9,5 @@ SRS wall/floor kicks, seven-piece bags, 500 ms lock delay with at most 15 moveme
 Built with the latest BlueEngine main at project creation (b2d559b). Simulation is fixed-step and rendering-free; snapshots retain the bag, generator, inputs, timers and pending line clears.
 
 `cargo test --no-default-features` tests rules. `python scripts/ship.py ship --no-install` packages and checks the native build. Windows installers are published through the engine community release pipeline.
+
+The original shaded tetromino icon is reproducibly rendered by `python3 scripts/make_icon.py`; it contains all native Windows shell sizes and transparent corners.
