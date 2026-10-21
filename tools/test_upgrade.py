@@ -88,14 +88,32 @@ class PlanningIsReadOnlyTests(SnapshotMixin, unittest.TestCase):
     def test_plan_touches_nothing_and_repeats_identically(self):
         fixture = CustomSimFixture()
         self.addCleanup(fixture.close)
+        # The full checker builds the real tools concurrently. Keep every input
+        # fixed here, including the executable whose bytes the plan fingerprints.
+        tool = fixture.root / 'fixture-be2-tools.exe'
+        tool.write_bytes(b'unchanged planner tool input')
         before = self.snapshot(fixture.root)
-        first = upgrade.plan(fixture.root, ROOT, 'HEAD')
-        after = self.snapshot(fixture.root)
-        self.assertEqual(before, after, 'planning must not write, touch or remove any file in the game')
-        second = upgrade.plan(fixture.root, ROOT, 'HEAD')
+        with patch.dict(os.environ, {'BE2_TOOLS': str(tool)}):
+            first = upgrade.plan(fixture.root, ROOT, 'HEAD')
+            after = self.snapshot(fixture.root)
+            self.assertEqual(before, after, 'planning must not write, touch or remove any file in the game')
+            second = upgrade.plan(fixture.root, ROOT, 'HEAD')
         first.pop('generated_at'); second.pop('generated_at')
         first.pop('human_summary'); second.pop('human_summary')
         self.assertEqual(first, second, 'identical inputs must produce an identical plan')
+
+    def test_plan_reports_a_changed_tool_as_a_changed_input(self):
+        fixture = CustomSimFixture()
+        self.addCleanup(fixture.close)
+        tool = fixture.root / 'fixture-be2-tools.exe'
+        tool.write_bytes(b'first tool build')
+        with patch.dict(os.environ, {'BE2_TOOLS': str(tool)}):
+            first = upgrade.plan(fixture.root, ROOT, 'HEAD')['tool_binary']
+            tool.write_bytes(b'second tool build')
+            second = upgrade.plan(fixture.root, ROOT, 'HEAD')['tool_binary']
+        self.assertEqual(first['path'], second['path'])
+        self.assertNotEqual(first['sha256'], second['sha256'])
+        self.assertEqual(second['sha256'], upgrade.sha256_of(tool))
 
     def test_plan_without_out_writes_no_report_file(self):
         fixture = CustomSimFixture()
