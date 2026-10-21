@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "request_id": "1bb09c83-0f7a-44be-a3a1-630ca53ac057",
+  "sequence": 5,
+  "created_at": "2026-10-21T15:27:41.552840+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "1bb09c83-0f7a-44be-a3a1-630ca53ac057",
+    "revision_id": "41413492a0b3f9b5e8de99ac1c855c3681c37a43bf527a87a7880d2d0bbb541a",
+    "source_commit": "d433ea5dc53098dadbcdf1247b33dbe3d86122df",
+    "games_commit": "836248e4f4d48ce94ae84564732aaf42ad3e36dd",
+    "receipt": {
+      "page": "https://kevstermcgee.github.io/BlueEngineGames/games/crosshaul/",
+      "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-d433ea5dc530-games-836248e4f4d4-39618485133-1",
+      "installer_sha256": "0533072969569e22ef90401a8186c23c960a634d492a94d907d3e0fb8f6da649",
+      "zip_sha256": "41e0786d9dbe7fb8cb5efc53279f2a2e86df3b64ead5dc41e69594b18c9f6aca",
+      "verified_at": "2026-10-21T15:26:09.815688+00:00"
+    },
+    "gates": {
+      "engine-checks": 39610674627,
+      "generated-game-linux-windows": 39610803163,
+      "windows-installer-review": 39618521785,
+      "production-release": 39618485133,
+      "download-page": 39625410987
+    }
+  },
+  "target": "crosshaul",
+  "event_type": "release_verified",
+  "release": {
+    "state": "published",
+    "source_kind": "engine",
+    "game_tree": "b03f2dad2f9889c909ac9a6ac3e8b9c25de6527d",
+    "revision_id": "41413492a0b3f9b5e8de99ac1c855c3681c37a43bf527a87a7880d2d0bbb541a",
+    "source_commit": "d433ea5dc53098dadbcdf1247b33dbe3d86122df",
+    "games_commit": "836248e4f4d48ce94ae84564732aaf42ad3e36dd",
+    "receipt": {
+      "page": "https://kevstermcgee.github.io/BlueEngineGames/games/crosshaul/",
+      "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-d433ea5dc530-games-836248e4f4d4-39618485133-1",
+      "installer_sha256": "0533072969569e22ef90401a8186c23c960a634d492a94d907d3e0fb8f6da649",
+      "zip_sha256": "41e0786d9dbe7fb8cb5efc53279f2a2e86df3b64ead5dc41e69594b18c9f6aca",
+      "verified_at": "2026-10-21T15:26:09.815688+00:00"
+    },
+    "gates": {
+      "engine-checks": {
+        "run": 39610674627,
+        "head": "d433ea5dc53098dadbcdf1247b33dbe3d86122df",
+        "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39610674627"
+      },
+      "generated-game-linux-windows": {
+        "run": 39610803163,
+        "head": "d433ea5dc53098dadbcdf1247b33dbe3d86122df",
+        "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/39610803163"
+      },
+      "windows-installer-review": {
+        "run": 39618521785,
+        "head": "836248e4f4d48ce94ae84564732aaf42ad3e36dd",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39618521785"
+      },
+      "production-release": {
+        "run": 39618485133,
+        "head": "836248e4f4d48ce94ae84564732aaf42ad3e36dd",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39618485133"
+      },
+      "download-page": {
+        "run": 39625410987,
+        "head": "836248e4f4d48ce94ae84564732aaf42ad3e36dd",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/39625410987"
+      }
+    }
+  }
+}
