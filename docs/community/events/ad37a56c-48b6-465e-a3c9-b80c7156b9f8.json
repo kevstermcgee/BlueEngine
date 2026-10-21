@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "request_id": "ad37a56c-48b6-465e-a3c9-b80c7156b9f8",
+  "sequence": 6,
+  "created_at": "2026-10-21T15:46:06.867970+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "ad37a56c-48b6-465e-a3c9-b80c7156b9f8",
+    "note": "Tetris development on b2d559b: portable Intent lacks separate command edges for rotate/hold/drop, requiring sentinel pointer command IDs via device_input; add optional command bits with subtick retention and controller mappings. Shared take_cues is limited to Coin/Hit/Success while AudioBankSpec rejects named effects; allow optional authored one-shot banks under the shared lifecycle. audio render also requires an existing parent directory absent from new scaffolds; document mkdir or safely create parents. Repro and priorities: docs/feedback/2026-10-21-tetris.md; learning L-315/L-316/L-317.",
+    "version": "",
+    "category": "tooling",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  },
+  "target": "engine",
+  "event_type": "feedback",
+  "feedback": {
+    "note": "Tetris development on b2d559b: portable Intent lacks separate command edges for rotate/hold/drop, requiring sentinel pointer command IDs via device_input; add optional command bits with subtick retention and controller mappings. Shared take_cues is limited to Coin/Hit/Success while AudioBankSpec rejects named effects; allow optional authored one-shot banks under the shared lifecycle. audio render also requires an existing parent directory absent from new scaffolds; document mkdir or safely create parents. Repro and priorities: docs/feedback/2026-10-21-tetris.md; learning L-315/L-316/L-317.",
+    "version": "",
+    "category": "tooling",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  }
+}

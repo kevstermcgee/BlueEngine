@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "request_id": "9f0d5ea3-2aa0-4549-a4b0-99232ca5b893",
+  "sequence": 7,
+  "created_at": "2026-10-21T15:51:41.087839+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "9f0d5ea3-2aa0-4549-a4b0-99232ca5b893",
+    "note": "Tetris minimal-board refinement exposed a responsive-layout gap: portable client fixes the canvas to 800x450 and normal launches force a shared fullscreen preference. A portrait board-first game inverse-maps native screen dimensions into Scene coordinates to fill letterbox margins while keeping shared timing/input/storage. Add optional game-owned logical dimensions or a responsive viewport contract and default window preference, preserving existing consumers. Repro: games/tetris/src/presentation.rs; learning L-318.",
+    "version": "",
+    "category": "ui",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  },
+  "target": "engine",
+  "event_type": "feedback",
+  "feedback": {
+    "note": "Tetris minimal-board refinement exposed a responsive-layout gap: portable client fixes the canvas to 800x450 and normal launches force a shared fullscreen preference. A portrait board-first game inverse-maps native screen dimensions into Scene coordinates to fill letterbox margins while keeping shared timing/input/storage. Add optional game-owned logical dimensions or a responsive viewport contract and default window preference, preserving existing consumers. Repro: games/tetris/src/presentation.rs; learning L-318.",
+    "version": "",
+    "category": "ui",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  }
+}
