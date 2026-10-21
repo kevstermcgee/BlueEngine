@@ -1,6 +1,6 @@
 //! The game's identity is one file (`assets/identity.json`); its window title, game document and icon
 //! assets must agree, so the window, the desktop shortcut and the exe's version info can never drift.
-//! Placeholder titles are not rejected here (`scripts/check.py` does that at the ship gate).
+//! Use the native client's parser so invalid identity metadata fails before launching the game.
 use vesper3d::viewer::{game::GameDocument, identity::Identity};
 
 fn root(file: &str) -> std::path::PathBuf {
@@ -10,7 +10,7 @@ fn root(file: &str) -> std::path::PathBuf {
 #[test]
 fn identity_icon_and_game_document_agree() {
     let text = std::fs::read_to_string(root("assets/identity.json")).expect("assets/identity.json");
-    let identity: Identity = serde_json::from_str(&text).expect("assets/identity.json is valid JSON");
+    let identity = Identity::parse(&text).expect("assets/identity.json is valid for native startup");
     assert!(!identity.title.trim().is_empty(), "give the game a title in assets/identity.json");
     if root("game.json").is_file() {
         let game = GameDocument::load(&root("game.json")).unwrap();

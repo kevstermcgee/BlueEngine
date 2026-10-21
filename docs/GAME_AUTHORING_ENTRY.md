@@ -25,6 +25,10 @@ Games own controls, camera, fonts, art, HUD and audio. Custom clients are suppor
 Authority uses fixed ticks without rendering; presentation reads it. For uncaptured mouse input use `shell.accepting_input()`, since `playing()`
 requires capture. Verify real keys and changed visuals in a native window.
 
+Declare `controller` input; run `scripts/check.py`.
+Use `Identity::parse` in tests: Serde skips validation, including the
+200-character controls limit.
+
 ## Movement and saves
 
 Stock `GameDocument.player_profile.jump_height: f32` is metres, finite `0..=3`,

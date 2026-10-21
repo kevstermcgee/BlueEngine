@@ -253,6 +253,34 @@ class FindToolsTests(unittest.TestCase):
 
 @unittest.skipUnless(os.environ.get('BE2_TOOLS'), 'Real native integration runs through check_authoring.py')
 class GeneratedGameIntegrationTests(unittest.TestCase):
+    def test_generated_identity_test_enforces_native_controls_contract(self):
+        engine = Path(__file__).resolve().parents[1]
+        native = Path(os.environ['BE2_TOOLS']).resolve()
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
+        env = os.environ.copy()
+        env['CARGO_TARGET_DIR'] = str(native.parent.parent)
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / 'identity-probe'
+            subprocess.run([str(native), 'new-game', 'identity-probe', str(project), str(engine), 'two-d'],
+                           check=True, capture_output=True, creationflags=flags)
+            # Settle the scaffold's seeded lock before running its actual generated Rust test.
+            subprocess.run(['cargo', 'metadata', '--offline', '--format-version', '1'], cwd=project,
+                           env=env, check=True, capture_output=True, timeout=600, creationflags=flags)
+            path = project / 'assets/identity.json'
+            identity = json.loads(path.read_text())
+            for length, accepted in ((200, True), (201, False)):
+                with self.subTest(controls_characters=length):
+                    identity['controls'] = '\u00e9' * length
+                    path.write_text(json.dumps(identity), encoding='utf-8')
+                    checked = subprocess.run(['cargo', 'test', '--locked', '--offline',
+                                              '--no-default-features', '--test', 'identity'],
+                                             cwd=project, env=env, capture_output=True, text=True,
+                                             timeout=600, creationflags=flags)
+                    output = checked.stdout + checked.stderr
+                    self.assertEqual(checked.returncode == 0, accepted, output)
+                    if not accepted:
+                        self.assertIn('identity controls must be 1-200 characters', output)
+
     def test_all_starters_validate_plan_and_use_the_fresh_authoring_binary(self):
         from tools import workflow
         engine = Path(__file__).resolve().parents[1]

@@ -43,6 +43,9 @@ folder's absolute path for `--game`. Simulation is a rendering-free fixed 60 Hz
 `ClientInput`, `GameShell`, `Lifecycle`, `Snapshot`, kit materials and meshes.
 Integer axis sweeps test baffles, stationary cargo and relative partner movement.
 Rendering reads state and interpolates the authority's synchronized travel interval.
+Docking clicks follow the final fixed tick of a cargo slide, including ordinary
+arrivals before chamber completion. Undo or restart cancels an unfinished arrival.
+These audio events belong to presentation and do not change puzzle rules or saves.
 
 `assets/chambers.json` contains authored positions, unit-cell baffles, allowances
 and legal reference solutions. `assets/verification_input.json` is a complete

@@ -1,6 +1,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+mod docking_audio;
 mod platform;
 use crosshaul::{Cell, Intent, Sim, TRAVEL};
+use docking_audio::DockingArrival;
 use macroquad::prelude::*;
 use vesper3d::viewer::{
     devkit::{self, flag_value, parse_size, synth, Lifecycle, Settings},
@@ -216,7 +218,6 @@ async fn main() {
     let mut hint = String::new();
     let mut instructions = false;
     let mut was_won = false;
-    let mut previous_docked = sim.docked();
     loop {
         input.begin_frame_with_keyboard(
             &mut shell,
@@ -333,7 +334,11 @@ async fn main() {
             let old_reject = sim.rejected;
             let old_chamber = sim.chamber;
             let old_pair = sim.pair.clone();
+            let docking = DockingArrival::finishing(&sim);
             sim.step(&command);
+            if docking.is_some_and(|arrival| arrival.completed(&sim)) {
+                sounds.play(0, 0.35);
+            }
             if sim.used > old_used {
                 sounds.play(1, 0.55);
                 hint.clear();
@@ -357,10 +362,6 @@ async fn main() {
             sounds.play(3, 0.7);
         }
         was_won = sim.won();
-        if sim.docked() > previous_docked && sim.motion.is_none() {
-            sounds.play(0, 0.35);
-        }
-        previous_docked = sim.docked();
         clear_background(Color::new(0.025, 0.043, 0.071, 1.));
         let mut geo = Template::new();
         world.clear();
