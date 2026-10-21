@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "request_id": "3ae186b7-3318-4ff6-93c7-f621fb05fce2",
+  "sequence": 3,
+  "created_at": "2026-10-21T12:58:52.892253+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "3ae186b7-3318-4ff6-93c7-f621fb05fce2",
+    "slug": "scatterlock",
+    "source_game": "scatterlock",
+    "source_commit": "ff0cdfecdb744176e051efdb14a7cc861a656ac1",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "title": "Scatterlock",
+    "note": "Recover the retained daily game on the current engine after its stale catalog export was removed.",
+    "version": "0.1.0"
+  },
+  "target": null,
+  "event_type": "game_created",
+  "game": {
+    "slug": "scatterlock",
+    "title": "Scatterlock",
+    "owner": "kevstermcgee",
+    "root_game": "scatterlock",
+    "parent_game": null,
+    "parent_revision": null,
+    "head_revision": "03918ab12942ef082ca4ef63e3bca772180e7f384a6a2bff79741820d1391cc5"
+  },
+  "revision": {
+    "id": "03918ab12942ef082ca4ef63e3bca772180e7f384a6a2bff79741820d1391cc5",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "source_commit": "ff0cdfecdb744176e051efdb14a7cc861a656ac1",
+    "source_game": "scatterlock",
+    "source": {
+      "repository": "kevstermcgee/BlueEngine",
+      "commit": "ff0cdfecdb744176e051efdb14a7cc861a656ac1",
+      "game_path": "games/scatterlock"
+    },
+    "source_url": "https://github.com/kevstermcgee/BlueEngine/tree/ff0cdfecdb744176e051efdb14a7cc861a656ac1/games/scatterlock",
+    "download_source_url": "https://github.com/kevstermcgee/BlueEngine/archive/ff0cdfecdb744176e051efdb14a7cc861a656ac1.tar.gz",
+    "source_branch": "blueengine-community/scatterlock/03918ab12942ef082ca4ef63e3bca772180e7f384a6a2bff79741820d1391cc5",
+    "version": "0.1.0",
+    "note": "Recover the retained daily game on the current engine after its stale catalog export was removed.",
+    "actor": {
+      "login": "kevstermcgee",
+      "role": "maintainer"
+    },
+    "created_at": "2026-10-21T12:58:52.892253+00:00",
+    "kind": "submitted"
+  }
+}
