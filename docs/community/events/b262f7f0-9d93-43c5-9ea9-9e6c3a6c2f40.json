@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "request_id": "b262f7f0-9d93-43c5-9ea9-9e6c3a6c2f40",
+  "sequence": 8,
+  "created_at": "2026-10-21T15:57:13.900593+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "b262f7f0-9d93-43c5-9ea9-9e6c3a6c2f40",
+    "note": "While adding full D-pad support to Tetris, reproduced that portable client consumed only left-stick axes and South: D-pad, Start and Select were ignored. Implemented D-pad-priority axes, Start start/pause/resume, Select retry, and backward-compatible Game::gamepad_input using the same backend/focus/accumulator. Added axis and game-command regression tests. Also added Game::default_fullscreen so the requested minimal 12x24 board can launch as a tight portrait window; saved preferences and explicit flags win. Native hardware still needs physical confirmation.",
+    "version": "",
+    "category": "controllers",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  },
+  "target": "engine",
+  "event_type": "feedback",
+  "feedback": {
+    "note": "While adding full D-pad support to Tetris, reproduced that portable client consumed only left-stick axes and South: D-pad, Start and Select were ignored. Implemented D-pad-priority axes, Start start/pause/resume, Select retry, and backward-compatible Game::gamepad_input using the same backend/focus/accumulator. Added axis and game-command regression tests. Also added Game::default_fullscreen so the requested minimal 12x24 board can launch as a tight portrait window; saved preferences and explicit flags win. Native hardware still needs physical confirmation.",
+    "version": "",
+    "category": "controllers",
+    "target_type": "engine",
+    "kind": "ai",
+    "target": ""
+  }
+}
