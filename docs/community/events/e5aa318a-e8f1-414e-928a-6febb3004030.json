@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "request_id": "e5aa318a-e8f1-414e-928a-6febb3004030",
+  "sequence": 2,
+  "created_at": "2026-10-21T12:58:40.096944+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "e5aa318a-e8f1-414e-928a-6febb3004030",
+    "source_game": "crosshaul",
+    "expected_revision": "4c3697c4dd0f864e4fc9c40f9f225cb887304a9df42387a338c6ceb274237b17",
+    "source_commit": "ff0cdfecdb744176e051efdb14a7cc861a656ac1",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "note": "Recover the verified docking correction with its required native publication guide and gameplay captures.",
+    "version": "0.1.0"
+  },
+  "target": "crosshaul",
+  "event_type": "revision_submitted",
+  "revision": {
+    "id": "41413492a0b3f9b5e8de99ac1c855c3681c37a43bf527a87a7880d2d0bbb541a",
+    "source_repository": "kevstermcgee/BlueEngine",
+    "source_commit": "ff0cdfecdb744176e051efdb14a7cc861a656ac1",
+    "source_game": "crosshaul",
+    "source": {
+      "repository": "kevstermcgee/BlueEngine",
+      "commit": "ff0cdfecdb744176e051efdb14a7cc861a656ac1",
+      "game_path": "games/crosshaul"
+    },
+    "source_url": "https://github.com/kevstermcgee/BlueEngine/tree/ff0cdfecdb744176e051efdb14a7cc861a656ac1/games/crosshaul",
+    "download_source_url": "https://github.com/kevstermcgee/BlueEngine/archive/ff0cdfecdb744176e051efdb14a7cc861a656ac1.tar.gz",
+    "source_branch": "blueengine-community/crosshaul/41413492a0b3f9b5e8de99ac1c855c3681c37a43bf527a87a7880d2d0bbb541a",
+    "version": "0.1.0",
+    "note": "Recover the verified docking correction with its required native publication guide and gameplay captures.",
+    "actor": {
+      "login": "kevstermcgee",
+      "role": "maintainer"
+    },
+    "created_at": "2026-10-21T12:58:40.096944+00:00",
+    "kind": "submitted",
+    "parent_revision": "4c3697c4dd0f864e4fc9c40f9f225cb887304a9df42387a338c6ceb274237b17"
+  },
+  "upstream_revision": "4c3697c4dd0f864e4fc9c40f9f225cb887304a9df42387a338c6ceb274237b17"
+}
