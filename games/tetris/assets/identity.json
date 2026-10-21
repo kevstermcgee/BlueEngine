@@ -5,5 +5,15 @@
   "engine_revision": "b2d559b43217",
   "package": [
     "assets"
+  ],
+  "smoke_args": [
+    "--capture",
+    "{dir}",
+    "--frames",
+    "30",
+    "--size",
+    "1200x960",
+    "--verify",
+    "--mute"
   ]
 }
