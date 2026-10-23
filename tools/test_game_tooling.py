@@ -16,6 +16,110 @@ from unittest.mock import patch
 from tools import game_tooling as tooling
 
 
+class ReproduciblePinTests(unittest.TestCase):
+    """Real Git revisions must restore the exact tooling digest a migration records."""
+
+    def setUp(self):
+        self.scratch = tempfile.TemporaryDirectory(prefix='be-pin-')
+        self.addCleanup(self.scratch.cleanup)
+        self.root = Path(self.scratch.name)
+        self.engine = self.root / 'engine café 雪'
+        self.game = self.root / 'game spaced'
+        (self.game / 'scripts').mkdir(parents=True)
+        bootstrap = tooling.module_from(tooling.ROOT / 'templates/game_entry.py', 'be2_pin_fixture_bootstrap')
+        self.files = bootstrap.FILES
+        for name in self.files:
+            destination = self.engine / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(tooling.ROOT / name, destination)
+        (self.engine / '.gitattributes').write_text('* text=auto eol=lf\n', encoding='utf-8')
+        for command in ('check', 'ship', 'dev', 'project'):
+            shutil.copyfile(self.engine / f'templates/game_{command}.py',
+                            self.game / f'scripts/{command}.py')
+        self.git('init', '-q')
+        self.git('config', 'user.name', 'Tooling fixture')
+        self.git('config', 'user.email', 'tooling@example.invalid')
+        self.commit('Initial tooling')
+
+    def git(self, *arguments):
+        return subprocess.run(['git', '-C', str(self.engine), *arguments], check=True,
+                              capture_output=True).stdout
+
+    def commit(self, message):
+        self.git('add', '.')
+        self.git('commit', '-qm', message)
+
+    def test_clean_pin_reconstructs_from_recorded_revision(self):
+        recorded = tooling.pin(self.game, self.engine)
+        self.assertEqual(recorded['revision'], self.git('rev-parse', 'HEAD').decode().strip())
+        restored = hashlib.sha256()
+        for name in self.files:
+            restored.update(name.encode('utf-8') + b'\0')
+            restored.update(self.git('show', recorded['revision'] + ':' + name) + b'\0')
+        self.assertEqual(recorded['sha256'], restored.hexdigest())
+
+    def test_dirty_shared_tooling_is_rejected_before_any_migration_writes(self):
+        helper = self.engine / 'tools/game_metadata.py'
+        helper.write_bytes(helper.read_bytes() + b'\n# reviewed but not committed\n')
+        completed = self.game / 'dist/completed.txt'
+        completed.parent.mkdir()
+        completed.write_text('completed native package', encoding='utf-8')
+        before = {p.relative_to(self.game): p.read_bytes() for p in self.game.rglob('*') if p.is_file()}
+        for staged in (False, True):
+            with self.subTest(staged=staged):
+                if staged:
+                    self.git('add', 'tools/game_metadata.py')
+                with self.assertRaisesRegex(ValueError, 'differ from recorded revision.*commit.*No files changed'):
+                    tooling.migrate(self.game, self.engine)
+                self.assertEqual(before, {p.relative_to(self.game): p.read_bytes()
+                                          for p in self.game.rglob('*') if p.is_file()})
+
+    def test_unrelated_tracked_and_untracked_project_changes_are_allowed(self):
+        source = self.engine / 'game.rs'
+        source.write_text('initial rules\n', encoding='utf-8')
+        self.commit('Game source')
+        expected = tooling.pin(self.game, self.engine)
+        source.write_text('changed rules\n', encoding='utf-8')
+        (self.engine / 'author-notes.txt').write_text('untracked notes\n', encoding='utf-8')
+        self.assertEqual(tooling.pin(self.game, self.engine), expected)
+        tooling.migrate(self.game, self.engine)
+        tooling.check(self.game, self.engine)
+
+    def test_new_tooling_input_missing_from_recorded_revision_is_rejected(self):
+        self.git('rm', '--cached', 'tools/game_metadata.py')
+        self.git('commit', '-qm', 'Old tooling revision without metadata helper')
+        with self.assertRaisesRegex(ValueError, 'game_metadata.py is unavailable.*commit.*No files changed'):
+            tooling.pin(self.game, self.engine)
+
+    def test_commit_then_migrate_restores_in_a_fresh_checkout(self):
+        helper = self.engine / 'tools/game_metadata.py'
+        helper.write_bytes(helper.read_bytes() + b'\n# reviewed tooling update\n')
+        self.commit('Reviewed shared tooling')
+        tooling.migrate(self.game, self.engine)
+        recorded = json.loads((self.game / 'scripts/tooling.json').read_text(encoding='utf-8'))
+        restored = self.root / 'fresh engine'
+        subprocess.run(['git', 'clone', '-q', '--no-hardlinks', str(self.engine), str(restored)],
+                       check=True, capture_output=True)
+        subprocess.run(['git', '-C', str(restored), 'checkout', '-q', '--detach', recorded['revision']],
+                       check=True, capture_output=True)
+        bootstrap = tooling.module_from(restored / 'templates/game_entry.py', 'be2_restored_pin_bootstrap')
+        self.assertEqual(bootstrap.tooling_digest(restored), recorded['sha256'])
+        result = subprocess.run([sys.executable, str(self.game / 'scripts/check.py'), '--help'],
+                                cwd=self.root, env=dict(os.environ, BE2_TOOLING_ROOT=str(restored)),
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_packaged_engine_pin_retains_manifest_revision_without_git(self):
+        (self.engine / 'PACKAGE-MANIFEST.json').write_text(json.dumps({'commit': 'packaged-revision'}),
+                                                         encoding='utf-8')
+        with patch.object(tooling.subprocess, 'run') as git:
+            recorded = tooling.pin(self.game, self.engine)
+            git.assert_not_called()
+        self.assertEqual(recorded['revision'], 'packaged-revision')
+        bootstrap = tooling.module_from(self.engine / 'templates/game_entry.py', 'be2_package_pin_bootstrap')
+        self.assertEqual(recorded['sha256'], bootstrap.tooling_digest(self.engine))
+
+
 class SharedToolingTests(unittest.TestCase):
     def setUp(self):
         self.scratch = tempfile.TemporaryDirectory(prefix='be-tooling-')

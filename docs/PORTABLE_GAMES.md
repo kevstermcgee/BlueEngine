@@ -54,6 +54,24 @@ entire framebuffer, and keep rendering read-only. Native kit geometry/materials/
 and the existing native worker/network APIs remain available. Controller, chunks and day clocks are rendering-free.
 Leo retains its optional native portable presentation with the same authoritative state.
 
+For native 2D drawing inside a callback, use `draw::logical_screen_camera` so
+top-left logical coordinates match `Viewport::pointer`, including letterboxing
+and display scaling:
+
+```rust,ignore
+let bounds = vesper3d::two_d::Rect::new(0, 0, 800, 450);
+scene.render_view(0, bounds, move |viewport| {
+    let camera = vesper3d::two_d::draw::logical_screen_camera(bounds, viewport)?;
+    macroquad::prelude::set_camera(&camera);
+    // Draw at logical coordinates; smaller Y is higher on screen.
+    Ok(())
+});
+```
+
+The helper uses positive Y zoom for the native screen (`render_target: None`).
+Macroquad render targets have a different Y convention; keep their camera and
+compositing policy explicit. `render_view` still accepts arbitrary custom cameras.
+
 `Game::show_overlays()` defaults to true; return false to hide shared start/pause panels and notices.
 `Game::start_automatically()` defaults to false; return true to start a simulation immediately.
 These preserve pause/input/audio/storage behavior. `show_hud()` independently controls title/control labels.
@@ -79,6 +97,16 @@ native keys into public intentions before fixed-step accumulation. It runs only
 while focused, started and unpaused; its default preserves existing input. Return
 `action: true` for a press edge. With `pointer_target_only_on_press`, a changed
 pointer is retained as an explicit command target even across frames without a tick.
+For additional actions, define game-owned bits such as `const HOLD: u32 = 1 << 0`
+and `const REVERSE: u32 = 1 << 1`, then OR them into `input.commands` from key
+presses or `gamepad_input`. In `Simulation::step`, test `input.commands & HOLD != 0`.
+Commands use all 32 bits independently of action/pointer; the shared
+`IntentAccumulator` combines bits across frames without a tick and consumes them
+on the next tick only. Repeated instances of one bit before that tick coalesce;
+the mask does not preserve ordering or repeated text edits. Focus loss, pause,
+restart and successful load discard pending input. Old serialized intentions
+default to zero commands; Rust struct literals should use `..Default::default()`
+for unused fields. Keep movement as held axes, and set command bits on press edges.
 Update camera-only presentation here; keep gameplay in `Simulation::step`, and
 exercise the same commands through `verification_input` and rule tests.
 

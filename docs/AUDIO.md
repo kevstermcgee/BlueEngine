@@ -8,16 +8,19 @@ presets, imported clips, authored polyphonic stereo music or adaptive layers:
 
 ```sh
 be2-tools audio validate project.json
-be2-tools audio render project.json NEW_BUNDLE_DIRECTORY
-be2-tools audio check NEW_BUNDLE_DIRECTORY
-cargo run --profile fast --example audio_preview -- NEW_BUNDLE_DIRECTORY
-python tools/audio_report.py NEW_BUNDLE_DIRECTORY/preview-mix.wav --loop --fail-on-issues
+# Create the parent first; the new bundle assets/audio/pulse must not exist.
+python3 -c "from pathlib import Path; Path('assets/audio').mkdir(parents=True, exist_ok=True)"
+be2-tools audio render project.json assets/audio/pulse
+be2-tools audio check assets/audio/pulse
+cargo run --profile fast --example audio_preview -- assets/audio/pulse
+python tools/audio_report.py assets/audio/pulse/preview-mix.wav --loop --fail-on-issues
 ```
 
 `validate` checks schema/ranges/resource estimates; `render` also reads and validates imported audio,
 computes the PCM assets and publishes `bank.json` last in an exclusively reserved directory. It fails
-without replacing an existing bundle. `check` rereads every runtime file and verifies PCM format,
-sample counts, checksums and equal music-layer lengths. Keep `project.json` in source control, render
+without replacing an existing bundle. A fresh scaffold needs `assets/audio` created
+before rendering into `assets/audio/pulse`. `check` rereads every runtime file and
+verifies PCM format, sample counts, checksums and equal music-layer lengths. Keep `project.json` in source control, render
 before packaging, and ship the runtime bank files. Generated banks need not be tracked;
 Leo renders/checks its committed JSON and source clips automatically at package time,
 and omits authoring preview mixes. Edit audio data and rerender to a new directory;

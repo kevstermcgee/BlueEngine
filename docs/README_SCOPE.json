@@ -54,7 +54,7 @@
     "source_free_authoring": "b01a46ac428001b6faa1bc99c0fd314c05f675fbd104e50585f08685d003089d",
     "source_navigator": "8e79a5cd2fb298e01d26d24d0dc8294691167c1bce3b1063eadd27271668f338",
     "static_lint": "34d5f0ffc1d189e9b771f00a4905709dedd03302caab5891107e63fa0ae92b26",
-    "two_dimensional": "ac5a731400bd4886d03d1db8cdc3c51e9b0be2d381eb782244a46920b241531f",
+    "two_dimensional": "49d8c60bf16cbdd89cca192f23b2b18a7e07c447c077be626e2b71fe9b2196ca",
     "ui_auditor": "0b6a22558074038299ae05684d1a98d8ee4a47365b662d6a078c42fb79e7ca84",
     "verification_framework": "c2091324abbe1a0a7e9940fb0d44fb9c7f4b6bd121704fae6a6d6272ce5d9c0a",
     "weapons": "2466993b13b51610e96a0602d5d96163fd2e3b14d5ad346bdcd9b1b689ea7be0",
@@ -86,5 +86,5 @@
   "readme_sha256": "1176066cf9c0ebbb7680ee27a729758b9cb1b1c0daffb07b97855a2ecbfd6b1e",
   "rust_version": "1.87",
   "starters_sha256": "fd931a4efe14309aff7611726b5e33f727bd77c704b934abe5f033fd3b30a7a7",
-  "unchanged_reason": null
+  "unchanged_reason": "Portable command edges, native camera alignment and reproducible tooling pins refine the existing gameplay, presentation and authoring scope; detailed contracts remain in the linked 2D and tooling guides."
 }

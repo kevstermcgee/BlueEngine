@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Shared project tooling. Explicitly migrate reviewed projects; check launcher compatibility."""
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -126,18 +127,33 @@ def load(command, game, engine):
 
 
 def pin(game, engine=ROOT):
+    """Pin only tooling bytes reproducible from the recorded source revision."""
     bootstrap = module_from(engine / 'templates/game_entry.py', 'be2_tooling_bootstrap')
+    digest = bootstrap.tooling_digest(engine)
     if (engine / 'PACKAGE-MANIFEST.json').is_file():
         revision = json.loads((engine / 'PACKAGE-MANIFEST.json').read_text(encoding='utf-8'))['commit']
     else:
         revision = subprocess.run(['git', '-C', str(engine), 'rev-parse', 'HEAD'], capture_output=True,
                                   text=True, check=True).stdout.strip()
+        committed = hashlib.sha256()
+        for name in bootstrap.FILES:
+            content = subprocess.run(['git', '-C', str(engine), 'show', f'{revision}:{name}'],
+                                     capture_output=True)
+            if content.returncode:
+                raise ValueError(f'{engine}: tooling input {name} is unavailable at {revision}; '
+                                 'commit the reviewed shared tooling before migration. No files changed.')
+            committed.update(name.encode('utf-8') + b'\0')
+            committed.update(content.stdout + b'\0')
+        if digest != committed.hexdigest():
+            raise ValueError(f'{engine}: tooling bytes differ from recorded revision {revision}; '
+                             'commit the reviewed shared tooling before migration. '
+                             'Unrelated project edits may remain uncommitted. No files changed.')
     try:
         relative = os.path.relpath(engine, game)
     except ValueError:  # Windows volumes
         relative = str(engine)
     return {'schema_version': 1, 'engine': relative, 'revision': revision,
-            'sha256': bootstrap.tooling_digest(engine)}
+            'sha256': digest}
 
 
 def check(game, engine=ROOT):
@@ -188,11 +204,11 @@ def migrate(game, engine=ROOT):
                     f'Reviewed hook: {engine / required["reference"]} '
                     f'(SHA-256 {required["sha256"]}). Preserve helper scripts; '
                     'review a different hook explicitly instead of overwriting it. No files changed.')
-    scripts = game / 'scripts'
-    scripts.mkdir(parents=True, exist_ok=True)
     payloads = {f'{command}.py': entry(command).encode('utf-8') for command in ('check', 'ship', 'dev', 'project')}
     payloads['tooling.py'] = (engine / 'templates/game_entry.py').read_bytes()
     payloads['tooling.json'] = (json.dumps(pin(game, engine), indent=2) + '\n').encode('utf-8')
+    scripts = game / 'scripts'
+    scripts.mkdir(parents=True, exist_ok=True)
     for name, payload in payloads.items():
         destination = scripts / name
         temporary = scripts / ('.' + name + '.new')

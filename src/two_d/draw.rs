@@ -1,7 +1,7 @@
 //! Portable layered presentation: logical 2D coordinates and optional depth-tested 3D views.
 use super::{Point, Rect};
 use macroquad::prelude::*;
-pub use macroquad::prelude::{Camera3D, Mesh, Vec3, Vertex};
+pub use macroquad::prelude::{Camera2D, Camera3D, Mesh, Vec3, Vertex};
 pub use macroquad::prelude::{Color, Texture2D};
 /// An optional 3D view, placed anywhere in the same layer list as sprites and HUD.
 /// Camera/meshes are presentation only; simulation owns collision and game rules.
@@ -121,6 +121,52 @@ impl Viewport {
             .then_some(Point::new(x.floor() as i32, y.floor() as i32))
     }
 }
+
+/// Map a logical rectangle to a native screen viewport, with `(0, 0)` at the top left.
+///
+/// Pass the same logical rectangle used by [`Scene::render_view`] and the physical
+/// viewport supplied to its callback. Positions then agree with [`Viewport::pointer`],
+/// including letterboxing and device scale. The viewport is already in framebuffer
+/// pixels; do not apply DPI a second time. Both rectangles must have positive dimensions.
+///
+/// This camera targets the **screen** (`render_target: None`). The pinned renderer
+/// inverts screen Y internally, so both zoom components are positive. Offscreen
+/// render targets have a different Y convention; do not attach one to this camera.
+/// Custom cameras remain available through `Scene::render_view`.
+///
+/// ```no_run
+/// use vesper3d::two_d::{draw::{logical_screen_camera, Scene}, Rect};
+/// use macroquad::prelude::{draw_line, set_camera, WHITE};
+/// let mut scene = Scene::default();
+/// let bounds = Rect::new(0, 0, 800, 450);
+/// scene.render_view(0, bounds, move |viewport| {
+///     set_camera(&logical_screen_camera(bounds, viewport)?);
+///     // The endpoint is above the base, matching top-left UI and picking coordinates.
+///     draw_line(496., 333., 496., 291., 2., WHITE);
+///     Ok(())
+/// });
+/// ```
+pub fn logical_screen_camera(
+    logical_rect: Rect,
+    physical_viewport: (i32, i32, i32, i32),
+) -> Result<Camera2D, String> {
+    if logical_rect.w <= 0
+        || logical_rect.h <= 0
+        || physical_viewport.2 <= 0
+        || physical_viewport.3 <= 0
+    {
+        return Err("Logical screen camera rectangles must have positive dimensions".into());
+    }
+    Ok(Camera2D {
+        target: vec2(
+            logical_rect.x as f32 + logical_rect.w as f32 / 2.,
+            logical_rect.y as f32 + logical_rect.h as f32 / 2.,
+        ),
+        zoom: vec2(2. / logical_rect.w as f32, 2. / logical_rect.h as f32),
+        viewport: Some(physical_viewport),
+        ..Default::default()
+    })
+}
 #[derive(Clone, Copy, Debug)]
 pub struct Transform {
     pub position: [f32; 2],
@@ -181,9 +227,10 @@ pub struct Scene<'a> {
     items: Vec<(i32, Shape<'a>)>,
 }
 impl<'a> Scene<'a> {
-    /// Reuse an existing read-only 3D kit renderer in a logical viewport.
+    /// Reuse an existing read-only renderer in a logical viewport.
     /// The callback receives a validated physical viewport and must apply it to its cameras.
     /// It must not clear the entire framebuffer or mutate simulation. Shared overlays follow normally.
+    /// For top-left logical 2D drawing on the native screen, use [`logical_screen_camera`].
     pub fn render_view(
         &mut self,
         layer: i32,
@@ -429,6 +476,96 @@ pub trait Game: super::GameLogic {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use macroquad::camera::Camera;
+
+    // Project through the actual pinned renderer matrix and bottom-left physical
+    // viewport, then return top-left window coordinates as native input supplies.
+    fn screen_position(camera: &Camera2D, point: [f32; 2], screen_h: f32, dpi: f32) -> [f32; 2] {
+        let projected = camera
+            .matrix()
+            .transform_point3(vec3(point[0], point[1], 0.));
+        let (x, y, width, height) = camera.viewport.unwrap();
+        [
+            (x as f32 + (projected.x + 1.) * width as f32 / 2.) / dpi,
+            screen_h - (y as f32 + (projected.y + 1.) * height as f32 / 2.) / dpi,
+        ]
+    }
+
+    #[test]
+    fn logical_screen_camera_aligns_corners_and_off_center_picking() {
+        let bounds = Rect::new(0, 0, 800, 450);
+        let camera = logical_screen_camera(bounds, (0, 0, 800, 450)).unwrap();
+        assert!(camera.render_target.is_none());
+        for (point, expected) in [
+            ([0., 0.], [0., 0.]),
+            ([800., 450.], [800., 450.]),
+            ([496., 333.], [496., 333.]),
+            ([496., 291.], [496., 291.]),
+        ] {
+            let screen = screen_position(&camera, point, 450., 1.);
+            assert!((screen[0] - expected[0]).abs() < 0.001);
+            assert!((screen[1] - expected[1]).abs() < 0.001);
+        }
+        let base = screen_position(&camera, [496., 333.], 450., 1.);
+        let roof = screen_position(&camera, [496., 291.], 450., 1.);
+        assert!(roof[1] < base[1], "an elevated marker must rise on screen");
+        // A centered click would also pass a vertically mirrored projection.
+        let view = Viewport::fit(800., 450., 800., 450.);
+        let clicked = screen_position(&camera, [496.5, 333.5], 450., 1.);
+        assert_eq!(
+            view.pointer(clicked[0], clicked[1]),
+            Some(Point::new(496, 333))
+        );
+    }
+
+    #[test]
+    fn logical_screen_camera_preserves_letterboxes_subviews_and_device_scale() {
+        for (screen_w, screen_h, dpi) in [
+            (960., 540., 1.),
+            (1000., 1000., 1.),
+            (1600., 700., 2.),
+            (960., 540., 1.25),
+        ] {
+            let view = Viewport::fit(800., 450., screen_w, screen_h);
+            for bounds in [Rect::new(0, 0, 800, 450), Rect::new(20, 55, 760, 345)] {
+                let viewport = view.physical_rect(bounds, screen_h, dpi).unwrap();
+                let camera = logical_screen_camera(bounds, viewport).unwrap();
+                for point in [[496.5, 333.5], [496.5, 291.5]] {
+                    let screen = screen_position(&camera, point, screen_h, dpi);
+                    let expected = [
+                        view.offset[0] + point[0] * view.scale,
+                        view.offset[1] + point[1] * view.scale,
+                    ];
+                    // Physical viewports round to framebuffer pixels.
+                    assert!((screen[0] - expected[0]).abs() <= 1. / dpi);
+                    assert!((screen[1] - expected[1]).abs() <= 1. / dpi);
+                    assert_eq!(
+                        view.pointer(screen[0], screen[1]),
+                        Some(Point::new(point[0] as i32, point[1] as i32)),
+                        "picking must agree at {screen_w}x{screen_h}, DPI {dpi}, {bounds:?}"
+                    );
+                }
+                let top_left =
+                    screen_position(&camera, [bounds.x as f32, bounds.y as f32], screen_h, dpi);
+                assert!((top_left[0] - viewport.0 as f32 / dpi).abs() < 0.001);
+                assert!(
+                    (top_left[1] - (screen_h - (viewport.1 + viewport.3) as f32 / dpi)).abs()
+                        < 0.001
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn logical_screen_camera_rejects_empty_and_inverted_rectangles() {
+        for bounds in [Rect::new(0, 0, 0, 450), Rect::new(0, 0, 800, -1)] {
+            assert!(logical_screen_camera(bounds, (0, 0, 800, 450)).is_err());
+        }
+        for viewport in [(0, 0, 0, 450), (0, 0, 800, -1)] {
+            assert!(logical_screen_camera(Rect::new(0, 0, 800, 450), viewport).is_err());
+        }
+    }
+
     #[test]
     fn hybrid_views_align_with_2d_at_high_device_dpi() {
         let view = Viewport::fit(800., 450., 400., 225.);

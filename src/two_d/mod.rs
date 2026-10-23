@@ -104,11 +104,55 @@ pub struct Intent {
     pub y: i32,
     pub pointer: Option<Point>,
     pub action: bool,
+    /// Game-defined press edges; name each bit with a game-owned `u32` constant.
+    /// The native client combines pending bits across device frames and delivers
+    /// them once on the next fixed tick, independently of `action` and `pointer`.
+    /// Repeated presses of the same bit before a tick coalesce; this is not an
+    /// ordered text-edit or event queue. Older serialized intentions default to zero.
+    #[serde(default)]
+    pub commands: u32,
     /// Radians accumulated across device frames and consumed once, for optional 3D look.
     #[serde(default)]
     pub look: [f32; 2],
     #[serde(default)]
     pub sprint: bool,
+}
+
+/// Collects portable device frames into fixed-tick intentions without losing edges.
+///
+/// Axes, pointer and sprint retain the latest frame; action, all 32 command bits
+/// and look are consumed once. Clear on pause, focus loss, restart or load so
+/// stale commands cannot reach a later simulation. Game rules consume only the
+/// returned [`Intent`], making the same commands available to replay and tests.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct IntentAccumulator {
+    input: crate::runtime::InputAccumulator<Intent>,
+    commands: u32,
+}
+impl IntentAccumulator {
+    pub fn new() -> Self {
+        Self::default()
+    }
+    /// Feed a device frame, including press edges and look deltas in `input`.
+    pub fn feed(&mut self, mut input: Intent) {
+        self.commands |= std::mem::take(&mut input.commands);
+        let action = std::mem::take(&mut input.action);
+        let look = std::mem::take(&mut input.look);
+        self.input.feed(input, u32::from(action), look);
+    }
+    /// Consume pending edges/look, keeping held axes, pointer and sprint.
+    pub fn take_tick(&mut self) -> Intent {
+        let tick = self.input.take_tick();
+        Intent {
+            action: tick.pressed(1),
+            commands: std::mem::take(&mut self.commands),
+            look: tick.look,
+            ..tick.held
+        }
+    }
+    pub fn clear(&mut self) {
+        *self = Self::default();
+    }
 }
 /// Checked authored loop bank, shared by native presentation clients.
 pub struct AudioBankSpec {
@@ -175,6 +219,109 @@ pub fn hash_json(value: &impl Serialize) -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn command_edges_survive_fast_frames_and_are_consumed_once() {
+        const HOLD: u32 = 1;
+        const REVERSE: u32 = 1 << 31;
+        let mut input = IntentAccumulator::new();
+        input.feed(Intent {
+            x: -1,
+            action: true,
+            commands: HOLD,
+            look: [0.1, 0.],
+            ..Default::default()
+        });
+        // No tick ran before a different device (e.g. controller) supplied an edge.
+        input.feed(Intent {
+            x: 1,
+            commands: REVERSE | HOLD,
+            look: [0., 0.2],
+            pointer: Some(Point::new(20, 30)),
+            ..Default::default()
+        });
+        let first = input.take_tick();
+        assert!(first.action);
+        assert_eq!(first.commands, HOLD | REVERSE);
+        assert_eq!(first.look, [0.1, 0.2]);
+        for _ in 0..3 {
+            let next = input.take_tick();
+            assert!(!next.action);
+            assert_eq!(next.commands, 0);
+            assert_eq!(next.look, [0., 0.]);
+            assert_eq!(next.x, 1);
+            assert_eq!(next.pointer, first.pointer);
+        }
+    }
+    #[test]
+    fn old_intentions_default_commands_and_new_commands_replay_losslessly() {
+        let old: Intent =
+            serde_json::from_str(r#"{"x":1,"y":0,"pointer":null,"action":true}"#).unwrap();
+        assert_eq!(old.commands, 0);
+        let mut input = IntentAccumulator::new();
+        input.feed(Intent {
+            commands: u32::MAX,
+            ..old
+        });
+        let recorded = serde_json::to_vec(&input.take_tick()).unwrap();
+        let replay: Intent = serde_json::from_slice(&recorded).unwrap();
+        assert_eq!(replay.commands, u32::MAX);
+        assert!(replay.action);
+        assert_eq!(replay.x, 1);
+        input.feed(replay);
+        input.clear();
+        assert_eq!(input.take_tick().commands, 0);
+    }
+    #[test]
+    fn command_driven_rules_replay_and_resume_through_engine_snapshots() {
+        const HOLD: u32 = 1;
+        const REVERSE: u32 = 1 << 31;
+        #[derive(Default)]
+        struct Puzzle([i32; 4]);
+        impl Simulation for Puzzle {
+            type Input = Intent;
+            fn step(&mut self, input: &Intent) {
+                self.0[0] += input.x;
+                self.0[1] += i32::from(input.action);
+                self.0[2] += i32::from(input.commands & HOLD != 0);
+                self.0[3] -= i32::from(input.commands & REVERSE != 0);
+            }
+            fn state_hash(&self) -> u64 {
+                hash_json(&self.0)
+            }
+        }
+        impl Snapshot for Puzzle {
+            const KIND: &'static str = "portable-command-test";
+            type State = [i32; 4];
+            fn capture(&self) -> Self::State {
+                self.0
+            }
+            fn restore(&mut self, state: Self::State) -> Result<(), String> {
+                self.0 = state;
+                Ok(())
+            }
+        }
+        let mut input = IntentAccumulator::new();
+        input.feed(Intent {
+            commands: HOLD,
+            ..Default::default()
+        });
+        input.feed(Intent {
+            x: 1,
+            action: true,
+            commands: REVERSE,
+            ..Default::default()
+        });
+        let route = [input.take_tick(), input.take_tick(), input.take_tick()];
+        let recorded = serde_json::to_vec(&route).unwrap();
+        let replay: Vec<Intent> = serde_json::from_slice(&recorded).unwrap();
+        crate::runtime::assert_deterministic(Puzzle::default, &replay);
+        crate::runtime::snapshot::assert_resumes_exactly(Puzzle::default, &replay, 1);
+        let mut puzzle = Puzzle::default();
+        for tick in replay {
+            puzzle.step(&tick);
+        }
+        assert_eq!(puzzle.0, [3, 1, 1, -1]);
+    }
     #[test]
     fn swept_collision_cannot_tunnel_and_slides_along_walls() {
         let mut a = Rect::new(0, 0, 10, 10);

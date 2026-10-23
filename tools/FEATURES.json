@@ -1060,7 +1060,7 @@
         "cargo test --locked --lib two_d --no-default-features --features two-d",
         "python -m unittest tools.test_browser_retirement"
       ],
-      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native installation. Choose elements by gameplay value; no legacy renderer exploration.",
+      "note": "Portable 2D/3D/hybrid composition through Scene and World, shared deterministic simulation, input/audio/Snapshot storage, automatic progress and native installation. Choose elements by gameplay value; no legacy renderer exploration. Intent.commands supplies 32 game-owned press bits with once-per-tick accumulation; logical_screen_camera aligns native 2D callback drawing with top-left pointer coordinates.",
       "keywords": [
         "2d",
         "2D",
@@ -1076,19 +1076,27 @@
         "3d",
         "portable",
         "minimap",
-        "mixed dimensions"
+        "mixed dimensions",
+        "command edges",
+        "hold",
+        "reverse rotation",
+        "logical camera",
+        "pointer picking",
+        "upside-down"
       ],
       "canonical_example": "templates/two-d/lib.rs",
       "depends_on": [],
       "public_api": [
         "two_d::GameLogic",
         "two_d::Intent",
+        "two_d::IntentAccumulator",
         "two_d::Rect",
         "two_d::Body",
         "two_d::draw::Scene",
         "two_d::client::run",
         "portable::draw::World",
-        "portable::draw::Scene::world"
+        "portable::draw::Scene::world",
+        "two_d::draw::logical_screen_camera"
       ],
       "entry_guide": "docs/GAME_AUTHORING_ENTRY.md",
       "answers": [
