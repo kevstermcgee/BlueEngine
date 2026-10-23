@@ -26,6 +26,11 @@ its 3D drawing does not provide 3D enemy collision or a first-person controller.
 | [`custom-sim`](CUSTOM_SIM_CHEATSHEET.md) | Game-owned fixed-step rules, spatial 3D enemies/AI/physics or native netplay | Game-owned 3D | offline, native-multiplayer |
 <!-- starters:end -->
 
+`be2.py map` resolves relative input and output paths from the caller's working
+directory; its Cargo build still runs in the engine checkout. For example, from a
+game directory, `python3 /path/to/BlueEngine/tools/be2.py map icon "My Title" assets`
+writes the game's `assets` directory. Absolute paths also work.
+
 An explicit `ENGINE_PATH` in the new-game authoring command is resolved from the
 command's working directory. From the engine root,
 `python3 tools/be2.py map new-game my-game games/my-game . two-d` writes `../..`

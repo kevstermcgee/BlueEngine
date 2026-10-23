@@ -35,15 +35,16 @@ class CommandFailure(RuntimeError):
         self.reported = False
 
 
-def invoke(args, *, env=None, log=None, capture=False, timeout=None, harness=None):
+def invoke(args, *, env=None, log=None, capture=False, timeout=None, harness=None, cwd=None):
     args = list(map(str, args))
+    cwd = ROOT if cwd is None else cwd
     if log:
         started = time.monotonic()
         evidence = None
         # Stream directly to disk: even a timeout/crash preserves complete output.
         with Path(log).open('wb') as output:
             try:
-                with subprocess.Popen(args, cwd=ROOT, env=env, stdout=output,
+                with subprocess.Popen(args, cwd=cwd, env=env, stdout=output,
                                       stderr=subprocess.STDOUT, start_new_session=os.name != 'nt',
                                       **workflow.console_options()) as process:
                     try:
@@ -81,7 +82,7 @@ def invoke(args, *, env=None, log=None, capture=False, timeout=None, harness=Non
         return evidence
     print('+ ' + ' '.join(map(str, args)), file=sys.stderr)
     buffered = capture or os.name == 'nt'
-    result = subprocess.run(list(map(str, args)), cwd=ROOT, env=env,
+    result = subprocess.run(list(map(str, args)), cwd=cwd, env=env,
                             stdout=subprocess.PIPE if buffered else None,
                             stderr=subprocess.STDOUT if buffered else None,
                             text=True, timeout=timeout, **workflow.console_options())
@@ -124,6 +125,7 @@ def build(kind):
 
 
 def tool(args):
+    caller = Path.cwd()
     # Share fresh headless authoring output with check_authoring; Cargo owns invalidation.
     # Isolated release builds remain the distribution/packaging path.
     output = invoke(['cargo', 'build', '--locked', '--profile', 'itest', '--no-default-features', '--features', 'physics,networking', '--bin', 'be2-tools'], capture=True)
@@ -131,7 +133,8 @@ def tool(args):
         print(output, end='', file=sys.stderr)
     target = target_directory()
     binary = target / 'itest' / ('be2-tools' + SUFFIX)
-    invoke([binary, *args])
+    # User paths belong to the invoking game/project, while Cargo builds in ROOT.
+    invoke([binary, *args], cwd=caller)
 
 
 def doctor():

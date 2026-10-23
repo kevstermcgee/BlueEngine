@@ -32,6 +32,50 @@ class BuildDeliveryTests(unittest.TestCase):
         self.assertEqual(calls[-1], ['cargo', 'build', '--release', '--locked', '--no-default-features',
                                    '--features', 'offline', '--bin', 'vesper3d'])
 
+    def test_map_paths_use_caller_directory_while_cargo_uses_engine(self):
+        ns = self.namespace()
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            engine = root / 'engine'
+            game = root / 'game space 星'
+            engine.mkdir(); game.mkdir()
+            (engine / 'assets').mkdir()
+            sentinel = engine / 'assets/icon.png'
+            sentinel.write_bytes(b'preserve engine artwork')
+            (game / 'map.json').write_text('{"caller": true}')
+            # Substitute only external programs. The real invoke/tool functions
+            # launch a child that reads and writes caller-relative paths.
+            program = ('import json, pathlib, sys; '
+                       'command, value = sys.argv[1:]; '
+                       'path = pathlib.Path(value); '
+                       'path.mkdir(exist_ok=True) if command == "icon" else None; '
+                       '(path / "icon.png").write_bytes(b"game icon") if command == "icon" '
+                       'else pathlib.Path("observed.json").write_text(path.read_text())')
+            run = subprocess.run
+            builds = []
+            def process(argv, **options):
+                if argv[0] == 'cargo':
+                    builds.append(options['cwd'])
+                    return subprocess.CompletedProcess(argv, 0, stdout='')
+                return run([sys.executable, '-c', program, *map(str, argv[1:])], **options)
+            original_cwd = Path.cwd()
+            try:
+                os.chdir(game)
+                with patch.dict(ns['tool'].__globals__, ROOT=engine), \
+                        patch('subprocess.run', side_effect=process):
+                    ns['tool'](['icon', 'assets'])
+                    self.assertTrue((game / 'assets/icon.png').is_file(),
+                                    'relative icon output must belong to the caller')
+                    ns['tool'](['icon', 'literal $(title)'])
+                    ns['tool'](['audit', 'map.json'])
+            finally:
+                os.chdir(original_cwd)
+            self.assertEqual(builds, [engine, engine, engine])
+            self.assertEqual(json.loads((game / 'observed.json').read_text()), {'caller': True})
+            self.assertEqual((game / 'assets/icon.png').read_bytes(), b'game icon')
+            self.assertEqual((game / 'literal $(title)/icon.png').read_bytes(), b'game icon')
+            self.assertEqual(sentinel.read_bytes(), b'preserve engine artwork')
+
     def test_default_package_excludes_even_a_stale_cinematic_executable(self):
         import zipfile
         ns = self.namespace()
