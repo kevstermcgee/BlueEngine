@@ -132,6 +132,25 @@ class EngineGameDeliveryTests(unittest.TestCase):
         with self.assertRaisesRegex(RuntimeError, 'pre-authoring creator baseline'):
             self.delivery.select(self.digest, self.result, ['games/unselected/src/main.rs'])
 
+    def test_engine_feedback_from_game_needs_no_game_baseline_or_delivery(self):
+        self.digest['selected'][0]['scope'] = 'engine'
+        self.delivery.state['baselines'].clear()
+        self.delivery.select(self.digest, self.result, ['tools/be2.py'])
+        self.assertEqual(self.delivery.state['wanted'], [])
+        self.assertIsNone(self.delivery.deliver(self.work))
+        self.assertEqual(self.events, [])
+
+    def test_addressed_game_feedback_still_needs_baseline_without_source_edits(self):
+        self.delivery.state['baselines'].clear()
+        with self.assertRaisesRegex(RuntimeError, 'pre-authoring creator baseline'):
+            self.delivery.select(self.digest, self.result, [])
+
+    def test_direct_game_edits_still_need_baseline_for_engine_feedback(self):
+        self.digest['selected'][0]['scope'] = 'engine'
+        self.delivery.state['baselines'].clear()
+        with self.assertRaisesRegex(RuntimeError, 'pre-authoring creator baseline'):
+            self.delivery.select(self.digest, self.result, ['games/owned/Cargo.toml'])
+
     def test_retained_tooling_or_source_change_cannot_resume_old_release_gates(self):
         self.source_update()
         (self.work / 'games/owned/Cargo.toml').write_text('changed after source intent')

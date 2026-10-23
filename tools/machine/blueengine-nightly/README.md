@@ -1,6 +1,6 @@
 # Scheduled collaborative feedback maintenance
 
-Runner version 5. Extend the existing nightly timer; do not install a second
+Runner version 6. Extend the existing nightly timer; do not install a second
 feedback-maintenance schedule.
 
 The existing timer now wakes hourly. Its service passes `--scheduled`: new AI work
@@ -127,8 +127,11 @@ human action. An ordinary launcher/game correction does not require approval
 merely because its source lives in the companion repository.
 
 Selected engine-owned `game.project.json` games also capture creator source before
-the AI starts. Every directly edited game and addressed game topic needs that
-baseline. The harness retains a delivery intent before engine main publication,
+the AI starts. Every directly edited game and addressed topic with `scope: game`
+needs that baseline. Engine-scoped feedback can identify the reporting game
+without requiring a release of that game when only engine tooling changes.
+Direct game edits always require a baseline, regardless of feedback scope.
+The harness retains a delivery intent before engine main publication,
 then uses the authored native release adapter for local, engine/native CI,
 Windows installer and immutable public gates. Source revision registration comes
 before native review, and creator head is checked again before public delivery.

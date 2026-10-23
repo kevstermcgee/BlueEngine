@@ -58,7 +58,8 @@ class Delivery:
 
     def select(self, digest, result, changed):
         dispositions = {item['feedback_id']: item['status'] for item in result['dispositions']}
-        wanted = {item['game'] for item in digest['selected'] if item.get('game') in self.state['selected_games']
+        wanted = {item['game'] for item in digest['selected'] if item.get('scope') == 'game'
+                  and item.get('game') in self.state['selected_games']
                   and dispositions[item['feedback_id']] == 'addressed'}
         wanted.update(path.split('/')[1] for path in changed if path.startswith('games/') and len(path.split('/')) > 2)
         if wanted - self.state['baselines'].keys():
