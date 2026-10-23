@@ -109,13 +109,17 @@ pub struct Intent {
     /// them once on the next fixed tick, independently of `action` and `pointer`.
     /// Repeated presses of the same bit before a tick coalesce; this is not an
     /// ordered text-edit or event queue. Older serialized intentions default to zero.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "no_commands")]
     pub commands: u32,
     /// Radians accumulated across device frames and consumed once, for optional 3D look.
     #[serde(default)]
     pub look: [f32; 2],
     #[serde(default)]
     pub sprint: bool,
+}
+
+fn no_commands(commands: &u32) -> bool {
+    *commands == 0
 }
 
 /// Collects portable device frames into fixed-tick intentions without losing edges.
@@ -257,6 +261,11 @@ mod tests {
         let old: Intent =
             serde_json::from_str(r#"{"x":1,"y":0,"pointer":null,"action":true}"#).unwrap();
         assert_eq!(old.commands, 0);
+        assert_eq!(
+            serde_json::to_string(&old).unwrap(),
+            r#"{"x":1,"y":0,"pointer":null,"action":true,"look":[0.0,0.0],"sprint":false}"#,
+            "neutral command bits retain the old serialized input shape"
+        );
         let mut input = IntentAccumulator::new();
         input.feed(Intent {
             commands: u32::MAX,
