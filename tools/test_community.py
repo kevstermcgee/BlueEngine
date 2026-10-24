@@ -417,17 +417,18 @@ class GamesReleaseIntegrationTests(unittest.TestCase):
         (self.writer / '.games-catalog.json').write_text(json.dumps(self.catalog))
         self.commit(self.writer, 'Original export')
         self.git(self.writer, 'push', 'origin', 'main')
-        self.git(self.root, 'clone', str(self.remote), str(self.games))
-        self.configure(self.games)
-        self.git(self.games, 'switch', '-c', 'community-release/test-game')
+        self.git(self.writer, 'worktree', 'add', '-b', 'community-release/test-game', str(self.games), 'main')
         (self.games / 'games/test-game/rules.rs').write_text('reviewed new rules\n')
         self.commit(self.games, 'Reviewed game source')
         self.source = self.git(self.games, 'rev-parse', 'HEAD')
         self.state = {'target_dir': str(self.root), 'timeout': 10, 'idea': {'slug': 'test-game'},
                       'engine_repository': 'fixture/engine', 'engine_head': 'e' * 40,
-                      'games_repository': 'fixture/games', 'games_head': self.source,
+                      'games_repository': 'fixture/games', 'games_head': self.source, 'games_root': str(self.writer),
                       'branch': 'community-release/test-game',
                       'ci': {'windows-installer-review': {'head': self.source, 'run': 1}}}
+        identity = patch.object(community_release.forge, 'github_repository', return_value='fixture/games')
+        identity.start()
+        self.addCleanup(identity.stop)
         self.release = community_release.Release(self.directory, self.state)
         self.release.assert_engine_gates = Mock()
         self.release.assert_source_gates = Mock()

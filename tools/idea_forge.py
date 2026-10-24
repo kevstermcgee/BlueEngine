@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
+from copy import deepcopy
 import csv
 import hashlib
 import io
@@ -943,15 +944,95 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
         entries.append(entry)
         return True
 
-    def export(self):
-        wiki = self.validate_wiki(self.game)
+    def assert_games_worktree(self):
+        """Only this run's private branch in the configured repository is writable."""
         source = Path(self.state["games_root"])
-        self.command(["git", "fetch", "origin", "main"], cwd=source, label="games-fetch")
+        repository = github_repository(source)
+        if self.state.get("games_repository", repository) != repository:
+            raise ForgeError("Companion repository differs from the retained run")
+        if self.games.is_symlink():
+            raise ForgeError("Companion worktree must not be a symlink")
+        common = lambda root: Path(git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")).resolve()
+        if (self.games.resolve() == source.resolve()
+                or Path(git(self.games, "rev-parse", "--show-toplevel")).resolve() != self.games.resolve()
+                or git(self.games, "branch", "--show-current") != self.state["branch"]
+                or common(self.games) != common(source)
+                or github_repository(self.games) != repository):
+            raise ForgeError("Companion worktree, branch or repository does not match the retained run")
+
+    def assert_games_merge_finished(self):
+        merge = Path(git(self.games, "rev-parse", "--git-path", "MERGE_HEAD"))
+        if not merge.is_absolute():
+            merge = self.games / merge
+        if merge.exists() or git(self.games, "ls-files", "-u"):
+            raise ForgeError(f"Companion integration needs review in {self.games}; resolve conflicts and commit "
+                             "the merge there, then resume. No source or receipts were discarded.")
+
+    def games_changes(self):
+        staged = set(filter(None, git(self.games, "diff", "--cached", "--name-only", "--no-renames", "-z").split("\0")))
+        working = set(filter(None, git(self.games, "diff", "--name-only", "--no-renames", "-z").split("\0")))
+        if staged & working:
+            raise ForgeError(f"Companion index and worktree both edit the same paths in {self.games}; "
+                             "reconcile them explicitly before resuming. Both versions were preserved.")
+        return staged | working | set(filter(None, git(self.games, "ls-files", "--others", "--exclude-standard", "-z").split("\0")))
+
+    def stage_games_changes(self, changed):
+        # An export can exceed Windows' command-line limit. NUL-delimited literal
+        # pathspecs also retain unusual filenames without shell/glob interpretation.
+        self.command(["git", "add", "--all", "--pathspec-from-file=-", "--pathspec-file-nul"],
+                     cwd=self.games, label="stage-games-export",
+                     stdin="".join(":(literal)" + name + "\0" for name in sorted(changed)))
+
+    def integrate_games(self):
+        """Checkpoint a retained export, then merge main without changing engine evidence."""
+        source = Path(self.state["games_root"])
+        repository = github_repository(source)
+        if self.state.get("games_repository", repository) != repository:
+            raise ForgeError("Companion repository differs from the retained run")
+        if self.games.is_symlink():
+            raise ForgeError("Companion worktree must not be a symlink")
         if not self.games.exists():
+            self.command(["git", "fetch", "origin", "main"], cwd=source, label="games-fetch")
             self.command(["git", "worktree", "add", "-b", self.state["branch"], str(self.games), "origin/main"],
                          cwd=source, label="games-worktree")
-        self.state["games_repository"] = github_repository(source)
+        self.assert_games_worktree()
+        self.assert_games_merge_finished()
+        slug = self.state["idea"]["slug"]
+        if not re.fullmatch(SLUG, slug):
+            raise ForgeError("Invalid retained game slug")
+        owned = ["games/" + slug, ".games-catalog.json", ".release-games.json", "site/thumbs/" + slug + ".png"]
+        changed = self.games_changes()
+        if any(not any(name == path or name.startswith(path + "/") for path in owned) for name in changed):
+            raise ForgeError(f"Unrelated companion edits in {self.games}; preserve and commit or move them "
+                             "explicitly before resuming. Nothing was staged or merged.")
+        self.state["games_repository"] = repository
+        pending = self.state.setdefault("games_export_integration", {"source_head": git(self.games, "rev-parse", "HEAD")})
+        if not git_ancestor(self.games, pending["source_head"], "HEAD"):
+            raise ForgeError("Companion integration lost its retained export checkpoint")
+        self.save()  # Journal ownership before checkpoint/merge; both operations can be interrupted.
+        if changed:
+            self.stage_games_changes(changed)
+            self.commit(self.games, "Checkpoint retained " + slug + " export before companion integration")
+            pending["source_head"] = git(self.games, "rev-parse", "HEAD")
+            self.save()
+        self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="games-integration-fetch")
+        head = git(self.games, "rev-parse", "HEAD")
+        if not git_ancestor(self.games, "origin/main", head):
+            try:
+                self.command(["git", "-c", "user.name=IdeaForge", "-c",
+                              "user.email=idea-forge@users.noreply.github.com", "merge", "--no-edit", "origin/main"],
+                             cwd=self.games, label="games-merge-main")
+            except ForgeError as error:
+                raise ForgeError(f"Companion integration needs review in {self.games}; resolve any conflicts "
+                                 "and commit the merge there, then resume. The checkpoint is retained.") from error
+        self.state.pop("games_export_integration", None)
+        self.save()
+
+    def export(self):
+        wiki = self.validate_wiki(self.game)
+        self.integrate_games()
         catalog = load_json(self.games / ".games-catalog.json")
+        previously_owned = {item["path"] for item in catalog["files"]}
         exported = catalog.get("source_revision")
         if (catalog.get("source_repository") != self.state["engine_repository"]
                 or not isinstance(exported, str) or not re.fullmatch(r"[0-9a-f]{40}", exported)):
@@ -988,11 +1069,42 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
                      cwd=self.games, label="distribution-tests")
         self.command([sys.executable, "-m", "unittest", "discover", "-s", "site", "-p", "test_*.py"],
                      cwd=self.games, label="site-tests")
-        git(self.games, "add", "--all")
+        generated = {item["path"] for item in load_json(self.games / ".games-catalog.json")["files"]}
+        generated |= previously_owned | {".games-catalog.json", ".release-games.json", "site/thumbs/" + slug + ".png"}
+        changed = self.games_changes()
+        if changed - generated:
+            raise ForgeError(f"Unrelated companion edits appeared during export in {self.games}; retained without committing them")
+        if changed:
+            self.stage_games_changes(changed)
         self.commit(self.games, "Publish " + self.state["idea"]["title"] + " generated by IdeaForge")
-        self.state["games_head"] = git(self.games, "rev-parse", "HEAD")
+        self.record_games_candidate(git(self.games, "rev-parse", "HEAD"))
+        self.state["games_source_snapshot"] = self.games_snapshot(self.state["games_head"])
+        self.state.pop("games_integration_pending", None)
+        self.save()
+
+    def record_games_candidate(self, head):
+        """Candidate bytes changed: only companion/package evidence becomes stale."""
+        recorded = self.state.get("games_head")
+        if head != recorded:
+            if self.state.get("publication"):
+                raise ForgeError("A published candidate is frozen; create a new run for another release")
+            if recorded:
+                self.state.setdefault("games_verification_history", []).append({
+                    "head": recorded, "installer": deepcopy(self.state.get("ci", {}).get("windows-installer-review"))})
+            for label in ("windows-installer-review", "production-release", "download-page"):
+                self.state.setdefault("ci", {}).pop(label, None)
+            self.state["dispatched"] = [label for label in self.state.get("dispatched", [])
+                                        if label != "windows-installer-review"]
+            invalidated = {"installer-review", "publish-games", "verify-publication", "installer", "production", "public_receipt"}
+            self.state["completed"] = [name for name in self.state.get("completed", []) if name not in invalidated]
+            self.state["games_head"] = head
+            self.save()
 
     def installer_review(self):
+        self.assert_games_worktree()
+        self.assert_games_merge_finished()
+        if git(self.games, "rev-parse", "HEAD") != self.state["games_head"] or git(self.games, "status", "--porcelain"):
+            raise ForgeError("Companion source changed before installer review; re-export or resolve the retained integration")
         self.command(["git", "push", "-u", "origin", "HEAD"], cwd=self.games, label="push-installer-review")
         self.wait_ci(self.state["games_repository"], "releases.yml", self.state["branch"],
                      self.state["games_head"], "windows-installer-review", dispatch=True,
@@ -1013,13 +1125,89 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             if run["head_sha"] != expected or run["status"] != "completed" or run["conclusion"] != "success":
                 raise ForgeError(f"The {label} gate does not certify this source")
 
+    def assert_engine_gates(self):
+        """Games metadata integration never authorizes different engine code."""
+        if (git(self.engine, "rev-parse", "HEAD") != self.state["engine_head"]
+                or code_digest(self.engine) != self.state["verified_code"]):
+            raise ForgeError("Engine source changed after verification; retain it for fresh source review")
+        for label in ("engine-checks", "generated-game-linux-windows"):
+            receipt = self.state.get("ci", {}).get(label, {})
+            if receipt.get("head") != self.state["engine_head"]:
+                raise ForgeError("Missing exact engine source gate: " + label)
+            run = self.api(f"repos/{self.state['engine_repository']}/actions/runs/{receipt['run']}")
+            if (run.get("head_sha") != self.state["engine_head"]
+                    or run.get("status") != "completed" or run.get("conclusion") != "success"):
+                raise ForgeError("The engine source gate is no longer successful: " + label)
+
+    def games_snapshot(self, head):
+        slug = self.state["idea"]["slug"]
+        selected = "games/" + slug
+        catalog = json.loads(git(self.games, "show", head + ":.games-catalog.json"))
+        if (catalog.get("source_repository") != self.state["engine_repository"]
+                or catalog.get("target_repository") != self.state["games_repository"]
+                or catalog.get("source_revision") != self.state["engine_head"]):
+            raise ForgeError("Concurrent Games export changed the pinned engine source; retain it for a fresh native release")
+        definitions = json.loads(git(self.games, "show", head + ":.release-games.json"))
+        definitions = [item for item in definitions["native_playables"] if item.get("slug") == slug]
+        if len(definitions) != 1:
+            raise ForgeError("The released game needs its unique native definition")
+        return {"game_tree": git(self.games, "rev-parse", head + ":" + selected),
+                "definition": definitions[0],
+                "thumbnail": git(self.games, "rev-parse", head + ":site/thumbs/" + slug + ".png"),
+                "ownership": sorted([item["path"], item["sha256"]] for item in catalog["files"]
+                                    if item["path"] == selected or item["path"].startswith(selected + "/")),
+                "preserved_paths": sorted(path for path in catalog.get("preserved_paths", [])
+                                          if path == selected or path.startswith(selected + "/") or selected.startswith(path + "/"))}
+
     def publish_games(self):
+        """Reconcile unrelated main updates and recheck the exact installer head."""
+        self.assert_engine_gates()
+        self.assert_games_worktree()
+        head = git(self.games, "rev-parse", "HEAD")
+        self.assert_games_merge_finished()
+        if git(self.games, "status", "--porcelain"):
+            raise ForgeError(f"Retained Games integration needs a clean committed merge in {self.games}; preserve the exact released game")
+        recorded = self.state["games_head"]
+        if head != recorded and not self.state.get("games_integration_pending"):
+            raise ForgeError("Games source changed outside its retained integration")
+        frozen = self.state.setdefault("games_source_snapshot", self.games_snapshot(recorded))
+        self.save()
+        self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="games-integration-fetch")
+        # A confirmed original push remains valid when unrelated main commits
+        # follow it; the original immutable production receipt remains the proof.
+        if head == recorded and git_ancestor(self.games, recorded, "origin/main"):
+            if self.state.get("ci", {}).get("windows-installer-review", {}).get("head") != recorded:
+                self.installer_review()
+            self.assert_source_gates()
+            return
+        if not git_ancestor(self.games, recorded, head):
+            raise ForgeError("Games integration lost the exact exported source commit")
+        if not git_ancestor(self.games, "origin/main", head):
+            self.state["games_integration_pending"] = recorded
+            self.save()
+            try:
+                self.command(["git", "-c", "user.name=IdeaForge", "-c", "user.email=idea-forge@users.noreply.github.com",
+                              "merge", "--no-edit", "origin/main"], cwd=self.games, label="games-merge-main")
+            except ForgeError as error:
+                raise ForgeError(f"Companion integration needs review in {self.games}; resolve conflicts and commit "
+                                 "the merge there, then resume. Installer evidence cannot certify a new candidate.") from error
+            head = git(self.games, "rev-parse", "HEAD")
+        if self.games_snapshot(head) != frozen:
+            raise ForgeError("Concurrent Games main changed the released game, thumbnail, ownership or native definition; retain its exact source for a separate reviewed release")
+        self.record_games_candidate(head)
+        self.state.pop("games_integration_pending", None)
+        self.save()
+        if self.state.get("ci", {}).get("windows-installer-review", {}).get("head") != head:
+            self.installer_review()
         self.assert_source_gates()
-        if git(self.games, "rev-parse", "HEAD") != self.state["games_head"] or git(self.games, "status", "--porcelain"):
-            raise ForgeError("Companion source changed after installer review")
-        self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="publication-fetch")
-        git(self.games, "merge-base", "--is-ancestor", "origin/main", "HEAD")
-        self.command(["git", "push", "origin", "HEAD:main"], cwd=self.games, label="publish-catalog")
+        if git(self.games, "rev-parse", "HEAD") != head or git(self.games, "status", "--porcelain"):
+            raise ForgeError("Companion source changed after installer review; retain it for fresh review")
+        self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="games-publication-fetch")
+        if git_ancestor(self.games, head, "origin/main"):
+            return
+        if not git_ancestor(self.games, "origin/main", head):
+            raise ForgeError("Games main advanced during installer review; resume to integrate and repeat its exact-source gate")
+        self.command(["git", "push", "origin", head + ":main"], cwd=self.games, label="publish-games")
 
     def verify_publication(self):
         repository = self.state["games_repository"]
@@ -1191,11 +1379,11 @@ Native package receipt: {self.game / 'dist/ship.json'}.""", REVIEW_SCHEMA, image
             raise ForgeError("This run has already published; start a new run for another release")
         self.state.setdefault("verification_history", []).append({
             key: self.state.get(key) for key in
-            ("completed", "engine_head", "games_head", "verified_code", "ci")})
+            ("completed", "engine_head", "games_head", "verified_code", "ci", "games_source_snapshot", "games_integration_pending")})
         self.state["completed"] = [name for name in self.state.get("completed", [])
                                    if name in ("setup", "generate")]
         for key in ("verified_code", "engine_head", "games_head", "screenshot", "ci",
-                    "dispatched", "feedback_commit", "error"):
+                    "dispatched", "feedback_commit", "error", "games_source_snapshot", "games_integration_pending"):
             self.state.pop(key, None)
         self.state["rebuild_reason"] = (
             "The existing game worktree was updated. Preserve the selected concept and "

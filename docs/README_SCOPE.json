@@ -21,7 +21,7 @@
     "game_upgrade": "69e64d2a9d9e22dae052d56e3544925f97a9d299fb9a84a2088a6116746a0aea",
     "geometry_kit": "f2224bac20c92a18e4bbc3ea442d83fe07d5bae7046110b5438d75fb27e22257",
     "graphics": "a7a8d804e12d863318a70a5f98197fe832c55a10acaedd4b72386b8926f6d9b7",
-    "idea_forge": "631632cd05119c1a7ad62543edff675e593612e36c202402355e4c28c42049b6",
+    "idea_forge": "48a38b9a094b97ca817449fd9d43b7bf7954877281db912edf36abab9d6e9180",
     "interactions": "d51200e602e0561ad23b0978f6bc4acfec44cf621d37c6df2f3454f426078c15",
     "interior_prefabs": "f8c2024f8f2b5e2e83f3ae65058b7337f054f28fa60b1c0a1f8a3053ce4d92ee",
     "landscaping": "ffba37e24b71e9d2b8b147381f197abd34c764519bca9b5897e2aac758e07d49",
@@ -86,5 +86,5 @@
   "readme_sha256": "1176066cf9c0ebbb7680ee27a729758b9cb1b1c0daffb07b97855a2ecbfd6b1e",
   "rust_version": "1.87",
   "starters_sha256": "fd931a4efe14309aff7611726b5e33f727bd77c704b934abe5f033fd3b30a7a7",
-  "unchanged_reason": "Portable command edges, native camera alignment and reproducible tooling pins refine the existing gameplay, presentation and authoring scope; detailed contracts remain in the linked 2D and tooling guides."
+  "unchanged_reason": "README already describes IdeaForge native verification and shared maintainer publishing with Windows installer gates; retained companion merge recovery changes retry reliability within that workflow, with ownership and evidence limits documented in IDEA_FORGE.md."
 }

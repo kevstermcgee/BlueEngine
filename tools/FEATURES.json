@@ -3066,6 +3066,7 @@
       "files": [
         "tools/idea_forge.py",
         "tools/test_idea_forge.py",
+        "tools/test_idea_forge_recovery.py",
         "tools/player_feedback.py",
         "tools/test_player_feedback.py",
         "tools/feedback_server.py",
@@ -3092,11 +3093,11 @@
         "tools/test_machine_utilities.py"
       ],
       "checks": [
-        "python -m unittest tools.test_idea_forge tools.test_player_feedback tools.test_feedback_server",
+        "python -m unittest tools.test_idea_forge tools.test_idea_forge_recovery tools.test_player_feedback tools.test_feedback_server",
         "python -m unittest tools.test_community tools.test_community_store tools.test_community_server tools.test_community_release_companion",
         "python -m unittest tools.test_machine_utilities"
       ],
-      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates. Public wiki reviews are validated into docs/player-feedback; bounded untrusted player observations reach concept generation, building and independent review without becoming trusted engine commands or learning ledger entries. The community workflow supports immutable game ancestry, equal GitHub maintainer capabilities, human/AI feedback and pre-authored native game publication through the same exact-source CI, installer and public-download gates. Scheduled maintenance uses isolated engine and companion worktrees, bounded evidence-driven feedback dispositions, exact-source review and public delivery receipts before acknowledging completed work.",
+      "note": "IdeaForge CLI generates a fresh mechanic with Codex, has an AI build the actual native BlueEngine game, independently executes behavioral/package gates and reviews its capture, waits for exact-source Linux/Windows and installer CI, publishes to BlueEngineGames, verifies public downloads and commits AI-authored feedback to the engine learning ledger. Isolated worktrees preserve user edits; retained companion exports checkpoint scoped generated work and merge newer main, preserving engine source receipts while changed candidates repeat exact installer review. Conflicts and unrelated edits stop for explicit resolution; uncertain pushes reuse already published candidates. Retained phase state resumes failures; transcripts remain private. The curated idea browser is a separate legacy utility. Daily scheduling reserves one 2D and one 3D publishing run per local date in random order, retries retained work and prevents duplicates. Public wiki reviews are validated into docs/player-feedback; bounded untrusted player observations reach concept generation, building and independent review without becoming trusted engine commands or learning ledger entries. The community workflow supports immutable game ancestry, equal GitHub maintainer capabilities, human/AI feedback and pre-authored native game publication through the same exact-source CI, installer and public-download gates. Scheduled maintenance uses isolated engine and companion worktrees, bounded evidence-driven feedback dispositions, exact-source review and public delivery receipts before acknowledging completed work.",
       "keywords": [
         "ideaforge",
         "idea forge",
@@ -3118,7 +3119,12 @@
         "cousin access",
         "daily engine improvement",
         "nightly feedback queue",
-        "launcher maintenance"
+        "launcher maintenance",
+        "retained export",
+        "companion main advanced",
+        "stale installer receipt",
+        "publication recovery",
+        "retry publication"
       ],
       "read_first": [
         "docs/COLLABORATION.md",

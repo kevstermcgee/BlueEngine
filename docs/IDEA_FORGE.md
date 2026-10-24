@@ -209,20 +209,53 @@ repair. A changed unrelated game, manifest field or unreceipted source still
 blocks repair. Newly registered sources retain their receipt across feedback
 updates and rebuilds automatically.
 
-An agent's completion claim never substitutes for executed checks. Changed code
-or commits invalidate old publication gates. Repository pushes never force or
-overwrite another author's updates. If main advances concurrently, integrate it
-in the retained worktree and re-run the affected checks before retrying; stale
-receipts cannot authorize the new source. Before production publication, use
-`ideaforge resume /path/to/run --rebuild` after integrating the changes. This
-preserves the idea and AI findings, archives old receipts and reruns build,
-review and publication gates. An already published run cannot be rebuilt; create
-a new run for another release. After verified delivery, resume instead retains
+An agent's completion claim never substitutes for executed checks. Repository
+pushes never force or overwrite another author's updates. For a retained export
+whose companion main advanced, use the ordinary recovery command:
+
+```sh
+./ideaforge status /path/to/run
+./ideaforge resume /path/to/run
+```
+
+Before export, the supervisor verifies the private companion worktree's path,
+branch, shared Git repository and origin. It checkpoints dirty generated files
+under `games/SLUG`, `.games-catalog.json`, `.release-games.json` and
+`site/thumbs/SLUG.png`, then explicitly merges fetched companion main. Unrelated
+staged, unstaged or untracked edits stop recovery before checkpointing; preserve
+and commit or move them explicitly. Different staged and working versions of one
+file also require explicit reconciliation. The exporter retains its hash-based
+ownership and collision guards; checkpointing an edit does not certify it as
+verified game source. Conflicts stay in the printed private worktree: resolve
+and commit the merge there, then repeat `resume`. Interrupted checkpoints and
+merges reuse their retained commits.
+
+A companion advance after export uses the same retained publication integration
+as `community resume-release`. The game tree, thumbnail, ownership, native
+definition and engine source pin must stay identical. A changed candidate commit
+requires a new exact Windows installer review, including a fresh dispatch; its
+catalog, distribution and site checks run in that review. Frozen engine source,
+local game verification and engine Linux/Windows receipts remain intact. An
+uncertain push is checked against fetched main before retrying, so an already
+published candidate is not published again when later commits follow it.
+Package/public-download evidence never transfers to a different candidate.
+
+A newer or divergent engine pin in the companion catalog still blocks export:
+do not downgrade the catalog or silently rewrite frozen verified source. Changes
+to engine/game source require explicit integration and fresh source gates. Before
+production publication, `ideaforge resume /path/to/run --rebuild` preserves the
+idea and findings but reruns build, review and publication gates for changed
+source. An already published run cannot be rebuilt; create a new run for another
+release. After verified delivery, resume instead retains
 the original game worktree and release evidence and continues the separate
 `engine-feedback` integration branch. Merge conflicts stop with that worktree's
 path; preserve current main's registry and learning entries, resolve and commit
 the merge there, then resume. Advancing main requires fresh checks for the new
-integration commit. Once prepared, final feedback is frozen: retries after a push
+integration commit. If newer engine main requires canonical tooling migration,
+review it and run `python ENGINE/tools/game_tooling.py migrate GAME` against that
+separate `engine-feedback` candidate, then commit and resume its fresh CI. Never
+migrate the frozen released worktree to make integration checks pass.
+Once prepared, final feedback is frozen: retries after a push
 or remote-verification failure reuse the same commit rather than rewriting its
 report. Integration state and head-specific CI receipts live in the private run
 journal. A failed run still retains feedback

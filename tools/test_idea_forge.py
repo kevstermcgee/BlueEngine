@@ -539,7 +539,7 @@ class SupervisorTests(unittest.TestCase):
         self.state.update(engine_head=head, verified_code=forge.code_digest(self.engine))
         (self.engine / "source.rs").write_text("unreviewed change")
         with patch.object(self.worker, "command") as command:
-            with self.assertRaisesRegex(forge.ForgeError, "Code changed"):
+            with self.assertRaisesRegex(forge.ForgeError, "Engine source changed"):
                 self.worker.publish_games()
             command.assert_not_called()
 
@@ -566,10 +566,10 @@ class SupervisorTests(unittest.TestCase):
         self.worker.games.mkdir()
         self.state.update(engine_repository="owner/BlueEngine", games_root=str(self.directory), engine_head="a" * 40)
         forge.atomic_json(self.worker.games / ".games-catalog.json", {
-            "source_repository": "owner/BlueEngine", "source_revision": "b" * 40})
+            "source_repository": "owner/BlueEngine", "source_revision": "b" * 40, "files": []})
         marker = self.worker.games / "newer-game.txt"
         marker.write_text("preserve newer source")
-        with patch.object(self.worker, "command") as command, patch.object(forge, "github_repository", return_value="owner/Games"), patch.object(forge, "git_ancestor", return_value=False):
+        with patch.object(self.worker, "command") as command, patch.object(self.worker, "integrate_games"), patch.object(forge, "git_ancestor", return_value=False):
             with self.assertRaisesRegex(forge.ForgeError, "newer or divergent"):
                 self.worker.export()
         self.assertEqual(marker.read_text(), "preserve newer source")
