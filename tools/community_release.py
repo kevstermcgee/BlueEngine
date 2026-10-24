@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from copy import deepcopy
 import hashlib
 import json
 import os
@@ -86,89 +85,6 @@ class Release(forge.Forge):
             self.command(["git", "-c", "user.name=BlueEngine Community", "-c", "user.email=community@users.noreply.github.com",
                           "commit", "--allow-empty", "-m", "Review native source for " + self.state["idea"]["slug"]],
                          cwd=self.engine, label="native-source-review-commit")
-
-    def assert_engine_gates(self):
-        """Games metadata integration never authorizes different engine code."""
-        if (forge.git(self.engine, "rev-parse", "HEAD") != self.state["engine_head"]
-                or forge.code_digest(self.engine) != self.state["verified_code"]):
-            raise forge.ForgeError("Engine source changed after verification; retain it for fresh source review")
-        for label in ("engine-checks", "generated-game-linux-windows"):
-            receipt = self.state.get("ci", {}).get(label, {})
-            if receipt.get("head") != self.state["engine_head"]:
-                raise forge.ForgeError("Missing exact engine source gate: " + label)
-            run = self.api(f"repos/{self.state['engine_repository']}/actions/runs/{receipt['run']}")
-            if (run.get("head_sha") != self.state["engine_head"]
-                    or run.get("status") != "completed" or run.get("conclusion") != "success"):
-                raise forge.ForgeError("The engine source gate is no longer successful: " + label)
-
-    def games_snapshot(self, head):
-        slug = self.state["idea"]["slug"]
-        selected = "games/" + slug
-        catalog = json.loads(forge.git(self.games, "show", head + ":.games-catalog.json"))
-        if (catalog.get("source_repository") != self.state["engine_repository"]
-                or catalog.get("target_repository") != self.state["games_repository"]
-                or catalog.get("source_revision") != self.state["engine_head"]):
-            raise forge.ForgeError("Concurrent Games export changed the pinned engine source; retain it for a fresh native release")
-        definitions = json.loads(forge.git(self.games, "show", head + ":.release-games.json"))
-        definitions = [item for item in definitions["native_playables"] if item.get("slug") == slug]
-        if len(definitions) != 1:
-            raise forge.ForgeError("The released game needs its unique native definition")
-        return {"game_tree": forge.git(self.games, "rev-parse", head + ":" + selected),
-                "definition": definitions[0],
-                "thumbnail": forge.git(self.games, "rev-parse", head + ":site/thumbs/" + slug + ".png"),
-                "ownership": sorted([item["path"], item["sha256"]] for item in catalog["files"]
-                                    if item["path"] == selected or item["path"].startswith(selected + "/")),
-                "preserved_paths": sorted(path for path in catalog.get("preserved_paths", [])
-                                          if path == selected or path.startswith(selected + "/") or selected.startswith(path + "/"))}
-
-    def publish_games(self):
-        """Reconcile unrelated main updates and recheck the exact installer head."""
-        self.assert_engine_gates()
-        head = forge.git(self.games, "rev-parse", "HEAD")
-        merge = Path(forge.git(self.games, "rev-parse", "--git-path", "MERGE_HEAD"))
-        if not merge.is_absolute():
-            merge = self.games / merge
-        if merge.exists() or forge.git(self.games, "status", "--porcelain"):
-            raise forge.ForgeError(f"Retained Games integration needs a clean committed merge in {self.games}; preserve the exact released game")
-        recorded = self.state["games_head"]
-        if head != recorded and not self.state.get("games_integration_pending"):
-            raise forge.ForgeError("Games source changed outside its retained integration")
-        frozen = self.state.setdefault("games_source_snapshot", self.games_snapshot(recorded))
-        self.save()
-        self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="games-integration-fetch")
-        # A confirmed original push remains valid when unrelated main commits
-        # follow it; the original immutable production receipt remains the proof.
-        if head == recorded and forge.git_ancestor(self.games, recorded, "origin/main"):
-            if self.state.get("ci", {}).get("windows-installer-review", {}).get("head") != recorded:
-                self.installer_review()
-            self.assert_source_gates()
-            return
-        if not forge.git_ancestor(self.games, recorded, head):
-            raise forge.ForgeError("Games integration lost the exact exported source commit")
-        if not forge.git_ancestor(self.games, "origin/main", head):
-            self.state["games_integration_pending"] = recorded
-            self.save()
-            self.command(["git", "-c", "user.name=BlueEngine Community", "-c", "user.email=community@users.noreply.github.com",
-                          "merge", "--no-edit", "origin/main"], cwd=self.games, label="games-merge-main")
-            head = forge.git(self.games, "rev-parse", "HEAD")
-        if self.games_snapshot(head) != frozen:
-            raise forge.ForgeError("Concurrent Games main changed the released game, thumbnail, ownership or native definition; retain its exact source for a separate reviewed release")
-        if head != recorded:
-            self.state.setdefault("games_verification_history", []).append({
-                "head": recorded, "installer": deepcopy(self.state.get("ci", {}).get("windows-installer-review"))})
-            self.state["games_head"] = head
-            self.state.setdefault("ci", {}).pop("windows-installer-review", None)
-        self.state.pop("games_integration_pending", None)
-        self.save()
-        if self.state.get("ci", {}).get("windows-installer-review", {}).get("head") != head:
-            self.installer_review()
-        self.assert_source_gates()
-        self.command(["git", "fetch", "origin", "main"], cwd=self.games, label="games-publication-fetch")
-        if forge.git_ancestor(self.games, head, "origin/main"):
-            return
-        if not forge.git_ancestor(self.games, "origin/main", head):
-            raise forge.ForgeError("Games main advanced during installer review; resume to integrate and repeat its exact-source gate")
-        self.command(["git", "push", "origin", head + ":main"], cwd=self.games, label="publish-games")
 
     def publish_source(self):
         self.assert_source_gates()
