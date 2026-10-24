@@ -19,7 +19,7 @@
     {
       "id": "legibility",
       "area": "ui",
-      "instructions": "Inspect colored cargo numbers, beacon badges, pulse allowance, blocked paths, recoverable exhaustion and final completion. Verify pause menu."
+      "instructions": "Inspect colored cargo numbers, beacon badges, pulse allowance, blocked paths, recoverable exhaustion and final completion. In chambers four and six, click both side-by-side B and D world badges and confirm the corresponding sidebar row. Inspect a moving and docking cube halfway through its slide: its number and LOCKED label must remain over the moving cube. Verify pause menu."
     },
     {
       "id": "pulse-sound",

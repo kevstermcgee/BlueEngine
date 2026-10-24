@@ -34,6 +34,39 @@ const COLORS: [[f32; 3]; 3] = [[1., 0.65, 0.23], [0.20, 0.86, 0.96], [0.76, 0.53
 fn v(p: Point) -> Vec3 {
     vec3(p[0] as f32 / 1024., p[1] as f32 / 1024., p[2] as f32 / 1024.)
 }
+fn cargo_positions(previous: &[Point], current: &[Point], progress: f32) -> Vec<Vec3> {
+    let eased = progress * progress * (3. - 2. * progress);
+    current
+        .iter()
+        .enumerate()
+        .map(|(i, p)| match previous.get(i) {
+            Some(old) if progress < 1. => v(*old).lerp(v(*p), eased),
+            _ => v(*p),
+        })
+        .collect()
+}
+fn beacon_badges(beacons: &[Point], view: &View, width: f32, height: f32, ui: f32) -> Vec<Option<Vec2>> {
+    beacons
+        .iter()
+        .enumerate()
+        .map(|(i, p)| {
+            // Co-located origins keep their rules position, but each badge gets its own click target.
+            let count = beacons.iter().filter(|other| *other == p).count();
+            let rank = beacons[..i].iter().filter(|other| *other == p).count();
+            let offset = (rank as f32 - (count - 1) as f32 * 0.5) * 40. * ui;
+            view.project(v(*p) + Vec3::Y * 0.75, width, height).map(|at| at + vec2(offset, -6. * ui))
+        })
+        .collect()
+}
+fn clicked_beacon(badges: &[Option<Vec2>], pointer: Vec2, ui: f32) -> Option<usize> {
+    badges
+        .iter()
+        .enumerate()
+        .filter_map(|(i, at)| at.map(|at| (i, at.distance(pointer))))
+        .filter(|(_, distance)| *distance < 18. * ui)
+        .min_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(i, _)| i)
+}
 fn color(c: [f32; 3]) -> Color {
     Color::new(c[0], c[1], c[2], 1.)
 }
@@ -207,12 +240,12 @@ async fn main() {
             }
             if is_mouse_button_pressed(MouseButton::Left) {
                 let m = Vec2::from(mouse_position());
-                for (i, p) in chamber(sim.state.level).beacons.iter().enumerate() {
-                    let on_world =
-                        view.project(v(*p) + Vec3::Y * 0.75, sw, sh).is_some_and(|p| p.distance(m) < 26. * ui);
+                let beacons = chamber(sim.state.level).beacons;
+                beacon = clicked_beacon(&beacon_badges(&beacons, &view, sw, sh, ui), m, ui);
+                for i in 0..beacons.len() {
                     let y = (306. + i as f32 * 34.) * ui;
                     let on_panel = m.x >= 28. * ui && m.x <= 248. * ui && m.y > y - 23. * ui && m.y < y + 6. * ui;
-                    if on_world || on_panel {
+                    if on_panel {
                         beacon = Some(i);
                     }
                 }
@@ -271,6 +304,7 @@ async fn main() {
         let c = chamber(sim.state.level);
         let preview = sim.preview();
         let cfg = &sim.state.config;
+        let cargo = cargo_positions(&previous, &cfg.positions, anim);
         let blocked = preview.obstruction.is_some();
         batch.clear();
         let mut objects = Template::new();
@@ -282,13 +316,7 @@ async fn main() {
             cage(&mut objects, pos, Vec3::splat(0.47), thick, col, if lit { 1. } else { 0.6 });
             rod(&mut objects, vec3(pos.x, 0.05, pos.z), pos - Vec3::Y * 0.55, 0.009, [0.18, 0.28, 0.34], 0.3);
         }
-        for (i, p) in cfg.positions.iter().enumerate() {
-            let end = v(*p);
-            let at = if anim < 1. && i < previous.len() {
-                v(previous[i]).lerp(end, anim * anim * (3. - 2. * anim))
-            } else {
-                end
-            };
+        for (i, &at) in cargo.iter().enumerate() {
             let col = COLORS[i];
             objects.rounded_box(at, Vec3::splat(0.375), 0.065, col, 0.25);
             cage(
@@ -340,23 +368,23 @@ async fn main() {
         batch.draw();
         gl_use_default_material();
         set_default_camera();
-        for (i, p) in c.beacons.iter().enumerate() {
-            if let Some(pos) = view.project(v(*p) + Vec3::Y * 0.75, sw, sh) {
+        for (i, pos) in beacon_badges(&c.beacons, &view, sw, sh, ui).iter().enumerate() {
+            if let Some(pos) = pos {
                 let col = if i == sim.state.selected {
                     Color::new(0.78, 1., 0.65, 1.)
                 } else {
                     Color::new(0.55, 0.74, 0.8, 1.)
                 };
-                if let Some(anchor) = view.project(v(*p), sw, sh) {
+                if let Some(anchor) = view.project(v(c.beacons[i]), sw, sh) {
                     draw_line(pos.x, pos.y, anchor.x, anchor.y, ui, col);
                 }
-                draw_circle(pos.x, pos.y - 6. * ui, 13. * ui, Color::new(0.04, 0.09, 0.12, 1.));
-                draw_circle_lines(pos.x, pos.y - 6. * ui, 13. * ui, 1.5 * ui, col);
-                text(&format!("{}", (b'A' + i as u8) as char), pos.x - 6. * ui, pos.y, 19. * ui, col);
+                draw_circle(pos.x, pos.y, 13. * ui, Color::new(0.04, 0.09, 0.12, 1.));
+                draw_circle_lines(pos.x, pos.y, 13. * ui, 1.5 * ui, col);
+                text(&format!("{}", (b'A' + i as u8) as char), pos.x - 6. * ui, pos.y + 6. * ui, 19. * ui, col);
             }
         }
-        for (i, p) in cfg.positions.iter().enumerate() {
-            if let Some(pos) = view.project(v(*p) + Vec3::Y * 0.65, sw, sh) {
+        for (i, &at) in cargo.iter().enumerate() {
+            if let Some(pos) = view.project(at + Vec3::Y * 0.65, sw, sh) {
                 text(
                     &format!("{}{}", i + 1, if cfg.docked[i] { " LOCKED" } else { "" }),
                     pos.x - 4. * ui,
@@ -528,4 +556,55 @@ async fn main() {
         sim.state.config.docked.iter().filter(|x| **x).count(),
         vesper3d::viewer::devkit::Simulation::state_hash(&sim)
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn coincident_b_and_d_have_separate_visible_click_targets() {
+        let target = vec3(-3.2, 3.6, 0.8);
+        let eye = target + vec3(0., 8., 18.);
+        let direction = (target - eye).normalize();
+        let view = View::first_person(eye, direction.x.atan2(-direction.z), direction.y.asin());
+        for level in [3, 5] {
+            let c = chamber(level);
+            assert_eq!(c.beacons[1], c.beacons[3]);
+            for ui in [0.65, 1., 2.] {
+                let badges = beacon_badges(&c.beacons, &view, 1280. * ui, 800. * ui, ui);
+                let (b, d) = (badges[1].unwrap(), badges[3].unwrap());
+                assert!(b.distance(d) >= 39.9 * ui, "badges must not overlap");
+                for (i, at) in [(1, b), (3, d)] {
+                    for offset in [Vec2::ZERO, vec2(-12., 0.), vec2(12., 0.)] {
+                        assert_eq!(clicked_beacon(&badges, at + offset * ui, ui), Some(i));
+                    }
+                }
+                assert_eq!(clicked_beacon(&badges, (b + d) * 0.5, ui), None);
+            }
+        }
+    }
+
+    #[test]
+    fn cargo_interpolates_pulses_and_docking_and_handles_missing_history() {
+        let mut sim = Sim::new(3);
+        for (beacon, mode) in chamber(0).solution {
+            let old = sim.state.config.positions.clone();
+            sim.step(&scatterlock::Intent {
+                beacon: Some(beacon),
+                mode: Some(mode),
+                execute: true,
+                ..Default::default()
+            });
+            assert_ne!(old, sim.state.config.positions);
+            let end = &sim.state.config.positions;
+            assert_eq!(cargo_positions(&old, end, 0.), old.iter().map(|p| v(*p)).collect::<Vec<_>>());
+            assert_eq!(cargo_positions(&old, end, 1.), end.iter().map(|p| v(*p)).collect::<Vec<_>>());
+            for (i, at) in cargo_positions(&old, end, 0.5).iter().enumerate() {
+                assert_eq!(*at, (v(old[i]) + v(end[i])) * 0.5);
+            }
+            assert_eq!(cargo_positions(&[], end, 0.), cargo_positions(&old, end, 1.));
+        }
+        assert!(sim.state.config.docked.iter().all(|docked| *docked));
+    }
 }

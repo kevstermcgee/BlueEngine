@@ -4,6 +4,8 @@ The six-chamber native 3D game is implemented: fixed-point position scaling, sim
 
 This review preserved the rules and improved the default camera angle, corner-post visibility, travel-path thickness, numbered berth labels and on-screen explanation. The BlueEngine Games opening is centered text-only. Fresh canonical map tooling generated a comparison custom-sim scaffold, refreshed the tooling revision and regenerated the game icon. The comparison scaffold was removed without replacing authored game rules.
 
+Maintenance corrected two remaining presentation issues. Co-located B/D origins in chambers four and six now have separate world badges and matching click targets; their authoritative coordinates are unchanged. Cargo geometry and number/LOCKED labels now use the same interpolated position throughout the 0.55-second slide. Client regressions cover B/D clicks at three UI scales and interpolation through a complete two-pulse delivery, including missing animation history after a restore. These are separate from the headless rule/control tests below. The native review checklist now explicitly requests both overlapping-origin clicks and mid-slide label inspection.
+
 `wiki.json` contains the public overview, concrete rules, exact controls and design rationale. Four unaltered 1280x800 native screenshots in `assets/wiki/` show the opening puzzle, an elevated obstruction, the delivery-order detour and campaign completion. Each gallery image was inspected. No story or characters were added.
 
 Fresh evidence against the current engine:
