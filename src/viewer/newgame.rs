@@ -392,7 +392,7 @@ fn write_shipping_files(
             "schema_version": 1,
             "engine": serde_json::from_str::<String>(&project.engine_toml)?,
             "revision": identity.engine_revision,
-            "sha256": tooling_digest(&project.engine_dir),
+            "sha256": tooling_digest(&project.engine_dir, identity.engine_revision.as_deref()),
         }))?,
     )?;
     // Starter names describe code generation; project runtimes describe the native client route.
@@ -484,9 +484,15 @@ pub fn tooling_entry(command: &str) -> String {
         if __name__ == \"__main__\":\n    import sys\n{tail}")
 }
 
-/// Content pin also supports a checked-out revision with local, reviewed tooling edits.
-/// A recorded Git revision alone cannot identify a dirty source checkout.
-fn tooling_digest(engine: &Path) -> Option<String> {
+/// Only source tooling reproducible from its recorded revision receives a verified pin.
+/// Packaged distributions keep their manifest-based path; unavailable or dirty source
+/// dependencies require the existing explicit tooling migration before use.
+fn tooling_digest(engine: &Path, recorded_revision: Option<&str>) -> Option<String> {
+    let revision = if engine.join("PACKAGE-MANIFEST.json").is_file() {
+        None
+    } else {
+        Some(recorded_revision?)
+    };
     let mut digest = ring::digest::Context::new(&ring::digest::SHA256);
     for name in [
         "templates/game_check.py",
@@ -507,6 +513,18 @@ fn tooling_digest(engine: &Path) -> Option<String> {
         // The legacy API can scaffold before its dependency exists; that project
         // needs an explicit tooling migration after restoring the dependency.
         let content = fs::read(engine.join(name)).ok()?;
+        if let Some(revision) = &revision {
+            let recorded = std::process::Command::new("git")
+                .arg("-C")
+                .arg(engine)
+                .arg("show")
+                .arg(format!("{revision}:{name}"))
+                .output()
+                .ok()?;
+            if !recorded.status.success() || recorded.stdout != content {
+                return None;
+            }
+        }
         digest.update(&content);
         digest.update(&[0]);
     }
@@ -1139,6 +1157,64 @@ mod tests {
         assert_eq!(engine_revision(&dir), None);
         fs::remove_dir_all(dir).unwrap();
         fs::remove_dir_all(linked).unwrap();
+    }
+
+    #[test]
+    fn source_tooling_pins_require_committed_bytes_but_allow_unrelated_edits() {
+        let dir = temp("tooling-pin");
+        fs::create_dir_all(dir.join("templates")).unwrap();
+        fs::create_dir_all(dir.join("tools")).unwrap();
+        for name in [
+            "templates/game_check.py",
+            "templates/game_dev.py",
+            "templates/game_project.py",
+            "templates/game_ship.py",
+            "templates/game_installer.py",
+            "templates/game_review.py",
+            "templates/game_entry.py",
+            "tools/game_tooling.py",
+            "tools/game_metadata.py",
+        ] {
+            fs::write(dir.join(name), b"# reviewed tooling\n").unwrap();
+        }
+        fs::write(dir.join(".gitattributes"), b"* text=auto eol=lf\n").unwrap();
+        let git = |args: &[&str]| {
+            let output = std::process::Command::new("git")
+                .arg("-C")
+                .arg(&dir)
+                .args(args)
+                .output()
+                .unwrap();
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stderr)
+            );
+        };
+        git(&["init", "-q"]);
+        git(&["config", "user.name", "Tooling fixture"]);
+        git(&["config", "user.email", "tooling@example.invalid"]);
+        git(&["add", "."]);
+        git(&["commit", "-qm", "Reviewed tooling"]);
+        let digest = || tooling_digest(&dir, engine_revision(&dir).as_deref());
+        let original_revision = engine_revision(&dir).unwrap();
+        let original = digest().expect("committed tooling is reproducible");
+        fs::write(dir.join("unrelated.rs"), b"// authored game change\n").unwrap();
+        assert_eq!(digest().as_deref(), Some(original.as_str()));
+        fs::write(dir.join("tools/game_metadata.py"), b"# updated tooling\n").unwrap();
+        assert_eq!(digest(), None, "dirty tooling remains unverified");
+        git(&["add", "tools/game_metadata.py"]);
+        assert_eq!(digest(), None, "staging alone is not provenance");
+        git(&["commit", "-qm", "Reviewed tooling update"]);
+        assert_eq!(tooling_digest(&dir, Some(&original_revision)), None);
+        assert_ne!(digest().as_deref(), Some(original.as_str()));
+        assert!(digest().is_some());
+        fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn missing_engine_dependency_retains_unverified_tooling_pin() {
+        assert_eq!(tooling_digest(&temp("missing-tooling"), None), None);
     }
 
     #[test]

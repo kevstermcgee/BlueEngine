@@ -1,9 +1,9 @@
 //! One recommended offline client: fixed-step input, native storage, audio, HUD and verification.
 use super::draw::{GOLD, PINK, WHITE};
-use super::{draw::*, Intent, Point, Rect};
+use super::{draw::*, Intent, IntentAccumulator, Point, Rect};
 use crate::runtime::{
     storage::{self, PlatformStorage},
-    FixedStepper, InputAccumulator,
+    FixedStepper,
 };
 use macroquad::audio::{
     load_sound_from_bytes, play_sound, set_sound_volume, stop_sound, PlaySoundParams, Sound,
@@ -284,7 +284,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
     let mut paused = false;
     let mut audio = Audio::new::<G>(platform::muted()).await?;
     let mut stepper = FixedStepper::new();
-    let mut inputs = InputAccumulator::<Intent>::new();
+    let mut inputs = IntentAccumulator::new();
     let mut pointer_actions = ActionPointer::default();
     let mut particles = Particles::new(8);
     let mut renderer = Renderer::default();
@@ -459,6 +459,7 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 y: y.clamp(-1, 1),
                 pointer,
                 action,
+                commands: 0,
                 sprint: platform::sprint_key(),
                 look: [0.; 2],
             })
@@ -480,22 +481,17 @@ async fn run_inner<G: Game>() -> Result<(), String> {
                 digital.action && digital.pointer.is_some(),
             );
         }
-        intent.action = false;
         clear_inactive_input(
             focused && started && !paused,
             &mut inputs,
             &mut pointer_actions,
             &mut last_pointer,
         );
-        inputs.feed(
-            intent,
-            u32::from(action && focused && started && !paused),
-            if focused && started && !paused {
-                look
-            } else {
-                [0.; 2]
-            },
-        );
+        if focused && started && !paused {
+            intent.look[0] += look[0];
+            intent.look[1] += look[1];
+            inputs.feed(intent);
+        }
         let ticks = if verification && started {
             // Replay uses the same fixed steps; graphics need not redraw after every eight ticks.
             // Real-device verification below runs normal timing independently.
@@ -511,13 +507,10 @@ async fn run_inner<G: Game>() -> Result<(), String> {
             if verification && verification_tick >= G::VERIFY_TICKS {
                 break;
             }
-            let tick = inputs.take_tick();
-            let mut intent = tick.held;
-            intent.action = tick.pressed(1);
+            let mut intent = inputs.take_tick();
             if G::pointer_target_only_on_press() {
                 intent.pointer = pointer_actions.take(intent.action);
             }
-            intent.look = tick.look;
             if verification {
                 intent = G::verification_input(verification_tick);
                 verification_tick += 1;
@@ -657,7 +650,7 @@ fn pad_axes(stick: [f32; 2], dpad: [bool; 4]) -> [i32; 2] {
 // Shared production path: inactive local clients cannot retain a press/target/look for later ticks.
 fn clear_inactive_input(
     active: bool,
-    inputs: &mut InputAccumulator<Intent>,
+    inputs: &mut IntentAccumulator,
     targets: &mut ActionPointer,
     pointer: &mut Option<(f32, f32)>,
 ) {
@@ -747,46 +740,55 @@ mod pointer_action_tests {
     #[test]
     fn focus_and_menu_discard_subtick_edges_targets_and_look_before_neutral_return() {
         let mut gate = crate::viewer::focus::NeutralGate::default();
-        let mut input = InputAccumulator::<Intent>::new();
+        let mut input = IntentAccumulator::new();
         let mut targets = ActionPointer::default();
         let mut pointer = Some((5., 6.));
-        input.feed(
-            Intent {
-                x: 1,
-                ..Default::default()
-            },
-            1,
-            [1., 2.],
-        );
+        input.feed(Intent {
+            x: 1,
+            action: true,
+            commands: 1 << 31,
+            look: [1., 2.],
+            ..Default::default()
+        });
         targets.feed(true, Some(Point::new(4, 5)), true, false);
         let active = gate.observe(true, true, false); // out/in between frames, before any simulation tick
         clear_inactive_input(active, &mut input, &mut targets, &mut pointer);
         let tick = input.take_tick();
-        assert!(!tick.pressed(1));
-        assert_eq!(tick.held.x, 0);
+        assert!(!tick.action);
+        assert_eq!(tick.commands, 0);
+        assert_eq!(tick.x, 0);
         assert_eq!(tick.look, [0., 0.]);
         assert_eq!(targets.take(true), None);
         assert_eq!(pointer, None);
         assert!(!gate.observe(true, false, false)); // mouse/controller/key still held
         assert!(!gate.observe(true, false, true)); // neutral frame is consumed
         assert!(gate.observe(true, false, true));
-        input.feed(Intent::default(), 1, [0., 0.]);
+        input.feed(Intent {
+            action: true,
+            commands: 7,
+            ..Default::default()
+        });
         clear_inactive_input(false, &mut input, &mut targets, &mut pointer); // menu opening
-        assert!(!input.take_tick().pressed(1));
+        let cleared = input.take_tick();
+        assert!(!cleared.action);
+        assert_eq!(cleared.commands, 0);
     }
     #[test]
     fn mapped_device_command_survives_a_frame_without_a_tick_and_fires_once() {
         let hover = Some(Point::new(400, 200));
         let command = Some(Point::new(-1, 7));
         let mut targets = ActionPointer::default();
-        let mut inputs = InputAccumulator::<Intent>::new();
+        let mut inputs = IntentAccumulator::new();
         // The hook maps a keyboard edge to an explicit public command target.
         targets.feed(true, command, command != hover, false);
-        inputs.feed(Intent::default(), 1, [0.; 2]);
+        inputs.feed(Intent {
+            action: true,
+            ..Default::default()
+        });
         targets.feed(false, hover, false, false);
-        inputs.feed(Intent::default(), 0, [0.; 2]);
-        assert_eq!(targets.take(inputs.take_tick().pressed(1)), command);
-        assert_eq!(targets.take(inputs.take_tick().pressed(1)), None);
+        inputs.feed(Intent::default());
+        assert_eq!(targets.take(inputs.take_tick().action), command);
+        assert_eq!(targets.take(inputs.take_tick().action), None);
     }
     #[test]
     fn keyboard_and_controller_ignore_hover_but_clicks_and_taps_keep_targets() {
@@ -803,15 +805,18 @@ mod pointer_action_tests {
     #[test]
     fn a_fast_click_keeps_its_location_until_the_press_edge_is_consumed() {
         let mut targets = ActionPointer::default();
-        let mut inputs = InputAccumulator::<Intent>::new();
+        let mut inputs = IntentAccumulator::new();
         let click = Some(Point::new(20, 30));
         targets.feed(true, click, true, false);
-        inputs.feed(Intent::default(), 1, [0.; 2]);
+        inputs.feed(Intent {
+            action: true,
+            ..Default::default()
+        });
         // A display frame runs no fixed tick, then the pointer moves before the next tick.
         targets.feed(false, Some(Point::new(500, 300)), false, false);
-        inputs.feed(Intent::default(), 0, [0.; 2]);
-        assert_eq!(targets.take(inputs.take_tick().pressed(1)), click);
-        assert_eq!(targets.take(inputs.take_tick().pressed(1)), None);
+        inputs.feed(Intent::default());
+        assert_eq!(targets.take(inputs.take_tick().action), click);
+        assert_eq!(targets.take(inputs.take_tick().action), None);
         targets.feed(true, click, false, true);
         targets.clear();
         assert_eq!(targets.take(true), None);

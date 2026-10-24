@@ -17,7 +17,7 @@ and hybrid presentation are described in docs/PORTABLE_GAMES.md.
 
 ## Game surface (`vesper3d::two_d`)
 
-- `Simulation` + `GameLogic`: fixed 60 Hz integer rules, `Intent { x, y, pointer, action }`, outcome,
+- `Simulation` + `GameLogic`: fixed 60 Hz integer rules, `Intent { x, y, pointer, action, commands, .. }`, outcome,
   public-input verification route and one meaningful real-device probe. All state stays rendering-free.
 - `Snapshot`: same checksummed BE2SAVE frame, exact continuation, version and migration contract as 3D.
 - `Rect::{overlaps,contains,slide}`: half-open integer bounds, swept axis movement that cannot tunnel;
@@ -28,6 +28,12 @@ and hybrid presentation are described in docs/PORTABLE_GAMES.md.
 - `draw::Animation::new(frames,ticks_per_frame)?.frame(tick)`; `Particles` are bounded, presentation-only.
 - `Viewport::fit` letterboxes a logical canvas; pointer coordinates outside it are `None`. Rendering
   can offset by a camera `Point`. The shared client uses an 800×450 logical canvas.
+- `draw::logical_screen_camera(bounds, viewport)` maps a native `render_view` callback
+  to top-left logical coordinates matching pointer picking. See [the recipe](PORTABLE_GAMES.md).
+- `IntentAccumulator` retains action and game-owned `commands` bits across device
+  frames without ticks, then consumes them once; held axes persist. The shared
+  client clears pending input when inactive. Define command bits for hold, alternate
+  rotation or other actions instead of encoding commands in pointer coordinates.
 - `draw::Game::draw` reads your state; `client::run` owns timing/input, pause/restart, sound,
   settings, saves, error notices and verification evidence. Main only supplies identity/icon configuration.
 

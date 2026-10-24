@@ -18,8 +18,14 @@ implementation. Moving a project also requires keeping its Cargo engine path and
 this recorded location consistent. A path dependency is **not a Git revision
 pin**. Keep the engine checkout at the recorded revision, or review an engine
 upgrade deliberately; tooling refuses different content instead of silently
-using another checkout or an executable on PATH. The content digest also records
-reviewed local edits that a Git revision alone cannot identify.
+using another checkout or an executable on PATH. Source migration verifies that
+the recorded revision reproduces every shared tooling input. Commit reviewed
+shared helper changes before migrating projects; staged or unstaged helper changes
+are rejected before project files are written. Unrelated game/source edits do not
+prevent pinning unchanged shared tooling. Native scaffolding leaves an unverified
+pin when the shared tooling cannot be reproduced; commit the helpers and explicitly
+migrate before using project commands. Packaged engines retain their manifest-based
+provenance and verification path.
 
 `BE2_TOOLING_ROOT` can select an equivalent engine distribution; it must match the
 content pin. For source tooling, checks let Cargo prove the selected dependency's
