@@ -127,8 +127,8 @@ Evidence at the implementation checkpoint:
   tooling tests passed, including restoration from recorded Git revisions.
 - Final focused run: **140** tests passed in **79.819 s** on this N97 host while
   canonical verification was also active. This is an observation, not a speed
-  comparison. The final additional large-path test passed separately; the new
-  recovery module contains **24** tests.
+  comparison. The complete final **24-test** recovery module also passed in
+  **7.492 s**, including the additional large-path test.
 - The new real-Git fixtures cover clean and dirty retained exports, unrelated
   staged/unstaged/untracked work (including hidden index edits), conflicting
   edits and committed resolution, wrong branch/repository/path/origin, interrupted
@@ -149,6 +149,11 @@ Evidence at the implementation checkpoint:
 - `python3 scripts/publish_games.py check` passed: **1,014** publication files.
   Discovery with “retained export companion main advanced stale installer receipt”
   selects the IdeaForge contract and existing public guide.
+- The documentation gate initially required renewed README scope review after
+  the capability contract changed. The existing README already describes this
+  workflow and its Windows installer gates; review recorded that specific reason
+  with `tools/readme_scope.py update --unchanged-reason`. The documentation and
+  README scope checks then passed without weakening their checks.
 - The indexed IdeaForge feature check passed **204** tests in **78.686 s** before
   the final added cases. Canonical **57-command** verification was started at this
   checkpoint. Exact-commit Linux/Windows CI and its consumer/package lanes remain
