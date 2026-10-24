@@ -26,6 +26,10 @@ class FeedbackError(ValueError):
     """Validation or API failure; existing records are preserved on API failures."""
 
 
+class UnknownGame(FeedbackError):
+    """A well-formed game identity is absent from the trusted review catalog."""
+
+
 def text(value, maximum, *, optional=False):
     if not isinstance(value, str) or len(value) > maximum:
         raise FeedbackError("Invalid review text length or type")
@@ -180,8 +184,10 @@ def record_from_submission(payload, games, created_at=None):
         raise FeedbackError("Unknown review format")
     identifier = submission_id(payload["submission_id"])
     slug, rating = payload["game"], payload["rating"]
-    if not isinstance(slug, str) or not SLUG.fullmatch(slug) or slug not in games:
+    if not isinstance(slug, str) or not SLUG.fullmatch(slug):
         raise FeedbackError("Unknown game slug")
+    if slug not in games:
+        raise UnknownGame("Unknown game slug")
     if type(rating) is not int or not 1 <= rating <= 10:
         raise FeedbackError("Rating must be an integer from 1 to 10")
     name = text(payload.get("name", ""), 80, optional=True)

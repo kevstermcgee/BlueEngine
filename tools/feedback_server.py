@@ -111,6 +111,16 @@ class Publisher:
         if self.git("status", "--porcelain", "--untracked-files=all").stdout:
             raise PublicationError("Publication checkout contains unrelated changes")
 
+    def sync(self):
+        self.git("fetch", "--quiet", "--no-tags", "origin", f"refs/heads/{self.branch}")
+        self.git("reset", "--hard", "FETCH_HEAD")
+
+    def sync_for_review(self):
+        self.sync()
+
+    def game_catalog(self):
+        return feedback.game_catalog(self.root)
+
     def safe_directories(self):
         for relative in ("docs", "docs/player-feedback", "docs/player-feedback/reviews", "docs/player-feedback/games"):
             path = self.root / relative
@@ -177,7 +187,7 @@ class Publisher:
             own_review = f"docs/player-feedback/reviews/{identifier}.json"
             if not {own_review, "docs/player-feedback/summary.json"} <= allowed:
                 raise ValueError
-            if any(path not in (own_review, "docs/player-feedback/summary.json")
+            if any(path not in (own_review, "docs/player-feedback/summary.json", "docs/player-feedback/games.json")
                    and not re.fullmatch(r"docs/player-feedback/games/[a-z0-9]+(?:-[a-z0-9]+)*\.json", path)
                    for path in allowed):
                 raise ValueError
@@ -189,10 +199,12 @@ class Publisher:
             if commit is not None:
                 if self.git("rev-parse", f"{commit}^").stdout.decode().strip() != base:
                     raise ValueError
-                if self.git("log", "-1", "--format=%s", commit).stdout.decode().strip() != self.commit_message(identifier):
-                    raise ValueError
                 committed = self.git("diff-tree", "--no-commit-id", "--name-only", "-r", "-z", base, commit).stdout
-                if not {path.decode("utf-8") for path in committed.split(b"\0") if path} <= allowed:
+                committed = {path.decode("utf-8") for path in committed.split(b"\0") if path}
+                if not committed <= allowed:
+                    raise ValueError
+                expected = self.commit_message(identifier, catalog_changed="docs/player-feedback/games.json" in committed)
+                if self.git("log", "-1", "--format=%s", commit).stdout.decode().strip() != expected:
                     raise ValueError
             self.rollback(base, allowed)
             self.clear_journal()
@@ -200,8 +212,10 @@ class Publisher:
             raise PublicationError("Interrupted publication requires operator inspection") from None
 
     @staticmethod
-    def commit_message(identifier):
-        return f"Record player feedback {identifier} [skip ci]"
+    def commit_message(identifier, *, catalog_changed=False):
+        # Allowlist changes fall outside nightly's review-only CI inheritance.
+        # Their own CI must run before an improvement cycle can use this tip.
+        return f"Record player feedback {identifier}" + ("" if catalog_changed else " [skip ci]")
 
     def rollback(self, base, allowed):
         # Never use git clean: delete only this import's untracked output paths.
@@ -233,14 +247,13 @@ class Publisher:
             received = datetime.now(timezone.utc).isoformat()
             for attempt in range(self.attempts):
                 # Fetch first even for an ID retry: a local commit alone is no receipt.
-                self.git("fetch", "--quiet", "--no-tags", "origin", f"refs/heads/{self.branch}")
-                self.git("reset", "--hard", "FETCH_HEAD")
+                self.sync_for_review()
                 self.safe_directories()
-                games = feedback.game_catalog(self.root)
+                games = self.game_catalog()
                 record = feedback.record_from_submission(payload, games, received)
                 identifier = record["submission_id"]
                 relative_review = f"docs/player-feedback/reviews/{identifier}.json"
-                allowed = {relative_review, "docs/player-feedback/summary.json"}
+                allowed = {relative_review, "docs/player-feedback/summary.json", "docs/player-feedback/games.json"}
                 allowed.update(f"docs/player-feedback/games/{slug}.json" for slug in games)
                 # Feed cleanup may remove an obsolete game's canonical JSON feed.
                 allowed.update(path.relative_to(self.root).as_posix()
@@ -256,6 +269,10 @@ class Publisher:
                            "commit": None, "paths": sorted(allowed)}
                 try:
                     self.save_journal(journal)
+                    # Keep trusted newly published game identities with the same
+                    # journal/commit as their review and canonical public feeds.
+                    feedback.atomic_json(self.root / feedback.DIRECTORY / "games.json",
+                                         {"schema_version": 1, "games": dict(sorted(games.items()))})
                     feedback.import_submission(self.root, payload, created_at=received)
                     changed = self.changed_paths()
                     if not changed <= allowed:
@@ -269,7 +286,8 @@ class Publisher:
                             raise PublicationError("Unsafe feedback output path")
                     self.git("add", "--", *sorted(changed))
                     tree = self.git("write-tree").stdout.decode().strip()
-                    commit = self.git("commit-tree", tree, "-p", base, "-m", self.commit_message(identifier)).stdout.decode().strip()
+                    message = self.commit_message(identifier, catalog_changed="docs/player-feedback/games.json" in changed)
+                    commit = self.git("commit-tree", tree, "-p", base, "-m", message).stdout.decode().strip()
                     journal["commit"] = commit
                     # Journal the new commit before moving HEAD, so interruption
                     # at any point leaves a recognizable, recoverable checkout.
@@ -472,6 +490,8 @@ class FeedbackHandler(BaseHTTPRequestHandler):
             self.respond(408, {"accepted": False, "error": "Review request timed out"})
         except SubmissionConflict as error:
             self.respond(409, {"accepted": False, "error": str(error)})
+        except feedback.UnknownGame:
+            self.respond(400, {"accepted": False, "code": "game_not_available", "error": "Unknown game slug"})
         except feedback.FeedbackError as error:
             self.respond(400, {"accepted": False, "error": str(error)})
         except (ValueError, UnicodeError, RecursionError):

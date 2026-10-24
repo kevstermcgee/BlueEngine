@@ -383,6 +383,139 @@ class CommunityTests(unittest.TestCase):
                                       {"request_id": str(uuid4()), "revision_id": standalone["head_revision"]})[0], 409)
         self.assertEqual(store.main(["check", "--root", str(self.root)]), 0)
 
+    def published_companion(self):
+        companion = self.base / "review-companion"
+        git(self.base, "init", "--initial-branch=main", str(companion))
+        feedback.atomic_json(companion / ".release-games.json", {"version": 1, "data_playables": [],
+            "native_playables": [{"slug": "new-native", "name": "New Native"},
+                                 {"slug": "rule-relay", "name": "A changed display title"}]})
+        feedback.atomic_json(companion / "site/released-games.json", {"version": 1, "games": [
+            {"slug": "bluecity", "name": "BlueCity", "game_version": "0.3.0",
+             "source_url": "https://github.com/owner/BlueCity/tree/" + "b" * 40 + "/src"}]})
+        git(companion, "add", ".")
+        git(companion, "commit", "-m", "Publish trusted native and independent game identities")
+        self.publisher.companion_sources = True
+        self.publisher.companion_synced_at = time.monotonic()
+        real_git = self.publisher.git
+        fetches = []
+
+        def local_companion(*args, **kwargs):
+            arguments = list(args)
+            url = f"https://github.com/{store.GAMES_REPOSITORY}.git"
+            if arguments[0] == "fetch" and url in arguments:
+                arguments[arguments.index(url)] = str(companion)
+                fetches.append(True)
+            return real_git(*arguments, **kwargs)
+
+        return companion, local_companion, fetches
+
+    def test_anonymous_review_refreshes_published_catalog_and_commits_allowlist_with_receipt(self):
+        _, local_companion, fetches = self.published_companion()
+        review = submission(game="bluecity")
+        with patch.object(self.publisher, "git", side_effect=local_companion):
+            status, _, body = self.request("/feedback", review, token=None)
+            self.assertEqual((status, body), (200, {"accepted": True, "submission_id": review["submission_id"]}))
+            first = git(self.remote, "rev-parse", "main")
+            self.assertNotIn("[skip ci]", git(self.remote, "log", "-1", "--format=%s", "main"))
+            self.assertEqual(self.request("/feedback", review, token=None)[0], 200)
+            self.assertEqual(git(self.remote, "rev-parse", "main"), first)
+            self.assertEqual(self.game("bluecity")["source_kind"], "independent")
+            self.assertEqual(self.request(f"{server.PREFIX}/games", token=None)[2]["reviewable_games"]["bluecity"], "BlueCity")
+        self.assertEqual(len(fetches), 2)  # A fresh public-read cache cannot hide a new release.
+        allowed = json.loads(git(self.remote, "show", "main:docs/player-feedback/games.json"))["games"]
+        self.assertEqual(allowed, {"bluecity": "BlueCity", "new-native": "New Native", "rule-relay": "Rule Relay"})
+        record = json.loads(git(self.remote, "show", f"main:docs/player-feedback/reviews/{review['submission_id']}.json"))
+        feed = json.loads(git(self.remote, "show", "main:docs/player-feedback/games/bluecity.json"))
+        self.assertEqual((record["game_title"], feed["count"], feed["reviews"]), ("BlueCity", 1, [record]))
+        self.assertEqual(feedback.main(["--root", str(self.root), "check"]), 0)
+        self.assertEqual(git(self.root, "status", "--porcelain"), "")
+
+    def test_no_cache_read_refreshes_review_capability_without_publishing_or_disabling_default_cache(self):
+        _, local_companion, fetches = self.published_companion()
+        original = git(self.remote, "rev-parse", "main")
+        with patch.object(self.publisher, "git", side_effect=local_companion):
+            status, _, body = self.request(f"{server.PREFIX}/games", token=None, headers={"Cache-Control": "no-cache"})
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body["reviewable_games"]["bluecity"], "BlueCity")
+        self.assertEqual(len(fetches), 1)
+        self.assertEqual(git(self.remote, "rev-parse", "main"), original)
+        self.assertEqual(feedback.game_catalog(self.root), {"rule-relay": "Rule Relay"})
+        self.assertEqual(git(self.root, "status", "--porcelain"), "")
+        with patch.object(self.publisher, "git", side_effect=AssertionError("Default reads must retain their cache")):
+            self.assertEqual(self.request(f"{server.PREFIX}/games", token=None)[2]["reviewable_games"], body["reviewable_games"])
+            self.assertEqual(self.request(f"{server.PREFIX}/games", token=None,
+                                         headers={"Cache-Control": "no-cache"})[2]["reviewable_games"], body["reviewable_games"])
+        companion = self.base / "review-companion"
+        document = json.loads((companion / ".release-games.json").read_text())
+        document["native_playables"].append({"slug": "next-city", "name": "Next City"})
+        feedback.atomic_json(companion / ".release-games.json", document)
+        git(companion, "add", ".")
+        git(companion, "commit", "-m", "Publish another title after capability snapshot")
+        refreshed_at = self.publisher._catalog_cache[0]
+        with patch.object(store.time, "monotonic", return_value=refreshed_at + store.CATALOG_CACHE_SECONDS + 0.01), \
+                patch.object(self.publisher, "git", side_effect=local_companion):
+            status, _, refreshed = self.request(f"{server.PREFIX}/games", token=None, headers={"Cache-Control": "no-cache"})
+        self.assertEqual(status, 200, refreshed)
+        self.assertEqual(refreshed["reviewable_games"]["next-city"], "Next City")
+        self.assertEqual(len(fetches), 2)
+        self.assertEqual(git(self.remote, "rev-parse", "main"), original)
+
+    def test_failed_review_push_restores_allowlist_and_retry_adds_published_game_once(self):
+        _, local_companion, _ = self.published_companion()
+        review = submission(game="bluecity")
+        original = git(self.remote, "rev-parse", "main")
+
+        def reject_push(*args, **kwargs):
+            if args[0] == "push":
+                return subprocess.CompletedProcess(args, 1, b"", b"")
+            return local_companion(*args, **kwargs)
+
+        with patch.object(self.publisher, "git", side_effect=reject_push):
+            self.assertEqual(self.request("/feedback", review, token=None)[0], 503)
+        self.assertEqual(git(self.remote, "rev-parse", "main"), original)
+        self.assertEqual(feedback.game_catalog(self.root), {"rule-relay": "Rule Relay"})
+        self.assertFalse(self.publisher.journal.exists())
+        self.assertEqual(git(self.root, "status", "--porcelain"), "")
+        with patch.object(self.publisher, "git", side_effect=local_companion):
+            self.assertEqual(self.request("/feedback", review, token=None)[0], 200)
+        self.assertEqual(git(self.remote, "rev-list", "--count", "main"), "2")
+
+    def test_unknown_game_has_distinct_code_and_invalid_trusted_catalog_is_retryable(self):
+        companion, local_companion, _ = self.published_companion()
+        with patch.object(self.publisher, "git", side_effect=local_companion):
+            status, _, body = self.request("/feedback", submission(game="unknown-game"), token=None)
+            self.assertEqual((status, body.get("code")), (400, "game_not_available"))
+            status, _, body = self.request("/feedback", submission(rating=0), token=None)
+            self.assertEqual(status, 400)
+            self.assertNotIn("code", body)
+            feedback.atomic_json(companion / ".release-games.json", {"version": 1, "native_playables": [
+                {"slug": "../unsafe", "name": "Unsafe"}]})
+            git(companion, "add", ".")
+            git(companion, "commit", "-m", "Invalid trusted metadata must fail closed")
+            self.assertEqual(self.request("/feedback", submission(game="bluecity"), token=None)[0], 503)
+        self.assertEqual(git(self.remote, "rev-list", "--count", "main"), "1")
+
+    def test_verified_community_release_is_reviewable_before_source_merges_to_main(self):
+        payload = {"request_id": str(uuid4()), "slug": "branch-game", "title": "Branch Game", "source_commit": "a" * 40,
+                   "source_repository": "alice/BlueEngine", "version": "v1", "note": "Native game ready"}
+        self.assertEqual(self.request(f"{server.PREFIX}/games", payload, token="alice_token")[0], 200)
+        game = self.game("branch-game")
+        self.assertNotIn("branch-game", self.request(f"{server.PREFIX}/games", token=None)[2]["reviewable_games"])
+        self.assertEqual(self.request("/feedback", submission(game="branch-game"), token=None)[0], 400)
+        release = {"request_id": str(uuid4()), "revision_id": game["head_revision"], "source_commit": "a" * 40,
+                   "games_commit": "b" * 40,
+                   "receipt": {"page": "https://kevstermcgee.github.io/BlueEngineGames/games/branch-game/",
+                               "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/native-games-" + "b" * 12 + "-v1",
+                               "installer_sha256": "c" * 64, "zip_sha256": "d" * 64, "verified_at": "2026-10-20T12:00:00+00:00"},
+                   "gates": {label: index for index, label in enumerate(store.RELEASE_GATES, 1) if label in store.ENGINE_GATES}}
+        status, _, body = self.request(f"{server.PREFIX}/games/branch-game/releases", release, token="owner_token")
+        self.assertEqual(status, 200, body)
+        self.assertEqual(self.request(f"{server.PREFIX}/games", token=None)[2]["reviewable_games"]["branch-game"], "Branch Game")
+        status, _, body = self.request("/feedback", submission(game="branch-game"), token=None)
+        self.assertEqual(status, 200, body)
+        self.assertEqual(feedback.game_catalog(self.root)["branch-game"], "Branch Game")
+        self.assertNotEqual(self.publisher.git("cat-file", "-t", "HEAD:games/branch-game", check=False).returncode, 0)
+
     def test_public_catalog_cache_avoids_git_contention_and_writes_invalidate_it(self):
         first = self.game()
         with patch.object(self.publisher, "git", side_effect=AssertionError("Cached public reads must not invoke Git")):

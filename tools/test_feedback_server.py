@@ -317,6 +317,31 @@ raise AssertionError("Crash injection did not run")
                 self.assertEqual(self.remote_review(review["submission_id"])["rating"], 8)
         self.assertEqual(git(self.remote, "rev-list", "--count", "main"), "4")
 
+    def test_catalog_update_is_recovered_with_the_same_journal_after_process_crash(self):
+        for phase in ("import", "local_commit", "push"):
+            with self.subTest(phase=phase):
+                git(self.seed, "pull", "--ff-only", "origin", "main")
+                game_slug = "new-native-" + phase.replace("_", "-")
+                game = self.seed / "games" / game_slug
+                feedback.atomic_json(game / "assets/identity.json", {"title": "New Native"})
+                feedback.atomic_json(game / "game.project.json", {"id": game_slug})
+                git(self.seed, "add", ".")
+                git(self.seed, "commit", "-m", "Add native source before review catalog backfill")
+                git(self.seed, "push", "origin", "main")
+                review = submission(game=game_slug)
+                self.crash_child(review, phase)
+                self.assertIn(game_slug, json.loads((self.root / feedback.DIRECTORY / "games.json").read_text())["games"])
+                self.restart_publisher()
+                self.assertNotIn(game_slug, json.loads((self.root / feedback.DIRECTORY / "games.json").read_text())["games"])
+                self.assertEqual(git(self.root, "status", "--porcelain"), "")
+                published_before_retry = git(self.remote, "rev-parse", "main")
+                self.assertEqual(self.request(review)[0], 200)
+                if phase == "push":
+                    self.assertEqual(git(self.remote, "rev-parse", "main"), published_before_retry)
+                self.assertEqual(self.remote_review(review["submission_id"])["game_title"], "New Native")
+                self.assertEqual(git(self.remote, "log", "-1", "--format=%s", "main"),
+                                 f"Record player feedback {review['submission_id']}")
+
     def test_crash_recovery_refuses_unrelated_changes_without_discarding_them(self):
         review = submission()
         self.crash_child(review, "import")

@@ -428,11 +428,46 @@ class GitHub:
                 "games_commit": request["games_commit"], "receipt": receipt, "gates": verified_gates}
 
 
+def published_game_catalog(publisher):
+    """Read only names from the configured companion main's trusted manifests."""
+    games = feedback.game_catalog(publisher.root)
+    if not getattr(publisher, "companion_sources", False):
+        return games
+    try:
+        for path, groups in ((".release-games.json", ("data_playables", "native_playables")),
+                             ("site/released-games.json", ("games",))):
+            result = publisher.git("show", f"{COMPANION_REF}:{path}", check=False)
+            if result.returncode:
+                continue  # Older companion repositories can lack either manifest.
+            if len(result.stdout) > 1_000_000:
+                raise ValueError
+            document = json.loads(result.stdout)
+            if document.get("version") != 1:
+                raise ValueError
+            seen = set()
+            for group in groups:
+                entries = document.get(group, [])
+                if not isinstance(entries, list) or len(entries) > 500:
+                    raise ValueError
+                for entry in entries:
+                    game_slug = slug(entry["slug"])
+                    title = feedback.text(entry.get("name", games.get(game_slug)), 160)
+                    if game_slug in seen:
+                        raise ValueError
+                    seen.add(game_slug)
+                    # Existing canonical records retain their trusted title.
+                    games.setdefault(game_slug, title)
+    except (ValueError, KeyError, TypeError, AttributeError):
+        raise feedback_server.PublicationError("Invalid trusted published game catalog") from None
+    return games
+
+
 class Catalog:
     def __init__(self, publisher):
         self.publisher, self.games, self.events, self.upstream = publisher, {}, [], {}
         self._public_source_trees = {}
-        for game_slug, title in feedback.game_catalog(publisher.root).items():
+        self.reviewable_games = published_game_catalog(publisher)
+        for game_slug, title in self.reviewable_games.items():
             self.games[game_slug] = {"slug": game_slug, "title": title, "owner": publisher.repository.split("/")[0],
                                      "root_game": game_slug, "parent_game": None, "parent_revision": None,
                                      "head_revision": None, "revisions": [], "publication_requests": [], "releases": [],
@@ -497,6 +532,9 @@ class Catalog:
         for event in self.events:
             self.apply(event)
         self.reconcile_upstream()
+        for game_slug, game in self.games.items():
+            if game["releases"]:
+                self.reviewable_games.setdefault(game_slug, game["title"])
 
     def seed_published_source_pins(self):
         """Recover historical/standalone roots from the trusted site's source pins.
@@ -719,30 +757,61 @@ class CommunityPublisher(feedback_server.Publisher):
         return client, client.actor(self.repository)
 
     def sync(self):
-        self.git("fetch", "--quiet", "--no-tags", "origin", f"refs/heads/{self.branch}")
-        self.git("reset", "--hard", "FETCH_HEAD")
-        if self.companion_sources and time.monotonic() - self.companion_synced_at > 300:
+        super().sync()
+        self.sync_companion()
+
+    def sync_companion(self, *, force=False):
+        if self.companion_sources and (force or time.monotonic() - self.companion_synced_at > 300):
             # Only public Git objects enter a namespaced ref. Never check out or
             # run companion source inside the intake service.
             self.git("fetch", "--quiet", "--no-tags", "--no-write-fetch-head", f"https://github.com/{self.games_repository}.git",
                      f"refs/heads/main:{COMPANION_REF}")
             self.companion_synced_at = time.monotonic()
 
-    def catalog(self):
+    def sync_for_review(self):
+        super().sync()
+        # A newly published title must work immediately, even when a public
+        # community read populated the five-minute companion cache just before it.
+        self.sync_companion(force=True)
+
+    def game_catalog(self):
+        try:
+            # Verified community release receipts can precede a merge of the
+            # game's source into either repository's main branch.
+            return dict(Catalog(self).reviewable_games)
+        except (CommunityError, feedback.FeedbackError, ValueError, OSError):
+            raise feedback_server.PublicationError("Published game catalog is temporarily unavailable") from None
+
+    def cached_catalog(self, *, refresh=False):
         cached = self._catalog_cache
-        if cached is not None and time.monotonic() - cached[0] < CATALOG_CACHE_SECONDS:
+        if (cached is not None and time.monotonic() - cached[0] < CATALOG_CACHE_SECONDS
+                and (not refresh or cached[2])):
             # This immutable snapshot was confirmed against origin. Serving it
             # does not contend with Git writes or trigger fetches per page view.
             return cached[1]
+        return None
+
+    def catalog(self, *, refresh=False):
+        cached = self.cached_catalog(refresh=refresh)
+        if cached is not None:
+            return cached
         if not self.lock.acquire(timeout=0.25):
             raise feedback_server.PublicationError("Another publication is active; retry shortly")
         try:
+            # Another read may have refreshed while this request waited. Even
+            # explicit fresh reads share one confirmed snapshot for five seconds.
+            cached = self.cached_catalog(refresh=refresh)
+            if cached is not None:
+                return cached
             self.recover_interrupted()
             self.require_clean()
-            self.sync()
+            if refresh:
+                self.sync_for_review()
+            else:
+                self.sync()
             self.safe_directories()
             catalog = Catalog(self)
-            self._catalog_cache = (time.monotonic(), catalog)
+            self._catalog_cache = (time.monotonic(), catalog, refresh)
             return catalog
         finally:
             self.lock.release()
@@ -997,7 +1066,7 @@ def main(argv=None):
         catalog = Catalog(RepositoryReader(args.root, args.repository))
         print(json.dumps({"valid": True, "events": len(catalog.events), "games": len(catalog.games)}))
         return 0
-    except (CommunityError, OSError, ValueError, KeyError, TypeError) as error:
+    except (CommunityError, feedback_server.PublicationError, OSError, ValueError, KeyError, TypeError) as error:
         print(f"Community event validation failed: {error}", file=sys.stderr)
         return 1
 
