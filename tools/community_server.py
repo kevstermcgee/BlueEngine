@@ -119,9 +119,11 @@ class CommunityHandler(feedback.FeedbackHandler):
                 _, actor = self.server.publisher.actor(self.token())
                 result = {"actor": actor}
             elif route in ("games", "game", "history", "releases"):
-                catalog = self.server.publisher.catalog()
+                catalog = self.server.publisher.catalog(
+                    refresh=route == "games" and self.headers.get("Cache-Control", "").strip().lower() == "no-cache")
                 if route == "games":
-                    result = {"games": [{key: game[key] for key in ("slug", "title", "owner", "root_game", "parent_game", "head_revision")}
+                    result = {"reviewable_games": catalog.reviewable_games,
+                              "games": [{key: game[key] for key in ("slug", "title", "owner", "root_game", "parent_game", "head_revision")}
                                         for game in catalog.games.values()]}
                 elif route == "game":
                     result = {"game": catalog.public_game(target)}

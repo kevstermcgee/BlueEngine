@@ -111,6 +111,16 @@ class Publisher:
         if self.git("status", "--porcelain", "--untracked-files=all").stdout:
             raise PublicationError("Publication checkout contains unrelated changes")
 
+    def sync(self):
+        self.git("fetch", "--quiet", "--no-tags", "origin", f"refs/heads/{self.branch}")
+        self.git("reset", "--hard", "FETCH_HEAD")
+
+    def sync_for_review(self):
+        self.sync()
+
+    def game_catalog(self):
+        return feedback.game_catalog(self.root)
+
     def safe_directories(self):
         for relative in ("docs", "docs/player-feedback", "docs/player-feedback/reviews", "docs/player-feedback/games"):
             path = self.root / relative
@@ -177,7 +187,7 @@ class Publisher:
             own_review = f"docs/player-feedback/reviews/{identifier}.json"
             if not {own_review, "docs/player-feedback/summary.json"} <= allowed:
                 raise ValueError
-            if any(path not in (own_review, "docs/player-feedback/summary.json")
+            if any(path not in (own_review, "docs/player-feedback/summary.json", "docs/player-feedback/games.json")
                    and not re.fullmatch(r"docs/player-feedback/games/[a-z0-9]+(?:-[a-z0-9]+)*\.json", path)
                    for path in allowed):
                 raise ValueError
@@ -233,14 +243,13 @@ class Publisher:
             received = datetime.now(timezone.utc).isoformat()
             for attempt in range(self.attempts):
                 # Fetch first even for an ID retry: a local commit alone is no receipt.
-                self.git("fetch", "--quiet", "--no-tags", "origin", f"refs/heads/{self.branch}")
-                self.git("reset", "--hard", "FETCH_HEAD")
+                self.sync_for_review()
                 self.safe_directories()
-                games = feedback.game_catalog(self.root)
+                games = self.game_catalog()
                 record = feedback.record_from_submission(payload, games, received)
                 identifier = record["submission_id"]
                 relative_review = f"docs/player-feedback/reviews/{identifier}.json"
-                allowed = {relative_review, "docs/player-feedback/summary.json"}
+                allowed = {relative_review, "docs/player-feedback/summary.json", "docs/player-feedback/games.json"}
                 allowed.update(f"docs/player-feedback/games/{slug}.json" for slug in games)
                 # Feed cleanup may remove an obsolete game's canonical JSON feed.
                 allowed.update(path.relative_to(self.root).as_posix()
@@ -256,6 +265,10 @@ class Publisher:
                            "commit": None, "paths": sorted(allowed)}
                 try:
                     self.save_journal(journal)
+                    # Keep trusted newly published game identities with the same
+                    # journal/commit as their review and canonical public feeds.
+                    feedback.atomic_json(self.root / feedback.DIRECTORY / "games.json",
+                                         {"schema_version": 1, "games": dict(sorted(games.items()))})
                     feedback.import_submission(self.root, payload, created_at=received)
                     changed = self.changed_paths()
                     if not changed <= allowed:
@@ -472,6 +485,8 @@ class FeedbackHandler(BaseHTTPRequestHandler):
             self.respond(408, {"accepted": False, "error": "Review request timed out"})
         except SubmissionConflict as error:
             self.respond(409, {"accepted": False, "error": str(error)})
+        except feedback.UnknownGame:
+            self.respond(400, {"accepted": False, "code": "game_not_available", "error": "Unknown game slug"})
         except feedback.FeedbackError as error:
             self.respond(400, {"accepted": False, "error": str(error)})
         except (ValueError, UnicodeError, RecursionError):

@@ -179,6 +179,18 @@ A genuine user submission must receive accepted=true and appear in
 `docs/player-feedback/reviews` on the remote before claiming publication works.
 Do not submit fabricated reviews to the production repository as a health probe.
 
+For community intake using `--companion-sources`, anonymous review publication
+refreshes the trusted companion reference even if a recent public catalog read
+populated its cache. Native/data identities in `.release-games.json`, independent
+identities in `site/released-games.json`, and verified community release receipts
+extend the canonical review allowlist automatically. The allowlist, new review,
+summary and feeds share one publication journal and commit; failed pushes and
+interrupted imports restore the previous allowlist with the other generated data.
+The service reads only metadata from the configured companion `main` and never
+runs companion code. Invalid trusted metadata returns 503. A well-formed game
+missing after refresh returns 400 with `code: "game_not_available"`; malformed
+review fields remain ordinary validation failures.
+
 Back up the remote repository through normal repository retention. The local clone
 is disposable, not an offline queue. A 503 leaves the client responsible for retaining
 and retrying the draft. To recover a damaged checkout, stop intake, replace the clone

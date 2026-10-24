@@ -317,6 +317,22 @@ raise AssertionError("Crash injection did not run")
                 self.assertEqual(self.remote_review(review["submission_id"])["rating"], 8)
         self.assertEqual(git(self.remote, "rev-list", "--count", "main"), "4")
 
+    def test_catalog_update_is_recovered_with_the_same_journal_after_process_crash(self):
+        game = self.seed / "games/new-native"
+        feedback.atomic_json(game / "assets/identity.json", {"title": "New Native"})
+        feedback.atomic_json(game / "game.project.json", {"id": "new-native"})
+        git(self.seed, "add", ".")
+        git(self.seed, "commit", "-m", "Add native source before review catalog backfill")
+        git(self.seed, "push", "origin", "main")
+        review = submission(game="new-native")
+        self.crash_child(review, "import")
+        self.assertIn("new-native", json.loads((self.root / feedback.DIRECTORY / "games.json").read_text())["games"])
+        self.restart_publisher()
+        self.assertNotIn("new-native", json.loads((self.root / feedback.DIRECTORY / "games.json").read_text())["games"])
+        self.assertEqual(git(self.root, "status", "--porcelain"), "")
+        self.assertEqual(self.request(review)[0], 200)
+        self.assertEqual(self.remote_review(review["submission_id"])["game_title"], "New Native")
+
     def test_crash_recovery_refuses_unrelated_changes_without_discarding_them(self):
         review = submission()
         self.crash_child(review, "import")
