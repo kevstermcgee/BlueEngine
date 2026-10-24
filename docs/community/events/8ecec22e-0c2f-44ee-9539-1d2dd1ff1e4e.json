@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "request_id": "8ecec22e-0c2f-44ee-9539-1d2dd1ff1e4e",
+  "sequence": 14,
+  "created_at": "2026-10-24T08:38:03.022260+00:00",
+  "actor": {
+    "login": "kevstermcgee",
+    "role": "maintainer"
+  },
+  "request": {
+    "request_id": "8ecec22e-0c2f-44ee-9539-1d2dd1ff1e4e",
+    "revision_id": "1f2973cddd16f0408b108ddf86d74730169231e397c22cc3aafb7d8dc1935b5d",
+    "source_commit": "181ed71a6d1b43ea5ab37ec9dc46fc4ce59e1f92",
+    "games_commit": "abd6f660acaef9b6340087b36489b8bbee36e7bf",
+    "receipt": {
+      "page": "https://kevstermcgee.github.io/BlueEngineGames/games/scatterlock/",
+      "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-181ed71a6d1b-games-abd6f660acae-40072598583-1",
+      "installer_sha256": "fa014455f11e6d2501708c6a1b6c7094f97bb56ce9c883c11818b0399b0f831c",
+      "zip_sha256": "3fa0a434ec37f05604f1ee79fc96158732f7e844eed86dace2f4e41c9c700217",
+      "verified_at": "2026-10-24T08:37:57.970646+00:00"
+    },
+    "gates": {
+      "engine-checks": 40075528843,
+      "generated-game-linux-windows": 40075529108,
+      "windows-installer-review": 40078429046,
+      "production-release": 40072598583,
+      "download-page": 40075077401
+    }
+  },
+  "target": "scatterlock",
+  "event_type": "release_verified",
+  "release": {
+    "state": "published",
+    "source_kind": "engine",
+    "game_tree": "0b6bbc1b530193623c53dd3b06b4658993cde4b4",
+    "revision_id": "1f2973cddd16f0408b108ddf86d74730169231e397c22cc3aafb7d8dc1935b5d",
+    "source_commit": "181ed71a6d1b43ea5ab37ec9dc46fc4ce59e1f92",
+    "games_commit": "abd6f660acaef9b6340087b36489b8bbee36e7bf",
+    "receipt": {
+      "page": "https://kevstermcgee.github.io/BlueEngineGames/games/scatterlock/",
+      "release": "https://github.com/kevstermcgee/BlueEngineGames/releases/tag/blueengine-181ed71a6d1b-games-abd6f660acae-40072598583-1",
+      "installer_sha256": "fa014455f11e6d2501708c6a1b6c7094f97bb56ce9c883c11818b0399b0f831c",
+      "zip_sha256": "3fa0a434ec37f05604f1ee79fc96158732f7e844eed86dace2f4e41c9c700217",
+      "verified_at": "2026-10-24T08:37:57.970646+00:00"
+    },
+    "gates": {
+      "engine-checks": {
+        "run": 40075528843,
+        "head": "181ed71a6d1b43ea5ab37ec9dc46fc4ce59e1f92",
+        "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/40075528843"
+      },
+      "generated-game-linux-windows": {
+        "run": 40075529108,
+        "head": "181ed71a6d1b43ea5ab37ec9dc46fc4ce59e1f92",
+        "url": "https://github.com/kevstermcgee/BlueEngine/actions/runs/40075529108"
+      },
+      "windows-installer-review": {
+        "run": 40078429046,
+        "head": "abd6f660acaef9b6340087b36489b8bbee36e7bf",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/40078429046"
+      },
+      "production-release": {
+        "run": 40072598583,
+        "head": "abd6f660acaef9b6340087b36489b8bbee36e7bf",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/40072598583"
+      },
+      "download-page": {
+        "run": 40075077401,
+        "head": "abd6f660acaef9b6340087b36489b8bbee36e7bf",
+        "url": "https://github.com/kevstermcgee/BlueEngineGames/actions/runs/40075077401"
+      }
+    }
+  }
+}
