@@ -120,7 +120,8 @@ record and generated public feeds were successfully pushed to `origin/main`, or 
 identical review was fetched from that remote during a retry. The service never
 acknowledges a local-only write. It commits only the review's UUID JSON, summary and
 canonical per-game feeds, using a fixed server identity and `[skip ci]` for validated
-data-only publication. Existing nightly improvement work consumes the repo data.
+review/feed-only publication. A commit that also updates the canonical game
+allowlist runs CI, providing the verified tip required by nightly improvement work.
 
 Publication is serialized. Concurrent upstream changes cause a bounded fetch/reapply
 retry without force pushes; successful remote writes with a lost acknowledgement

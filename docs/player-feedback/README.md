@@ -47,6 +47,8 @@ come from its native/data release manifest and independent released-game catalog
 plus verified community release receipts that can precede a source merge. The
 service writes newly discovered identities to `games.json` in the same journaled
 commit as the review and its feeds. Existing canonical titles stay unchanged.
+Allowlist-changing commits run CI so nightly improvement cycles can verify them;
+ordinary review/feed commits retain their existing verified-ancestor CI policy.
 Request text cannot add a game to this allowlist. A catalog refresh failure is a
 retryable service error and preserves the draft; an unknown game returns the
 machine-readable error code `game_not_available`.

@@ -199,10 +199,12 @@ class Publisher:
             if commit is not None:
                 if self.git("rev-parse", f"{commit}^").stdout.decode().strip() != base:
                     raise ValueError
-                if self.git("log", "-1", "--format=%s", commit).stdout.decode().strip() != self.commit_message(identifier):
-                    raise ValueError
                 committed = self.git("diff-tree", "--no-commit-id", "--name-only", "-r", "-z", base, commit).stdout
-                if not {path.decode("utf-8") for path in committed.split(b"\0") if path} <= allowed:
+                committed = {path.decode("utf-8") for path in committed.split(b"\0") if path}
+                if not committed <= allowed:
+                    raise ValueError
+                expected = self.commit_message(identifier, catalog_changed="docs/player-feedback/games.json" in committed)
+                if self.git("log", "-1", "--format=%s", commit).stdout.decode().strip() != expected:
                     raise ValueError
             self.rollback(base, allowed)
             self.clear_journal()
@@ -210,8 +212,10 @@ class Publisher:
             raise PublicationError("Interrupted publication requires operator inspection") from None
 
     @staticmethod
-    def commit_message(identifier):
-        return f"Record player feedback {identifier} [skip ci]"
+    def commit_message(identifier, *, catalog_changed=False):
+        # Allowlist changes fall outside nightly's review-only CI inheritance.
+        # Their own CI must run before an improvement cycle can use this tip.
+        return f"Record player feedback {identifier}" + ("" if catalog_changed else " [skip ci]")
 
     def rollback(self, base, allowed):
         # Never use git clean: delete only this import's untracked output paths.
@@ -282,7 +286,8 @@ class Publisher:
                             raise PublicationError("Unsafe feedback output path")
                     self.git("add", "--", *sorted(changed))
                     tree = self.git("write-tree").stdout.decode().strip()
-                    commit = self.git("commit-tree", tree, "-p", base, "-m", self.commit_message(identifier)).stdout.decode().strip()
+                    message = self.commit_message(identifier, catalog_changed="docs/player-feedback/games.json" in changed)
+                    commit = self.git("commit-tree", tree, "-p", base, "-m", message).stdout.decode().strip()
                     journal["commit"] = commit
                     # Journal the new commit before moving HEAD, so interruption
                     # at any point leaves a recognizable, recoverable checkout.

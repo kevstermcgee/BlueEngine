@@ -416,6 +416,7 @@ class CommunityTests(unittest.TestCase):
             status, _, body = self.request("/feedback", review, token=None)
             self.assertEqual((status, body), (200, {"accepted": True, "submission_id": review["submission_id"]}))
             first = git(self.remote, "rev-parse", "main")
+            self.assertNotIn("[skip ci]", git(self.remote, "log", "-1", "--format=%s", "main"))
             self.assertEqual(self.request("/feedback", review, token=None)[0], 200)
             self.assertEqual(git(self.remote, "rev-parse", "main"), first)
             self.assertEqual(self.game("bluecity")["source_kind"], "independent")
