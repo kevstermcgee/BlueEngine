@@ -66,6 +66,25 @@ HTTP endpoint. If terminating TLS directly instead, pass `--cert CERT --key KEY`
 and an explicit public `--host`; the CLI refuses non-loopback cleartext listening.
 The nginx proxy remains the recommended deployment for public request limits.
 
+If an existing user deployment renews a temporary router mapping through
+`blueengine-feedback-portmap.service`, install
+[`blueengine-feedback-portmap.timer.d/reliability.conf`](blueengine-feedback-portmap.timer.d/reliability.conf)
+under `~/.config/systemd/user/blueengine-feedback-portmap.timer.d/`, then run
+`systemctl --user daemon-reload` and restart that timer. This drop-in assumes the
+existing service already restricts itself to the feedback HTTPS mapping; it does
+not create or change a router rule by itself. Run the existing mapping service
+once to restore an expired lease, then verify public HTTPS as described below.
+
+The timer starts 30 seconds after each activation and renews five minutes after
+each mapping attempt finishes, including failed attempts. An empty setting for
+**any** monotonic timer directive clears **all** monotonic triggers, so resetting
+`OnUnitActiveSec=` also removes an inherited `OnBootSec=`. A timer with only a
+recurrence trigger can remain `active (elapsed)` after reboot and let the router
+lease expire. `Persistent=true` does not recover missed monotonic activations.
+Check `systemctl --user list-timers --all blueengine-feedback-portmap.timer` after
+restarting the timer and after its first execution: both must show a future NEXT
+activation. A healthy local receiver alone does not establish public reachability.
+
 The service permits only browser Origin `https://kevstermcgee.github.io`; the path of
 the GitHub Pages project is not part of an Origin. Native launcher requests may omit
 Origin. The endpoint does not use cookies or authenticated browser sessions. CORS is
